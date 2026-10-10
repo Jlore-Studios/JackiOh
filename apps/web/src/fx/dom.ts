@@ -1,20 +1,6 @@
-// DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
-//
-// The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, R502's
-// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, the fog and zone wave, and
-// R1363's shield flash) to `mountDomEffect` as the cue fires, with the anchor boxes it measured then.
-// One element per cue, written as data only (kind, tone, text attribute, `--fx-*` geometry and
-// timing); everything visual lives in fx.css, keyed off `data-fx`.
-//
-// Three invariants:
-// - No text node is ever created. Words ride in `data-amount` / `data-text` and reach the screen
-//   through CSS `content: attr(…)`, so no Cypress `contains` matches an effect and no screen reader
-//   reads one (the element is `aria-hidden` as well).
-// - A cue whose kind needs a missing box mounts nothing and returns null.
-// - No timers. The director removes each element when `firedAt + durationMs ≤ now` (S8 step 5), and
-//   `remove()` is idempotent so a clear() racing an expiry is harmless.
-//
-// Nothing here reads a card identity: a ghost is a card BACK only (R202).
+// DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
+// Missing boxes mount nothing. No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, and R1363 shields.
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./types.ts";
@@ -22,7 +8,6 @@ import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./t
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
 export type DomEffect = { readonly el: HTMLElement; remove(): void };
 
-/** A length in CSS pixels (S10). */
 function px(value: number): string {
   return `${value}px`;
 }
@@ -31,7 +16,6 @@ function centreOf(box: FxBox): { x: number; y: number } {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** `--fx-x/--fx-y` at the box centre, `--fx-w/--fx-h` at its size (splat, rays). */
 function placeAtCentre(el: HTMLElement, box: FxBox): void {
   const centre = centreOf(box);
   el.style.setProperty("--fx-x", px(centre.x));
@@ -40,7 +24,6 @@ function placeAtCentre(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-h", px(box.height));
 }
 
-/** The same at the box's top-left (sheen, arrows). */
 function cover(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-x", px(box.x));
   el.style.setProperty("--fx-y", px(box.y));
@@ -48,21 +31,18 @@ function cover(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-h", px(box.height));
 }
 
-/** R437: the brand's colours, as `--fx-mark-*` custom properties fx.css paints with. */
 function tint(el: HTMLElement, colours: FxTint): void {
   el.style.setProperty("--fx-mark-rim", colours.rim);
   el.style.setProperty("--fx-mark-core", colours.core);
   el.style.setProperty("--fx-mark-glow", colours.glow);
 }
 
-/** A fog's or a zone wave's colours, as `--fx-tint-*` custom properties fx.css paints with. */
 function tintVars(el: HTMLElement, colours: FxTint): void {
   el.style.setProperty("--fx-tint-rim", colours.rim);
   el.style.setProperty("--fx-tint-core", colours.core);
   el.style.setProperty("--fx-tint-glow", colours.glow);
 }
 
-/** The smallest box holding both, grown by `pad` of its height on every side. */
 function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
   const x = Math.min(a.x, b.x);
   const y = Math.min(a.y, b.y);
@@ -74,7 +54,6 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** The fog's body: cloud puffs, each its own `--fx-puff`, and drifting icons (an emblem's path, never a word). */
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
   for (let i = 0; i < FX_FOG_PUFFS; i += 1) {
@@ -99,10 +78,6 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   }
 }
 
-/**
- * R436: the reveal's lines. Each is a window one name tall over a reel that spins up to the name
- * rolled (the reel's last), landing at its own `--fx-land-ms`. Names ride in `data-text`.
- */
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
   el.style.setProperty("--fx-lines", String(lines.length));
   lines.forEach((line, index) => {
@@ -126,12 +101,10 @@ function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]):
   });
 }
 
-/** The splat's signed amount: ASCII hyphen-minus for damage and loss (S10). */
 function signedAmount(tone: "damage" | "heal" | "loss", amount: number): string {
   return tone === "heal" ? `+${amount}` : `-${amount}`;
 }
 
-/** Appends one element for the cue; null (nothing appended) when a box the kind needs is missing. */
 export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffectBoxes): DomEffect | null {
   const doc = root.ownerDocument;
   const el = doc.createElement("div");
@@ -255,14 +228,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
   };
 }
 
-/*
- * Stand-ins (B46): a copy of a card the board already renders, carried to the zone the next view
- * shows it in. It keeps the card's markup and classes but loses everything that would make it a
- * second card to a test, a screen reader or the keyboard: testids, ids, roles, labels, legality
- * marks and every text node (the words move into `data-text`, as the splats' do).
- */
+/* Stand-ins (B46) carry rendered cards to the next view while stripping identity, interaction, and text. */
 
-/** Attributes a stand-in must not carry: identity, interaction and state the board owns. */
 function strippable(name: string): boolean {
   return (
     name === "id" ||
@@ -281,7 +248,6 @@ function strippable(name: string): boolean {
   );
 }
 
-/** A copy of `source` with no testid, no interaction and no text node. */
 export function standInCopy(source: Element): HTMLElement {
   const copy = source.cloneNode(true) as HTMLElement;
   const doc = copy.ownerDocument;
@@ -305,7 +271,6 @@ export function standInCopy(source: Element): HTMLElement {
   return copy;
 }
 
-/** Where a stand-in lands in a zone: card-shaped, the zone's height, centred as the board centres a card. */
 export function landingBox(zone: FxBox, source: FxBox | null): FxBox {
   const height = Math.max(1, zone.height - 2);
   const aspect = source !== null && source.height > 0 ? source.width / source.height : CARD_ASPECT;
@@ -313,20 +278,13 @@ export function landingBox(zone: FxBox, source: FxBox | null): FxBox {
   return { x: zone.x + (zone.width - width) / 2, y: zone.y + (zone.height - height) / 2, width, height };
 }
 
-/** A card's width over its height (board.css: --card-w = 0.74 × --card-h). */
 const CARD_ASPECT = 0.74;
-/** Where a stand-in with nothing to fly from drops in from, and its start scale. */
 const DROP_PX = -14;
 const DROP_SCALE = 1.3;
-/** fx.css's `fx-hold-fly` swells the stand-in to this mid-flight, whatever it starts at. */
 const FLIGHT_PEAK_SCALE = 1.3;
-/** fx.css's resting `transform-origin` for a stand-in, as fractions of its box. */
 const HOLD_ORIGIN = { x: 0.5, y: 0.6 } as const;
 
-/**
- * Where a stand-in scales from, as fractions of its box, so that at `scale` it stays inside the
- * `view` (the viewport): the resting origin, moved toward any edge the box is too close to.
- */
+/** Keeps the scaled stand-in inside the viewport. */
 export function holdOrigin(land: FxBox, scale: number, view: { width: number; height: number }): { x: number; y: number } {
   const axis = (start: number, size: number, room: number, rest: number): number => {
     const grow = size * (scale - 1);
@@ -342,17 +300,10 @@ export function holdOrigin(land: FxBox, scale: number, view: { width: number; he
 }
 
 export type HoldEffect = DomEffect & {
-  /** Re-places the stand-in on a new landing box (its size changed: a resize). Costs a layout. */
   place(land: FxBox): void;
-  /** Offsets the stand-in from where it was placed (the board shook or scrolled under it). No layout. */
   shift(dx: number, dy: number): void;
 };
 
-/**
- * Mounts a stand-in for `cue`: a copy of `source` (flying from `from`, its box) when there is one,
- * else a card-shaped light that drops into `land`. `font` is the font size the source card
- * inherits, so its `em` sizes resolve as they do on the board.
- */
 export function mountHold(
   root: HTMLElement,
   cue: FxHoldCue,

@@ -1,23 +1,5 @@
-// BUILD M9-T12 `32-tribute-full-board.cy.ts`: player 1's five unit zones full, C #45 Nature Titan
-// (Tribute 1) in hand (R391; issue #66).
-//
-// What it asserts, read off the DOM player 1's view drew (CLAUDE.md rule 7):
-//
-//   1. On a full unit row the Tribute card is still playable. The hand card is live, and picking it
-//      up opens the Tribute picker.
-//   2. The zones it may go into glow as legal: lanes 3, 4 and 5, whose single Felinor Token its own
-//      Tribute would empty. Lane 1 is never offered, because its #3 Right-house defender has Reborn,
-//      so its zone would be reserved for the return (R64). Lane 2 is never offered either: #92
-//      Felinor Fiender sits on a pile over a Felinor Token, and tributing the top frees nothing (R13).
-//   3. Paying the lane-4 Felinor plays the Titan into lane 4. The token is gone, and the Titan's Cry
-//      resolves: it draws 1 and heals player 1's hero 3, from 30 to 33.
-//
-// Decks: `32-tribute-a` is spec 03's player-1 deck with Nature Titan swapped in. Its handicap
-// (R180) gives player 1 four crystals and a ten-card hand from turn 1, so the whole row is filled on
-// player 1's first turn: Right-house defender in lane 1, then Friend of Felinors for lanes 2-5, then
-// Felinor Fiender stacked onto lane 2. The fixture's description has the reasoning. `30-quiet-b`
-// does nothing. Seed 32-tribute-18 was chosen by replaying these moves against the engine; it deals
-// all four cards into player 1's opening hand.
+// BUILD M9-T12: C #45 Nature Titan's Tribute follows R391; R64 and R13 exclude lanes 1 and 2.
+// R180 provides the full-row setup. DOM assertions use player 1's view (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";
 import { cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
@@ -46,7 +28,6 @@ describe("BUILD M9 32: a Tribute card on a full unit row (R391)", () => {
   it("R391: only the zones a Tribute empties are offered, and the card lands in the one it paid for", () => {
     cy.seedGame({ seed: SEED, a: "32-tribute-a", b: "30-quiet-b" });
 
-    // Player 1's first turn: fill the row.
     ensureSeat("p1");
     cy.playByName("Right-house defender", { zone: { side: "you", row: "units", lane: 1 } });
     cy.playByName("Friend of Felinors");
@@ -78,7 +59,7 @@ describe("BUILD M9 32: a Tribute card on a full unit row (R391)", () => {
           cy.get(ts(zoneId("you", "units", lane))).should("not.match", GLOWING);
         }
 
-        // Paying lane 4's Felinor is the one candidate left, so the play goes at once.
+        // The last candidate resolves the Tribute immediately.
         cy.answerPrompt("tribute", { cards: [paid] });
         cy.get(ts(cardId(paid))).should("not.exist");
         cy.get(ts(zoneId("you", "units", INTO))).find(ts(cardId(titan))).should("exist");

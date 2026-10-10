@@ -1,16 +1,7 @@
-// Where the practice core runs: a module Web Worker in a browser, the page's own thread in jsdom.
-//
-// Either way the page talks to it only through `request`, which assigns the ids and resolves each
-// request with its own response, strictly in order. A worker processes its messages one at a time,
-// so order comes for free there; the in-thread host chains its answers to get the same guarantee,
-// and answers each on a macrotask so a test sees the same asynchrony a worker has.
-//
-// Only type imports reach `core.ts` from here (they are erased), so the page's bundle never holds
-// the practice core: the worker's bundle does, and the in-thread host loads it with a dynamic import
-// when it is first asked. Either way the engine and the AI are the WebAssembly module
-// (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request: the worker loads its own, and the
-// in-thread host awaits `loadWasm()`, which under jsdom returns at once, because `test/setup.ts` has
-// already instantiated the module from its bytes with `loadWasmSync`.
+// The core runs in a module worker, or in-thread under jsdom; `request` preserves response order.
+// The in-thread host answers on a macrotask to match worker asynchrony.
+// Type-only imports keep the core out of the page bundle; the worker dynamically imports it.
+// The engine and AI are WebAssembly (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
 
 import { loadWasm } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
@@ -18,7 +9,6 @@ import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
 
 export type PracticeHost = {
-  /** Requests are answered strictly in order; ids are assigned here. */
   request(body: PracticeRequestBody): Promise<PracticeResponse>;
   dispose(): void;
 };
@@ -39,23 +29,15 @@ function withId(body: PracticeRequestBody, id: number): PracticeRequest {
   return { ...body, id } as PracticeRequest;
 }
 
-/**
- * A module Worker (`new Worker(new URL("./practice.worker.ts", import.meta.url), { type: "module" })`)
- * when `typeof Worker === "function"` and !forceInThread; otherwise the in-thread host, which
- * dynamic-imports ./core.ts and answers each request on a macrotask (setTimeout 0).
- */
 export function createPracticeHost(options: PracticeHostOptions = {}): PracticeHost {
   if (typeof Worker === "function" && options.forceInThread !== true) return createWorkerHost();
   return createInThreadHost(options.env ?? {});
 }
 
-// ---------------------------------------------------------------------------------------------
-// the worker host
-// ---------------------------------------------------------------------------------------------
+// The worker host
 
 function createWorkerHost(): PracticeHost {
-  // Spelled out in full, in one expression: Vite recognises exactly this shape and bundles the
-  // worker and everything it imports as a separate chunk.
+  // Vite recognises this exact shape and bundles the worker as a separate chunk.
   const worker = new Worker(new URL("./practice.worker.ts", import.meta.url), { type: "module" });
 
   let nextId = 1;
@@ -76,8 +58,7 @@ function createWorkerHost(): PracticeHost {
     resolve(response);
   };
 
-  // A script error is an ErrorEvent with a message. A worker whose script never loaded (a deploy
-  // since this page loaded replaced the hashed chunk it names) fires a plain Event with none.
+  // A missing deployed chunk fires a plain Event, unlike a script ErrorEvent.
   worker.onerror = (event: Event) => {
     event.preventDefault();
     const message = (event as Partial<ErrorEvent>).message;
@@ -118,9 +99,7 @@ function createWorkerHost(): PracticeHost {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// the in-thread host (jsdom, and any browser without module workers)
-// ---------------------------------------------------------------------------------------------
+// The in-thread host for jsdom and browsers without module workers
 
 function macrotask(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -132,17 +111,14 @@ function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
   let nextId = 1;
   let disposed = false;
   let core: Promise<PracticeCore> | null = null;
-  /** The previous request's answer; each request waits for it, so answers keep their order. */
   let chain: Promise<unknown> = Promise.resolve();
 
   function load(): Promise<PracticeCore> {
     if (core === null) {
-      // R668: the save store is the env's (a test passes one to outlive the host, as IndexedDB
-      // outlives a reload), else the scope's own.
+      // R668: an injected save store outlives the host; otherwise use this scope's store.
       const saves = env.saves ?? defaultSaveStore();
       core = Promise.all([import("./core.ts"), saves.ready, loadWasm()]).then(([mod]) =>
         mod.createPracticeCore({
-          // `Date.now`, the clock the WebAssembly side measures the AI's deadline on (`core.ts`).
           now: () => Date.now(),
           dev: import.meta.env.MODE !== "production",
           ...env,

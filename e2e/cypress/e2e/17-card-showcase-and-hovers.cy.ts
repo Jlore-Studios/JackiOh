@@ -1,34 +1,5 @@
-// Spec 17 — the opponent's play held up, and the log and the piles looked into (client polish,
-// SPEC §10.8, §10.10, R97, R202).
-//
-// What it proves, in a real browser against `pnpm build:e2e` + `vite preview` and no server:
-//
-//   * a card the opponent plays is held up beside the field (`showcase`) for about a second
-//     (SHOWCASE_HOLD_MS, 1 s at the default effects speed), click-through, and then goes by itself;
-//     the polite live region says what was played. On `/dev/hotseat` the arriving seat catches up
-//     on the plays made since it last held the device; the viewer's own plays are never held up;
-//   * a log line that names a card is a button (`log-card`): a resting mouse opens the card's face
-//     (`inspect-hover`), and a click opens it in the sheet, which Escape closes;
-//   * a graveyard (and so an exile pile, the same component) that holds cards is browsable on both
-//     seats: a resting mouse shows its count and its newest faces (`inspect-list-hover`), and a click
-//     opens every card, newest first, in a dialog (`inspect-list-sheet`) where a face opens large;
-//     the opponent's library, which is hidden, is not browsable (your own is, without its order:
-//     spec 24, R313);
-//   * on `/practice` (normal pacing, not `?pace=fast`), the AI's played card is held up for about a
-//     second and the AI takes no step while it is up (routes/practice.tsx holds it on
-//     `data-showcase`, as it does on `data-speaking`);
-//   * cards in play show what they are now (SPEC §10.10): a #98 Heroic Power in hand prints only the
-//     power it rolled, with its X, (0) on the gem, and the printed list of thirteen beside its hover
-//     preview (R752); a
-//     #95 Call to Chaos reads ???; and #82 KY's Trial's Discover offers three numbers on card backs,
-//     no faces, the pick arriving as the Radiant card with that index (R247).
-//
-// House rules (BUILD M8): seeds come from `seedFor`, there is no fixed `cy.wait(ms)` (every wait is
-// `cy.settled()` or a retried assertion), and every selector comes from support/testids.ts.
-//
-// How long the showcase stood is read off a recorder, not off Cypress polling: a MutationObserver
-// installed in the page timestamps every showcase as it appears and as it goes (the page's own
-// `performance.now()`), so "about a second" is measured where it happened.
+// Spec 17: card showcases, inspection, and current in-play display (SPEC §10.8, §10.10; R97, R202, R247, R313, R752).
+// It uses `seedFor`, settled assertions, and support/testids selectors; the page-side recorder measures showcase duration.
 //
 // Run it with:
 //   pnpm build:e2e
@@ -76,29 +47,18 @@ const SEED = seedFor("17-showcase");
 const DECK_A = "01-aggro-a";
 const DECK_B = "01-aggro-b";
 
-/**
- * Spec 03's decks and seed: player 2 holds #41 Sheepish on its first turn and sets it face down
- * (R227). The seed is spec 03's own, so the trap is in hand exactly when that spec relies on it.
- */
+/** Spec 03's seed gives player 2 #41 Sheepish on its first turn (R227). */
 const TRAP_SEED = seedFor("03-sheep-19");
 const TRAP_DECK_A = "03-plays-a";
 const TRAP_DECK_B = "03-sheepish-b";
 const TRAP_NAME = "Sheepish";
 
-/**
- * The cards-in-play test's decks and seed (SPEC §10.10, R247): with 17-live-48, player 1 opens with
- * #98 Heroic Power, #82 KY's Trial and #95 Call to Chaos in hand on turn 1, with the 1 mana #82
- * costs (e2e/fixtures/decks/17-live-a.json). Player 2 only ends turns.
- */
+/** This seed opens player 1 with #98, #82, and #95 (SPEC §10.10, R247). */
 const LIVE_SEED = seedFor("17-live-48");
 const LIVE_DECK_A = "17-live-a";
 const LIVE_DECK_B = "08-do-nothing-b";
 
-/**
- * The catalog's Units and Spells among 01-aggro-a and 01-aggro-b (crates/cards/catalog.json).
- * Every card in those two decks is choice-free (spec 01), so a play is a hand click plus, for a
- * Unit, a zone click. A Spell resolves into its owner's graveyard; the Field Spells stay out.
- */
+/** Choice-free Unit and Spell ids in the fixtures. */
 const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
   "core-001", "core-003", "core-008", "core-011", "core-015", "core-019", "core-020", "core-025",
   "core-032", "core-045", "core-053", "core-056", "core-077", "core-081", "core-089", "core-091",
@@ -106,37 +66,29 @@ const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
 ]);
 const SPELL_DEF_IDS: ReadonlySet<string> = new Set(["core-005", "core-010", "core-062"]);
 
-/** Player-turns to wait for the client to offer a card of a kind. A 0- to 2-cost card lands well inside it. */
+/** Turns to seek an offered 0- to 2-cost card. */
 const TURN_BUDGET = 8;
 
-/**
- * SHOWCASE_HOLD_MS (apps/web/src/game/showcase/constants.ts) is 1 s at the default effects speed.
- * The measured hold may land a little either side of it (timers, frames, a busy CI runner), and
- * "about a second" is what is asserted.
- */
+/** Allow timer, frame, and CI jitter around SHOWCASE_HOLD_MS. */
 const HOLD_MIN_MS = 700;
 const HOLD_MAX_MS = 2_500;
 
-/** The practice worker loads the engine, the card scripts and the AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
-/** Human turns the practice test may end while waiting for the AI to play a card. */
 const PRACTICE_TURN_BUDGET = 6;
-/** Prompts the human may have to answer on the way (a cast-on-draw, R58, is rare). */
+/** Cap rare cast-on-draw prompts (R58). */
 const PROMPT_BUDGET = 10;
 
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 const ROWS: readonly Row[] = ["units", "backrow"];
 
-/** A catalog id's printed name: `core-032` is SPEC §8 #32. */
+/** Catalog display name (SPEC §8). */
 function nameOf(defId: string): string {
   const name = CARD_NAMES[Number(defId.replace(/^core-/, ""))];
   expect(name, `SPEC §8 names ${defId}`).to.not.eq(undefined);
   return name ?? defId;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the recorder
-// ---------------------------------------------------------------------------------------------
+// Recorder
 
 type Shown = {
   seq: string | null;
@@ -148,7 +100,6 @@ type Shown = {
   goneAt: number | null;
 };
 
-/** A practice step: the newest event the page's snapshot carries changed. */
 type Step = { at: number; key: string };
 
 type Recorder = { showcases: Shown[]; steps: Step[] };
@@ -157,10 +108,7 @@ type PracticeHandleLike = { readonly view: { events: unknown[] } | null; readonl
 
 type RecordingWindow = { __showcaseRecorder?: Recorder; __jackiohPractice?: PracticeHandleLike };
 
-/**
- * Timestamp every showcase as it appears and as it goes, and (on /practice) every change of the
- * newest event in the page's snapshot, from inside the page. Safe to install twice.
- */
+/** Page-side recorder; safe to install twice. */
 function installRecorder(win: Cypress.AUTWindow): void {
   const host = win as unknown as RecordingWindow;
   if (host.__showcaseRecorder !== undefined) return;
@@ -210,7 +158,6 @@ function recorder(): Cypress.Chainable<Recorder> {
   });
 }
 
-/** Every showcase of `defId` has come and gone, and there is exactly `count` of them. */
 function expectHeldAboutASecond(defId: string, count = 1): void {
   cy.window({ timeout: timeouts.animation }).should((win) => {
     const recorded = (win as unknown as RecordingWindow).__showcaseRecorder;
@@ -225,9 +172,7 @@ function expectHeldAboutASecond(defId: string, count = 1): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// hotseat: playing a card of a kind through the UI (the pattern spec 15 uses)
-// ---------------------------------------------------------------------------------------------
+// Hotseat play helper
 
 type HandCard = { id: string; defId: string };
 
@@ -236,7 +181,6 @@ function handOf(state: GameStateLike, player: PlayerId): HandCard[] {
   return side.hand ?? [];
 }
 
-/** The first of `testids` the client marks `data-legal="true"` (its copy of `legalActions`). */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
@@ -244,7 +188,7 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
   });
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: act from the seat holding the hotseat device. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     if (handle.seat !== undefined && handle.seat !== player) cy.handOver();
@@ -253,11 +197,7 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string; seat: PlayerId | "" };
 
-/**
- * Play the first card of `kinds` the client offers from the active seat's hand: a hand click, then
- * the first highlighted zone of the player's own side if the play asks for one. Ends turns (handing
- * the device over) until one is offered.
- */
+/** Play the first offered kind, ending and handing over turns until one is available. */
 function playOffered(kinds: ReadonlySet<string>, played: Played, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered such a card inside the turn budget").to.be.greaterThan(0);
@@ -295,11 +235,8 @@ function playOffered(kinds: ReadonlySet<string>, played: Played, turnsLeft = TUR
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// practice
-// ---------------------------------------------------------------------------------------------
+// Practice
 
-/** Any `prompt-option-<key>`. */
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
 
 function practiceUrl(seed: string): string {
@@ -322,12 +259,7 @@ function aiHasPlayed(win: Cypress.AUTWindow): boolean {
   );
 }
 
-/**
- * Wait, as long as whole AI turns take, for a showcase that has come and gone, the human's main
- * phase, a prompt for the human, or the end. The human's turn and prompt are read off the newest
- * snapshot AND a board that has caught up with it (nothing animating), so an answer is never sent
- * twice for one prompt.
- */
+/** Read prompt and turn from a settled snapshot so a prompt is never answered twice. */
 function waitForShowcaseOrHuman(): Cypress.Chainable<Waited> {
   const classify = (win: Cypress.AUTWindow): Waited | null => {
     if (aiHasPlayed(win)) return "showcase";
@@ -352,7 +284,6 @@ function waitForShowcaseOrHuman(): Cypress.Chainable<Waited> {
     .then((win) => classify(win) ?? "over");
 }
 
-/** Act once, then wait for the snapshot that answers it, so nothing is sent twice. */
 function actOnce(act: () => void): void {
   cy.window({ log: false }).then((win) => {
     const before = practiceView(win);
@@ -363,7 +294,6 @@ function actOnce(act: () => void): void {
   });
 }
 
-/** Answer whatever prompt the human holds: keep the whole hand for a mulligan, else the first option. */
 function answerHumanPrompt(): void {
   actOnce(() => {
     cy.get(PROMPT)
@@ -390,7 +320,6 @@ function answerHumanPrompt(): void {
   });
 }
 
-/** Keep going until the AI has played a card the showcase held up and took down again. */
 function untilTheAiPlays(turns = PRACTICE_TURN_BUDGET, prompts = PROMPT_BUDGET): void {
   waitForShowcaseOrHuman().then((waited) => {
     if (waited === "showcase") return;
@@ -409,20 +338,16 @@ function untilTheAiPlays(turns = PRACTICE_TURN_BUDGET, prompts = PROMPT_BUDGET):
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// the spec
-// ---------------------------------------------------------------------------------------------
+// Spec
 
 describe("17 — the opponent's play held up, and the log and the piles looked into", () => {
   it("holds the opponent's played card up for about a second, click-through, and never the viewer's own", () => {
     cy.seedGame({ seed: SEED, a: DECK_A, b: DECK_B });
     const played: Played = { instanceId: "", defId: "", seat: "" };
     playOffered(UNIT_DEF_IDS, played);
-    // The seat that played it holds the device: its own play is never held up.
     cy.get(ts(SHOWCASE)).should("not.exist");
 
     cy.window().then(installRecorder);
-    // The seat ends its turn and hands the device over; the arriving seat catches up on the play.
     cy.endTurn();
     cy.then(() => {
       const name = nameOf(played.defId);
@@ -432,13 +357,11 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
         .and("have.css", "pointer-events", "none");
       cy.get(ts(SHOWCASE_FACE)).should("contain.text", name);
       cy.get(ts(SHOWCASE_LIVE)).should("have.text", `Opponent played ${name}`);
-      // It goes by itself, after about a second.
       cy.get(ts(SHOWCASE), { timeout: timeouts.animation }).should("not.exist");
       expectHeldAboutASecond(played.defId);
       cy.get(ts(SHOWCASE_LIVE)).should("have.text", "");
     });
 
-    // The arriving seat plays a card of its own: nothing is held up for it.
     const own: Played = { instanceId: "", defId: "", seat: "" };
     playOffered(UNIT_DEF_IDS, own);
     cy.get(ts(SHOWCASE)).should("not.exist");
@@ -452,14 +375,12 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
 
   it("R97 / R227 a trap the opponent sets face down is held up as a back that names nothing", () => {
     cy.seedGame({ seed: TRAP_SEED, a: TRAP_DECK_A, b: TRAP_DECK_B });
-    // Player 1's first turn: nothing to show yet, so it passes to player 2.
     cy.gameState().then((state) => {
       ensureSeat(state.active);
       cy.endTurn();
     });
     ensureSeat("p2");
     cy.playByName(TRAP_NAME, { zone: { side: "you", row: "backrow", lane: 3 } });
-    // Its controller set it: nothing is held up on this seat.
     cy.get(ts(SHOWCASE)).should("not.exist");
 
     cy.window().then(installRecorder);
@@ -484,7 +405,6 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
       expect(set[0]?.def ?? null, "with no definition").to.eq(null);
       expect(set[0]?.text ?? "", "and no name").to.not.contain(TRAP_NAME);
     });
-    // Nor does the log open it: the line about the set names no card.
     cy.get(ts(LOG)).should(($log) => {
       const opens = $log
         .find(ts(LOG_CARD))
@@ -506,13 +426,11 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
       const line = `${ts(LOG)} ${ts(LOG_CARD)}[data-def-id="${played.defId}"]`;
       cy.get(line).first().should("contain.text", name);
 
-      // A resting mouse opens the card's face beside the log.
       cy.get(line).first().trigger("pointerover", { pointerType: "mouse" });
       cy.get(ts(INSPECT_HOVER)).should("be.visible").and("contain.text", name);
       cy.get(line).first().trigger("pointerout", { pointerType: "mouse" });
       cy.get(ts(INSPECT_HOVER)).should("not.exist");
 
-      // A click (a tap, Enter) opens it in the sheet; Escape closes it.
       cy.get(line).first().click();
       cy.get(ts(INSPECT_SHEET)).should("be.visible").and("have.attr", "role", "dialog").and("contain.text", name);
       cy.get(ts(INSPECT_CLOSE)).should("have.focus");
@@ -520,7 +438,6 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
       cy.get(ts(INSPECT_SHEET)).should("not.exist");
     });
 
-    // A line about no particular card (a draw, a mana change) opens nothing.
     cy.get(`${ts(LOG)} .log-line[data-event="manaChanged"]`).first().find(ts(LOG_CARD)).should("not.exist");
   });
 
@@ -532,8 +449,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
     cy.then(() => {
       const name = nameOf(spell.defId);
       const pile = ts("graveyard-you");
-      // The opponent's library is hidden, so it is a count and nothing else (your own opens its
-      // list without order, R313: spec 24).
+      // R313 (spec 24): the opponent's library is not browsable.
       cy.get(ts("library-opponent")).should("not.have.attr", "data-browsable");
 
       cy.get(ts(graveyardCountId("you")))
@@ -542,7 +458,6 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
           const count = Number(text);
           expect(count, "the Spell resolved into its owner's graveyard").to.be.at.least(1);
 
-          // Hover: the count and the newest faces, click-through.
           cy.get(`${pile}${BROWSABLE}`).trigger("pointerover", { pointerType: "mouse" });
           cy.get(ts(INSPECT_LIST_HOVER)).should("be.visible").and("have.css", "pointer-events", "none");
           cy.get(`${ts(INSPECT_LIST_HOVER)} ${ts(INSPECT_LIST_COUNT)}`).should("have.attr", "data-count", String(count));
@@ -550,7 +465,6 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
           cy.get(pile).trigger("pointerout", { pointerType: "mouse" });
           cy.get(ts(INSPECT_LIST_HOVER)).should("not.exist");
 
-          // Click: every card in a dialog, newest first; a face opens large, Back returns, Escape closes.
           cy.get(pile).click();
           cy.get(ts(INSPECT_LIST_SHEET)).should("be.visible").and("have.attr", "role", "dialog");
           cy.get(`${ts(INSPECT_LIST_SHEET)} ${ts(INSPECT_LIST_CARD)}`).should("have.length", count);
@@ -563,7 +477,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
           cy.get(ts(INSPECT_LIST_SHEET)).should("not.exist");
           cy.get(pile).should("have.focus");
 
-          // The other seat reads the same pile as the opponent's: public, so browsable there too.
+          // Public piles remain browsable to the other seat.
           cy.endTurn();
           cy.get(`${ts("graveyard-opponent")}${BROWSABLE}`).click();
           cy.get(`${ts(INSPECT_LIST_SHEET)} ${ts(INSPECT_LIST_CARD)}`).first().should("have.attr", "data-def-name", name);
@@ -585,8 +499,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
         const held = (entry.goneAt ?? 0) - entry.shownAt;
         expect(held, `the AI's ${entry.def ?? "card"} stood for about a second`).to.be.within(HOLD_MIN_MS, HOLD_MAX_MS);
         expect(entry.pointerEvents, "the showcase is click-through").to.eq("none");
-        // The AI's next step waits for it: its snapshot does not move while the card is up. The step
-        // that played the card lands in the same commit that raises the showcase, hence the margin.
+        // The play's snapshot lands with the showcase, so allow a small margin.
         const during = recorded.steps.filter((step) => step.at > entry.shownAt + 50 && step.at < (entry.goneAt ?? 0));
         expect(during, `no AI step while ${entry.def ?? "the card"} was held up`).to.have.length(0);
       }
@@ -595,7 +508,6 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
 });
 
 describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
-  /** The shown hand card of `defId`, by the attribute the board puts on its root. */
   const inHand = (defId: string): string => `[data-testid^="hand-card-"][data-def-id="${defId}"]`;
 
   it("R247 Heroic Power prints its rolled power, Call to Chaos reads ???, and KY's Trial Discovers three numbers", () => {
@@ -604,13 +516,11 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
       if (handle.seat !== "p1") cy.handOver();
     });
 
-    // #98 (R752): the card costs (0), and its text is one power, the one it rolled, with its X; not
-    // the thirteen.
+    // R752: show the rolled power, not all thirteen.
     cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
     cy.get(`${inHand("core-098")} .card-text`)
       .should("contain.text", "Activate: Spend (")
       .and("not.contain.text", "13 random powers");
-    // Its hover preview holds the printed card beside it, in a real layout: visible, on screen.
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
       .should("be.visible")
@@ -618,10 +528,8 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 
-    // #95: its text is a mystery in play.
     cy.get(`${inHand("core-095")} .card-text`).should("have.text", "???");
 
-    // #82: three numbers on card backs, no card faces, and the pick is the card with that index.
     cy.playByName("KY's Trial");
     cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
     cy.get(`${promptOf("discover")} [data-number]`)
@@ -632,7 +540,6 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
         expect($option.find(".cf").length, `number ${n} draws no card face`).to.eq(0);
         const value = $option.find(".prompt-number-value");
         expect(value.text()).to.eq(n);
-        // The number sits inside its option, where a player can read it.
         const inner = value[0]?.getBoundingClientRect();
         const outer = $option[0]?.getBoundingClientRect();
         expect(inner !== undefined && outer !== undefined && inner.width > 0, `number ${n} is laid out`).to.eq(true);
@@ -647,7 +554,6 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
       .then((picked) => {
         const name = CARD_NAMES[Number(picked)];
         expect(name, `SPEC §8 names #${String(picked)}`).to.not.eq(undefined);
-        // The picker names no card: only the number stands for it.
         cy.get(promptOf("discover")).should("not.contain.text", name ?? "");
         cy.answerPrompt("discover", { first: 1 });
         cy.get(`[data-testid^="hand-card-"][data-radiant="true"]`).should("contain.text", name ?? "");

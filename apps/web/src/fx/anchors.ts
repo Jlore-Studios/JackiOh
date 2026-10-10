@@ -19,7 +19,6 @@ function attrValue(value: string): string {
   return value.replace(/["\\]/g, "\\$&");
 }
 
-/** The element's viewport rectangle, or null when there is no element or it has no size yet. */
 function boxOf(element: Element | null | undefined): FxBox | null {
   if (element === null || element === undefined) return null;
   const rect = element.getBoundingClientRect();
@@ -29,7 +28,6 @@ function boxOf(element: Element | null | undefined): FxBox | null {
 
 const HAND_TESTIDS: ReadonlySet<string> = new Set(["hand-you", "hand-opponent"]);
 
-/** A hand's cards plus the slot after the last one, inside the strip (see the header). */
 function handBox(hand: Element): FxBox | null {
   const strip = boxOf(hand);
   if (strip === null) return null;
@@ -93,7 +91,6 @@ export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): F
   return boxOf(crystal) ?? boxOf(tray);
 }
 
-/** The point `at` inside `box`, as fractions of its width and height; the centre by default. */
 export function pointIn(box: FxBox, at?: FxPoint): FxVec {
   const p = at ?? CENTRE;
   return { x: box.x + box.width * p.x, y: box.y + box.height * p.y };

@@ -1,11 +1,5 @@
-// BUILD M8's row for `10-invite-gate.cy.ts`: "code screen shown; bad code error identical for
-// three failure kinds; good code activates".
-//
-// The three states the screen can be in, plus the property that makes the identical error worth
-// anything: §9.4's one sentence for a code failure and R145's distinct sentence for an
-// account-state failure both reach the DOM exactly as the server wrote them. A client that
-// paraphrased either would flatten the two into one, which is the oracle §9.8 is paying 80 bits to
-// avoid. Every number in the format assertions is imported from `crates/server/src/config.rs`.
+// BUILD M8: §9.4/R145 refusal messages reach the DOM verbatim, preserving §9.8's oracle boundary.
+// Format assertions read config rather than spelling values.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,19 +74,12 @@ async function mount(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// §9.4's format, from config
-// ---------------------------------------------------------------------------------------------
+// §9.4 format from config
 
 describe("the code format is §9.4's, read from crates/server/src/config.rs", () => {
   it("R104 normalises to upper case, and refuses an excluded character rather than dropping it", async () => {
-    // R104: "the alphabet is uppercase-only, so SPEC's exclusion of lowercase `l` is satisfied by
-    // normalising any user-entered code to upper case before comparison, rather than by omitting a
-    // lowercase `l` that could never appear here in the first place." So a typed `l` becomes the
-    // alphabet's own `L`. R191 settles the other half: `0`, `O`, `1` and `I` are outside the
-    // alphabet, and both halves of each look-alike pair are, so none can be mapped to anything.
-    // The reading stops at the first one. It is never dropped: the old field turned `AB0CD` into
-    // `ABCD`, shifting every later character and sending a different code.
+    // R104 normalises lowercase `l` to `L`; R191 refuses ambiguous look-alikes rather than mapping them.
+    // Refusal stops reading rather than dropping a character and shifting the submitted code.
     expect(formatInviteCode("abcd")).toBe("ABCD");
     expect(formatInviteCode("l")).toBe("L");
     for (const excluded of ["0", "O", "1", "I", "o", "i"]) {
@@ -104,8 +91,6 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
     }
     expect(CODE_ALPHABET.includes("L"), "R104 keeps L; SPEC excludes only lowercase l").toBe(true);
 
-    // And on the screen: the keystroke is refused, the value stays what it was, and the field
-    // names the character instead of quietly sending a different code.
     await mount();
     const input = screen.getByTestId(INVITE_CODE_INPUT);
     fireEvent.change(input, { target: { value: "ab" } });
@@ -118,7 +103,6 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
     expect(hint).toHaveAttribute("data-kind", "excluded");
     expect(hint.textContent).toContain("0");
 
-    // The next accepted keystroke clears the hint.
     fireEvent.change(input, { target: { value: "abc" } });
     expect(input).toHaveValue("ABC");
     expect(screen.queryByTestId(codeFieldTestid.hint)).toBeNull();
@@ -149,9 +133,7 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// state 1: a pending account, redemption open
-// ---------------------------------------------------------------------------------------------
+// Pending account, redemption open
 
 describe("a pending account", () => {
   it("is shown the code screen", async () => {
@@ -208,9 +190,7 @@ describe("a pending account", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the error, verbatim (§9.4's identical error and R145's distinct one)
-// ---------------------------------------------------------------------------------------------
+// Verbatim refusal messages (§9.4, R145)
 
 describe("a refusal is rendered exactly as the server wrote it", () => {
   async function submitAndFail(error: ApiRequestError): Promise<HTMLElement> {
@@ -229,9 +209,7 @@ describe("a refusal is rendered exactly as the server wrote it", () => {
   });
 
   it("shows an account-state refusal as its own sentence, not as the code one (R145)", async () => {
-    // §9.4's identical error covers missing, revoked, expired, exhausted and malformed. An
-    // already-active account is a 409 and is *supposed* to read differently; the client must not
-    // level the two.
+    // §9.4 code failures share one error; R145 requires a distinct already-active response.
     const distinct = "This account is already active.";
     const node = await submitAndFail(
       new ApiRequestError(409, { code: "already_active", message: distinct }),
@@ -248,9 +226,7 @@ describe("a refusal is rendered exactly as the server wrote it", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// state 2: redemption paused (§9.4's circuit breaker)
-// ---------------------------------------------------------------------------------------------
+// Redemption paused (§9.4 circuit breaker)
 
 describe("when redemption is paused", () => {
   it("says so from GET /api/codes/status instead of guessing after a 503", async () => {
@@ -273,9 +249,7 @@ describe("when redemption is paused", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// state 3: an active account that reached the code screen
-// ---------------------------------------------------------------------------------------------
+// Active account
 
 describe("an active account", () => {
   it("is told it needs no code, and the route stays reachable", async () => {
@@ -284,15 +258,11 @@ describe("an active account", () => {
     await waitFor(() => {
       expect(screen.getByTestId(INVITE_NOT_NEEDED)).toBeInTheDocument();
     });
-    // Spec 10 visits this route while pending and expects to stay; nothing bounces an active one
-    // away either, because redemption is the pending → active transition and 409 is not a gate.
     expect(window.location.pathname).toBe("/invite");
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// no session at all
-// ---------------------------------------------------------------------------------------------
+// No session
 
 describe("with no session", () => {
   it("goes to the sign-in screen", async () => {

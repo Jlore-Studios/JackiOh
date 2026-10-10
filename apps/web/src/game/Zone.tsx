@@ -1,21 +1,16 @@
-// One field zone: a side, a row and a lane, plus whatever the view says is standing in it
-// (SPEC §3, BUILD M5-T1).
+// Field zone view (SPEC §3; BUILD M5-T1).
 //
-// It reads `locks[row][laneIndex(lane)]` for `data-locked` (BUILD M5-T4) and nothing else about the
-// rules: whether a card may be played here is `props.highlight.legal`, from the engine's
-// `legalActions`; an empty unlocked zone with no highlight is greyed out.
+// It reads `locks[row][laneIndex(lane)]` for `data-locked` (BUILD M5-T4); play legality comes from
+// the engine's `legalActions`.
 //
-// Polish task 7: the zone glows (`data-glow="ready"`) when its testid is in `highlight.glow`. Drag to
-// play is pointer events in game/drag/DragLayer.tsx, which hit-tests the zone by testid, so the zone
-// needs no drag handler.
+// DragLayer hit-tests zones by testid; no drag handler belongs here.
 
 import type { ReactElement } from "react";
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
 /**
- * One flag out of a `{ units, backrow }` pair. Optional on purpose: a fixture or a server that
- * predates a field hands over `undefined`, and a missing flag must read "not set", not crash.
+ * Missing flags from old fixtures or servers read as "not set", not a board crash.
  */
 function flagAt(flags: { units: boolean[]; backrow: boolean[] } | undefined, row: Row, lane: number): boolean {
   if (flags === undefined) return false;

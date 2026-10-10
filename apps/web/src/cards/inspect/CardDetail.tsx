@@ -1,15 +1,7 @@
-// The deck builder's detail view (B29): both faces side by side, a meta line (lines of code last,
-// E36), the glossary, and the caller's meta and actions above Close. A modal dialog over a scrim,
-// closed by Close, the scrim or Escape (B25); it takes the one inspect slot, and closeInspect() closes it.
-//
-// A reference in a card's text is a control (R279); the Radiant face and line mark in gold what the
-// base face lacks (R277). The rules text is printed again at reading size, since two faces on a
-// 390 px phone print a long card at 5 px: inspect.css shows it on narrow, short and long-text
-// screens, and on a wide short one puts the info column beside the faces. The actions row is pinned
-// under the scrolling body, where focus lands.
-//
-// After the glossary: the flavour line and artist credit (R660, Flavour.tsx). Last, the card's
-// History (R388, patches/CardHistory.tsx), collapsed unless `historyOpen` (the Patch notes page).
+// Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29).
+// It is the sole inspect slot, closed by Close, scrim or Escape (B25).
+// Card-text refs are controls and Radiant differences are gold (R279, R277); reading-size rules and
+// pinned actions keep long faces usable. Flavour then History follow the glossary (R660, R388).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";

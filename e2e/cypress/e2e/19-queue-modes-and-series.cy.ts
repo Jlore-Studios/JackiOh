@@ -1,49 +1,6 @@
-// BUILD M8 spec 19 — "The three queue modes, and a Conquest series between the browser and
-// `cy.task(\"wsPlayer\")` (R257–R264, R330–R338)".
-//
-// Key assertions (BUILD M8, quoted verbatim):
-//
-//     "Best of 1 plays the chosen deck; All Random needs no saved deck; a series pick is chosen,
-//      locked in and hidden until both have picked; each game starts on the picked decks; a deck
-//      that wins is locked and a deck that lost may be picked again; a player's last deck is picked
-//      for them; a conceded game loses the game, not the series; the series ends when one side has
-//      won with all three decks and moves the rating once; a room refuses a joiner in another mode"
-//
-// WHO IS WHO. Seat one is the browser, signed in as the `e2e-p1` fixture account; it only ever acts
-// through the lobby (`/play`), the series screen (`/series/<id>`) and the board, the way a player
-// does. Seat two is the `e2e-p2` account, driven over HTTP (`cy.request`) and, inside a game, over a
-// socket from Node (`cy.task("wsPlayer")`). Every enqueue, room and join seat two makes carries a
-// seed (R143), so every game here is seeded: the older ticket's seed wins and seat one's lobby never
-// sends one, so seat two's is the one the match or the series is made with.
-//
-// "PLAYS THE CHOSEN DECK" / "STARTS ON THE PICKED DECKS" is read off the opening hand. Every card
-// in a hand at the mulligan was drawn from the deck the match froze, except a Token a rule dealt
-// (The Coin, R245), and the fixture decks hold nothing that puts any other card into a hand at the
-// opening (see their descriptions). So a hand whose every non-Token card is in the chosen deck, and
-// none in another, is the chosen deck; the three decks `cy.installLoadout` saves are disjoint, so
-// "in the chosen deck" already excludes the others, and the spec says so anyway. The browser's hand
-// is read off the DOM (`hand-card-<id>` carries `data-def-id`, which is `viewFor`'s own `defId`);
-// seat two's off its socket's view.
-//
-// THE RATING. The fixture accounts live as long as the E2E server does, and every rated ending
-// moves them apart. §9.5's rating window only widens with waiting (R108, up to
-// `RATING_WINDOW_UNCAPPED_AFTER_SECONDS`), so accounts that drift apart pair ever more slowly on
-// every re-run. This file therefore keeps its own endings level: seat one concedes the Best-of-1
-// game, seat two the All Random one, seat one wins the series and forfeits the room's series — two
-// rated wins and two rated losses each. The pairing waits still allow for the full widening.
-//
-// CLEAN SLATE. Each `it` starts with `cy.freeAccount` for both accounts (dequeue, concede a live
-// match, forfeit a series between games), because the server keeps state across specs and across
-// runs, and a test that failed half-way must not poison the next one. Each `it` also ends by taking
-// both accounts out of whatever it made.
-//
-// LEAVING THE LOBBY (R765). The All Random game is also the one that proves the queue follows the
-// player: the browser leaves `/play` for the main menu while it is queued and is taken to the board
-// when seat two's ticket pairs with it, then leaves the board, finds the main menu's banner and
-// rejoins through it, and once the game is over the banner is gone.
-//
-// Needs: M6 and M7 (server, match actor, queue, results) and TASK 1's modes, series and lobby, against
-// the `E2E=1` server and a `build:e2e` client. See e2e/README.md.
+// BUILD M8 spec 19: Best-of-1, All Random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
+// Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
+// Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -96,49 +53,37 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 
-// ---------------------------------------------------------------------------------------------
-// constants
-// ---------------------------------------------------------------------------------------------
+// Constants
 
-/** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/**
- * How long a pairing may take to reach the browser. §9.5's window is uncapped once a ticket has
- * waited `RATING_WINDOW_UNCAPPED_AFTER_SECONDS`; the next sweep (R108) then pairs it, and the lobby
- * reads `/api/auth/me` every `SERIES_POLL_SECONDS`. Most runs pair on the second enqueue at once;
- * this is the bound for accounts whose ratings earlier runs have pulled apart (see the header).
- */
+/** Allow the uncapped §9.5/R108 window, a sweep, poll, and render. */
 const PAIRING_TIMEOUT_MS =
   (RATING_WINDOW_UNCAPPED_AFTER_SECONDS + MATCHMAKER_SWEEP_INTERVAL_SECONDS + SERIES_POLL_SECONDS) *
     MS_PER_SECOND +
   timeouts.view;
 
-/** A series screen or banner reads the server every `SERIES_POLL_SECONDS`; allow a few reads. */
+/** Allow a poll and render. */
 const SERIES_POLL_TIMEOUT_MS = SERIES_POLL_SECONDS * MS_PER_SECOND + timeouts.view;
 
-/** Every Token's catalog id: the only cards a hand may hold that no deck does (R245's Coin). */
+/** R245 Tokens are the only hand cards not from a deck. */
 const TOKEN_IDS: ReadonlySet<string> = new Set(Object.keys(TOKEN_NAMES).map((index) => tokenId(index)));
 
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 const SERIES_PATH = /^\/series\/([^/]+)$/;
 
-/** Seat two's socket, one per game. */
 const SEAT_TWO = "seat-two";
 
-/** The fixture that is the browser's Best-of-1 choice: saved as deck 2 (index 1), not deck 1. */
+/** Best-of-1 selects fixture deck 2, not deck 1. */
 const CHOSEN_DECK_INDEX = 1;
 
-/** Game 1 of the series: the browser picks its chosen deck's slot, seat two its last slot. */
 const GAME_ONE_PICKS = { browser: CHOSEN_DECK_INDEX, seatTwo: 2 } as const;
-/** Game 2: the browser picks slot 0; seat two picks slot 2 again, the deck that lost (R330). */
+/** R330 permits seat two's losing deck again. */
 const GAME_TWO_PICKS = { browser: 0, seatTwo: 2 } as const;
-/** Game 3: the browser's last deck is picked for it (R332); seat two picks its fixture deck, slot 0. */
+/** R332 auto-picks the browser's final deck. */
 const GAME_THREE_PICKS = { browser: 2, seatTwo: 0 } as const;
 
-// ---------------------------------------------------------------------------------------------
-// the HTTP surface, as far as this spec reads it (apps/web/src/net/api.ts is the contract)
-// ---------------------------------------------------------------------------------------------
+// HTTP contract
 
 type EnqueueBody = {
   ticketId: string;
@@ -160,13 +105,11 @@ type JoinBody = {
 
 type MeBody = { currentMatchId: string | null; currentSeriesId?: string | null };
 
-/** R612: the hidden rating never reaches the client, so the spec reads the season's game count instead. */
+/** R612: read season games, never hidden rating. */
 type ProfileBody = { record: { wins: number; losses: number; draws: number } };
 
-/** `GET /api/ranked`: the caller's season record — rated games played, won, lost and drawn. */
 type RankBody = { record: { games: number; wins: number; losses: number; draws: number } };
 
-/** `SeriesView` (apps/web/src/net/api.ts). */
 type SeriesView = {
   id: string;
   status: "picking" | "playing" | "over";
@@ -258,14 +201,10 @@ function forfeitAs(account: E2EAccount, seriesId: string): Cypress.Chainable<Ser
     .its("body");
 }
 
-// ---------------------------------------------------------------------------------------------
-// reading hands
-// ---------------------------------------------------------------------------------------------
+// Hand reading
 
-/** `hand-card-` is the prefix every hand card's testid starts with (BUILD M5-T1). */
 const HAND_CARD = `[data-testid^="${handCardId("")}"]`;
 
-/** The browser's opening hand, as catalog ids, once the board has rendered it. */
 function browserHand(): Cypress.Chainable<string[]> {
   return cy
     .get(HAND_CARD, { timeout: timeouts.view })
@@ -273,17 +212,14 @@ function browserHand(): Cypress.Chainable<string[]> {
     .then(($cards) => $cards.map((_index, element) => element.getAttribute("data-def-id") ?? "").get());
 }
 
-/** A socket view's own hand, as catalog ids (§10.8: the viewer's hand arrives as cards). */
+/** §10.8 sends the viewer's own hand as cards. */
 function socketHand(view: Record<string, unknown> | null | undefined): string[] {
   const you = (view?.you ?? {}) as { hand?: unknown };
   expect(Array.isArray(you.hand), "the viewer's own hand arrives as cards, not a count (§10.8)").to.eq(true);
   return (Array.isArray(you.hand) ? (you.hand as { defId?: string }[]) : []).map((card) => card.defId ?? "");
 }
 
-/**
- * Every card of `hand` that is not a Token is in `deck`, and none is in any of `others`. A hand of
- * fewer than `OPENING_DRAW[0]` such cards would prove nothing, so that is asserted too.
- */
+/** Require enough non-Token cards to prove the selected deck. */
 function expectDealtFrom(hand: readonly string[], deck: readonly string[], others: readonly (readonly string[])[], label: string): void {
   const drawn = hand.filter((id) => !TOKEN_IDS.has(id));
   expect(drawn.length, `${label}: an opening hand (§2.1)`).to.be.at.least(constants.OPENING_DRAW[0]);
@@ -295,27 +231,20 @@ function expectDealtFrom(hand: readonly string[], deck: readonly string[], other
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-// the lobby, driven as a player drives it
-// ---------------------------------------------------------------------------------------------
+// Lobby
 
-/** Open `/play` as `account` and choose a mode (R257). */
 function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.visitAs(account, routes.play());
   cy.get(ts(playModeId(mode)), { timeout: timeouts.view }).check();
   cy.get(ts(playModeId(mode))).should("be.checked");
 }
 
-/**
- * "Find a match", and wait for the lobby to say it is queued — so the browser's ticket is the older
- * one before seat two enqueues, which makes the browser series seat p1 (R335).
- */
+/** Queue browser first so R335 gives it series seat p1. */
 function findMatch(): void {
   cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("not.be.disabled").click();
   cy.get(ts(PLAY_STATUS), { timeout: timeouts.view }).should("be.visible");
 }
 
-/** Where the lobby (or the series screen) took the browser: the id in `/match/<id>` or `/series/<id>`. */
 function landedOn(pattern: RegExp, timeout: number): Cypress.Chainable<string> {
   return cy
     .location("pathname", { timeout })
@@ -323,11 +252,7 @@ function landedOn(pattern: RegExp, timeout: number): Cypress.Chainable<string> {
     .then((pathname) => pattern.exec(pathname)?.[1] ?? "");
 }
 
-/**
- * §2.5: seat two concedes the game its socket is on. `playerId` is only the field the action type
- * carries: `parseClientMessage` discards it and the actor stamps the seat the token holds, which in
- * an even game of a series is the match's p1 (R335).
- */
+/** §2.5 stamps the socket's seat; `playerId` is only action-shape data (R335). */
 function seatTwoConcedes(): void {
   cy.wsPlayer({ action: "send", name: SEAT_TWO, body: { type: "concede", playerId: "p2" } });
 }
@@ -366,7 +291,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(PLAY_DECK_SELECT), { timeout: timeouts.view }).select(chosen);
       cy.get(ts(PLAY_DECK_SELECT)).should("have.value", chosen);
     });
-    // R253: the client's verdict is UX only, but the fixture deck is legal and it should say so.
+    // R253: the verdict is UX only, but this legal fixture should say ready.
     cy.get(ts(PLAY_VERDICT)).should("have.attr", "data-ready", "true");
     findMatch();
 
@@ -378,11 +303,10 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // §9.5: the lobby reads `currentMatchId` and goes to the board by itself.
     landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((id) => {
       matchId = id;
     });
-    // A Best-of-1 game is no series game: no banner (R259).
+    // R259: Best-of-1 has no series banner.
     browserHand().then((hand) => {
       const decks = installed(mine).decks;
       const chosen = decks[CHOSEN_DECK_INDEX] ?? [];
@@ -391,7 +315,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     cy.get(ts(SERIES_BANNER)).should("not.exist");
 
-    // Seat one concedes, which keeps this file's endings level (see the header).
     cy.then(() => {
       cy.concedeAs(seatOne, matchId).its("ok").should("eq", true);
     });
@@ -405,20 +328,17 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     const seatTwo = accounts.p2();
     let matchId = "";
 
-    // Neither player has a single saved deck.
     cy.clearDecks(seatOne);
     cy.clearDecks(seatTwo);
     cy.savedDecks(seatTwo).its("decks").should("have.length", 0);
     cy.savedDecks(seatOne).its("decks").should("have.length", 0);
 
     openLobby(seatOne, "random");
-    // Nothing to choose, so nothing stands between the player and the queue.
     cy.get(ts(PLAY_DECK_SELECT)).should("not.exist");
     cy.get(ts(PLAY_TRIO_SELECT)).should("not.exist");
     findMatch();
 
-    // R765: the ticket waits on the server, so the player may leave the lobby while it does. The
-    // pairing finds them on the main menu.
+    // R765: a queued ticket follows the player to the main menu.
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
 
@@ -436,7 +356,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
           const hand = socketHand(result.view);
           expect(hand.length, "seat two was dealt a deck and drew from it").to.be.at.least(constants.OPENING_DRAW[0]);
           for (const card of hand) {
-            // R258 deals from every set (R380), so the id may be Core's, Classic's or Classic+'s.
+            // R258/R380 can deal from every set.
             expect(card, "a catalog id").to.match(/^(core|classic|classicplus)-\d{3}$/);
           }
         },
@@ -444,9 +364,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     browserHand().should("have.length.at.least", constants.OPENING_DRAW[0]);
 
-    // R765: away from the board while the match is live (the mulligan's picker covers the board's
-    // Back, so the player opens the main menu itself), the main menu says so, and Rejoin goes back
-    // to it as a reconnect does (§9.5): the same match, the same hand.
+    // R765/§9.5: the main-menu banner rejoins the same live match.
     cy.visit("/");
     cy.then(() => {
       cy.get(ts(LIVE_GAME_BANNER), { timeout: timeouts.view }).should("have.attr", "data-kind", "match");
@@ -455,23 +373,18 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     browserHand().should("have.length.at.least", constants.OPENING_DRAW[0]);
 
-    // Seat two concedes: the other half of this file's level endings.
     cy.then(() => {
       seatTwoConcedes();
     });
     cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("contain.text", "Win");
     me(seatOne).its("currentMatchId").should("eq", null);
-    // The game is over, so the main menu, once it has read the account, offers no way back into it.
     cy.visit("/");
     cy.get(`[data-testid="landing"][data-account="signed-in"]`, { timeout: timeouts.view }).should("exist");
     cy.get(ts(LIVE_GAME_BANNER)).should("not.exist");
   });
 
   it("a Conquest series: sealed picks, the picked decks, won decks locked, the last deck picked for you, three wins end it and rate it once (R330–R338, R262)", () => {
-    // The series' games are seeded `${seed}:1`..`:3` (R335). No #21 Hinder is dealt into an opening
-    // hand in any game: setup sets a cast-on-draw card aside until the mulligans are done (R635).
-    // Before that the seed had to avoid it, since a turn-1 cast discards a random card (R431, R682),
-    // changing the hand this test reads.
+    // R335 seeds the games; R635 withholds Hinder until mulligans, avoiding R431/R682 hand changes.
     const seed = seedFor("19-series-0");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
@@ -495,7 +408,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       rankedBefore = body;
     });
 
-    /** The browser selects `slot` in the picker and locks it in (R331). */
     const lockIn = (slot: number): void => {
       cy.get(ts(SERIES_PICKER), { timeout: timeouts.view }).should("have.attr", "data-state", "choosing");
       cy.get(ts(seriesPickId(slot))).should("not.be.disabled").check();
@@ -503,10 +415,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(SERIES_LOCK_IN)).should("not.be.disabled").click();
     };
 
-    /**
-     * Game `gameNo` on the board: both hands come from the picked decks, and seat two concedes it
-     * (R334: that loses the game, not the series).
-     */
+    /** R334: a concession loses this game, not the series. */
     const playAndWin = (gameNo: number, picks: { browser: number; seatTwo: number }): void => {
       landedOn(MATCH_PATH, SERIES_POLL_TIMEOUT_MS).then((id) => {
         matchIds.push(id);
@@ -538,7 +447,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("contain.text", "Win");
     };
 
-    /** From the board after a won game, back to the series screen to pick for the next one. */
     const continueToPick = (wins: number): void => {
       cy.get(ts(SERIES_BANNER_RESULT)).should("not.exist");
       cy.get(ts(SERIES_BANNER_CONTINUE), { timeout: SERIES_POLL_TIMEOUT_MS }).should("be.visible").click();
@@ -549,7 +457,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(SERIES_SCORE)).should("have.attr", "data-you", String(wins)).and("have.attr", "data-opponent", "0");
     };
 
-    // --- both queue Conquest: the browser through the lobby, seat two over HTTP ------------------
+    // Queue Conquest
     openLobby(seatOne, "bo3");
     cy.then(() => {
       cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).select(installed(mine).trioId);
@@ -565,14 +473,13 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // The lobby reads `currentSeriesId` and goes to the series screen to pick.
     landedOn(SERIES_PATH, PAIRING_TIMEOUT_MS).then((id) => {
       seriesId = id;
     });
     cy.get(ts(SERIES_SCREEN), { timeout: timeouts.view }).should("have.attr", "data-status", "picking");
     cy.get(ts(SERIES_SCORE)).should("have.attr", "data-you", "0").and("have.attr", "data-opponent", "0");
 
-    // --- game 1's picks: sealed, and hidden until both are in (R331) -----------------------------
+    // R331: picks are sealed until both players lock in.
     lockIn(GAME_ONE_PICKS.browser);
     cy.get(ts(SERIES_PICKER)).should("have.attr", "data-state", "waiting");
     cy.get(ts(seriesDeckId(GAME_ONE_PICKS.browser))).should("have.attr", "data-picked", "true");
@@ -581,7 +488,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       seriesAs(seatTwo, seriesId).should((view) => {
         expect(view.status).to.eq("picking");
         expect(view.opponent.picked, "R331: seat two sees THAT the browser picked").to.eq(true);
-        // …and never WHAT: the opponent's side carries wins, which decks have won, and a yes/no.
+        // R336: the opponent projection excludes its selected deck.
         expect(Object.keys(view.opponent).sort(), "R336: no pick and no deck in the opponent's projection").to.deep.eq([
           "decks",
           "picked",
@@ -595,7 +502,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         }
         expect(view.you.pick, "seat two has not picked yet").to.eq(null);
       });
-      // Sealed: the browser's pick cannot be changed once it is in.
       cy.request<ErrorBody>({
         method: "POST",
         url: api(`/api/series/${seriesId}/pick`),
@@ -611,10 +517,10 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // --- game 1, on the picked decks; seat two concedes it ----------------------------------------
+    // Game 1
     playAndWin(1, GAME_ONE_PICKS);
 
-    // --- game 2: the deck that won is locked; the one that lost comes back ------------------------
+    // R330: a won deck is locked; a losing deck returns.
     continueToPick(1);
     cy.get(ts(seriesGameId(1))).should("have.attr", "data-result", "win");
     cy.get(ts(seriesDeckId(GAME_ONE_PICKS.browser))).should("have.attr", "data-won", "true");
@@ -638,7 +544,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(2, GAME_TWO_PICKS);
 
-    // --- game 3: the browser's last deck is picked for it (R332) ----------------------------------
+    // R332: auto-pick the browser's final deck.
     continueToPick(2);
     cy.get(ts(SERIES_PICKER)).should("have.attr", "data-state", "waiting").and("have.attr", "data-auto", "true");
     cy.get(ts(seriesDeckId(GAME_THREE_PICKS.browser))).should("have.attr", "data-picked", "true");
@@ -648,7 +554,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(3, GAME_THREE_PICKS);
 
-    // --- a win with every deck: the series is over, and won ---------------------------------------
+    // Series result
     cy.get(ts(SERIES_BANNER_RESULT), { timeout: SERIES_POLL_TIMEOUT_MS }).should("have.attr", "data-outcome", "win");
     for (const slot of [0, 1, 2]) {
       cy.get(ts(seriesBannerYourDeckId(slot))).should("have.attr", "data-won", "true");
@@ -662,9 +568,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       .should("have.attr", "data-you", String(SERIES_WINS_NEEDED))
       .and("have.attr", "data-opponent", "0");
 
-    // --- the rating moved once: by the series' own move, not by its games (R262, R604) ---------------
-    // R612: the hidden rating never reaches the client, so the move is read off the series'
-    // `ranked` flag and the season record, not off rating points.
+    // R262/R604: the series moves rating once; R612 reads its season record, not hidden points.
     cy.then(() => {
       seriesAs(seatOne, seriesId).then((view) => {
         expect(view.status).to.eq("over");
@@ -679,7 +583,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         profile(seatOne).should((after) => {
           expect(after.record.wins - before.record.wins, "R262: every game is recorded as a win").to.eq(SERIES_WINS_NEEDED);
         });
-        // Rated once: the series is one rated game (R262), however many games it took.
         ownRank(seatOne).should((after) => {
           expect(
             after.record.games - rankedBefore.record.games,
@@ -690,7 +593,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // --- and both players may queue again --------------------------------------------------------
+    // Both players can queue again.
     for (const account of [seatOne, seatTwo]) {
       cy.then(() => {
         me(account).should((body) => {
@@ -717,7 +620,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       theirs = value;
     });
 
-    // The browser makes a Conquest room with its only trio, through the lobby.
     openLobby(seatOne, "bo3");
     cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).find("option:selected").should("have.text", INSTALLED_TRIO_NAME);
     cy.get(ts(PLAY_CREATE_ROOM)).should("not.be.disabled").click();
@@ -729,7 +631,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(code, "R79: a room code").to.have.length(constants.ROOM_CODE_LENGTH);
       });
 
-    // A Best-of-1 joiner is refused with the room's mode (R264).
+    // R264: a Best-of-1 joiner is refused with the room mode.
     cy.then(() => {
       cy.request<ErrorBody>({
         method: "POST",
@@ -744,7 +646,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(response.body.error.message).to.eq("This room plays Conquest: pick one of your trios.");
       });
     });
-    // The refusal claimed nothing: the room still takes the right choice.
     cy.then(() => {
       cy.request<JoinBody>({
         method: "POST",
@@ -761,13 +662,12 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // The host is told by its own poll, and taken to the pick.
     landedOn(SERIES_PATH, SERIES_POLL_TIMEOUT_MS).then((id) => {
       expect(id, "the host lands on the series the join made").to.eq(seriesId);
     });
     cy.get(ts(SERIES_SCREEN), { timeout: timeouts.view }).should("have.attr", "data-status", "picking");
 
-    // Clean up, and keep this file's endings level: the host forfeits between games (R334).
+    // R334: forfeit between games to balance fixture endings.
     cy.then(() => {
       forfeitAs(seatOne, seriesId).should((view) => {
         expect(view.status).to.eq("over");

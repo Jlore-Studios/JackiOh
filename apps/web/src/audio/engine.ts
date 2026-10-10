@@ -1,25 +1,15 @@
 // The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53).
 //
-// Lazily built: no AudioContext exists until the first `unlock()`, called inside a user gesture
-// (autoplay policy; iOS's resume-plus-silent-buffer rule). Both play calls go through one acceptance
-// gate and never throw. While `duckMusic` is on, the music (music.ts plays into `musicOutput()`) ducks
-// under every voice line and the effects MUSIC_DUCK_SFX names (R631); every voice line also dips the
-// effects, and an sfx cue whose params carry a `pan` plays through a stereo panner (R669).
+// Created inside a user gesture for autoplay. Music ducks under voice and selected effects (R631);
+// voice ducks effects and lane cues pan through a stereo panner (R669).
 //
-// NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING: a suspended context's clock stands still, so
-// everything scheduled on it would start at once on resume. Such a cue is accepted and logged,
-// flagged, with no nodes built.
+// Nothing is scheduled on an inactive context: its frozen clock would start every cue on resume.
 //
-// BACKGROUND VOICE WORK NEVER RUNS DURING AN ANIMATION BURST (B58): the runner times each entry with a
-// main-thread setTimeout, and the prefetch's requests landing in an R82 auto-ended turn run pushed a
-// 3.8 s burst past 4 s. While `setBusy(true)` the prefetch starts nothing and a preload is held; a
-// line asked to play is never held.
+// `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's delayed
+// auto-ended turn; requested lines are never held.
 //
-// CARD EFFECTS (R655): a hook may play a named effect from `card-audio.json5`'s bank. Its retrigger
-// guard is its own name's, since it shares a recipe with the plain sounds of the same moment, and it
-// plays with voice lines off. `playPickup` plays the `attack` hook's effect at once and its line
-// CARD_EFFECT_DELAY_MS later at VOICE_PRIORITY.pickup, which cuts in on any line; a pick-up within
-// PICKUP_MIN_GAP_MS of the last accepted one plays nothing, and a later one fades out the last.
+// CARD EFFECTS (R655) guard by bank name. `playPickup` plays the effect, then a priority line after
+// CARD_EFFECT_DELAY_MS; a nearby repeat does nothing and a later one fades the prior effect.
 
 import {
   CARD_EFFECT_DELAY_MS,
@@ -408,7 +398,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, sfxDuckUntil, SFX_DUCK_RELEASE_TC_S);
   }
 
-  /** R669: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its params pan it off centre. */
+  /** R669: sfx enters the effects bus directly or through a stereo panner. */
   function sfxInput(c: AudioContext, b: Mix, pan: number | undefined): { input: AudioNode; extra: AudioNode | null } {
     if (pan === undefined || pan === 0 || !Number.isFinite(pan)) {
       return { input: b.sfx, extra: null };

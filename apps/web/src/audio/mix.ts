@@ -5,18 +5,11 @@
 //                                  reverb sends ◀───────┘─▶ reverb ─────┤
 //   music player ─▶ music bus ─▶ music duck ────────────────────────────┴─▶ master ─▶ limiter ─▶ destination
 //
-// The music bus carries the music volume (R631); its duck is the engine's, which dips it under a
-// voice line or an important effect while `duckMusic` is on. R669: the effects have a duck of their
-// own, dipped under every voice line, and a cue about a unit is panned to its lane before the bus.
-// The effects (after their duck) and the voice lines each feed a little of themselves into one
-// shared reverb; the music, mixed with its own room, does not.
+// The music bus ducks under voice or selected effects (R631). R669 ducks effects under voice and pans
+// unit cues before the bus; effects and voice share reverb, unlike music.
 //
-// The limiter is a DynamicsCompressor set as a peak catcher: a hard knee at LIMITER's threshold, so
-// a lone sound passes at one fixed gain and only a pile-up is held back (the default 30 dB knee
-// takes a few dB off every effect). Measured in Chrome (audio-recipes.cy.tsx, B57): its automatic
-// makeup gain is the same for every sound, so a -6 dB threshold lifts effects and lines alike and
-// keeps the densest scene under full scale. The attack stays at 3 ms: at 1 ms Chrome's detector
-// clips 4 to 6 dB off short transients.
+// The hard-knee limiter only catches pile-ups. Chrome measurements (audio-recipes.cy.tsx, B57) keep
+// a -6 dB threshold below full scale; a 3 ms attack avoids clipping short transients.
 //
 // Imports only ./types.ts and ./constants.ts, like sfx.ts, so the Cypress component spec can render
 // the real mix in an OfflineAudioContext.
@@ -49,8 +42,7 @@ export type Mix = {
 };
 
 /**
- * R669: the shared reverb's impulse: REVERB_SECONDS of seeded white noise on each channel (a
- * different seed each, so it is wide), falling off by REVERB_DECAY_POWER, with no early reflections.
+ * R669: wide, seeded white noise decaying by REVERB_DECAY_POWER, without early reflections.
  */
 export function reverbImpulse(ctx: BaseAudioContext): AudioBuffer {
   const length = Math.max(1, Math.round(REVERB_SECONDS * ctx.sampleRate));

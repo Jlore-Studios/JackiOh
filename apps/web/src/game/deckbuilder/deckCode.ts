@@ -1,41 +1,14 @@
-// Deck codes (SPEC §9.4, R255): a deck as a line of text a player can paste into a chat and a
-// friend can paste back into the builder.
+// Deck codes (SPEC §9.4, R255) are shareable deck text. Imports are new saved decks; this module
+// does not judge legality (R250, R253).
 //
-// CLIENT-ONLY. No endpoint reads or writes a code: an import is simply a NEW saved deck (R250),
-// which the builder saves like any other draft and the server judges like any other deck. So this
-// module decides nothing about legality. It reads what the code says, drops what no deck could
-// hold (a number the catalog does not know, a Token, a copy past `MAX_COPIES`, a card past
-// `DECK_SIZE`) and reports every drop so the import dialog can say so, and it flags the cards the
-// player does not own without dropping them (they are judged at queue, R253).
+// `JKO<version>.` precedes an unpadded base64url body:
+// [name-byte-length] [UTF-8 name] [LEB128 card count] [LEB128 card numbers] [two-byte checksum].
+// Version 2 uses a card's set offset plus §5 index (B2.2); non-whole-number Token indices cannot
+// be encoded (R251). Names failing D1 fall back to "Imported deck". FNV-1a detects damaged pastes.
+// Older codes are refused except Core-only version 1 (R255).
 //
-// THE FORMAT. `JKO<version>.` then base64url (no padding) of:
-//
-//   [name byte length: 1 byte] [name: UTF-8] [card count: LEB128] [card number: LEB128]… [checksum: 2 bytes]
-//
-// - A card is carried as its catalog NUMBER, not its id: numbers are what the printed set shows,
-//   and a code stays valid through an id rename. Version 2 (patch v0.2.0, B2.2) writes the set
-//   with it: the §5 index plus the set's offset (`CATALOG_NUMBER_SET_OFFSETS`: Core n, Classic
-//   1000 + n, Classic+ 2000 + n). Only whole-number indices are encodable; Tokens carry numbers
-//   like "51.1" or "T-AI-1" and are never deckable anyway (R251).
-// - The name is the deck's name as it is stored (`normalizeName`), cut to `DECK_NAME_MAX_LENGTH`
-//   characters; a name the draft rule D1 would refuse is written as "Imported deck" instead.
-// - The checksum is FNV-1a (32-bit) over every byte before it, folded to 16 bits. It is not
-//   security: it catches a paste that lost or mangled characters, so the player is told the code
-//   is damaged instead of being handed a different deck.
-// - The version is `DECK_CODE_VERSION`. A newer one is refused with a sentence saying so (this
-//   client cannot know what it means); so is an older one, except `DECK_CODE_CORE_ONLY_VERSION`
-//   (1): every code minted before v0.2.0 is one, and its numbers are read as Core's (R255).
-//
-// DECODING IS TOTAL. It never throws, whatever it is handed: over-long input is refused before it
-// is read at all (`DECK_CODE_MAX_INPUT_LENGTH`), and each failure is a sentence for the player. The
-// order is: length, whitespace, prefix and version, base64url, structure (a payload that declares
-// more than it carries is "incomplete"; bytes left over are "damaged"), then the checksum, then the
-// name (D1, falling back to "Imported deck") and the cards.
-//
-// A TRIO CODE (R339, `trioCode.ts`) is built from the same parts: its three decks are written and
-// read by `writeDeckBody` and `readDeckBody`, resolved by `resolveDeck`, and checked by the same
-// checksum, so a deck inside a trio code is read exactly as a deck code's deck is. A trio code
-// pasted into the deck import is recognised by its prefix and sent where it belongs.
+// Decoding is total: it rejects over-long or malformed input before resolving name (D1) and cards.
+// Trio codes share the body reader, resolver and checksum (R339, `trioCode.ts`).
 
 import { checkDeckDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
@@ -91,7 +64,7 @@ export const DECK_CODE_MESSAGES = Object.freeze({
   unreadable: "That deck code couldn’t be read.",
 });
 
-// --- byte format ---------------------------------------------------------------------------------
+// Byte format
 
 /** The name's byte length is one byte. */
 const NAME_LENGTH_BYTES = 1;
@@ -106,7 +79,6 @@ const BYTE_MASK = 0xff;
 
 /** LEB128: seven bits of value per byte, the top bit set on every byte but the last. */
 const VARINT_PAYLOAD_BITS = 7;
-/** What one byte of payload is worth: the next byte counts this many times more. */
 const VARINT_BASE = 2 ** VARINT_PAYLOAD_BITS;
 const VARINT_PAYLOAD_MASK = 0x7f;
 const VARINT_CONTINUE = 0x80;
@@ -134,9 +106,9 @@ const WHITESPACE = /\s+/gu;
 /** A card number that can be encoded: a whole number from 1, as a Core `index` is. */
 const WHOLE_NUMBER = /^[1-9]\d*$/;
 
-// --- helpers --------------------------------------------------------------------------------------
+// Helpers
 
-/** The checksum: FNV-1a (32-bit) over `bytes[0..end)`, folded to 16 bits. */
+/** FNV-1a (32-bit) over `bytes[0..end)`, folded to 16 bits. */
 export function fnv1a16(bytes: readonly number[] | Uint8Array, end: number): number {
   let hash = FNV_OFFSET_BASIS;
   for (let at = 0; at < end; at += 1) {
@@ -193,7 +165,7 @@ export function fromBase64Url(text: string): Uint8Array | null {
   return Uint8Array.from(out);
 }
 
-/** D1, as the validator states it: whether `name` may be a saved deck's name. */
+/** D1: whether `name` may be a saved deck's name. */
 function passesD1(name: string): boolean {
   const issues = checkDeckDraft({
     name,
@@ -204,26 +176,20 @@ function passesD1(name: string): boolean {
   return !issues.some((issue) => issue.rule === "D1");
 }
 
-/** The name a code carries: stored form, at most `DECK_NAME_MAX_LENGTH` characters, D1-clean. */
+/** A stored, D1-clean code name within `DECK_NAME_MAX_LENGTH`. */
 function nameForCode(raw: string): string {
   const cut = normalizeName([...normalizeName(raw)].slice(0, DECK_NAME_MAX_LENGTH).join(""));
   return passesD1(cut) ? cut : IMPORTED_DECK_NAME;
 }
 
-/**
- * B2.2: a card's catalog number in a version 2 code — its whole-number §5 index plus its set's
- * offset — or `undefined` for a card no code can carry (a token's index, a set with no offset).
- */
+/** B2.2: whole-number §5 index plus set offset, or `undefined` when unencodable. */
 export function catalogNumberOf(def: Pick<CardDef, "set" | "index">): number | undefined {
   if (!WHOLE_NUMBER.test(def.index)) return undefined;
   const offset = (CATALOG_NUMBER_SET_OFFSETS as Readonly<Record<string, number>>)[def.set];
   return offset === undefined ? undefined : offset + Number(def.index);
 }
 
-/**
- * What a code's numbers mean, by the code's version: a version 2 number names a set and a card
- * (`catalogNumberOf`); a version 1 number is a Core index, the only set there was (R255).
- */
+/** R255: version 1 numbers are Core indices; later versions use catalog numbers. */
 function numberOfIn(version: number): (def: CardDef) => number | undefined {
   if (version === DECK_CODE_CORE_ONLY_VERSION) {
     return (def) => (def.set === "Core" && WHOLE_NUMBER.test(def.index) ? Number(def.index) : undefined);
@@ -236,24 +202,16 @@ function isToken(catalog: CatalogSnapshot, cardId: string): boolean {
   return def !== undefined && (def.token || def.tags.includes("Token"));
 }
 
-// --- encode ---------------------------------------------------------------------------------------
+// Encode
 
-/**
- * A name's bytes as a code writes them: one length byte, then UTF-8. `fallback` stands in when the
- * UTF-8 would not fit the length byte, which a name within `DECK_NAME_MAX_LENGTH` never does.
- */
+/** Writes one length byte and UTF-8, using `fallback` if the name does not fit. */
 export function pushName(out: number[], name: string, fallback: string): void {
   let bytes = new TextEncoder().encode(name);
   if (bytes.length > NAME_BYTES_MAX) bytes = new TextEncoder().encode(fallback);
   out.push(bytes.length, ...bytes);
 }
 
-/**
- * One deck's body, as a deck code and each deck of a trio code carry it: its name, the card count
- * and each card's catalog number (`catalogNumberOf`, version 2). Cards the catalog does not know, or
- * that no number can carry, are skipped; everything else is written as given, in order, so the code
- * says exactly what the deck holds (duplicates and all: the decoder is the one that drops).
- */
+/** Writes a deck or trio-code body; unknown or unencodable cards are skipped. */
 export function writeDeckBody(out: number[], name: string, cardIds: readonly string[], catalog: CatalogSnapshot): void {
   pushName(out, nameForCode(name), IMPORTED_DECK_NAME);
   const numbers: number[] = [];
@@ -281,7 +239,7 @@ export function encodeDeckCode(name: string, cardIds: readonly string[], catalog
   return `${DECK_CODE_PREFIX}${String(DECK_CODE_VERSION)}.${toBase64Url(payload)}`;
 }
 
-// --- decode ---------------------------------------------------------------------------------------
+// Decode
 
 /** Why a payload could not be read: it declares more than it carries, or holds what no code does. */
 export type ReadFailure = "incomplete" | "damaged";

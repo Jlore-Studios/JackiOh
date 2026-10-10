@@ -1,9 +1,5 @@
-// `game/net.ts` driven entirely through a fake WebSocket: every frame
-// `crates/server/src/actor/protocol.rs` defines, the handshake, the reconnect and the dev-handle shim.
-//
-// No real socket, no timer and no server. The seams (`socketFactory`, `timers`, `monotonic`) exist
-// for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
-// in-memory socket.
+// `game/net.ts` protocol coverage through a fake WebSocket.
+// Injected socket, timer and clock seams keep it deterministic without a server.
 
 import { describe, expect, it } from "vitest";
 
@@ -21,9 +17,7 @@ import {
   type Timers,
 } from "./net.ts";
 
-// ---------------------------------------------------------------------------------------------
-// fakes
-// ---------------------------------------------------------------------------------------------
+// Fakes
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -46,7 +40,7 @@ class FakeSocket implements SocketLike {
     this.closedWith = { ...(code === undefined ? {} : { code }), ...(reason === undefined ? {} : { reason }) };
   }
 
-  // --- test drivers -------------------------------------------------------------------------
+  // Test drivers
 
   open(): void {
     this.readyState = 1;
@@ -136,14 +130,11 @@ function connected(options: { matchId?: string; token?: string } = {}): Harness 
   return h;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the handshake
-// ---------------------------------------------------------------------------------------------
+// The handshake
 
 describe("the handshake", () => {
   it("carries the token and the match in the query string, because a browser cannot set headers", () => {
-    // `crates/server/src/actor/ws_server.rs` reads the token from `?token=` and the match from
-    // `?matchId=` (SURFACE §11.3).
+    // `ws_server.rs` reads `?token=` and `?matchId=` (SURFACE §11.3).
     const url = socketUrlFor("ws://server.test/ws/match", "tok en", "m-1");
     expect(url).toContain("token=tok+en");
     expect(url).toContain("matchId=m-1");
@@ -163,9 +154,7 @@ describe("the handshake", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the frames
-// ---------------------------------------------------------------------------------------------
+// The frames
 
 describe("server frames", () => {
   it("a `view` frame becomes the rendered view", () => {
@@ -176,8 +165,7 @@ describe("server frames", () => {
   });
 
   it("with no legal list anywhere, the board stays empty and says so", () => {
-    // A server that sends no `legalActions` at all leaves the board read-only. The client does NOT
-    // compute it (rule 7, BUILD M5-T2) — it reports the gap, and `routes/match.tsx` shows it.
+    // Missing `legalActions` leaves the board read-only; the client never computes them (BUILD M5-T2).
     const h = connected();
     h.socket().deliver({ type: "view", view: baseView() });
     expect(h.client.snapshot().legal).toEqual([]);
@@ -289,10 +277,8 @@ describe("remainingMs", () => {
         ceilingAt: 0,
       },
     };
-    // 75 s were left when the frame was sent; 2 s of local time have passed since.
     expect(remainingMs(85_000, clock, () => 2_500)).toBe(73_000);
     expect(remainingMs(null, clock, () => 2_500)).toBeNull();
-    // Never negative: an expired deadline reads as zero, not as a countdown running backwards.
     expect(remainingMs(85_000, clock, () => 500_000)).toBe(0);
   });
 
@@ -301,9 +287,7 @@ describe("remainingMs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// sending
-// ---------------------------------------------------------------------------------------------
+// Sending
 
 describe("actions", () => {
   it("sends `{type:'action', action:{...body, nonce}}` and never a playerId", () => {
@@ -341,9 +325,7 @@ describe("actions", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// portraits and emotes (R642, R643)
-// ---------------------------------------------------------------------------------------------
+// Portraits and emotes (R642, R643)
 
 describe("portraits and emotes", () => {
   it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
@@ -351,7 +333,6 @@ describe("portraits and emotes", () => {
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
     expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
 
-    // A second frame — the reconnect's — simply replaces the first.
     h.socket().deliver({ type: "portraits", p1: "timmy", p2: "dfender" });
     expect(h.client.snapshot().portraits).toEqual({ p1: "timmy", p2: "dfender" });
   });
@@ -364,7 +345,6 @@ describe("portraits and emotes", () => {
     expect(h.client.snapshot().portraits).toBeNull();
 
     expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "gary", p2: "nobody" }))).toBeNull();
-    // A portrait id is a string of the roster, never a number.
     expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "core-008", p2: "shredder" }))).toBeNull();
   });
 
@@ -375,8 +355,7 @@ describe("portraits and emotes", () => {
     expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
     expect(h.client.snapshot().emoteHand).toEqual(hand);
 
-    // The reconnect's frame holds the same hand (R1341); a frame from a server that deals none
-    // leaves the client on its default hand.
+    // R1341: a reconnect can replace the hand; no dealt hand restores the default.
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder", emotes: hand });
     expect(h.client.snapshot().emoteHand).toEqual(hand);
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
@@ -432,7 +411,6 @@ describe("portraits and emotes", () => {
     const h = connected();
     h.client.sendEmote("laugh");
     expect(h.socket().frames().at(-1)).toEqual({ type: "emote", emote: "laugh" });
-    // Nothing else rode along: the frame is exactly the two fields.
     expect(Object.keys(h.socket().frames().at(-1) ?? {})).toEqual(["type", "emote"]);
   });
 
@@ -441,14 +419,11 @@ describe("portraits and emotes", () => {
     h.client.connect(); // connecting, never `open()`ed
     h.client.sendEmote("sob");
     expect(h.socket().sent).toEqual([]);
-    // Cosmetic chatter is never worth an error banner.
     expect(h.client.snapshot().error).toBeNull();
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the socket's life
-// ---------------------------------------------------------------------------------------------
+// The socket's life
 
 describe("reconnect", () => {
   it("reopens after an unexpected close, with a backoff", () => {
@@ -461,7 +436,7 @@ describe("reconnect", () => {
     expect(h.sockets).toHaveLength(2);
     h.socket().open();
     expect(h.client.snapshot().connection).toBe("open");
-    // A reconnected socket asks for a fresh full view (§9.5), never a log replay.
+    // Reconnection requests a fresh full view (§9.5), never a log replay.
     expect(h.socket().frames()).toEqual([{ type: "hello", token: "tok", matchId: "m-1" }]);
   });
 
@@ -514,9 +489,7 @@ describe("reconnect", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the dev-handle shim
-// ---------------------------------------------------------------------------------------------
+// The dev-handle shim
 
 describe("viewDerivedState", () => {
   const view: PlayerView = baseView({
@@ -528,8 +501,7 @@ describe("viewDerivedState", () => {
   });
 
   it("is a view-derived shim, and carries no seed", () => {
-    // The server mints the seed and never sends it: (seed, log) reconstructs the library order
-    // (§9.1, §9.3), which is hidden from the client by design.
+    // The server withholds its seed: `(seed, log)` reconstructs hidden library order (§9.1, §9.3).
     const state = viewDerivedState(view);
     expect(state.seed).toBe("");
     expect(state.turn).toBe(6);

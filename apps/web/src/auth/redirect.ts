@@ -1,33 +1,12 @@
 // Emailed auth links, read once and scrubbed (R193, R323, R324).
-//
-// A confirmation or recovery email links to `/login` (`authRedirectUrl`). A PKCE link (R323,
-// `auth/pkce.ts`) carries a one-time `?code=…` in the QUERY, which `/login` exchanges for a session
-// with the verifier this browser kept (`net/auth.ts` `exchangeAuthCode`). An older link, or one to a
-// browser that could not hash, carries the session in the URL FRAGMENT (`#access_token=…&
-// type=signup`) and is read as before (R324). A failed link (mail scanners spend one-time tokens)
-// carries `error`, `error_code` and `error_description`, in the fragment, the query, or both.
-//
-// `code` is an auth parameter only on `/login` (where `redirect_to` points) and `/` (the Site URL,
-// the provider's fallback when a `redirect_to` misses its allow-list); elsewhere it is some other page's.
-//
-//   - `parseAuthRedirect` is pure and never reads `error_description`: provider text is never shown,
-//     a known error code maps to our sentence.
-//   - `consumeAuthRedirect` drops the query and fragment with `history.replaceState` BEFORE
-//     returning, so the tokens are gone before anything renders. The result is cached for
-//     StrictMode's second call, which sees the scrubbed URL.
-//   - A recovery session is held HERE, for this tab only (memory and `sessionStorage`, never
-//     `localStorage`), and becomes the stored session only once a new password is saved
-//     (`/reset-password`). Leaving the reset screen unsaved abandons it (`abandonRecoverySession`).
-//
-// A LINK'S ADDRESS IS A CLAIM, NOT A FACT. `email` is read from the access token's payload without
-// checking its signature, and anyone can write a link. `/login` acts on it only once the server has
-// accepted the token (`routes/login.tsx`); every navigation after an auth link goes to a `paths` value.
+// `/login` exchanges a one-time PKCE code (R323); legacy sessions and errors arrive in fragments or queries (R324).
+// Only `/login` and `/` treat code as auth; parsing never shows provider text and scrubbing happens before rendering.
+// Recovery stays tab-local; email needs server acceptance; navigation after an auth link must use `paths`.
 
 import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import type { Session } from "../net/session.ts";
 
-/** The session-bearing link types GoTrue sends besides `recovery`. */
 export type SessionLinkType = "signup" | "invite" | "magiclink" | "email_change";
 
 export type AuthRedirect =
@@ -38,7 +17,6 @@ export type AuthRedirect =
   | { kind: "code"; code: string }
   | { kind: "error"; failure: "linkExpired" | "linkDenied" };
 
-/** Every parameter GoTrue's implicit flow may put on a link. Any of them present means scrub. */
 const AUTH_PARAMETERS: readonly string[] = [
   "access_token",
   "refresh_token",
@@ -51,10 +29,8 @@ const AUTH_PARAMETERS: readonly string[] = [
   "error_description",
 ];
 
-/** R323: the PKCE link's code, read from the query on `CODE_PATHS` only. */
 const CODE_PARAMETER = "code";
 
-/** Where a link's `code` can land: `/login` (`redirect_to`) and `/` (the Site URL fallback). */
 const CODE_PATHS: ReadonlySet<string> = new Set([paths.login, paths.landing]);
 
 function codeCounts(url: URL): boolean {
@@ -83,7 +59,6 @@ function positiveNumber(raw: string | null): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-/** One string claim of an access token's payload, base64url-decoded and NEVER verified. */
 function tokenClaim(token: string, name: "email" | "sub" | "session_id"): string | null {
   const parts = token.split(".");
   const payload = parts[1];
@@ -102,34 +77,21 @@ function tokenClaim(token: string, name: "email" | "sub" | "session_id"): string
   }
 }
 
-/**
- * The `email` claim, base64url-decoded and NEVER verified: anyone can write a token naming any
- * address. A link's address is acted on only once the server has accepted the token (`/login`); a
- * stored session's is only shown back to the player who holds it.
- */
+/** Decodes an unverified email claim; `/login` acts only after server acceptance. */
 export function emailFromToken(token: string): string | null {
   return tokenClaim(token, "email");
 }
 
-/**
- * The `sub` claim (the account's user id), NEVER verified. Worth reading only for a token the
- * provider or the server has already accepted, such as a stored session's, to tell whether a
- * renewal handed back the same account (`net/gate.ts`).
- */
+/** Decodes an unverified account claim to compare renewed and stored sessions. */
 export function subjectFromToken(token: string): string | null {
   return tokenClaim(token, "sub");
 }
 
-/**
- * The `session_id` claim (the provider's session the token belongs to), NEVER verified. Read only
- * for tokens this browser already holds, to tell a renewal of the same session (the refresh token
- * rotated) from a new sign-in (`net/gate.ts`).
- */
+/** Decodes an unverified session claim to distinguish a renewal from a new sign-in. */
 export function sessionIdFromToken(token: string): string | null {
   return tokenClaim(token, "session_id");
 }
 
-/** One source (the fragment, or the query) read on its own. */
 function readParams(params: URLSearchParams): AuthRedirect {
   // An error outranks any token beside it. `error_description` is never read.
   const errorCode = params.get("error_code");
@@ -148,8 +110,7 @@ function readParams(params: URLSearchParams): AuthRedirect {
     refreshToken: refreshToken !== null && refreshToken.length > 0 ? refreshToken : null,
     expiresAt: null,
   };
-  // Counted on THIS device's clock (`expires_in` from now), since readers compare `expiresAt` with
-  // `Date.now()`; `expires_at` is the provider's clock, the fallback for a link with no `expires_in`.
+  // Use this device's clock for `expires_in`; `expires_at` is the fallback.
   const expiresAt = positiveNumber(params.get("expires_at"));
   const expiresIn = positiveNumber(params.get("expires_in"));
   if (expiresIn !== null) {
@@ -163,11 +124,7 @@ function readParams(params: URLSearchParams): AuthRedirect {
   return { kind: "recovery", session, email };
 }
 
-/**
- * Pure (bar `Date.now()` for an `expires_in`-only link). Reads the fragment and then the query: the
- * first of the two that yields anything decides. An error outranks a code beside it, and a code
- * (R323) is read on `/login` and `/` only; one that is not an auth code's shape is no link at all.
- */
+/** Reads the fragment before the query; errors win, and R323 codes count only on `/login` and `/`. */
 export function parseAuthRedirect(url: URL): AuthRedirect {
   const fromFragment = readParams(fragmentParams(url));
   if (fromFragment.kind !== "none") return fromFragment;
@@ -177,18 +134,13 @@ export function parseAuthRedirect(url: URL): AuthRedirect {
   return isAuthCode(code) ? { kind: "code", code } : NONE;
 }
 
-/** Whether the URL carries anything this module reads, and so scrubs. */
 function carriesAuth(url: URL): boolean {
   return hasAuthParameter(fragmentParams(url)) || hasAuthParameter(url.searchParams) || codeCounts(url);
 }
 
 let consumed: AuthRedirect | null = null;
 
-/**
- * Parses `window.location`. If any auth parameter is present, `history.replaceState` drops the
- * query and fragment before it returns (R193). The result is cached (StrictMode's second call) until
- * `clearConsumedAuthRedirect()`; a URL with nothing to consume is `none` and caches nothing.
- */
+/** R193: scrub auth URL data before rendering and cache the result for StrictMode. */
 export function consumeAuthRedirect(): AuthRedirect {
   if (consumed !== null) return consumed;
 
@@ -209,14 +161,7 @@ export function clearConsumedAuthRedirect(): void {
   consumed = null;
 }
 
-/**
- * R193 on every path. Supabase falls back to the Site URL when a `redirect_to` misses its
- * allow-list, and dashboard emails always use it, so a link can land anywhere with a live refresh
- * token in its fragment. Called once at boot, before the route switch and before anything renders:
- * a link is consumed (read, cached, scrubbed) at once, `/login` included, since its lazily loaded
- * chunk could leave the tokens in the address bar. A link on any other path is then moved to
- * `loginPathname`, where `/login` checks it as usual. Returns whether it moved.
- */
+/** R193: consume links at boot before lazy login leaves a token in the URL, then move non-login links. */
 export function adoptAuthRedirect(loginPathname: string): boolean {
   if (typeof window === "undefined") return false;
   const url = new URL(window.location.href);
@@ -231,10 +176,7 @@ export function adoptAuthRedirect(loginPathname: string): boolean {
   return true;
 }
 
-// The recovery session, for this tab only. In memory, and mirrored to `sessionStorage`, which dies
-// with the tab: the mirror lets the reset survive a reload or a phone discarding the backgrounded
-// tab, since the link cannot be opened twice. Never `localStorage`, where every tab (and the next
-// person at a shared computer) would find it.
+// Recovery is tab-local (`sessionStorage`, never `localStorage`), so an unrepeatable link survives reload.
 
 export const RECOVERY_STORAGE_KEY = "jackioh.auth.recovery";
 
@@ -252,7 +194,7 @@ function writeRecoveryMirror(value: HeldRecovery | null): void {
   }
 }
 
-/** The mirror, read as untrusted input: anything but a session with an access token is nothing. */
+/** Treat the storage mirror as untrusted: only a session with an access token survives. */
 function readRecoveryMirror(): HeldRecovery | null {
   if (typeof window === "undefined") return null;
   let raw: string | null;
@@ -279,17 +221,12 @@ function readRecoveryMirror(): HeldRecovery | null {
   }
 }
 
-/** Keep a recovery link's session for `/reset-password`, in this tab only. */
 export function holdRecoverySession(session: Session, email: string | null): void {
   recovery = { session, email };
   writeRecoveryMirror(recovery);
 }
 
-/**
- * The held recovery session, or null. One whose access token has expired is dropped only when it
- * cannot be renewed: with a refresh token, the reset screen renews it before the new password is
- * sent (R194), and the provider is the one to say whether the reset still stands.
- */
+/** An expired recovery session is usable only with a refresh token (R194). */
 export function recoverySession(): HeldRecovery | null {
   const held = recovery ?? readRecoveryMirror();
   if (held === null) return null;
@@ -303,22 +240,13 @@ export function recoverySession(): HeldRecovery | null {
   return held;
 }
 
-/**
- * Forget it, without revoking: after a save, when it has become the stored session. A scheduled
- * abandonment is called off too, since nothing is held any more for it to abandon.
- */
 export function releaseRecoverySession(): void {
   cancelScheduledAbandon();
   recovery = null;
   writeRecoveryMirror(null);
 }
 
-/**
- * The player left the reset without saving: forget the session and revoke it at the provider, so
- * nobody at this tab later (Back on a shared computer) finds a working reset form. The form outlives
- * the access token's hour, so an expired one is renewed first (`revokeSignedOutSession`, R194): the
- * provider refuses to revoke with an expired access token. Best effort, never throws.
- */
+/** On unsaved exit, revoke recovery. Renew expired access first (R194); best effort. */
 export function abandonRecoverySession(): void {
   const held = recovery ?? readRecoveryMirror();
   releaseRecoverySession();
@@ -327,11 +255,7 @@ export function abandonRecoverySession(): void {
 
 let scheduledAbandon: ReturnType<typeof setTimeout> | null = null;
 
-/**
- * The reset screen unmounted without saving: abandon the session once the current task is over,
- * unless the screen takes it back first (`keepRecoverySession`). React's StrictMode unmounts and
- * remounts every screen once in development, and that rehearsal must not revoke a live reset.
- */
+/** Defer abandonment so StrictMode's development remount can retain the session. */
 export function abandonRecoverySessionSoon(): void {
   cancelScheduledAbandon();
   scheduledAbandon = setTimeout(() => {
@@ -340,7 +264,6 @@ export function abandonRecoverySessionSoon(): void {
   }, 0);
 }
 
-/** The reset screen is (still) showing the held session: a scheduled abandonment is called off. */
 export function keepRecoverySession(): void {
   cancelScheduledAbandon();
 }

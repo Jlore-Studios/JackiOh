@@ -1,17 +1,8 @@
-// The Activate control (docs/classic-sets.md B3.2, SPEC §6.2, R384; its presentation R510).
-//
-// A card whose view lists `activations` (a pile's top card or a face-up backrow card) wears one control
-// per ability: a lightning glyph and a badge of the uses left this turn ("∞" for Activate ♾️, whose
-// `usesLeft` is null). Its label is the control's tooltip and accessible name.
-//
-// No rule lives here (CLAUDE.md rule 7). Whether the control fires is `highlight.legal`, derived from
-// the `activate` actions `legalActions` listed; the view's `usable` and `reason` are drawn, never
-// obeyed: a control that is not legal is greyed, says why in its tooltip and sends nothing. A press
-// reports `{ on: "activate", instanceId, ability? }`, which `actions.ts` builds as a play's choices
-// are built. `ability` is named only when the card lists several (`namedAbility`).
-//
-// The control flashes (`data-flash="activated"`) while the `activated` row plays on its card
-// (animations.ts); under reduced motion a static ring marks it instead.
+// Activate control (B3.2, SPEC §6.2, R384; presentation R510).
+// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
+// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
+// `ability` is named only for multiple entries (`namedAbility`).
+// It flashes for its `activated` animation row; reduced motion uses a static ring.
 
 import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -23,13 +14,10 @@ import { glowAttr } from "./glow.ts";
 
 import "./activate.css";
 
-/** The event whose animation row the control flashes on (animations.ts `activated`). */
 export const ACTIVATED_EVENT = "activated";
 
-/** What the uses badge says for Activate ♾️ (`usesLeft: null`). */
 export const UNLIMITED_USES = "∞";
 
-/** The tooltip's reason when the view gives none and the control is not live (the board catching up, say). */
 export const NOT_NOW = "can't be activated right now";
 
 /** The attribute a drag reads a control's card off (game/drag/targets.ts). */
@@ -37,7 +25,6 @@ export const ACTIVATE_FOR_ATTRIBUTE = "data-activate-for";
 /** The attribute a drag reads the ability a control names off, when it names one. */
 export const ACTIVATE_ABILITY_ATTRIBUTE = "data-activate-ability";
 
-/** "2", or "∞" for Activate ♾️. */
 export function usesText(usesLeft: number | null): string {
   return usesLeft === null ? UNLIMITED_USES : String(usesLeft);
 }
@@ -75,7 +62,6 @@ export type ActivateControlsProps = {
   onClick?: (target: ClickTarget) => void;
 };
 
-/** Every Activate ability the view lists on `card`, one control each; nothing when it lists none. */
 export default function ActivateControls(props: ActivateControlsProps): ReactElement | null {
   const { card } = props;
   const info = useCardInfo(card.defId, card.radiant);
@@ -106,7 +92,6 @@ function ActivateButton(props: {
   name: string;
   label: string;
   activation: ActivationView;
-  /** The ability the control names: undefined when the card lists only one. */
   ability: string | undefined;
   highlight: Highlight;
   flashing: boolean;

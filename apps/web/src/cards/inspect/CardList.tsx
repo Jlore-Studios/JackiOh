@@ -1,16 +1,7 @@
-// A list of cards to look through: a graveyard or exile pile (public, §10.8) or the viewer's own
-// library (R310, R313). The caller hands the entries over in display order, says what that order is
-// (`order`) and renders these through `useInspectTrigger`'s `render`, so they take the one inspect
-// slot like a card's preview and sheet do (B23).
-//
-// An entry is one face and a `count` ("×2" above 1: a library's list is grouped, R310), or a card
-// back (`face: null`, R312) for cards the viewer was never shown, which names and opens nothing.
-// `CardListPreview` is what a resting mouse opens (click-through, hidden from assistive tech, like
-// HoverPreview); `CardListSheet` is what a click, tap, long-press or Enter opens (useModalOverlay).
-//
-// B5 E11: while a permission lets the viewer play cards from their graveyard, the board hands an
-// entry's `play` for exactly the cards `legalActions` lists a `play` for (game/Board.tsx; this file
-// decides nothing, CLAUDE.md rule 7). "Play" reports it to the board and closes the sheet.
+// Lists display public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller
+// order, using inspect's sole slot (B23). Entries are faces/counts or unopened backs (R312).
+// B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
+// sheet (CLAUDE.md rule 7).
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -210,7 +201,7 @@ export function CardListPreview({
   );
 }
 
-/** One face in the sheet's grid: a button that opens it large, with "Play" under it when the viewer may (B5 E11). */
+/** B5 E11: a grid face opens large, with "Play" when permitted. */
 function FaceTile({
   entry,
   face,
@@ -265,8 +256,7 @@ export function CardListSheet({
   /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */
   const returnTo = useRef<string | null>(null);
 
-  // The button that had focus leaves the DOM on both switches, so focus is moved on purpose: to
-  // Back when a face opens, and to that face's tile when Back returns to the grid.
+  // Changing views removes the focused button, so move focus to Back or its returning tile.
   useLayoutEffect(() => {
     if (opened !== undefined) {
       backButton.current?.focus({ preventScroll: true });

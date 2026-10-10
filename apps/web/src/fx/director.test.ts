@@ -1,18 +1,5 @@
-// Polish 1 (docs/polish/1-animations.md, S8): the effects director, B32 to B35.
-//
-// The director is driven only through the seams S8 gives it: a fake clock for `now`, a frame
-// source whose callbacks the test runs by hand, a visibility the test flips, a `measure` that
-// returns fixed boxes from a table the test can edit, a stub `FxSurface` whose 2D context accepts
-// and records every call, a recording `FxShakeSink`, and a plain jsdom `div` as the DOM root.
-//
-// Every assertion is on something the director shows to the outside: `active()`, `particles()`,
-// `capacity()`, the DOM root's children, the `measure` calls and the sink calls. None of it reads
-// the director's parts.
-//
-// Timing convention: `play()` happens at T0, and the harness runs a frame AT T0 and then every
-// 5 ms. Every delay below is a multiple of 5, so each cue's due time lands exactly on a frame and
-// the S8 rule "fires on the first frame where now >= playTime + delayMs" leaves no slack to argue
-// about.
+// Polish 1 (docs/polish/1-animations.md, S8): effects director tests, B32–B35.
+// Public seams only; 5 ms frames make every multiple-of-five delay land exactly on its due frame.
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -42,9 +29,7 @@ import type {
   FxVisibility,
 } from "./types.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Seams
- * ------------------------------------------------------------------------------------------- */
+// Seams
 
 const T0 = 10_000;
 const STEP = 5;
@@ -62,7 +47,6 @@ function fakeClock(start = T0) {
   };
 }
 
-/** A frame source whose callbacks run only when the test says so. */
 function fakeFrames() {
   let nextHandle = 1;
   const pending = new Map<number, (timestampMs: number) => void>();
@@ -80,7 +64,6 @@ function fakeFrames() {
   return {
     source,
     pending: (): number => pending.size,
-    /** Runs every callback requested so far; the ones they request in turn wait for the next run. */
     run(timestampMs: number): void {
       const due = [...pending.values()];
       pending.clear();
@@ -110,11 +93,7 @@ function fakeVisibility() {
   };
 }
 
-/**
- * A 2D context that has every method and every property. Methods record their name and return
- * something harmless (a gradient that takes colour stops, an empty metric); properties can be set
- * and read back. It is enough for any drawing code without the test knowing which calls it makes.
- */
+/** Records canvas calls without assuming implementation details. */
 function recordingContext(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; calls: string[] } {
   const calls: string[] = [];
   const state: Record<string, unknown> = {
@@ -211,7 +190,6 @@ const MOVED: FxBox = { x: 700, y: 300, width: 90, height: 126 };
 const HERO: FxBox = { x: 600, y: 20, width: 120, height: 120 };
 const HAND: FxBox = { x: 500, y: 600, width: 300, height: 110 };
 
-/** `measure`: a table of testid boxes (anything absent measures null), and a log of every call. */
 function fakeMeasure(clock: { now: () => number }) {
   const boxes = new Map<string, FxBox>([
     ["card-a", CARD],
@@ -259,17 +237,14 @@ function harness(over: Partial<FxDirectorOptions> = {}) {
   });
   live.push(director);
 
-  /** One frame at absolute time `at`. */
   function frame(at: number): void {
     clock.set(at);
     frames.run(at);
   }
-  /** Frames every `step` ms from now until absolute time `until`, the last one exactly at `until`. */
   function pumpTo(until: number, step = STEP): void {
     while (clock.now() + step <= until) frame(clock.now() + step);
     if (clock.now() < until) frame(until);
   }
-  /** `n` frames, each `ms` after the previous one. */
   function frameEvery(ms: number, n: number): void {
     for (let i = 0; i < n; i += 1) frame(clock.now() + ms);
   }
@@ -279,12 +254,7 @@ function harness(over: Partial<FxDirectorOptions> = {}) {
 
 const at = (testid: string): FxAnchor => ({ kind: "testid", testid });
 
-/**
- * One entry's worth of cues for D = 300 ms, one of every kind, each inside the S7 bounds: every
- * delay <= D, the projectile lands by D, and every duration ends by D + FX_MAX_TAIL_MS. The banner
- * ends exactly on that bound and the ember burst starts exactly at D, which are the two cases that
- * press hardest on it.
- */
+/** S7 boundary cues: banner ends at D + tail and ember starts at D. */
 const D = 300;
 const HIT = 165;
 
@@ -309,9 +279,7 @@ function measuredTestids(calls: readonly { anchor: FxAnchor }[]): string[] {
   return calls.flatMap((call) => (call.anchor.kind === "testid" ? [call.anchor.testid] : []));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B32: cues fire on time, at the box measured then, and nothing outlives D + T
- * ------------------------------------------------------------------------------------------- */
+// B32: cues fire at the measured box and expire by D + T.
 
 describe("B32 — the director fires each cue on time and leaves nothing behind", () => {
   it("freezes FX visual time during hit-stop and resumes from the remaining lifetime", () => {
@@ -335,7 +303,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
     h.director.play(entryCues());
     h.frame(T0);
 
-    // Mid-entry the effects really are running, so the zeros at the end are not vacuous.
     h.pumpTo(T0 + 200);
     expect(h.director.active()).toBeGreaterThan(0);
     expect(h.director.particles()).toBeGreaterThan(0);
@@ -346,7 +313,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
     expect(h.director.active()).toBe(0);
     expect(h.director.particles()).toBe(0);
     expect(h.root.childElementCount).toBe(0);
-    // The shake ended too, and the sink was told so.
     expect(h.sink.log.at(-1)).toEqual({ kind: "clear" });
   });
 
@@ -357,7 +323,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
       { kind: "burst", preset: "spark", at: at("card-a"), delayMs: 100, count: 12, spread: "point", power: 1 },
       { kind: "shake", trauma: 0.4, delayMs: 100 },
     ]);
-    // Nothing is measured at play() time: anchors are resolved when the cue fires.
     expect(h.measure.calls).toHaveLength(0);
 
     h.frame(T0 + 50);
@@ -366,7 +331,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
     expect(h.root.childElementCount).toBe(0);
     expect(h.director.particles()).toBe(0);
     expect(h.sink.applies()).toHaveLength(0);
-    // Still pending, so still reported as work.
     expect(h.director.active()).toBeGreaterThan(0);
   });
 
@@ -418,7 +382,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
     expect(h.root.childElementCount).toBe(1);
     expect(h.root.querySelector('[data-fx="splat"]')?.getAttribute("data-amount")).toBe("-5");
     expect(h.director.particles()).toBe(0);
-    // The one mounted splat is the only thing left: skipped cues are not held as pending work.
     expect(h.director.active()).toBe(1);
   });
 
@@ -499,9 +462,7 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B33: clear(), and the page going hidden
- * ------------------------------------------------------------------------------------------- */
+// B33: clear() and a hidden page.
 
 describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock ages", () => {
   it("B32 a banner replaces one still fading, so two never read over each other", () => {
@@ -513,7 +474,6 @@ describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock
     const banners = h.root.querySelectorAll('[data-fx="banner"]');
     expect(banners).toHaveLength(1);
     expect(banners[0]?.getAttribute("data-text")).toBe("Opponent's turn");
-    // Other kinds are left alone.
     h.director.play([{ kind: "splat", tone: "damage", amount: 2, at: at("card-a"), delayMs: 0, durationMs: 500 }]);
     h.director.play([{ kind: "banner", text: "Your turn", tone: "you", delayMs: 0, durationMs: 1_000 }]);
     h.frame(T0 + 320);
@@ -522,7 +482,6 @@ describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock
   });
 
   it("dismissBanner takes the turn banner and its rays at once, and leaves everything else", () => {
-    // Integration QA: "YOUR TURN" sat over the zones a play was asking about for a second or two.
     const h = harness();
     h.director.play([
       { kind: "banner", text: "Your turn", tone: "you", delayMs: 0, durationMs: 1_400 },
@@ -547,7 +506,7 @@ describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock
 
   it("B32 the canvas is cleared while it shows anything and once after, then left alone", () => {
     const h = harness();
-    // A cue due in an hour keeps the loop running with nothing to draw.
+    // Keep the loop awake after drawing ends.
     h.director.play([
       { kind: "burst", preset: "spark", at: at("card-a"), delayMs: 0, count: 10, spread: "point", power: 1 },
       { kind: "banner", text: "Your turn", tone: "you", delayMs: 3_600_000, durationMs: 100 },
@@ -567,7 +526,7 @@ describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock
     h.frame(T0);
     h.frame(T0 + 200);
     expect(h.director.particles()).toBeGreaterThan(0);
-    // One frame, 1.2 s late: dt is clamped to FX_MAX_DT_MS, but everything is 1.2 s older.
+    // A late frame ages by wall time, not clamped dt.
     h.frame(T0 + 200 + D + FX_MAX_TAIL_MS);
     expect(h.director.particles()).toBe(0);
     expect(h.director.active()).toBe(0);
@@ -601,7 +560,6 @@ describe("B33 — clear() and visibility", () => {
     const logged = h.sink.log.length;
     const measured = h.measure.calls.length;
 
-    // The ember burst was due at D and the splat's tail ran to 950 ms: neither may come back.
     h.pumpTo(T0 + 3_000);
     expect(h.root.childElementCount).toBe(0);
     expect(h.director.particles()).toBe(0);
@@ -659,11 +617,9 @@ describe("B33 — clear() and visibility", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B34: capacity, and adaptive quality on slow frames
- * ------------------------------------------------------------------------------------------- */
+// B34: capacity and adaptive quality on slow frames.
 
-/** A cue due in an hour: keeps the frame loop busy without drawing anything in the meantime. */
+/** Keeps the frame loop awake without drawing. */
 function keepBusy(director: FxDirector): void {
   director.play([{ kind: "banner", text: "Your turn", tone: "you", delayMs: 3_600_000, durationMs: 100 }]);
 }
@@ -686,16 +642,12 @@ describe("B34 — particle capacity", () => {
     expect(harness({ capacity: capacityFor(390) }).director.capacity()).toBe(FX_PARTICLE_CAP_MOBILE);
   });
 
-  /**
-   * A 60 Hz display, learned: a first frame (timed from the wake, so it counts for nothing) and then
-   * one whole window of 16 ms frames. The next window starts empty.
-   */
+  /** Learns 60 Hz through an ignored wake frame plus one steady window. */
   function settleOn60Hz(h: ReturnType<typeof harness>): void {
     h.frameEvery(16, FX_ADAPT_WINDOW + 1);
     expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
   }
 
-  /** How many frames of `ms` it takes a window to run past FX_ADAPT_WINDOW frames at `slowMs`. */
   const framesToTrip = (ms: number, slowMs: number): number => Math.floor((FX_ADAPT_WINDOW * slowMs) / ms) + 1;
 
   it("B34 on a 60 Hz display, 40 ms frames halve the capacity once a window's worth of time runs slow, down to FX_PARTICLE_CAP_MIN", () => {
@@ -710,7 +662,6 @@ describe("B34 — particle capacity", () => {
     const once = halved(FX_PARTICLE_CAP);
     expect(h.director.capacity()).toBe(once);
 
-    // The window restarts after a halving, so the next one needs as long again.
     h.frameEvery(40, trip);
     expect(h.director.capacity()).toBe(halved(once));
 
@@ -726,8 +677,6 @@ describe("B34 — particle capacity", () => {
   });
 
   it("B34 a steady 30 Hz display is not load: 33.4 ms frames never lower the capacity, 15 fps on it does", () => {
-    // Review: iOS Low Power Mode and Chrome's energy saver cap rAF at 30 Hz, and the old rule
-    // (mean over 24 ms) pinned such a phone at the floor for the whole game.
     const steady = harness({ capacity: capacityFor(390) });
     keepBusy(steady.director);
     steady.frameEvery(33.4, FX_ADAPT_WINDOW * 10);
@@ -758,7 +707,6 @@ describe("B34 — particle capacity", () => {
     const h = harness();
     keepBusy(h.director);
     settleOn60Hz(h);
-    // Three 300 ms frames already run past a whole window at 24 ms; the old rule waited 30 frames (9 s).
     h.frameEvery(FX_MAX_DT_MS * 6, 3);
     expect(h.director.capacity()).toBe(halved(FX_PARTICLE_CAP));
   });
@@ -803,9 +751,7 @@ describe("B34 — particle capacity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B35: the shake reaches the board only through the sink
- * ------------------------------------------------------------------------------------------- */
+// B35: shake reaches the board only through the sink.
 
 describe("B35 — the shake goes through the sink", () => {
   it("B35 a shake cue drives the sink with offsets bounded by trauma², then clears it once when the trauma is spent", () => {
@@ -826,7 +772,6 @@ describe("B35 — the shake goes through the sink", () => {
     }
     expect(applies.some((offset) => offset.x !== 0 || offset.y !== 0 || offset.angle !== 0)).toBe(true);
 
-    // The last apply is followed by a clear, and nothing is applied after it.
     let lastApply = -1;
     h.sink.log.forEach((entry, index) => {
       if (entry.kind === "apply") lastApply = index;
@@ -868,9 +813,7 @@ describe("B35 — the shake goes through the sink", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B41: a burst of a preset with a flash blooms where it fires
- * ------------------------------------------------------------------------------------------- */
+// B41: flash presets bloom at their origin.
 
 describe("B41 — bursts of a flash preset bloom at their origin", () => {
   it("B41 a spark burst leaves a bloom running after its particles are counted, and it is gone within the preset's flash time", () => {
@@ -879,7 +822,6 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     const h = harness();
     h.director.play([{ kind: "burst", preset: "spark", at: at("card-a"), delayMs: 0, count: 24, spread: "point", power: 1 }]);
     h.frame(T0);
-    // The bloom is canvas activity of its own: active() counts it while particles run separately.
     expect(h.director.active()).toBe(1);
     expect(h.director.particles()).toBe(24);
     h.pumpTo(T0 + flashMs);

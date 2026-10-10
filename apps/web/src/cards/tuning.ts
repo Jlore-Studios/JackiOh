@@ -1,16 +1,8 @@
-// Degrade and Upgrade on a face (docs/classic-sets.md B3.4, R386), which players read as Nerf and Buff
-// (R1320): what the view says changed on a card, for the marks a face draws and the inspect words. The
-// verdicts keep the engine's words as data (`data-tuned="upgraded"`); `VERDICT_WORD` is what a player reads.
-//
-// The view carries a tuned card's live numbers (`params`) and the record of what changed (`tuning`, SPEC
-// §10.8). This module compares them with the public catalog and nothing else (CLAUDE.md rule 7), and
-// names each change better or worse for the controller: a stat, up is better; a keyword, added is
-// better and removed worse (§6.3); a numbered keyword or X, more is better except Tribute (§6.3); a
-// declared number, the way its `better` says (B3.4 rule 5); a number set outright that is not declared
-// (KY's Constant) is neither, only "set to N". The face marks each by shape as well as colour.
-//
-// `filledText` fills a face's text exactly as `fillParams` does and records where each moved number
-// stands, so the rules text can box it; a test holds the two to the same string.
+// B3.4, R386; R1320: face marks present Degrade and Upgrade as Nerf and Buff while verdict data keeps
+// the engine's words. Compare `tuning` and `params` with the public catalog only (SPEC §10.8;
+// CLAUDE.md rule 7). Stats and keywords use their player-facing direction; numbered keywords and X are
+// greater-is-better except Tribute (§6.3). Declared numbers use `better` (B3.4 rule 5); constants set
+// outright are neither better nor worse. `filledText` stays identical to `fillParams`.
 
 import {
   PARAM_PLACEHOLDER,

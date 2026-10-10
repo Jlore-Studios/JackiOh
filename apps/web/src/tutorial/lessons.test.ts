@@ -1,10 +1,5 @@
-// The tutorial's lessons as data (tutorial/lessons.ts): R291.
-//
-// A lesson is a practice game (R187) with two fixed decks, a fixed seed and seat, and the tutorial
-// handicap on the AI seat (R290). These tests hold what every lesson must be, whatever its content:
-// legal decks, an AI deck of exactly the handicap's size with nothing the AI's shadow ban holds
-// back (R186) and nothing the lesson has not taught yet, a deal that is the same every time, and a
-// start through the real practice core that hands the page only what the human may see (rule 7).
+// R291 lessons are deterministic R187 practice games with the R290 handicap. Their decks respect
+// R186 and taught mechanics; the practice core exposes only the human's view (rule 7).
 
 import { describe, expect, it } from "vitest";
 
@@ -22,19 +17,14 @@ import { scriptFor } from "./scripts/index.ts";
 
 const catalog = registeredCatalog();
 
-/** "Mostly Commons, Rares and Epics; a few fun cards": at most this many Legendary or Mythic cards in a human deck. */
 const HUMAN_SHOWPIECES_MAX = 2;
 const SHOWPIECE_RARITIES: readonly string[] = ["Legendary", "Mythic"];
 
-/**
- * R291: what the AI may not hold before the lesson that teaches it. Lesson 1 teaches units and
- * combat, so its AI plays plain units only; lesson 2 teaches spells and keywords; lesson 3 the
- * backrow, so no Trap, Field Trap or Field Spell reaches the AI before it.
- */
+// R291: the AI gets each mechanic only after its lesson teaches it.
 const BACKROW_TYPES: readonly string[] = ["Trap", "Field Trap", "Field Spell"];
 const BACKROW_LESSON = 3;
 const SPELL_LESSON = 2;
-/** Keywords that change how attacking works (§4, §6.1): lesson 2's subject, so never on lesson 1's AI. */
+// Lesson 1 excludes combat keywords (§4, §6.1).
 const COMBAT_KEYWORDS: readonly string[] = [
   "Taunt",
   "Rush",
@@ -51,11 +41,7 @@ const COMBAT_KEYWORDS: readonly string[] = [
   "Can't attack",
 ];
 
-/**
- * R290, R291: cards that read their controller's health against §2's 30, which the tutorial hero's
- * 20 bends: #53 Reno would lift the AI's hero from 20 to 30, and #70 Spiteful Stab counts ten health
- * as already missing (R72), so both would hand the tutorial opponent more than a human gets.
- */
+// R290/R291: health readers assume §2's 30; that misreads the tutorial hero's 20 (R72).
 const READS_THIRTY: readonly string[] = ["core-053", "core-070"];
 
 function def(id: string): CardDef {
@@ -129,7 +115,6 @@ describe("R291 the tutorial's lessons", () => {
         if (lesson.number < BACKROW_LESSON) expect(BACKROW_TYPES, `${where}: no backrow card before lesson ${String(BACKROW_LESSON)}`).not.toContain(card.type);
         if (lesson.number < SPELL_LESSON) {
           expect(card.type, `${where}: units only in lesson 1`).toBe("Unit");
-          // The base face only: nothing in a lesson-1 deck makes a card Radiant.
           const keywords = card.base.keywords.map((keyword) => keyword.kind);
           for (const keyword of keywords) expect(COMBAT_KEYWORDS, `${where}: ${keyword}`).not.toContain(keyword);
         }

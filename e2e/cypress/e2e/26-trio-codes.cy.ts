@@ -1,21 +1,6 @@
-// Spec 26 — "Trio codes: copy a trio's code, import it as three new decks and a trio, and the cap
-// refusal (R339–R341)".
-//
-// Key assertions:
-//
-//     "Copy trio code shows the trio as a code; pasting it into another account's Import trio
-//      previews its three decks and imports them as three new decks and a trio naming them, which
-//      the server holds; with too little room the import is off and says exactly how many slots it
-//      needs, the server refuses the same import with the same numbers, and nothing is made"
-//
-// WHO IS WHO. The code is copied from `e2e-p2`'s trio (the one `cy.installLoadout` saves: "E2E
-// trio", Deck 1..3) and imported into `e2e-p1`, which starts each test with nothing saved, so the
-// import is the only thing that could have made what `GET /api/decks` then lists. The clipboard is
-// not read: a Cypress browser may refuse it, and the workshop shows the code in a read-only field
-// for exactly that case, which is where the spec reads it.
-//
-// Needs: M6 (the deck endpoints), TASK 1's deck workshop and the trio import route
-// (`POST /api/trios/import`). See e2e/README.md.
+// Trio-code copy/import and capacity refusal (R339–R341).
+// `e2e-p2` supplies one installed trio; `e2e-p1` starts empty, proving this import created every listing.
+// Read the code from the output field because Cypress may deny clipboard access. See e2e/README.md.
 
 import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { INSTALLED_DECK_NAMES, INSTALLED_TRIO_NAME, mintId, type InstalledLoadout } from "../../support/commands.ts";
@@ -43,7 +28,6 @@ import {
 
 const DECK_SIZE = constants.DECK_SIZE;
 
-/** Every deck row in the rail, whatever its id. */
 const DECK_ROWS = `${ts(DECK_LIST)} [data-testid^="${deckRowId("")}"]`;
 
 type ErrorBody = { error: { code: string; message: string; details?: unknown } };
@@ -56,13 +40,11 @@ function bearer(account: E2EAccount): Record<string, string> {
   return { authorization: `Bearer ${account.token}` };
 }
 
-/** Open `/decks` and wait for the workshop itself, not for the route. */
 function openWorkshop(account: E2EAccount): void {
   cy.visitAs(account, routes.deckbuilder());
   cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("exist");
 }
 
-/** `e2e-p2`'s installed trio, as a code copied off its trio editor. */
 function copiedTrioCode(): Cypress.Chainable<{ code: string; installed: InstalledLoadout }> {
   const exporter = accounts.p2();
   return cy.installLoadout(exporter, "19-modes-b").then((installed) => {
@@ -81,7 +63,6 @@ function copiedTrioCode(): Cypress.Chainable<{ code: string; installed: Installe
   });
 }
 
-/** Paste `code` into the trio import panel of the open workshop. */
 function pasteTrioCode(code: string): void {
   cy.get(ts(TRIO_IMPORT_OPEN), { timeout: timeouts.view }).click();
   cy.get(ts(TRIO_IMPORT)).should("be.visible");
@@ -100,7 +81,6 @@ describe("26 trio codes — copy, import, and the caps (R339–R341)", () => {
       cy.get(DECK_ROWS).should("have.length", 0);
       pasteTrioCode(code);
 
-      // The preview: the trio's name, each deck with its count, and nothing shared (L4's trio).
       cy.get(ts(TRIO_IMPORT_PREVIEW)).should("have.attr", "data-ok", "true").and("contain.text", INSTALLED_TRIO_NAME);
       INSTALLED_DECK_NAMES.forEach((name, at) => {
         cy.get(ts(trioImportSlotId(at + 1)))
@@ -110,13 +90,11 @@ describe("26 trio codes — copy, import, and the caps (R339–R341)", () => {
       cy.get(ts(TRIO_IMPORT_SHARED)).should("not.exist");
       cy.get(ts(TRIO_IMPORT_SUBMIT)).should("not.be.disabled").click();
 
-      // The new trio opens, whole, and is ready for Conquest.
       cy.get(ts(TRIO_EDITOR), { timeout: timeouts.view }).should("be.visible");
       cy.get(ts(TRIO_NAME_INPUT)).should("have.value", INSTALLED_TRIO_NAME);
       cy.get(ts(TRIO_VERDICT)).should("have.attr", "data-ready", "true");
       cy.get(DECK_ROWS).should("have.length", constants.DECKS_PER_LOADOUT);
 
-      // The server holds exactly what the code carried: three decks, and a trio naming them in order.
       cy.savedDecks(importer).should((saved) => {
         expect(saved.decks.map((deck) => deck.name), "the decks' names").to.deep.eq([...INSTALLED_DECK_NAMES]);
         expect(saved.decks.map((deck) => deck.cards), "the decks' cards, card for card").to.deep.eq(installed.decks);
@@ -133,7 +111,7 @@ describe("26 trio codes — copy, import, and the caps (R339–R341)", () => {
   it("R340 with too little room the import says how many slots it needs, the server refuses it too, and nothing is made", () => {
     const importer = accounts.p1();
     copiedTrioCode().then(({ code, installed }) => {
-      // Leave one free deck slot: the code's three decks need three.
+      // Leave one slot free; importing the trio needs three.
       cy.savedDecks(importer).then((saved) => {
         for (let at = 0; at < MAX_SAVED_DECKS - 1; at += 1) {
           cy.saveDeck(importer, { name: `Filler ${String(at + 1)}`, cards: [], catalogVersion: saved.catalogVersion });
@@ -150,8 +128,7 @@ describe("26 trio codes — copy, import, and the caps (R339–R341)", () => {
         .and("contain.text", "Delete 2 decks");
       cy.get(ts(TRIO_IMPORT_SUBMIT)).should("be.disabled");
 
-      // The server is law (rule 7): the same import sent straight to it is refused with the same
-      // numbers, and writes nothing.
+      // Server authority (CLAUDE.md rule 7): direct import has the same refusal and no writes.
       cy.savedDecks(importer).then((saved) => {
         cy.request<ErrorBody>({
           method: "POST",

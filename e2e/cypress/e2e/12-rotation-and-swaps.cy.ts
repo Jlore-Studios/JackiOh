@@ -1,55 +1,6 @@
-// BUILD M8 `12-rotation-and-swaps.cy.ts` — "Silly Silas, Pocket Chaos board swap".
-//
-// Key assertions (BUILD M8's table, verbatim):
-//
-//   "every card testid moves one lane; board swap flips sides"
-//
-// "One lane" is not an array shift. R14 and §3.1 make the ten unit zones ONE RING, read from the
-// rotating player's seat: "your lane 1→5, then the opponent's lane 5 down to 1, and back to your
-// lane 1; the backrow forms a second ring the same way". So the step out of your lane 5 is the
-// opponent's lane 5 and the step out of the opponent's lane 1 is your lane 1, and those two moves
-// change control (§3.2: "Steal and rotation change the controller of a card on the field";
-// ownership does not move, R12). `RING` below is that order, and every expected destination in
-// this spec is one step along it — a naive per-side shift would put four of the six cards in the
-// wrong zone and is exactly what this spec is meant to catch.
-//
-// R33 is the other half. "Only the current controller sees a face-down trap's identity: after a
-// steal, board swap or rotation the new controller sees it and the previous one stops seeing it,
-// even though ownership is unchanged." Each seat sets one trap, and the board swap moves both
-// across the centre line, so the spec reads the same two cards twice: seat 1's own My Pawn stops
-// being readable although seat 1 still OWNS it, and seat 2's Bear Honeypot starts being readable
-// although seat 1 will never own it. `Backrow.tsx` makes that assertable without a peek at the
-// state: a `{ faceDown: true }` entry carries no instance id, so a trap seat 1 may not read has
-// no `card-<instanceId>` element at all and its name is nowhere in the DOM (§10.8).
-//
-// R73 fixes what "swap boards" does: "zone contents swap lane by lane, locks stay with their
-// zones, control changes, ownership doesn't, and a face-down trap stays face-down but is now
-// readable by its new controller only (R33)". Lane-preserving is asserted per card: same row,
-// same lane, other side.
-//
-// R81 is why neither choice is a `PendingChoice`: Silas's direction is a declared `direction`
-// pick and Pocket Chaos's swap is a declared `mode`, so both travel inside the `play` action and
-// the client builds them with its pickers. §10.6: "No Core card opens an `x`, `embiggen`, `zone`,
-// `tribute` or `direction` prompt".
-//
-// House rules (BUILD M8): the seed is set here and overridable with `--expose seed=…`; there is
-// no fixed `cy.wait(ms)` — every wait is `cy.settled()` or a retried assertion; every selector
-// comes from `e2e/support/testids.ts`.
-//
-// The catalog blocker this header used to name is CLOSED. The note is kept rather than deleted
-// because a stale "blocked" claim is worse than none — it invites a reader to write off a real
-// failure as known. `apps/web` now depends on `@jackioh/cards` and calls `registerAll()` in its
-// composition root, so `registeredCatalog()` is populated, `/dev/hotseat` resolves a fixture deck
-// and `window.__jackioh` is exposed. If this spec fails in `cy.seedGame` now, it is a finding.
-// The three cards this spec steers are further along than most: `rotate`
-// (#52), `swap` (#87) and #60's `forcedAttacks` are all in the effects barrel now, and #96 is
-// only ever set face-down here, never fired.
-//
-// Not asserted here, and reported rather than worked around: the `rotated` and `swapped`
-// animations. Both are 500 ms on the `board` element (BUILD M5-T4), and both plays go through
-// `cy.playCard`, which ends with `cy.settled()` — so the `data-animating` window is gone before a
-// spec could look. BUILD M5-T4's own acceptance for `rotated` is "every card's zone testid changed
-// by one step", which is the assertion this spec makes.
+// BUILD M8: R14 and §3.1 rotate each row's ten zones as one ring; crossing its centre changes control (§3.2), not ownership (R12).
+// R33 and §10.8 require a face-down trap's controller alone to see its identity. R73 swaps each lane across the board with ownership intact.
+// R81 declared `direction` and `mode` choices travel in `play`; §10.6 supplies no prompt. BUILD M5-T4 observes the resulting zone testids.
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
@@ -57,28 +8,14 @@ import { seedFor } from "../../support/config.ts";
 import { BOARD, cardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Side, ZoneRef } from "../../support/types.ts";
 
-/**
- * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it.
- *
- * Chosen for the draw order this file's six plays need, in the order it makes them: My Pawn is in
- * seat 1's opening hand and Bear Honeypot in seat 2's, so the two traps are set on player-turns 1
- * and 2 — which is also the order §8 #60 needs, since a 1-cost My Pawn set after the Honeypot was
- * armed would fire it. Two of the six plain 2-cost units reach seat 1 by player-turn 5 and one
- * reaches seat 2 by player-turn 6, Pocket Chaos arrives on player-turn 5 and Silly Silas on
- * player-turn 11, so the rotation and the swap both happen inside R2's cap. The previous seed never
- * put #96 in seat 1's hand at all and the game ran out as a draw in the first `advanceUntil`.
- */
+/** BUILD M8 seed supplies the ordered trap and unit plays before R2's cap (SPEC §8). */
 const SEED = seedFor("12-rotation-4");
 
 const TURN_BUDGET = 34;
 
 const BEAR_HONEYPOT = catalogId(60);
 
-/**
- * The six units 12-rotation-a/b hold that need nothing but a zone: no Cry, no target, no mode, so
- * a play is one card click and one zone click (SPEC §8 #1, #20, #32, #45, #56, #91). All cost 2,
- * which also keeps them above Bear Honeypot's "costing 1 or less" trigger.
- */
+/** SPEC §8 choice-free 2-cost units avoid Bear Honeypot's 1-cost trigger. */
 const PLAIN_UNITS: readonly string[] = [
   catalogId(1),
   catalogId(20),
@@ -89,7 +26,7 @@ const PLAIN_UNITS: readonly string[] = [
 ];
 const PLAIN_UNIT_COST = 2;
 
-/** Costs from SPEC §8. §2.3 caps max mana at 4, so each play waits for a turn that can pay. */
+/** SPEC §8 costs require waiting within §2.3's mana cap. */
 const COSTS: Record<string, number> = {
   [CARDS.myPawn]: 1,
   [BEAR_HONEYPOT]: 1,
@@ -97,11 +34,7 @@ const COSTS: Record<string, number> = {
   [CARDS.pocketChaos]: 4,
 };
 
-/**
- * R14 / §3.1, read from the ROTATING player's seat — which is seat 1 here, and seat 1 is "you"
- * in the view the assertions are made against (ASSUMPTION A3). One ring per row, and both rings
- * turn together; "right" is one step forward along this order.
- */
+/** R14 / §3.1 ring, from seat 1's `you` view (ASSUMPTION A3). */
 const RING: readonly { side: Side; lane: Lane }[] = [
   { side: "you", lane: 1 },
   { side: "you", lane: 2 },
@@ -115,7 +48,7 @@ const RING: readonly { side: Side; lane: Lane }[] = [
   { side: "opponent", lane: 1 },
 ];
 
-/** One step "right" around the ring of `zone.row`, staying in that row (R14: two rings). */
+/** R14: move right within `zone.row`'s ring. */
 function rotateRight(zone: ZoneRef): ZoneRef {
   const at = RING.findIndex((slot) => slot.side === zone.side && slot.lane === zone.lane);
   expect(at, `${zone.side} lane ${zone.lane} is on the ring`).to.be.at.least(0);
@@ -129,12 +62,12 @@ function acrossTheLine(zone: ZoneRef): ZoneRef {
   return { side: zone.side === "you" ? "opponent" : "you", row: zone.row, lane: zone.lane };
 }
 
-/** The seat that owns a side of the board seat 1 is looking at (ASSUMPTION A3). */
+/** The owner of each side in seat 1's view (ASSUMPTION A3). */
 function seatOf(side: Side): PlayerId {
   return side === "you" ? "p1" : "p2";
 }
 
-/** SPEC §8's name for card #index, which is what the client prints on a card (BUILD M5-T1). */
+/** SPEC §8 card names are what BUILD M5-T1 renders. */
 function nameOf(index: number): string {
   const name = CARD_NAMES[index];
   if (name === undefined) throw new Error(`no SPEC §8 card #${index}`);
@@ -157,7 +90,7 @@ function handOf(state: GameStateLike, player: PlayerId): Held[] {
   return peek(state, player).hand ?? [];
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: hand the hotseat device to the actor. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
@@ -173,7 +106,7 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready` holds, then leave the device on the seat that has to act. */
+/** Take turns until `ready`, leaving the device with the actor. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -191,13 +124,7 @@ function canPay(state: GameStateLike, player: PlayerId, cost: number): boolean {
   return (peek(state, player).mana?.current ?? 0) >= cost;
 }
 
-/**
- * Wait until `player` holds `defId` on their own turn with the mana SPEC §8 prices it at, then
- * play it and hand back the instance id. By def id rather than `cy.playByName` because the
- * instance is chosen by what the card IS, not by what the client prints on it — and the id is
- * read out of the hand BEFORE the play, so a later "it is in this zone" assertion is a real
- * check rather than a restatement of where the spec just looked.
- */
+/** Play the held SPEC §8 card by id, preserving its pre-play id for later assertions. */
 function playWhenDrawn(
   player: PlayerId,
   defId: string,
@@ -212,8 +139,7 @@ function playWhenDrawn(
   ensureSeat(player);
   return cy.instanceInHand(player, defId).then((instanceId) => {
     cy.playCard(instanceId, options);
-    // R227: a card set face-down takes a fresh instance id as it lands, so a trap is tracked by the
-    // id its zone holds from then on, not the one it had in hand.
+    // R227: a set trap gets a fresh id, so track the id in its zone.
     const zone = options.zone;
     if (zone !== undefined && zone.row === "backrow" && zone.side === "you") {
       return cy.instanceAt(player, "backrow", zone.lane);
@@ -222,17 +148,13 @@ function playWhenDrawn(
   });
 }
 
-/** Narrow an id captured in an earlier step; a missing one is a spec bug, not a rules failure. */
+/** Require an id captured by an earlier step. */
 function need(value: string | undefined, what: string): string {
   if (value === undefined) throw new Error(`${what} was never captured`);
   return value;
 }
 
-/**
- * Put one of the choice-free units into a lane of the playing seat's own row and hand back its
- * instance id. Which of the six it is does not matter to any assertion in this spec: it is a card
- * in a zone, and the rotation and the swap have to move it.
- */
+/** Put a choice-free unit in a lane; only its zone matters here. */
 function summonPlainUnit(player: PlayerId, lane: Lane): Cypress.Chainable<string> {
   advanceUntil(`${player} can summon a plain unit into lane ${lane}`, (state) => {
     if (state.active !== player) return false;
@@ -244,21 +166,20 @@ function summonPlainUnit(player: PlayerId, lane: Lane): Cypress.Chainable<string
     const unit = handOf(state, player).find((card) => PLAIN_UNITS.includes(card.defId));
     expect(unit, `${player} holds one of the choice-free units`).to.not.eq(undefined);
     const instanceId = unit?.id ?? "";
-    // The zone is always on the playing seat's own side: `viewFor` orients the view, so the seat
-    // holding the device is "you" (ASSUMPTION A3).
+    // `viewFor` makes the acting seat `you` (ASSUMPTION A3).
     cy.playCard(instanceId, { zone: { side: "you", row: "units", lane } });
     return cy.wrap(instanceId, { log: false });
   });
 }
 
-/** The card element is inside the zone element the view drew it in (BUILD M5-T1's nesting). */
+/** BUILD M5-T1 nests each card inside its zone. */
 function expectCardAt(instanceId: string, zone: ZoneRef): void {
   cy.get(ts(cardId(instanceId)))
     .closest(ts(zoneId(zone.side, zone.row, zone.lane)))
     .should("exist");
 }
 
-/** The engine agrees about the zone, which is what `controlChanged` means for a crossed card. */
+/** Confirm the engine's zone after a crossed card changes control. */
 function expectEngineAt(instanceId: string, zone: ZoneRef): void {
   cy.instanceAt(seatOf(zone.side), zone.row, zone.lane).should("eq", instanceId);
 }
@@ -269,48 +190,22 @@ function expectTrapReadable(instanceId: string, zone: ZoneRef, name: string): vo
   cy.get(ts(zoneId(zone.side, zone.row, zone.lane))).should("contain.text", name);
 }
 
-/**
- * R33: this seat is not the controller, so the trap is a back — and `Backrow.tsx` gives a
- * face-down entry no instance id at all, so there is no element to find and no name to read
- * anywhere on the board (§10.8). The engine is asked separately that the card is still standing
- * in that zone, because the DOM is not allowed to say so.
- */
+/** R33 / §10.8: a non-controller cannot see the trap, but the engine confirms its zone. */
 function expectTrapHidden(instanceId: string, zone: ZoneRef, name: string): void {
   cy.get(ts(cardId(instanceId))).should("not.exist");
   cy.get(ts(zoneId(zone.side, zone.row, zone.lane))).should("not.contain.text", name);
   expectEngineAt(instanceId, zone);
 }
 
-// --- the pixel layout (BUILD M5-T1) -----------------------------------------------------------
-//
-// BUILD M5-T1's acceptance is "a snapshot test renders a fixture `PlayerView` with 10 units, 10
-// backrow cards and a stacked pile **without layout overflow at 1280x720 and 390x844**". Until
-// this block, nothing in the repo measured the second half of that sentence: the three places
-// that could have each deferred to one of the others.
-//
-//   apps/web/src/game/Board.test.tsx  "jsdom has no layout engine ... the real pixel check at
-//                                      1280x720 and 390x844 is the Cypress spec's job"
-//   apps/web/src/game/board.css       "The real pixel check is the Cypress spec's"
-//   e2e/cypress.config.ts             "the responsive case (390x844) is a component test there"
-//
-// Cypress is the only one of the three with a layout engine, and no spec in the twelve had ever
-// called `cy.viewport`. This is the measurement.
+// BUILD M5-T1 layout check: Cypress measures responsive overflow at both viewports.
 
-/** BUILD M5-T1's two viewports. The first is also `cypress.config.ts`'s default. */
+/** BUILD M5-T1 viewports. */
 const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720 },
   { label: "phone", width: 390, height: 844 },
 ] as const;
 
-/**
- * Nothing on the page needs more horizontal room than the viewport gives it.
- *
- * `scrollWidth` is the width the content would need; the viewport is the width it has. A lane
- * column that will not shrink, a card with a min-width, a hero row that has grown a badge list —
- * each of them shows up here and in no other assertion in this suite. `cards` are re-asserted
- * visible at each size, because a board that fits by clipping its own cards to nothing would
- * otherwise pass.
- */
+/** BUILD M5-T1: each viewport must fit without clipping the tracked cards. */
 function expectFitsViewport(
   viewport: { label: string; width: number; height: number },
   cards: readonly string[],
@@ -320,8 +215,7 @@ function expectFitsViewport(
   for (const instanceId of cards) {
     cy.get(ts(cardId(instanceId))).should("be.visible");
   }
-  // `should`, not `then`: a resize relays out asynchronously, so this retries until it settles
-  // rather than reading the frame that happened to be current.
+  // `should` retries until asynchronous resize layout settles.
   cy.document({ log: false }).should((doc) => {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     expect(doc.documentElement.scrollWidth, `the document fits ${where}`).to.be.at.most(
@@ -339,7 +233,7 @@ function expectFitsViewport(
   });
 }
 
-/** Where each tracked card stands, in the view seat 1 is looking at. */
+/** Tracked card zones in seat 1's view. */
 type Board = {
   yourLane1: ZoneRef;
   silas: ZoneRef;
@@ -366,7 +260,6 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
   });
 
   it("R14/R33/R73 moves every card one lane, then flips both sides of the board", () => {
-    // Filled in by the steps below and read back inside `cy.then`, which runs at command time.
     const ids: {
       myPawn?: string;
       honeypot?: string;
@@ -376,9 +269,7 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       silas?: string;
     } = {};
 
-    // The board this spec builds, in the view seat 1 is looking at. Seat 1's lane 5 and seat 2's
-    // lane 1 are the two zones whose next step around R14's ring is on the other side of the
-    // centre line, so putting a unit in each is what makes the rotation's control change visible.
+    // R14's centre crossings make control changes visible in seat 1 lane 5 and seat 2 lane 1.
     const built: Board = {
       yourLane1: { side: "you", row: "units", lane: 1 },
       silas: { side: "you", row: "units", lane: 3 },
@@ -388,11 +279,7 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       honeypot: { side: "opponent", row: "backrow", lane: 2 },
     };
 
-    // -----------------------------------------------------------------------------------------
-    // 1. Seat 1 sets My Pawn first, before seat 2's Bear Honeypot is armed: #60 fires "when the
-    //    opponent plays a card costing 1 or less", and a 1-cost trap is exactly that. Nothing
-    //    seat 1 plays after this costs less than 2.
-    // -----------------------------------------------------------------------------------------
+    // Set My Pawn before #60 Bear Honeypot can trigger on its 1-cost play.
     playWhenDrawn("p1", CARDS.myPawn, { zone: { side: "you", row: "backrow", lane: 2 } }).then((id) => {
       ids.myPawn = id;
     });
@@ -401,9 +288,6 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       ids.honeypot = id;
     });
 
-    // -----------------------------------------------------------------------------------------
-    // 2. Three units: two of seat 1's and one of seat 2's, in the lanes `built` names.
-    // -----------------------------------------------------------------------------------------
     summonPlainUnit("p1", 1).then((id) => {
       ids.yourLane1 = id;
     });
@@ -414,8 +298,7 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       ids.theirLane1 = id;
     });
 
-    // The board as built, and R33 before anything has moved: seat 1 reads its own face-down trap
-    // and cannot read seat 2's.
+    // R33: seat 1 reads only its own face-down trap.
     ensureSeat("p1");
     cy.then(() => {
       expectCardAt(need(ids.yourLane1, "seat 1's lane-1 unit"), built.yourLane1);
@@ -425,14 +308,10 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       expectTrapHidden(need(ids.honeypot, "seat 2's Bear Honeypot"), built.honeypot, nameOf(60));
     });
 
-    // -----------------------------------------------------------------------------------------
-    // 3. Silly Silas lands in seat 1's lane 3 and rotates right. §10.5 step 4 precedes step 5, so
-    //    Silas is on the field when his own Cry resolves and rotates with everything else (SPEC
-    //    §8 #52's Engine column: "Silas rotates too").
-    // -----------------------------------------------------------------------------------------
+    // §10.5 puts Silas on field before its §8 #52 Cry rotates it.
     playWhenDrawn("p1", CARDS.sillySilas, {
       zone: { side: "you", row: "units", lane: 3 },
-      // R81: a declared `direction` pick travels in the play action's `modes`.
+      // R81: the declared direction travels in `modes`.
       answers: [{ kind: "direction", options: ["right"] }],
     }).then((id) => {
       ids.silas = id;
@@ -440,34 +319,25 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
 
     const rotated = mapBoard(built, rotateRight);
 
-    // "every card testid moves one lane" — one step along R14's ring, which for seat 1's lane 5
-    // and seat 2's lane 1 means crossing the centre line and changing controller (BUILD M5-T4
-    // `controlChanged`: "card testid now under the other side's zone").
+    // BUILD M5-T4: R14 crossings move cards under the other side's zone.
     ensureSeat("p1");
     cy.then(() => {
       expectCardAt(need(ids.yourLane1, "seat 1's lane-1 unit"), rotated.yourLane1);
       expectEngineAt(need(ids.yourLane1, "seat 1's lane-1 unit"), rotated.yourLane1);
       expectCardAt(need(ids.silas, "Silly Silas"), rotated.silas);
       expectEngineAt(need(ids.silas, "Silly Silas"), rotated.silas);
-      // Crossed the line: seat 2 controls it now, and it is drawn under their zone.
       expectCardAt(need(ids.yourLane5, "seat 1's lane-5 unit"), rotated.yourLane5);
       expectEngineAt(need(ids.yourLane5, "seat 1's lane-5 unit"), rotated.yourLane5);
-      // Crossed the other way, into seat 1's lane 1.
       expectCardAt(need(ids.theirLane1, "seat 2's lane-1 unit"), rotated.theirLane1);
       expectEngineAt(need(ids.theirLane1, "seat 2's lane-1 unit"), rotated.theirLane1);
-      // The backrow is its own ring (R14) and turns with the units. Neither trap crossed here, so
-      // R33 reads exactly as it did before.
+      // R14 rotates the backrow too; R33 visibility is unchanged without a crossing.
       expectTrapReadable(need(ids.myPawn, "seat 1's My Pawn"), rotated.myPawn, nameOf(96));
       expectTrapHidden(need(ids.honeypot, "seat 2's Bear Honeypot"), rotated.honeypot, nameOf(60));
     });
 
-    // -----------------------------------------------------------------------------------------
-    // 4. "board swap flips sides" — #87's second mode. R73: zone contents swap lane by lane,
-    //    control changes, ownership does not.
-    // -----------------------------------------------------------------------------------------
+    // #87's board mode applies R73's lane-preserving swap.
     playWhenDrawn("p1", CARDS.pocketChaos, {
-      // R81: a declared `mode`, one of "health" | "board" | "library", drawn as a Discover
-      // pop-up since it has at most five options (#88).
+      // R81 declared mode uses #88's Discover picker.
       answers: [{ kind: "discover", options: ["board"] }],
     });
 
@@ -483,36 +353,20 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
       expectCardAt(need(ids.theirLane1, "seat 2's lane-1 unit"), swapped.theirLane1);
       expectEngineAt(need(ids.theirLane1, "seat 2's lane-1 unit"), swapped.theirLane1);
 
-      // R33 read twice over, which is why each seat set a trap: the trap seat 1 OWNS is now seat
-      // 2's to read and seat 1's to guess at, and seat 2's trap is now seat 1's to read.
-      // Ownership never moved (R12) — only control did (R73).
+      // R33 swaps trap readability; R12 ownership remains while R73 control moves.
       expectTrapHidden(need(ids.myPawn, "seat 1's My Pawn"), swapped.myPawn, nameOf(96));
       expectTrapReadable(need(ids.honeypot, "seat 2's Bear Honeypot"), swapped.honeypot, nameOf(60));
-      // Its name is rendered on the field now, so the DOM can find the same instance by name.
       cy.fieldCardByName(nameOf(60)).should("eq", need(ids.honeypot, "seat 2's Bear Honeypot"));
     });
 
-    // -----------------------------------------------------------------------------------------
-    // 5. THE PIXEL LAYOUT, measured at BUILD M5-T1's two viewports (see the block above the
-    //    `Board` type for why this lives here and nowhere else).
-    //
-    //    It runs at the END of this spec because this is the fullest board the twelve build: six
-    //    field zones occupied across both sides and both rows — four units, one readable trap and
-    //    one face-down back — plus both hands, both heroes, the control bar and the log. That is
-    //    short of the 10 units and 10 backrow cards BUILD M5-T1's fixture names, and deliberately
-    //    so: no deck fixture in `e2e/fixtures/decks` holds five backrow-capable cards a seat could
-    //    set, so a full board is not reachable by playing one. The premise is asserted rather than
-    //    assumed — every card measured is named — so an edit that empties the board turns this
-    //    into a failure and not into a measurement of an empty grid.
+    // BUILD M5-T1 measures this spec's fullest reachable board.
     cy.then(() => {
       expect(Cypress.config("viewportWidth"), "the desktop viewport is the suite's default").to.eq(
         VIEWPORTS[0].width,
       );
       expect(Cypress.config("viewportHeight"), "and so is its height").to.eq(VIEWPORTS[0].height);
 
-      // The five cards seat 1 can see. Seat 1's own My Pawn is face-down to it after the swap
-      // (R33, asserted above), so it has no element to measure — which is the view being correct,
-      // not the board being empty.
+      // R33 hides seat 1's My Pawn after the swap, leaving five visible cards to measure.
       const onScreen = [
         need(ids.yourLane1, "seat 1's lane-1 unit"),
         need(ids.silas, "Silly Silas"),

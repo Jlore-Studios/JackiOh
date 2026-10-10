@@ -10,7 +10,6 @@
 // would not reach it), one per flow, each timestamped so the newest is tried first. A code with no
 // verifier here was asked for on another device or browser (R324). A verifier is forgotten once used.
 
-/** Where the verifiers live (R323). */
 export const PKCE_STORAGE_KEY = "jackioh.auth.pkce";
 /** The stored value's shape version: anything else reads as no verifier. */
 const PKCE_STORAGE_VERSION = 1;
@@ -18,14 +17,9 @@ const PKCE_STORAGE_VERSION = 1;
 export const PKCE_VERIFIER_BYTES = 64;
 const PKCE_VERIFIER_MIN_LENGTH = 43;
 const PKCE_VERIFIER_MAX_LENGTH = 128;
-/** What the challenge is: SHA-256 of the verifier, base64url (GoTrue spells it lower case). */
 export const PKCE_METHOD = "s256";
 
-/**
- * Which link a verifier is for (`email_change` is R663's). `magiclink` (R664) and `oauth` (R666) are the two whose code signs
- * this browser in: the code exchanges only with the verifier THIS browser made when it asked, so a
- * link someone else asked for can never sign it into their account (R193's login CSRF).
- */
+/** Link flows (R663, R664, R666); exchange only with this browser's verifier to prevent R193 login CSRF. */
 export type PkceFlow = "signup" | "recovery" | "email_change" | "magiclink" | "oauth";
 
 const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change", "magiclink", "oauth"];
@@ -33,7 +27,6 @@ const FLOWS: readonly PkceFlow[] = ["signup", "recovery", "email_change", "magic
 type Stored = { verifier: string; at: number };
 type StoredValue = { v: number } & Partial<Record<PkceFlow, Stored>>;
 
-/** What a request that mails a link sends beside the address. */
 export type PkceChallenge = { code_challenge: string; code_challenge_method: typeof PKCE_METHOD };
 
 function base64url(bytes: Uint8Array): string {
@@ -53,7 +46,6 @@ function isVerifier(value: unknown): value is string {
   );
 }
 
-/** A fresh random verifier (RFC 7636 §4.1). */
 export function newVerifier(): string {
   const bytes = new Uint8Array(PKCE_VERIFIER_BYTES);
   crypto.getRandomValues(bytes);
@@ -120,7 +112,6 @@ export async function challengeForRequest(flow: PkceFlow, options: { reuse?: boo
   return { code_challenge: challenge, code_challenge_method: PKCE_METHOD };
 }
 
-/** The verifiers this browser holds, newest first: the order to try a returning code with. */
 export function storedVerifiers(): { flow: PkceFlow; verifier: string }[] {
   const stored = readStored();
   return FLOWS.flatMap((flow) => {
@@ -131,12 +122,10 @@ export function storedVerifiers(): { flow: PkceFlow; verifier: string }[] {
     .map(({ flow, verifier }) => ({ flow, verifier }));
 }
 
-/** The newest verifier's flow, or null: which way in a returning error most likely came from. */
 export function newestFlow(): PkceFlow | null {
   return storedVerifiers()[0]?.flow ?? null;
 }
 
-/** The verifier for `flow` has been used (its code exchanged): forget it. */
 export function forgetVerifier(flow: PkceFlow): void {
   const stored = readStored();
   delete stored[flow];

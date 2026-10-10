@@ -1,31 +1,7 @@
-// Spec 28 — the v0.1.1 patch's presentation (issue #27; SPEC §10.10, R370–R374), on /dev/hotseat and
-// the landing page, against `build:e2e` with no server.
-//
-// What it asserts, each off the DOM the view drew (CLAUDE.md rule 7):
-//
-//   A. Your own face-down trap (R371), with spec 03's decks and seed: player 2 sets #41 Sheepish,
-//      and on player 2's own device the card is its face with `data-unrevealed="true"` and a "Face
-//      down" tag whose tooltip says "Face down — your opponent can't see this card"; its hover
-//      preview carries the same line over the face. The deck pile reads "Deck" and its preview
-//      "Your deck" (R373). After the hand-over, player 1 sees a back labelled "Face-down trap",
-//      whose hover shows the face-down overlay and names nothing (R370). The view gives the back
-//      its cost (R351, the engine's half of v0.1.1), and the gem, the label and the overlay all
-//      state it as "(1) Cost", Sheepish's (R432).
-//   B. Combo-Index by its letter (R372), with `28-combo-a` (spec 03's player-1 deck with #93 in it)
-//      and seed 28-combo-16, which deals #93 into player 1's opening hand: played on player 1's
-//      third turn (three mana, so a one-mana card is still playable and R82 does not end the turn
-//      under the assertions), its grade badge reads E and its face "Grade {E}" and "{1}" after N;
-//      its own play meets E's threshold of one, so after that turn the badge reads D, on the other
-//      seat's board too.
-//   C. The homescreen fan (R374): four real faces and a back; two visits with two different sources
-//      of randomness deal two different hands, each of four rarities.
-//
-// Screenshots: `--expose shots=1` adds shots of A's face-down treatment and B's Combo-Index at
-// 1280x720 and 390x844, under `<E2E_ARTIFACTS>/screenshots/28-patch-011-ui.cy.ts/28-patch-011-ui/`.
-// Headless Chrome crops a tall capture, so launch it big enough:
-//
-//   E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome \
-//     --spec cypress/e2e/28-patch-011-ui.cy.ts --expose shots=1
+// Spec 28 checks the DOM only (CLAUDE.md rule 7; SPEC §10.10).
+// Face-down cost is SPEC §8 #41 (R351, R370, R432); Combo-Index relies on R82 and R372.
+// Face-down traps (R371, R373), Combo-Index, and the landing fan (R374) are covered here.
+// `--expose shots=1` captures treatments; use 1600x1200 because Headless Chrome crops tall viewports.
 
 import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
@@ -48,10 +24,8 @@ const TRAP_SEED = seedFor("03-sheep-19");
 const COMBO_SEED = seedFor("28-combo-16");
 
 const SHEEPISH = "Sheepish";
-/** SPEC §8 #41's cost, which its back states (R351, R370). */
 const SHEEPISH_COST = 1;
 const COMBO_INDEX = "Combo-Index";
-/** R372: the words of #93's text the plays it asks for follow. */
 const THRESHOLD_LABEL = "N = the grades from E to the current one";
 
 const UNREVEALED_NOTE = "Face down — your opponent can't see this card";
@@ -63,7 +37,7 @@ const VIEWPORTS = [
 ] as const;
 type Viewport = (typeof VIEWPORTS)[number];
 
-/** The screenshot pass turns the effects layer off (R200), so no banner or burst covers the board. */
+/** R200: screenshot passes turn effects off. */
 const QUIET_FX = { speed: 1, intensity: "off", motion: "system" } as const;
 
 function quiet(viewport: Viewport | null): { onBeforeLoad?: (win: Cypress.AUTWindow) => void } {
@@ -72,7 +46,7 @@ function quiet(viewport: Viewport | null): { onBeforeLoad?: (win: Cypress.AUTWin
 
 function shoot(viewport: Viewport | null, name: string): void {
   if (viewport === null) return;
-  // The opponent's play held up by the showcase stands over the board for a moment; let it pass.
+  // Wait for the opponent's showcase animation.
   cy.get(ts(SHOWCASE)).should("not.exist");
   cy.screenshot(`28-patch-011-ui/${viewport.label}/${name}`, { capture: "viewport", overwrite: true });
 }
@@ -85,13 +59,12 @@ function unhover(selector: string): void {
   cy.get(selector).trigger("pointerout", { pointerType: "mouse" });
 }
 
-/** A: the face-down treatment on both seats, and the deck pile's words. */
 function faceDownTrap(viewport: Viewport | null): void {
   if (viewport !== null) cy.viewport(viewport.width, viewport.height);
   cy.seedGame({ seed: TRAP_SEED, a: "03-plays-a", b: "03-sheepish-b", ...quiet(viewport) });
   cy.advanceToTurn(2);
 
-  // Player 2 sets Sheepish face-down in backrow lane 3; its own device reads it (R33).
+  // R33: the owner's device shows a set Sheepish.
   cy.playByName(SHEEPISH, { zone: { side: "you", row: "backrow", lane: 3 } });
   cy.instanceAt("p2", "backrow", 3).then((trap) => {
     const own = ts(cardId(trap));
@@ -102,7 +75,6 @@ function faceDownTrap(viewport: Viewport | null): void {
       .and("have.attr", "title", UNREVEALED_NOTE);
     cy.get(ts(unrevealedId(trap))).find("img").should("exist");
 
-    // Its hover preview carries the note over its face.
     hover(own);
     cy.get(ts(INSPECT_HOVER)).should("be.visible").find(ts(INSPECT_NOTE)).should("have.text", UNREVEALED_NOTE);
     cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).should("contain.text", SHEEPISH);
@@ -111,15 +83,13 @@ function faceDownTrap(viewport: Viewport | null): void {
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
     shoot(viewport, "own-face-down-trap");
 
-    // R373: the deck pile says Deck, and its list says "Your deck".
     cy.get(ts(libraryId("you"))).find(".pile-label").should("have.text", "Deck");
     hover(ts(libraryId("you")));
     cy.get(ts(INSPECT_LIST_HOVER)).should("be.visible").and("contain.text", "Your deck");
     unhover(ts(libraryId("you")));
 
-    // Player 1's turn: the same zone is a back, and nothing on it names the card.
     cy.advanceToTurn(3);
-    // The showcase holds the set card up over the board for a moment (R227); let it pass first.
+    // R227: wait for the showcase.
     cy.get(ts(SHOWCASE)).should("not.exist");
     const back = `${ts(zoneId("opponent", "backrow", 3))} .card-back`;
     cy.get(ts(zoneId("opponent", "backrow", 3))).find(own).should("not.exist");
@@ -129,7 +99,6 @@ function faceDownTrap(viewport: Viewport | null): void {
     cy.get(ts(INSPECT_FACE_DOWN)).should("be.visible").and("contain.text", "Face-down trap").and("not.contain.text", SHEEPISH);
     cy.get(ts(INSPECT_FACE_DOWN)).find(".cf").should("not.exist");
 
-    // R351, R370: the view gives the back its cost, and the gem, the label and the overlay state it.
     cy.get(back).should("have.attr", "data-facedown-cost", String(SHEEPISH_COST));
     cy.get(back).find(".facedown-cost").should("have.text", String(SHEEPISH_COST));
     cy.get(back).should("have.attr", "aria-label", `Face-down trap, (${String(SHEEPISH_COST)}) Cost`);
@@ -140,7 +109,6 @@ function faceDownTrap(viewport: Viewport | null): void {
   });
 }
 
-/** B: Combo-Index's grade badge and face by letter, E then D. */
 function comboIndex(viewport: Viewport | null): void {
   if (viewport !== null) cy.viewport(viewport.width, viewport.height);
   cy.seedGame({ seed: COMBO_SEED, a: "28-combo-a", b: "03-sheepish-b", ...quiet(viewport) });
@@ -160,8 +128,7 @@ function comboIndex(viewport: Viewport | null): void {
     unhover(card);
     shoot(viewport, "combo-index-grade-e");
 
-    // Its own play meets grade E's threshold of one, so the end of the turn raises it to D, which
-    // the other seat reads on its board after the hand-over.
+    // Grade E's threshold is one, so end turn advances it to D.
     cy.endTurn();
     cy.jackioh().its("seat").should("eq", "p2");
     cy.get(ts(zoneId("opponent", "backrow", 1)))
@@ -175,14 +142,12 @@ function comboIndex(viewport: Viewport | null): void {
   });
 }
 
-/** The four dealt faces' ids, left to right. */
 function fanIds(): Cypress.Chainable<string[]> {
   return cy.get(ts(landingTestid.fan)).then(($fan) =>
     [0, 1, 2, 3].map((index) => $fan.find(ts(landingFanCardTestid(index))).attr("data-def-id") ?? ""),
   );
 }
 
-/** A seeded `Math.random` for the landing page (mulberry32). */
 function seededRandom(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -205,7 +170,7 @@ function visitLanding(seed: number): void {
 
 describe("Spec 28 — the v0.1.1 patch's board and homescreen (R370–R374)", () => {
   beforeEach(() => {
-    // No server: the landing page's account check gets a plain "signed out".
+    // Without a server, the account check is signed out.
     cy.intercept({ url: /\/api\// }, { statusCode: 401, body: { code: "unauthenticated", message: "signed out" } });
   });
 

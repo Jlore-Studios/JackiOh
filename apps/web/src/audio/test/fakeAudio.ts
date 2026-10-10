@@ -1,18 +1,12 @@
 // Test helper for the audio suite (docs/polish/2-sound.md, "Tests"). It is not a test file.
 //
-// `FakeAudio` implements exactly the permitted Web Audio subset the design names (see CONTEXT_KEYS,
-// PARAM_KEYS and `createNode`) and nothing else, plus the engine's extras: the compressor,
-// `decodeAudioData`, `resume`, `close`, `state`, and the mix's stereo panner and convolver (R669).
+// `FakeAudio` implements only the permitted Web Audio subset (see CONTEXT_KEYS, PARAM_KEYS and
+// `createNode`), plus the engine's compressor, decoding, lifecycle, panner and convolver (R669).
 //
-// Every object the code under test touches is a Proxy. Reading or writing anything outside that
-// subset records a violation and throws, as does anything the real API would reject (a negative
-// time, a non-finite value, an exponential ramp to 0, starting a source twice). A caught throw is
-// still in `violations`, so a test can assert the list is empty.
+// Every object is a Proxy: unsupported or invalid Web Audio calls throw and record a violation.
 //
-// The `FakeAudio` controller, which the code under test never sees, records nodes, connections,
-// start and stop times and AudioParam calls, and owns the context state, a `resume()` spy, the
-// decode behaviour and `advance()` (moves `currentTime`, fires `onended` on every ended source).
-// Also here: a fake `SpeechPort`, a fake `fetchBytes` and a settable millisecond clock.
+// Its unseen controller records calls, controls context and decode behaviour, and advances ended
+// sources. It also provides fake speech, fetch and clock services.
 
 import { vi, type Mock } from "vitest";
 
@@ -20,10 +14,7 @@ import type { SpeechPort } from "../engine.ts";
 
 // Strictness
 
-/**
- * Keys that a test framework, a pretty-printer or `await` may probe on any object. They read
- * through to the underlying object (usually `undefined`) and are never violations.
- */
+/** Keys test frameworks, pretty-printers and `await` may probe without a violation. */
 const PROBES: ReadonlySet<string> = new Set([
   "then",
   "toJSON",
@@ -70,7 +61,6 @@ function time(violations: string[], where: string, value: unknown, name = "time"
   return t;
 }
 
-/** Wraps `surface` so only `readable` keys can be read and only `writable` keys written. */
 function strict<T extends object>(
   surface: T,
   where: string,
@@ -118,7 +108,6 @@ export class FakeParam {
   readonly node: FakeNode;
   readonly name: string;
   readonly defaultValue: number;
-  /** Every `value` write and automation call, in order. */
   readonly events: ParamEvent[] = [];
   value: number;
   proxy: AudioParam;
@@ -187,21 +176,15 @@ export class FakeNode {
   readonly connections: (FakeNode | FakeParam)[] = [];
   disconnects = 0;
   readonly params = new Map<string, FakeParam>();
-  /** Oscillator or filter type. */
   type: string | null = null;
   buffer: FakeBuffer | null = null;
   loop = false;
   loopStart = 0;
   loopEnd = 0;
-  /** The `offset` passed to a buffer source's `start`, or null. */
   startOffset: number | null = null;
-  /** The `when` passed to `start`, raw, or null while not started. */
   startTime: number | null = null;
-  /** `currentTime` at the moment `start` was called. */
   startedAt: number | null = null;
-  /** The `duration` argument of a buffer source's `start`, if any. */
   playDuration: number | null = null;
-  /** The `when` passed to the last `stop`, raw, or null. */
   stopTime: number | null = null;
   ended = false;
   onended: ((event: Event) => void) | null = null;
@@ -336,7 +319,7 @@ export class FakeAudio {
     this.context = this.makeContext();
   }
 
-  /* ----- controller API (tests only) ----- */
+  // Controller API (tests only)
 
   /** The record behind a node, param or buffer proxy this context handed out. */
   recordOf(proxy: unknown): FakeNode | FakeParam | FakeBuffer | undefined {
@@ -444,7 +427,7 @@ export class FakeAudio {
           const error = namedError("EncodingError", "the fake could not decode");
           const rejected = Promise.reject(error);
           if (typeof onError === "function") {
-            // A caller that chose the callback form has handled it; the promise is marked handled.
+            // Callback form handles this rejection.
             rejected.catch(() => undefined);
             (onError as (e: unknown) => void)(error);
           }
@@ -714,7 +697,7 @@ function namedError(name: string, message: string): Error {
   return error;
 }
 
-/** A `createContext` factory for `createAudioEngine`, keeping every context it constructs. */
+/** `createAudioEngine` context factory that records every context. */
 export type FakeContextFactory = {
   create: Mock<() => AudioContext>;
   made: FakeAudio[];
@@ -768,10 +751,9 @@ export type FetchMode = "resolve" | "reject" | "hang";
 
 type HungFetch = { url: string; resolve: (bytes: ArrayBuffer) => void; reject: (error: unknown) => void };
 
-/** A `fetchBytes` whose answer is chosen per test: resolve (fresh bytes), reject, or hang until released. */
+/** Test-controlled `fetchBytes`: resolve, reject or hang. */
 export class FakeFetch {
   mode: FetchMode = "resolve";
-  /** Per-URL overrides of `mode`. */
   readonly modes = new Map<string, FetchMode>();
   readonly fetchBytes: Mock<(url: string) => Promise<ArrayBuffer>>;
   private readonly hung: HungFetch[] = [];
@@ -787,17 +769,14 @@ export class FakeFetch {
     });
   }
 
-  /** Every URL requested, in order. */
   urls(): string[] {
     return this.fetchBytes.mock.calls.map((call) => call[0]);
   }
 
-  /** Resolves the hanging requests (all, or those for `url`); returns how many. */
   release(url?: string): number {
     return this.settle(url, (h) => h.resolve(new ArrayBuffer(16)));
   }
 
-  /** Rejects the hanging requests (all, or those for `url`); returns how many. */
   fail(url?: string): number {
     return this.settle(url, (h) => h.reject(new Error(`fake fetch: failed ${h.url}`)));
   }
@@ -812,7 +791,6 @@ export class FakeFetch {
   }
 }
 
-/** A settable millisecond clock for the engine's and the UI sounds' `now`. */
 export class FakeClock {
   ms: number;
 

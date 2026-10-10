@@ -1,10 +1,7 @@
-// Which picture a card gets (docs/polish/6-cards.md, Surface A). The theme comes from the card's
-// tags, then its Token tag, then its type, and sets the palette, the emblem and the motes. The
-// composition comes from the type alone and sets the geometry. Both are presentation only: no
-// rule reads them (CLAUDE.md rule 7).
+// Card art (docs/polish/6-cards.md, Surface A): themes select palette, emblem and motes; type
+// selects composition. Presentation only (CLAUDE.md rule 7).
 //
-// Book, Pancake and AI (R503) are tag themes, so an AI or Pancake token reads as its family and
-// not as a plain Token.
+// R503: Book, Pancake and AI tag themes override Token.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -14,15 +11,12 @@ export type ArtThemeId =
   | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "book" | "pancake" | "ai" | "token"
   | "unit" | "spell" | "field-spell" | "trap" | "field-trap";
 
-/** How a theme's motes are drawn: round dust, ink drops (Book), square pixels (AI). */
 export type MoteShape = "dot" | "drop" | "pixel";
 
 export type Composition = "figure" | "burst" | "landscape" | "sigil";
 
 export type ThemePalette = {
-  /** Top and bottom of the sky gradient. */
   sky: readonly [string, string];
-  /** Far, mid and near layers, lightest to darkest. */
   ridges: readonly [string, string, string];
   glow: string;
   emblem: { glyph: EmblemGlyph; fill: string; stroke: string };
@@ -30,9 +24,8 @@ export type ThemePalette = {
 };
 
 /**
- * First match wins; Token and the type themes come after every tag. AI follows Call to Chaos, Book
- * follows KY (KY's own emblem is already a book), and Pancake precedes Fruit, Quickdraw and Human,
- * so Classic+ #13 Mommy Barker (Human, Pancake) wears the Pancake picture.
+ * First match wins. AI follows Call to Chaos; Book follows KY; Pancake precedes Fruit, Quickdraw
+ * and Human, so Classic+ #13 Mommy Barker (Human, Pancake) uses Pancake art.
  */
 export const TAG_THEMES: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
@@ -191,9 +184,7 @@ export const THEME_PALETTES: Readonly<Record<ArtThemeId, ThemePalette>> = {
 };
 
 /**
- * The glyphs a theme's emblem is picked from, per card. The first is the theme's signature and is
- * listed twice where the theme is an identity (a Felinor should mostly read as a cat), so a grid
- * of one type or one tribe does not print the same picture a hundred times.
+ * Repeat each theme's signature glyph so it remains recognisable while a grid still varies.
  */
 export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> = {
   human: ["shield", "shield", "sword", "tower", "crown", "star", "flame"],
@@ -207,8 +198,7 @@ export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> 
   pancake: ["pancakes", "pancakes", "pancakes", "spatula", "drop"],
   ai: ["chip", "chip", "neural", "eye", "hourglass"],
   token: ["coin", "coin", "crystal", "star"],
-  // The type themes draw only from glyphs no tribe signs with (no cat, book, virus, fruit, vortex,
-  // bolt, coin, tome, pancakes or chip), so an untagged card never passes for a tribe's.
+  // Type themes exclude tribe glyphs so untagged cards never pass for a tribe.
   unit: ["sword", "tower", "eye", "crown", "flame", "shield", "moon"],
   spell: ["star", "flame", "moon", "crystal", "hourglass", "rune", "eye"],
   "field-spell": ["tower", "star", "moon", "crystal", "crown"],
@@ -217,9 +207,7 @@ export const EMBLEM_POOLS: Readonly<Record<ArtThemeId, readonly EmblemGlyph[]>> 
 };
 
 /**
- * How far, in degrees either way, a card's palette may turn around the colour wheel. The type
- * themes turn furthest, since nothing else tells two plain Spells apart; the tribes turn far enough
- * that two of them rarely share a colour, but stay recognisable; tokens stay grey.
+ * Drift distinguishes plain Spells and tribes; tokens stay grey.
  */
 export const HUE_DRIFT: Readonly<Record<ArtThemeId, number>> = {
   human: 28,
@@ -240,7 +228,6 @@ export const HUE_DRIFT: Readonly<Record<ArtThemeId, number>> = {
   "field-trap": 32,
 };
 
-/** The motes' shape per theme: dust everywhere, but ink drops in a Book and pixels in an AI card. */
 export const THEME_MOTES: Readonly<Record<ArtThemeId, MoteShape>> = {
   human: "dot",
   felinor: "dot",
@@ -264,7 +251,6 @@ const HEX_CHANNEL_MAX = 255;
 const HUE_TURN = 360;
 const HUE_SEXTANT = 60;
 
-/** Turns a `#rrggbb` colour `degrees` around the hue wheel, keeping its saturation and lightness. */
 export function turnHue(hex: string, degrees: number): string {
   if (degrees === 0) return hex;
   const channel = (index: number): number => parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16) / HEX_CHANNEL_MAX;
@@ -297,7 +283,6 @@ export function turnHue(hex: string, degrees: number): string {
   return out;
 }
 
-/** A theme palette with every colour turned by `degrees`, and its emblem swapped for `glyph`. */
 export function driftPalette(palette: ThemePalette, degrees: number, glyph: EmblemGlyph): ThemePalette {
   const turn = (hex: string): string => turnHue(hex, degrees);
   return {
@@ -310,8 +295,7 @@ export function driftPalette(palette: ThemePalette, degrees: number, glyph: Embl
 }
 
 /**
- * The Radiant face's gold. A radiant spec mixes each base colour this far toward its gold
- * counterpart, so the theme still shows through the foil.
+ * Radiant mixes base colours toward gold so the theme still shows through the foil.
  */
 export const RADIANT_MIX = 0.7;
 
@@ -324,7 +308,6 @@ export const RADIANT_PALETTE = {
   ray: "#fff1b0",
 } as const;
 
-/** Mixes two `#rrggbb` colours: `t = 0` gives `from`, `t = 1` gives `to`. */
 export function mixHex(from: string, to: string, t: number): string {
   const channel = (hex: string, index: number): number => parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16);
   let out = "#";

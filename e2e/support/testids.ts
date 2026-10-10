@@ -1,15 +1,7 @@
-// Every selector the specs use lives here. BUILD M5-T1 fixes the testid vocabulary:
-//
-//   zone-<side>-<row>-<lane>   card-<instanceId>   hero-<side>
-//   hand-card-<instanceId>     end-turn            offer-draw        power
-//
-// and BUILD M5-T4 fixes `data-animating="<eventType>"` and `data-prompt-kind`. Anything below
-// that is not in those two lists is marked ASSUMPTION and is only ever built here, so the web
-// team has one file to align with.
+// E2E selector contract: BUILD M5-T1, BUILD M5-T2, BUILD M5-T3 and BUILD M5-T4 fix base testids and attributes; assumptions are in e2e/README.md.
 
 import type { EventType, Lane, PromptKind, Row, Side } from "./types.ts";
 
-/** `[data-testid="…"]`. */
 export function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
@@ -34,48 +26,37 @@ export const END_TURN = "end-turn";
 export const OFFER_DRAW = "offer-draw";
 export const POWER = "power";
 
-/** BUILD M5-T4 `promptOpened`: the modal carries `data-prompt-kind`. */
 export const PROMPT = "[data-prompt-kind]";
 
 export function promptOf(kind: PromptKind): string {
   return `[data-prompt-kind="${kind}"]`;
 }
 
-/** BUILD M5-T4: an element animating an event carries `data-animating="<eventType>"`. */
 export const ANIMATING = "[data-animating]";
 
 export function animating(event: EventType): string {
   return `[data-animating="${event}"]`;
 }
 
-/** BUILD M5-T4 `locked`: "zone has `data-locked=\"true\"`". */
 export const LOCKED = '[data-locked="true"]';
 
-// ---------------------------------------------------------------------------------------------
-// ASSUMPTIONS beyond the BUILD contract. Each is listed in e2e/README.md.
-// ---------------------------------------------------------------------------------------------
+// A4–A5 selectors beyond the BUILD contract are listed in e2e/README.md.
 
 /** A4: one option of an open prompt, keyed by `PendingOption.key` (SPEC §10.8). */
 export function promptOptionId(key: string): string {
   return `prompt-option-${key}`;
 }
 
-/** A4: the confirm button of a multi-select prompt (tribute, mulligan, hand-with-min>1). */
 export const PROMPT_SUBMIT = "prompt-submit";
 
-/** A4: the numeric input of an `x` prompt with more values than its cards take (#492). */
 export const PROMPT_X_INPUT = "prompt-x";
 
-/** A5: the result overlay (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw"). */
 export const RESULT_OVERLAY = "result-overlay";
 
-/** A5: the turn banner (BUILD M5-T4 `turnStarted` / `turnAutoEnded`). */
 export const BANNER = "turn-banner";
 
-/** A5: the hotseat seat-handover button (BUILD M5-T3). */
 export const SEAT_SWITCH = "seat-switch";
 
-/** A5: per-side graveyard, exile and library counters (BUILD M5-T4 acceptance rows). */
 export function graveyardCountId(side: Side): string {
   return `graveyard-count-${side}`;
 }
@@ -92,34 +73,25 @@ export function handCountId(side: Side): string {
   return `hand-count-${side}`;
 }
 
-/** A5: the mana crystal tray (BUILD M5-T4 `manaChanged`: "crystal count equals mana"). */
 export function manaId(side: Side): string {
   return `mana-${side}`;
 }
 
 export const MANA_CRYSTAL = ".mana-crystal";
 
-/** BUILD M5-T4 fixes these class names in its acceptance column. */
 export const DAMAGE_POP = ".damage-pop";
 export const HEAL_POP = ".heal-pop";
 export const LOSS_POP = ".loss-pop";
 export const RADIANT = ".radiant";
 
-/** A5: the switch-position control on a card (BUILD M5-T2 "switch via a button on the card"). */
 export function switchPositionId(instanceId: string): string {
   return `switch-${instanceId}`;
 }
 
-/** A5: a zone the client has highlighted as legal for the held card (BUILD M5-T2). */
 export const LEGAL = '[data-legal="true"]';
 export const ILLEGAL = '[data-legal="false"]';
 
-// ---------------------------------------------------------------------------------------------
-// A5 (continued): shown stats. BUILD M5-T4's `buffed` row is "shown stats equal the view", so the
-// numbers have to be read off attributes rather than out of rendered text — a reformat of
-// `{health}/{maxHealth}` must not break a spec. Specs 02, 03 and 04 each declare these locally
-// today; these are the same attributes `apps/web/src/game/Card.tsx` already renders.
-// ---------------------------------------------------------------------------------------------
+// A5: read shown stats from attributes, not formatted text.
 
 export function attackIs(attack: number): string {
   return `[data-attack="${String(attack)}"]`;
@@ -137,28 +109,21 @@ export function armorIs(armor: number): string {
   return `[data-armor="${String(armor)}"]`;
 }
 
-/** One keyword badge on a card, by `Keyword.kind` (SPEC §6.1). */
+/** §6.1 keyword badge. */
 export function keywordIs(keyword: string): string {
   return `[data-keyword="${keyword}"]`;
 }
 
-/** §3.3: `ATK` or `DEF`. A Defense Position card is rotated. */
+/** §3.3: position. */
 export function positionIs(position: "ATK" | "DEF"): string {
   return `[data-position="${position}"]`;
 }
 
-/** BUILD M5-T4 `radiantSet`: the attribute beside the `.radiant` class. */
 export const RADIANT_ATTR = '[data-radiant="true"]';
 
-// ---------------------------------------------------------------------------------------------
-// A5 (continued): regions and chrome. Every name below is one `apps/web` already renders —
-// `animTestid` in apps/web/src/game/animations.ts for the piles and toasts, `testid` in
-// apps/web/src/game/contract.ts for the shell — so these document the vocabulary in one place
-// rather than inventing it. No frozen spec calls them yet; the animation table (BUILD M5-T4)
-// targets them, so a spec that asserts a pile animation will.
-// ---------------------------------------------------------------------------------------------
+// A5: regions and animation targets mirror `apps/web/src/game/animations.ts` and `contract.ts`.
 
-/** The hand as a region. An opponent hand is a `count` only (§10.8), so it holds no card ids. */
+/** §10.8: an opponent hand has no card ids. */
 export function handRegionId(side: Side): string {
   return `hand-${side}`;
 }
@@ -175,81 +140,48 @@ export function exileId(side: Side): string {
   return `exile-${side}`;
 }
 
-/**
- * The player-modifier badge list beside the hero (R169, BUILD M5-T4 `modifierChanged`). The
- * container is rendered on both seats even when the list is empty — `apps/web/src/game/Hero.tsx`
- * keeps it because the fade `modifierChanged` plays is the animation for the badge that has just
- * *left* — so it carries `data-count` and "no badges" is a different DOM state from "no list".
- */
+/** R169: keep the empty modifier container so a leaving badge can animate. */
 export function modifiersId(side: Side): string {
   return `modifiers-${side}`;
 }
 
-/**
- * R169: one badge inside that list. A class rather than a testid, like `.mana-crystal` and
- * `.damage-pop` above, because the badges are a repeated part of one named element rather than an
- * element a spec addresses on its own.
- */
+/** R169: repeated modifier badges use a class, not testids. */
 export const MODIFIER_BADGE = ".modifier-badge";
 
-/**
- * R169: the badge for one modifier, keyed by `ModifierView.id`. The id is the only thing that
- * travels besides the caption — never the `sourceId` of the card that installed it, which is why
- * a badge can be public on both seats without leaking a face-down card's identity.
- */
+/** R169: public modifier badges use `ModifierView.id`, never a face-down source id. */
 export function modifierBadgeOf(modifierId: string): string {
   return `[data-modifier-id="${modifierId}"]`;
 }
 
-/** The backrow as a region: a face-down `BackrowView` carries no `instanceId` (§10.8). */
+/** §10.8: a face-down `BackrowView` has no `instanceId`. */
 export function backrowRegionId(side: Side): string {
   return `backrow-${side}`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// A18: the three overflows' notices (§2.4, R315–R318, BUILD M5-T4's `fatigue`, `burned` and
-// `libraryOverflow` rows). Each mounts when its event's animation entry starts and stays until the
-// board shows the next view, like `.damage-pop`, so a spec asserts it with a retried `should` right
-// after the action and asserts it gone after `cy.settled()`. These are the board's own names
-// (`apps/web/src/game/Board.tsx` for the pile, `Hand.tsx` for the hand); keep the files identical.
-// None starts with `card-` or `hand-card-`, so `cy.fieldCardByName` and `cy.handCardByName` never
-// resolve to the card a notice shows.
-// ---------------------------------------------------------------------------------------------
+// A18: overflow notices (§2.4; R315, R316, R317, R318) mirror `Board.tsx` and `Hand.tsx`.
 
-/**
- * A18: the notice on a library pile (inside `library-<side>`), `data-kind="fatigue"` ("Fatigue N",
- * N the event's `count`, R315) or `data-kind="libraryFull"` ("Library full", R316), and
- * `data-playing="true"` while its entry runs.
- */
+/** A18: `data-kind="fatigue|libraryFull"`; `data-playing` marks its entry animation. */
 export function pileNoticeId(side: Side): string {
   return `pile-notice-${side}`;
 }
 
-/** A18: `pileNoticeId`'s `data-kind` values. */
 export type PileNoticeKind = "fatigue" | "libraryFull";
 
-/**
- * A18: inside a "Library full" notice, the card the library turned away: `data-face="face"` with the
- * card's name when the viewer reads the event, `"back"` for the sentinel, and `data-outcome`
- * `notCreated`, `graveyard` or `ceased` (R316).
- */
+/** A18: rejected-library card; R316 controls its public face and outcome. */
 export function overflowCardId(side: Side): string {
   return `overflow-card-${side}`;
 }
 
-/** A18: the "Hand full" notice inside `hand-<side>`, `data-playing="true"` while its entry runs (R317). */
+/** A18/R317: hand-full notice. */
 export function burnNoticeId(side: Side): string {
   return `burn-notice-${side}`;
 }
 
-/** A18: inside it, the burned card: `data-face="face"` with its name, or `"back"` for the sentinel. */
 export function burnCardId(side: Side): string {
   return `burn-card-${side}`;
 }
 
-/** The whole app shell, carrying `data-viewer`. */
 export const GAME = "game";
-/** The board (BUILD M5-T4 puts `rotated` and `swapped` on it). */
 export const BOARD = "board";
 export const CONCEDE = "concede";
 export const LOG = "log";
@@ -257,214 +189,136 @@ export const LOG = "log";
 export const ACTION_ERROR = "action-error";
 /** §2.5: the draw-offer toast. */
 export const DRAW_TOAST = "draw-toast";
-/** The prompt modal as an animation target (`animTestid.prompt`), not as a selector: see PROMPT. */
 export const PROMPT_MODAL = "prompt-modal";
-/** The backdrop behind an open prompt. */
 export const PROMPT_SCRIM = "prompt-scrim";
 
-// ---------------------------------------------------------------------------------------------
-// A16: the concurrent mulligan (§2.1, R265, R266), Concede's confirmation and the draw offer's
-// notices (§2.5, R36, R269). These mirror, name for name, `testid` in
-// `apps/web/src/game/contract.ts` (and `mulligan-waiting-card-<id>` in `Prompt.tsx`, the clock
-// lines in `Clock.tsx`). Keep the files identical.
-// ---------------------------------------------------------------------------------------------
+// A16: mulligan, concede and draw-offer selectors (§2.1, §2.5; R36, R265, R266, R269) mirror `apps/web/src/game/contract.ts`.
 
-/** "Concede this game?" (role `alertdialog`): what the `concede` control opens. */
 export const CONCEDE_DIALOG = "concede-dialog";
-/** In that dialog: the only thing that sends `{ type: "concede" }`. */
 export const CONCEDE_CONFIRM = "concede-confirm";
-/** In that dialog: "Keep playing", focused on open; Escape and a click outside mean the same. */
 export const CONCEDE_CANCEL = "concede-cancel";
 
-/** The offerer's line while its offer stands: "Draw offered — waiting for reply". */
 export const DRAW_OFFER_STATUS = "draw-offer-status";
-/** The other seat's notice while the offer stands: "Your opponent offers a draw". */
 export const DRAW_OFFER = "draw-offer";
-/** In that notice: enabled only when `legal` lists the matching `answerDraw`. */
 export const DRAW_ACCEPT = "draw-accept";
 export const DRAW_DECLINE = "draw-decline";
-/** What became of the last offer; `data-outcome` is `declined`, `accepted` or `expired`. */
 export const DRAW_OUTCOME = "draw-outcome";
 
-/** In the mulligan picker: `data-ready="true|false"`, whether the opponent has answered its own. */
 export const MULLIGAN_OPPONENT_STATUS = "mulligan-opponent-status";
-/** Inside that status, only once the opponent has answered: "Opponent is ready". */
 export const MULLIGAN_OPPONENT_READY = "mulligan-opponent-ready";
-/**
- * After the viewer's own answer, until both are in: "Waiting for your opponent…", with
- * `data-returning="<n>"`. It carries no `data-prompt-kind`: the viewer's question is answered.
- */
+/** `data-returning` waits after the viewer's answer; it has no `data-prompt-kind`. */
 export const MULLIGAN_WAITING = "mulligan-waiting";
 
-/** One hand card on the waiting panel, `data-verdict="keep|redraw"`. */
 export function mulliganWaitingCardId(instanceId: string): string {
   return `mulligan-waiting-card-${instanceId}`;
 }
 
-/** A networked match's clock lines (`Clock.tsx`): each carries `data-kind` and `data-remaining-ms`. */
 export const CLOCK_YOU = "clock-you";
 export const CLOCK_OPPONENT = "clock-opponent";
 export const PROMPT_CLOCK = "prompt-clock";
 export const TURN_CLOCK = "turn-clock";
 
-// ---------------------------------------------------------------------------------------------
-// A11: the deck workshop (`/decks`, SPEC §9.4, R250–R256). BUILD names no testid for this screen,
-// so these mirror, name for name, `apps/web/src/game/deckbuilder/testids.ts`, which is the screen's
-// own vocabulary. Keep the two files identical: that file says so too.
-//
-// The workshop replaced the three-deck loadout editor, and with it every per-deck name
-// (`deck-tab-<n>`, `deck-drop-<n>`, `deck-count-<n>`, `deck-card-<n>-<id>`, `loadout-save`, …): one
-// deck is open at a time, so its elements carry no number. There is no Save button either: an edit
-// saves `DECK_AUTOSAVE_DEBOUNCE_MS` after the last one, so a spec waits on `SYNC_STATUS`'s
-// `data-state="saved"` (R256).
-// ---------------------------------------------------------------------------------------------
+// A11: workshop selectors mirror `apps/web/src/game/deckbuilder/testids.ts` (§9.4; R250, R251, R253, R255, R256).
 
-/** The workshop's root, whatever is open; `data-view="list|editor"` says which half a phone shows. */
 export const WORKSHOP = "workshop";
-/** The save status line, always on screen: `data-state="saved|saving|offline|error"` (R256). */
+/** R256: save status is always present. */
 export const SYNC_STATUS = "sync-status";
-/** On a phone only (≤1100 px), the editor's way back to the list. */
 export const WORKSHOP_BACK = "workshop-back";
-/** The main column when nothing is open. */
 export const WORKSHOP_EMPTY = "workshop-empty";
 
-/** The list of saved decks, and its "n/10" (`data-count`, `data-limit`). */
 export const DECK_LIST = "deck-list";
 export const DECK_CAP = "deck-cap";
 
-/** One saved deck in the list: `data-count`, `data-status`, `data-unsynced`, `aria-current`. */
 export function deckRowId(deckId: string): string {
   return `deck-row-${deckId}`;
 }
 
-/** Makes a deck and opens it. Disabled at the cap (R250), with `DECK_CAP_REASON` saying why. */
+/** R250: deck creation is disabled at its cap. */
 export const DECK_NEW = "deck-new";
 export const DECK_CAP_REASON = "deck-cap-reason";
 
-/** The list of saved trios, its "n/5", and New trio (disabled at the cap, with its reason). */
 export const TRIO_LIST = "trio-list";
 export const TRIO_CAP = "trio-cap";
 export const TRIO_NEW = "trio-new";
 export const TRIO_CAP_REASON = "trio-cap-reason";
 
-/** One saved trio in the list: `data-ready="true|false"` (R253's Conquest verdict). */
+/** R253: trio readiness. */
 export function trioRowId(trioId: string): string {
   return `trio-row-${trioId}`;
 }
 
-/**
- * The card pool a deck is built from, and one entry per card in it: `card-pool-<id>` carries
- * `data-legal`, `data-in-deck="true"` when the open deck holds it, and `data-unavailable="true"`
- * with `data-held-by="<deck name>"` when a compared deck does (R251). The workshop's file lists
- * these with the browse names; they sit here because `card-pool-` starts with `card-`, which A14's
- * block promises none of its names does (a pool entry is never on the board, so
- * `cy.fieldCardByName` cannot meet one).
- */
+/** R251: pool entries carry legality, membership and comparison state. */
 export const CARD_POOL = "card-pool";
 
 export function poolCardId(catalogCardId: string): string {
   return `${CARD_POOL}-${catalogCardId}`;
 }
 
-/** The open deck's editor: `data-deck` is its id. */
 export const DECK_EDITOR = "deck-editor";
-/** The open deck's name. */
 export const DECK_NAME_INPUT = "deck-name-input";
-/** The open deck's card count against `DECK_SIZE`, in `data-count`. */
 export const DECK_COUNT = "deck-count";
-/** The open deck's drop region: a card dragged from the pool lands here. */
 export const DECK_DROP = "deck-drop";
-/** The open deck's list of tiles. */
 export const DECK_CARDS = "deck-cards";
 
-/**
- * One card in the open deck: a tile whose click takes it out. `data-conflict="true"` and
- * `data-conflict-with="<deck name>"` when a compared deck holds it too (shown, never removed).
- */
+/** Compared-deck conflicts are shown, never removed. */
 export function deckCardId(catalogCardId: string): string {
   return `deck-card-${catalogCardId}`;
 }
 
-/** The open deck's mana curve: one `.db-bar[data-bucket][data-count]` per cost bucket. */
 export const DECK_CURVE = "deck-curve";
-/** On a phone, the toggle that folds the curve and the tiles away (`aria-expanded`). */
 export const DECK_FOLD = "deck-fold";
-/** The polite line naming the last add, removal or refusal (a refusal names the deck holding it). */
 export const DECK_STATUS = "deck-status";
-/** The server's refusal of this deck's last save, verbatim (R256). */
+/** R256: save errors are verbatim. */
 export const DECK_SAVE_ERROR = "deck-save-error";
 
-/** Copies the deck's code (R255) and shows it in `DECK_CODE_OUTPUT`, a read-only field. */
+/** R255: deck-code output. */
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
-/** Delete, then the confirm that really deletes, or the one that keeps the deck. */
 export const DECK_DELETE = "deck-delete";
 export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
 export const DECK_DELETE_CANCEL = "deck-delete-cancel";
 
-/**
- * "Compare with" (R251): option values `trio:<trioId>` (a trio holding this deck: its other decks),
- * `deck:<deckId>` (another deck) and `none`. Each compared deck is then a chip, `deckCompareChipId`.
- */
+/** R251: comparison accepts a trio, deck or none. */
 export const DECK_COMPARE_SELECT = "deck-compare-select";
 
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }
 
-/** How many of the open deck's cards a compared deck also holds, in `data-count`. */
 export const DECK_CONFLICTS = "deck-conflicts";
 
-/** The Best-of-1 verdict under the deck (`data-ready`), around `LOADOUT_ERRORS`. */
 export const DECK_VERDICT = "deck-verdict";
 
-/** The list every L1–L6 sentence is rendered into, in a deck's verdict and in a trio's (`data-count`). */
+/** L1–L6 verdict sentences. */
 export const LOADOUT_ERRORS = "loadout-errors";
 
-/**
- * One marker per failure, carrying the validator's sentence and nothing else. Several may share a
- * testid (the validator reports every failure), so each also carries `data-rule`, `data-source`
- * and, where the validator named them, `data-deck` and `data-card`.
- */
+/** Validator failures share a testid, so their rule, source, deck and card stay in attributes. */
 export function loadoutErrorId(rule: string): string {
   return `loadout-error-${rule}`;
 }
 
-/** Rendered instead of the workshop while the route's reads are in flight, or when one failed. */
 export const DECKBUILDER_LOADING = "deckbuilder-loading";
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
-/**
- * The MIME a pool drag carries the catalog id on, beside a `text/plain` copy. The board's own drag
- * uses `application/x-jackioh-target` for a click target (apps/web/src/game/Card.tsx); a workshop
- * drag carries a catalog id, which is a different thing, so it gets its own type.
- */
+/** Pool drags carry a catalog id, not the board's click target. */
 export const DECK_DRAG_MIME = "application/x-jackioh-card";
 
-/** The open trio's editor: `data-trio` is its id. */
 export const TRIO_EDITOR = "trio-editor";
 export const TRIO_NAME_INPUT = "trio-name-input";
 
-/** Slot `n`'s deck `<select>`, 1-based: the value `""` is Empty, else a deck id. */
 export function trioSlotId(slot: number): string {
   return `trio-slot-${String(slot)}`;
 }
 
-/** Opens slot `n`'s deck in the deck editor. */
 export function trioOpenDeckId(slot: number): string {
   return `trio-open-${String(slot)}`;
 }
 
-/** R253's Best-of-3 verdict (`data-ready`), around `LOADOUT_ERRORS`. */
 export const TRIO_VERDICT = "trio-verdict";
-/** The trio's three decks side by side. */
 export const TRIO_COMPARE = "trio-compare";
 
-/**
- * Card `cardId` in slot `n`'s column (1-based): `data-conflict="true|false"` and, for a card another
- * slot's deck holds too, `data-conflict-with="<deck name>"` (names joined with ", ").
- */
+/** Per-slot card conflict state. */
 export function trioCardId(slot: number, catalogCardId: string): string {
   return `trio-card-${String(slot)}-${catalogCardId}`;
 }
@@ -472,294 +326,159 @@ export function trioCardId(slot: number, catalogCardId: string): string {
 export const TRIO_DELETE = "trio-delete";
 export const TRIO_DELETE_CONFIRM = "trio-delete-confirm";
 export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
-/** R339: copies the trio's code and shows it in `TRIO_CODE_OUTPUT`, a read-only field. */
+/** R339: trio-code output. */
 export const TRIO_COPY_CODE = "trio-copy-code";
 export const TRIO_CODE_OUTPUT = "trio-code-output";
 
-/** Opens the import panel from the rail (R255). */
 export const DECK_IMPORT_OPEN = "deck-import-open";
-/** The import panel. */
 export const DECK_IMPORT = "deck-import";
-/** Where the code is pasted. */
 export const DECK_IMPORT_INPUT = "deck-import-input";
-/** The live read of the pasted code, `data-ok="true|false"`: what it holds, or why it cannot be read. */
 export const DECK_IMPORT_PREVIEW = "deck-import-preview";
-/** "Import as new deck": off until the code reads, and at the deck cap. */
 export const DECK_IMPORT_SUBMIT = "deck-import-submit";
 export const DECK_IMPORT_CAP_REASON = "deck-import-cap-reason";
 export const DECK_IMPORT_CANCEL = "deck-import-cancel";
 
-/** Opens the trio import panel from the rail's Trios group (R339–R341). */
+/** R339, R340, R341: trio import. */
 export const TRIO_IMPORT_OPEN = "trio-import-open";
-/** The trio import panel. */
 export const TRIO_IMPORT = "trio-import";
-/** Where the trio code is pasted. */
 export const TRIO_IMPORT_INPUT = "trio-import-input";
-/** The live read of the pasted trio code, `data-ok="true|false"`. */
 export const TRIO_IMPORT_PREVIEW = "trio-import-preview";
-/** Slot `n` of the preview, 1-based: `data-empty`, and `data-count` for a deck. */
 export function trioImportSlotId(slot: number): string {
   return `trio-import-slot-${String(slot)}`;
 }
-/** The cards two or more of the code's decks share (`data-count`): kept, and flagged. */
 export const TRIO_IMPORT_SHARED = "trio-import-shared";
-/** "Import as new trio": off until the code reads and while the caps leave too little room (R340). */
 export const TRIO_IMPORT_SUBMIT = "trio-import-submit";
-/** Exactly how many deck and trio slots the import needs (`data-decks-short`, `data-trios-short`). */
 export const TRIO_IMPORT_CAP_REASON = "trio-import-cap-reason";
 export const TRIO_IMPORT_CANCEL = "trio-import-cancel";
-/** The server's refusal of an import, in its own words. */
 export const TRIO_IMPORT_ERROR = "trio-import-error";
 
-// ---------------------------------------------------------------------------------------------
-// A13: the invite code screen (BUILD M6-T1, SPEC §9.4). Like A11's deckbuilder block, BUILD names
-// no testid for this screen, so these mirror — name for name — the screen's own vocabulary:
-// `inviteTestid`, `codeFieldTestid` and `codeFieldSegmentTestid` in `apps/web/src/auth/testids.ts`,
-// which `apps/web/src/routes/invite.tsx` and `apps/web/src/auth/CodeField.tsx` render. Keep the two
-// files identical.
-//
-// THESE WERE NEVER MISSING FROM THE CLIENT. The M8 rule-8 review recorded spec 10's "code screen
-// shown" as blocked because `invite-code-input`, `invite-submit` and `invite-error` "really are
-// absent from both the client and `testids.ts`"
-// (reviews/2026-09-18-m5-m6-m8-gates.md). Only the second half was true: `invite.tsx` has
-// exported and rendered all three since it was written. Nothing under `e2e/` had ever named them,
-// which is why the row was proved as a URL redirect and an `/invite` route rendering a blank page
-// would have passed it.
-// ---------------------------------------------------------------------------------------------
+// A13: invite and code-field selectors mirror `apps/web/src/auth/testids.ts` (BUILD M6-T1; §9.4).
 
-/**
- * The box §9.4's `XXXX-XXXX-XXXX-XXXX` code is typed into: one real `<input>` with transparent text
- * over the four segments below. R191 reads it exactly as the server does, so a character outside
- * R104's alphabet is refused (the value stays and `CODE_FIELD_HINT` names it), never dropped.
- */
+/** §9.4; R191 rejects R104-excluded characters without dropping the value. */
 export const INVITE_CODE_INPUT = "invite-code-input";
-/**
- * Submits the code (`POST /api/codes/redeem`). Enabled only while the code is complete, redemption
- * is not paused, no request is in flight, the account has tries left and no rate limit is running.
- */
+/** Submit only a complete, unpaused, non-rate-limited code. */
 export const INVITE_SUBMIT = "invite-submit";
 /** The server's refusal, rendered verbatim — §9.4's identical error is never paraphrased here. */
 export const INVITE_ERROR = "invite-error";
-/** §9.4's circuit breaker is open: the screen says so rather than guessing after a 503. */
 export const INVITE_PAUSED = "invite-paused";
-/** An active account reached the code screen; redemption is the pending → active transition only. */
 export const INVITE_NOT_NEEDED = "invite-not-needed";
-/** The tries `GET /api/codes/status` says this account has left, as `data-remaining`. */
 export const INVITE_ATTEMPTS = "invite-attempts";
-/** R192: a 429 `rate_limited` refusal's wait, as `data-retry-after-ms`. Submit is off meanwhile. */
+/** R192: rate-limit wait disables submit. */
 export const INVITE_RATE_LIMITED = "invite-rate-limited";
-/** The address the pending account signed in with, beside the way out. */
 export const INVITE_ACCOUNT_EMAIL = "invite-account-email";
-/** Signs out (clears both session keys) and lands on `/`: the code screen is never a dead end. */
 export const INVITE_SIGN_OUT = "invite-sign-out";
-/** The line under the field saying what a code looks like. */
 export const INVITE_HELP = "invite-help";
 
-/** The code field's root, carrying `data-complete` and, while one stands, `data-problem`. */
 export const CODE_FIELD = "code-field";
-/** "N of 16 characters" (`aria-live="polite"`). */
 export const CODE_FIELD_PROGRESS = "code-field-progress";
-/** The refused character's sentence, with `data-kind="excluded|foreign|tooLong"`. Only while a problem stands. */
 export const CODE_FIELD_HINT = "code-field-hint";
 
-/** One drawn group (`aria-hidden`), with `data-state="empty|partial|complete"` and `data-active`. */
 export function codeFieldSegmentId(index: number): string {
   return `code-field-segment-${String(index)}`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// PRACTICE: `/practice`, a game against the AI with no account and no server (SPEC §9.9, R187,
-// spec 13). Like A11 and A13 these name the route's own vocabulary: `practiceTestid` in
-// `apps/web/src/practice/testids.ts` carries the same strings. Keep the two files identical.
-// ---------------------------------------------------------------------------------------------
+// Practice selectors mirror `apps/web/src/practice/testids.ts` (SPEC §9.9, R187; spec 13).
 
-/** The setup form: a difficulty, a deck and Start. */
 export const PRACTICE_SETUP = "practice-setup";
 
-/** One `<input type="radio">` per difficulty. */
 export function practiceDifficultyId(d: "easy" | "medium" | "hard"): string {
   return `practice-difficulty-${d}`;
 }
 
-/** The deck `<select>`: `random`, `preset:<id>` per preset, and `saved:<1..3>` for an active account. */
 export const PRACTICE_DECK = "practice-deck";
-/** Under the deck picker: why no saved deck is offered; absent when some are. */
 export const PRACTICE_DECK_HINT = "practice-deck-hint";
-/** The chosen deck: its name, its identity and, once the catalog is in, its curve and cards. */
 export const PRACTICE_DECK_PREVIEW = "practice-deck-preview";
-/** R1373: beside the Random deck only, "More cards from the newest set", a checkbox. */
+/** R1373: Random's “More cards from the newest set” option. */
 export const PRACTICE_LEAN_NEWEST = "practice-lean-newest";
-/** In the preview: one bar per cost, `data-cost` and `data-count`. */
 export const PRACTICE_DECK_CURVE = "practice-deck-curve";
-/** In the preview: one row per card of the chosen deck. */
 export function practiceDeckCardId(defId: string): string {
   return `practice-deck-card-${defId}`;
 }
 export const PRACTICE_START = "practice-start";
-/** Shown while the worker builds the decks and deals. */
 export const PRACTICE_LOADING = "practice-loading";
-/** The worker failed or refused the setup. */
 export const PRACTICE_ERROR = "practice-error";
-/** Above the board; carries data-difficulty, data-human-seat, data-ai-seat and data-thinking. */
 export const PRACTICE_HUD = "practice-hud";
-/** Rendered only while the AI owes an action; role="status", text "AI is thinking…". */
 export const PRACTICE_THINKING = "practice-thinking";
-/** Mid-game it opens PRACTICE_LEAVE; once the game is over, or on the failure screen, it leaves at once. */
 export const PRACTICE_NEW_GAME = "practice-new-game";
-/** Out to the main menu: mid-game it opens PRACTICE_LEAVE first; once the game is over it leaves at once. */
 export const PRACTICE_MENU = "practice-menu";
-/** "Leave this game?": the confirmation PRACTICE_NEW_GAME or PRACTICE_MENU opens while a game is in progress. */
 export const PRACTICE_LEAVE = "practice-leave";
-/**
- * In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game"
- * for a lesson) and go where PRACTICE_NEW_GAME or PRACTICE_MENU goes.
- */
+/** R765: leave without saving. */
 export const PRACTICE_LEAVE_CONFIRM = "practice-leave-confirm";
-/** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
+/** R765: save and leave for later resume. */
 export const PRACTICE_LEAVE_SAVE = "practice-leave-save";
-/** In the confirmation: close it and carry on. */
 export const PRACTICE_LEAVE_STAY = "practice-leave-stay";
-/** R765: on the setup, after the banner's Resume found no game to pick up; role="status". */
 export const PRACTICE_RESUME_LOST = "practice-resume-lost";
-/** R765: atop the setup while a game left with Save and leave is kept; `data-difficulty`. */
 export const PRACTICE_RESUME_BANNER = "practice-resume-banner";
-/** R765: in PRACTICE_RESUME_BANNER, back into that game. */
 export const PRACTICE_RESUME = "practice-resume";
-/**
- * R765: atop the landing page and the practice setup while the player's online game is live;
- * `data-kind="match|series"`. `apps/web/src/routes/GameBanner.tsx`'s `gameBannerTestid`.
- */
+/** R765: live online-game banner. */
 export const LIVE_GAME_BANNER = "live-game-banner";
-/** R765: in LIVE_GAME_BANNER, a link back to the board (or the series screen between games). */
 export const LIVE_GAME_REJOIN = "live-game-rejoin";
-/** R765: "Match found!" over any screen but `/play`, while the queue's pairing takes the player there. */
 export const QUEUE_FOUND = "queue-found";
-/** The end-of-game dialog; data-outcome="win|loss|draw". */
 export const PRACTICE_RESULT = "practice-result";
-/** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */
 export const PRACTICE_PLAY_AGAIN = "practice-play-again";
-/** In the result dialog: back to the setup screen. */
 export const PRACTICE_CHANGE_SETUP = "practice-change-setup";
-/** In the result dialog: close it and look at the final board. */
 export const PRACTICE_VIEW_BOARD = "practice-view-board";
-/** In the HUD once the game is over: the outcome, which reopens the result dialog. */
 export const PRACTICE_OUTCOME = "practice-outcome";
-/** In the HUD while any modifier is live (R169): a chip with the count, `data-count`; it opens the panel. */
+/** R169: live-modifier count and panel. */
 export const PRACTICE_MODIFIERS = "practice-modifiers";
-/** Every live modifier's label in full, grouped You and AI. */
 export const PRACTICE_MODIFIERS_PANEL = "practice-modifiers-panel";
 
-// ---------------------------------------------------------------------------------------------
-// TUTORIAL: the lesson path at the top of `/practice`, and a lesson's HUD, coach and result (SPEC
-// §9.10). These mirror, name for name, `tutorialTestid` in `apps/web/src/tutorial/testids.ts`. Keep
-// the two files identical. A lesson is a practice game, so the PRACTICE names above (the think
-// indicator, the modifiers, "Leave this game?") apply inside one too. None starts with `card-` or
-// `hand-card-`, so `cy.fieldCardByName` and `cy.handCardByName` never resolve to one of them.
-// ---------------------------------------------------------------------------------------------
+// Tutorial selectors mirror `apps/web/src/tutorial/testids.ts` (SPEC §9.10); lessons reuse the practice contract.
 
-/** The lesson path at the top of `/practice`'s lobby. */
 export const TUTORIAL_PATH = "tutorial-path";
 
-/** One lesson on the path; `data-status="locked|unlocked|completed"`, `data-next="true"` on the one to play next. */
 export function tutorialLessonId(lessonId: string): string {
   return `tutorial-lesson-${lessonId}`;
 }
 
-/** A lesson's button: Start, Replay, or Locked (`aria-disabled="true"`, does nothing). */
 export function tutorialStartId(lessonId: string): string {
   return `tutorial-start-${lessonId}`;
 }
 
-/** In the path's header once a lesson is done and another is open: "Continue: Lesson N". */
 export const TUTORIAL_CONTINUE = "tutorial-continue";
-/** Once every lesson is done the path folds to its header; this shows or hides the lessons (`aria-expanded`). */
 export const TUTORIAL_PATH_TOGGLE = "tutorial-path-toggle";
-/** In the path's header while a lesson is still to do: "Hide tutorial" (R322). */
+/** R322: tutorial visibility controls. */
 export const TUTORIAL_HIDE = "tutorial-hide";
-/** In the path's place while the player has hidden it (R322): `data-complete` as the path's. */
 export const TUTORIAL_PATH_HIDDEN = "tutorial-path-hidden";
-/** In the hidden path's place: "Show tutorial", which brings the path back (R322). */
 export const TUTORIAL_SHOW = "tutorial-show";
-/** The lesson's HUD above the board; `data-lesson`, `data-human-seat`, `data-ai-seat`, `data-thinking`. */
 export const TUTORIAL_HUD = "tutorial-hud";
-/** In the HUD: "Step k of n". */
 export const TUTORIAL_STEP = "tutorial-step";
-/** In the HUD: back to the lessons; mid-game it opens PRACTICE_LEAVE first. */
 export const TUTORIAL_EXIT = "tutorial-exit";
-/** In the HUD once the lesson is over: the outcome, which reopens the result dialog. */
 export const TUTORIAL_OUTCOME = "tutorial-outcome";
-/**
- * The coach bubble: `data-coach-mode="step|tip|waiting"`, `data-coach-step` (the step or tip id;
- * absent while waiting) and `data-coach-anchor` (the board testids it points at, space-separated).
- */
+/** Coach state, step and anchors. */
 export const COACH = "coach";
-/** In the bubble: "Got it", on every tip and info step. */
 export const COACH_ACK = "coach-ack";
-/** The ring round the anchor's elements; `pointer-events: none`; absent when none is on screen. */
 export const COACH_RING = "coach-ring";
-/** The end-of-lesson dialog; `data-outcome="win|loss|draw"`, `data-lesson`. */
 export const TUTORIAL_RESULT = "tutorial-result";
-/** In the result dialog after a win: start the next lesson. */
 export const TUTORIAL_NEXT = "tutorial-next";
-/** In the result dialog after a loss or draw: the same lesson again, same seed. */
 export const TUTORIAL_RETRY = "tutorial-retry";
-/** In the result dialog: back to the lesson path. */
 export const TUTORIAL_BACK = "tutorial-back";
-/** In the result dialog after the last lesson: back to the lobby's practice setup. */
 export const TUTORIAL_PLAY_PRACTICE = "tutorial-play-practice";
-/** In the result dialog after the last lesson: "What's next" (the practice tiers, decks, draws). */
 export const TUTORIAL_WHATS_NEXT = "tutorial-whats-next";
-/** In the result dialog: close it and look at the final board. */
 export const TUTORIAL_VIEW_BOARD = "tutorial-view-board";
 
-// ---------------------------------------------------------------------------------------------
-// A14: card faces, inspect and deck-builder browse (polish 6, docs/polish/6-cards.md). These mirror,
-// name for name, `apps/web/src/cards/inspect/testids.ts` (the `INSPECT_*` overlays) and the browse
-// additions to `apps/web/src/game/deckbuilder/testids.ts` (the `DB_*` names, the id functions and
-// `slugOf`). Keep the files identical. No name here starts with `card-` or `hand-card-`, so
-// `cy.fieldCardByName` and `cy.handCardByName` still resolve to the named card.
-// ---------------------------------------------------------------------------------------------
+// A14: selectors mirror `apps/web/src/cards/inspect/testids.ts` and deckbuilder `testids.ts` (SPEC §10.10; R277, R279, R280, R654, R660).
 
-/** A14: the hover preview (desktop, after the hover delay). `pointer-events: none`. */
 export const INSPECT_HOVER = "inspect-hover";
-/** A14: the touch long-press sheet (`role="dialog"`). */
 export const INSPECT_SHEET = "inspect-sheet";
-/** A14: the deck builder's detail view: both faces side by side and the glossary. */
 export const INSPECT_DETAIL = "inspect-detail";
-/** A14: the backdrop behind the sheet or the detail; a click on it closes the overlay. */
 export const INSPECT_SCRIM = "inspect-scrim";
-/** A14: the close control of the sheet or the detail. */
 export const INSPECT_CLOSE = "inspect-close";
-/** A14: the enlarged face inside the preview or the sheet. */
 export const INSPECT_FACE = "inspect-face";
-/** A14: the detail view's base face. */
 export const INSPECT_FACE_BASE = "inspect-face-base";
-/** A14: the detail view's radiant face. */
 export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
-/** A14: the keyword glossary, one `li[data-glossary-term]` per term. */
 export const INSPECT_GLOSSARY = "inspect-glossary";
-/** A14: a face in play's printed text, beside it in the preview or the sheet where the two differ (SPEC §10.10). */
 export const INSPECT_PRINTED = "inspect-printed";
-/** A14: R279, the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
-/** A14: R660, a card's flavour line and artist credit in the preview, the sheet and the detail view. */
 export const INSPECT_FLAVOUR = "inspect-flavour";
-/** A14: R660, the artist credit inside it, where the sidecar names one. */
 export const INSPECT_ARTIST = "inspect-artist";
-/** A14: card stats block in the inspect detail dialog (R654). */
 export const INSPECT_STATS = "inspect-stats";
-/** A14: R279, the tooltip a reference in a card's text opens (`[data-ref]` names the card). */
 export const CARD_REF_TOOLTIP = "card-ref-tooltip";
-/** A14: R279, one named card's face in the hover preview's references column (`[data-ref]`). */
 export const INSPECT_REFS_FACE = ".inspect-refs-face";
-/** A14: R277, a stretch of a Radiant face's text its base face does not have (gold, bold, underlined). */
 export const RADIANT_MARK = ".cf-mark";
-/** A14: R279, a name in a card's text that points at another card (`[data-ref]`, `[data-ref-face]`). */
 export const CARD_REF = ".cf-ref";
-/** A14: R280, what a formula comes to now, "{n}" (`[data-value]`, `[data-label]`). */
 export const CARD_VALUE = ".cf-value";
 
-/** A14: lower-case, every run of characters outside `[a-z0-9]` becomes one "-", trimmed of "-". */
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
@@ -767,191 +486,119 @@ export function slugOf(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** A14: the deck builder's filter bar. */
 export const DB_FILTERS = "db-filters";
-/** A14: its free-text search box. */
 export const DB_SEARCH = "db-search";
 
-/** A14: a cost chip, `0`–`5`, `6+` or `X` (`db-filter-cost-6+`, `db-filter-cost-X`). */
 export function filterCostId(bucket: string): string {
   return `db-filter-cost-${bucket}`;
 }
 
-/** A14: a type chip (`db-filter-type-field-spell`). */
 export function filterTypeId(type: string): string {
   return `db-filter-type-${slugOf(type)}`;
 }
 
-/** A14: a tag chip (`db-filter-tag-call-to-chaos`). */
 export function filterTagId(tag: string): string {
   return `db-filter-tag-${slugOf(tag)}`;
 }
 
-/** A set chip: `db-filter-set-core`, `db-filter-set-classic`, `db-filter-set-classic-plus`. */
 export function filterSetId(set: string): string {
   return `db-filter-set-${slugOf(set.replace(/\+/g, " plus"))}`;
 }
 
-/** A14: a rarity chip (`db-filter-rarity-legendary`). */
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
 }
 
-/** A14: the "owned only" checkbox; checked by default. */
 export const DB_FILTER_OWNED = "db-filter-owned";
-/** A14: restores the default filter. */
 export const DB_FILTER_CLEAR = "db-filter-clear";
-/** A14: at phone width, folds the chip rows away; `aria-expanded` says which. */
 export const DB_FILTER_TOGGLE = "db-filter-toggle";
-/** A14: the sort key select (cost, name, rarity, attack, health, type). */
 export const DB_SORT = "db-sort";
-/** A14: the sort direction toggle, `data-dir="asc|desc"`. */
 export const DB_SORT_DIR = "db-sort-dir";
-/** A14: the visible pool's size, in `data-count`. */
 export const DB_RESULT_COUNT = "db-result-count";
-/** A14: shown when no pool card matches the filter. */
 export const DB_EMPTY = "db-empty";
 
-/** A14: the "+" on pool card `catalogCardId`, which adds it to the open deck (a click on the card opens its detail view). */
 export function addPoolId(catalogCardId: string): string {
   return `db-add-${catalogCardId}`;
 }
 
-/** A14: the detail view's "Add to <deck name>". */
 export const DB_DETAIL_ADD = "db-detail-add";
-/** A14: the open deck's sidebar: its name, count, curve, tiles, comparison, verdict and actions. */
 export const DB_SIDEBAR = "db-sidebar";
 
-// ---------------------------------------------------------------------------------------------
-// A15: the opponent's-play showcase, the log's card lines and the pile browser. These mirror, name
-// for name, `apps/web/src/game/showcase/constants.ts` (`showcaseTestid`), `LOG_CARD_TESTID` in
-// `apps/web/src/game/Log.tsx` and the `INSPECT_LIST_*` names in
-// `apps/web/src/cards/inspect/testids.ts`. Keep the files identical. None starts with `card-` or
-// `hand-card-`, so `cy.fieldCardByName` and `cy.handCardByName` never resolve to one of them.
-// ---------------------------------------------------------------------------------------------
+// A15: selectors mirror showcase constants, `Log.tsx` and inspect `testids.ts` (R97, R227, R502).
 
-/**
- * A15: the opponent's play, held up for about a second, and a cast on draw on both seats (R502).
- * `data-showcase="played|set|hidden|cast"`; click-through.
- */
+/** A15/R502: opponent play or cast-on-draw. */
 export const SHOWCASE = "showcase";
-/** A15: its caption ("Opponent played", "Opponent set a card"). */
 export const SHOWCASE_CAPTION = "showcase-caption";
-/** A15: the face of a card the view names, inside the showcase. */
 export const SHOWCASE_FACE = "showcase-face";
-/** A15: the back drawn for a card the view hides (R97, R227), inside the showcase. */
 export const SHOWCASE_BACK = "showcase-back";
-/** A15: the polite live region that says what the opponent played; always present, empty between plays. */
 export const SHOWCASE_LIVE = "showcase-live";
 
-/** A15: a log line that names a card is this button, `data-def-id` naming the card; hover or click opens it. */
 export const LOG_CARD = "log-card";
 
-/** A15: a pile (`graveyard-<side>`, `exile-<side>`) that holds cards carries `data-browsable="true"`. */
 export const BROWSABLE = '[data-browsable="true"]';
-/** A15: a pile's hover preview: its title, count and newest faces. `pointer-events: none`. */
 export const INSPECT_LIST_HOVER = "inspect-list-hover";
-/** A15: a pile's sheet (`role="dialog"`): every card, newest first. */
 export const INSPECT_LIST_SHEET = "inspect-list-sheet";
-/** A15: the count in the preview or the sheet, in `data-count`. */
 export const INSPECT_LIST_COUNT = "inspect-list-count";
-/** A15: one face in the preview, or one face button in the sheet; `data-def-name` is its name. */
 export const INSPECT_LIST_CARD = "inspect-list-card";
-/** A15: the preview's "+N more" line, past its cap. */
 export const INSPECT_LIST_MORE = "inspect-list-more";
-/** A15: a face opened large inside the sheet. */
 export const INSPECT_LIST_DETAIL = "inspect-list-detail";
-/** A15: back from a face opened large to the whole list. */
 export const INSPECT_LIST_BACK = "inspect-list-back";
 
-// ---------------------------------------------------------------------------------------------
-// A16: the lobby, the Conquest series screen and its deck picker, and the board's series banner
-// (SPEC §9.5, R257–R264, R330–R338). Like A11 and A13 these mirror, name for name, the screens' own
-// vocabulary: `playTestid` / `playModeTestid` in `apps/web/src/routes/play.tsx`, `seriesTestid` in
-// `apps/web/src/routes/series.tsx`, `seriesPickerTestid` in `apps/web/src/routes/SeriesPicker.tsx`
-// and `seriesBannerTestid` in `apps/web/src/routes/SeriesBanner.tsx`.
-// Keep the files identical.
-// ---------------------------------------------------------------------------------------------
+// A16: selectors mirror play, series, picker and banner modules (SPEC §9.5; R257, R264, R330, R331, R333, R336, R338).
 
-/** R257: the three queue modes, as the lobby's radios and the API spell them. */
 export type QueueMode = "bo1" | "bo3" | "random";
 
-/** "Find a match" (`POST /api/queue` with the chosen mode, deck or trio). */
 export const PLAY_QUEUE = "play-queue";
 export const PLAY_LEAVE_QUEUE = "play-leave-queue";
 export const PLAY_CREATE_ROOM = "play-create-room";
-/** The created room's code, as text. */
 export const PLAY_ROOM_CODE = "play-room-code";
-/** The created room's mode, in `data-mode` (R264). */
 export const PLAY_ROOM_MODE = "play-room-mode";
 export const PLAY_JOIN_INPUT = "play-join-code";
 export const PLAY_JOIN_SUBMIT = "play-join-submit";
-/** "In the … queue", "Give your opponent this code": what the lobby is waiting on. */
 export const PLAY_STATUS = "play-status";
-/** A refusal, in the server's words (a 422's validator sentences as a list). */
 export const PLAY_ERROR = "play-error";
-/** Best of 1's deck `<select>`: one option per saved deck, its value the deck id. */
 export const PLAY_DECK_SELECT = "play-deck-select";
-/** Conquest's trio `<select>`: one option per saved trio, its value the trio id. */
 export const PLAY_TRIO_SELECT = "play-trio-select";
-/** The client's verdict on the choice (`data-ready`): UX only, the server's is law (R253). */
 export const PLAY_VERDICT = "play-choice-verdict";
-/** R1372: All Random's "More cards from the newest set" checkbox, off unless this device turned it on. */
+/** R1372: All Random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
 
-/** One mode radio (R257). */
 export function playModeId(mode: QueueMode): string {
   return `play-mode-${mode}`;
 }
 
-/** The series screen (`data-status="picking|playing|over"`). */
 export const SERIES_SCREEN = "series-screen";
-/** A refusal or a failed read, in the server's words. */
 export const SERIES_ERROR = "series-error";
-/** The game wins so far, in `data-you` and `data-opponent`. */
 export const SERIES_SCORE = "series-score";
-/** "Opponent is choosing…" / "Opponent has picked" (`data-picked`), and never what (R331). */
+/** R331: opponent-pick status never reveals the choice. */
 export const SERIES_OPPONENT_STATUS = "series-opponent-status";
-/** The pick clock's whole seconds left, in `data-seconds` (R333). */
 export const SERIES_PICK_CLOCK = "series-pick-clock";
-/** The deck picker (R338): `data-state="choosing|waiting"`, `data-auto="true"` for a pick made for you. */
 export const SERIES_PICKER = "series-picker";
-/** Seals the selected deck as the pick (R331). */
 export const SERIES_LOCK_IN = "series-lock-in";
-/** While a game is on: the way to its board. */
 export const SERIES_OPEN_MATCH = "series-open-match";
 export const SERIES_FORFEIT = "series-forfeit";
 export const SERIES_FORFEIT_CONFIRM = "series-forfeit-confirm";
-/** Once over: `data-outcome="win|loss|draw|abandoned"`. */
 export const SERIES_RESULT = "series-result";
 
-/** One of your three decks in the standings (0-based trio slot): `data-won` (locked), `data-picked`. */
 export function seriesDeckId(slot: number): string {
   return `series-deck-${String(slot)}`;
 }
 
-/** A deck's radio in the picker, while choosing: checked when selected; disabled once it has won. */
 export function seriesPickId(slot: number): string {
   return `series-pick-${String(slot)}`;
 }
 
-/** One of the opponent's slots: `data-won` and nothing else (R336). */
 export function seriesOpponentDeckId(slot: number): string {
   return `series-opponent-deck-${String(slot)}`;
 }
 
-/** One game of the history: `data-result="win|loss|draw|pending"`. */
 export function seriesGameId(gameNo: number): string {
   return `series-game-${String(gameNo)}`;
 }
 
-/** The board's series banner (`data-series-id`), on a series game only. */
 export const SERIES_BANNER = "series-banner";
-/** Once the game is over: the way on to the next game, or to the series screen to pick for it. */
 export const SERIES_BANNER_CONTINUE = "series-banner-continue";
-/** Once the series is over: its result, in `data-outcome`. */
 export const SERIES_BANNER_RESULT = "series-banner-result";
-/** One pip per deck on the banner, `data-won="true"` once it has won (R336). */
 export function seriesBannerYourDeckId(slot: number): string {
   return `series-banner-you-deck-${String(slot)}`;
 }
@@ -959,81 +606,43 @@ export function seriesBannerOpponentDeckId(slot: number): string {
   return `series-banner-opponent-deck-${String(slot)}`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// A19: the v0.1.1 patch's presentation (SPEC §10.10, R370–R372). Documentation, like A11: each
-// mirrors a name `apps/web` renders — `testid.unrevealed` in `apps/web/src/game/contract.ts`, the
-// `INSPECT_FACE_DOWN*` and `INSPECT_NOTE` overlays in `apps/web/src/cards/inspect/testids.ts`.
-// A back in the backrow carries `data-face-down="true"`, its label "Face-down trap[, Cost (N)]",
-// and, where the view gives it a cost, `data-facedown-cost` and a `.facedown-cost` gem (R370). Your
-// own face-down trap carries `data-unrevealed="true"` (R371). A grade badge is
-// `[data-counter="grade"]` with `data-grade` and `data-grade-letter` (R372).
-// ---------------------------------------------------------------------------------------------
+// A19: face-down selectors mirror `apps/web/src/game/contract.ts` and inspect `testids.ts` (SPEC §10.10; R370, R371, R372).
 
-/** R371: the "Face down" tag on your own face-down trap. */
 export function unrevealedId(instanceId: string): string {
   return `unrevealed-${instanceId}`;
 }
 
-/** R370: a face-down backrow card's overlay (hover or sheet, `data-mode`), and the cost it states. */
 export const INSPECT_FACE_DOWN = "inspect-face-down";
 export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
-/** R371: the line over your own face-down trap's face in its preview and its sheet. */
 export const INSPECT_NOTE = "inspect-note";
 
-// ---------------------------------------------------------------------------------------------
-// A20: patch v0.2.0's Activate control (R384, R510) and plays from the graveyard (B5 E11). Mirrors,
-// name for name, `testid.activate`, `testid.activateUses`, `testid.powerOf` and `testid.pilePlay` in
-// `apps/web/src/game/contract.ts`. Keep the files identical. A card the viewer controls whose view
-// lists `activations` carries one control per ability; `ability` is named only when it lists
-// several. A control is live (`data-legal="true"`) exactly when `legal` lists that card's
-// `activate`; its badge's text is the uses left this turn ("∞" for Activate ♾️), and a control that
-// is not live keeps the engine's reason in its `title`. It flashes (`data-flash="activated"`) while
-// the `activated` row plays on its card. Heroic Power's first power stays `POWER`.
-// ---------------------------------------------------------------------------------------------
+// A20: activate and pile-play selectors mirror `apps/web/src/game/contract.ts` (R384, R510; B5 E11).
 
-/** A20: a card's Activate control (R384). */
 export function activateId(instanceId: string, ability?: string): string {
   return ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`;
 }
 
-/** A20: that control's uses-left badge (`data-uses`: a number, or "unlimited"). */
 export function activateUsesId(instanceId: string, ability?: string): string {
   return ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`;
 }
 
-/** A20: a Heroic Power after the first on the hero panel (the first is `POWER`). */
 export function powerOfId(instanceId: string): string {
   return `power-${instanceId}`;
 }
 
-/** A20: "Play" on a card in your graveyard pile's sheet, present only while `legal` lists that play (B5 E11). */
 export function pilePlayId(instanceId: string): string {
   return `pile-play-${instanceId}`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// A21: the Card Almanac (`/almanac`, R630) and the site footer's link to it. Mirrors, name for name,
-// `almanacTestid` in `apps/web/src/routes/almanac.tsx`, `siteFooterTestid` in
-// `apps/web/src/routes/SiteFooter.tsx` and `navTestid.back` in `apps/web/src/routes/nav.tsx`, which
-// are React modules a spec cannot import. Keep the files identical. The almanac's pool, filters and
-// detail view are A14's names: it renders the deck builder's own browse pane.
-// ---------------------------------------------------------------------------------------------
+// A21: almanac, footer and back selectors mirror their apps/web testid modules (R630).
 
-/** A21: the almanac's root. */
 export const ALMANAC = "almanac";
-/** A21: the site footer, on the landing page and the sign-in screen. */
 export const SITE_FOOTER = "site-footer";
-/** A21: the footer's "Card almanac" link, right after its Patch notes link. */
 export const SITE_FOOTER_ALMANAC = "site-footer-almanac";
-/** A21: the footer's Patch notes link. */
 export const SITE_FOOTER_PATCH_NOTES = "site-footer-patch-notes";
-/** A21: a screen's "← Back" in its top bar. */
 export const NAV_BACK = "nav-back";
 
-// ---------------------------------------------------------------------------------------------
-// A22: the public Statistics screen (`/stats`, R654) and links to it. Mirrors, name for name,
-// `statsTestid` in `apps/web/src/stats/testids.ts` and `SITE_FOOTER_STATS`.
-// ---------------------------------------------------------------------------------------------
+// A22: public Statistics selectors mirror `apps/web/src/stats/testids.ts` (R654).
 
 export const STATS_SCREEN = "stats-screen";
 export const STATS_TAB_CARDS = "stats-tab-cards";

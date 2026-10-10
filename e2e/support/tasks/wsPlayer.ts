@@ -1,35 +1,7 @@
-// `cy.task("wsPlayer", …)`: the second player of a networked match, driven from Node.
-//
-// BUILD M6 gate and spec 06 require it ("the second player driven by a Node WebSocket client via
-// cy.task"). One socket per named player, held across tasks for the length of the spec file.
-//
-// PROTOCOL. BUILD M6-T4 fixes the message names and `crates/server/src/actor/protocol.rs` now fixes
-// every shape, so this is read off that file rather than assumed (e2e/README.md A8):
-//
-//   -> { type: "hello", token?, matchId?, roomCode? }   (the actor ignores every field: it means
-//                                                        "push me a fresh full view", §9.5)
-//   -> { type: "action", action: { ...ActionBody, nonce } }
-//   <- { type: "view", view: PlayerView }               (pushed after every change, SPEC §10.8)
-//   <- { type: "ack", nonce, seq }                      (nonce dedupe + the log seq, SPEC §9.3)
-//   <- { type: "error", code, message, nonce? }         (`nonce` only when an action failed)
-//   <- { type: "prompt", forYou, … }                    (recorded, not interpreted; §10.6)
-//   <- { type: "clock", now, clocks }                   (R79 deadlines, §9.5)
-//
-// TWO THINGS THIS CLIENT DELIBERATELY DOES NOT DO.
-//
-//  - It never sends `joinRoom`. `protocol.rs` accepts that frame only so a client which speaks it
-//    gets `error { code: "unsupported" }` instead of "malformed": joining is
-//    `POST /api/rooms/:code/join`, because the atomic single-claim and the loadout re-check are
-//    HTTP concerns and a socket is only ever opened onto a match that already exists. Specs 05 and
-//    06 claim a room with `cy.request` and open the socket on the match id they get back.
-//  - It does not trust its own `playerId`. `parseClientMessage` rebuilds the action body field by
-//    field and discards `playerId`; the actor stamps the authenticated seat. `seat` below is only
-//    used to fill the field the frozen specs put on the wire, and to label the result.
-//
-// The socket's query string carries `token` and `matchId` only — the two things
-// `crates/server/src/actor/ws_server.rs` reads at the upgrade.
-//
-// If the server team lands other shapes, only this file changes.
+// Node second-player client for BUILD M6 and BUILD M6-T4 spec 06 (e2e/README.md A8).
+// `protocol.rs` fixes hello (fresh full view, §9.5), action, view (SPEC §10.8), ack (nonce/seq,
+// SPEC §9.3), error, prompt (record only, §10.6) and clock (R79, §9.5). HTTP joins atomically;
+// the actor stamps `playerId`'s authenticated seat.
 
 import { WebSocket } from "ws";
 
@@ -45,7 +17,6 @@ type Client = {
   lastView: Record<string, unknown> | null;
   waiters: Waiter[];
   nonce: number;
-  /** The match this socket was opened onto, for the leave-nothing-behind concede below. */
   matchId: string | null;
 };
 
@@ -128,9 +99,7 @@ function matchesView(view: Record<string, unknown>, where: ViewPredicate): boole
     if (by !== where.drawOfferBy) return false;
   }
   if (where.promptKind !== undefined) {
-    // §10.6, §10.8: `PendingView` is split on `forYou`, and the player who does NOT hold the
-    // prompt gets `{ forYou: false, pendingFor }` — no kind, no options. So a `promptKind`
-    // predicate is satisfied only by a prompt this client itself has to answer.
+    // §10.6, §10.8: only the responding player receives a pending prompt's kind and options.
     const pending = isRecord(view.pending) ? view.pending : null;
     if (pending === null || pending.forYou !== true || pending.kind !== where.promptKind) return false;
   }
@@ -147,12 +116,10 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
   const existing = clients.get(command.name);
   if (existing !== undefined) existing.socket.close();
 
-  // `WS_PATH` in crates/server/src/actor/ws_server.rs. A handshake off this path is left alone by
-  // `attachWebSocketServer`, so a wrong path never reaches the upgrade at all.
+  // `WS_PATH`: an off-path handshake never reaches the upgrade.
   const base = command.url ?? "ws://localhost:8787/ws/match";
   const url = new URL(base);
-  // `tokenFrom` reads `?token=` (a browser cannot set a handshake header) and the upgrade reads
-  // `?matchId=`. Nothing else in the query string is looked at, so nothing else is put there.
+  // The upgrade reads only `?token=` and `?matchId=`.
   if (command.token !== undefined) url.searchParams.set("token", command.token);
   if (command.matchId !== undefined) url.searchParams.set("matchId", command.matchId);
 
@@ -179,9 +146,7 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
     }
   });
 
-  // A refusal closes the socket (`WS_CLOSE` 4401/4403/4404 in wsServer.ts mirror the HTTP
-  // statuses), and so does the actor's `stop()`. Waking every waiter here turns what would be a
-  // 15-second timeout into the close code that caused it.
+  // Reject waiters with a refusal's close code instead of waiting for the timeout.
   socket.on("close", (code: number, reason: Buffer) => {
     const why = reason.length > 0 ? `: ${reason.toString()}` : "";
     for (const waiter of record.waiters.splice(0)) {
@@ -208,12 +173,7 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
   if (command.roomCode !== undefined) hello.roomCode = command.roomCode;
   socket.send(JSON.stringify(hello));
 
-  // `attach` already pushes a view and a clock, and `hello` asks for another (§9.5: "Reconnect
-  // gets a fresh full view, never a log replay"), so the first view may well pre-date the hello.
-  // Either way it is the full view this seat is entitled to.
-  //
-  // A refused upgrade answers `error { code: "forbidden" }` and closes, so that is matched too:
-  // failing with the server's own words beats timing out for 15 s on a view that cannot come.
+  // §9.5 permits the pushed view to pre-date `hello`; match refusal errors rather than timing out.
   const first = await waitFor(
     record,
     (message) => message.type === "view" || message.type === "error",
@@ -225,11 +185,7 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
   return { ok: true, name: command.name, seat: record.seat, view: isRecord(first.view) ? first.view : null };
 }
 
-/**
- * §9.3: "`reduce` refuses illegal actions itself and returns the reason", and `protocol.ts` relays
- * that reason verbatim. An `ErrorMessage` is `{ type, code, message, nonce? }` — there is no
- * `error` field on it — so the reason is `message` and nothing here rewords it.
- */
+/** §9.3: `ErrorMessage.message` is the reducer's verbatim reason; it has no `error` field. */
 function errorOf(message: WsMessage): { error: string; code?: string } {
   const code = typeof message.code === "string" ? message.code : undefined;
   const text = typeof message.message === "string" ? message.message : "";
@@ -243,18 +199,14 @@ async function send(command: Extract<WsPlayerCommand, { action: "send" }>): Prom
   const record = client(command.name);
   record.nonce += 1;
   const nonce = `${command.name}-${record.nonce}`;
-  // `playerId` is discarded by `parseClientMessage`; the actor stamps the authenticated seat. It
-  // rides along because the frozen specs put it on the body, not because the server reads it.
+  // The actor stamps the authenticated seat; frozen specs still put `playerId` on the body.
   const action = { playerId: record.seat, ...command.body, nonce };
   record.socket.send(JSON.stringify({ type: "action", action }));
   const reply = await waitFor(
     record,
     (message) =>
       (message.type === "ack" && message.nonce === nonce) ||
-      // Every refusal that belongs to an action carries that action's nonce (`applyAction`,
-      // `rate_limited`, `match_over`). A `malformed` frame error carries none, and is the reply to
-      // the frame just sent, so it counts too — but an error stamped with someone else's nonce
-      // never does.
+      // An un-nonced malformed error is this frame's reply; another action's error is not.
       (message.type === "error" && (message.nonce === undefined || message.nonce === nonce)),
     `an ack for ${String(command.body.type)} (${nonce})`,
   );
@@ -283,29 +235,11 @@ async function awaitView(command: Extract<WsPlayerCommand, { action: "awaitView"
   return { ok: true, name: command.name, view: isRecord(message.view) ? message.view : null };
 }
 
-/**
- * Leave no live match behind when a spec file ends.
- *
- * A profile with `inMatchId` set is refused by `POST /api/rooms`, `POST /api/rooms/:code/join` and
- * `POST /api/queue` alike — all three answer `409 already_in_match`
- * (`crates/server/src/actor/rooms.rs`, `crates/server/src/api/queue.rs`). Spec 05 ends with its match
- * still running, on purpose: the point of that spec is that the prompt rebuilt after the reload is
- * live state, so it answers the prompt and stops. Spec 06 is next in the alphabetical order Cypress
- * runs, and its first server call is `POST /api/rooms` as the same account — so without this the
- * suite passes spec by spec and fails as a suite, which is the shape the M8 gate is run in.
- *
- * §2.5 already gives a player a way out of a match, so nothing new is invented here: this sends the
- * `concede` the protocol already carries, and §9.5's "every ending records a result and clears both
- * players' in-match state" does the rest for BOTH seats. It is best-effort by design — a match that
- * is already over answers `match_over` and a closed socket answers nothing, and neither is a
- * failure worth taking a spec file down for.
- */
+/** §2.5 concede clears both seats' in-match state (§9.5); cleanup is best-effort for closed or over matches. */
 async function concedeIfLive(record: Client): Promise<void> {
   if (record.matchId === null) return;
   if (record.socket.readyState !== WebSocket.OPEN) return;
-  // `result` is non-null once the match has ended (§10.8), so there is nothing to concede. A view
-  // that never arrived is not evidence of an ended match, so that case still concedes: the cost of
-  // a redundant concede is one `match_over` error nobody reads.
+  // §10.8: only a non-null result proves the match ended; a missing view still concedes.
   const view = record.lastView;
   if (view !== null && view.result !== null && view.result !== undefined) return;
   try {
@@ -315,19 +249,7 @@ async function concedeIfLive(record: Client): Promise<void> {
   }
 }
 
-/**
- * Open a socket onto a match as `token`, concede it and close again, in ONE task.
- *
- * This is how a spec (or `cy.freeAccount`) takes a seat out of a match that seat's own BROWSER is
- * also attached to. The actor keeps one socket per seat and closes the older one when a second
- * attaches (`attach` in crates/server/src/actor/match_actor.rs), and the browser reconnects after
- * `RECONNECT_DELAYS_MS[0]` (apps/web/src/game/net.ts), which would take the seat straight back.
- * Doing connect and concede as two Cypress commands leaves a Cypress round trip inside that window;
- * doing both here leaves only the socket's own. The ack of a concede is sent after the actor has
- * recorded the result (`applyAction` awaits `afterChange`), so once this answers the profile is out
- * of the match and a series has moved on. A match already over answers `match_over`, which is
- * reported rather than thrown.
- */
+/** Concede in one task so browser reconnect cannot reclaim the seat between Cypress commands. */
 async function concede(command: Extract<WsPlayerCommand, { action: "concede" }>): Promise<WsPlayerResult> {
   try {
     const opened = await connect({
@@ -368,8 +290,7 @@ export async function wsPlayer(command: WsPlayerCommand): Promise<WsPlayerResult
         return { ok: true, name: command.name, messages: client(command.name).messages };
       case "disconnect": {
         const record = client(command.name);
-        // A deliberate disconnect is what spec 05 uses to model a dropped player, so it must NOT
-        // concede: the grace countdown is the thing under test. Only `reset` cleans up.
+        // Spec 05 models a dropped player: only `reset` cleans up, not this disconnect.
         record.socket.close();
         clients.delete(command.name);
         return { ok: true, name: command.name };

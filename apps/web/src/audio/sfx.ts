@@ -1,19 +1,8 @@
-// Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16): one recipe per `SfxId`
-// in the sfxr tradition: an oscillator or noise buffer, a filter and a gain envelope, plus FM for
-// bells. No audio files ship for effects. Every recipe keeps this contract:
-//   - it schedules nothing before `at` and stops every source by `at + returned`, and
-//     `returned <= durationMs / 1000` (every time goes through `time()`, which clamps into the span);
-//   - it connects only into `out`, never `ctx.destination`, and its peak output stays at or under 1;
-//   - exponential ramps target a positive value (`FLOOR`), never 0;
-//   - it uses only the permitted Web Audio subset, which is all the test fake implements.
-// The Cypress component spec imports this file alone, so it imports only `./types.ts` and
-// `./constants.ts`. Frequencies and times stay local to each recipe (CLAUDE.md rule 9 names only the
-// numbers another module reads).
-// PITCH (R655): `renderSfx` detunes every oscillator and filter by the same cents (the crushed
-// wavetable plays faster or slower); the times stay as written, so the contract holds.
-// LEVELS (B57): the SFX table's gains set the mix against the voice lines (about -20 dBFS RMS):
-// big moments within a few dB of a line, routine sounds 5 to 9 dB under, UI ticks quieter but
-// audible. audio-recipes.cy.tsx holds these bands, so a retune cannot drift.
+// Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16): one sfxr-style recipe
+// per `SfxId`. It stays within its returned span, connects only into `out` below peak 1, uses positive
+// exponential ramps, and relies only on Web Audio that the test fake implements.
+// Cypress imports this file alone, so it imports only `./types.ts` and `./constants.ts`; local recipe
+// values need no constants (CLAUDE.md rule 9). PITCH (R655) preserves timings; LEVELS (B57) are tested.
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";

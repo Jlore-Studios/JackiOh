@@ -1,15 +1,9 @@
-// The effects layer (docs/polish/1-animations.md, S9): a fixed, click-through overlay that decorates
-// the animation runner's in-flight entry. It paces nothing (R200): it only hears `subscribeSignals`
-// and never calls `schedule` or `drain`. Besides the board shake it writes `--anim-squeeze` on its
-// parent: the duration the runner gave an entry (speed setting, burst budget, R201) over the table's.
-// The subscription is a LAYOUT effect: `Game` enqueues events in its own layout effect and child
-// layout effects run first, so the listener exists before the first entry starts.
-// It reads only the redacted stream (R202). Under reduced motion or intensity "off" it renders the
-// empty root (`data-fx="off"`) but keeps `--anim-squeeze`; the reduce setting also zeroes `--anim-scale`.
-// A drain clears the killing blow before it draws, so the layer keeps the cut entries and replays the
-// lethal one ahead of game-over (`planLethal`).
-// R502: `latest` is the newest view, read for what events do not carry (#21 Hinder's `env.next`) and
-// to mark the crystals the next refresh will not fill (`manaMarks.ts`), even under reduced motion.
+// The fixed effects overlay (docs/polish/1-animations.md, S9) decorates the runner's in-flight entry
+// but never paces it (R200). `--anim-squeeze` preserves the runner's actual duration (R201).
+// Its layout-effect subscription exists before `Game` enqueues the first entry; it reads only the
+// redacted stream (R202), and reduced motion or intensity "off" leaves an empty root.
+// A drain clears the killing blow before it draws, so cut entries replay lethal ahead of game-over.
+// R502: `latest` supplies #21 Hinder's `env.next` and marks the next refresh's empty crystals.
 
 import {
   useContext,

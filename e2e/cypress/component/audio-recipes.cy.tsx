@@ -1,38 +1,9 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviours B15 and B16: every procedural SFX recipe,
-// rendered by a real browser's Web Audio implementation rather than jsdom's fake.
-//
-//   B15  In real Chrome, every recipe rendered alone in an OfflineAudioContext yields finite
-//        samples with a peak in [0.01, 1.0], and a peak < 0.001 after its durationMs.
-//   B16  In real Chrome, `impact` RMS strictly increases across amount 1 -> 4 -> 10, and amount 25
-//        renders the same RMS as 10 within 1%.
-//
-// The jsdom suite (sfx.test.ts, B14) proves what a recipe SCHEDULES on a fake context. It cannot
-// prove what comes out: whether filters ring past the end, whether a ramp clips, whether a sweep
-// produces NaN. This spec renders the real thing, offline and faster than real time, and measures
-// the samples.
-//
-// It imports `apps/web/src/audio/sfx.ts` and nothing else from the client — the Surface keeps
-// sfx.ts free of anything but ./types.ts and ./constants.ts for exactly this reason — and it mounts
-// nothing. Types come off sfx.ts's own exports so no second client module is pulled in.
-//
-// Each recipe renders into `new OfflineAudioContext(1, 44100 * (durationMs / 1000 + 0.25), 44100)`
-// with `at = 0`, through a unity-gain node into the destination: the recipe contract is "connects
-// only into `out` … its peak output is <= 1.0", so the recipe's own output is what is measured, not
-// the engine's per-cue gain or buses on top of it. It runs once per params set B14 names ({},
-// {amount: 1}, {amount: 25}, {mine: true}): `durationMs` is the Surface's "upper bound over all
-// params", so the tail has to be silent for every one of them.
-//
-//   B57  At the default settings, through the real mix (mix.ts: buses and limiter), every effect
-//        sits in its band against the shipped voice lines: the maximum hit and the big moments
-//        within a few dB of a line, routine sounds 4 to 12 dB under it, the UI ticks under that but
-//        audible, victory louder than defeat, and a dense scene under the limiter never clipping.
-//        The reference is the mean active RMS of five real lines in five personas, decoded by
-//        Chrome from the committed .m4a files with their persona trims.
-//
-// B15 and B16 measure a recipe alone, as described above. B57 measures what a player hears, so it
-// also imports mix.ts, the default settings and voiceData.ts's card table (for the voices' trims).
-//
-// Run it with:
+// B15 and B16 render SFX in real offline Chrome, not jsdom's schedule-only fake.
+// B15: each recipe is finite, audible, unclipped, and silent after `durationMs`.
+// B16: impact RMS rises from 1 -> 4 -> 10, and 25 matches 10 within 1%.
+// B57 measures SFX through the real mix against decoded voice lines.
+// `sfx.ts` remains independently importable, and every B14 parameter render is bounded by `durationMs`.
+// Run with:
 //   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
 //     --spec cypress/component/audio-recipes.cy.tsx
 
@@ -45,19 +16,16 @@ type SfxId = (typeof SFX_IDS)[number];
 type SfxParams = Parameters<SfxRecipe>[3];
 
 const SAMPLE_RATE = 44_100;
-/** Rendered past `durationMs`, so the tail after it can be measured (Tests section). */
+/** Render past `durationMs` to measure tails. */
 const TAIL_S = 0.25;
-/** An offline render of under two seconds of mono audio takes milliseconds; this is headroom. */
 const RENDER_TIMEOUT_MS = 30_000;
 
-/** B15's bounds. */
 const MIN_PEAK = 0.01;
 const MAX_PEAK = 1.0;
 const SILENT = 0.001;
-/** B16's tolerance. */
 const RMS_TOLERANCE = 0.01;
 
-/** The SfxId union from types.ts, in its order: SFX_IDS is "every id, in the order of the union". */
+/** The `SfxId` union order, checked against `SFX_IDS`. */
 const EXPECTED_IDS = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
@@ -72,7 +40,7 @@ const EXPECTED_IDS = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
 ] as const;
 
-/** The Surface's recipe table, `durationMs` column: the window each recipe must fall silent in. */
+/** Each recipe's silence deadline. */
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   draw: 180,
   play: 260,
@@ -106,7 +74,7 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   entrance: 1400,
   fatigue: 650,
   refuse: 400,
-  // Patch v0.2.0 (R506).
+  // R506 variants.
   manaCrack: 900,
   bloodDrain: 600,
   goldBurst: 850,
@@ -120,9 +88,9 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   emoteLaugh: 750,
   emoteAngry: 700,
   emoteWahWah: 1800,
-  // Patch v0.2.X (R669).
+  // R669: sting by rarity.
   sting: 800,
-  // Patch v0.3.X (MN05): Armor (R1363) and the niche moments (R1364–R1366).
+  // MN05: Armor and niche moments (R1363, R1364, R1365, R1366).
   armorClank: 350,
   armorRing: 850,
   overkill: 550,
@@ -135,7 +103,7 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   fuse: 650,
   degrade: 520,
   upgrade: 500,
-  // Patch v0.3.X (MN03, R1345).
+  // MN03 emotes (R1345).
   emoteWave: 500,
   emoteClap: 650,
   emoteThumbsUp: 400,
@@ -152,7 +120,7 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   emoteParty: 850,
 };
 
-/** B14's params sets, reused so the browser checks the same inputs the fake context does. */
+/** B14 parameter sets used here too. */
 const PARAM_SETS: readonly { label: string; params: SfxParams }[] = [
   { label: "{}", params: {} },
   { label: "{amount: 1}", params: { amount: 1 } },
@@ -160,10 +128,8 @@ const PARAM_SETS: readonly { label: string; params: SfxParams }[] = [
   { label: "{mine: true}", params: { mine: true } },
 ];
 
-/** One params set's render of one recipe. */
 type Render = { label: string; samples: Float32Array };
 
-/** Render one recipe alone and hand back its only channel. */
 async function render(id: SfxId, params: SfxParams): Promise<Float32Array> {
   const seconds = SFX[id].durationMs / 1000 + TAIL_S;
   const ctx = new OfflineAudioContext(1, Math.round(SAMPLE_RATE * seconds), SAMPLE_RATE);
@@ -181,7 +147,6 @@ function nonFiniteCount(samples: Float32Array): number {
   return count;
 }
 
-/** max |x| over samples[from..]. */
 function peak(samples: Float32Array, from = 0): number {
   let max = 0;
   for (let index = from; index < samples.length; index += 1) {
@@ -191,7 +156,6 @@ function peak(samples: Float32Array, from = 0): number {
   return max;
 }
 
-/** Root mean square over the whole render (every `impact` render has the same length). */
 function rms(samples: Float32Array): number {
   let sum = 0;
   for (const sample of samples) sum += sample * sample;
@@ -232,7 +196,6 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
     });
   }
 
-  // Integration: every card family's summon and spell, the Mythic entrance and R506's variants keep B15's bounds.
   it("B15 every card family's summon and spell, the Mythic entrance and R506's variants: finite, unclipped, silent after durationMs", () => {
     const cases: { id: SfxId; params: SfxParams }[] = [
       ...SFX_TIMBRES.flatMap((timbre): { id: SfxId; params: SfxParams }[] => [
@@ -241,7 +204,7 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
         { id: "spell", params: { timbre } },
       ]),
       { id: "entrance", params: { mythic: true } },
-      // R506: the variants the four standard params sets do not reach.
+      // R506 variants outside PARAM_SETS.
       { id: "chaosRoll", params: { amount: 3 } },
       { id: "brand", params: { release: true } },
       { id: "clockTick", params: { amount: 10 } },
@@ -284,15 +247,13 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B57: the mix at the default settings
- * --------------------------------------------------------------------------------------------- */
+// B57: default mix.
 
-/** Five shipped lines in five personas (robot, kid, narrator, diva, goof): the dialogue level. */
+/** Dialogue reference across five personas. */
 const REFERENCE_LINES = ["core-013-play", "core-011-play", "core-005-cast", "core-081-play", "core-009-death"] as const;
 const MIX_LEAD_S = 0.01;
 const MIX_TAIL_S = 0.3;
-/** Active RMS: 10 ms windows, keeping those within 20 dB of the loudest (a sound's body, not its tail). */
+/** Active RMS excludes low-tail windows. */
 const WINDOW_S = 0.01;
 const GATE = 100; // power ratio: 20 dB
 
@@ -319,7 +280,6 @@ function level(samples: Float32Array): Level {
 
 type Cue = { id: SfxId; params: SfxParams; at?: number };
 
-/** Renders cues (and, optionally, decoded lines) through the real mix at the default settings. */
 async function renderMix(cues: readonly Cue[], lines: readonly { buffer: AudioBuffer; gain: number; at: number }[] = []): Promise<Float32Array> {
   const ends = [
     ...cues.map((c) => (c.at ?? 0) + SFX[c.id].durationMs / 1000),
@@ -358,7 +318,6 @@ async function decode(b64: string): Promise<AudioBuffer> {
   return new OfflineAudioContext(1, SAMPLE_RATE, SAMPLE_RATE).decodeAudioData(bytes.buffer);
 }
 
-/** Bands in dB against the reference line level. */
 const LOUD: readonly Cue[] = [
   { id: "impact", params: { amount: 10 } },
   { id: "death", params: {} },
@@ -367,10 +326,9 @@ const LOUD: readonly Cue[] = [
   { id: "defeat", params: {} },
   { id: "drain", params: { amount: 10 } },
   { id: "summon", params: { amount: 14 } },
-  // Integration: a Legendary or Mythic unit's entrance is one of the big moments.
   { id: "entrance", params: {} },
   { id: "entrance", params: { mythic: true } },
-  // R506: #21 Hinder's mana crack is a big moment, made to be noticed by the player it hits.
+  // R506: Hinder's mana crack is a big moment.
   { id: "manaCrack", params: {} },
 ];
 const LOUD_BAND = [-5, 1] as const;
@@ -381,17 +339,16 @@ const ROUTINE: readonly Cue[] = [
   { id: "mana", params: { mine: true } },
   { id: "impact", params: { amount: 1 } },
   { id: "drain", params: { amount: 1 } },
-  // R506: #27's blood drain and gold burst, a cast on draw, Call to Chaos's roll, a mark, and the
-  // turn clock's heartbeat and ticks.
+  // R506 variants.
   ...(["bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat"] as const).map((id): Cue => ({ id, params: {} })),
   { id: "chaosRoll", params: { amount: 3 } },
   { id: "clockTick", params: { amount: 1 } },
   { id: "clockTick", params: { amount: 10 } },
-  // R669: the play sting at each rarity.
+  // R669: sting by rarity.
   { id: "sting", params: {} },
   { id: "sting", params: { tier: "rare" } },
   { id: "sting", params: { tier: "epic" } },
-  // MN05: Armor's clank and ring (R1363), overkill's crunch (R1364), the niche moments (R1365, R1366).
+  // MN05: Armor and niche moments (R1363, R1364, R1365, R1366).
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
@@ -399,7 +356,6 @@ const ROUTINE: readonly Cue[] = [
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };
 const VICTORY_BAND = [-4, 3] as const;
-/** No single effect comes near full scale on its own. */
 const EFFECT_PEAK_MAX = 0.7;
 
 describe("polish 2 — B57 the mix at the default settings", () => {
@@ -435,7 +391,7 @@ describe("polish 2 — B57 the mix at the default settings", () => {
           relDb: Number((l.activeDb - reference).toFixed(1)),
           peak: Number(l.peak.toFixed(3)),
         }));
-        // Reported before the checks, so a failing row's neighbours are measured too.
+        // Report before assertions so all rows are measured.
         cy.task("layout:report", { b57: label, rows }, { log: false }).then(() => {
           for (const row of rows) {
             expect(row.relDb, `${row.sfx} against the voice lines`).to.be.within(band[0], band[1]);
@@ -451,7 +407,6 @@ describe("polish 2 — B57 the mix at the default settings", () => {
   check("uiClick", [{ id: "uiClick", params: {} }], UI_BANDS.uiClick);
   check("uiHover", [{ id: "uiHover", params: {} }], UI_BANDS.uiHover);
   check("victory", [{ id: "victory", params: {} }], VICTORY_BAND);
-  // Integration: a card's family changes a summon's accent and a spell's chimes, never its level.
   check(
     "summon and spell in every card family",
     SFX_TIMBRES.flatMap((timbre): Cue[] => [
@@ -469,8 +424,7 @@ describe("polish 2 — B57 the mix at the default settings", () => {
     });
   });
 
-  // Every effect in it at once, each id once (the engine refuses an id again within
-  // SFX_RETRIGGER_MS), under the loudest persona's line: denser than any turn the director plays.
+  // Each id is used once because the engine rejects retriggers within `SFX_RETRIGGER_MS`.
   it("B57 a dense scene (a trade under a death line and a trap) stays under full scale through the limiter", () => {
     const scene: Cue[] = [
       { id: "attack", params: {} },

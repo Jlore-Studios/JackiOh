@@ -1,14 +1,5 @@
-// R318: the board shows §2.4's three overflows on both seats — a fatigue draw on the library pile
-// ("Fatigue N"), a full library turning a card away ("Deck full" and the card), and a full hand
-// burning one ("Hand full" and the card) — from the redacted event alone.
-//
-// The notices are the board's own elements (OverflowNotices.tsx), so they are proved here through
-// the whole client (`Game`, whose runner starts the entries), with fake timers: a notice mounts when
-// its entry starts, is `data-playing` only while that entry is in flight, stays up through the rest
-// of the burst (the fatigue hit landing after it), and goes when the board catches up. A card the
-// viewer reads is drawn face up with its name; R97's sentinel is a back that names nothing. Reduced
-// motion starts no entry, so nothing mounts, and the effects speed scales the entries (R201).
-// `animations.window.test.ts` proves the other half: each event reaches each seat's runner once.
+// R318 / §2.4: overflow notices render redacted fatigue, library-full, and hand-full events on both seats.
+// R97 hides unreadable cards; R200 keeps notices from owning animation state, R240 renders zero hits, and R201 scales durations.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -45,7 +36,6 @@ function nameOf(defId: string): string {
 
 const TURN: GameEvent = { type: "turnStarted", player: "p1", turn: 5 };
 
-/** The same board from either seat: p1 sits in `you` for p1, in `opponent` for p2. */
 function seatView(viewer: "p1" | "p2", events: GameEvent[] = [TURN]): PlayerView {
   const other = viewer === "p1" ? "p2" : "p1";
   return withEvents(
@@ -62,7 +52,6 @@ function withCatalog(node: ReactElement): ReactElement {
   return <CatalogContext.Provider value={lookup}>{node}</CatalogContext.Provider>;
 }
 
-/** Mounts the client on a quiet board, then hands it the view `events` produced (after the turn). */
 function play(viewer: "p1" | "p2", events: GameEvent[]): void {
   const { rerender } = render(withCatalog(<Game view={seatView(viewer)} legal={[]} onAction={vi.fn()} />));
   rerender(withCatalog(<Game view={seatView(viewer, [TURN, ...events])} legal={[]} onAction={vi.fn()} />));
@@ -74,7 +63,6 @@ function advance(ms: number): void {
   });
 }
 
-/** Every attribute value under `root` but `aria-hidden`'s: where an id or a def id would show. */
 function attributeValues(root: Element): string[] {
   return [root, ...root.querySelectorAll("*")].flatMap((el) =>
     [...el.attributes].filter((attr) => attr.name !== "aria-hidden").map((attr) => attr.value),
@@ -160,10 +148,8 @@ describe("R318 fatigue on the library pile", () => {
       expect(notice).toHaveAttribute("data-playing", "true");
       expect(notice, "a notice carries no data-animating of its own (R200)").not.toHaveAttribute("data-animating");
       expect(notice.querySelector("[data-animating]")).toBeNull();
-      // The other seat's pile has nothing to say.
       expect(screen.queryByTestId(noticeTestid.pile(side === "you" ? "opponent" : "you"))).toBeNull();
 
-      // The hit lands on the hero with its number; the badge rests on the pile meanwhile.
       advance(ANIMATIONS.fatigue.durationMs);
       expect(inFlight()).toBe("damage");
       expect(screen.getByTestId(testid.hero(side))).toHaveAttribute("data-animating", "damage");
@@ -172,7 +158,6 @@ describe("R318 fatigue on the library pile", () => {
       expect(screen.getByTestId(noticeTestid.pile(side))).toHaveTextContent(/^Fatigue 3$/);
       expect(screen.getByTestId(noticeTestid.pile(side))).not.toHaveAttribute("data-playing");
 
-      // The board catches up: the notice goes with the burst.
       advance(ANIMATIONS.damage.durationMs);
       expect(inFlight()).toBeNull();
       expect(screen.queryByTestId(noticeTestid.pile(side))).toBeNull();
@@ -263,8 +248,7 @@ describe("R318 a full library on the library pile", () => {
     for (let k = 0; k < 3; k += 1) {
       const notice = screen.getByTestId(noticeTestid.pile("you"));
       expect(notice, `refusal ${String(k + 1)}`).toHaveAttribute("data-playing", "true");
-      // A fresh element for each entry, so its CSS animations start again rather than holding their
-      // end frame, where the refused card is gone.
+      // A fresh element restarts its CSS animation.
       expect(seen, `refusal ${String(k + 1)} is a new notice`).not.toContain(notice);
       seen.push(notice);
       advance(ANIMATIONS.libraryOverflow.durationMs);
@@ -323,7 +307,6 @@ describe("R318 a full hand over the hand", () => {
       expect(burned).toHaveClass("burn-card");
       expect(burned).toHaveAttribute("data-face", "face");
       expect(burned).toHaveTextContent(nameOf(SHEEPISH));
-      // The hand's own count and cards are untouched: the notice is drawn over them.
       expect(screen.getByTestId(`hand-count-${side}`)).toHaveTextContent(side === "you" ? "0" : "4");
 
       advance(ANIMATIONS.burned.durationMs);
@@ -505,7 +488,6 @@ describe("R318 the stylesheets", () => {
     }
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
     for (const part of [".pile-notice-tag", ".overflow-card", ".burn-tag", ".burn-card"]) expect(reduced).toContain(part);
-    // The hand region never animates as a whole: the burn plays on the notice inside it.
     expect(css).not.toContain('[data-animating="burned"]');
   });
 });

@@ -75,12 +75,10 @@ export type CodeFieldProps = {
   describedBy?: string;
 };
 
-/** How many code characters `text` holds: everything that is not a separator, after reading. */
 function codeCharacterCount(text: string): number {
   return normalizeCodeText(text).length;
 }
 
-/** The alphabet characters of a formatted value, separators removed. */
 function charactersOf(formatted: string): string {
   let characters = "";
   for (const character of formatted) {
@@ -89,7 +87,6 @@ function charactersOf(formatted: string): string {
   return characters;
 }
 
-/** How many code characters sit before `position` in a formatted value. */
 function charactersBefore(formatted: string, position: number): number {
   return charactersOf(formatted.slice(0, position)).length;
 }
@@ -119,12 +116,9 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   /** The caret to restore once React has written the value, or null for "leave it alone". */
   const pendingCaret = useRef<number | null>(null);
   const [problem, setProblem] = useState<CodeInputProblem | null>(null);
-  /** The text a refused multi-character insertion carried, quoted in the hint. */
   const [refusedText, setRefusedText] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
-  /** Code characters before the caret (a selection's start), for the active segment and the caret. */
   const [caretCharacters, setCaretCharacters] = useState(0);
-  /** Code characters before a selection's end; equal to `caretCharacters` for a collapsed caret. */
   const [selectedTo, setSelectedTo] = useState(0);
   // A change the parent turns into the value it already holds (a typed separator, a refused
   // character) re-renders nothing upstream, so the caret would never be put back. This does.
@@ -170,7 +164,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     readChange(raw, event.target.selectionStart ?? raw.length);
   }
 
-  /** A composition's text so far: shown as written, followed by the parent while it reads cleanly. */
   function whileComposing(raw: string): void {
     setDraft(raw);
     const next = readCodeInput(raw, format);
@@ -184,7 +177,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     setDraft(event.currentTarget.value);
   }
 
-  /** The composition is over: its text is read like any other change, and may now be rewritten. */
   function handleCompositionEnd(event: CompositionEvent<HTMLInputElement>): void {
     if (disabled || draft === null) return;
     const input = event.currentTarget;
@@ -193,7 +185,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     readChange(raw, input.selectionStart ?? raw.length);
   }
 
-  /** One change to the input's text, read, formatted or refused (see NOTHING IS DROPPED). */
   function readChange(raw: string, rawCaret: number): void {
     const next = readCodeInput(raw, format);
     const inserted = raw.length - value.length;
@@ -253,7 +244,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   function handlePaste(event: ClipboardEvent<HTMLInputElement>): void {
     if (disabled) return;
     const found = findCodeInText(event.clipboardData.getData("text/plain"), format);
-    // No single code in it: let the paste through, and `onChange` reads (or refuses) it.
     if (found === null) return;
     event.preventDefault();
     const next = readCodeInput(found, format);
@@ -289,7 +279,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
       return;
     }
     if (event.key === "Delete" && beforeSeparator) {
-      // Delete the character after the separator; the caret stays where it is drawn.
       event.preventDefault();
       const before = charactersBefore(value, start);
       const all = charactersOf(value);
@@ -357,7 +346,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   const activeSegment = focused
     ? Math.min(Math.floor(caretCharacters / format.groupSize), groups - 1)
     : -1;
-  /** A selection covers code characters [caretCharacters, selectedTo) while the field has focus. */
   const selecting = focused && selectedTo > caretCharacters;
 
   const progressId = `${id}-progress`;

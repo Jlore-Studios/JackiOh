@@ -1,32 +1,4 @@
-// Spec 23 — the tutorial's lesson path: progress saved and restored, no Skip step and Exit, a later
-// lesson with its fixed deck, and the phone layout (SPEC §9.10, R290, R291, R294, R314).
-//
-// What it proves, against `pnpm build:e2e` + `vite preview` and NO server:
-//
-//   * an anonymous `/practice` opens on the lesson path, above the practice setup: lesson 1 open
-//     and marked next, every later lesson locked (its button `aria-disabled`), and a click on a
-//     locked lesson starts nothing (R294's unlock rule);
-//   * progress seeded in `localStorage["jackioh.tutorial.v1"]` before the page boots shows lesson 1
-//     completed (Replay) and lesson 2 open and next; a reload keeps it; a corrupt value
-//     (`"{bad json"`) reads as no progress, with no error;
-//   * lesson 2 started from the path plays on its own seed with the two decks lessons.ts gives it
-//     (read from the web source at spec time by `cy.task("tutorialLessons")`, never copied here),
-//     and the AI seat carries the tutorial handicap (R290: 12 cards, no mana bonus, a cap of 3, a
-//     20-health hero), which the opponent's hero shows;
-//   * there is no Skip step (R314): no button in the HUD or the coach's bubble is named or marked
-//     as one, while the HUD counts the steps; Exit tutorial asks first ("Leave this game?"), Stay
-//     keeps the game, and Exit returns to the lobby's path with the progress unchanged;
-//   * a later lesson (traps) deals its fixed opening hand, Quickdraw card included when its deck
-//     has one (a Quickdraw card always starts in the opening hand), and deals the same hand again
-//     when it is started a second time;
-//   * at 390x844 the path lists every lesson with no horizontal scroll, and in a lesson the coach is
-//     a panel between the HUD and the board (`data-coach-dock="panel"`), never over End turn or your
-//     hand, and both stay on screen, from the first step to the player's first turn.
-//
-// House rules (BUILD M8): a lesson's seed is its own and a `?seed=` never overrides it; every wait
-// is a retried assertion (`cy.settled()`-style waits live in support/tutorial.ts); every selector
-// comes from support/testids.ts. The lesson games run under `?pace=fast`, so the AI does not pace
-// itself for a reader.
+// Tutorial path coverage (SPEC §9.10; R290, R291, R294, R314).
 
 import { TUTORIAL_HANDICAP, TUTORIAL_PROGRESS_VERSION, constants, timeouts } from "../../support/config.ts";
 import {
@@ -68,19 +40,14 @@ import {
   waitForMoment,
 } from "../../support/tutorial.ts";
 
-/** The later lesson whose fixed deal is checked: the backrow lesson, which teaches Quickdraw. */
 const LATER_LESSON = "traps";
 
-/** `/practice` with e2e pacing: a lesson started from the path plays with the AI unpaced. */
 const FAST_LOBBY = `${PRACTICE_PATH}?pace=fast`;
 
-/** The phone the layout smoke runs at (docs/polish/7-mobile-ux.md). */
 const PHONE = { width: 390, height: 844 } as const;
 
-/** Moments followed on the phone, from the first bubble to the player's first turn. */
 const PHONE_MOMENTS = 16;
 
-/** Tips read before the coach is on a step (or waiting for one). */
 const TIP_BUDGET = 6;
 
 type Status = "locked" | "unlocked" | "completed";
@@ -105,12 +72,10 @@ function otherSeat(seat: PlayerId): PlayerId {
   return seat === "p1" ? "p2" : "p1";
 }
 
-/** Progress with every lesson before `lesson` completed, so `lesson` is the one open. */
 function progressUpTo(data: TutorialData, lesson: TutorialLessonData): { v: number; completed: string[] } {
   return { v: TUTORIAL_PROGRESS_VERSION, completed: data.lessons.slice(0, lesson.number - 1).map((each) => each.id) };
 }
 
-/** Each lesson's `data-status`, its button's `aria-disabled`, and which one is marked next. */
 function expectPath(data: TutorialData, statuses: readonly Status[], next: string | null): void {
   cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
   data.lessons.forEach((lesson, at) => {
@@ -129,7 +94,6 @@ function expectPath(data: TutorialData, statuses: readonly Status[], next: strin
   );
 }
 
-/** Start a lesson from the path and wait for its HUD and its first snapshot. */
 function startFromPath(lesson: TutorialLessonData): void {
   cy.get(ts(tutorialStartId(lesson.id))).should("not.have.attr", "aria-disabled");
   cy.get(ts(tutorialStartId(lesson.id))).click();
@@ -141,7 +105,7 @@ function startFromPath(lesson: TutorialLessonData): void {
   practiceHandle();
 }
 
-/** R291, R290: the game on screen is this lesson's, on its seed, with its two decks and the tutorial handicap. */
+/** R291, R290: a lesson uses its fixed seed, decks and tutorial handicap. */
 function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void {
   debugSnapshot().then((debug) => {
     const human = lesson.humanSeat === "p1" ? 0 : 1;
@@ -158,7 +122,6 @@ function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void 
   });
 }
 
-/** Exit tutorial mid-game, confirmed: back to the lobby's path. */
 function exitLesson(): void {
   cy.get(ts(TUTORIAL_EXIT)).click();
   cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
@@ -167,10 +130,7 @@ function exitLesson(): void {
   cy.get(ts(TUTORIAL_HUD)).should("not.exist");
 }
 
-/**
- * R314: nothing in the HUD or the coach's bubble is a Skip step, by its text, its accessible label or
- * its testid (the page had `tutorial-skip` and `coach-skip` before the button was removed).
- */
+/** R314: no Skip controls in the HUD or coach bubble. */
 function expectNoSkip(doc: Document): void {
   for (const region of [TUTORIAL_HUD, COACH]) {
     const root = doc.querySelector(ts(region));
@@ -184,7 +144,6 @@ function expectNoSkip(doc: Document): void {
   }
 }
 
-/** Read "Got it" on any tip in the way, so the coach is on a step (or waiting for one). */
 function coachOnAStep(budget = TIP_BUDGET): void {
   cy.get(ts(COACH), { timeout: TUTORIAL_BOOT_TIMEOUT })
     .should(($coach) => {
@@ -204,7 +163,7 @@ function coachOnAStep(budget = TIP_BUDGET): void {
 
 type Opening = { instanceIds: string[]; defIds: string[] };
 
-/** The human's opening hand as the page holds it, before the player has done anything; and on the board. */
+/** The opening hand must agree with the board (§2.1). */
 function openingHand(lesson: TutorialLessonData): Cypress.Chainable<Opening> {
   debugSnapshot().then((debug) => {
     expect(debug.log.filter((action) => action.playerId === lesson.humanSeat), "the player has done nothing yet").to.deep.eq([]);
@@ -235,10 +194,7 @@ function overlapArea(a: Box, b: Box): number {
   return width > 0 && height > 0 ? width * height : 0;
 }
 
-/**
- * On a phone the coach is a panel in the page above the board, not a bubble over it: it and End
- * turn are both on screen, and it covers neither End turn nor your hand.
- */
+/** On a phone the coach must not cover End turn or the hand. */
 function expectCoachClearOfEndTurn(when: string): void {
   cy.get(ts(COACH)).should("be.visible").and("have.attr", "data-coach-dock", "panel");
   cy.get(ts(END_TURN)).should("be.visible");
@@ -265,7 +221,6 @@ function expectCoachClearOfEndTurn(when: string): void {
   });
 }
 
-/** Follow the coach on the phone until the player's first turn, checking the bubble at every moment. */
 function phoneMoments(remaining: number): void {
   waitForMoment().then((moment) => {
     expect(moment.kind, "the lesson is still on").to.not.eq("over");
@@ -292,7 +247,6 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       );
       cy.get(ts(TUTORIAL_CONTINUE)).should("not.exist");
 
-      // The first section of the page, above the practice setup.
       cy.get(ts(PRACTICE_SETUP)).should("be.visible");
       cy.document().then((doc) => {
         const path = doc.querySelector(ts(TUTORIAL_PATH));
@@ -303,7 +257,6 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
         expect(path.getBoundingClientRect().bottom, "the path sits above the setup").to.be.at.most(setup.getBoundingClientRect().top);
       });
 
-      // A locked lesson's button does nothing.
       for (const locked of data.lessons.slice(1)) {
         cy.get(ts(tutorialStartId(locked.id))).click();
         cy.get(ts(PRACTICE_LOADING)).should("not.exist");
@@ -331,12 +284,10 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       cy.get(ts(tutorialStartId(second.id))).should("contain.text", "Start");
       cy.get(ts(TUTORIAL_CONTINUE)).should("be.visible").and("contain.text", `Lesson ${String(second.number)}`);
 
-      // Restored on a reload, and never rewritten by reading it.
       cy.reload();
       expectPath(data, afterOne, second.id);
       storedProgress().should("deep.eq", done);
 
-      // Corrupt storage reads as no progress, and the page carries on without an error.
       visitTutorial(PRACTICE_PATH, { progress: "{bad json" });
       expectPath(
         data,
@@ -361,8 +312,6 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       expectLessonGame(data, second);
       cy.get(ts(heroId("opponent"))).find(healthIs(TUTORIAL_HANDICAP.heroHealth)).should("exist");
 
-      // No Skip step (R314), in the HUD or the bubble, while the HUD counts the lesson's steps and
-      // Exit tutorial is there.
       coachOnAStep();
       stepCounter().then((counter) => {
         expect(counter.of, "the HUD counts the lesson's steps").to.be.greaterThan(0);
@@ -372,7 +321,6 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
         expectNoSkip(doc);
       });
 
-      // Exit tutorial asks first; Stay keeps the game exactly where it was.
       debugSnapshot().then((before) => {
         cy.get(ts(TUTORIAL_EXIT)).click();
         cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
@@ -382,12 +330,11 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
         debugSnapshot().then((after) => {
           expect(after.seed, "the same game").to.eq(before.seed);
           expect(after.lesson, "the same lesson").to.eq(before.lesson);
-          // The same game carried on: nothing it had played is gone (the AI may have moved since).
+          // The AI may have moved, so the prior log must remain as a prefix.
           expect(after.log.slice(0, before.log.length), "the game was not restarted").to.deep.eq(before.log);
         });
       });
 
-      // Exit confirmed: the lobby's path, and the progress as it was.
       exitLesson();
       cy.get(ts(PRACTICE_SETUP)).should("be.visible");
       expectPath(data, afterOne, second.id);

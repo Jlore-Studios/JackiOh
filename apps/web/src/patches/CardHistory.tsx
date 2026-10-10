@@ -1,14 +1,5 @@
-// The History section of the collection's card detail view (brief B4.2 item 5, R388, R507).
-//
-// Collapsed by default under a "History" control; opening it loads the card's history from the patch
-// source (source.ts, through the context) — patches.json, the index and only the snapshots this
-// card's versions need — and lists every patch in which the card changed, newest first: the patch,
-// both faces as that patch left them (from its snapshot), and what it changed, marked (ChangeList).
-// A card whose only patch is the one that added it says "Unchanged since <version>."
-//
-// Read-only and deciding nothing (CLAUDE.md rule 7): the catalog and its history are public (§5.1).
-// The faces here are old printings, so a name in their text is marked but never opens the card it
-// names today (R279's references stay controls only on the current faces above).
+// Card history (brief B4.2 item 5; R388, R507) is public, read-only data (CLAUDE.md rule 7; §5.1).
+// Old printings do not make card references interactive (R279).
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -49,7 +40,6 @@ function EntryView({ entry }: { entry: HistoryEntry }): ReactElement {
   );
 }
 
-/** The history itself, loaded when it first renders. */
 export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   const source = usePatchSource();
   const read = useLoaded<HistoryRead>(`history:${cardId}`, async () => {
@@ -117,7 +107,6 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
 
 export type CardHistoryProps = {
   cardId: string;
-  /** Open on arrival: the Patch notes page opens a card to read its history. Collapsed otherwise. */
   initiallyOpen?: boolean;
 };
 

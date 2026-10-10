@@ -1,18 +1,7 @@
-// R502: flourishes a card earns by name, and the cast on draw any card earns by how it was cast,
-// both planned from the redacted stream alone (R202).
-//
-// - `castOnDrawCues`: a `cardPlayed` the planner's memory saw right after its own `drawn`
-//   (castOnDraw.ts) bursts out of its drawer's Deck pile. It keys off the order of the events, never
-//   the card, so a card a Classic+ effect gives Cast on draw earns it too, as does one the viewer may
-//   not read.
-// - `CARD_FX`: a card's definition to a signature recipe. While a card with an entry is resolving
-//   (the memory keeps the plays in flight), its recipe may claim the events of its own resolution,
-//   replacing or adding to their row's recipe. Keyed by the `cardPlayed`'s `defId`, which a hidden
-//   play never has, so a hidden card never keys a recipe.
-// - R670: the same table gives a few marquee Legendary and Mythic Units an entrance of their own
-//   (entrances.ts), keyed by the `summoned` event's `defId` whoever cast it, replacing the row's.
-//
-// R200: every delay lands inside the entry and everything trails off within FX_MAX_TAIL_MS.
+// R502: named-card flourishes and Cast on draw are planned only from the redacted stream (R202).
+// A card recipe may claim its own resolving events; hidden plays never key recipes.
+// R670: marquee Legendary and Mythic Units replace a row entrance when their `summoned` has a `defId`.
+// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -58,13 +47,9 @@ const CARD_TUNING = {
   wallDust: { count: 24, power: 1.2 },
 } as const;
 
-/** What a recipe here plans against: the entry, the view it was planned against, the env and D. */
 export type CardFxPlan = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
-/**
- * R502: the cast on draw's burst out of the drawer's Deck pile, for a `cardPlayed` the memory saw
- * right after its `drawn`. [] for any other event.
- */
+/** R502: cast on draw bursts from the drawer's Deck pile; other events produce no cues. */
 export function castOnDrawCues(event: GameEvent, p: CardFxPlan): FxCue[] {
   if (event.type !== "cardPlayed" || !p.env.memory.castOnDraw(event)) return [];
   const i = p.env.intensity;
@@ -93,11 +78,7 @@ function projectile(intensity: number, preset: FxProjectileCue["preset"], from: 
   return { kind: "projectile", preset, from, to, delayMs, flightMs, density: intensity };
 }
 
-/**
- * #21 Hinder: its `modifierChanged` on the victim's next refresh flies a frost bolt from the caster's
- * hero and cracks the crystals the refresh will not fill. How many is the view's number
- * (manaMarks.ts), never the card's; with no number to read the whole tray cracks.
- */
+/** #21 Hinder cracks next-refresh crystals using the view's count (manaMarks.ts). */
 const manaCrack: CardRecipe = (event, p) => {
   if (event.type !== "modifierChanged" || event.modifierId !== FX_NEXT_REFRESH_MODIFIER_ID || !event.added) return null;
   const i = p.env.intensity;
@@ -133,12 +114,7 @@ function radiantTarget(event: Extract<GameEvent, { type: "radiantSet" }>, p: Car
   return { kind: "handCard", side, pick: FX_BLOOD_PICK_BASE + (play.step - 1) * FX_BLOOD_PICK_STRIDE };
 }
 
-/**
- * #27 Blood Ridden Glowy Jelly Bean: its `radiantSet` in the caster's hand streams blood from the hero
- * into the card made Radiant, which bursts gold on landing. On the other seat the card is a back
- * (R97), picked by the play's own event count so it is the same whatever the card was. Its
- * `healthLost` spills blood at the hero over the row's own drain.
- */
+/** #27 Blood Ridden Glowy Jelly Bean targets its Radiant hand card, or an opponent's back (R97). */
 const bloodDrain: CardRecipe = (event, p, play) => {
   const i = p.env.intensity;
   if (event.type === "radiantSet") {
@@ -171,11 +147,7 @@ const bloodDrain: CardRecipe = (event, p, play) => {
   return null;
 };
 
-/**
- * Classic+ #24 Crushing Walls: at the first `destroyed` of its own play, two walls close in over
- * lanes 1 and 5, hit with dust and a shake, and slide back out. A play that destroys nothing, or is
- * countered, draws none.
- */
+/** Classic+ #24 Crushing Walls plays at its first destroyed card; empty or countered plays draw none. */
 const crushingWalls: CardRecipe = (event, p, play) => {
   if (event.type !== "destroyed" || play.seen.destroyed !== 1) return null;
   const i = p.env.intensity;
@@ -196,7 +168,6 @@ const crushingWalls: CardRecipe = (event, p, play) => {
 
 export const CARD_RECIPES: { readonly [K in Exclude<CardFxKey, EntranceKey>]: CardRecipe } = { manaCrack, bloodDrain, crushingWalls };
 
-/** A card's definition → its signature recipe. Add a definition here to give another card one. */
 export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-021": "manaCrack", // #21 Hinder
   "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
@@ -212,7 +183,6 @@ function keyOf(defId: string): CardFxKey | undefined {
   return Object.prototype.hasOwnProperty.call(CARD_FX, defId) ? CARD_FX[defId] : undefined;
 }
 
-/** R670: a marquee Unit's own entrance, for the `summoned` that puts it into a unit zone; else null. */
 function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   const summoned = entranceEvent(event, HIDDEN_ID);
   if (summoned === null) return null;
@@ -223,7 +193,6 @@ function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity }), row: "replace" };
 }
 
-/** The recipe of the card resolving now, if it has one and claims this event; else null. */
 export function planCardFx(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   const entrance = planEntrance(event, p);
   if (entrance !== null) return entrance;

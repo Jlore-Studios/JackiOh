@@ -1,15 +1,6 @@
-// The board's own notices for §2.4's three overflows (SPEC §10.10, R318): "Fatigue N" and "Library
-// full" on a library pile, "Hand full" over a hand.
-//
-// They are read off the animation runner's entries and nothing else, as the number pops are
-// (Board.tsx `popsFrom`): `animated` is every entry started since the board last caught up. A notice
-// mounts when the runner starts its event's entry and stays until the board shows the next view; the
-// newest started wins per pile or hand. `data-playing="true"` is on it only while its own entry is in
-// flight (animations.css keys off it). Under reduced motion the runner starts no entry, so nothing mounts.
-//
-// No rule lives here (CLAUDE.md rule 7), and nothing is read past the redacted event (R97, R202): the
-// card is drawn from the event's own `defId`, a back where it carries the sentinel. The notices take no
-// pointer event and carry no `data-animating` of their own; the pile they sit in carries the runner's.
+// Notices for §2.4's overflows (SPEC §10.10, R318) use the runner's entries: the newest wins per pile or hand.
+// `data-playing="true"` follows its entry; reduced motion starts none.
+// No rule lives here (CLAUDE.md rule 7); only redacted event data is read (R97, R202), showing a back for the sentinel.
 
 import { useContext, type ReactElement } from "react";
 
@@ -22,19 +13,11 @@ import { sideOf, type AnimatingMap, type AnimationFrames, type Side } from "./co
 import { HIDDEN_CARD, namedFace } from "./faces.ts";
 import "./overflow.css";
 
-/** The events that raise a notice, and the element each one's notice sits in. */
 const NOTICE_EVENTS: readonly GameEventType[] = ["fatigue", "libraryOverflow", "burned"];
 
-/**
- * A refused or burned card as the event names it: the sentinel stays the sentinel (R97). `radiant` is
- * the face a refused copy would have had (R316), which travels only with a card the viewer reads.
- */
+/** Event card data preserves the R97 sentinel; R316 radiant status accompanies viewer-readable cards. */
 export type NoticeCard = { instanceId: string; defId: string; radiant?: boolean };
 
-/**
- * `entry` is the notice's place in the burst, which the board keys it by: two refusals in a row (#33
- * turns three copies away at once) are two entries, and a kept notice would play its motion only once.
- */
 export type PileNoticeModel =
   | { kind: "fatigue"; count: number; playing: boolean; entry: number }
   | { kind: "libraryFull"; card: NoticeCard; outcome: LibraryOverflowOutcome; playing: boolean; entry: number };
@@ -42,15 +25,13 @@ export type PileNoticeModel =
 export type BurnNoticeModel = { card: NoticeCard; playing: boolean; entry: number };
 
 export type OverflowNotices = {
-  /** Per side, the notice on that side's library pile. */
   pile: ReadonlyMap<Side, PileNoticeModel>;
-  /** Per side, the card burning over that side's hand. */
   burn: ReadonlyMap<Side, BurnNoticeModel>;
 };
 
 export const NO_NOTICES: OverflowNotices = { pile: new Map(), burn: new Map() };
 
-/** The testids the notices answer to (the e2e contract, R318). */
+/** e2e contract (R318). */
 export const noticeTestid = {
   pile: (side: Side): string => `pile-notice-${side}`,
   overflowCard: (side: Side): string => `overflow-card-${side}`,
@@ -58,7 +39,6 @@ export const noticeTestid = {
   burnCard: (side: Side): string => `burn-card-${side}`,
 } as const;
 
-/** The element an overflow event's notice sits in, as the animation table resolves it. */
 function regionOf(view: PlayerView, event: GameEvent): { side: Side; region: string } | null {
   if (event.type === "fatigue" || event.type === "libraryOverflow") {
     const side = sideOf(view, event.player);
@@ -71,12 +51,6 @@ function regionOf(view: PlayerView, event: GameEvent): { side: Side; region: str
   return null;
 }
 
-/**
- * The notices to draw, from the entries the runner has started this burst (see the header). An
- * event raises its notice only when its entry marked that element; with no burst, it falls back to
- * "whatever is animating, against the shown view", as the number pops do. An entry is playing while
- * it is the one in flight: `animating()` is its own frames, and Game keeps it last in the burst.
- */
 export function noticesFrom(
   view: PlayerView,
   animating: AnimatingMap | undefined,
@@ -91,7 +65,7 @@ export function noticesFrom(
   sources.forEach((source, index) => {
     for (const [region, type] of source.frames) {
       if (!NOTICE_EVENTS.includes(type)) continue;
-      // The last event of that type the entry plays on that element: the runner animates in order.
+      // Last matching event; the runner animates in order.
       const event = [...source.events].reverse().find((e) => e.type === type && regionOf(view, e)?.region === region);
       if (event === undefined) continue;
       const playing =
@@ -115,10 +89,7 @@ export function noticesFrom(
   return pile.size === 0 && burn.size === 0 ? NO_NOTICES : { pile, burn };
 }
 
-/**
- * The card a notice holds: its face in play where the viewer reads it (faces.ts), a back for the
- * sentinel, which names nothing (R97). Compact, since it is drawn small.
- */
+/** R97: render a back for the hidden-card sentinel. */
 function NoticeCardFace({
   card,
   view,
@@ -132,7 +103,6 @@ function NoticeCardFace({
   className: string;
   testId: string;
   outcome?: LibraryOverflowOutcome;
-  /** The contract's element: a span in a pile (which is itself a span), a div over a hand. */
   as?: "span" | "div";
 }): ReactElement {
   const lookup = useContext(CatalogContext);
@@ -151,10 +121,7 @@ function NoticeCardFace({
   );
 }
 
-/**
- * Inside the deck pile (the rules' library, shown to players as the Deck, R373): "Fatigue N", or
- * "Deck full" with the card it turned away.
- */
+/** R373: deck-pile notice. */
 export function PileNotice({
   notice,
   side,
@@ -194,7 +161,6 @@ export function PileNotice({
   );
 }
 
-/** Inside the hand region: "Hand full" over the card that burned. */
 export function BurnNotice({
   notice,
   side,

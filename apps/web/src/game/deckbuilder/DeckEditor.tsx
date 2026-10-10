@@ -1,17 +1,10 @@
-// The deck editor: one saved deck, the card pool beside it, and what the player can do with it
-// (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D for the pool and the tiles).
+// Deck editor: saved deck, card pool and actions (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D).
 //
-// The messages are not written here: the verdict under the deck is `validateDeck`'s list, rendered as
-// `{issue.message}` with the rule in `data-rule`, and the deck goes in under its saved name so the
-// sentences name it. A second copy would be a second source of truth (messages.test.ts).
+// Validator messages avoid a second source of truth (messages.test.ts).
 //
-// The refusals the editor does make are UX (workshop.ts `addCard`): a second copy, a card past
-// `DECK_SIZE` (a save would be refused at D2 and D4), and a card a compared deck holds (R251's
-// "unavailable, used in <deck>"). Each says so on the polite status line. A clash that already
-// exists is shown on the tile and never removed for the player.
+// `addCard` rejects duplicates, full decks (D2, D4), and compared cards (R251); existing clashes stay visible.
 //
-// Every edit goes to the store (sync.ts), which saves it after `DECK_AUTOSAVE_DEBOUNCE_MS` (R256);
-// the twentieth card saves at once, and the status line says "Deck complete — saved" when the server has it.
+// The store autosaves (R256); completing a deck saves immediately.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -72,33 +65,27 @@ export const DECK_COMPLETE_SAVED = "Deck complete and saved";
 
 export type DeckEditorProps = {
   deck: DeckItem;
-  /** Every saved deck, for the comparison. */
   decks: readonly DeckItem[];
   trios: readonly TrioItem[];
   catalog: CatalogSnapshot;
   /** Null when `GET /api/collection` could not be read: ownership is then neither claimed nor denied. */
   collection: Collection | null;
   limits: WorkshopLimits;
-  /** The server has this deck's latest edit (R256). */
   saved: boolean;
-  /** The server's refusal of this deck's last save, verbatim. */
   refusal: string | null;
   filter: PoolFilter;
   onFilter: (next: PoolFilter) => void;
   sort: PoolSort;
   onSort: (next: PoolSort) => void;
   onRename: (name: string) => void;
-  /** R641, issue §8: the deck's hero portrait changed; saved through the same upsert. */
+  /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
-  /** Saves now, without waiting for the debounce. */
   onSaveNow: () => void;
-  /** A phone's way back to the list. */
   onBack: () => void;
 };
 
-/** The dragged card: the id this component recorded, else whatever the DataTransfer carries. */
 function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): string | null {
   if (held !== null && held.length > 0) return held;
   for (const mime of [DECK_DRAG_MIME, "text/plain"]) {
@@ -112,7 +99,6 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
   return null;
 }
 
-/** "Control", "Control and Midrange": the compared decks, as the conflict line names them. */
 function joinNames(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
@@ -136,7 +122,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const verdictTitleId = useId();
   const confirmTextId = useId();
 
-  // The status line fades after a moment; the next add, removal or refusal replaces it.
   useEffect(() => {
     if (status === null) return undefined;
     const timer = window.setTimeout(() => {
@@ -147,8 +132,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     };
   }, [status]);
 
-  // R256: completing a deck saves at once, and says so once the server has it. A card taken out
-  // first calls the announcement off.
   useEffect(() => {
     if (!awaitingComplete) return;
     if (deck.cards.length < DECK_SIZE) {
@@ -161,7 +144,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     }
   }, [awaitingComplete, saved, deck.cards.length]);
 
-  // The confirm opens on its safe answer, so a stray Enter keeps the deck.
+  // Focus the safe answer so a stray Enter keeps the deck.
   useEffect(() => {
     if (confirming) keepButton.current?.focus();
   }, [confirming]);
@@ -252,8 +235,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       event.dataTransfer.setData("text/plain", cardId);
       event.dataTransfer.effectAllowed = "move";
     } catch {
-      // Cypress and jsdom synthesise drag events without a DataTransfer; the id is already in
-      // `dragged`, which is what a drop reads first.
+      // Cypress and jsdom lack DataTransfer; drops read `dragged` first.
     }
   }, []);
 
@@ -271,7 +253,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   );
 
   const openDetail = useCallback((cardId: string) => {
-    // At most one inspect overlay at a time: a hover preview on a tile gives way to the detail.
+    // Close a hover preview before opening detail.
     closeInspect();
     setDetailCardId(cardId);
   }, []);
@@ -285,8 +267,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       setStatus(fallback);
       return;
     }
-    // A page without clipboard permission (an embedded frame, an old browser) still gets the code
-    // in the field under the button, which is why the field is always shown.
+    // The always-visible field is the fallback for unavailable clipboard access.
     clipboard.writeText(text).then(
       () => {
         setStatus("Code copied. Paste it anywhere to share this deck.");
@@ -330,7 +311,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               type="button"
               className="db-detail-add"
               data-testid={DB_DETAIL_ADD}
-              // The same refusals the "+" and a drop get, so the action says so by being unavailable.
+              // Detail uses the same availability as add and drop.
               disabled={detailPlace !== null || full}
               onClick={() => {
                 add(detailCardId);
@@ -568,9 +549,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             onDragEnd: endDrag,
           }}
           status={
-            // What the last add, removal or refusal did, as a toast at the foot of the screen: deep in
-            // the pool on a phone, the deck's own count has scrolled away. Polite, so a screen reader
-            // hears each one too. It ignores the pointer, so it never covers a card (deckbuilder.css).
+            // A non-blocking, polite toast keeps pool-side changes audible on phones (deckbuilder.css).
             <p className="db-deck-status" data-testid={DECK_STATUS} role="status" aria-live="polite">
               {status ?? ""}
             </p>

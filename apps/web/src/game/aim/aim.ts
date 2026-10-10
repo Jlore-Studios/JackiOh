@@ -1,25 +1,12 @@
-// The aim this seat shows the opponent (SPEC §9.5, R738), as data.
-//
-// While a play, an Activate or an attack is being aimed (by drag or click-select, both the board's
-// `interaction`), the opponent's board draws an arrow from its source to the target under the
-// pointer. This module turns that interaction and the hovered spot into the wire's `Aim`, whose
-// ends are public handles only (`@jackioh/shared` `aim.ts`): a hero by its seat, a field card by its
-// zone (never its instance id, so a face-down card is only ever a zone), a hand card by its position.
-//
-// Only an aim at a declared target is shown, never a zone a card is placed in, a Tribute or a
-// discard. Nothing here is a rule (CLAUDE.md rule 7): the targets are the glow the board lights
-// from `legal`. No React; only `aimEndElement` reads the DOM.
+// The aim this seat shows the opponent (SPEC §9.5, R738).
+// Only declared targets use public handles, preserving hidden information (CLAUDE.md rule 7).
 
 import type { ActionBody, Aim, AimEnd, PlayerView, Row } from "@jackioh/shared";
 
 import { highlightFor, selectionTestid, type Interaction } from "../actions.ts";
 import { laneIndex, LANES, playerOf, testid, type ClickTarget, type Side } from "../contract.ts";
 
-/**
- * The testids an aim may land on now: the board's glow, narrowed to what the interaction aims at —
- * an attack's targets, or the declared targets (`targets`) of a play or an activation still in the
- * running. Empty when nothing is being aimed.
- */
+/** Narrows board highlights to the interaction's declared targets. */
 export function aimTargets(view: PlayerView, legal: readonly ActionBody[], interaction: Interaction): ReadonlySet<string> {
   if (interaction.stage === "idle") return new Set();
   const glow = highlightFor(view, legal, interaction).glow ?? new Set<string>();
@@ -53,11 +40,7 @@ function fieldEnd(view: PlayerView, instanceId: string): AimEnd | null {
   return zoneOf(view, "you", instanceId) ?? zoneOf(view, "opponent", instanceId);
 }
 
-/**
- * Where the aim starts, as the opponent can see it: the hand card's position, the zone of the unit
- * attacking or the card activating, or the hero whose Heroic Power it is. Null when the source is
- * somewhere the arrow cannot start from (a play from the graveyard pile), and nothing is shown.
- */
+/** Gives the opponent a public source handle, or hides an unrepresentable source. */
 export function aimSource(view: PlayerView, interaction: Interaction): AimEnd | null {
   switch (interaction.stage) {
     case "idle":
@@ -84,7 +67,6 @@ export function aimSource(view: PlayerView, interaction: Interaction): AimEnd | 
   }
 }
 
-/** The hovered spot as a public handle: a hero, or the zone a card or an empty zone stands for. */
 export function aimEndOf(view: PlayerView, target: ClickTarget): AimEnd | null {
   switch (target.on) {
     case "hero":
@@ -101,11 +83,7 @@ export function aimEndOf(view: PlayerView, target: ClickTarget): AimEnd | null {
   }
 }
 
-/**
- * The aim to show the opponent: null while nothing is aimed (idle, a placement, a source the arrow
- * cannot start from, or `targets` — `aimTargets` — empty), else the source and the hovered target,
- * which `hovered` gives only when it is one of `targets` (the caller picks it off the DOM with them).
- */
+/** An aim requires a declared target and a public source. */
 export function aimFor(
   view: PlayerView,
   interaction: Interaction,
@@ -118,10 +96,7 @@ export function aimFor(
   return { source, target: hovered === null ? null : aimEndOf(view, hovered) };
 }
 
-/**
- * The element an end names on the RECEIVER's board (`view.viewer` is the receiver, so the sender's
- * seat is "opponent"): its hero, its zone, or the card back at that position in the hand.
- */
+/** Maps a public end to the receiver's board (`view.viewer`). */
 export function aimEndElement(root: ParentNode, view: PlayerView, end: AimEnd): Element | null {
   const side: Side = end.player === view.viewer ? "you" : "opponent";
   switch (end.at) {

@@ -1,18 +1,7 @@
-// The game's music director (SPEC §10.11, R631): follows one mounted board and tells the music what
-// the viewer's own screen calls for (R203): their station, their hero's health, their turn.
-// musicPlan.ts holds the priority stack.
-//
-// - The newest view is applied when the animation runner goes idle (`settle`), so the music follows
-//   the board as drawn. Events arrive in step with their animations: a cast of a card in
-//   music-cards.json (when its cast line would speak, R204, and only if readable) starts its Mythic
-//   theme or switches its caster's station; a hit on the viewer's hero ends a theme.
-// - A Mythic theme holds until the viewer's hero is next hit, another Mythic replaces it, or the game
-//   ends; away from low health it also ends after MUSIC_MYTHIC_PLAYS plays.
-// - A Field Trap fires again and again (Classic+ #74 on every fuse): its theme starts at its first
-//   firing only. A hotseat hand-over is a new viewer: no theme carries over.
-// - R1350: a readable Legendary or Mythic card opens its play with its own intro (music-cards.json's
-//   `intro`) at R204's moment, before any theme it starts, with dynamic music on only. R1351: the
-//   result, a hand-over, dynamic music off and the board leaving each cut it short.
+// The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
+// screen (R203). It applies after the board settles and starts themes at readable cards' R204 moments.
+// A Mythic theme holds until hit, replacement or game end; Classic+ #74 starts on its first firing.
+// R1350's readable-card intro precedes its theme; R1351 stops it on result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";

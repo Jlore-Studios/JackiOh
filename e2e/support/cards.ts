@@ -1,9 +1,6 @@
-// Catalog ids, one place. SPEC §8 numbers every card; the id of card #N is `core-` plus N
-// zero-padded to three digits, as `crates/cards/catalog.json` spells it ("core-001", "core-043")
-// and `crates/engine/src/wire/catalog_types.rs` documents it. No spec spells an id itself: if the
-// format ever moves, `cardId` below and the fixture decks are the only places to fix.
+// Catalog IDs mirror SPEC §8; only `cardId` and fixture decks depend on their zero-padded format.
 
-/** SPEC §8: index -> name, all 100 Core cards. Tokens are excluded: L3 bans them from decks. */
+/** SPEC §8 Core cards. L3 excludes Tokens from decks. */
 export const CARD_NAMES: Record<number, string> = {
   1: "Big D-fender",
   2: "Bigot",
@@ -107,20 +104,17 @@ export const CARD_NAMES: Record<number, string> = {
   100: "Ceaseless Void",
 };
 
-/** How many deckable cards SPEC §8 numbers. `crates/cards/catalog.json` holds exactly 100. */
 export const CORE_CARD_COUNT = Object.keys(CARD_NAMES).length;
 
-/** The catalog id of SPEC §8 card #index. */
 export function cardId(index: number): string {
   return `core-${String(index).padStart(3, "0")}`;
 }
 
-/** Every deckable catalog id, in SPEC §8 order. The pool `installLoadout` pads a loadout from. */
 export function allCardIds(): string[] {
   return Array.from({ length: CORE_CARD_COUNT }, (_, index) => cardId(index + 1));
 }
 
-/** The catalog id of the card SPEC §8 calls `name`. Throws on a typo, so a spec cannot drift. */
+/** Throws on a typo so fixtures cannot drift from the catalog. */
 export function idOf(name: string): string {
   for (const [index, cardName] of Object.entries(CARD_NAMES)) {
     if (cardName === name) return cardId(Number(index));
@@ -128,19 +122,11 @@ export function idOf(name: string): string {
   throw new Error(`no SPEC §8 card named "${name}"`);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Tokens
-// ---------------------------------------------------------------------------------------------
 
 /**
- * The 11 Token cards, read off `crates/cards/catalog.json` (`"token": true`), keyed by the
- * catalog's own `index` string. They are deliberately NOT in `CARD_NAMES`: L3 bans Tokens from
- * decks, and `asDeck` in support/commands.ts checks a fixture against `CARD_NAMES` being exactly
- * the deckable set, so a Token added there would let an illegal fixture through.
- *
- * Two id shapes, both spelled by the catalog rather than invented here: a token created by a
- * numbered card takes that card's index with a `.1` suffix (`65.1` -> `core-065-1`), and a token
- * no single card owns is named (`T-sheep` -> `core-t-sheep`).
+ * Tokens stay out of `CARD_NAMES`: L3 bans them from fixtures' decks.
+ * The catalog defines numbered and named IDs; `tokenId` handles both.
  */
 export const TOKEN_NAMES: Record<string, string> = {
   "51.1": "KY's Empty Notebook",
@@ -156,11 +142,7 @@ export const TOKEN_NAMES: Record<string, string> = {
   "T-ghoul": "Ghoul Token",
 };
 
-/**
- * The catalog id of the token the catalog indexes as `index`. Unlike `cardId`, this validates:
- * the two id shapes are irregular enough that a typo would otherwise produce a plausible-looking
- * id for a card that does not exist.
- */
+/** Validates irregular token IDs that could otherwise look plausible. */
 export function tokenId(index: string): string {
   if (!(index in TOKEN_NAMES)) throw new Error(`no Token card indexed "${index}"`);
   const numbered = /^(\d+)\.(\d+)$/.exec(index);
@@ -170,7 +152,6 @@ export function tokenId(index: string): string {
   return `core-${index.toLowerCase()}`;
 }
 
-/** The catalog id of the Token called `name`. Throws on a typo, exactly as `idOf` does. */
 export function idOfToken(name: string): string {
   for (const [index, tokenName] of Object.entries(TOKEN_NAMES)) {
     if (tokenName === name) return tokenId(index);
@@ -178,7 +159,7 @@ export function idOfToken(name: string): string {
   throw new Error(`no Token card named "${name}"`);
 }
 
-/** Cards the M8 table names by hand, so a spec can say `CARDS.sheepish`. */
+/** M8 names these cards directly. */
 export const CARDS = {
   bigDfender: cardId(1),
   rightHouseDefender: cardId(3),
@@ -204,7 +185,7 @@ export const CARDS = {
   myPawn: cardId(96),
 } as const;
 
-/** Tokens the M8 table names by hand, in the same style as `CARDS` (spec 09's L3 sentence). */
+/** M8 names these tokens directly; L3 keeps them out of decks. */
 export const TOKENS = {
   kysEmptyNotebook: tokenId("51.1"),
   spikeyPillow: tokenId("65.1"),

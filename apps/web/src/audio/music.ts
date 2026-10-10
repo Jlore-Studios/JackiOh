@@ -1,32 +1,8 @@
-// The music player (SPEC §10.11 "Music", R631): plays one track at a time into the engine's music
-// bus, and moves between tracks musically.
-//
-//   voice gain ─┐
-//   voice gain ─┴─▶ bed ─▶ turn low-pass ─▶ turn gain ─▶ focus gain ─▶ engine music bus ─▶ duck ─▶ master
-//                                           intro gain ─┘
-//
-// A REQUEST NAMES WHAT SHOULD PLAY, never when: asking for the track already playing does nothing.
-// A change waits for the playing track's next bar line (at most MUSIC_BAR_WAIT_MAX_S away), then
-// fades in over MUSIC_FADE_S as the old one fades out. A track that opens on a sting comes in at
-// once so its first note lands; a sting hands off on its own last bar line, and a change arriving
-// meanwhile replaces the track it hands off to. A station's tracks pick up where they left off.
-//
-// The opponent's turn is a mix, not a track: a ramped low-pass and a little less level. Losing focus
-// fades the music out unless `playMusicInBackground`. Muted or at zero, nothing new loads or starts.
-//
-// A CARD'S INTRO (R1350, R1351) plays once on top of whatever plays, straight into the focus gain, so
-// it follows volume, mute and focus but not the turn low-pass. While its music runs (to the
-// manifest's `handoff`) the bed ducks to MUSIC_INTRO_DUCK_GAIN, and a change asked for meanwhile
-// comes in ducked. Another card's intro cuts it with a MUSIC_INTRO_CUT_FADE_S fade; the same one
-// asked for again does nothing; one not ready MUSIC_INTRO_LATE_S after it was asked for is dropped.
-// Intro files have caches of their own, so they never push a track's bytes out.
-//
-// Nothing is scheduled on a context that is not running, and the player never throws: a turn or
-// focus change that arrives while it is suspended is applied when it runs. A track's file is
-// fetched once (MUSIC_BYTES_MAX kept) and decoded only to play (MUSIC_DECODED_MAX kept); one that
-// fails is tried again when a request next names it or at the next turn boundary, never at every
-// idle. No file is fetched or decoded while the board animates (B58). A sting that cannot be had
-// is skipped, never waited on.
+// The music player (SPEC §10.11 "Music", R631) keeps requests idempotent and changes tracks on bar
+// lines; stings hand off there and station tracks resume where they left off. The opponent's turn is
+// a mix, not a track; focus, mute or zero volume prevent new playback.
+// Card intros (R1350, R1351) play above and duck the bed, take precedence over themes, and use their
+// own cache. Nothing fetches or decodes during animation (B58); failures retry on a later request.
 
 import {
   MUSIC_BAR_WAIT_MAX_S,

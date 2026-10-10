@@ -1,14 +1,7 @@
-// Polish task 2 (docs/polish/2-sound.md), B45: `gen-voice.mjs` in its default, generate mode (B37
-// covers `--check`).
-//
-//   B45  With no synthesizer (neither macOS `say`, `afconvert`, `afinfo` nor Windows SAPI through
-//        `powershell.exe` with `ffmpeg`) it exits 2 with its needs-macOS line. On macOS it is
-//        idempotent by input hash, deletes orphans, and renders only an edited line's key.
-//   R501 Where Windows SAPI and ffmpeg are, it renders a SAPI voice's line to an M4A in the committed
-//        format within the length cap, and reports a stale `say` line as needing macOS.
-//
-// Every run points `--root` at a temp copy of the tree, never the committed files. The macOS cases
-// need the real `say` and the SAPI ones need SAPI; CI (Linux) runs the first case.
+// Polish task 2 (docs/polish/2-sound.md): `gen-voice.mjs` generates by default (B45; B37 covers
+// `--check`). B45 exits 2 without a synthesizer; macOS is hash-idempotent, removes orphans and
+// rerenders edited lines. R501 renders SAPI lines in the committed M4A format when available.
+// Every run uses a temporary `--root`; CI (Linux) covers the no-synthesizer case.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

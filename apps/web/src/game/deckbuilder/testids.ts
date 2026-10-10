@@ -20,13 +20,10 @@ export const WORKSHOP = "workshop";
 /** The save status line, always on screen: `data-state="saved|saving|offline|error"` (R256). */
 export const SYNC_STATUS = "sync-status";
 
-/** On a phone, the editor's way back to the list of decks and trios (hidden on wider screens). */
 export const WORKSHOP_BACK = "workshop-back";
 
-/** Shown in the main column when nothing is open. */
 export const WORKSHOP_EMPTY = "workshop-empty";
 
-/** The list of saved decks, and its "n/10" beside the heading. */
 export const DECK_LIST = "deck-list";
 export const DECK_CAP = "deck-cap";
 
@@ -39,11 +36,9 @@ export function deckRowId(deckId: string): string {
   return `deck-row-${deckId}`;
 }
 
-/** Makes a deck and opens it. Disabled at the cap, with `deck-cap-reason` saying why. */
 export const DECK_NEW = "deck-new";
 export const DECK_CAP_REASON = "deck-cap-reason";
 
-/** The list of saved trios, its "n/5", and New trio (disabled at the cap, with its reason). */
 export const TRIO_LIST = "trio-list";
 export const TRIO_CAP = "trio-cap";
 export const TRIO_NEW = "trio-new";
@@ -56,16 +51,13 @@ export function trioRowId(trioId: string): string {
 
 // The deck editor
 
-/** The open deck's editor: `data-deck` is its id. */
 export const DECK_EDITOR = "deck-editor";
 
 /** The open deck's name (D1 met gently: an emptied name saves as "Untitled deck"). */
 export const DECK_NAME_INPUT = "deck-name-input";
 
-/** The open deck's card count against `DECK_SIZE`, in `data-count`. */
 export const DECK_COUNT = "deck-count";
 
-/** The open deck's drop region: a card dragged from the pool lands here. */
 export const DECK_DROP = "deck-drop";
 
 export const DECK_CARDS = "deck-cards";
@@ -78,13 +70,10 @@ export function deckCardId(cardId: string): string {
   return `deck-card-${cardId}`;
 }
 
-/** The open deck's mana curve: one `.db-bar[data-bucket][data-count]` per cost bucket. */
 export const DECK_CURVE = "deck-curve";
 
-/** On a phone, the toggle that folds the curve and the tiles away (`aria-expanded`). */
 export const DECK_FOLD = "deck-fold";
 
-/** The polite line naming the last add, removal or refusal, and "Deck complete and saved". */
 export const DECK_STATUS = "deck-status";
 
 /** The server's refusal of this deck's last save, verbatim (R256). */
@@ -94,7 +83,6 @@ export const DECK_SAVE_ERROR = "deck-save-error";
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
-/** Delete, then the confirm that really deletes, or the one that keeps the deck. */
 export const DECK_DELETE = "deck-delete";
 export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
 export const DECK_DELETE_CANCEL = "deck-delete-cancel";
@@ -110,10 +98,8 @@ export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }
 
-/** How many of the open deck's cards a compared deck also holds, when any do. */
 export const DECK_CONFLICTS = "deck-conflicts";
 
-/** The Best-of-1 verdict under the deck (`data-ready`): "Ready to queue", or `loadout-errors`. */
 export const DECK_VERDICT = "deck-verdict";
 
 /** The list every L1–L6 sentence is rendered into, in a deck's verdict and in a trio's. */
@@ -128,10 +114,8 @@ export function loadoutErrorId(rule: LoadoutRule): string {
   return `loadout-error-${rule}`;
 }
 
-/** Rendered instead of the workshop while the route's reads are in flight. */
 export const DECKBUILDER_LOADING = "deckbuilder-loading";
 
-/** Rendered instead of the workshop when a read the screen cannot do without failed. */
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
 /**
@@ -144,18 +128,15 @@ export const DECK_DRAG_MIME = "application/x-jackioh-card";
 
 // The trio editor
 
-/** The open trio's editor: `data-trio` is its id. */
 export const TRIO_EDITOR = "trio-editor";
 
 /** The open trio's name (T1 met gently: an emptied name saves as "Untitled trio"). */
 export const TRIO_NAME_INPUT = "trio-name-input";
 
-/** Slot `n`'s deck select, 1-based: the value `""` is Empty, else a deck id. */
 export function trioSlotId(slot: number): string {
   return `trio-slot-${String(slot)}`;
 }
 
-/** Opens slot `n`'s deck in the deck editor. */
 export function trioOpenDeckId(slot: number): string {
   return `trio-open-${String(slot)}`;
 }
@@ -163,7 +144,6 @@ export function trioOpenDeckId(slot: number): string {
 /** R253's Conquest verdict (`data-ready`): "Ready for Conquest", or `loadout-errors`. */
 export const TRIO_VERDICT = "trio-verdict";
 
-/** The trio's three decks side by side. */
 export const TRIO_COMPARE = "trio-compare";
 
 /**
@@ -184,12 +164,10 @@ export const TRIO_CODE_OUTPUT = "trio-code-output";
 
 // Import (R255)
 
-/** Opens the import panel from the rail. */
 export const DECK_IMPORT_OPEN = "deck-import-open";
 
 export const DECK_IMPORT = "deck-import";
 
-/** Where the code is pasted. */
 export const DECK_IMPORT_INPUT = "deck-import-input";
 
 /**
@@ -206,12 +184,10 @@ export const DECK_IMPORT_CANCEL = "deck-import-cancel";
 
 // Import a trio (R339–R341)
 
-/** Opens the trio import panel from the rail's Trios group. */
 export const TRIO_IMPORT_OPEN = "trio-import-open";
 
 export const TRIO_IMPORT = "trio-import";
 
-/** Where the trio code is pasted. */
 export const TRIO_IMPORT_INPUT = "trio-import-input";
 
 /**
@@ -221,12 +197,10 @@ export const TRIO_IMPORT_INPUT = "trio-import-input";
  */
 export const TRIO_IMPORT_PREVIEW = "trio-import-preview";
 
-/** Slot `n` of the preview, 1-based: `data-empty="true|false"`, and `data-count` for a deck. */
 export function trioImportSlotId(slot: number): string {
   return `trio-import-slot-${String(slot)}`;
 }
 
-/** The cards two or more of the code's decks share (`data-count`): kept, and flagged. */
 export const TRIO_IMPORT_SHARED = "trio-import-shared";
 
 /**
@@ -238,7 +212,6 @@ export const TRIO_IMPORT_SUBMIT = "trio-import-submit";
 export const TRIO_IMPORT_CAP_REASON = "trio-import-cap-reason";
 export const TRIO_IMPORT_CANCEL = "trio-import-cancel";
 
-/** The server's refusal of an import, in its own words: nothing was made. */
 export const TRIO_IMPORT_ERROR = "trio-import-error";
 
 // Browse: filters, sort, the pool grid and its inspect control (docs/polish/6-cards.md, Surface D).
@@ -255,54 +228,41 @@ export function slugOf(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** The filter bar: search, chips, the owned toggle, sort, clear and the result count. */
 export const DB_FILTERS = "db-filters";
 
-/** The free-text search box. */
 export const DB_SEARCH = "db-search";
 
-/** A cost chip: `db-filter-cost-0` … `db-filter-cost-5`, `db-filter-cost-6+`, `db-filter-cost-X`. */
 export function filterCostId(bucket: CostBucket): string {
   return `db-filter-cost-${bucket}`;
 }
 
-/** A type chip: `db-filter-type-unit`, `db-filter-type-field-spell`, … */
 export function filterTypeId(type: CardType): string {
   return `db-filter-type-${slugOf(type)}`;
 }
 
-/** A tag chip: `db-filter-tag-human`, `db-filter-tag-call-to-chaos`, … */
 export function filterTagId(tag: Tag): string {
   return `db-filter-tag-${slugOf(tag)}`;
 }
 
-/** A set chip: `db-filter-set-core`, `db-filter-set-classic`, `db-filter-set-classic-plus`. */
 export function filterSetId(set: string): string {
   return `db-filter-set-${slugOf(set.replace(/\+/g, " plus"))}`;
 }
 
-/** A rarity chip: `db-filter-rarity-common`, … `db-filter-rarity-mythic`. */
 export function filterRarityId(rarity: Rarity): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
 }
 
-/** The "owned only" checkbox. Checked by default; disabled when the collection could not be read. */
 export const DB_FILTER_OWNED = "db-filter-owned";
 
 export const DB_FILTER_CLEAR = "db-filter-clear";
-/** The phone-width toggle that folds the chip rows away (its `aria-expanded` says which). */
 export const DB_FILTER_TOGGLE = "db-filter-toggle";
 
-/** The sort key select (cost, name, rarity, attack, health, type). */
 export const DB_SORT = "db-sort";
 
-/** The sort direction toggle; carries `data-dir="asc|desc"`. */
 export const DB_SORT_DIR = "db-sort-dir";
 
-/** How many pool cards the filter shows, in `data-count`. */
 export const DB_RESULT_COUNT = "db-result-count";
 
-/** Shown in place of an empty grid when nothing matches. */
 export const DB_EMPTY = "db-empty";
 
 /** The card pool, and one entry per card in it: `card-pool-<id>` carries `data-legal`,
@@ -314,14 +274,11 @@ export function poolCardId(cardId: string): string {
   return `${CARD_POOL}-${cardId}`;
 }
 
-/** The "+" button on pool card `cardId`, which adds it to the open deck (a click on the card opens its detail view). */
 export function addPoolId(cardId: string): string {
   return `db-add-${cardId}`;
 }
 
-/** The detail view's "Add to <deck name>" action. */
 export const DB_DETAIL_ADD = "db-detail-add";
 
-/** The open deck's sidebar: its name, count, curve, tiles, comparison, verdict and actions. */
 export const DB_SIDEBAR = "db-sidebar";
 

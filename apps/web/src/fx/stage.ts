@@ -1,16 +1,6 @@
-// Stage directions (docs/polish/1-animations.md, visual pass 2, B46–B48).
-//
-// The S7 recipes draw OVER the board; these cues act on the board's own elements. BUILD M5-T4 keeps
-// the view from before a burst on screen until the burst has played, so a card the burst moves would
-// stay where it was until the very end. Three cues cover that seam without touching the runner:
-// - `hold`: a stand-in carries the card to the zone the next view shows it in, until the board shows it.
-// - `conceal`: the card the burst took away stays hidden once its own motion ends, until it is gone.
-// - `lunge`: the attacker's lunge aims at the element it attacks, and a spark meets it on contact.
-//
-// R200: nothing here paces, extends or reschedules an entry; a hold or conceal lasts until the shown
-// view changes and never past FX_HOLD_MAX_MS. R202: a stand-in copies only what the viewer's board
-// already renders, and a unit from nowhere the viewer can see arrives as a card-shaped light.
-// Pure, like `cues.ts`.
+// Stage directions (S7; B46–B48) bridge BUILD M5-T4's stale board with holds, conceals, and targeted lunges.
+// R200: never pace or reschedule entries; FxLayer ends holds and conceals with the view or FX_HOLD_MAX_MS.
+// R202: stand-ins show only viewer-visible cards, otherwise a card-shaped light. Pure, like `cues.ts`.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -38,7 +28,6 @@ function tid(id: string): FxAnchor {
 
 const frac = (fraction: number, D: number): number => Math.round(fraction * D);
 
-/** The element an attack is aimed at: the defending card, or the hero named `hero-<playerId>`. */
 function attackTarget(targetId: string, view: PlayerView): string | null {
   const hero = HERO_TARGET.exec(targetId)?.[1];
   if (hero === "p1" || hero === "p2") return testid.hero(sideOf(view, hero));
@@ -67,7 +56,6 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
 
   switch (event.type) {
     case "cardPlayed": {
-      // A unit played from the viewer's hand is carried by its `summoned` stand-in below.
       const paired = entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
       const at = targetFor(event, view);
       if (paired || at === null || !at.startsWith("hand-card-")) return [];
@@ -79,7 +67,6 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const played = entry.events.find(
         (e): e is Extract<GameEvent, { type: "cardPlayed" }> => e.type === "cardPlayed" && e.instanceId === event.instanceId,
       );
-      // A slam's stand-in waits out the anticipation before it lands.
       const wait = entry.slam?.instanceId === event.instanceId ? entry.slam.anticipationMs : 0;
       const landMs = wait + frac(FX_SLAM_AT, D - wait);
       // R502: a card cast as it was drawn never was in a hand, so it comes out of its Deck pile.
@@ -139,7 +126,7 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
   }
 }
 
-/** Plans the stage cues of one entry, in event order. Nothing at intensity 0 (the layer is off). */
+/** The layer is off at intensity 0. */
 export function planStage(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
   const cues: FxCue[] = [];
