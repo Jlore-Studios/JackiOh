@@ -1789,6 +1789,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                     zone: None,
                     x: None,
                     embiggen: None,
+                    magnetic: None,
                     tributes: None,
                     targets: None,
                     modes: None,
@@ -1796,6 +1797,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                         from: "c4".to_string(),
                         tokens: 1,
                     }),
+                    face_down: None,
                 },
             }))
         );
