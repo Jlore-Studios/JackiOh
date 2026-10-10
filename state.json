@@ -4447,7 +4447,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-10T14:59:29Z",
+      "feedback_since": "2026-10-10T17:45:43Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-10T17:44:21Z",
@@ -4472,7 +4472,7 @@
       "review_notes": "",
       "run_id": "38072995419",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-10T17:45:43Z",
       "stop_requested": false,
       "taken_asks": [
