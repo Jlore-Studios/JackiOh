@@ -1,17 +1,9 @@
-// Routing, such as it is.
-//
-// `main.tsx` is a pathname switch rather than a router dependency (M5 shipped one route). The
-// screens M6 adds still have to move between each other — §9.4's gate sends a pending account to
-// the code screen, and a room claim sends both players to `/match/<id>` — so this module is the
-// one place that changes the URL and the one place a component subscribes to it.
-//
-// `history.pushState` / `replaceState` do not fire `popstate`, so `navigate` dispatches its own
-// event and `usePathname` listens for both. The pathname is what `cy.location("pathname")` reads
-// in specs 09 and 10, so a guard redirect must really move the URL, not merely swap a component.
+// Client routing.
+// M5's pathname switch and M6's screens share URL changes; §9.4 redirects pending accounts and room claims.
+// `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
 
 import { useSyncExternalStore } from "react";
 
-/** Fired after every `navigate`. Private to this module; `usePathname` is the public half. */
 const NAVIGATED = "jackioh:navigated";
 
 export function currentPath(): string {
@@ -19,7 +11,6 @@ export function currentPath(): string {
   return window.location.pathname.replace(/\/+$/, "") || "/";
 }
 
-/** "/login?mode=forgot" -> { pathname: "/login", search: "?mode=forgot" }; a bare path has "". */
 function splitTarget(path: string): { pathname: string; search: string } {
   const at = path.indexOf("?");
   const rawPath = at === -1 ? path : path.slice(0, at);
@@ -30,11 +21,7 @@ function splitTarget(path: string): { pathname: string; search: string } {
   };
 }
 
-/**
- * Moves to `path`, which may carry a query (`loginPath` builds the only ones). A navigation to the
- * page already showing -- same pathname AND same query -- is a no-op, so a guard that re-renders
- * cannot stack history entries.
- */
+/** Avoid stacking history when a guard re-renders the current pathname and query. */
 export function navigate(path: string, options: { replace?: boolean } = {}): void {
   if (typeof window === "undefined") return;
   const target = splitTarget(path);
@@ -56,25 +43,19 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
-/** The current pathname, re-rendering the caller whenever it changes. */
 export function usePathname(): string {
   return useSyncExternalStore(subscribe, currentPath, currentPath);
 }
 
 /**
- * The deployed site's address. The runtime canonical link (main.tsx) and the build's pages and
- * sitemap.xml (static-pages.ts, through net/head.ts) are built from it; index.html (`og:image`, the
- * JSON-LD `url`, and the source's `og:url`), public/robots.txt and public/.well-known/security.txt
- * spell it too, since static files cannot import it.
+ * The runtime canonical link and static pages derive from this address. Static `index.html`,
+ * `public/robots.txt`, and `public/.well-known/security.txt` must spell it too.
  */
 export const SITE_ORIGIN = "https://jackioh.vercel.app";
 
 /**
- * Every route the client serves. One table, so no screen spells a path twice.
- *
- * vercel.json (and its copy, apps/web/vercel.json) sends only these paths to index.html, so any
- * other path is a real 404 (public/404.html). A route added here must be added there too;
- * `net/deploy-routes.test.ts` fails until it is.
+ * Client routes live in one table. `vercel.json` and `apps/web/vercel.json` must match it or
+ * `net/deploy-routes.test.ts` fails; other paths are real 404s.
  */
 export const paths = {
   landing: "/",
@@ -85,19 +66,16 @@ export const paths = {
   play: "/play",
   account: "/account",
   practice: "/practice",
-  /** The privacy policy (routes/privacy.tsx). Public, like the landing page. */
   privacy: "/privacy",
-  /** The terms (routes/terms.tsx). Public, like the privacy policy. */
   terms: "/terms",
-  /** The accessibility statement (routes/accessibility.tsx). Public, like the privacy policy. */
   accessibility: "/accessibility",
-  /** R388: every patch and the cards it touched (routes/patch-notes.tsx). Public, like the landing page. */
+  /** R388: patch notes and touched cards. */
   patchNotes: "/patch-notes",
-  /** R630: every card, tokens included, to browse (routes/almanac.tsx). Public, like the landing page. */
+  /** R630: browsable cards, including tokens. */
   almanac: "/almanac",
-  /** R608, R612: the global ranked ladder (routes/leaderboard.tsx). Gated: every read needs an account. */
+  /** R608, R612: the account-gated ranked ladder. */
   leaderboard: "/leaderboard",
-  /** R654: public card and player statistics page (routes/stats.tsx). Public, like the landing page. */
+  /** R654: public card and player statistics. */
   stats: "/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
@@ -105,34 +83,27 @@ export const paths = {
   series: (seriesId: string): string => `/series/${seriesId}`,
 } as const;
 
-/** `/<first>/<id>` -> `<id>`, or null when the path is anything else. */
 function idUnder(path: string, first: string): string | null {
   const parts = path.split("/").filter((part) => part.length > 0);
   if (parts.length !== 2 || parts[0] !== first) return null;
   return parts[1] ?? null;
 }
 
-/** `/match/<id>` -> `<id>`, or null when this is not a match route. */
 export function matchIdOf(path: string): string | null {
   return idUnder(path, "match");
 }
 
-/** `/series/<id>` -> `<id>`, or null when this is not a series route. */
 export function seriesIdOf(path: string): string | null {
   return idUnder(path, "series");
 }
 
-// --- the sign-in screen's two entry states --------------------------------------------------------
-//
-// `/login` can be opened to say why (the session ended) or to open straight onto the forgot-password
-// form (the reset screen's "request a new link"). Those are the ONLY two things ever put in its
-// query, each an exact token, so no destination, message or address can travel through a URL into
-// the screen (B35, R193). A sign-in always lands on a `paths` value, never on a URL it was given.
+// Sign-in screen entry states.
+// `/login` permits only exact expiry and password-reset tokens, so URL input cannot carry a destination,
+// message or address (B35, R193). A sign-in always lands on a `paths` value.
 
 export type LoginReason = "expired";
 export type LoginEntryMode = "forgot";
 
-/** "/login", "/login?reason=expired" or "/login?mode=forgot". Nothing else is ever put in the query. */
 export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode } = {}): string {
   const query = new URLSearchParams();
   if (options.reason === "expired") query.set("reason", "expired");
@@ -145,12 +116,10 @@ function queryValue(search: string, key: string): string | null {
   return new URLSearchParams(search).get(key);
 }
 
-/** Exactly "expired", else null. */
 export function loginReasonOf(search: string): LoginReason | null {
   return queryValue(search, "reason") === "expired" ? "expired" : null;
 }
 
-/** Exactly "forgot", else null. */
 export function loginModeOf(search: string): LoginEntryMode | null {
   return queryValue(search, "mode") === "forgot" ? "forgot" : null;
 }

@@ -1,15 +1,4 @@
-// Test support only (nothing outside a test imports it): a small patch history in the real files'
-// shape (crates/cards/patches/), fed through `PatchSourceProvider`.
-//
-// Three patches whose version strings sort the wrong way on purpose ("v9-first" < "v1-second" is
-// false), so a screen that ordered patches by comparing versions instead of reading patches.json's
-// order (R105 as B4.2 rewrites it) lists them wrongly and fails.
-//
-//   v9-first   adds Test Knight, Test Bolt, Old Relic, Quiet Golem (Core)
-//   v1-second  changes Test Knight (cost, stats, both texts), removes Old Relic
-//   v5-third   changes Test Bolt (text via a {key} param, cost to embiggen, a Radiant keyword),
-//              Quiet Golem (its lines of code only), adds Fresh Face (Classic), Pancake Pal and
-//              its token Syrup Token (Classic+)
+// Fixture versions sort out of patch order: consumers must use patches.json order (R105 as B4.2 rewrites it).
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -134,7 +123,7 @@ export const FIXTURE_INDEX: HistoryIndex = {
   "classicplus-012-1": [V3],
 };
 
-/** The fixture history as a source; `onSnapshot` sees every snapshot asked for, in order. */
+/** Fixture source; `onSnapshot` observes snapshots in request order. */
 export function fixtureSource(onSnapshot?: (version: string) => void): PatchSource {
   const source = sourceFromData({ patches: FIXTURE_PATCHES, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS });
   return {
@@ -146,7 +135,6 @@ export function fixtureSource(onSnapshot?: (version: string) => void): PatchSour
   };
 }
 
-/** A fixture card as a patch left it. */
 export function fixtureDef(version: string, id: string): CardDef {
   const def = FIXTURE_SNAPSHOTS[version]?.[id];
   if (def === undefined) throw new Error(`no ${id} in ${version}`);

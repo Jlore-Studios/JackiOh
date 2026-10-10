@@ -1,29 +1,11 @@
-// Where the practice worker keeps a free game in progress, so a reload or a closed tab picks it up
-// again (SPEC §9.9, R668).
-//
-// The save holds the action log, and the log holds the AI's actions, which name its hidden cards, so
-// it never crosses to the page (rule 7): the worker keeps it itself, in IndexedDB, which a worker
-// has and `localStorage` is not. The page keeps only the setup it chose (`resume.ts`), which is how
-// it knows to ask for a resume at all.
-//
-// The core reads and writes synchronously (`handle` is synchronous), so the store holds the save in
-// memory and mirrors every write to IndexedDB in order; `ready` is the one read at boot, which the
-// hosts wait for before the first request. Storage is untrusted and may be missing (a private
-// window, blocked site data, jsdom): a failed open or read is no save, and a failed write loses only
-// the resume, never the game.
-//
-// The store also keeps the finished free games for their replays (R768), under a second key of the
-// same object store: each holds its log too, so it never crosses to the page either.
+// `resume.ts` holds only page setup; worker-side logs name hidden AI cards (SPEC §9.9, R668; rule 7).
+// R768 retains finished games for replay. Unavailable storage is no save; failed writes never end play.
 
 import type { Action, PlayerId } from "@jackioh/shared";
 
 import type { PracticeReplaySummary, PracticeStartConfig } from "./protocol.ts";
 
-/**
- * R668: what a free practice game needs to come back: the start config as the worker had it (its
- * last board included), the action log, the AI stream's cursor, the catalog version and the state's
- * hash. Worker-side only.
- */
+/** R668: worker-only start state, action log, AI cursor, catalog version and state hash for resuming. */
 export type PracticeSave = {
   catalog: string;
   config: PracticeStartConfig;
@@ -37,7 +19,6 @@ export type PracticeReplay = {
   catalog: string;
   config: PracticeStartConfig;
   log: Action[];
-  /** `hashState` of the final state. */
   hash: string;
   /** R677: the seat the human played when the game ended. */
   endSeat: PlayerId;
@@ -48,11 +29,9 @@ export type PracticeSaveStore = {
   /** Settles once the stored save, if any, is read; it never rejects. */
   readonly ready: Promise<void>;
   read(): PracticeSave | null;
-  /** null clears. */
   write(save: PracticeSave | null): void;
   /** R768: the kept finished games, oldest first. */
   readReplays(): readonly PracticeReplay[];
-  /** Replaces them all. */
   writeReplays(replays: readonly PracticeReplay[]): void;
 };
 
@@ -176,7 +155,6 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
   };
 }
 
-/** IndexedDB where the scope has it, else memory. */
 export function defaultSaveStore(): PracticeSaveStore {
   return typeof indexedDB === "undefined" ? memorySaveStore() : indexedDbSaveStore(indexedDB);
 }

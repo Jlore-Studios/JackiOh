@@ -1,53 +1,6 @@
-// The networked match client: one WebSocket, the five frames `crates/server/src/actor/protocol.rs`
-// defines, and no rules at all.
-//
-// CLAUDE.md rule 7 / SPEC §9.1: "the client sends intent, never state". So this module does three
-// things and nothing else — it opens the socket, it turns a `ActionBody` into an `action` frame
-// with a nonce, and it hands whatever the server pushed back to the renderer. It never decides
-// whether an action is legal, never computes a view, and never reads a field the server did not
-// send.
-//
-// WHAT IS ON THE WIRE (`crates/server/src/actor/protocol.rs`, BUILD M6-T4):
-//
-//   client -> server   hello {token?, matchId?, roomCode?}
-//                      action {nonce, action: ActionBody}      (`playerId` is DISCARDED server-side)
-//   server -> client   view {view: PlayerView, legal: ActionBody[]}   (this seat's own actions)
-//                      ack {nonce, seq}
-//                      error {code, message, nonce?}
-//                      prompt {forYou, pendingFor, choiceId?, kind?, deadline}
-//                      clock {now, clocks: MatchClocks}
-//
-// THE HANDSHAKE. `crates/server/src/actor/ws_server.rs` reads the bearer token from `?token=` and
-// the match from `?matchId=` (a browser cannot set headers on a WebSocket handshake, so both travel
-// in the query string, and the server reads no other place, SURFACE §11.3). The `hello` frame is sent
-// anyway: the actor treats it as "push me a fresh full view" (§9.5: "Reconnect gets a fresh full
-// view, never a log replay") and ignores every field on it, so it is how a reconnected socket asks
-// for the state it missed.
-//
-// NO IMPORT FROM `crates/server`. `MatchClocks` is restated structurally below, the way
-// `e2e/support/types.ts` restates the engine's types: the client is a separate deployable and a
-// type import across that boundary would be a build-time coupling the topology (§9.2) does not
-// have.
-//
-// THE LEGAL-ACTION ARRAY. `apps/web/src/game/actions.ts` derives every clickable element by
-// filtering the `legalActions` array (BUILD M5-T2: "The client never computes legality itself; it
-// asks `legalActions` and greys out the rest"). With an empty array `end-turn` renders `disabled`
-// and no hand card is clickable, so a board with no array can answer prompts (`Prompt.tsx` rebuilds
-// an `answer` from `PendingView.options` when none is supplied) and do nothing else.
-//
-// The actor sends it: `crates/server/src/actor/protocol.rs` `ViewMessage` is
-// `{type:"view", view, legal}` and `match_actor.rs` `push_view` fills `legal` with
-// `legalActions(state, player)` for the seat that socket holds — after every change, and on attach
-// and `hello` too, which is what makes a reloaded board interactive again. That file's own comment
-// says why it rides on `view` rather than in a frame of its own: BUILD §1 fixes the message names,
-// and an array that travels with its view can never describe a different one.
-//
-// This module does NOT compute legality — that is exactly what rule 7 and M5-T2 forbid. It takes
-// the array from the `legal` field riding alongside the view, `{type:"view", view, legal:[...]}`,
-// the one shape a server sends (a standalone `legal` frame was never sent, and its handler went with
-// v0.3.0, SURFACE §11.3; an unknown frame is still ignored, never fatal), and reports in
-// `legalSource` when none has ever arrived — which `routes/match.tsx` renders as a visible notice
-// rather than as a silently dead board.
+// CLAUDE.md rule 7 / SPEC §9.1: this client sends intent and renders server views; it never computes legality (BUILD M5-T2).
+// The handshake uses query parameters (SURFACE §11.3) and `hello` refreshes the view (§9.5).
+// `MatchClocks` is structural across the deployable boundary (§9.2); view frames carry legal actions (BUILD §1, M6-T4).
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -61,11 +14,9 @@ import { matchSocketUrl } from "../net/api.ts";
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
-// ---------------------------------------------------------------------------------------------
-// The wire, restated structurally (never imported from crates/server)
-// ---------------------------------------------------------------------------------------------
+// The wire, restated structurally
 
-/** The server's `MatchClocks` (`crates/server/src/db/store.rs`). One shape, stated twice, by design (see header). */
+/** The server's `MatchClocks`, restated across the deployable boundary. */
 export type MatchClocks = {
   /** Epoch ms the active player's turn clock expires, or null while it is paused. */
   turnDeadline: number | null;
@@ -83,19 +34,12 @@ export type PromptFrame =
   | { forYou: false; pendingFor: PlayerId; deadline: number | null };
 
 /**
- * A `clock` frame plus the local monotonic reading at the moment it landed.
- *
- * `protocol.ts`: "`now` is the server's clock at send time, so the client computes remaining time
- * as `deadline - now` against its own monotonic delta instead of trusting its wall clock." That
- * delta is what `receivedAt` is for; `remainingMs` below is the only place it is applied.
+ * A `clock` frame plus the monotonic reading when it landed; deadline calculations never use wall time.
  */
 export type ClockReading = { now: number; clocks: MatchClocks; receivedAt: number };
 
 /**
- * Milliseconds left on an absolute server deadline, or null when there is no deadline.
- *
- * The browser's wall clock is never consulted: the answer is `deadline - now` at the instant the
- * frame was sent, less however long this tab has been running since.
+ * Milliseconds left on an absolute server deadline, or null when there is none.
  */
 export function remainingMs(
   deadline: number | null | undefined,
@@ -115,13 +59,10 @@ function defaultMonotonic(): number {
   return Date.now();
 }
 
-// ---------------------------------------------------------------------------------------------
 // The socket seam
-// ---------------------------------------------------------------------------------------------
 
 /**
- * As much of `WebSocket` as this module uses. A seam, so a test can drive every frame without a
- * server and without a timer — `net.test.ts` is written against it.
+ * The WebSocket subset used here, for frame-level tests.
  */
 export type SocketLike = {
   readonly readyState: number;
@@ -143,16 +84,12 @@ function browserSocket(url: string): SocketLike {
 }
 
 /**
- * The private-use close codes `crates/server/src/actor/ws_server.rs` refuses with. Restated, not
- * imported (see the header). A refusal is final: retrying it would be a reconnect loop against a
- * server that has already said no.
+ * Refusal close codes; retrying one would loop against a settled server answer.
  */
 const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
 /**
- * R679: the close code both sockets of a match a Glitch voided carry (`MATCH_VOIDED_CLOSE_CODE` in
- * `crates/server/src/config.rs`, restated like the refusals). The match no longer exists, so there is
- * nothing to reconnect to; the last view already shows the game over as voided.
+ * R679: a voided match has no socket to reconnect to.
  */
 const VOIDED_CLOSE_CODE = 4410;
 
@@ -210,9 +147,7 @@ function pageWake(handler: () => void): () => void {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// Frame parsing: total, never throws, keeps only what the protocol declares
-// ---------------------------------------------------------------------------------------------
+// Frame parsing: total and protocol-shaped
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -223,12 +158,7 @@ const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || typeof value === "number";
 
 /**
- * An `ActionBody[]` off the wire.
- *
- * Deliberately shallow: the client does not re-derive what a legal action may contain — that is the
- * engine's business (§9.3) and a stricter check here would be a second, weaker copy of the action
- * union. Anything that is not an object with a string `type` is dropped, because `actions.ts`
- * indexes on `type` and a malformed entry would break the board rather than the rules.
+ * Deliberately shallow (§9.3): validation here would duplicate the engine's action union.
  */
 function parseLegal(value: unknown): readonly ActionBody[] | null {
   if (!Array.isArray(value)) return null;
@@ -261,10 +191,7 @@ export type ServerFrame =
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
   | { type: "clock"; now: number; clocks: MatchClocks }
-  /**
-   * R642: both seats' hero portraits, on join and on reconnect. R1342: `emotes` is this account's
-   * own dealt hand — null from a server that deals none, and the board then shows the default.
-   */
+  /** R642: both portraits. R1342: the account's dealt emote hand, if any. */
   | { type: "portraits"; p1: PortraitId; p2: PortraitId; emotes: EmoteId[] | null }
   /** R643: an emote the opponent sent, relayed by the actor. */
   | { type: "emote"; from: PlayerId; emote: EmoteId }
@@ -272,9 +199,7 @@ export type ServerFrame =
   | { type: "aim"; from: PlayerId; aim: Aim | null };
 
 /**
- * Parse one text frame. Returns null for anything this client does not understand, which is not an
- * error: the protocol may grow a frame before this file learns it, and an unknown frame must not
- * take the board down.
+ * Parse one text frame; unknown frames must not take the board down.
  */
 export function parseServerFrame(text: string): ServerFrame | null {
   let parsed: unknown;
@@ -287,8 +212,7 @@ export function parseServerFrame(text: string): ServerFrame | null {
 
   switch (parsed.type) {
     case "view": {
-      // §10.8: the payload is one `PlayerView`. It is the server's to shape; the client renders it
-      // and does not second-guess its fields, so only its presence is checked here.
+      // §10.8: the server shapes PlayerView; the client only checks its presence.
       if (!isRecord(parsed.view)) return null;
       return {
         type: "view",
@@ -336,8 +260,7 @@ export function parseServerFrame(text: string): ServerFrame | null {
     }
     case "portraits": {
       if (!isPortraitId(parsed.p1) || !isPortraitId(parsed.p2)) return null;
-      // R1342: absent (or null) is a server that deals no hand; otherwise it must be a hand, or the
-      // frame is bad.
+      // R1342: absent or null means no dealt hand.
       const emotes = parsed.emotes ?? null;
       if (emotes !== null && !isEmoteHand(emotes)) return null;
       return { type: "portraits", p1: parsed.p1, p2: parsed.p2, emotes };
@@ -359,9 +282,7 @@ export function parseServerFrame(text: string): ServerFrame | null {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Nonces (SPEC §9.3: "every action carries a client nonce, deduped server-side")
-// ---------------------------------------------------------------------------------------------
+// Nonces (SPEC §9.3)
 
 let nonceCounter = 0;
 
@@ -372,9 +293,7 @@ export function nextNonce(): string {
   return `c${Date.now().toString(36)}-${String(nonceCounter)}-${random}`;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The client
-// ---------------------------------------------------------------------------------------------
 
 export type ConnectionState =
   /** A socket is being opened, or a backoff is waiting to open one. */
@@ -389,8 +308,7 @@ export type ConnectionState =
   | "closed";
 
 /**
- * Where the `legalActions` array came from. `"none"` means no server has sent one at all, which
- * leaves the board read-only; `routes/match.tsx` renders that as a visible notice.
+ * `"none"` leaves the board read-only until a server view provides legal actions.
  */
 export type LegalSource = "none" | "view";
 
@@ -398,7 +316,7 @@ export type MatchSnapshot = {
   connection: ConnectionState;
   /** The last `PlayerView` pushed, or null before the first one. */
   view: PlayerView | null;
-  /** Empty until a server sends one; NEVER computed here (rule 7, BUILD M5-T2). */
+  /** Empty until a server sends one; never computed here (CLAUDE.md rule 7, BUILD M5-T2). */
   legal: readonly ActionBody[];
   legalSource: LegalSource;
   /** The last `error` frame's message, relayed verbatim (§9.3), or null. */
@@ -415,10 +333,7 @@ export type MatchSnapshot = {
   portraits: { p1: PortraitId; p2: PortraitId } | null;
   /** R1342: this account's own emote hand, from the last `portraits` frame; null until one deals it. */
   emoteHand: EmoteId[] | null;
-  /**
-   * R643: the last emote the opponent sent, with a `seq` that bumps on every relay so the same
-   * emote twice in a row still notifies.
-   */
+  /** R643: the last opponent emote; `seq` makes repeats notify. */
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
   /** R738: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
   aim: { from: PlayerId; aim: Aim } | null;
@@ -431,10 +346,7 @@ export type MatchClient = {
   connect: () => void;
   /** Send one action. The nonce is minted here; `playerId` is never sent (the actor stamps it). */
   send: (body: ActionBody) => void;
-  /**
-   * R643: send one emote. No nonce and no ack — a rate-limited emote is the server's silent drop,
-   * so there is nothing to wait for; the board shows it locally at once.
-   */
+  /** R643: send one emote without nonce or ack. */
   sendEmote: (emote: EmoteId) => void;
   /** R738: tell the opponent what this seat is aiming at (null: the aim ended). Never answered. */
   sendAim: (aim: Aim | null) => void;
@@ -442,11 +354,7 @@ export type MatchClient = {
   close: () => void;
   /** The URL the next socket will open, for a diagnostic panel. */
   url: () => string;
-  /**
-   * The token the NEXT socket opens with. The open socket is left alone: the server checks a token
-   * only at the handshake, so a renewed token (R194) changes nothing for a socket already up, and
-   * reopening it would start the opponent's disconnect grace for nothing.
-   */
+  /** R194: changes the token for the next handshake without reopening a healthy socket. */
   setToken: (token: string) => void;
 };
 
@@ -489,8 +397,7 @@ const INITIAL: MatchSnapshot = {
 };
 
 /**
- * `?token=` and `?matchId=` on the handshake, because a browser cannot set an `authorization`
- * header on one (`wsServer.ts` `tokenFrom` reads either).
+ * Browsers cannot set a WebSocket authorization header, so the handshake uses query parameters.
  */
 export function socketUrlFor(baseUrl: string, token: string, matchId: string): string {
   try {
@@ -499,8 +406,7 @@ export function socketUrlFor(baseUrl: string, token: string, matchId: string): s
     url.searchParams.set("matchId", matchId);
     return url.toString();
   } catch {
-    // A base the URL parser will not take (a relative path in a test, say): fall back to a plain
-    // query string rather than failing to connect.
+    // Relative test URLs still need their query string.
     const separator = baseUrl.includes("?") ? "&" : "?";
     return `${baseUrl}${separator}token=${encodeURIComponent(token)}&matchId=${encodeURIComponent(matchId)}`;
   }
@@ -513,7 +419,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   const wake = options.wake ?? pageWake;
   const random = options.random ?? Math.random;
   const base = options.baseUrl ?? matchSocketUrl();
-  /** The latest token handed in (`setToken`): every socket opened from now on carries it. */
+  /** Every subsequently opened socket carries this token. */
   let token = options.token;
 
   const listeners = new Set<() => void>();
@@ -533,9 +439,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let probe: unknown = null;
   /** R1441: stops listening for the page waking; null while it is not. */
   let unwake: (() => void) | null = null;
-  /** Set by `close()`; cleared by `connect()`. Keeps a deliberate close from reconnecting. */
+  /** A deliberate close must not reconnect. */
   let stopped = false;
-  /** R643: bumps on every relayed emote, so two identical ones in a row still notify. */
+  /** R643: repeated emotes still notify. */
   let emoteSeq = 0;
 
   function emit(): void {
@@ -575,17 +481,15 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "view":
         patch({
           view: frame.view,
-          // A view that carries no `legal` leaves the previous array alone rather than blanking a
-          // board that an earlier view had filled.
+          // A view without `legal` does not blank an earlier legal-action array.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
         });
         return;
       case "ack":
-        // The action landed, so whatever refusal was on screen belongs to an older one.
         patch({ ack: { nonce: frame.nonce, seq: frame.seq }, error: null, errorCode: null });
         return;
       case "error":
-        // §9.3: the reducer's reason, relayed verbatim. Never reworded, never re-derived.
+        // §9.3: relay the reducer's reason verbatim.
         patch({ error: frame.message, errorCode: frame.code });
         return;
       case "prompt":
@@ -631,8 +535,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       hear();
       retry = 0;
       patch({ connection: "open" });
-      // §9.5: the actor reads `hello` as "push me a fresh full view", which is what a reconnected
-      // socket needs and what a first socket gets anyway.
+      // §9.5: `hello` requests a fresh full view.
       try {
         created.send(JSON.stringify({ type: "hello", token, matchId: options.matchId }));
       } catch {
@@ -650,14 +553,13 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     };
 
     created.onerror = () => {
-      // A transport error is a disconnect; `onclose` follows and owns the decision.
     };
 
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
       cancelProbe();
-      // R738: an arrow from before the drop would stand there until the opponent aimed again.
+      // R738: clear an aim from before the drop.
       if (snapshot.aim !== null) patch({ aim: null });
       if (stopped) {
         patch({ connection: "closed" });
@@ -668,8 +570,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {
-        // The upgrade said no (not signed in, not this match, no such match). Retrying would be a
-        // loop against a settled answer.
+        // Retrying a settled refusal would loop.
         patch({
           connection: "refused",
           error: event.reason.length > 0 ? event.reason : "the server refused this match socket",
@@ -757,13 +658,11 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     send: (body) => {
       const live = socket;
       if (live === null || live.readyState !== OPEN) {
-        // Honest refusal rather than a silent drop: the click did not reach the actor, and a
-        // queue flushed after a reconnect would replay an intent formed against an older view.
+        // Do not replay an intent formed against an older view.
         patch({ error: "not connected to the match", errorCode: "offline" });
         return;
       }
-      // `parseClientMessage` takes the nonce on the action or at top level and rebuilds the body
-      // field by field, discarding `playerId` — so none is sent. The actor stamps the seat.
+      // The actor stamps the seat; never send `playerId`.
       const frame = JSON.stringify({ type: "action", action: { ...body, nonce: nextNonce() } });
       patch({ error: null, errorCode: null });
       try {
@@ -774,8 +673,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     },
     sendEmote: (emote) => {
       const live = socket;
-      // Cosmetic chatter is never worth an error banner: a dead socket just drops the emote, the
-      // way the server drops a rate-limited one (R643).
+      // R643: a dead socket drops cosmetic emotes.
       if (live === null || live.readyState !== OPEN) return;
       try {
         live.send(JSON.stringify({ type: "emote", emote }));
@@ -785,7 +683,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     },
     sendAim: (aim) => {
       const live = socket;
-      // As an emote: cosmetic, so a dead socket simply drops it (R738).
+      // R738: a dead socket drops cosmetic aim updates.
       if (live === null || live.readyState !== OPEN) return;
       try {
         live.send(JSON.stringify({ type: "aim", aim }));
@@ -821,34 +719,11 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // The dev handle (BUILD M5-T3, consumed by e2e/support/commands.ts)
-// ---------------------------------------------------------------------------------------------
 
 /**
- * THIS IS NOT A `GameState`.
- *
- * `e2e/support/types.ts` declares `window.__jackioh = { state, dispatch, seed, seat }` and cites
- * this file for `seat`: "Present in networked mode (apps/web/src/game/net.ts) when the route is not
- * hotseat." But a networked client HAS no `GameState` and must not have one — SPEC §9.1 lists the
- * library order, the opponent's hand, the face-down traps and the other player's pending options as
- * hidden, and the client only ever receives `viewFor(state, playerId)`. Handing the harness a real
- * state would mean the server had leaked it.
- *
- * So `state` is a SHIM derived from the `PlayerView` on screen: the six fields
- * `GameStateLike` names, and nothing under them that the view did not already contain. Concretely:
- *
- *  - `seed` is EMPTY. The server mints the match seed and never sends it, and it must not: with
- *    the seed and the log a client could reconstruct the library order (§9.3: "(seed, log)
- *    reconstructs any match"). `cy.seedGame` reads `handle.seed`, and `cy.seedGame` is the hotseat
- *    route's command; specs 05 and 06 never read it.
- *  - `players[p]` is that player's `SideView`, not a `PlayerState`. `cy.instanceInHand` and
- *    `cy.instanceAt` read `.id` off it and a `SideView` spells it `instanceId`, so those two
- *    commands do not work against this shim. Specs 05 and 06 do not call them.
- *  - there is no `log` and no `decks` (ASSUMPTION A2): the client is not told the action log, and
- *    only spec 01 — hotseat — needs them.
- *
- * `cy.jackioh()` only asserts the object exists, which is what specs 05 and 06 need it for.
+ * Networked `window.__jackioh` is a PlayerView-derived shim, never GameState: §9.1 hides its state.
+ * `e2e/support/types.ts` cites its `seat`; the empty seed protects §9.3 reconstruction, and log/decks stay absent (ASSUMPTION A2).
  */
 export type ViewDerivedState = {
   seed: string;
@@ -873,7 +748,6 @@ export function viewDerivedState(view: PlayerView): ViewDerivedState {
         : { player: view.pending.pendingFor };
 
   return {
-    // See the doc above: a networked client is not given the seed and must not be.
     seed: "",
     turn: view.turn,
     active: view.active,
@@ -891,12 +765,11 @@ export type NetDevHandle = {
   dispatch: (action: ActionBody & { playerId?: PlayerId }) => void;
 };
 
-/** `window.__jackioh` is declared by `routes/dev/hotseat.tsx` as its own handle; this is the other. */
+/** The networked counterpart to the hotseat `window.__jackioh` handle. */
 type DevWindow = { __jackioh?: unknown };
 
 /**
- * Publish the handle outside production builds. Returns the teardown, so a route can install it in
- * an effect and take it down again without clobbering the hotseat route's.
+ * Publish outside production; teardown avoids clobbering the hotseat handle.
  */
 export function installDevHandle(handle: NetDevHandle): () => void {
   if (!DEV_ONLY || typeof window === "undefined") return () => {};
@@ -907,9 +780,7 @@ export function installDevHandle(handle: NetDevHandle): () => void {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // The hook
-// ---------------------------------------------------------------------------------------------
 
 export type UseMatchOptions = {
   matchId: string;
@@ -932,18 +803,11 @@ export type UseMatchResult = MatchSnapshot & {
 };
 
 /**
- * One socket per match, opened on mount and closed on unmount. The snapshot is external mutable
- * state, so it is read through `useSyncExternalStore` rather than mirrored into React state.
- *
- * A new `token` does not reopen the socket. The gate renews a session shortly before its token
- * expires and hands the new token down (R194), and the server reads a token only at the handshake,
- * so closing a healthy socket to open it again with the new one gained nothing and started the
- * opponent's disconnect grace. The token is handed to the client for its next socket instead (a
- * reconnect). A route that must open a new socket for another session remounts this hook.
+ * One socket per match; snapshots use `useSyncExternalStore`. R194 tokens apply on the next handshake.
  */
 export function useMatch(options: UseMatchOptions): UseMatchResult {
   const { matchId, token, baseUrl, socketFactory, timers, monotonic } = options;
-  // The client is made with the token it first sees; later ones reach it through `setToken`.
+  // Later tokens reach the client through `setToken`.
   const [firstToken] = useState(token);
 
   const client = useMemo(
@@ -959,8 +823,7 @@ export function useMatch(options: UseMatchOptions): UseMatchResult {
     [matchId, firstToken, baseUrl, socketFactory, timers, monotonic],
   );
 
-  // Before the connect effect below (effects run in order), so a client made for a new match id
-  // opens its first socket with the current token rather than the first one.
+  // This runs before connect, so a new match uses the current token.
   useEffect(() => {
     client.setToken(token);
   }, [client, token]);

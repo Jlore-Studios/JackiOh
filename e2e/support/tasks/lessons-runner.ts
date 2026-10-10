@@ -1,17 +1,5 @@
-// Run by support/tasks/lessons.ts under the repo's own tsx, from the repo root.
-//
-// Prints one JSON line: { ok: true, lessons, aiTutorial, quickdraw } | { ok: false, error }
-//
-//   lessons     apps/web/src/tutorial/lessons.ts's TUTORIAL_LESSONS, in path order: each lesson's
-//               id, number, title, seed, seat and its two fixed decks (SPEC §9.10, R291);
-//   aiTutorial  AI_TUTORIAL from apps/web/src/wire/engineConfig.ts, the tutorial opponent's handicap
-//               (R290), which `cargo test -p jackioh-engine --test export_config` generates from
-//               crates/engine/src/config.rs;
-//   quickdraw   the catalog ids tagged Quickdraw (crates/cards/catalog.json).
-//
-// Specs 22 and 23 compare what the page plays against these, so no card list is ever copied into a
-// spec by hand. This file is excluded from e2e/tsconfig.json on purpose: it is the one place in e2e/
-// that imports the client's source at run time.
+// Runs under the repo's tsx from its root and prints the source-of-truth lesson, tutorial, and Quickdraw data.
+// Specs 22 and 23 compare their page state to it; runtime client imports are intentional (SPEC §9.10, R290, R291).
 
 import { readFileSync } from "node:fs";
 

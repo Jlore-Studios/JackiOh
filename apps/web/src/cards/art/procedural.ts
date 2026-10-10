@@ -1,33 +1,5 @@
-// The procedural card art as data (docs/polish/6-cards.md, Surface A, behaviours B1 and B2).
-//
-// `artSpec` is pure: the only randomness is `seededRandom(hashId(defId))`, so equal arguments give
-// deep-equal specs and `Math.random` is never read. The geometry is drawn first, from that one
-// generator, in an order that never looks at `radiant`. The radiant variant therefore reuses the
-// base geometry exactly (composition, every ridge path, the emblem's glyph and place) and changes
-// only colour, plus its rays, which come from a second generator salted off the same seed.
-//
-// Per-card variety. A theme sets the palette and the kind of picture; within a theme, each card
-// draws its own large-scale features from a stream salted off its seed, so two Humans or two plain
-// Spells never share a picture: the composition's LAYOUT (a figure left, right, centred or close
-// up; a spell as a starburst, a spiral, an orbit or a shatter; …), a BACKDROP motif behind it (a
-// moon, rings, pillars, beams, clouds, a constellation, arches, waves or a floor grid), the SKY's
-// lighting (dusk, night, dawn or a split second hue), the emblem from a wider pool, a hue turn, and
-// often a second, smaller ACCENT glyph in a free corner.
-//
-// Everything lives in a 0..100 box and every number is rounded to 2 dp, so the SVG that
-// `svg.ts` prints is short and identical on every machine.
-//
-// v0.2.0 (R503). Three things join the picture, each from its own salted stream so a Core card
-// without them draws exactly what it drew before:
-// - the card's MOTIF (motifs.ts), the picture its name asks for: a plain card (a type theme or a
-//   Token) wears it as its emblem, in the motif's own colours; a tribe or family keeps its emblem
-//   and carries the motif beside it (a corner glyph, a scatter, a row along the ground or a fall
-//   from the sky), and a figure may wear it on its head;
-// - the Book, Pancake and AI families' TWIST: pages in the air, steam and syrup, circuit traces with
-//   scanlines and a glitch;
-// - a per-set VARIETY SALT: the Classic and Classic+ cards draw their layout, backdrop, sky and
-//   emblem from their own salted streams, chosen (like Core's) so that no two catalog cards of one
-//   theme share all of them, while Core's stays the salt it always was.
+// Fixed seeds keep artSpec pure and base/radiant geometry identical (Surface A, B1, B2).
+// R503 adds per-card motif, family twist and per-set variety streams without changing Core cards.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
@@ -48,12 +20,9 @@ import {
   type ThemePalette,
 } from "./themes.ts";
 
-/** The motif drawn behind a composition. */
 export type Backdrop = "none" | "moon" | "rings" | "pillars" | "beams" | "clouds" | "stars" | "arches" | "waves" | "grid";
-/** How the sky is lit. */
 export type SkyScheme = "dusk" | "night" | "dawn" | "split";
 
-/** Each composition's arrangements, one per card. */
 export const LAYOUTS: Readonly<Record<Composition, readonly string[]>> = {
   figure: ["centre", "left", "right", "close"],
   burst: ["star", "spiral", "orbit", "shatter"],
@@ -77,10 +46,8 @@ export const BACKDROPS: readonly Backdrop[] = [
 export const SKY_SCHEMES: readonly SkyScheme[] = ["dusk", "night", "dawn", "split"];
 
 type Glyph = { glyph: EmblemGlyph; x: number; y: number; size: number; rotate: number; fill: string; stroke: string };
-/** A motif's glyph: a placed glyph with its own opacity. */
 type MotifGlyphSpec = Glyph & { opacity: number };
 
-/** Everything the SVG is drawn from. Coordinates are in a 0..100 box, numbers rounded to 2 dp. */
 export type ArtSpec = {
   theme: ArtThemeId;
   composition: Composition;
@@ -107,19 +74,13 @@ export type ArtSpec = {
   motifGlyphs: readonly MotifGlyphSpec[];
 };
 
-/** The drawing box is 0..ART_BOX on both axes. */
 export const ART_BOX = 100;
 const RAY_COUNT_MIN = 7;
 const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;
 /** Salts the generator that picks a card's emblem and hue drift, so the geometry stream is untouched. */
 const VARIETY_SALT = 0x2545f491;
-/**
- * R503: the variety salt of each set's cards, by the set's id prefix (B2.2: `classic-043`,
- * `classicplus-012-1`). Each was chosen, as Core's was, so that no two catalog cards of one theme
- * share their layout, backdrop, sky, emblem and motif, and the families spread over every layout;
- * an id of any other set (a transient `t-<n>`) uses Core's.
- */
+/** R503 (B2.2): per-set salts keep catalog cards of a theme distinct; other ids use Core's. */
 const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
   classicplus: 0x5921ab01,
@@ -127,28 +88,21 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;
 const TWIST_SALT = 0x3c6ef372;
-/** A radiant face mixes a motif's own colours this far toward the gold. */
 const RADIANT_MOTIF_MIX = 0.5;
-/** A plain card's emblem is this much larger when it is the card's motif, so the picture reads. */
 export const MOTIF_EMBLEM_SCALE = 1.2;
 const RADIANT_GLOW_BOOST = 0.1;
 const FULL_TURN = 360;
 const DEGREES = Math.PI / 180;
-/** Sky gradients run roughly top to bottom: 180° ± 30°. */
 const SKY_ANGLE_MIN = 150;
 const SKY_ANGLE_MAX = 210;
 const MOTES_MIN = 5;
 const MOTES_MAX = 10;
-/** Share of cards that carry an accent glyph. */
 const ACCENT_CHANCE = 0.7;
-/** How far toward black a night sky goes, and how far a split sky's second stop turns. */
 const NIGHT_MIX = 0.45;
 const SPLIT_TURN_MIN = 60;
 const SPLIT_TURN_MAX = 120;
-/** A dawn sky's horizon, warmed this far toward this orange. */
 const DAWN_WARMTH = "#ff9a5a";
 const DAWN_MIX = 0.38;
-/** Every glyph an accent may be. */
 const ACCENT_POOL: readonly EmblemGlyph[] = [
   "star",
   "moon",
@@ -166,14 +120,12 @@ const ACCENT_POOL: readonly EmblemGlyph[] = [
 ];
 
 type Rng = () => number;
-/** A layer's colour: a palette slot, the motif's own colour, or the family twist's. */
 type LayerFill = "far" | "mid" | "near" | "glow" | "accent" | "motif" | "twist";
 type Layer = { d: string; fill: LayerFill; opacity: number };
 type Geometry = {
   layers: Layer[];
   glow: { cx: number; cy: number; r: number; opacity: number };
   emblem: { x: number; y: number; size: number; rotate: number };
-  /** The band of the box the motes drift in. */
   motes: { top: number; bottom: number };
 };
 
@@ -198,7 +150,6 @@ function ellipsePath(cx: number, cy: number, rx: number, ry: number): string {
   return `M${pt(cx - rx, cy)}A${fmt(rx)} ${fmt(ry)} 0 1 0 ${pt(cx + rx, cy)}A${fmt(rx)} ${fmt(ry)} 0 1 0 ${pt(cx - rx, cy)}Z`;
 }
 
-/** Rolling hills from edge to edge, closed along the bottom of the box. */
 function hills(rng: Rng, baseY: number, amplitude: number, count: number): string {
   const ys: number[] = [];
   for (let i = 0; i <= count; i += 1) ys.push(baseY + (rng() * 2 - 1) * amplitude);
@@ -211,7 +162,6 @@ function hills(rng: Rng, baseY: number, amplitude: number, count: number): strin
   return `${d}L${pt(ART_BOX, y(count))}L${ART_BOX} ${ART_BOX}Z`;
 }
 
-/** A jagged range: peaks on the odd points, valleys on the even ones. */
 function mountains(rng: Rng, baseY: number, height: number, count: number): string {
   let d = `M0 ${ART_BOX}`;
   for (let i = 0; i <= count; i += 1) {
@@ -251,7 +201,6 @@ function polygonPath(cx: number, cy: number, sides: number, radius: number, offs
   return `${d}Z`;
 }
 
-/** A kite-shaped shard pointing away from (cx, cy). */
 function shardPath(cx: number, cy: number, degrees: number, distance: number, length: number, width: number): string {
   const ux = Math.cos(degrees * DEGREES);
   const uy = Math.sin(degrees * DEGREES);
@@ -260,7 +209,6 @@ function shardPath(cx: number, cy: number, degrees: number, distance: number, le
   return `M${at(distance, 0)}L${at(shoulder, width)}L${at(distance + length, 0)}L${at(shoulder, -width)}Z`;
 }
 
-/** A small triangle on a ring, pointing outward. */
 function tickPath(cx: number, cy: number, degrees: number, from: number, to: number, halfWidth: number): string {
   const ux = Math.cos(degrees * DEGREES);
   const uy = Math.sin(degrees * DEGREES);
@@ -268,18 +216,10 @@ function tickPath(cx: number, cy: number, degrees: number, from: number, to: num
   return `M${at(from, -halfWidth)}L${at(to, 0)}L${at(from, halfWidth)}Z`;
 }
 
-/** What a figure wears on its head. Drawn as its own layer, so it can overlap the head freely. */
 type Headgear = "bare" | "hood" | "crown" | "helm" | "ears" | "hat" | "antennae" | "sprout" | "horns" | "brim" | "blob" | "toque";
-/** What its shoulders look like. */
 type Build = "plain" | "pauldrons" | "collar";
 
-/**
- * Per theme, the silhouettes a Unit may take; the geometry stream picks one. A tribe's own shape
- * is listed more than once so most of its units wear it: Felinor ears, KY's pointed hat, CN's
- * antennae, a Fruit's sprout, Call to Chaos horns, a Quickdraw's wide brim, a Token's round
- * critter, a Book scholar's hood, a Pancake cook's toque, an AI's helm and antennae. Only Units are
- * figures, so the Spell and Trap themes never reach this table.
- */
+/** Repeated tribe shapes weight Units toward them; Spell and Trap themes never reach this table. */
 const HEADGEAR: Readonly<Record<ArtThemeId, readonly Headgear[]>> = {
   human: ["bare", "hood", "crown", "helm", "helm"],
   felinor: ["ears", "ears", "ears", "hood"],
@@ -322,23 +262,17 @@ function pick<T>(rng: Rng, pool: readonly T[], fallback: T): T {
   return pool[Math.floor(rng() * pool.length)] ?? fallback;
 }
 
-/** A point on a circle, `degrees` clockwise from the +x axis (the y axis points down). */
 function onCircle(cx: number, cy: number, r: number, degrees: number): string {
   return pt(cx + r * Math.cos(degrees * DEGREES), cy + r * Math.sin(degrees * DEGREES));
 }
 
-/** One horn or ear on the left; `side` -1 draws it there, +1 mirrors it to the right. */
 function mirrored(draw: (side: number) => string): string {
   return draw(-1) + draw(1);
 }
 
 type Head = { cx: number; cy: number; r: number; top: number; lean: number };
 
-/**
- * The headgear layer and the glowing detail layer (eyes, a visor, inner ears, antenna bulbs).
- * Every shape here is one closed subpath that never overlaps another in the same layer, because
- * the ridges are filled even-odd and an overlap would punch a hole.
- */
+/** Headgear-layer paths cannot overlap: even-odd fills would punch holes. */
 function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail: string } {
   const { cx, cy, r, top, lean } = head;
   const eyes =
@@ -346,7 +280,7 @@ function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail:
     ellipsePath(cx + r * 0.36 + lean * 0.3, cy + r * 0.08, r * 0.15, r * 0.1);
   switch (kind) {
     case "hood":
-      // The face opening is a hole in the body path; the glow behind shows through it.
+      // The glow shows through the face hole.
       return { gear: "", detail: "" };
     case "crown": {
       const t = top - 1.2;
@@ -447,7 +381,6 @@ function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail:
       return { gear, detail: eyes };
     }
     case "toque": {
-      // A cook's hat: a band round the head and a puffed crown of three lobes on it.
       const w = r * 0.92;
       const bandTop = top - r * 0.12;
       const band = `M${pt(cx - w, bandTop)}L${pt(cx + w, bandTop)}L${pt(cx + w, top + r * 0.32)}L${pt(cx - w, top + r * 0.32)}Z`;
@@ -464,7 +397,6 @@ function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail:
   }
 }
 
-/** Shoulder plates or a high collar, as a layer over the body. */
 function buildLayer(build: Build, cx: number, shoulderY: number, half: number, neck: number, neckTop: number): string {
   if (build === "pauldrons") {
     return mirrored((side) => {
@@ -488,13 +420,6 @@ function buildLayer(build: Build, cx: number, shoulderY: number, half: number, n
   return "";
 }
 
-/**
- * Units: a silhouetted figure before two rows of hills. The theme picks what it wears and how it
- * stands (HEADGEAR, BUILDS), so a Felinor, a KY scholar and a Call to Chaos fiend read apart
- * before the emblem does. Everything comes from the geometry stream, never from `radiant`, so the
- * base and radiant faces share every path (B2).
- */
-/** Where a figure stands for each layout: its centre line, and how close the viewer is. */
 const FIGURE_STANCE: Readonly<Record<string, { from: number; to: number; scale: number; drop: number }>> = {
   centre: { from: 44, to: 56, scale: 1, drop: 0 },
   left: { from: 29, to: 37, scale: 0.92, drop: 0 },
@@ -511,8 +436,7 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadge
   const neck = between(rng, 4.2, 5.6) * stance.scale;
   const neckTop = shoulderY - between(rng, 5, 7.5) * stance.scale;
   const lean = between(rng, -3, 3);
-  // A motif may put something on the figure's head (motifs.ts); the pick still draws, so the rest of
-  // the stream reads as it did.
+  // Still draw the pick so a motif does not shift the stream.
   const picked = pick(rng, HEADGEAR[theme], "bare");
   const kind: Headgear = wears ?? picked;
   const build = pick(rng, BUILDS[theme], "plain");
@@ -524,7 +448,6 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadge
   let body: string;
   let face = "";
   if (kind === "blob") {
-    // A round critter: one mound from the ground up, no neck.
     const crown = headTop + 2;
     body =
       `M${pt(cx - half, ART_BOX)}C${pt(cx - half, shoulderY - 6)} ${pt(cx - half * 0.55, crown)} ${pt(cx, crown)}` +
@@ -532,7 +455,6 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadge
   } else {
     let head: string;
     if (kind === "hood") {
-      // A peaked hood, with the face left open so the glow shows through.
       head =
         `C${pt(cx - headR - 2.5, neckTop - headR * 0.9)} ${pt(cx - headR * 0.7 + lean, headTop - 1)} ${pt(cx + lean * 1.6, headTop - 5)}` +
         `C${pt(cx + headR * 0.7 + lean, headTop - 1)} ${pt(cx + headR + 2.5, neckTop - headR * 0.9)} ${pt(cx + neck, neckTop)}`;
@@ -555,7 +477,6 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadge
   const emblemY = shoulderY + between(rng, 8, 11);
   const emblemSize = between(rng, 12.5, 15.5);
   const emblemTurn = between(rng, -8, 8);
-  // A figure off to one side leaves the other half of the sky to its emblem.
   const aside = layout === "left" || layout === "right";
   const emblem = aside
     ? { x: cx < ART_BOX / 2 ? between(rng, 70, 78) : between(rng, 22, 30), y: between(rng, 22, 32), size: emblemSize + 3, rotate: emblemTurn }
@@ -576,7 +497,6 @@ function figure(rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadge
   };
 }
 
-/** Spells: a halo, two starbursts and flying shards around the emblem. */
 function starburst(rng: Rng): Geometry {
   const cx = between(rng, 44, 56);
   const cy = between(rng, 44, 54);
@@ -618,7 +538,6 @@ function starburst(rng: Rng): Geometry {
   };
 }
 
-/** A spiral arm from radius `r0` to `r1`, turning `sweep` degrees, tapering from `w0` wide to a point. */
 function armPath(cx: number, cy: number, start: number, sweep: number, r0: number, r1: number, w0: number): string {
   const STEPS = 8;
   const outer: string[] = [];
@@ -634,7 +553,6 @@ function armPath(cx: number, cy: number, start: number, sweep: number, r0: numbe
   return `M${outer.join("L")}L${inner.reverse().join("L")}Z`;
 }
 
-/** An ellipse turned `degrees` about its centre, as one closed path. */
 function turnedEllipsePath(cx: number, cy: number, rx: number, ry: number, degrees: number): string {
   const ux = Math.cos(degrees * DEGREES);
   const uy = Math.sin(degrees * DEGREES);
@@ -644,7 +562,6 @@ function turnedEllipsePath(cx: number, cy: number, rx: number, ry: number, degre
   return `M${a}A${arc} 1 0 ${b}A${arc} 1 0 ${a}Z`;
 }
 
-/** Spells, as a spiral: tapering arms wheeling out from the emblem inside a thin halo. */
 function spiral(rng: Rng): Geometry {
   const cx = between(rng, 42, 58);
   const cy = between(rng, 42, 56);
@@ -668,7 +585,6 @@ function spiral(rng: Rng): Geometry {
   };
 }
 
-/** Spells, as an orbit: a planet under the emblem, tilted rings around it, and orbs riding them. */
 function orbit(rng: Rng): Geometry {
   const cx = between(rng, 44, 56);
   const cy = between(rng, 44, 56);
@@ -686,7 +602,6 @@ function orbit(rng: Rng): Geometry {
       fill: "accent",
       opacity: 0.55,
     });
-    // An orb on the ring's far end, and a smaller one partway round.
     const along = rng() * FULL_TURN * DEGREES;
     const ox = rx * Math.cos(along);
     const oy = ry * Math.sin(along);
@@ -703,7 +618,6 @@ function orbit(rng: Rng): Geometry {
   };
 }
 
-/** Spells, as a shatter: long shards flying out from a point off the centre. */
 function shatter(rng: Rng): Geometry {
   const cx = between(rng, 32, 68);
   const cy = between(rng, 36, 60);
@@ -735,7 +649,6 @@ function burst(rng: Rng, _theme: ArtThemeId, layout: string): Geometry {
   return starburst(rng);
 }
 
-/** A closed skyline from x 0 to 100: towers of varied height, some with a spire. */
 function skyline(rng: Rng, base: number, low: number, high: number, spires: boolean): string {
   let d = `M0 ${ART_BOX}L0 ${fmt(base)}`;
   let x = 0;
@@ -754,7 +667,6 @@ function skyline(rng: Rng, base: number, low: number, high: number, spires: bool
   return `${d}L${ART_BOX} ${ART_BOX}Z`;
 }
 
-/** Field Spells, as a sea: a horizon, a sun low over it, its reflection, and rows of waves. */
 function sea(rng: Rng): Geometry {
   const horizon = between(rng, 54, 62);
   const sunX = between(rng, 24, 76);
@@ -793,7 +705,6 @@ function sea(rng: Rng): Geometry {
   };
 }
 
-/** Field Spells, as towers: a far skyline with spires, a near one, and lit windows. */
 function towers(rng: Rng): Geometry {
   const far = skyline(rng, 62, 38, 56, true);
   const near = skyline(rng, 80, 64, 78, false);
@@ -817,7 +728,6 @@ function towers(rng: Rng): Geometry {
   };
 }
 
-/** Field Spells, as dunes: long smooth ridges under a large, low sun. */
 function dunes(rng: Rng): Geometry {
   const sunX = between(rng, 26, 74);
   const sunY = between(rng, 40, 50);
@@ -833,7 +743,6 @@ function dunes(rng: Rng): Geometry {
   };
 }
 
-/** Field Spells: a sun in the sky over a mountain range and two rows of hills. */
 function range(rng: Rng): Geometry {
   const sunX = between(rng, 22, 78);
   const sunY = between(rng, 22, 34);
@@ -866,7 +775,6 @@ function landscape(rng: Rng, _theme: ArtThemeId, layout: string): Geometry {
   return range(rng);
 }
 
-/** Traps, as a diamond: two nested square frames on their points, and four ticks outside. */
 function diamond(rng: Rng): Geometry {
   const cx = ART_BOX / 2 + between(rng, -2, 2);
   const cy = ART_BOX / 2 + between(rng, -2, 2);
@@ -889,7 +797,6 @@ function diamond(rng: Rng): Geometry {
   };
 }
 
-/** Traps, as an eye: an almond frame, an iris ring around the emblem, and lashes above. */
 function eyeSigil(rng: Rng): Geometry {
   const cx = ART_BOX / 2 + between(rng, -2, 2);
   const cy = ART_BOX / 2 + between(rng, -1, 3);
@@ -918,7 +825,6 @@ function eyeSigil(rng: Rng): Geometry {
   };
 }
 
-/** Traps, as a wheel: a rim, spokes and a hub around the emblem. */
 function wheel(rng: Rng): Geometry {
   const cx = ART_BOX / 2 + between(rng, -2, 2);
   const cy = ART_BOX / 2 + between(rng, -2, 2);
@@ -947,7 +853,6 @@ function wheel(rng: Rng): Geometry {
   };
 }
 
-/** Traps and Field Traps: a ticked rim, a polygon frame and an inner ring around the emblem. */
 function ringSigil(rng: Rng): Geometry {
   const cx = ART_BOX / 2 + between(rng, -2, 2);
   const cy = ART_BOX / 2 + between(rng, -2, 2);
@@ -988,12 +893,10 @@ function sigil(rng: Rng, _theme: ArtThemeId, layout: string): Geometry {
   return ringSigil(rng);
 }
 
-/** An axis-aligned rectangle. */
 function rectPath(x: number, y: number, w: number, h: number): string {
   return `M${pt(x, y)}L${pt(x + w, y)}L${pt(x + w, y + h)}L${pt(x, y + h)}Z`;
 }
 
-/** A crescent from (cx, cy - r) to (cx, cy + r), bulging left (side -1) or right (side 1). */
 function crescentPath(cx: number, cy: number, r: number, side: number): string {
   const outer = side < 0 ? 0 : 1;
   const inner = side < 0 ? 1 : 0;
@@ -1003,7 +906,6 @@ function crescentPath(cx: number, cy: number, r: number, side: number): string {
   );
 }
 
-/** A tall arch: a rectangle with a round top, as a frame (the inside cut out). */
 function archFrame(x: number, top: number, w: number, thick: number): string {
   const r = w / 2;
   const shape = (inset: number): string =>
@@ -1012,10 +914,7 @@ function archFrame(x: number, top: number, w: number, thick: number): string {
   return shape(0) + shape(thick);
 }
 
-/**
- * The motif behind a composition, drawn first and faint. Each path is one layer whose subpaths never
- * overlap, because the layers are filled even-odd.
- */
+/** Backdrop-layer subpaths cannot overlap: even-odd fills would punch holes. */
 function backdropLayers(rng: Rng, backdrop: Backdrop): Layer[] {
   switch (backdrop) {
     case "none":
@@ -1163,9 +1062,8 @@ const COMPOSERS: Readonly<Record<Composition, (rng: Rng, theme: ArtThemeId, layo
   sigil,
 };
 
-/* ------------------------------------------------------------------ R503: twists and motifs --- */
+// R503: twists and motifs
 
-/** A thin band along a polyline, as one closed path. */
 function bandPath(points: readonly (readonly [number, number])[], width: number): string {
   const left: string[] = [];
   const right: string[] = [];
@@ -1182,10 +1080,7 @@ function bandPath(points: readonly (readonly [number, number])[], width: number)
   return `M${left.join("L")}L${right.reverse().join("L")}Z`;
 }
 
-/**
- * Circuit traces: runs that leave an edge of the box, travel straight, take one 45° bend and end in
- * a ringed pad. The AI family's backdrop, and the `circuits` motif's pattern.
- */
+/** Circuit traces serve the AI backdrop and `circuits` motif. */
 function circuitTraces(rng: Rng): string {
   const count = whole(rng, 6, 8);
   let d = "";
@@ -1194,7 +1089,6 @@ function circuitTraces(rng: Rng): string {
     const along = between(rng, 10, 90);
     const reach = between(rng, 14, 30);
     const bend = between(rng, 6, 14) * (rng() < 0.5 ? -1 : 1);
-    // Out from the edge, then a diagonal of `bend` each way.
     const inward: readonly (readonly [number, number])[] =
       side === 0 ? [[along, -1], [along, reach], [along + bend, reach + Math.abs(bend)]]
         : side === 1 ? [[ART_BOX + 1, along], [ART_BOX - reach, along], [ART_BOX - reach - Math.abs(bend), along + bend]]
@@ -1202,7 +1096,7 @@ function circuitTraces(rng: Rng): string {
             : [[-1, along], [reach, along], [reach + Math.abs(bend), along + bend]];
     const [ex, ey] = inward[2] ?? [0, 0];
     const [bx, by] = inward[1] ?? [0, 0];
-    // Stop the run at the pad's rim, so the two never overlap (layers fill even-odd).
+    // Stop at the pad rim: even-odd layers cannot overlap.
     const toPad = Math.hypot(ex - bx, ey - by) || 1;
     const stop: readonly [number, number] = [ex - ((ex - bx) / toPad) * 2.2, ey - ((ey - by) / toPad) * 2.2];
     d += bandPath([inward[0] ?? [0, 0], inward[1] ?? [0, 0], stop], 1.1);
@@ -1211,7 +1105,6 @@ function circuitTraces(rng: Rng): string {
   return d;
 }
 
-/** Waves across the lower part of the band a face shows, the `waves` motif's pattern. */
 function waveBands(rng: Rng): string {
   let d = "";
   const first = between(rng, 60, 64);
@@ -1228,7 +1121,6 @@ function waveBands(rng: Rng): string {
   return d;
 }
 
-/** Book: loose pages drifting in the sky, each ruled with three lines. */
 function pages(rng: Rng): string {
   let d = "";
   const count = whole(rng, 3, 4);
@@ -1248,7 +1140,6 @@ function pages(rng: Rng): string {
   return d;
 }
 
-/** Pancake: steam curling up from the middle of the picture. */
 function steam(rng: Rng): string {
   let d = "";
   const count = whole(rng, 2, 3);
@@ -1265,11 +1156,7 @@ function steam(rng: Rng): string {
   return d;
 }
 
-/**
- * Pancake: syrup across the top, running down in drips. It reaches just past the top of the band a
- * full face shows, so the drips hang from the window's top edge there, and a squarer window shows
- * the pool they run from.
- */
+/** Syrup reaches past the full-face band so drips hang from its top edge. */
 function syrup(rng: Rng): string {
   const depth = between(rng, 17.5, 19.5);
   let d = `M0 0L${ART_BOX} 0L${pt(ART_BOX, depth)}L${pt(0, depth)}Z`;
@@ -1283,14 +1170,12 @@ function syrup(rng: Rng): string {
   return d;
 }
 
-/** AI: faint scanlines over the whole picture. */
 function scanlines(): string {
   let d = "";
   for (let y = 1; y < ART_BOX; y += 3) d += rectPath(0, y, ART_BOX, 0.7);
   return d;
 }
 
-/** AI: one or two glitch bars, knocked sideways. */
 function glitch(rng: Rng): string {
   let d = "";
   const count = whole(rng, 1, 2);
@@ -1304,7 +1189,7 @@ function glitch(rng: Rng): string {
 
 type Twist = { under: Layer[]; over: Layer[] };
 
-/** A family's own touch (R503), from its own stream: pages, steam and syrup, or circuitry. */
+/** R503 family twists use a stream of their own. */
 function twistLayers(rng: Rng, theme: ArtThemeId): Twist {
   switch (theme) {
     case "book":
@@ -1327,23 +1212,18 @@ function twistLayers(rng: Rng, theme: ArtThemeId): Twist {
   }
 }
 
-/** Each family twist's own colour: parchment pages, amber syrup, neon traces. */
 const TWIST_COLORS: Readonly<Partial<Record<ArtThemeId, string>>> = {
   book: "#f4e4bf",
   pancake: "#a8561c",
   ai: "#39f3ff",
 };
 
-/** The themes with no emblem of their own to keep: a plain card, or a Token. */
+/** Plain cards and Tokens use their motif as their emblem. */
 const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spell", "field-spell", "trap", "field-trap", "token"]);
 
 type Placed = { x: number; y: number; size: number };
 
-/**
- * The band of the square every face shows. A full face's art window is about 1.6 times as wide as
- * it is tall and `background-size: cover` fills it, so it shows roughly y 18 to 82 of the box (a
- * Unit's portrait a little more, a compact face nearly all). A motif stays inside this band.
- */
+/** Motifs stay inside the full-face `background-size: cover` band. */
 const SHOWN_TOP = 22;
 const SHOWN_BOTTOM = 78;
 
@@ -1351,14 +1231,7 @@ function farEnough(x: number, y: number, size: number, taken: readonly Placed[])
   return taken.every((other) => Math.hypot(other.x - x, other.y - y) >= (other.size + size) / 2 + 1.5);
 }
 
-/**
- * Where a motif's glyphs go (R503), from the motif stream, inside the band every face shows and
- * inside the rounded windows (a portrait's oval, a Field Spell's arch). `hero` puts one larger glyph
- * in the upper corner furthest from the emblem and the glow (a plain card has already made it its
- * emblem, so it adds nothing; a figure standing to one side has its emblem in that corner, so the
- * motif goes just under it); `scatter` strews a handful through the composition's sky; `rise`
- * stands a row along the ground; `fall` drops a few from above. Nothing lands on the emblem.
- */
+/** R503 motif glyphs stay inside visible rounded windows; `hero` takes the far corner. */
 function motifPlacements(
   rng: Rng,
   motif: Motif,
@@ -1409,7 +1282,6 @@ function motifPlacements(
     }
     case "rise": {
       const count = whole(rng, 3, 5);
-      // A figure's portrait shows a little lower, and its oval narrows at the foot.
       const [left, right, low, high] = figure ? [26, 74, 76, 82] : [15, 85, 68, 74];
       for (let k = 0; k < count; k += 1) {
         const size = between(rng, 9, 12);
@@ -1428,7 +1300,7 @@ function motifPlacements(
   }
 }
 
-/* ------------------------------------------------------------------------------ colour --- */
+// Colour
 
 type Colors = {
   sky: readonly [string, string];
@@ -1439,7 +1311,6 @@ type Colors = {
   mote: string;
 };
 
-/** The sky's two stops for a scheme, before any gilding. */
 function skyFor(sky: readonly [string, string], scheme: SkyScheme, turn: number): readonly [string, string] {
   switch (scheme) {
     case "dusk":
@@ -1447,14 +1318,12 @@ function skyFor(sky: readonly [string, string], scheme: SkyScheme, turn: number)
     case "night":
       return [mixHex(sky[0], "#05060a", NIGHT_MIX), mixHex(sky[1], "#020204", NIGHT_MIX)];
     case "dawn":
-      // Lit from below: a warm horizon under a dark zenith.
       return [sky[1], mixHex(sky[0], DAWN_WARMTH, DAWN_MIX)];
     case "split":
       return [turnHue(sky[0], turn), sky[1]];
   }
 }
 
-/** The colours outside the palette: the motif's own, and the family twist's. */
 type ExtraColors = { motif: string; twist: string };
 
 function colorsFor(palette: ThemePalette, radiant: boolean, extra: ExtraColors): Colors {
@@ -1524,7 +1393,6 @@ function radiantRays(seed: number): ArtSpec["rays"] {
   return rays;
 }
 
-/** The accent glyph's corner: the one furthest from the emblem, just inside the box. */
 function accentCorner(emblem: { x: number; y: number }): { x: number; y: number } {
   const corners = [
     { x: 16, y: 16 },
@@ -1544,17 +1412,12 @@ function accentCorner(emblem: { x: number; y: number }): { x: number; y: number 
   return best;
 }
 
-/** R503: the variety salt for a card's set, read off its id's prefix (B2.2); Core's otherwise. */
 export function varietySalt(defId: string): number {
   const dash = defId.indexOf("-");
   const prefix = dash < 0 ? "" : defId.slice(0, dash);
   return Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
 }
 
-/**
- * Pure. The seed is hashId(defId); the radiant variant reuses the base geometry. `motif` is the
- * motif the card's name calls up (`motifFor`), or null for none.
- */
 export function artSpec(
   defId: string,
   theme: ArtThemeId,
@@ -1564,9 +1427,7 @@ export function artSpec(
 ): ArtSpec {
   const seed = hashId(defId);
   const rng = seededRandom(seed);
-  // Per card, never per variant: the emblem from the theme's pool, how far the palette turns, the
-  // layout, the backdrop, the sky's lighting and the accent. All come from their own salted stream,
-  // so the base and radiant faces agree on them (B2).
+  // A separate variety stream keeps base and radiant choices identical (B2).
   const variety = seededRandom((seed ^ varietySalt(defId)) >>> 0);
   const pool = EMBLEM_POOLS[theme];
   const pooled = pool[Math.floor(variety() * pool.length)] ?? THEME_PALETTES[theme].emblem.glyph;
@@ -1581,8 +1442,7 @@ export function artSpec(
   const accentSize = between(variety, 7, 10);
   const accentTurn = between(variety, -20, 20);
 
-  // R503: a plain card wears its motif as its emblem, in the motif's own colours; a tribe or family
-  // keeps its emblem and carries the motif beside it, in place of the accent when that is a corner.
+  // R503 plain cards use their motif as the emblem; other themes place it beside one.
   const drawn: Motif | null = motif === null ? null : MOTIFS[motif];
   const plain = PLAIN_THEMES.has(theme);
   const glyph: EmblemGlyph = drawn !== null && plain ? drawn.glyph : pooled;
@@ -1593,11 +1453,11 @@ export function artSpec(
   const worn = drawn !== null && plain ? { ...themed, emblem: { glyph, fill: drawn.fill, stroke: drawn.stroke } } : themed;
   const palette: ThemePalette = { ...worn, sky: skyFor(worn.sky, skyScheme, splitTurn) };
   const colors = colorsFor(palette, radiant, { motif: drawn?.fill ?? palette.glow, twist: TWIST_COLORS[theme] ?? palette.glow });
-  // Geometry first, in a fixed order that never depends on `radiant` (B2).
+  // Draw geometry in a radiant-independent order (B2).
   const angle = between(rng, SKY_ANGLE_MIN, SKY_ANGLE_MAX);
   const behind = backdropLayers(rng, backdrop);
   const composed = COMPOSERS[composition](rng, theme, layout, drawn?.headgear);
-  // The family twist and the motif draw from streams of their own, after everything else.
+  // Isolated streams leave existing geometry untouched.
   const twist = twistLayers(seededRandom((seed ^ TWIST_SALT) >>> 0), theme);
   const motifStream = seededRandom((seed ^ MOTIF_SALT) >>> 0);
   const pattern: Layer[] =

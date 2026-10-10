@@ -1,22 +1,6 @@
-// The player's online game, followed from anywhere in the client (SPEC §9.5, R765).
-//
-// IT ENFORCES NOTHING (CLAUDE.md rule 7). Whether a player is in a match or a Conquest series is the
-// server's to say, and it already does: `GET /api/auth/me` answers `currentMatchId` (§9.5) and
-// `currentSeriesId` (R259), the read `/play` waits on after it queues. No new route is needed, so
-// this module only reads that answer, two ways:
-//
-//   * THE QUEUE FOLLOWS THE PLAYER. A queue ticket lives on the server until it is paired or
-//     cancelled, so a player who queues on `/play` and then goes elsewhere is still queued. The tab
-//     remembers that it queued, in `sessionStorage` (a reload keeps it, another tab does not share
-//     it), and while it is queued on any screen but `/play`, which watches for itself,
-//     `useQueueFollow` reads the account every `SERIES_POLL_SECONDS`. A pairing is announced for
-//     `MATCH_FOUND_NAV_DELAY_MS`, as `/play` announces one, and then the player is taken to it.
-//   * THE WAY BACK. `useLiveGame` is the live game an account read names, read again every
-//     `SERIES_POLL_SECONDS` while there is one, so the menus' banner (`routes/GameBanner.tsx`) goes
-//     as soon as the game ends. A read that fails changes nothing on screen; the next one retries.
-//
-// Storage is untrusted and may be missing: a read that throws or finds anything else is "not
-// queued", and a write that throws only costs the follow.
+// Client-side online-game follow (SPEC §9.5, R765); the server decides the account state
+// (CLAUDE.md rule 7) through `/api/auth/me` (`currentMatchId`, §9.5; `currentSeriesId`, R259).
+// Queue follow is per-tab session storage; storage failures mean no follow, never a failed queue.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -32,11 +16,9 @@ const MS_PER_SECOND = 1000;
 /** What a screen says the moment a pairing lands, before it takes the player there. */
 export const MATCH_FOUND_STATUS = "Match found! Taking you to your game…";
 
-// ---------------------------------------------------------------------------------------------
-// the live game
-// ---------------------------------------------------------------------------------------------
+// Live game
 
-/** The game an account is in: a running match, or a Conquest series between its games. */
+/** A running match or a Conquest series between games. */
 export type LiveGame = { kind: "match" | "series"; id: string; path: string };
 
 /**
@@ -53,7 +35,7 @@ export function liveGameOf(me: { currentMatchId: string | null; currentSeriesId?
   return null;
 }
 
-/** A call that may throw synchronously (or return nothing, in a test), as a promise. */
+/** Turns a synchronous throw into a rejected promise. */
 function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
@@ -65,7 +47,7 @@ function attempt<T>(call: () => Promise<T>): Promise<T> {
 export function useLiveGame(account: Account, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const token = account.kind === "ready" ? account.token : null;
   const me = account.kind === "ready" ? account.me : null;
-  /** The last re-read, kept with the account read it followed, so a fresh account read wins. */
+  /** Pair a re-read with its account read so a fresh account read wins. */
   const [polled, setPolled] = useState<{ after: MeResponse; game: LiveGame | null } | null>(null);
   const reader = useRef(read);
   reader.current = read;
@@ -93,14 +75,12 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
   return game;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the queue this tab joined
-// ---------------------------------------------------------------------------------------------
+// Queue joined by this tab
 
 /** Where this tab remembers the mode it queued in, while it waits to be paired. */
 export const QUEUE_STORAGE_KEY = "jackioh.play.queued";
 
-/** Fired in this tab whenever the remembered queue changes; `storage` events cover no tab's own writes. */
+/** Fired for this tab's writes, which `storage` events do not cover. */
 const QUEUE_CHANGED = "jackioh:queue-changed";
 
 const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -127,22 +107,22 @@ function changed(): void {
   window.dispatchEvent(new Event(QUEUE_CHANGED));
 }
 
-/** R765: this tab is in `mode`'s queue, so a pairing finds the player wherever they are. */
+/** R765: remember this tab's queue so a pairing can follow it. */
 export function rememberQueued(mode: QueueMode): void {
   try {
     tabStorage()?.setItem(QUEUE_STORAGE_KEY, mode);
   } catch {
-    // Blocked or full storage: only `/play` follows the queue, as before R765.
+    // Blocked storage: only `/play` follows the queue (R765).
   }
   changed();
 }
 
-/** Out of the queue: left it, or paired. */
+/** Forget a left or paired queue. */
 export function forgetQueued(): void {
   try {
     tabStorage()?.removeItem(QUEUE_STORAGE_KEY);
   } catch {
-    // Blocked storage held nothing to forget.
+    // Blocked storage has nothing to forget.
   }
   changed();
 }

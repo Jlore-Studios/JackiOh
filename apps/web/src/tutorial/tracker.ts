@@ -1,22 +1,5 @@
-// The coach, fed: every snapshot the practice controller receives goes into `coachObserve`, in
-// order, and the page subscribes to what it shows (SPEC §9.10, R292).
-//
-// Framework-free, and created in the same effect as the controller it reads, before the game's
-// `start` is sent. That is what guarantees the coach reads EVERY snapshot: the controller keeps only
-// its newest one, so a subscriber that arrived a render later could miss the first (the deal) or
-// fold two snapshots' events into one. `fresh` is computed the way the board and the lesson harness
-// compute it (`newEventsSince` against the previous view the coach read; nothing for the first).
-//
-// The AI hold lives here too, for the same reason. A step or tip with `holdAi` holds the AI's next
-// step (`setHold("coach", …)`) from the moment the snapshot that shows it arrives, synchronously,
-// before the controller can schedule that step. The page shows a new display only once the board
-// has caught up (Coach.tsx), and while the board animates the controller is held by the board
-// anyway, so holding on the newest display holds exactly while the shown one asks for it. Only a
-// display with "Got it" ever asks (a tip or an `info` step, coach.ts, R314), so the player can
-// always let go.
-//
-// Rule 7: the tracker reads what the page already holds (the view, the legal actions, `aiToAct`)
-// and never sends an action.
+// Observe each snapshot before controller start so no event is missed or coalesced (SPEC §9.10, R292).
+// Apply AI holds synchronously when a "Got it" display appears (R314); this tracker never sends actions (Rule 7).
 
 import type { ActionBody } from "@jackioh/shared";
 
@@ -37,25 +20,16 @@ import {
 import { myMain } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
 
-/** What the tracker needs of the controller. */
 export type CoachSource = Pick<PracticeController, "getState" | "subscribe" | "setHold">;
 
-/** The controller's hold reason for the coach. */
 export const COACH_HOLD = "coach";
 
 export type CoachView = {
   coach: CoachState;
-  /** The newest snapshot's context; null before the first snapshot. */
   ctx: CoachCtx | null;
   display: CoachDisplay;
-  /** The display's anchor as the board's testids (empty for none). */
   targets: readonly string[];
-  /** It is the AI's turn, or the AI owes an answer: what the waiting bubble says. */
   aiBusy: boolean;
-  /**
-   * The human's own main phase, nothing open: the waiting bubble says it is their move (a step
-   * waiting on its moment retires by itself, TUTORIAL_STEP_TURNS_MAX).
-   */
   yourMove: boolean;
 };
 
@@ -63,17 +37,13 @@ export type CoachTracker = {
   readonly script: LessonScript;
   getState(): CoachView;
   subscribe(fn: () => void): () => void;
-  /**
-   * "Got it". With `expected` (a `displayKey`), only while that display is still the coach's: a
-   * press on a bubble the board has not caught up with yet never answers one the player has not seen.
-   */
+  /** An expected display key prevents an unseen bubble from acknowledging its successor. */
   ack(expected?: string): void;
   dispose(): void;
 };
 
 const FINISHED: CoachDisplay = { mode: "finished" };
 
-/** One display's identity: its mode and its step or tip id. */
 export function displayKey(display: CoachDisplay): string {
   return display.mode === "tip" || display.mode === "step" ? `${display.mode}:${display.id}` : display.mode;
 }
@@ -130,7 +100,7 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
       legal: snapshot.legal,
       fresh: previous === null ? [] : newEventsSince(previous.events, snapshot.view.events),
       aiToAct: snapshot.aiToAct,
-      // §5.1: the catalog is public; the worker sent it with the game (`started`).
+      // §5.1: the catalog is public and arrives with `started`.
       nameOf: (defId) => snapshot.view.defs?.[defId]?.name ?? defs?.[defId]?.name,
     };
     coach = coachObserve(script, coach, ctx);
@@ -167,11 +137,7 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
   };
 }
 
-/**
- * The first of the human's legal actions the showing step `expect`s, or null (no step showing, a
- * tip in front of it, or a step that asks for nothing). Only the dev handle reads it (the e2e spec
- * performs it through the real UI); the page never acts on it.
- */
+/** Dev-only aid: returns an expected action but never performs it; e2e uses the real UI. */
 export function suggestedAction(script: LessonScript, state: CoachView): ActionBody | null {
   const ctx = state.ctx;
   if (ctx === null) return null;
@@ -189,7 +155,6 @@ export function suggestedAction(script: LessonScript, state: CoachView): ActionB
   );
 }
 
-/** A script with nothing to say: a lesson whose script is missing still plays, uncoached. */
 export function silentScript(lessonId: string): LessonScript {
   return { lessonId, steps: [], tips: [] };
 }

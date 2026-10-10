@@ -1,20 +1,6 @@
-// Test support, never loaded by the page: a lesson played in full through the REAL practice core
-// (the engine, the card scripts and the AI the worker runs), with the coach reading every snapshot
-// exactly as the page's coach does (R293).
-//
-// The human is played by a policy. `"coach"` is the lesson's own line: it answers every tip and
-// info step with "Got it", does whatever the showing `act` step `expect`s, and falls back to the
-// autopilot below only when the coach asks for nothing. `"coach-passive"` follows the coach just as
-// closely but, where it asks nothing, only attacks (the hero first) and ends the turn: a beginner who
-// plays no card the coach did not name, which is how the tutorial's own browser run plays (spec 22)
-// and what a lesson's quiet turns must survive. `"autopilot"` is a sensible beginner who
-// reads nothing the coach says and plays the autopilot alone, which is how forgiving a lesson is.
-// `"random"` is a player who ignores the coach, drawing uniformly from the legal actions (never
-// conceding or offering a draw) — the robustness case: the coach must neither throw nor stall,
-// whatever the player does.
-//
-// The core runs with a frozen clock and the gates' budget, as core.test.ts does, so the AI's
-// decisions are a pure function of the node budget and a game replays exactly.
+// Test-only full-lesson runner on the real practice core; its coach reads browser-equivalent
+// snapshots (R293). A frozen clock and fixed node budget make replays deterministic. Policies cover
+// coached, coached-passive (spec 22), autonomous, and robust random play.
 
 import { AI_GATE_BUDGET, type SearchBudget } from "@jackioh/ai";
 import { createRng } from "@jackioh/engine";
@@ -38,14 +24,9 @@ import { lessonById, type TutorialLesson } from "./lessons.ts";
 import { scriptFor } from "./scripts/index.ts";
 import { heroTargetId, myMain, mulliganOpen } from "./steps.ts";
 
-/** Most requests one lesson game sends before the harness calls it stuck. */
 const LESSON_REQUEST_CAP = 1500;
 
-/**
- * The AI's budget when the human plays at random. That run proves the coach neither breaks nor
- * stalls, which does not depend on how well the AI plays, and a random player's games run long, so
- * the AI searches a tenth as much there and the run stays affordable in `pnpm test`.
- */
+/** Random games need a cheaper search budget to keep the robustness run affordable. */
 export const RANDOM_POLICY_AI_BUDGET: SearchBudget = {
   nodes: 60,
   lethalNodes: 20,
@@ -57,18 +38,11 @@ export const RANDOM_POLICY_AI_BUDGET: SearchBudget = {
   finalists: 1,
 };
 
-/**
- * What a lesson game costs, for the tests' timeouts. Measured in patch v0.2.0 on the shared 8-core
- * development machine at load averages of 13 to 35: a game under the gates' budget takes 3 to 101 s,
- * about 11 s on average at load 13 and 42 s at load 34; under the random policy's budget, 3 to 23 s.
- * About 90% of it is the AI's search (`decide`), whose every node is an engine `reduce` with its
- * `legalActions`: 5 to 7.5 ms a node, where the v0.1.1 engine took about 3 to 4 ms on the same games
- * run side by side. The harness's own reads (the core's snapshots and the coach) are about 1%.
- */
+/** Full-lesson timeout; AI search dominates its runtime. */
 export const LESSON_GAME_TIMEOUT_MS = 180_000;
-/** A test that plays many games under the gates' budget allows each this much, on average. */
+/** Per-game budget for multi-game gate tests. */
 export const LESSON_GAME_MS = 90_000;
-/** The same under the random policy's budget. */
+/** Per-game budget for multi-game random-policy tests. */
 export const RANDOM_GAME_MS = 45_000;
 
 export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random";
@@ -78,31 +52,21 @@ export type LessonRun = {
   script: LessonScript;
   winner: PlayerId | "draw" | null;
   humanSeat: PlayerId;
-  /** The human's own turns started. */
   humanTurns: number;
   /** How each step ended; a step missing here was never retired (the game ended on it). */
   outcomes: Readonly<Record<string, StepOutcome>>;
-  /** Steps in the order they were first shown, with the player-turn each showed on. */
   shown: { id: string; turn: number }[];
-  /** Tips in the order they showed. */
   tips: string[];
-  /** The coach's state at the end. */
   coach: CoachState;
-  /** The dev core's debug record: seed, decks, handicaps, log and hash. */
   debug: PracticeDebug;
-  /** Every human action the policy sent, and whether the engine refused it. */
   humanActions: { action: ActionBody; refused: string | null; byCoach: boolean }[];
-  /** The last view. */
   view: PlayerView;
 };
 
 type Options = {
   policy?: LessonPolicy;
-  /** Default: the lesson's own. */
   seed?: string;
-  /** For `"random"`: the policy's own stream. */
   policySeed?: string;
-  /** The AI's budget; default the gates' own, or RANDOM_POLICY_AI_BUDGET under `"random"`. */
   budget?: SearchBudget;
 };
 
@@ -110,7 +74,6 @@ function isPlay(action: ActionBody): action is Extract<ActionBody, { type: "play
   return action.type === "play";
 }
 
-/** A target that belongs to the human: their own unit or backrow card, a zone of theirs, or their hero. */
 function hitsOwnSide(view: PlayerView, action: Extract<ActionBody, { type: "play" }>): boolean {
   const own = new Set<string>();
   for (const unit of view.you.units) if (unit !== null) own.add(unit.instanceId);
@@ -123,11 +86,7 @@ function hitsOwnSide(view: PlayerView, action: Extract<ActionBody, { type: "play
   );
 }
 
-/**
- * The autopilot: what a sensible beginner does when the coach asks for nothing. Keep the hand;
- * answer a prompt with its first option; play the dearest card it can (never aiming at its own
- * side), then attack — the hero when it may, else the first target — and end the turn.
- */
+/** Beginner fallback: keep, resolve prompts, play safely, then attack and end. */
 export function autopilot(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
   if (mulliganOpen(view)) {
@@ -157,10 +116,7 @@ export function autopilot(ctx: CoachCtx): ActionBody | null {
   return legal.find((action) => action.type === "endTurn") ?? null;
 }
 
-/**
- * A beginner who plays no card on their own: keep the hand, answer a prompt with its first option,
- * attack the hero when they may, else attack anything, else end the turn.
- */
+/** Coach-passive fallback never plays a card independently. */
 export function passive(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
   if (mulliganOpen(view) || (view.pending !== null && view.pending.forYou)) return autopilot(ctx);
@@ -175,7 +131,6 @@ export function passive(ctx: CoachCtx): ActionBody | null {
   );
 }
 
-/** A player who ignores the coach: uniform over the legal actions, never conceding or offering a draw. */
 function randomPolicy(ctx: CoachCtx, pick: (n: number) => number): ActionBody | null {
   const choices = ctx.legal.filter((action) => action.type !== "concede" && action.type !== "offerDraw" && action.type !== "answerDraw");
   if (choices.length === 0) return null;
@@ -192,7 +147,6 @@ function snapshotOf(response: PracticeResponse): PracticeSnapshot {
   throw new Error(`the practice core answered ${response.type}: ${response.type === "failed" ? response.message : ""}`);
 }
 
-/** Play one lesson to the end under a policy, the coach reading every snapshot. */
 export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   const lesson = lessonById(lessonId);
   const script = scriptFor(lessonId);
@@ -242,7 +196,6 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       if (snapshot.view.active === snapshot.view.viewer && snapshot.view.phase === "main") humanTurns += 1;
     }
 
-    // Read every tip and info step the way a player presses "Got it".
     let display = coachDisplay(script, coach, ctx);
     while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
       const id = display.id;
@@ -287,7 +240,6 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action = randomPolicy(ctx, (n) => rng.int(n));
     }
     if (action === null) {
-      // Nothing the human can do and the AI owes nothing: the engine is waiting on no one.
       throw new Error(`lesson "${lessonId}" stalled on turn ${String(snapshot.view.turn)}: no human action and no AI step`);
     }
     const next = snapshotOf(send(core, counter, { type: "act", action }));
@@ -313,7 +265,6 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   };
 }
 
-/** The human actions a run sent, as the log's actions (for a replay check). */
 export function humanLog(run: LessonRun): Action[] {
   return run.debug.log.filter((action) => action.playerId === run.humanSeat);
 }

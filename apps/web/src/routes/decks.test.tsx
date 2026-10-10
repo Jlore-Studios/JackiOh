@@ -1,10 +1,4 @@
-// `/decks`: §9.4's gate, the three reads the workshop opens with, and the writes it is handed.
-//
-// `game/deckbuilder/DeckWorkshop.test.tsx` covers the workshop itself. This file covers what the
-// route adds: a pending account lands on `/invite` (which is what `10-invite-gate.cy.ts` asserts
-// from the browser), an active one stays and sees its saved decks by name, a profile that has saved
-// nothing opens an empty workshop rather than an error, a collection that cannot be read leaves
-// ownership unclaimed, and a save carries the session's token (R256).
+// `/decks`: §9.4's gate, its reads, and R256 writes.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -86,18 +80,14 @@ async function mount(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.4's gate
-// ---------------------------------------------------------------------------------------------
 
-
-/** Test harness timing, not game or server configuration: how long the account-switch test waits. */
+/** Account-switch test wait, not game or server configuration. */
 const SWITCH_WAIT_MS = 10_000;
 const SWITCH_TEST_TIMEOUT_MS = 30_000;
 
 describe("the gate (§9.4)", () => {
   it("sends a pending account to the code screen", async () => {
-    // `10-invite-gate.cy.ts`: visiting the deckbuilder while pending lands on `/invite`.
     vi.mocked(getMe).mockResolvedValue(meBody("pending", true));
     render(<DecksRoute />);
     await waitFor(() => {
@@ -120,7 +110,7 @@ describe("the gate (§9.4)", () => {
   });
 
   it("does not send a banned account to the code screen", async () => {
-    // Redemption is the pending → active transition; a banned account has no code to redeem.
+    // A banned account cannot redeem a code.
     vi.mocked(getMe).mockResolvedValue(meBody("banned", false));
     render(<DecksRoute />);
     await waitFor(() => {
@@ -138,9 +128,7 @@ describe("the gate (§9.4)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// The reads
-// ---------------------------------------------------------------------------------------------
+// Reads
 
 describe("what the screen opens with", () => {
   it("R250 lists the saved decks and trios by name, with the session's token on the read", async () => {
@@ -164,7 +152,7 @@ describe("what the screen opens with", () => {
   it("still opens when the collection cannot be read, claiming nothing about ownership", async () => {
     vi.mocked(getCollection).mockRejectedValue(new ApiRequestError(403, { code: "account_pending", message: "no" }));
     await mount();
-    // L5 needs quantities; without them a full deck is "Complete", never "Ready" on a guess.
+    // L5 needs quantities; without them, do not guess "Ready".
     expect(screen.getByTestId("deck-row-d-aggro")).toHaveAttribute("data-status", "complete");
   });
 
@@ -177,9 +165,7 @@ describe("what the screen opens with", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// The writes (R256)
-// ---------------------------------------------------------------------------------------------
+// Writes (R256)
 
 describe("saving", () => {
   it("R256 a new deck is PUT under a client-minted id with the token, the name and the catalog version", async () => {
@@ -194,7 +180,7 @@ describe("saving", () => {
     const [token, id, input] = vi.mocked(putDeck).mock.calls[0] ?? [];
     expect(token).toBe(TOKEN);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-    // D5: a fresh deck carries no portrait yet; the column reads it back as `vanilla` (R641).
+    // D5: a fresh deck has no portrait; the column reads `vanilla` (R641).
     expect(input).toEqual({ name: "Deck 1", cards: [], catalogVersion: catalog.version, portrait: null });
     await waitFor(() => {
       expect(screen.getByTestId("sync-status")).toHaveAttribute("data-state", "saved");
@@ -209,9 +195,7 @@ describe("saving", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Another account on this device (R256)
-// ---------------------------------------------------------------------------------------------
 
 describe("when another account signs in under an open workshop", () => {
   const OTHER_TOKEN = "e2e-token-p2";
@@ -223,17 +207,15 @@ describe("when another account signs in under an open workshop", () => {
       profile: { id: token === OTHER_TOKEN ? OTHER_PROFILE : PROFILE, status: "active" },
     }));
     await mount();
-    // An edit the debounce has not sent yet: this profile's, and only this profile's.
     fireEvent.click(screen.getByTestId("deck-new"));
     const mirrored = window.localStorage.getItem(mirrorKey(PROFILE)) ?? "";
     expect(mirrored).toContain("Deck 1");
 
-    // Another tab signs in as someone else (the gate hears it through `storage`, R194's path).
+    // The gate hears another tab's sign-in through `storage` (R194).
     vi.mocked(getDecks).mockResolvedValue(decksResponse([], [], catalog.version));
     window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: OTHER_TOKEN }));
     window.dispatchEvent(new StorageEvent("storage", { key: E2E_SESSION_STORAGE_KEY }));
-    // Generous waits: this test runs on the real clock, and under a loaded `pnpm test` the gate's
-    // re-read and the new workshop's mount can take longer than waitFor's one-second default.
+    // Real-clock reload and mount can exceed waitFor's one-second default.
     await waitFor(
       () => {
         expect(getDecks).toHaveBeenCalledWith(OTHER_TOKEN);
@@ -246,15 +228,11 @@ describe("when another account signs in under an open workshop", () => {
       },
       { timeout: SWITCH_WAIT_MS },
     );
-    // Give the old workshop's last flush and any debounce every chance to go out.
     await new Promise((resolve) => setTimeout(resolve, DECK_AUTOSAVE_DEBOUNCE_MS * 2));
 
     const sentAsOther = vi.mocked(putDeck).mock.calls.filter(([token]) => token === OTHER_TOKEN);
     expect(sentAsOther, "the first profile's new deck must not be created in the second's account").toEqual([]);
-    // Not lost either: it waits in the first profile's own mirror for that profile's next visit —
-    // unless the debounce ran out before the switch landed (a loaded run on the real clock takes
-    // longer than `DECK_AUTOSAVE_DEBOUNCE_MS` to re-read the gate), and then it was saved, with the
-    // first profile's own token, which is just as right.
+    // It may save before the switch; otherwise the first profile's mirror keeps it (R256).
     const kept = window.localStorage.getItem(mirrorKey(PROFILE)) ?? "";
     expect(kept).toContain("Deck 1");
     const savedAsFirst = vi.mocked(putDeck).mock.calls.some(([token, , input]) => token === TOKEN && input.name === "Deck 1");

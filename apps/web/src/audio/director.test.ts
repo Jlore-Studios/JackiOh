@@ -26,9 +26,7 @@ import type { AudioEngine, CardAudioTable, CardHook, PlayableLineKind, SfxId, Sf
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Fixtures
- * --------------------------------------------------------------------------------------------- */
+// Fixtures
 
 const LINES: CardAudioTable = {
   voices: {
@@ -163,9 +161,7 @@ function must<T>(value: T | undefined, what: string): T {
   return value;
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * B24: cues play when an entry starts
- * --------------------------------------------------------------------------------------------- */
+// B24: cues play when an entry starts
 
 describe("B24 cues play when the runner starts an entry", () => {
   it("B24 onView sends nothing to the sink, it only owes the fresh events", () => {
@@ -252,9 +248,7 @@ describe("B24 cues play when the runner starts an entry", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B25: the flush
- * --------------------------------------------------------------------------------------------- */
+// B25: the flush
 
 describe("B25 events the runner never started are flushed once, condensed, by onIdle", () => {
   it("B25 a reduced-motion burst: SFX deduped in stream order, at most FLUSH_MAX_SFX, FLUSH_GAP_MS apart, one line, gameOver last", () => {
@@ -383,9 +377,7 @@ describe("B25 events the runner never started are flushed once, condensed, by on
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B26: nothing is voiced twice
- * --------------------------------------------------------------------------------------------- */
+// B26: nothing is voiced twice
 
 describe("B26 no event is voiced twice", () => {
   it("B26 across overlapping event windows, the events both views carry sound once", () => {
@@ -456,9 +448,7 @@ describe("B26 no event is voiced twice", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B27: a fresh view or a new seat voices nothing (R203)
- * --------------------------------------------------------------------------------------------- */
+// B27: a fresh view or a new seat voices nothing (R203)
 
 describe("R203: a hand-over plays nothing the arriving seat's view did not produce", () => {
   it("R203 (B27) the first view voices nothing, and its window is dropped", () => {
@@ -507,9 +497,7 @@ describe("R203: a hand-over plays nothing the arriving seat's view did not produ
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B22: the director's mana baseline
- * --------------------------------------------------------------------------------------------- */
+// B22: the director's mana baseline
 
 describe("B22 the mana baseline", () => {
   it("B22 starts at the planned view's mana.current for that player", () => {
@@ -577,9 +565,7 @@ describe("B22 the mana baseline", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B55: a window R97 has un-redacted is not new
- * --------------------------------------------------------------------------------------------- */
+// B55: a window R97 has un-redacted is not new
 
 /** Every entry the Game would enqueue for `next` (the runner's `newEventsSince`), started in order, then idle. */
 function playLikeGame(director: SoundDirector, prev: PlayerView, next: PlayerView): void {
@@ -588,7 +574,7 @@ function playLikeGame(director: SoundDirector, prev: PlayerView, next: PlayerVie
   director.onIdle();
 }
 
-/** A runner handed `next`'s whole window, as Game's exact matcher once did after an R97 rewrite. */
+/** A runner handed `next`'s whole window, as an exact matcher would after an R97 rewrite. */
 function replayWholeWindow(director: SoundDirector, prev: PlayerView, next: PlayerView): void {
   director.onView(next);
   for (const entry of planEntries(next.events, prev, false)) director.onEntryStart(entry);
@@ -675,8 +661,7 @@ function turn2(): GameEvent {
 
 /**
  * A real game (cheap20 against cheap20) played until p2 plays a card it drew earlier in p1's
- * window, so p1's `drawn` for it turns from the sentinel into the card (R97). Deterministic: the
- * same seeds in the same order, the first that produces it wins.
+ * window, so p1's `drawn` for it turns from the sentinel into the card (R97).
  */
 function drawThenPlay(): { before: PlayerView; after: PlayerView; produced: number } | null {
   for (let seed = 1; seed <= 40; seed += 1) {
@@ -702,9 +687,7 @@ function drawThenPlay(): { before: PlayerView; after: PlayerView; produced: numb
   return null;
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * R203 against the engine's own redaction
- * --------------------------------------------------------------------------------------------- */
+// R203 against the engine's own redaction
 
 type Seats = { p1: Recorder; p2: Recorder };
 
@@ -798,9 +781,7 @@ describe("R203 against real viewFor redaction: a trap names itself only to its c
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B47 end to end: the director into the real engine
- * --------------------------------------------------------------------------------------------- */
+// B47 end to end: the director into the real engine
 
 describe("B47 a trap that answers a play is heard over that play's line", () => {
   let engine: AudioEngine | null = null;
@@ -862,9 +843,7 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Issue #124: a sweep or a whole-pile impact is voiced condensed
- * --------------------------------------------------------------------------------------------- */
+// A sweep or a whole-pile impact is voiced condensed
 
 describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => {
   function sweptView(): PlayerView {
@@ -916,9 +895,7 @@ describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => 
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R655: card effects ride the same path as the lines
- * --------------------------------------------------------------------------------------------- */
+// R655: card effects ride the same path as the lines
 
 describe("R655 a card's effect is sent on its hook's moment, through the director", () => {
   /** #66 The Rock: an effect and a line on its play, only an effect on its death; #5 a cast that is only an effect. */
