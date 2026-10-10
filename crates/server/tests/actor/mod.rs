@@ -8,6 +8,7 @@ pub mod clock;
 pub mod dealt_deck;
 pub mod engine_real;
 pub mod glitch;
+pub mod heartbeat;
 pub mod last_boards;
 pub mod match_actor;
 pub mod recovery;

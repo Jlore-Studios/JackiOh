@@ -155,4 +155,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R1437]] is a result the store fails to take (issue #621, 2026-10-10)**: the match actor tries the write again, and a write that never lands leaves the match `live`, both players still in it, for the next socket's rebuild to record. It takes the next number after [[R1436]]. It edits [[§9.5]].
 
+**[[R1441]] is the match socket's heartbeat (issue #622, 2026-10-10)**: the server pings an attached match socket and drops one that has sent nothing for three intervals, which starts its seat's grace; its outgoing queue is bounded and a socket that overflows it is closed; and a page that wakes probes a quiet socket and replaces it if it does not answer, with jitter on the reconnect backoff. It takes R1441, the first number free on `main` and on the open branches: R1437 is issue #621's, and issue #571's branch holds R1438 to R1440. It edits [[§9.5]] and [[§9.8]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

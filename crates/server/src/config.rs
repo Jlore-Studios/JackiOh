@@ -399,6 +399,18 @@ pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// reconnects; ten leaves room for several players behind one home or campus address. Past it the
 /// upgrade is refused with 429 before the handshake is read.
 pub const WS_MAX_CONNECTIONS_PER_ADDRESS: usize = 10;
+/// SPEC §11 R1441: how often the server pings a match socket that is attached. Fifteen seconds is well
+/// under the 60-second idle limit common proxies hold a quiet connection to, so the ping also keeps
+/// the path open. Pings run only while a socket is attached, so an idle server still sleeps.
+pub const WS_PING_INTERVAL_SECONDS: i64 = 15;
+/// R1441: how long a match socket may send no frame of any kind (a pong counts) before the server
+/// drops it, which is a disconnect and starts the seat's grace (§9.5, R79). Three ping intervals, so
+/// a slow mobile link that loses a pong or two is not dropped.
+pub const WS_IDLE_TIMEOUT_SECONDS: i64 = 45;
+/// R1441, §9.8: how many frames a match socket's outgoing queue holds before the socket is closed
+/// for not reading. Views are full snapshots, so a reconnect loses nothing, and a reader that keeps
+/// up holds only a few.
+pub const WS_OUTBOX_MAX_FRAMES: usize = 256;
 
 // ---------------------------------------------------------------------------------------------
 // The reaper (§9.5).
