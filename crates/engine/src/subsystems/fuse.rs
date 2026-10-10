@@ -59,7 +59,7 @@ use crate::script::{
     TargetCheck, TributeWhenHook, TriggerDef, TriggerRun, WouldCounterHook, attack_mod_hook, aura_hook,
     condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
     AttackHealth, CardCost, CardDef, CardFace, CardType, FusedIngredient, GameEvent, Keyword, KeywordKind,
     PlayerId, Rarity, Selection, SetName, Tag, TargetDecl, Zone, ZoneName, keyword_key,
@@ -279,6 +279,9 @@ fn fused_face(ingredients: &[CardInstance], defs: &[CardDef], radiant: bool, for
             .map(|face| face.text.as_str())
             .collect::<Vec<&str>>()
             .join("\n"),
+        // ME-GRANT: a fused face grants nothing itself; the fused script's grant map (R102) is what
+        // a grant it carries resolves through.
+        grants: None,
     }
 }
 
@@ -1101,6 +1104,17 @@ fn combine_objects(records: &[Script]) -> Script {
         set_stat: None,
         start_of_turn: hooks(|s| s.start_of_turn.clone(), "startOfTurn"),
         end_of_turn: hooks(|s| s.end_of_turn.clone(), "endOfTurn"),
+        // ME-GRANT (MD-D13): a fused card merges its ingredients' grant maps (R102); the keys name
+        // their definition (`<defId>#<key>`), so they never collide.
+        grants: {
+            let mut grants: IndexMap<&'static str, Hook> = IndexMap::new();
+            for record in records {
+                for (key, hook) in &record.grants {
+                    grants.insert(*key, hook.clone());
+                }
+            }
+            grants
+        },
         aura: None,
         attack_mods: None,
         triggers: lists_of_triggers(|s| s.triggers.clone()),
@@ -1817,6 +1831,17 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     } else {
         Some(seen.into_iter().collect())
     };
+    // ME-GRANT (MD-D13): a Fuse unites the granted Death abilities of every ingredient, the kept
+    // card itself included, in order — and carries none when no ingredient has any.
+    let mut united: Vec<Grant> = card.grants.clone().unwrap_or_default();
+    for ingredient in ingredients {
+        for grant in ingredient.grants.clone().unwrap_or_default() {
+            if !united.contains(&grant) {
+                united.push(grant);
+            }
+        }
+    }
+    card.grants = if united.is_empty() { None } else { Some(united) };
 }
 
 /// The terms a crafted hand card is made on (TS `craftInHand`'s `terms`).

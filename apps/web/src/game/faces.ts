@@ -86,6 +86,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
+  // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
+  if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;

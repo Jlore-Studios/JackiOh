@@ -171,6 +171,8 @@ export type FaceModel = {
    * sum whenever the sum is not the printed one (R1438). Empty outside play.
    */
   gained: readonly Keyword[];
+  /** ME-GRANT, R1107: the Death abilities other cards granted the unit, each on its own line after the gained keywords. Empty outside play. */
+  grants: readonly string[];
   /**
    * The collection's text for this face, when the face in play prints something else — a Heroic
    * Power's rolled power, a Vanilla unit — so the inspect overlays can show both. Null when the two
@@ -244,6 +246,8 @@ export type InPlay = {
   quest?: QuestView;
   /** B5 E14, R399: the Spell a copier has the text of (`CardView.copies`), with its definition. */
   copies?: { def: CardDef; radiant: boolean; params?: Readonly<Record<string, number>> };
+  /** ME-GRANT, R1107: the Death abilities other cards granted the unit (`UnitView.grants`). */
+  grants?: readonly string[];
 };
 export type FaceSource = {
   defId: string;
@@ -339,6 +343,8 @@ export function faceModel(source: FaceSource): FaceModel {
       inPlay === undefined || (source.live === undefined && inPlay.handKeywords === undefined)
         ? []
         : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
+    // ME-GRANT, R1107: the granted Death abilities, each on its own line after the gained keywords.
+    grants: inPlay?.grants ?? [],
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
     tuning,

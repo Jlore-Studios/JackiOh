@@ -512,11 +512,13 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `bounced` | Card flies to controller's hand | 350 ms | hand count increments | `bounce`: smoke and a card-back ghost to the hand |
 | `drawn` | Card slides from library to hand (own) or back to hand count (opponent) | 250 ms | hand length or count increments | `draw`: card-back ghost from library to hand |
 | `radiantSet` | Gold glow pulse, stats swap | 400 ms | card has class `radiant` afterwards | `radiant`: gold sheen, gold burst, rays on a field card |
+| `deradianted` | Gold glow goes out, stats swap back | 400 ms | card loses class `radiant` | `cancel` |
 | `positionSwitched` | Rotate 90° / back | 250 ms | transform contains rotate(90deg) for DEF | — |
 | `controlChanged` | Card slides across the centre line to the new zone | 450 ms | card testid now under the other side's zone | `mindControl`: arcane motes stream to the new zone |
 | `trapFired` | Backrow card flips face-up, holds, then dissolves (or stays for Field Trap) | 700 ms | trap name visible during hold | `trap`: arcane ring and burst, small shake |
 | `promptOpened` | Modal fades in | 150 ms | modal has `data-prompt-kind` | — |
 | `manaChanged` | Crystals fill/empty | 150 ms | crystal count equals mana | `mana`: a sparkle per crystal that fills |
+| `manaSpent` | Crystals fill/empty (the spend just reported) | 150 ms | `mana-<side>` | silent (`manaChanged` sounds it) |
 | `turnStarted` | Banner "Your turn" / "Opponent's turn" | 600 ms | banner text | `banner`: "Your turn" with rays, or "Opponent's turn" |
 | `divineShieldLost` | Shield shatter | 250 ms | shield icon removed | `shieldBreak`: gold ring and shards |
 | `fused` | Two cards merge into one | 500 ms | one card remains with summed stats | `fuse`: smoke and arcane motes into the survivor |

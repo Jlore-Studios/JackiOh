@@ -1389,12 +1389,18 @@
     "meditative-049-3": { // AI Girlfriend
       cast: { voice: "diva", text: "Fight for my amusement, darlings." },
     },
+    "meditative-050": { // CN Tech
+      cast: { voice: "robot", text: "Winning formula found. You're welcome." },
+    },
     "meditative-051": { // Devin Bot
       play: { voice: "robot", text: "Meditation subroutine engaged." },
       death: { voice: "robot", text: "Rebooting. Somewhere else." },
     },
     "meditative-052": { // Economic Anxiety
       cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
+    },
+    "meditative-053": { // Prestige
+      cast: { voice: "diva", text: "Darling, true class never fades." },
     },
     "meditative-055": { // Dragon Fruit
       cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
@@ -1405,6 +1411,14 @@
     "meditative-057": { // Clip-Farming Critikal
       play: { voice: "hustler", text: "Did you get that on camera?" },
       death: { voice: "hustler", text: "Cut. Print it anyway." },
+    },
+    "meditative-058": { // Permanent Underclassman
+      play: { voice: "zoomer", text: "First year! Best year! Only year!" },
+      death: { voice: "zoomer", text: "Held back. Again." },
+    },
+    "meditative-059": { // Permanent Upperclassman
+      play: { voice: "prof", text: "Seniors rule. Permanently." },
+      death: { voice: "prof", text: "Graduation postponed. Indefinitely." },
     },
     "meditative-060": { // Eschews
       cast: { voice: "snob", text: "Nope. Not dealing with that." },
@@ -1436,6 +1450,10 @@
     },
     "meditative-068": { // Catnip
       cast: { voice: "cat", text: "Mrrrow! Who left the nip out?" },
+    },
+    "meditative-069": { // The Maestro
+      play: { voice: "posh", text: "I conduct. You suffer." },
+      death: { voice: "posh", text: "Encore? Never." },
     },
     "meditative-070": { // I'M WILL BE YOUR DOOM
       play: { voice: "brute", text: "I'M WILL BE YOUR DOOM" },

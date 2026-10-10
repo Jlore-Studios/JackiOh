@@ -552,6 +552,13 @@ pub struct CardFace {
     /// Conventions and written out in full (R277), so a client can print it whole and mark what differs.
     /// A tunable number (`CardDef.params`, B3.4) is written `{key}`, filled in by `fill_params`.
     pub text: String,
+    /// ME-GRANT (MD-D13): the Death abilities this face grants, by key, holding the quoted ability of
+    /// the face — `meditative-058`'s faces carry `bookDeath`, `meditative-059`'s `fusedBookDeath`.
+    /// The instance carries the name and the numbers as plain data; `grants::grant_texts` fills the
+    /// text for the view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<IndexMap<String, String>>,
 }
 
 string_union! {
@@ -762,9 +769,20 @@ pub fn fill_params(def: &CardDef, face: FaceKind, values: Option<&IndexMap<Strin
         FaceKind::Base => &def.base.text,
         FaceKind::Radiant => &def.radiant.text,
     };
+    fill_text(text, def, face, values)
+}
+
+/// ME-GRANT: `fill_params` over a text that is not the face's own — a granted ability's quoted text,
+/// filled with the grant's numbers against the granting card's declarations.
+pub fn fill_text(
+    text: &str,
+    def: &CardDef,
+    face: FaceKind,
+    values: Option<&IndexMap<String, i32>>,
+) -> String {
     let params = match &def.params {
         Some(params) if !params.is_empty() => params,
-        _ => return text.clone(),
+        _ => return text.to_string(),
     };
     let mut out = String::with_capacity(text.len());
     let mut copied = 0;
@@ -1320,6 +1338,7 @@ mod tests {
             x_stats: None,
             keywords: vec![],
             text: text.into(),
+            grants: None,
         };
         CardDef {
             id: "core-999".into(),

@@ -827,6 +827,11 @@ pub struct Script {
     pub set_stat: Option<SetStatHook>,
     pub start_of_turn: Option<Hook>,
     pub end_of_turn: Option<Hook>,
+    /// ME-GRANT (MD-D13): the Death abilities this card grants, by key — `meditative-058#bookDeath`
+    /// grants face `bookDeath`. A grant names a hook here, so state stays plain data (a closure never
+    /// enters it, as `fuse.rs` explains). A fused card merges its ingredients' maps (R102): the keys
+    /// already name their definition, so they never collide.
+    pub grants: IndexMap<&'static str, Hook>,
     pub aura: Option<AuraHook>,
     pub triggers: Vec<TriggerDef>,
     pub on_play_hook: Option<Hook>,
@@ -1018,6 +1023,15 @@ pub struct ActivationCost {
     /// Turtinator, which cannot Tribute itself; R683).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tribute_excludes_self: Option<bool>,
+    /// MD-D9: either player may activate an ability with this cost (Meditative #54's shape, proved
+    /// with the engine fixture while #54 waits for #525's Jade). The non-controller activates in
+    /// their own main phase, paying from their own mana. Absent: the controller's alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub either_player: Option<bool>,
+    /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
+    /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
+    #[serde(skip)]
+    pub mana_param: Option<&'static str>,
 }
 
 /// B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"

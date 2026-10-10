@@ -432,6 +432,8 @@ pub fn clone_of(
     copy.chinese = source.chinese;
     // MD-B15, R923: a copy keeps the granted tags of the card copied.
     copy.granted_tags = source.granted_tags.clone();
+    // ME-GRANT (MD-D13): a copy keeps the granted Death abilities of the card copied (R57).
+    copy.grants = source.grants.clone();
     copy.buffs = AttackHealth {
         attack: source.buffs.attack,
         health: source.buffs.health,

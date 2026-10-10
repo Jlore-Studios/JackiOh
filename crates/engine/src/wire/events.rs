@@ -743,6 +743,23 @@ pub enum GameEvent {
     Translated {
         instance_id: String,
     },
+    /// MD-D6 (Meditative #53 Prestige): De-Radiant cleared the card's Radiant flag. The face swaps
+    /// back while damage, buffs and tuning stay (§5.2's exception). Hidden per zone like `radiantSet`
+    /// (R440): a hand or deck card reads redacted, a face-up card openly.
+    Deradianted {
+        instance_id: String,
+        def_id: String,
+        zone: Zone,
+    },
+    /// MD-D26 (Meditative #69 The Maestro): `player` paid `amount` mana for a play's price or an
+    /// activation's price. Public: it names a player and a number, never a card. It is emitted only
+    /// while a card answers it, so a game with no listener serialises, hashes and replays as before.
+    ManaSpent {
+        player: PlayerId,
+        amount: i32,
+        #[serde(rename = "for")]
+        for_: ManaSpentFor,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M8, MN05). Its BUILD M5-T4 row, `ANIMATIONS` and
     // `SOUND_CUES` rows came with it, and `viewFor` redacts it as it does `damage`.
@@ -866,6 +883,8 @@ string_union! {
         Marked = "marked",
         Glitched = "glitched",
         Translated = "translated",
+        Deradianted = "deradianted",
+        ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
         JadeChanged = "jadeChanged",
     }
@@ -1023,9 +1042,19 @@ impl GameEvent {
             GameEvent::Glitched { .. } => GameEventType::Glitched,
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
+            GameEvent::Deradianted { .. } => GameEventType::Deradianted,
+            GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
         }
+    }
+}
+
+string_union! {
+    /// MD-D26: what the spent mana paid for — a play's price or an activation's price.
+    pub enum ManaSpentFor {
+        Play = "play",
+        Activate = "activate",
     }
 }
 
@@ -1081,7 +1110,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 68);
+        assert_eq!(GAME_EVENT_TYPES.len(), 71);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

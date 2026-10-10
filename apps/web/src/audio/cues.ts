@@ -535,6 +535,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
         ? [sfx("bloodDrain"), sfx("goldBurst", undefined, GOLD_BURST_DELAY_MS)]
         : [sfx("radiant")],
   },
+  // MD-D6: De-Radiant takes the glow away with a soft cancel.
+  deradianted: { sfx: "cancel", cues: () => [sfx("cancel")] },
   // R1365: a Sheep bleats as it comes out of the puff.
   transformed: { sfx: "poof", cues: transformCues },
   fused: { sfx: "fuse", cues: () => [sfx("fuse")] },
@@ -563,6 +565,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       return [sfx("mana", { mine: event.player === ctx.view.viewer, amount: event.current - before })];
     },
   },
+  manaSpent: silent("manaChanged sounds it"),
   turnStarted: {
     sfx: "turnStart",
     cues: (event, ctx) => [sfx("turnStart", { mine: event.player === ctx.view.viewer })],

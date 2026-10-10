@@ -1070,11 +1070,17 @@
   "meditative-049-3": {
     "flavour": "She only wants a sparring partner."
   },
+  "meditative-050": {
+    "flavour": "The algorithm has already decided. It likes your odds."
+  },
   "meditative-051": {
     "flavour": "It meditates by filling the room with tiny copies of itself."
   },
   "meditative-052": {
     "flavour": "The market demands sacrifice."
+  },
+  "meditative-053": {
+    "flavour": "Old money never sparkles. It gleams."
   },
   "meditative-055": {
     "flavour": "Scaly outside, speckled inside, and a little smug about both."
@@ -1084,6 +1090,12 @@
   },
   "meditative-057": {
     "flavour": "Do it for the clip. Then do it again, but Radiant."
+  },
+  "meditative-058": {
+    "flavour": "Four years, eight semesters, one eternal freshman."
+  },
+  "meditative-059": {
+    "flavour": "Seniors graduate. Legends get held back with honors."
   },
   "meditative-060": {
     "flavour": "It avoids everything. Especially responsibility."
@@ -1111,6 +1123,9 @@
   },
   "meditative-068": {
     "flavour": "One sniff and the whole yard goes feral."
+  },
+  "meditative-069": {
+    "flavour": "He raises the baton. The choir coughs in four-part harmony."
   },
   "meditative-070": {
     "flavour": "Grammar was never part of the prophecy."

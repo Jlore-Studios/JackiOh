@@ -572,6 +572,7 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         x_stats: None,
         keywords: vec![],
         text: String::new(),
+        grants: None,
     };
     CardDef {
         id: id.to_string(),

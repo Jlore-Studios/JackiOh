@@ -133,6 +133,7 @@ pub mod magnetic;
 pub mod mana;
 pub mod mana_before_play;
 pub mod mb22;
+pub mod meditative_riders;
 pub mod modifiers;
 pub mod mulligan_concurrent;
 pub mod night_market;
