@@ -4532,9 +4532,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-10T16:56:07Z",
+        "at": "2026-10-10T23:25:59Z",
         "by": "`claude` (strong)",
-        "sha": "cb28a0fe158fe6ffc152111515e2e5cb15ab6e8f"
+        "carried_from": "cb28a0fe158fe6ffc152111515e2e5cb15ab6e8f",
+        "resolved_by": "`claude` (strong)",
+        "sha": "edaeae4184628943b3d29958da05cef015d3d732"
       },
       "difficulty": "hard",
       "failures": 0,
