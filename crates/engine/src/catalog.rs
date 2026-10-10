@@ -29,8 +29,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient,
-    KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
+    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
@@ -88,6 +88,7 @@ struct Registered {
     defs: CardDefs,
     version: String,
     index: indexmap::IndexMap<String, usize, IdHash>,
+    win_rates: crate::win_rates::WinRateTable,
 }
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
@@ -117,17 +118,35 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// TS `registerCatalog(defs, catalogVersion = "test")`. Set once per process: a second call is
-/// ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
-/// testkit's override instead (SURFACE §8).
-pub fn register_catalog(defs: CardDefs, catalog_version: &str) {
+/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table beside
+/// them (ME-STATS, MD-D1). Set once per process: a second call is ignored (the registry is a
+/// `OnceLock`, SURFACE §3); a test that needs another catalog sets the testkit's override instead
+/// (SURFACE §8).
+pub fn register_catalog(defs: CardDefs, catalog_version: &str, win_rates: crate::win_rates::WinRateTable) {
     let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
         index,
+        win_rates,
     });
 }
+
+/// ME-STATS: the win-rate table CN Tech reads — the testkit's override first, then the registered
+/// table, then an empty table held in a `OnceLock` (nothing registered yet).
+pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
+    #[cfg(feature = "testkit")]
+    if let Some(table) = crate::testkit::scenario::win_rates_override() {
+        return table;
+    }
+    match REGISTERED.get() {
+        Some(registered) => &registered.win_rates,
+        None => EMPTY_WIN_RATES.get_or_init(crate::win_rates::WinRateTable::default),
+    }
+}
+
+/// What `registered_win_rates` answers before anything is registered.
+static EMPTY_WIN_RATES: OnceLock<crate::win_rates::WinRateTable> = OnceLock::new();
 
 pub fn registered_catalog() -> &'static CardDefs {
     registered()
@@ -218,6 +237,9 @@ pub struct CatalogQueryArgs {
     /// R1437: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck_based: Option<bool>,
+    /// R1080: the printed base attack and health a pool asks for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats: Option<AttackHealth>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
@@ -265,6 +287,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             not_tags: query.not_tags,
             any_tags: query.any_tags,
             luck_based: None,
+            stats: query.stats,
             rarity: query.rarity,
             set: query.set,
             exclude_def_id: query.exclude_def_id,
@@ -398,6 +421,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1221: the Tribute-cost filter, read off the registered script.
     if let Some(wanted) = args.tribute
         && has_tribute_cost(def) != wanted
+    {
+        return false;
+    }
+    // R1080: `stats` reads the printed base face; a face that prints none never matches.
+    if let Some(wanted) = args.stats
+        && (def.base.attack != Some(wanted.attack) || def.base.health != Some(wanted.health))
     {
         return false;
     }

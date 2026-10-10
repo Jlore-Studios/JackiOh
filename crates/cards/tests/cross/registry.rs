@@ -120,6 +120,7 @@ fn fingerprint(script: &Script) -> Value {
             "heroGuard": script.hero_guard.is_some(),
             "conditionalKeywords": script.conditional_keywords.is_some(),
             "afterAttack": script.after_attack.is_some(),
+            "afterAttacked": script.after_attacked.is_some(),
             "plagueMultiplier": script.plague_multiplier.is_some(),
             "echoX": script.echo_x.is_some(),
             "quests": script.quests.is_some(),

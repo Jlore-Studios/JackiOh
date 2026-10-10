@@ -386,6 +386,21 @@ pub fn max_mana_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.max
 }
 
+/// R1064: every point of Armor on the field: each acting Unit's on both sides through the §10.4 layers (printed,
+/// Defense Position's +1, auras) and both heroes' as §4.4 step 2 reads it (`hero_armor_of`, R124). Public (§10.8).
+pub fn armor_on_field(state: &GameState) -> i32 {
+    crate::wire::PLAYER_IDS
+        .iter()
+        .map(|&player| {
+            crate::damage::hero_armor_of(state, player)
+                + active_units_of(state, player)
+                    .into_iter()
+                    .map(|unit| crate::layers::unit_view(state, unit).armor)
+                    .sum::<i32>()
+        })
+        .sum()
+}
+
 // ---------------------------------------------------------------------------
 // The yellow glow's facts for the cards R195 left out (R662)
 // ---------------------------------------------------------------------------

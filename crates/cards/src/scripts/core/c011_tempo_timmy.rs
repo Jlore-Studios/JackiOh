@@ -80,6 +80,7 @@ mod tests {
             attack_mods,
             conditional_keywords,
             after_attack,
+            after_attacked,
             plague_multiplier,
             echo_x,
             deck_triggers,
@@ -91,6 +92,7 @@ mod tests {
             face_down_play,
             turn_hook_extra,
             cry_death_extra,
+            grants,
         } = script;
         cost.is_none()
             && cry.is_none()
@@ -125,6 +127,7 @@ mod tests {
             && attack_mods.is_none()
             && conditional_keywords.is_none()
             && after_attack.is_none()
+            && after_attacked.is_none()
             && plague_multiplier.is_none()
             && echo_x.is_none()
             && deck_triggers.is_empty()
@@ -136,6 +139,7 @@ mod tests {
             && face_down_play.is_none()
             && turn_hook_extra.is_none()
             && cry_death_extra.is_none()
+            && grants.is_empty()
     }
 
     fn kinds(keywords: &[Keyword]) -> Vec<&'static str> {

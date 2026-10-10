@@ -3954,3 +3954,51 @@ mod r1044_face_down_play_over_the_socket {
         }
     }
 }
+
+mod r1086_magnetic_over_the_socket {
+    use super::*;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    #[test]
+    fn r1086_parses_a_play_s_magnetic_flag() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                    "playerId": "p1",
+                    "nonce": "mag-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "mag-1".to_string(),
+                body: serde_json::from_value(json!({
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                }))
+                .expect("a play body"),
+            }))
+        );
+
+        // Absent reads as no Magnetic play, and a non-boolean is malformed, never passed on.
+        let bare = parse_client_message(
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "mag-2" } })
+                .to_string(),
+        );
+        assert!(matches!(bare, Ok(ClientMessage::Action(_))), "{bare:?}");
+        let wrong = parse_client_message(
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "magnetic": "yes", "nonce": "bad" } })
+                .to_string(),
+        );
+        assert!(wrong.is_err(), "{wrong:?}");
+    }
+}

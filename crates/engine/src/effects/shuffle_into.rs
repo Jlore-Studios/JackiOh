@@ -57,6 +57,10 @@ pub struct ShuffleIntoArgs {
     /// (Meditative #96's Journey Complete, `memory.journey`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<IndexMap<String, Value>>,
+    /// ME-DECK-BOTTOM (Meditative #49): put the fresh card at this end of the library instead of
+    /// a random position. Absent is the shuffle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<crate::ownership::LibraryEnd>,
 }
 
 /// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
@@ -76,7 +80,12 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             if let Some(memory) = &args.memory {
                 card.memory.extend(memory.clone());
             }
-            shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref());
+            match args.position {
+                None => shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref()),
+                Some(end) => {
+                    crate::draw::put_into_library(ctx, &mut card, false, args.copy_of.as_deref(), end)
+                }
+            };
         }
     })
 }

@@ -652,3 +652,31 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         );
     }
 }
+
+/// R1062: I1 and I4 stay clean as Fiery Waraxe animates again and attacks the hero.
+mod r1062_fiery_waraxe_reanimated {
+    use super::*;
+
+    #[test]
+    fn r1062_i1_and_i4_stay_clean_as_fiery_waraxe_animates_again_and_attacks_the_hero() {
+        let mut g = scenario(json!({
+            "p1": { "hand": ["meditative-066", "core-005"] },
+            "p2": { "hand": ["core-005"] },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        g.play("meditative-066", json!({ "zone": 1 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let waraxe = g.unit(PlayerId::P1, 1).expect("the waraxe").id.clone();
+        let attack = ActionBody::Attack {
+            attacker_id: waraxe.clone(),
+            target_id: "hero-p2".to_string(),
+        };
+        assert_eq!(monitor.before(g.state(), PlayerId::P1, &attack), no_violations());
+        g.attack(&waraxe, "hero");
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+}

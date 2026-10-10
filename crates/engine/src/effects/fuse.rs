@@ -106,6 +106,13 @@ pub struct FuseCardsArgs {
     /// R470: the kept card keeps the cost it had ("its cost doesn't change").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// ME-FUSE-RANDOM (Meditative #47 饕餮, MD-C20): instead of named ingredients, fuse one card
+    /// drawn uniformly from this scope into the kept target — an enemy permanent on the field (tops
+    /// of piles, both rows, face-down cards included, never Immutable) or a card of the opponent's
+    /// library. A library ingredient goes in as a fresh phantom (its definition only), and the
+    /// library card ceases to exist, so its id never reaches a view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_ingredient: Option<crate::effects::card_scope::CardScope>,
 }
 
 /// §6.3 Fuse per R77, wrapped. The ingredients are named in two ways, in this order: cards that
@@ -137,6 +144,12 @@ pub struct FuseCardsArgs {
 /// that is off the field or Immutable (R23), and for a call that names neither a target nor a hand.
 pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     Effect::new("fuseCards", move |ctx| {
+        // ME-FUSE-RANDOM first: the ingredient is drawn inside `apply` from the match rng, and the
+        // kept card is the target named beside it. Nothing else of this call runs then.
+        if let Some(scope) = &args.random_ingredient {
+            fuse_random_ingredient(ctx, &args, scope);
+            return;
+        }
         // Resolved ONCE, before any fusion: these objects are reused for every fusion below, so an
         // ingredient the first fusion consumed still contributes its definition to the second.
         let mut ingredients: Vec<CardInstance> = Vec::new();
@@ -267,6 +280,84 @@ fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<&'
         .or_else(|| ctx.def_id.clone());
     let asked = asked.cloned().unwrap_or_default();
     query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()))
+}
+
+/// ME-FUSE-RANDOM (Meditative #47, MD-C20): fuse one card drawn uniformly from `scope` into the
+/// kept target named beside it. The kept card is `targetInstanceId`'s live instance; an Immutable
+/// kept card eats nothing and draws nothing (R23). The pool is the scope's cards minus the kept
+/// card and minus every Immutable card (being eaten changes its text, R23); with none, nothing is
+/// fused and nothing is drawn. A library ingredient goes in as a fresh phantom of its definition —
+/// radiant flag, tuning and enchantments carried — and the library card ceases to exist, so its id
+/// never reaches a view.
+fn fuse_random_ingredient(
+    ctx: &mut EffectContext<'_>,
+    args: &FuseCardsArgs,
+    scope: &crate::effects::card_scope::CardScope,
+) {
+    // The kept card is the target's live instance; without one there is no fusion.
+    let Some(kept_id) = args.target_instance_id.clone() else {
+        return;
+    };
+    let Some(kept) = find_instance(ctx.sink.state, &kept_id).cloned() else {
+        return;
+    };
+    // An Immutable kept card eats nothing and draws nothing (R23).
+    if !keepable(ctx.sink.state, &kept) {
+        return;
+    }
+    // The scope's cards minus the kept card and minus every Immutable one; a card the scope
+    // reaches that has left meanwhile is no ingredient.
+    let pool: Vec<CardInstance> = crate::effects::card_scope::cards_in_card_scope(ctx, scope, None)
+        .into_iter()
+        .map(|entry| entry.card)
+        .filter(|card| card.id != kept.id)
+        .filter(|card| find_instance(ctx.sink.state, &card.id).is_some())
+        .filter(|card| {
+            find_instance(ctx.sink.state, &card.id)
+                .is_none_or(|live| !unit_has(ctx.sink.state, live, KeywordKind::Immutable))
+        })
+        .collect();
+    if pool.is_empty() {
+        return;
+    }
+    let Some(picked) = ctx.sink.rng.pick(&pool).cloned() else {
+        return;
+    };
+    // A library ingredient goes in as a fresh phantom of its definition — radiant flag, tuning
+    // and enchantments carried — and the library card ceases to exist, so its id never reaches a
+    // view. A field ingredient goes in as the card standing there.
+    let ingredient = match picked.zone {
+        Zone::Library { player } => {
+            let mut phantom = new_instance(
+                &mut *ctx.sink.state,
+                &picked.def_id,
+                player,
+                Zone::Gone { player },
+            );
+            phantom.radiant = picked.radiant;
+            phantom.tuning = picked.tuning.clone();
+            phantom.enchantments = picked.enchantments.clone();
+            if let Some(live) = find_instance(ctx.sink.state, &picked.id).cloned() {
+                let mut gone = live;
+                crate::zones::cease_to_exist(&mut *ctx.sink.state, &mut gone);
+            }
+            phantom
+        }
+        _ => {
+            let Some(live) = find_instance(ctx.sink.state, &picked.id).cloned() else {
+                return;
+            };
+            live
+        }
+    };
+    fuse(
+        ctx,
+        FuseArgs {
+            ingredients: vec![ingredient],
+            target: Some(kept),
+            ..FuseArgs::default()
+        },
+    );
 }
 
 /// R23, R470: a card a Fuse may keep — on the field and acting (R77's target), or in a hand or a
@@ -415,6 +506,10 @@ pub struct FuseGeneratedArgs {
     pub to_hand: Option<PlayerSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hand_price: Option<HandPrice>,
+    /// MD-D14: one pick from each named pool, in order (Meditative #59 fuses a random Book and a
+    /// random AI card). Set: `count` and `query` are ignored; an empty pool fuses nothing (R142).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pools: Option<Vec<CatalogQueryArgs>>,
 }
 
 /// E23: "fuse 3 random AI generated cards and add the result to your hand; it costs (0)" (Classic+
@@ -426,24 +521,42 @@ pub struct FuseGeneratedArgs {
 /// picks is no fusion, so it draws nothing (R77, R129), and neither does an empty pool.
 pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
     Effect::new("fuseGenerated", move |ctx| {
-        let count = args.count;
-        if count < FUSE_MIN_INGREDIENTS as i32 {
-            return;
-        }
-        let pool = pool_for(ctx, args.query.as_ref());
-        if pool.is_empty() {
-            return;
-        }
+        // MD-D14: with named pools, one `pool_for` pick from each pool, in order — and if any pool
+        // is empty, fuse nothing (R142).
+        let picked_ids: Vec<String> = if let Some(pools) = &args.pools {
+            let mut picked_ids: Vec<String> = Vec::with_capacity(pools.len());
+            for pool in pools {
+                let pool = pool_for(ctx, Some(pool));
+                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                    return;
+                };
+                picked_ids.push(picked.id.clone());
+            }
+            picked_ids
+        } else {
+            let count = args.count;
+            if count < FUSE_MIN_INGREDIENTS as i32 {
+                return;
+            }
+            let pool = pool_for(ctx, args.query.as_ref());
+            if pool.is_empty() {
+                return;
+            }
+            let mut picked_ids: Vec<String> = Vec::with_capacity(count as usize);
+            for _ in 0..count {
+                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                    return;
+                };
+                picked_ids.push(picked.id.clone());
+            }
+            picked_ids
+        };
         let player = player_of(ctx, args.to_hand.unwrap_or(PlayerSpec::SelfSide));
         let mut ingredients: Vec<CardInstance> = Vec::new();
-        for _ in 0..count {
-            let Some(picked) = ctx.sink.rng.pick(&pool) else {
-                return;
-            };
-            let picked_id = picked.id.clone();
+        for picked_id in &picked_ids {
             ingredients.push(new_instance(
                 &mut *ctx.sink.state,
-                &picked_id,
+                picked_id,
                 player,
                 Zone::Gone { player },
             ));

@@ -134,11 +134,13 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `highest_permanent_cost(state, player)` | the highest R396 cost among the permanents acting on a side, `None` with none (R901) |
 | `base_stats_of(state, card)` | §10.4 layer 1: the stat override as its face wears it, else the printed stats; no buffs, tuning or auras (R1181) |
 | `credit_used_this_turn(state, player)` | whether the player borrowed mana this turn — Jlarna's base face reads it (R1225) |
+| `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts (R426) |
+| `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
 | `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |

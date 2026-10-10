@@ -64,7 +64,7 @@ use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_
 use crate::state::{
     AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance,
 };
-use crate::subsystems::activate::{ActivateAction, activate_ability, activate_actions_for};
+use crate::subsystems::activate::{ActivateAction, abilities_of, activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
 use crate::subsystems::hero_power::power_ability_of;
@@ -867,6 +867,26 @@ fn each_legal_action(
                 for activation in activation_actions(state, player, card) {
                     visit(activation)?;
                 }
+            }
+        }
+    }
+
+    // MD-D9: an ability either player may use is offered to the other seat too, off the opponent's
+    // cards. A card with no either-player ability is skipped before its choices are built, so a
+    // shipped card lists nothing new here.
+    for row in [Row::Units, Row::Backrow] {
+        for zone_ref in slots_of(opponent_of(player), row) {
+            let Some(card) = card_at(state, zone_ref) else {
+                continue;
+            };
+            let open = abilities_of(state, card)
+                .iter()
+                .any(|decl| decl.cost.is_some_and(|cost| cost.either_player == Some(true)));
+            if !open {
+                continue;
+            }
+            for activation in activation_actions(state, player, card) {
+                visit(activation)?;
             }
         }
     }

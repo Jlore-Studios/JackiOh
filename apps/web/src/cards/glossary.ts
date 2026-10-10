@@ -195,6 +195,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Deft: keyword("Deft", "Can attack and switch position in the same turn"),
   // R1220: Untributable, Meditative #80 Aluneth's keyword.
   Untributable: keyword("Untributable", "Can't be Tributed, by any cost or effect"),
+  // Meditative batch 16 (issue #532, R1086): Magnetic, M #65 and M #67's keyword.
+  Magnetic: keyword("Magnetic", "May be played onto one of your Units, fusing into it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -310,4 +312,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Temporary: "TE",
   Deft: "DE",
   Untributable: "UT",
+  Magnetic: "MG",
 };

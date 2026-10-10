@@ -163,6 +163,29 @@ pub fn shuffle_into_library(
     existing: bool,
     copy_of: Option<&str>,
 ) -> ShuffleInOutcome {
+    into_library(sink, instance, existing, copy_of, None)
+}
+
+/// A fresh card put at a named end of its owner's library (Meditative #49's bottom, ME-DECK-BOTTOM):
+/// `LibraryEnd::Top` is position 0, `LibraryEnd::Bottom` the last one, with no rng draw. The caps
+/// and reports are `shuffle_into_library`'s.
+pub fn put_into_library(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    existing: bool,
+    copy_of: Option<&str>,
+    end: crate::ownership::LibraryEnd,
+) -> ShuffleInOutcome {
+    into_library(sink, instance, existing, copy_of, Some(end))
+}
+
+fn into_library(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    existing: bool,
+    copy_of: Option<&str>,
+    end: Option<crate::ownership::LibraryEnd>,
+) -> ShuffleInOutcome {
     let library_len = sink.state.players[instance.owner].library.len() as i32;
     if library_len >= LIBRARY_CAP {
         if !existing {
@@ -201,7 +224,13 @@ pub fn shuffle_into_library(
         crate::zones::report_graveyard_landing(sink, instance, landed);
         return ShuffleInOutcome::Dropped;
     }
-    let position = sink.rng.int(library_len + 1);
+    // ME-DECK-BOTTOM: a named end is placed, not drawn — the bottom is the last card, with no
+    // rng draw (R80's cap still refuses a full library, above).
+    let position = match end {
+        None => sink.rng.int(library_len + 1),
+        Some(crate::ownership::LibraryEnd::Top) => 0,
+        Some(crate::ownership::LibraryEnd::Bottom) => library_len,
+    };
     crate::zones::move_to_zone(
         sink.state,
         instance,

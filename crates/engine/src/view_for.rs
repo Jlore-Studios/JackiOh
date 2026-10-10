@@ -518,6 +518,8 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
         created: card.created,
+        // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
+        grants: crate::grants::grant_texts(state, top),
     })
 }
 
@@ -790,6 +792,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
         // R757: #98's Armor Up, until the player's next turn.
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
+        // MD-C21: Tranquility's immunity badge.
+        ModifierKind::HeroImmune => "Your hero is immune to damage until your next turn".to_string(),
         ModifierKind::ReplacePlays { def_id, radiant } => {
             let name = find_def_in(state, def_id).map_or_else(|| def_id.clone(), |def| def.name.clone());
             format!(
@@ -1576,6 +1580,12 @@ fn redact_event(
                 shown.remove("formerId");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
+            // R1088: `sourceId` names a card as well, and the card whose effect summoned this one may
+            // since have gone somewhere this viewer cannot read — so it is hidden the way `killerId`
+            // is on `destroyed`, never removed.
+            if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
+                hide(&mut shown, &["sourceId"]);
+            }
             rebuild(shown)
         }
 
@@ -1622,7 +1632,7 @@ fn redact_event(
         // only (R60), so a cue located in the hand, or at a face-down trap's lane, would tell this viewer
         // that the hand still held a base-face card, or that the trap was base-face (R33). The zone is
         // given as that player's hand, the region this viewer is shown the player's unread cards in.
-        GameEventType::RadiantSet => {
+        GameEventType::RadiantSet | GameEventType::Deradianted => {
             let zone = shown.get("zone").unwrap_or(Value::Null);
             let in_library = zone.get("z").and_then(Value::as_str) == Some("library");
             let unread = in_library || hidden(&instance);
@@ -1811,6 +1821,7 @@ fn redact_event(
         | GameEventType::Swapped
         | GameEventType::Locked
         | GameEventType::ManaChanged
+        | GameEventType::ManaSpent
         | GameEventType::TurnStarted
         | GameEventType::TurnEnded
         | GameEventType::TurnAutoEnded

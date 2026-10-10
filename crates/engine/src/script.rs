@@ -877,6 +877,11 @@ pub struct Script {
     pub set_stat: Option<SetStatHook>,
     pub start_of_turn: Option<Hook>,
     pub end_of_turn: Option<Hook>,
+    /// ME-GRANT (MD-D13): the Death abilities this card grants, by key — `meditative-058#bookDeath`
+    /// grants face `bookDeath`. A grant names a hook here, so state stays plain data (a closure never
+    /// enters it, as `fuse.rs` explains). A fused card merges its ingredients' maps (R102): the keys
+    /// already name their definition, so they never collide.
+    pub grants: IndexMap<&'static str, Hook>,
     pub aura: Option<AuraHook>,
     pub triggers: Vec<TriggerDef>,
     pub on_play_hook: Option<Hook>,
@@ -959,6 +964,14 @@ pub struct Script {
     /// (R44). `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
     /// destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
     pub after_attack: Option<Hook>,
+    /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
+    /// state check that closes each combat it was the target of has run, a declared attack's or a
+    /// forced one's, also when it died there — then on the snapshot it fought with, as a Death hook
+    /// reads its card (R78, R89). Not for a Cleave splash (no attack on it) nor for an attack on
+    /// the hero (MD-C26, R1026). `ctx.data` holds the combat's facts, read with
+    /// `combat::after_attacked_of`: `{ attackerId, forced, attackerSurvived }`. A whole effect
+    /// list, parkable like any (R113).
+    pub after_attacked: Option<Hook>,
     // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
     /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
     /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
@@ -1028,6 +1041,7 @@ impl Script {
             "endOfTurn" => self.end_of_turn.as_ref(),
             "onPlayHook" => self.on_play_hook.as_ref(),
             "afterAttack" => self.after_attack.as_ref(),
+            "afterAttacked" => self.after_attacked.as_ref(),
             "startOfOpponentTurn" => self.start_of_opponent_turn.as_ref(),
             _ => None,
         }
@@ -1083,6 +1097,15 @@ pub struct ActivationCost {
     /// Turtinator, which cannot Tribute itself; R683).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tribute_excludes_self: Option<bool>,
+    /// MD-D9: either player may activate an ability with this cost (Meditative #54's shape, proved
+    /// with the engine fixture while #54 waits for #525's Jade). The non-controller activates in
+    /// their own main phase, paying from their own mana. Absent: the controller's alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub either_player: Option<bool>,
+    /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
+    /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
+    #[serde(skip)]
+    pub mana_param: Option<&'static str>,
 }
 
 /// B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"

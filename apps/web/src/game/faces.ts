@@ -90,6 +90,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.berserk === true) inPlay.berserk = true;
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
+  // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
+  if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;

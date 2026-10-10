@@ -12,7 +12,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::testkit::*;
 
-use super::catalog::{vanilla_catalog, vanilla_deck};
+use super::catalog::vanilla_deck;
 use super::harness::setup_catalog;
 
 /// TS `def(overrides)`: a Core Common card with empty faces, `overrides` over it.

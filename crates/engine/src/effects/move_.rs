@@ -18,6 +18,7 @@ use crate::effects::targets::{
 };
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
+use crate::plague::permanents_on_field;
 use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
@@ -108,6 +109,65 @@ pub fn exile(args: ExileArgs) -> Effect {
             return;
         };
         exile_card(ctx, &card);
+    })
+}
+
+/// `exileRandomFrom`'s zone: whose cards the picks come from.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ExileRandomZone {
+    Field,
+    Hand,
+    Library,
+    Graveyard,
+}
+
+/// `exileRandomFrom`'s argument: the seat whose cards, the zone, and how many.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExileRandomFromArgs {
+    pub player: PlayerSpec,
+    pub from: ExileRandomZone,
+    #[serde(default)]
+    pub count: i32,
+}
+
+/// MD-D27 (Meditative #69 The Maestro): exile `count` different random cards of `player`'s zone —
+/// field picks come from `permanents_on_field`, face-down cards included. The picks happen at apply
+/// time, off the match rng, so a replay with the same seed exiles the same cards; each pick goes
+/// down the same path a single exile takes (`exile_card`). An empty zone is skipped, never an error.
+pub fn exile_random_from(args: ExileRandomFromArgs) -> Effect {
+    Effect::new("exileRandomFrom", move |ctx| {
+        let player = player_of(ctx, args.player);
+        let ids: Vec<String> = match args.from {
+            ExileRandomZone::Field => permanents_on_field(ctx.state, player)
+                .iter()
+                .filter(|card| card.controller == player)
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Hand => ctx.state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Library => ctx.state.players[player]
+                .library
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Graveyard => ctx.state.players[player]
+                .graveyard
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+        };
+        let mut picks = ctx.sink.rng.shuffle(&ids);
+        picks.truncate(args.count.max(0) as usize);
+        for id in &picks {
+            if let Some(card) = find_instance(ctx.state, id).cloned() {
+                exile_card(ctx, &card);
+            }
+        }
     })
 }
 

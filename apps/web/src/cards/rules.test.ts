@@ -197,6 +197,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Temporary: "TE",
   Deft: "DE",
   Untributable: "UT",
+  Magnetic: "MG",
 };
 
 type Term = { text: string; term: GlossaryTermId };

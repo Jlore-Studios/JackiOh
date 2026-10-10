@@ -518,7 +518,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     }
 
     #[test]
-    fn r383_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again()
+    fn r383_r1062_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again_not_summoning_sick()
      {
         let mut state = playing("animated-spatula-cycle");
         let card = put(
@@ -570,7 +570,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         sink.state.turn += 2;
         animate_at_turn_start(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 4)), Some(card.id.clone()));
-        assert_eq!(by_id(sink.state, &card.id).summoned_turn, Some(sink.state.turn));
+        assert!(!is_sick(sink.state, &live(sink.state, &card.id)));
     }
 
     #[test]
@@ -809,6 +809,64 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             id_at(sink.state, slot(P1, Row::Units, 4)),
             Some(granted.id.clone())
         );
+    }
+}
+
+mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
+    use super::*;
+
+    #[test]
+    fn r1062_animated_at_its_start_of_turn_after_an_earlier_entry_it_is_not_summoning_sick_and_its_rush_reaches_the_hero()
+     {
+        let mut state = playing("r1062-not-sick");
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let turn = state.turn;
+        by_id_mut(&mut state, &card.id).summoned_turn = Some(turn);
+        state.turn += 2;
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        let now = live(sink.state, &card.id);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        assert!(!is_sick(sink.state, &now));
+        assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
+    }
+
+    #[test]
+    fn r1062_one_that_came_to_its_side_this_turn_is_still_sick() {
+        let mut state = playing("r1062-still-sick");
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &card.id).summoned_turn = Some(state.turn);
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        let now = live(sink.state, &card.id);
+        assert!(is_sick(sink.state, &now));
+        assert!(!attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
+    }
+
+    #[test]
+    fn r1062_r383_its_animation_as_it_enters_the_field_is_still_an_entry() {
+        let mut state = playing("r1062-entry");
+        let Some(card) = in_hand(&mut state, &spatula.id, P1, 1).into_iter().next() else {
+            return;
+        };
+        flush(&mut state, P1, 10);
+        let next = act(
+            &state,
+            input(json!({
+                "type": "play", "instanceId": card.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1"
+            })),
+        );
+        assert!(is_sick(&next, &live(&next, &card.id)));
     }
 }
 

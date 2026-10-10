@@ -1092,6 +1092,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.damage = 0;
     instance.buffs = AttackHealth { attack: 0, health: 0 };
     instance.granted_keywords = Vec::new();
+    // ME-GRANT (MD-D13): granted Death abilities are lost with the card leaving the field (R78).
+    instance.grants = None;
     instance.vanilla = false;
     instance.counters = Counters::default();
     instance.memory = Default::default();

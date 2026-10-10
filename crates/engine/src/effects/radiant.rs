@@ -76,7 +76,7 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 /// pick non-Radiant cards (R60), and a public card's face is public either way.
 ///
 /// `card` is a snapshot; the card is read again by its id, as it stands now, and written there.
-fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
+pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     let card = find_instance(ctx.state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone());
@@ -173,6 +173,37 @@ pub fn set_radiant(args: RadiantTarget) -> Effect {
             return;
         };
         make_radiant(ctx, &card);
+    })
+}
+
+/// `clearRadiant`'s argument is a `RadiantTarget` too (default the first chosen selection).
+pub type ClearRadiantArgs = RadiantTarget;
+
+/// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed. A card
+/// that is not Radiant is untouched; otherwise the flag is cleared and `deradianted` reports it.
+/// The layers read the flag, so the face swaps back while damage, buffs and tuning stay, keywords
+/// only the Radiant face printed are lost, ongoing triggers read the base text from then on, and no
+/// Cry fires. A fused card returns to its fused base form (R77), since the face is the flag.
+pub fn clear_radiant(args: RadiantTarget) -> Effect {
+    Effect::new("clearRadiant", move |ctx| {
+        let Some(card) = instance_of(ctx, &args) else {
+            return;
+        };
+        let card = find_instance(ctx.state, &card.id)
+            .cloned()
+            .unwrap_or_else(|| card.clone());
+        if !card.radiant {
+            return;
+        }
+        // R311: as Make Radiant leaves it, a library card's `knownAs` is left as it was.
+        if let Some(live) = find_instance_mut(ctx.state, &card.id) {
+            live.radiant = false;
+        }
+        ctx.events.push(GameEvent::Deradianted {
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            zone: card.zone.clone(),
+        });
     })
 }
 

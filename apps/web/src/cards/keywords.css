@@ -42,6 +42,7 @@
   --kw-period-dart: 1.2s;
   --kw-period-anchor: 2.8s;
   --kw-period-tribal: 2.4s;
+  --kw-period-magnet: 2s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -381,6 +382,10 @@
   animation: kw-tribal var(--kw-period-tribal) ease-in-out infinite alternate;
 }
 
+.cf .kw-fx[data-keyword-fx="Magnetic"][data-kw-motion="on"] .kw-anim {
+  animation: kw-magnet-pull var(--kw-period-magnet) ease-in-out infinite alternate;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -613,6 +618,18 @@
   to {
     transform: rotate(8deg);
     opacity: 1;
+  }
+  }
+}
+
+@keyframes kw-magnet-pull {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.12);
+    opacity: 0.82;
   }
 }
 

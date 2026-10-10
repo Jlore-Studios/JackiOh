@@ -526,10 +526,33 @@ fn validate_face(
         // TS narrowed the object to `Keyword` here; the checks above are that shape.
     }
 
+    // ME-GRANT (MD-D13, R1107): the Death abilities a face grants, by key, each its quoted text.
+    if let Some(grants) = face.get("grants") {
+        let well_formed = match grants {
+            Json::Object(grants) => {
+                !grants.is_empty()
+                    && grants
+                        .values()
+                        .all(|text| text.as_str().is_some_and(|text| !text.is_empty()))
+            }
+            _ => false,
+        };
+        if !well_formed {
+            fail(
+                failures,
+                &at,
+                &format!(
+                    "`grants` must be a non-empty object of non-empty texts (got {})",
+                    describe(Some(grants))
+                ),
+            );
+        }
+    }
+
     let unknown_fields: Vec<&str> = face
         .keys()
         .map(String::as_str)
-        .filter(|k| !["type", "attack", "health", "xStats", "keywords", "text"].contains(k))
+        .filter(|k| !["type", "attack", "health", "xStats", "keywords", "text", "grants"].contains(k))
         .collect();
     if !unknown_fields.is_empty() {
         fail(

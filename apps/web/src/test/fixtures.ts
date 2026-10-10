@@ -129,6 +129,8 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Deft" },
   // R1220's keyword.
   { kind: "Untributable" },
+  // Meditative batch 16's keyword (R1086).
+  { kind: "Magnetic" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

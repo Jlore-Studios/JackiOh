@@ -137,6 +137,7 @@ mod the_lethal_solvers_walks {
                 }),
                 x: None,
                 embiggen: None,
+                magnetic: None,
                 tributes: Some(vec![
                     vanilla.id.clone(),
                     menace.id.clone(),

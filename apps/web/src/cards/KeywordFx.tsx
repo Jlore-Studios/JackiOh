@@ -355,6 +355,13 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Magnetic: () => (
+    <Part className="kw-glyph-art kw-magnet" anim fit="contain">
+      <path d="M28 24 V56 A22 22 0 0 0 72 56 V24 H58 V54 A8 8 0 0 1 42 54 V24 Z" fill="#e0574f" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M28 24 H42 V38 H28 Z M58 24 H72 V38 H58 Z" fill="#f3e3b4" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

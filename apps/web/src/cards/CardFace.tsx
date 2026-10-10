@@ -114,7 +114,7 @@ function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
 function printedText(face: FaceModel): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${face.text.full}${values}`, gainedLine(face), tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${face.text.full}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
 /** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
@@ -283,6 +283,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
                 <RulesText text={gainedLine(face)} />
               </span>
             )}
+            {face.grants.map((grant) => (
+              <span key={grant} className="cf-text-granted">
+                <RulesText text={grant} />
+              </span>
+            ))}
             <TuningKeywords face={face} />
           </span>
         )}

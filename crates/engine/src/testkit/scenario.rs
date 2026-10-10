@@ -175,6 +175,8 @@ thread_local! {
     static CATALOG_OVERRIDE: Cell<Option<&'static CardDefs>> = const { Cell::new(None) };
     static CATALOG_VERSION_OVERRIDE: Cell<Option<&'static str>> = const { Cell::new(None) };
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
+    static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
+        const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -213,12 +215,25 @@ pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
+/// ME-STATS: the win-rate table this thread registered, if any: what
+/// `catalog::registered_win_rates()` answers first. A leaked `&'static`, like the catalog's.
+pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
+    let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
+}
+
+/// The win-rate table this thread registered, if any.
+pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
+    WIN_RATES_OVERRIDE.with(Cell::get)
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {
     CATALOG_OVERRIDE.with(|cell| cell.set(None));
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -440,6 +455,9 @@ pub struct PlayOptions {
     pub x: Option<i32>,
     #[serde(default)]
     pub embiggen: Option<bool>,
+    /// R1086: play this Magnetic card onto the zone's host Unit.
+    #[serde(default)]
+    pub magnetic: Option<bool>,
     #[serde(default)]
     pub targets: Option<Vec<Selection>>,
     #[serde(default)]
@@ -1423,7 +1441,8 @@ impl Scenario {
 
     // --- steps ----------------------------------------------------------------------------------
 
-    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "targets"?, "modes"?, "tributes"?, "faceDown"? })`.
+    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "magnetic"?, "targets"?, "modes"?,
+    /// "tributes"?, "faceDown"? })`.
     pub fn play(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: PlayOptions = options_of(opts, "play");
         let id = or_fail(self.resolve(&card.into(), Where::Hand, "play"));
@@ -1469,6 +1488,7 @@ impl Scenario {
                 zone,
                 x: opts.x,
                 embiggen: opts.embiggen,
+                magnetic: opts.magnetic,
                 tributes,
                 targets: opts.targets,
                 modes: opts.modes,

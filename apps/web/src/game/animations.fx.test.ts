@@ -121,6 +121,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   costChanged: { type: "costChanged", instanceId: "c11", cost: 0 },
   modifierChanged: { type: "modifierChanged", player: "p2", modifierId: "m4", added: true },
   radiantSet: { type: "radiantSet", instanceId: "u3", defId: "core-017", zone: { z: "field", player: "p1", row: "units", lane: 2 } },
+  deradianted: { type: "deradianted", instanceId: "u3", defId: "core-017", zone: { z: "field", player: "p1", row: "units", lane: 2 } },
   transformed: { type: "transformed", instanceId: "u3", fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" },
   fused: { type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "c91", defId: "core-088" },
   positionSwitched: { type: "positionSwitched", instanceId: "u3", position: "DEF" },
@@ -132,6 +133,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   attackDeclared: { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false },
   attackCancelled: { type: "attackCancelled", attackerId: "u1", targetId: "u6", byInstanceId: "b5" },
   manaChanged: { type: "manaChanged", player: "p1", current: 2, max: 4 },
+  manaSpent: { type: "manaSpent", player: "p1", amount: 2, for: "activate" },
   turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
   turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
   turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -211,7 +213,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 17 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 19 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -235,6 +237,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   costChanged: "glint",
   modifierChanged: "glint",
   radiantSet: "radiant",
+  deradianted: null,
+  manaSpent: null,
   transformed: "smoke",
   fused: "fuse",
   controlChanged: "mindControl",
@@ -361,6 +365,8 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   costChanged: ["jk-gem-tick", 200, "card-<instanceId> | hand-card-<instanceId>"],
   modifierChanged: ["jk-badge-fade", 200, "modifiers-<side>"],
   radiantSet: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  deradianted: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  manaSpent: ["jk-crystal-fill", 150, "mana-<side>"],
   transformed: ["jk-spin-face", 400, "card-<instanceId>"],
   fused: ["jk-fuse-merge", 500, "card-<instanceIds[0]>"],
   positionSwitched: ["jk-rotate-def", 250, "card-<instanceId>"],
@@ -415,7 +421,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 57 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 17 carry none", () => {
+  it("B1 exactly the 57 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 19 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(57);
@@ -430,9 +436,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 17 rows without an effect have no fx value at all", () => {
+  it("B1 the 19 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(17);
+    expect(bare).toHaveLength(19);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

@@ -171,6 +171,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   costChanged: { type: "costChanged", instanceId: "c11", cost: 0 },
   modifierChanged: { type: "modifierChanged", player: "p2", modifierId: "m4", added: true },
   radiantSet: { type: "radiantSet", instanceId: "u3", defId: UNIT, zone: { z: "field", player: "p1", row: "units", lane: 2 } },
+  deradianted: { type: "deradianted", instanceId: "u3", defId: UNIT, zone: { z: "field", player: "p1", row: "units", lane: 2 } },
   transformed: { type: "transformed", instanceId: "u3", fromDefId: UNIT, toDefId: TOKEN, newInstanceId: "c90" },
   fused: { type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "c91", defId: UNIT },
   positionSwitched: { type: "positionSwitched", instanceId: "u3", position: "DEF" },
@@ -182,6 +183,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   attackDeclared: { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false },
   attackCancelled: { type: "attackCancelled", attackerId: "u1", targetId: "u6", byInstanceId: "b5" },
   manaChanged: { type: "manaChanged", player: "p1", current: 3, max: 4 },
+  manaSpent: { type: "manaSpent", player: "p1", amount: 1, for: "activate" },
   turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
   turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
   turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -254,6 +256,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   costChanged: null,
   modifierChanged: "notify",
   radiantSet: "radiant",
+  deradianted: "cancel",
+  manaSpent: null,
   transformed: "poof",
   fused: "fuse",
   positionSwitched: "whoosh",
@@ -326,6 +330,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "keywordGranted",
   "counterChanged",
   "radiantSet",
+  "deradianted",
   "fused",
   "positionSwitched",
   "controlChanged",
@@ -557,6 +562,47 @@ describe("R204: which moments speak", () => {
       const event: GameEvent = { type: "summoned", player: "p1", instanceId: "c5", defId, row: "units", lane: 1 };
       expect(voices(event), defId).toEqual([]);
     }
+  });
+
+  it("R1088 the Skull's summon speaks one trigger line by the injected rng", () => {
+    const SKULL = "core-099";
+    const lines: CardAudioTable = {
+      ...LINES,
+      cards: {
+        ...LINES.cards,
+        [SKULL]: {
+          kind: "spell",
+          cast: { voice: "crone", text: "Come closer." },
+          trigger: { voice: "crone", lines: ["First.", "Second.", "Third."] },
+        },
+      },
+    };
+    const view = baseView();
+    view.you.units[0] = unit("p1", { instanceId: "s1", defId: SKULL });
+    const summoned: GameEvent = {
+      type: "summoned",
+      player: "p1",
+      instanceId: "c1",
+      defId: UNIT,
+      row: "units",
+      lane: 2,
+      sourceId: "s1",
+    };
+    // The injected rng picks the line: 0 the first, near-1 the last — and the summoned unit's own
+    // line is replaced, not added.
+    const first = { ...ctx({ lines, random: () => 0 }), view };
+    expect(ranked(summoned, first)).toEqual([`${SKULL}/trigger1!${String(VOICE_PRIORITY.play)}`]);
+    expect(shape(summoned, first)).toEqual([sfx("summon"), voice(SKULL, "trigger1", VOICE_DELAY_MS)].sort());
+    const last = { ...ctx({ lines, random: () => 0.99 }), view };
+    expect(ranked(summoned, last)).toEqual([`${SKULL}/trigger3!${String(VOICE_PRIORITY.play)}`]);
+    // The sentinel names nothing, and a source with no trigger changes nothing: the unit speaks
+    // its own line.
+    expect(ranked({ ...summoned, sourceId: HIDDEN_DEF_ID }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
+    expect(ranked({ ...summoned, sourceId: "c9" }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
   });
 
   it("R204 (B56) every line carries its priority: play and cast lines on a play, death and trap lines react", () => {

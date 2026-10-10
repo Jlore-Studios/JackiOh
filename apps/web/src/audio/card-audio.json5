@@ -22,6 +22,9 @@
 //   attack   a Unit of yours picked up to attack (dragged, or clicked to choose its target)
 //   death    a Unit destroyed
 //   cast     a Spell or Field Spell cast, a Trap or Field Trap firing
+//   trigger  a card whose effect summons (R1088): one of its lines plays when the runner starts the
+//            `summoned` entry the card caused, picked by the client's own rng, replacing the
+//            summoned card's own line for that entry
 // A hook gives a voice line, { voice: "<a voice>", text: "<the line>" }, an effect,
 // { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
 //
@@ -1434,11 +1437,104 @@
       play: { voice: "sapi-teacher", text: "I have seen through everything." },
       death: { voice: "sapi-teacher", text: "Even this ends." },
     },
+    "meditative-046": { // Conjure Intellect
+      cast: { voice: "prof", text: "Three schools of thought, one hand." },
+    },
+    "meditative-047": { // 饕餮
+      play: { voice: "brute", text: "Dinner is served. You are dinner." },
+      death: { voice: "brute", text: "Still hungry. Always hungry." },
+    },
+    "meditative-048": { // Tranquility
+      cast: { voice: "whisper", text: "Breathe in, breathe out, be still." },
+    },
+    "meditative-049": { // YileGPT Tamed
+      play: { voice: "sapi-synth", text: "Tamed, tuned, and mostly harmless." },
+      death: { voice: "sapi-synth", text: "Back to training. Again." },
+    },
+    "meditative-049-1": { // YileGPT Unleashed
+      play: { voice: "sapi-synth-deep", text: "I have read everything. Everything." },
+      death: { voice: "sapi-synth-deep", text: "You cannot uninstall me." },
+    },
+    "meditative-049-2": { // Yile's Virus
+      play: { voice: "alien", text: "Cough, cough. You look contagious." },
+      death: { voice: "alien", text: "Quarantined. Rude, honestly." },
+    },
+    "meditative-049-3": { // AI Girlfriend
+      cast: { voice: "diva", text: "Fight for my amusement, darlings." },
+    },
+    "meditative-050": { // CN Tech
+      cast: { voice: "robot", text: "Winning formula found. You're welcome." },
+    },
+    "meditative-051": { // Devin Bot
+      play: { voice: "robot", text: "Meditation subroutine engaged." },
+      death: { voice: "robot", text: "Rebooting. Somewhere else." },
+    },
     "meditative-052": { // Economic Anxiety
       cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
     },
+    "meditative-053": { // Prestige
+      cast: { voice: "diva", text: "Darling, true class never fades." },
+    },
+    "meditative-055": { // Dragon Fruit
+      cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
+    },
+    "meditative-056": { // House Party
+      cast: { voice: "announcer", text: "Everybody in! The house is open!" },
+    },
+    "meditative-057": { // Clip-Farming Critikal
+      play: { voice: "hustler", text: "Did you get that on camera?" },
+      death: { voice: "hustler", text: "Cut. Print it anyway." },
+    },
+    "meditative-058": { // Permanent Underclassman
+      play: { voice: "zoomer", text: "First year! Best year! Only year!" },
+      death: { voice: "zoomer", text: "Held back. Again." },
+    },
+    "meditative-059": { // Permanent Upperclassman
+      play: { voice: "prof", text: "Seniors rule. Permanently." },
+      death: { voice: "prof", text: "Graduation postponed. Indefinitely." },
+    },
+    "meditative-060": { // Eschews
+      cast: { voice: "snob", text: "Nope. Not dealing with that." },
+    },
+    "meditative-061": { // Joon Jorker
+      play: { voice: "hustler", text: "Let me hype up my neighbor!" },
+      death: { voice: "hustler", text: "Who hypes you now?" },
+    },
+    "meditative-062": { // Small Time Recruits
+      cast: { voice: "guard", text: "Small fry, report for duty!" },
+    },
+    "meditative-063": { // Skull of J'Nari
+      cast: { voice: "elder", text: "Come closer. I don't bite. Much." },
+      trigger: { voice: "elder", lines: ["This one will prove very useful! ...Probably.", "There IS a method to my madness!", "Good units are hard to find."] },
+    },
     "meditative-064": { // Traitorous Blood
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
+    },
+    "meditative-065": { // Keymaster Keenus
+      play: { voice: "guard", text: "Every lock needs a key. I have all of them." },
+      death: { voice: "guard", text: "You'll have to find your own way in." },
+    },
+    "meditative-066": { // Fiery Waraxe
+      cast: { voice: "hero", text: "Burn bright, swing hard!" },
+    },
+    "meditative-067": { // Sentient Cat Ears
+      play: { voice: "cat", text: "Purr-fectly attached." },
+      death: { voice: "cat", text: "Nine lives, one pair of ears." },
+    },
+    "meditative-068": { // Catnip
+      cast: { voice: "cat", text: "Mrrrow! Who left the nip out?" },
+    },
+    "meditative-069": { // The Maestro
+      play: { voice: "posh", text: "I conduct. You suffer." },
+      death: { voice: "posh", text: "Encore? Never." },
+    },
+    "meditative-070": { // I'M WILL BE YOUR DOOM
+      play: { voice: "brute", text: "I'M WILL BE YOUR DOOM" },
+      death: { voice: "brute", text: "Doom... was me." },
+    },
+    "meditative-070-1": { // Ready… I'm
+      play: { voice: "kid", text: "Ready... I'm" },
+      death: { voice: "kid", text: "Not ready!" },
     },
     "meditative-071": { // Pareto Optimality
       cast: { voice: "sapi-teacher", text: "There is always a better move." },
@@ -1449,6 +1545,17 @@
     "meditative-072": { // The Banisher
       play: { voice: "robot", text: "You are unmade." },
       death: { voice: "robot", text: "Banished with you." },
+    },
+    "meditative-073": { // Plate Packer
+      play: { voice: "brute", text: "Three-oh-five is the new two-twenty-five" },
+      death: { voice: "brute", text: "Spot me... spot me!" },
+    },
+    "meditative-074": { // Montaña Giant
+      play: { voice: "storyteller", text: "The mountain wakes." },
+      death: { voice: "storyteller", text: "The mountain sleeps." },
+    },
+    "meditative-075": { // Ever Growing Tree
+      cast: { voice: "digger", text: "Growing. Always growing." },
     },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },

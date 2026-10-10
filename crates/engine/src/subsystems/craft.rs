@@ -597,6 +597,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
             x_stats: None,
             keywords: face_keywords(recipe, radiant),
             text: face_text(recipe, radiant),
+            grants: None,
         }
     };
     CardDef {

@@ -254,6 +254,10 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
+        /// R1088: the card whose effect summoned it, for the client; no rule reads it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        source_id: Option<String>,
         /// R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -785,6 +789,23 @@ pub enum GameEvent {
         player: PlayerId,
         count: i32,
     },
+    /// MD-D6 (Meditative #53 Prestige): De-Radiant cleared the card's Radiant flag. The face swaps
+    /// back while damage, buffs and tuning stay (§5.2's exception). Hidden per zone like `radiantSet`
+    /// (R440): a hand or deck card reads redacted, a face-up card openly.
+    Deradianted {
+        instance_id: String,
+        def_id: String,
+        zone: Zone,
+    },
+    /// MD-D26 (Meditative #69 The Maestro): `player` paid `amount` mana for a play's price or an
+    /// activation's price. Public: it names a player and a number, never a card. It is emitted only
+    /// while a card answers it, so a game with no listener serialises, hashes and replays as before.
+    ManaSpent {
+        player: PlayerId,
+        amount: i32,
+        #[serde(rename = "for")]
+        for_: ManaSpentFor,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M8, MN05). Its BUILD M5-T4 row, `ANIMATIONS` and
     // `SOUND_CUES` rows came with it, and `viewFor` redacts it as it does `damage`.
@@ -951,6 +972,8 @@ string_union! {
         FengShui = "fengShui",
         Translated = "translated",
         DiscardPrevented = "discardPrevented",
+        Deradianted = "deradianted",
+        ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
         JadeChanged = "jadeChanged",
         SecretChosen = "secretChosen",
@@ -969,7 +992,8 @@ impl GameEvent {
     /// which reports what Armor took to the client (§10.10, §10.11) and which no rule reads. R1361: a
     /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
-    /// without its `how`, likewise the client's. So the state a game passes through, a frontier paused
+    /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
+    /// whose effect summoned it, which no rule reads. So the state a game passes through, a frontier paused
     /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
     /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
@@ -1013,6 +1037,28 @@ impl GameEvent {
                 lane: *lane,
                 former_id: former_id.clone(),
                 how: None,
+            },
+            // R1088: `sourceId` is the client's, like `how` above, so the rules drop it.
+            GameEvent::Summoned {
+                player,
+                instance_id,
+                def_id,
+                row,
+                lane,
+                former_id,
+                source_id: _,
+                arrived_during,
+                exits_from,
+            } => GameEvent::Summoned {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                row: *row,
+                lane: *lane,
+                former_id: former_id.clone(),
+                source_id: None,
+                arrived_during: arrived_during.clone(),
+                exits_from: *exits_from,
             },
             other => other.clone(),
         }
@@ -1090,12 +1136,22 @@ impl GameEvent {
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
             GameEvent::DiscardPrevented { .. } => GameEventType::DiscardPrevented,
+            GameEvent::Deradianted { .. } => GameEventType::Deradianted,
+            GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
         }
+    }
+}
+
+string_union! {
+    /// MD-D26: what the spent mana paid for — a play's price or an activation's price.
+    pub enum ManaSpentFor {
+        Play = "play",
+        Activate = "activate",
     }
 }
 
@@ -1155,7 +1211,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 74);
+        assert_eq!(GAME_EVENT_TYPES.len(), 76);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

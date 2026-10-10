@@ -481,6 +481,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub created: Option<bool>,
+    /// ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
+    /// (`grants::grant_texts`). Absent when it holds none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<Vec<String>>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the

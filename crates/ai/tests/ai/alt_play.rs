@@ -46,6 +46,7 @@ fn set_state(seed: &str) -> GameState {
             }),
             x: None,
             embiggen: None,
+            magnetic: None,
             tributes: None,
             targets: None,
             modes: None,

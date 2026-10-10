@@ -12,16 +12,20 @@
 //! resolved to; Rust writes through `state::find_instance_mut` by the instance's id (the resolvers
 //! hand back copies), so the change lands on the card as it stands in the state.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::config::RANDOM_KEYWORD_POOL;
 use crate::damage::DamageTarget;
 use crate::effects::card_scope::{CardScope, Readers, cards_in_card_scope};
-use crate::effects::targets::{PlayerSpec, TargetSpec, player_of, resolve_target};
+use crate::effects::radiant::RadiantTarget;
+use crate::effects::targets::{
+    PlayerSpec, TargetSpec, instance_of, instance_on_its_stay, player_of, resolve_target,
+};
 use crate::layers::unit_view;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance, find_instance_mut};
-use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, has_keyword};
+use crate::state::{CardInstance, Grant, find_instance, find_instance_mut};
+use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, ZoneName, has_keyword};
 use crate::zones::active_units_of;
 
 /// A stat change in attack, max health, or both (#4 Gary, #43 Friend of Felinors, #63).
@@ -221,6 +225,61 @@ pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
             return;
         };
         grant_to(ctx, &mut instance, &args.keyword, true);
+    })
+}
+
+/// `grantAbility`'s argument: the card, the grant `<defId>#<key>`, the face it was granted on, and
+/// the numbers it was granted with.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GrantAbilityArgs {
+    #[serde(flatten)]
+    pub target: RadiantTarget,
+    pub grant: String,
+    #[serde(default)]
+    pub radiant: bool,
+    #[serde(default)]
+    pub params: IndexMap<String, i32>,
+}
+
+/// ME-GRANT (MD-D13): grant the card a Death ability — append the grant to a card on the field, and
+/// do nothing to a card anywhere else. The hook itself is never stored: the instance carries the
+/// name and the numbers as plain data, the granting card's script registers the hook
+/// (`Script.grants`), and `grants::death_hook_of` runs it after the card's own Death. A grant
+/// already held is not added twice.
+pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
+    Effect::new("grantAbility", move |ctx| {
+        // R174: as `setRadiant` resolves it, a card named by id is aimed at the stay it had when
+        // the run began, else the first chosen selection.
+        let card = match &args.target.instance_id {
+            Some(instance_id) => instance_on_its_stay(ctx, instance_id),
+            None => instance_of(
+                ctx,
+                &args
+                    .target
+                    .target
+                    .clone()
+                    .unwrap_or(TargetSpec::Chosen { index: None }),
+            ),
+        };
+        let Some(card) = card else {
+            return;
+        };
+        if card.zone.z() != ZoneName::Field {
+            return;
+        }
+        let Some(live) = find_instance_mut(ctx.state, &card.id) else {
+            return;
+        };
+        let grant = Grant {
+            grant: args.grant.clone(),
+            radiant: args.radiant,
+            params: args.params.clone(),
+        };
+        let grants = live.grants.get_or_insert_with(Vec::new);
+        if !grants.contains(&grant) {
+            grants.push(grant);
+        }
     })
 }
 

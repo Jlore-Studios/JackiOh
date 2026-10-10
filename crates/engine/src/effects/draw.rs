@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::draw::{complete_draw, draw_blocked};
+use crate::draw::{DrawOutcome, complete_draw, draw_blocked};
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::Effect;
 
@@ -36,6 +36,9 @@ pub struct DrawFromLibraryArgs {
     pub def_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R1061: once the drawn card is in its holder's hand it is made Radiant; one the hand cap burned or cast on draw stays as it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
 }
 
 /// §6.3 Draw of a card a script has NAMED, rather than of the top of the library: #30 Archivist's
@@ -77,6 +80,12 @@ pub fn draw_from_library(args: DrawFromLibraryArgs) -> Effect {
         // Out of the pile first, exactly as `drawOne` does it, so a cast-on-draw card resolves against
         // a library that no longer holds it (§2.4, R58).
         let card = ctx.sink.state.players[player].library.remove(at);
-        complete_draw(ctx, player, card, None);
+        let drawn_id = card.id.clone();
+        if complete_draw(ctx, player, card, None) == DrawOutcome::Drawn
+            && args.radiant == Some(true)
+            && let Some(drawn) = crate::state::find_instance(ctx.state, &drawn_id).cloned()
+        {
+            crate::effects::radiant::make_radiant(ctx, &drawn);
+        }
     })
 }

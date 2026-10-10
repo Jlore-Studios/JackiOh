@@ -183,6 +183,8 @@ export const GAME_EVENT_TYPES = [
   "fengShui",
   "translated",
   "discardPrevented",
+  "deradianted",
+  "manaSpent",
   "damageAbsorbed",
   "jadeChanged",
   "secretChosen",

@@ -1033,3 +1033,71 @@ describe("R1044 playing face-down as a Trap", () => {
     expect(result.interaction).toEqual(IDLE);
   });
 });
+
+describe("R1086 Magnetic plays (issue #532)", () => {
+  it("R1086 a Magnetic card onto a friendly Unit sends magnetic: true", () => {
+    const legal: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+    ];
+    const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
+
+    // One zone, two ways to play it: the picker asks which.
+    expect(outstandingNeed(playing.interaction)).toEqual({
+      kind: "magnetic",
+      min: 1,
+      max: 1,
+      values: [true, false],
+    });
+
+    const result = pickInPlay(playing.interaction, { magnetic: true });
+
+    expect(result.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: true,
+    });
+  });
+
+  it("R1086 Stack and Magnetic on one zone ask which", () => {
+    const legal: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+    ];
+    const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
+
+    // Two zones first, then which way onto the shared one.
+    expect(outstandingNeed(playing.interaction)).toEqual({
+      kind: "zone",
+      min: 1,
+      max: 1,
+      zones: [
+        { row: "units", lane: 1 },
+        { row: "units", lane: 3 },
+      ],
+    });
+
+    const zoned = onClickTarget(seatedView(), legal, playing.interaction, {
+      on: "zone",
+      side: "you",
+      row: "units",
+      lane: 1,
+    });
+    expect(outstandingNeed(zoned.interaction)).toEqual({
+      kind: "magnetic",
+      min: 1,
+      max: 1,
+      values: [true, false],
+    });
+
+    const stacked = pickInPlay(zoned.interaction, { magnetic: false });
+    expect(stacked.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: false,
+    });
+  });
+});

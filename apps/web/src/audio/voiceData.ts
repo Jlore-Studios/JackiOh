@@ -98,7 +98,7 @@ const SAY_FIELDS = ["backend", "say", "rate", "pbas", "pmod", "web", "gain"] as 
 const SAPI_FIELDS = ["backend", "voice", "rate", "semitones", "filter", "web", "gain"] as const;
 const EFFECT_FIELDS = ["sfx", "pitch", "gain", "params"] as const;
 const PARAM_FIELDS = ["amount", "mine", "timbre", "mythic", "urgent", "release"] as const;
-const ASSIGNMENT_FIELDS = ["voice", "text", "effect"] as const;
+const ASSIGNMENT_FIELDS = ["voice", "text", "lines", "effect"] as const;
 /** The file's sections, in the order it keeps them. */
 const SECTIONS = ["voices", "effects", "cards"] as const;
 
@@ -201,6 +201,13 @@ function parseAssignment(
   }
   const voice = text(o.voice, `${path}.voice`);
   if (!Object.hasOwn(voices, voice)) fail(`${path}.voice`, `unknown voice "${voice}"`);
+  // R1088: a trigger lists its lines; any other hook speaks one text.
+  if (o.lines !== undefined) {
+    if (!Array.isArray(o.lines) || o.lines.length === 0) fail(`${path}.lines`, "must be a non-empty list of strings");
+    const lines = o.lines.map((line, i) => text(line, `${path}.lines[${i}]`));
+    if (o.text !== undefined) fail(`${path}.text`, "a trigger lists its lines instead");
+    return effect === undefined ? { voice, lines } : { voice, lines, effect };
+  }
   const spoken = text(o.text, `${path}.text`);
   return effect === undefined ? { voice, text: spoken } : { voice, text: spoken, effect };
 }
@@ -410,8 +417,19 @@ export function lineFor(
   defId: string,
   line: PlayableLineKind,
 ): { text: string; persona: Persona } | null {
+  // R1088: `trigger<n>` is the n-th line of the card's trigger list (1-based).
+  const trigger = /^trigger(\d+)$/.exec(line);
+  if (trigger !== null) {
+    const assignment = hookFor(table, defId, "trigger");
+    const spoken = assignment !== null && "lines" in assignment ? assignment.lines[Number(trigger[1]) - 1] : undefined;
+    if (spoken === undefined || assignment?.voice === undefined) return null;
+    const persona = table.voices[assignment.voice];
+    return persona === undefined ? null : { text: spoken, persona };
+  }
+  // A bare `trigger` is not a playable line: only its numbered lines are.
+  if (line === "trigger") return null;
   if (line !== "play" && line !== "death" && line !== "cast" && line !== "attack") {
-    return emoteLineFor(table, emotePortraitOf(defId), line);
+    return emoteLineFor(table, emotePortraitOf(defId), line as VoiceEmoteId);
   }
   const assignment = hookFor(table, defId, line);
   if (assignment?.voice === undefined) return null;
