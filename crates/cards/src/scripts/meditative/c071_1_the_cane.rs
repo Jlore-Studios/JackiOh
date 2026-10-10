@@ -35,7 +35,6 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     const SCARAB: &str = "core-007";
 
