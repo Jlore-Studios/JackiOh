@@ -5,3 +5,4 @@
 {"generation":5,"lane":"unban","parent":"11fbd00ad06305feecbfb167dd483e0b13a4c049","tree":"a0de83d59fda68b951b24c53cc5cae02991ee64d","vsRandom":"100/100","vsParent":"78/100","shadowBan":3,"parentShadowBan":4,"date":"2026-10-10"}
 {"generation":6,"lane":"unban","parent":"c84e57d9af74a0e102518753f08cfd555889cf0a","tree":"bbec2289c2ca9e0aa6d65dbcacdf14d6b0c8f559","vsRandom":"100/100","vsParent":"76/100","shadowBan":2,"parentShadowBan":3,"date":"2026-10-10"}
 {"generation":7,"lane":"unban","parent":"13b096c2eb6df8cd7e334386cd0215a737aa1ef1","tree":"da68f33955d91deaaf047d1fa25be901f6ee7080","vsRandom":"99/100","vsParent":"79/100","shadowBan":1,"parentShadowBan":2,"date":"2026-10-10"}
+{"generation":8,"lane":"unban","parent":"17b8cf2ed056f4ce027ded1177510703f4878d90","tree":"0ce1c788d435866bf5f76bdfeb8c815f369c3cc6","vsRandom":"97/100","vsParent":"81/100","shadowBan":0,"parentShadowBan":1,"date":"2026-10-10"}
