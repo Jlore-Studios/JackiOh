@@ -44,7 +44,7 @@ type PlayerState = {
   resolving: CardInstance[];    // cards mid-resolution: a Spell between its play and its GY (10.5 step 4)
   locks: { units: boolean[5]; backrow: boolean[5] };
   mods: PlayerModifier[];       // next-spell discount, this-turn discounts, Curvature, Twinspell echo, /fullsend's Combo draw; since v0.2.0 also price rules (`costRule`, R455), `enchantNextSpell` (C+ #14), `replacePlays` (C #23, R449), `turnEnds` (R456), `startOfTurnEffect` (a rest-of-game effect, R458) and `healToDamage` (C+ #22)
-  turnLog: { playedIds: string[]; cardsPlayed: number; unspentAtEnd?: number; costsPaid?: number[]; playedByType?: Partial<Record<CardType, number>> };  // costsPaid: what each play paid, beside playedIds (R213); plays by type counted on both players' turns (C+ #37, R451)
+  turnLog: { playedIds: string[]; cardsPlayed: number; unspentAtEnd?: number; costsPaid?: number[]; playedByType?: Partial<Record<CardType, number>>; manaBorrowed?: number; borrowedParts?: number; manaLocked?: number };  // costsPaid: what each play paid, beside playedIds (R213); plays by type counted on both players' turns (C+ #37, R451); manaBorrowed/borrowedParts: this turn's debt and its split, manaLocked: the instalment the last refresh took (M #89, R1223-R1225)
   draws?: { turn: number; count: number };  // this player's draws on the running turn, whoever's it is (C #9, R457)
   jade?: number;  // this player's Jade Counter, absent until it first rises (R961, R962)
   gameLog?: { playedByTag: Partial<Record<Tag, number>>; lastFaceUpPlay?: { defId: string; radiant: boolean; chinese?: true; type: CardType } };  // never reset (C+ #64, T-AI-2, T-AI-5, R451)
@@ -52,6 +52,7 @@ type PlayerState = {
   carried?: (CardInstance | null)[];  // the Unit each backrow zone carries (C+ #33, R446)
   drawOffer: { offeredTurn?: number; blockedUntil?: number }; fatigueCount: number;
   turnsStarted: number;         // drives the mana refresh (2.3)
+  owedInstalments?: number[];   // the instalment due at each coming refresh, next first, trailing zeros trimmed; absent when empty (M #89, R1223)
   aiTurn: boolean;              // My Pawn: the AI policy plays out the rest of this turn
   handicap?: Handicap;          // an AI seat's resources in practice; absent = this spec's (9.9, R180)
   handCap?: number;             // this seat's hand size, once set for the rest of the game (M #79, R1143); absent = 10
@@ -159,13 +160,14 @@ Patch v0.2.0's cards add to the view, each under the same rules of who may read 
 - **Prompts that show cards.** A prompt that shows the opponent's hand (C #11, [[§6.3]] Look at a hand), deck cards (T-AI-1, C #78's Radiant fuse) or a last board's cards (C+ #29) reaches the chooser only, as #51's reveal does; C+ #42's options reach the chooser and its answer key reaches nobody, being in the prompt's `resume` data, which no view sends ([[R420]]). `state.lastBoards` and `state.boardHistory` never reach a view ([[R417]], [[R419]]).
 - **A dealt deck** (All Random, [[R258]]; practice's fresh random deck) is listed to its owner, like a built one, only as far as its owner has been shown its cards: the rest are unknown cards ([[R433]]).
 - **The game's end** reveals both hands to both players once `result` is set ([[R434]]).
-- **Call to Chaos's rolls.** The effects #95 or C+ #73 rolled are named in the event stream both players read, since the rules box reads "???" in play ([[R436]]).
+- **Call to Chaos's rolls.** The effects #95, C+ #73 or Meditative #95 rolled are named in the event stream both players read, since the rules box reads "???" in play ([[R436]]).
 - **A marked card** carries its mark in both views: #50 K-Pop Fanatic's pending steal on its target, for as long as the delayed steal waits ([[R437]]).
 - **Each seat's Jade Counter** shows beside its hero on both seats once it has risen above 0, and the view carries no key before that ([[R961]]).
 - **A Chinese card** carries `chinese: true` on every view of it the viewer may read — a hand card, a unit, a backrow card, a pile's card and a prompt's option — and on no view they may not read ([[R1301]]). `translated` reports a translation only where both players read the card; a change in a hand, a deck or on a face-down trap is silent ([[R440]]).
 - **A card with a granted tag** carries `tags` on every view of it the viewer may read, where they differ from its definition's — and on no view they may not read ([[R923]]).
 - **A set hand size** is public on both seats as `handCap`: Meditative #79's rest-of-game setting, absent until one is set ([[R1143]]).
 - **A marked hand** shows its owner each mark on its card and the other player only the count, `handMarked`, never which ([[R1141]]).
+- **A credit line** is public on its seat as `credit`: what more its controller can borrow (`available`, while a line acts), the instalment each coming refresh owes (`owed`, next first), the instalment the last refresh took (`locked`), and, while a lapsing face acts, whether the line was used this turn (`used`). Absent with no line, no debt and no locked instalment (M #89, [[R1223]]–[[R1225]]).
 
 Two marks since v0.1.1 name what a client would otherwise have to work out. A backrow Trap or Field Trap that has not flipped face-up carries `unrevealed: true` on its controller's own view of it, exactly where the other player sees a face-down marker ([[R33]], [[R351]], [[R371]]); the key is absent otherwise. A backrow card with a grade counter carries the letter it stands for beside it, `counters.gradeLetter` (#93, E to S), and a `preview` value may carry `display`, the word it prints as, such as that letter ([[R372]]).
 

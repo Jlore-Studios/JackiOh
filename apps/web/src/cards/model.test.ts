@@ -8,11 +8,11 @@ import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
-import { faceModel, frameRarity, type FaceModel, type FaceSource } from "./model.ts";
+import { ALL_TRIBES, faceModel, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
 import { termsIn } from "./rules.ts";
 
@@ -254,9 +254,10 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // doubled stats are what R277 marks on it.
     // Classic #60 and Classic+ #5 drop words too, and patch v0.2.1's Classic+ #34 drops "Choose
     // one." Balance patch 1 gives Classic #28's base face the same minimum price as its Radiant
-    // face, so its Radiant face is its base text less the exile replacement (radiantDiff.test.ts
-    // names all five).
-    const pureDeletions = new Set(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034"]);
+    // face, so its Radiant face is its base text less the exile replacement. Meditative #89 Jlarna's
+    // Radiant face is its base text less the end-of-turn Tribute (R1225; radiantDiff.test.ts names
+    // all six).
+    const pureDeletions = new Set(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034", "meditative-089"]);
     for (const card of DEFS) {
       const f = face(card.id, true);
       // The Radiant face prints its catalog text with its `{key}` numbers filled in (B3.4 rule 5).
@@ -591,5 +592,20 @@ describe("R503: a token's printed rarity", () => {
     expect(frameRarity(unknown)).toBeNull();
     // A face built by hand without the field reads as none.
     expect(frameRarity({ rarity: "Epic" })).toBe("Epic");
+  });
+});
+
+describe("R1162: All Tribes", () => {
+  it("R1162 a card with every tribal tag prints All Tribes in their place; one missing a tribe prints its tags", () => {
+    const tribes = ["Human", "Felinor", "KY", "CN", "Jlockeed"] as Tag[];
+    expect(frameTags(tribes)).toEqual([ALL_TRIBES]);
+    expect(frameTags([...tribes, "Quickdraw" as Tag])).toEqual([ALL_TRIBES, "Quickdraw"]);
+    expect(frameTags(["Human", "Felinor", "KY", "CN"] as Tag[])).toEqual([
+      "Human",
+      "Felinor",
+      "KY",
+      "CN",
+    ]);
+    expect(frameTags([])).toEqual([]);
   });
 });

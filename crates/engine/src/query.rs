@@ -522,3 +522,15 @@ pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
         health: face.health - tuning.and_then(|tuning| tuning.health).unwrap_or(0),
     }
 }
+
+/// R1220: whether this card carries Untributable — no Tribute cost may take it, and every Sacrifice
+/// of it does nothing. Read through the layers so auras apply, as the sacrifice sites do.
+pub fn is_untributable(state: &GameState, card: &CardInstance) -> bool {
+    crate::layers::unit_has(state, card, KeywordKind::Untributable)
+}
+
+/// R1225: whether this player borrowed mana this turn — at least one spend went past their current
+/// mana. Jlarna's base face reads it at the end of its controller's turn.
+pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
+    state.players[player].turn_log.mana_borrowed.unwrap_or(0) > 0
+}

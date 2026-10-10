@@ -12201,6 +12201,45 @@
       "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}. Each becomes Radiant."
     }
   },
+  "meditative-080": {
+    "id": "meditative-080",
+    "index": "80",
+    "name": "Aluneth",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 3,
+    "loc": 32,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Untributable"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3 cards."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3 cards."
+    }
+  },
   "meditative-081": {
     "id": "meditative-081",
     "index": "81",
@@ -12244,6 +12283,138 @@
       "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
     }
   },
+  "meditative-082": {
+    "id": "meditative-082",
+    "index": "82",
+    "name": "Medina Outfitter",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Buff every card in your hand."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Buff every card in your hand {times|time|times}."
+    }
+  },
+  "meditative-083": {
+    "id": "meditative-083",
+    "index": "83",
+    "name": "Medina Enforcer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Buff every card in your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "End of turn: Buff every card in your hand {times|time|times}."
+    }
+  },
+  "meditative-084": {
+    "id": "meditative-084",
+    "index": "84",
+    "name": "Volatility",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 25,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Buffs and Nerfs are twice as effective on this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Buffs are three times as effective on this."
+    }
+  },
+  "meditative-085": {
+    "id": "meditative-085",
+    "index": "85",
+    "name": "Playtester",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "classicplus-071",
+      "classicplus-072"
+    ],
+    "params": [
+      {
+        "key": "books",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 35,
+    "base": {
+      "attack": 4,
+      "health": 5,
+      "keywords": [],
+      "text": "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
+    }
+  },
   "meditative-086": {
     "id": "meditative-086",
     "index": "86",
@@ -12271,6 +12442,118 @@
         }
       ],
       "text": "Lucky 1\nAura: All targets are chosen at random."
+    }
+  },
+  "meditative-087": {
+    "id": "meditative-087",
+    "index": "87",
+    "name": "Tatches the Totem",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Felinor",
+      "KY",
+      "CN",
+      "Jlockeed"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 58,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [],
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [],
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck. Then Buff each Unit adjacent to this."
+    }
+  },
+  "meditative-088": {
+    "id": "meditative-088",
+    "index": "88",
+    "name": "The True Sheep",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "worth",
+        "base": 5,
+        "radiant": 500,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 51,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a card with Tribute to replace this with."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a Radiant card with Tribute to replace this with."
+    }
+  },
+  "meditative-089": {
+    "id": "meditative-089",
+    "index": "89",
+    "name": "Jlarna",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "credit",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "instalments",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns.\nEnd of turn: If you didn't use your credit line this turn, Tribute this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns."
     }
   },
   "meditative-090": {
@@ -12625,6 +12908,182 @@
       "health": 22,
       "keywords": [],
       "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+    }
+  },
+  "meditative-095": {
+    "id": "meditative-095",
+    "index": "95",
+    "name": "Call to Chaos (Meditative Edition)",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Call to Chaos"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "meditative-095",
+      "meditative-039-2",
+      "meditative-039-5",
+      "meditative-095-1",
+      "core-095",
+      "classicplus-073"
+    ],
+    "loc": 22,
+    "base": {
+      "keywords": [],
+      "text": "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+    }
+  },
+  "meditative-095-1": {
+    "id": "meditative-095-1",
+    "index": "95.1",
+    "name": "CN Golem",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "token": true,
+    "cost": 4,
+    "refs": [
+      "core-090-1"
+    ],
+    "params": [
+      {
+        "key": "viruses",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 37,
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Poisonous"
+        },
+        {
+          "kind": "Cleave"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|CN-Virus|CN-Viruses} into your opponent's deck."
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Poisonous"
+        },
+        {
+          "kind": "Cleave"
+        },
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
+    }
+  },
+  "meditative-096": {
+    "id": "meditative-096",
+    "index": "96",
+    "name": "Meditative Journey",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-096-1"
+    ],
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 58,
+    "base": {
+      "keywords": [],
+      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Journey Complete into your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Radiant Journey Complete into your deck. Draw {draw|card|cards}."
+    }
+  },
+  "meditative-096-1": {
+    "id": "meditative-096-1",
+    "index": "96.1",
+    "name": "Journey Complete",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 41,
+    "base": {
+      "keywords": [],
+      "text": "Cast on draw: Return the cards that went on this journey from exile to hand. They become Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast on draw: Return the cards that went on this journey from exile to hand. They become Radiant and cost ({discount}) less."
     }
   },
   "meditative-097": {

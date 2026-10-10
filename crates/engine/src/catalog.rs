@@ -197,7 +197,8 @@ pub fn query_cost(def: &CardDef) -> i32 {
 /// every non-token card of every set (R380).
 ///
 /// (TS `CatalogQuery & { defId?, token? }`: the wire query's fields written out beside the two of its
-/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`.)
+/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
+/// `tribute` came after the port, on this side only.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogQueryArgs {
@@ -234,6 +235,24 @@ pub struct CatalogQueryArgs {
     /// §5.1: `true` asks for tokens only, `false` forbids them (the default already does).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<bool>,
+    /// R1221: `true` asks for cards with a Tribute play cost only, `false` forbids them. A script
+    /// flag, not catalog data, so the pool keeps up with every new Tribute card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute: Option<bool>,
+}
+
+/// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
+/// base face, read off the registered script without state.
+fn has_tribute_cost(def: &CardDef) -> bool {
+    crate::scripts::registered_entry(&def.id)
+        .map(|entry| {
+            entry
+                .base
+                .static_flags
+                .as_ref()
+                .is_some_and(|flags| flags.tribute.unwrap_or(0) > 0)
+        })
+        .unwrap_or(false)
 }
 
 impl From<CatalogQuery> for CatalogQueryArgs {
@@ -252,6 +271,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             with_tokens: query.with_tokens,
             def_id: None,
             token: None,
+            tribute: None,
         }
     }
 }
@@ -373,6 +393,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
     if args.luck_based == Some(true) && !is_luck_based(def) {
+        return false;
+    }
+    // R1221: the Tribute-cost filter, read off the registered script.
+    if let Some(wanted) = args.tribute
+        && has_tribute_cost(def) != wanted
+    {
         return false;
     }
 

@@ -193,6 +193,9 @@ pub struct EvalWeights {
     pub library_comfort: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
+    /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
+    /// turns' mana spent early.
+    pub owed_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's hero health.
@@ -260,6 +263,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
+    owed_mana: 0.8,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -324,6 +329,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
+    // them did.
+    owed_mana: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,

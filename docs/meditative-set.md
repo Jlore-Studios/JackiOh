@@ -168,7 +168,7 @@ list (in M6, after its cards) says more.
 | discard guard | "you cannot be forced to discard on your opponent's turn" | #1 | MB02 |
 | computed Echo X | Echo from max mana | #5 | MB02 |
 | ME-TRIG | start/end-of-turn and Cry/Death trigger multipliers; "trigger your end of turn effects" | #9, #10, #12 (#11, #13) | MB03 |
-| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
+| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89's credit line) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
 | ME-WIN | an effect that wins; chosen alternative win conditions held by the state check | #8, #20 | MB04 |
 | ME-SECRET | a hidden choice kept until a later turn, the opponent's prediction | #22, #22.1 | MB05 |
 | ME-CRAFT | the card crafter: a block editor over the engine's real keywords, hooks and verbs, priced in mana and lines of code, building a transient definition as Fuse does | #17 | MB06 |
@@ -3570,34 +3570,47 @@ Twenty-four entries: nineteen cards (#76–#94, #99 Paranoia, the designer's sec
 - **Class:** C (NEW: ME-TRIBUTEPOOL, small).
 
 #### Meditative #89 · Jlarna
-`meditative-089` · (0) Spell · Rare (assigned)
+`meditative-089` · (3) Field Spell · Rare
 
-> **Designer:** (0) Jlarna #89 (a name and a cost only). Read as Klarna, the buy-now-pay-later
-> company, by the house's J-puns (Jlockheed is Lockheed, Jlockwork is Clockwork).
+> **Designer:** (2) Jlarna, Field Spell, Rare, Meditative, #89
+> Combo 2: This costs (2) less.
+> Aura: You can spend mana from next turn. {for AI: lock your next turn’s mana crystals as this happens}
+> If either player doesn’t play a card on a turn, Tribute this.
+> ~~~
+> Combo 2: This costs (2) less.
+> Aura: You can spend mana from next turn.
 
-- **Text:** Choose another card in your hand. It costs (0). Pay its old cost back in
-  {instalments|instalment|instalments}, one at the start of each of your next turns: each is an equal
-  share of that cost, taken from that turn's mana.
-- **Radiant:** Choose another card in your hand. It costs (0). Pay half its old cost back, rounded
-  down, in {instalments|instalment|instalments}, one at the start of each of your next turns: each is an
-  equal share of that half, taken from that turn's mana.
-- **Engine:** a declared hand pick (R81, KY's Constant's) among your other hand cards that are not
-  X-cost (R65) and cost (1) or more now; the old cost C is its price as Jlarna resolves (R65's
-  `effective_cost`); `set_cost_override` 0 on it (kept until it reaches a graveyard or exile, R766).
-  The debt (C, Radiant ⌊C/2⌋) goes on its controller as a **ME-TURN** schedule: at each of their next
-  `instalments` refreshes (§2.3, their own turns, an extra turn counting), that refresh gives the
-  share less mana, Hinder's mechanism on a schedule. With no valid pick it fizzles and still counts as
-  played.
-- **Rulings:** **MD-E13:** the shares split the debt as evenly as possible, larger first (4 in 4 is
-  1, 1, 1, 1; 3 is 1, 1, 1, 0; 6 is 2, 2, 1, 1); mana never goes below 0, so an instalment that finds
-  less mana takes what there is; the debt is the player's and is owed whatever becomes of the card
-  (discarded, stolen or never played); several Jlarnas add their shares turn by turn. The schedule is
-  public (its turns and amounts), as Hinder's is.
-- **Numbers:** `instalments` 4 → 4 ↑ (more instalments, thinner shares).
-- **Check:** **⚠ designer:** the whole card is a proposal from its name: "Pay in 4", and the Radiant
-  face is half price. Rarity Rare by §8's rubric: one idea with a twist (a cost change paid over time),
-  in no family (Jlockeed ___ is Lockheed's) and with no tag.
-- **Class:** C (ME-TURN).
+The designer then made four later changes, kept in the reading below: the brief's "pay in 4" stays
+(M9 row 3, now answered); the Combo line is gone and the cost is (3); a missed instalment is
+forgiven; and the Tribute condition is "If you don't use your credit line", checked on the turn
+Jlarna is played too.
+
+- **Text:** Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at
+  once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next
+  turns.
+  End of turn: If you didn't use your credit line this turn, Tribute this.
+- **Radiant:** the Aura line only.
+- **Engine:** the Aura, a credit line paid in 4 (MD-E13, rewritten). While Jlarna acts on its
+  controller's field, any mana they spend (a card's price, an X, an Activate's cost) can go past
+  the mana they have: they spend their current mana first, and the shortfall is borrowed. What they
+  owe at once (every instalment not yet taken) can never be more than 4. Everything borrowed during
+  one turn is one debt, split into 4 instalments as evenly as possible, larger first. One
+  instalment falls due at each of the borrower's next four refreshes (§2.3), taken off what the
+  refresh gives; debts from different turns add up on one refresh. The instalments lock in as soon
+  as the mana is borrowed, and the schedule is public. A missed instalment is forgiven: it takes
+  what there is, and the rest is dropped, never carried. The debt stays if Jlarna leaves the field;
+  two or more Jlarnas share one line. The base face is Tributed at the end of a turn its controller
+  borrowed nothing on, the turn it is played included (R1225). One affordability function
+  (`spendable_mana`) decides what a player can pay, read by `legal_actions`, the reducer's refusal
+  and the AI. This reading replaces the brief's old card, MD-E13 and every row that described it.
+- **Rulings:** **MD-E13 (rewritten):** the Aura is now a credit line paid in 4, above. **R1223** the
+  borrowing and its limit; **R1224** the repayment schedule and its forgiveness; **R1225** use it or
+  lose it.
+- **Numbers:** `credit` 4 → 4 ↑; `instalments` 4 → 4 ↑ (more instalments, thinner shares).
+- **Check:** R275 ✓: the Radiant face has no self-Tribute. Rare now by the designer's choice, not
+  the brief's.
+- **Class:** C (ME-TURN's repayment schedule).
+
 
 #### Meditative #90 · Spell Basket
 `meditative-090` · (1) Spell · Common
@@ -3853,9 +3866,12 @@ Twenty-four entries: nineteen cards (#76–#94, #99 Paranoia, the designer's sec
   dropped as its stay in that hand ends (R174), and mark each (R437 on hand cards): the owner sees
   the marks, the other player's hand count carries how many (MD-E2). At its point it runs with the
   cards still watched, and `give_from_hand` gains a selector by instance ids to steal them (R12).
-- **ME-TURN** (#89). Besides "next turn" mana, a per-player schedule of refresh changes keyed to that
-  player's next N turn starts (`turnsStarted + k`), each lowering that refresh by its share, mana
-  floored at 0 (MD-E13). Jlarna's instalments are one schedule. Extra turns count as turns.
+- **ME-TURN** (#89). Besides "next turn" mana, a per-player repayment schedule, `owedInstalments`:
+  the instalment due at each of that player's next refreshes, next first, each refresh taking its
+  share off what it gives, mana floored at 0 (MD-E13, rewritten; R1224). Jlarna's credit line borrows
+  past current mana up to its limit through the one affordability function (`spendable_mana`,
+  R1223), its instalments go on that one schedule, and a missed one is forgiven. Extra turns count as
+  turns.
 - **NEW: ME-TUNEMULT** (#84). A static flag `tuneMultiplier { upgrade?, degrade? }` read off a card's
   running face in every zone, which `tune_effect` passes to `tune_once`. Each menu row then scales by
   it: N cost steps, N × `TUNE_STAT_TOTAL`, N keywords, N X steps, N number steps, still one draw and one
@@ -4838,10 +4854,12 @@ differently is corrected in its note, not here.
   Tribes card carries every one in `tags`. A face-down play has no tags until revealed.
 - **MD-E12** (#88 The True Sheep): the Discovered card with a Tribute cost goes to your hand. "To
   replace this with" names its use: the Sheep, worth 5, pays any Tribute alone.
-- **MD-E13** (#89 Jlarna): the debt is the chosen card's cost as Jlarna resolves (Radiant half,
-  rounded down), split into `instalments` shares as evenly as possible, larger first. It is taken from
-  the refreshes of the controller's next turns, mana floored at 0, and is owed whatever becomes of the
-  card.
+- **MD-E13** (#89 Jlarna, rewritten): the Aura is a credit line paid in 4. While Jlarna acts on
+  its controller's field, any mana they spend may go past what they have, owing up to 4 at once;
+  one turn's debt is split into 4 instalments as evenly as possible, larger first, one falling due
+  at each of the next four refreshes, taken off what the refresh gives. A missed instalment is
+  forgiven, never carried; the debt is owed whatever becomes of the card; two or more Jlarnas share
+  one line. The base face is Tributed at the end of a turn its controller borrowed nothing on.
 - **MD-E14** (#91 Windfast): with no Unit in hand or no open unit zone, Windfast attacks itself. The
   summoned Unit makes the attack as a forced attack on the same target, and the base face bounces it
   after the combat if it is still on the field. Each Windfury attack does this.
@@ -5037,7 +5055,7 @@ The build uses the default in each row; each is a guess, and an answer changes t
 | --- | --- | --- | --- |
 | 1 | M2 | Showdown and Paranoia renumbered #98 and #99 (the cards whose tokens did not carry the number move) | as M2 |
 | 2 | #62 | Small Time Recruits' text ("Something with 1 costs") | Draw three (1) Cost Units from your deck; Radiant makes them Radiant |
-| 3 | #89 | Jlarna's text (none given) | Klarna's "pay in 4": choose another card in your hand, it costs (0), and you pay its old cost back in four shares over your next four turns; Radiant pays half |
+| 3 | #89 | Jlarna's text (none given) | answered 2026-10-09: the designer gave the text (a (2) Field Spell Aura, "spend mana from next turn", tributing when a turn passes with no card played), then removed the Combo line, raised the cost to (3), forgave missed instalments, and made the Tribute "if you don't use your credit line", keeping "pay in 4" as the Aura's four instalments |
 | 4 | #12, #59, #83, #93–#93.3, #49.2, #97.5 | Radiant stats the designer kept equal | doubled, R275's stat half |
 | 5 | #69 | The Maestro has no Radiant face | 8/8; two exiles from each zone |
 | 6 | #2 | Rampaging Rhino's Radiant only raises stats | adds Trample |
@@ -5114,7 +5132,7 @@ policy and the timeout can answer it.
 | MB20 | #536 | buffs: #82 Medina Outfitter, #83 Medina Enforcer, #84 Volatility, #85 Playtester, #87 Tatches the Totem | ME-TUNEMULT: "Buffs and Nerfs are twice as effective on this" (one application, a doubled change, R440 kept); Tatches' deck trigger on a card with a tribal tag (R1424) | #515 | hard |
 | MB21 | #537 | the Felinor chains: #93 Growing Felinor, #93.1 Growing Felinor Sr, #93.2 Growing Felinor Sr Sr, #93.3 Growing Felinor Super Senior, #94 Shrinking Felinor | nothing new: named Death summons and `statsOverride` | #515 | medium |
 | MB22 | #538 | combat replacements: #86 Mayor Medinamogger, #91 Windfast, #91.1 Windfurious Prime, #92 Unan | ME-RANDOMTARGETS: "all targets are random", for both players' targets, attacks and target prompts; attack summons (#91, #91.1); the lethal guard (#92): §4.4 step 4a opening for Units as well as heroes | #515 | hard |
-| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword; a catalog pool of cards with a Tribute cost; ME-TURN's repayment schedule (#89), on MB04's refresh | #515, #520 | hard |
+| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword (R1220); a catalog pool of cards with a Tribute cost (R1221); Jlarna's credit line: borrowing past current mana up to its limit through one affordability function (R1223), ME-TURN's repayment schedule taking an instalment off each refresh, a missed one forgiven (R1224), and the turn log's record of borrowing that the base face's Tribute reads (R1225), on MB04's refresh | #515, #520 | hard |
 | MB24 | #540 | chaos and the journey: #95 Call to Chaos (Meditative Edition), #95.1 CN Golem, #96 Meditative Journey, #96.1 Journey Complete | the third Call to Chaos table, `subsystems/call_to_chaos_meditative.rs`, with "for the rest of the game" bounded by a cap and R28, R87, R380, R423 and R436 reworded for three editions (their pools find the Meditative edition once the set ships, R1420); memory written on a shuffled card (#96) | #515, #525 | hard |
 | MB25 | #541 | the plain buildings: #97.2 Wishing Well, #97.3 School, #97.6 University, #97.7 The Great Wall, #97.9 Jlockheed's Headquarters | nothing new beyond an optional `lock_all` | #515 | medium |
 | MB26 | #542 | the blueprint: #97 Jlockheed's Evil Blueprints, #97.1 Empty Plot, #97.4 Mega Church, #97.5 Bunker, #97.8 Prison | stack base (#97.1); wide tribute (#97.4); lane strike (#97.5); capture (#97.8) | #515, #541 | hard |

@@ -4169,7 +4169,16 @@ const MEDITATIVE: &[SpecRow] = &[
         st(1, 1),
         st(2, 2),
     ),
-    row("89", "Jlarna", c(0), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "89",
+        "Jlarna",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "90",
         "Spell Basket",
@@ -5030,7 +5039,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             (
                 "Call to Chaos",
                 Rarity::Legendary,
-                &["core-095", "classicplus-073"],
+                &["core-095", "classicplus-073", "meditative-095"],
             ),
             (
                 "___ Glowy Jelly Bean",
@@ -5119,6 +5128,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("38.1", "Epic"),
             ("36.1", "Rare"),
             ("76.1", "Rare"),
+            ("95.1", "Legendary"),
+            ("96.1", "Rare"),
             ("65.1", "Common"),
             ("65.2", "Common"),
             ("65.3", "Rare"),
@@ -5149,7 +5160,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         }
         assert_eq!(printed, expected);
         // §8.8 prints a designer rarity on Meditative tokens too (M #28.1 Common, M #30.1 Epic, M
-        // #91.1 Epic, M #97's buildings); every other printed rarity stays a Classic+ token's.
+        // #91.1 Epic, M #95.1 Legendary, M #96.1 Rare, M #97's buildings); every other printed rarity
+        // stays a Classic+ token's.
         assert!(
             entries()
                 .into_iter()
@@ -5162,13 +5174,16 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn b2_5_prints_the_designer_s_rarity_on_every_meditative_token_the_catalog_holds() {
         // The designer's rarity of each Meditative token the catalog holds yet, by index: Rare for
-        // the Rock and the Jade, Common for the Dud, Mythic for the Red Jade and the Beauty.
+        // the Rock and the Jade, Common for the Dud, Mythic for the Red Jade and the Beauty; Legendary
+        // for CN Golem and Rare for Journey Complete (MB24).
         const MEDITATIVE_PRINTED: &[(&str, &str)] = &[
             ("39.1", "Rare"),
             ("39.2", "Rare"),
             ("39.3", "Common"),
             ("39.4", "Mythic"),
             ("39.5", "Mythic"),
+            ("95.1", "Legendary"),
+            ("96.1", "Rare"),
         ];
         let printed: BTreeMap<String, String> = entries()
             .into_iter()

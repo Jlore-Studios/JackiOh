@@ -126,6 +126,8 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Temporary" },
   // Patch v0.2.4's keyword (R49).
   { kind: "Deft" },
+  // R1220's keyword.
+  { kind: "Untributable" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

@@ -241,6 +241,13 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-deft-dart", when: "always" },
     numbered: false,
   },
+  Untributable: {
+    layer: "glyph",
+    priority: 26,
+    shape: "an anchor holding its ground",
+    motion: { keyframes: "kw-untributable-anchor", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

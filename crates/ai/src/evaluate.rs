@@ -14,8 +14,8 @@
 use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
-    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, find_def, has_keyword,
-    hero_armor_of, own_cost, query_cost, subsystems, unit_view,
+    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, credit_lapsing, find_def,
+    has_keyword, hero_armor_of, owed_mana_of, own_cost, query_cost, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -134,7 +134,20 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         value += unit_worth(state, unit, w);
     }
 
+    // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
+    value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
+    // is worth nothing.
+    let lapsing: Vec<String> = if state.active == player {
+        credit_lapsing(state, player)
+    } else {
+        Vec::new()
+    };
+
     for card in side.backrow.iter().flatten() {
+        if lapsing.iter().any(|id| id == &card.id) {
+            continue;
+        }
         let def = find_def(Some(state), &card.def_id);
         match def {
             Some(def) if readable_by(state, card, seat) => {

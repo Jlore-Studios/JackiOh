@@ -3,7 +3,7 @@
 // Everything outside `src/cards/` imports from here. Inside `src/cards/`, files import each other
 // by path and never through this barrel, so it cannot create an import cycle.
 
-export { faceModel } from "./model.ts";
+export { ALL_TRIBES, faceModel } from "./model.ts";
 export type { FaceCost, FaceLayout, FaceModel, FaceSource, FaceStats, FaceText, InPlay, StatTone } from "./model.ts";
 
 // The three marks on a face's text (SPEC §10.10): the Radiant diff (R277), references (R279) and,
@@ -71,7 +71,7 @@ export {
 } from "./wheel/StackSheet.tsx";
 export type { StackSheetProps } from "./wheel/StackSheet.tsx";
 
-export { ALL_TRIBES, CardFace } from "./CardFace.tsx";
+export { CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";
 export { MinionFace } from "./MinionFace.tsx";
 export type { MinionFaceProps } from "./MinionFace.tsx";

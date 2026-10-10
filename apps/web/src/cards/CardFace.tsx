@@ -40,7 +40,6 @@
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { TRIBAL_TAGS } from "@jackioh/engine/config";
 import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
@@ -51,7 +50,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { foilFor, frameRarity, type FaceModel } from "./model.ts";
+import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
@@ -104,15 +103,6 @@ export function tuningLine(face: FaceModel): string {
     ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
     ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
   ].join(" ");
-}
-
-/** R1382: what the frame prints for a card with every tribal tag (R1424), in place of the five. */
-export const ALL_TRIBES = "All Tribes";
-
-/** R1382: "All Tribes" in place of the five tribal tags on a card with them all, other tags after. */
-export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
-  if (!TRIBAL_TAGS.every((tribe) => tags.includes(tribe))) return tags;
-  return [ALL_TRIBES, ...tags.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
 /** A frame tag in the face's words (R1301). */

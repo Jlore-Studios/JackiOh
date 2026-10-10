@@ -383,7 +383,12 @@ pub const TUNE_ATTACK_FLOOR: i32 = 0;
 pub const TUNE_HEALTH_FLOOR: i32 = 1;
 /// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card —
 /// "Cannot be in Defense Position" is a static flag (§8 #65.1), not a keyword, so it is never offered.
-pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[KeywordKind::CantAttack, KeywordKind::Brittle];
+/// R1220: Untributable is harmful the same way — losing it would let a Tribute take the card.
+pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
+    KeywordKind::CantAttack,
+    KeywordKind::Brittle,
+    KeywordKind::Untributable,
+];
 
 /// `{ upTo, step }`: one band of `PARAM_DEFAULT_STEP`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -413,6 +418,13 @@ pub const PARAM_DEFAULT_STEP: ParamDefaultStep = ParamDefaultStep {
 /// names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
 /// Degrade lowers.
 pub const TUNE_MIN_AMOUNT: i32 = 1;
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): no tune multiplier — one Buff or Nerf
+/// application moves each row once.
+pub const TUNE_MULTIPLIER_NONE: i32 = 1;
+/// R1160: Volatility's base face makes Buffs and Nerfs twice as effective on it.
+pub const VOLATILITY_TUNE_MULTIPLIER: i32 = 2;
+/// R1160: Volatility's Radiant face makes Buffs three times as effective on it (Nerfs plain).
+pub const VOLATILITY_RADIANT_BUFF_MULTIPLIER: i32 = 3;
 
 // ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
 
@@ -747,6 +759,27 @@ pub const CHAOS_PLUS_UPGRADES: i32 = 2;
 /// §8.7 row 73 entry 7: "Nerf every card on your opponent's field and in their hand three times" (Nerf is the
 /// engine's Degrade, R1320).
 pub const CHAOS_PLUS_DEGRADES: i32 = 3;
+
+// Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R423): its table's numbers.
+/// §8.8 row 95 entry 1: "add 2 copies of it to your hand" (R1242).
+pub const CHAOS_MED_FUSE_COPIES: i32 = 2;
+/// §8.8 row 95 entry 2: "Add 3 random CN cards to your hand".
+pub const CHAOS_MED_CN_CARDS: i32 = 3;
+/// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
+pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
+/// §8.8 row 95 entry 4: "Your hero gains 8 Armor".
+pub const CHAOS_MED_HERO_ARMOR: i32 = 8;
+/// §8.8 row 95 entry 4: "and you heal it 8".
+pub const CHAOS_MED_HEAL: i32 = 8;
+/// §8.8 row 95 entry 6: "Summon 3 random Acclaimed cards" (R1243).
+pub const CHAOS_MED_ACCLAIMED: i32 = 3;
+/// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
+pub const CHAOS_MED_NERFS: i32 = 1;
+/// §8.8 row 95 entries 1, 2 and 3: the cards "cost (0)" (`costOverride`).
+pub const CHAOS_MED_COST: i32 = 0;
+/// §8.8 row 95 entry 9, R1241: the most rest-of-game "cast a random Call to Chaos" effects one player
+/// holds; a roll of the entry for a player at the cap resolves into nothing.
+pub const CALL_TO_CHAOS_ETERNAL_CAP: i32 = 3;
 
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /// T-AI-4: the repeats after the first draw, a termination bound: five draws at most.

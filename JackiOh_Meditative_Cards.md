@@ -842,7 +842,18 @@ Cry:  Discover a Radiant tribute card to replace this with
 Worth 500 tributes
 
 
-(0) Jlarna #89
+(2) Jlarna, Field Spell, Rare, Meditative, #89
+Combo 2: This costs (2) less.
+Aura: You can spend mana from next turn. {for AI: lock your next turn’s mana crystals as this happens}
+If either player doesn’t play a card on a turn, Tribute this.
+~~~
+Combo 2: This costs (2) less.
+Aura: You can spend mana from next turn.
+
+Note (kept with the designer's text above, verbatim): the designer then made four later changes,
+all in the build: the brief's "pay in 4" stays as the Aura's four instalments; the Combo line is
+gone and the cost is (3); a missed instalment is forgiven; and the Tribute condition is "If you
+don't use your credit line", checked on the turn Jlarna is played too.
 
 (1) Spell Basket, Spell, Common, Meditative, #90
 Add 3 random spells to your hand
