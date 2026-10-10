@@ -4008,6 +4008,8 @@
       "run_id": "38003661467",
       "started_at": "2026-10-09T23:17:57Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "560": {
