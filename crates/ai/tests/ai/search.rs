@@ -401,19 +401,18 @@ mod candidate_actions_b14 {
 
         // Extract distinct tribute sets for Mega Church from candidate actions
         let church_id = &state.players.p1.hand[0].id;
-        let mut candidate_tribute_sets = std::collections::HashSet::new();
+        let mut candidate_tribute_sets = std::collections::BTreeSet::new();
         for action in &candidates {
             if let ActionBody::Play {
                 instance_id,
                 tributes: Some(t),
                 ..
             } = action
+                && instance_id == church_id
             {
-                if instance_id == church_id {
-                    let mut sorted = t.clone();
-                    sorted.sort();
-                    candidate_tribute_sets.insert(sorted);
-                }
+                let mut sorted = t.clone();
+                sorted.sort();
+                candidate_tribute_sets.insert(sorted);
             }
         }
 
@@ -449,35 +448,33 @@ mod candidate_actions_b14 {
         let candidates = candidate_actions(state, AI);
 
         let boom_id = &state.players.p1.hand[0].id;
-        let mut legal_tribute_sets = std::collections::HashSet::new();
+        let mut legal_tribute_sets = std::collections::BTreeSet::new();
         for action in &legal {
             if let ActionBody::Play {
                 instance_id,
                 tributes: Some(t),
                 ..
             } = action
+                && instance_id == boom_id
             {
-                if instance_id == boom_id {
-                    let mut sorted = t.clone();
-                    sorted.sort();
-                    legal_tribute_sets.insert(sorted);
-                }
+                let mut sorted = t.clone();
+                sorted.sort();
+                legal_tribute_sets.insert(sorted);
             }
         }
 
-        let mut candidate_tribute_sets = std::collections::HashSet::new();
+        let mut candidate_tribute_sets = std::collections::BTreeSet::new();
         for action in &candidates {
             if let ActionBody::Play {
                 instance_id,
                 tributes: Some(t),
                 ..
             } = action
+                && instance_id == boom_id
             {
-                if instance_id == boom_id {
-                    let mut sorted = t.clone();
-                    sorted.sort();
-                    candidate_tribute_sets.insert(sorted);
-                }
+                let mut sorted = t.clone();
+                sorted.sort();
+                candidate_tribute_sets.insert(sorted);
             }
         }
 

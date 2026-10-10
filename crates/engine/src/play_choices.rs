@@ -653,13 +653,12 @@ pub fn legal_tribute_units<'a>(
                 }
             }
             for slot in crate::zones::slots_of(side, Row::Backrow) {
-                if let Some(c) = crate::zones::card_at(state, slot) {
-                    if c.id != card.id
-                        && !out.iter().any(|existing| existing.id == c.id)
-                        && crate::mana::cost_now(state, c) <= cheap
-                    {
-                        out.push(c);
-                    }
+                if let Some(c) = crate::zones::card_at(state, slot)
+                    && c.id != card.id
+                    && !out.iter().any(|existing| existing.id == c.id)
+                    && crate::mana::cost_now(state, c) <= cheap
+                {
+                    out.push(c);
                 }
             }
         }

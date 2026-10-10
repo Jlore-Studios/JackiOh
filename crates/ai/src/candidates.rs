@@ -276,12 +276,11 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
                 tributes: Some(tributes),
                 ..
             } = action
+                && let Some(allowed) = allowed_sets_by_instance.get(instance_id)
             {
-                if let Some(allowed) = allowed_sets_by_instance.get(instance_id) {
-                    let mut sorted = tributes.clone();
-                    sorted.sort();
-                    return allowed.contains(&sorted);
-                }
+                let mut sorted = tributes.clone();
+                sorted.sort();
+                return allowed.contains(&sorted);
             }
             true
         })
