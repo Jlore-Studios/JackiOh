@@ -4312,6 +4312,13 @@
     "621": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-10T05:21:40Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "Adds ruling R1437 (a new spec/rulings note, spec/INDEX.md, \u00a79.5 and \u00a711 edits), a conflict hot spot that is never easy; the code itself stays in crates/server"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
