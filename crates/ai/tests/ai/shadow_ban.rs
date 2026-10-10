@@ -17,11 +17,11 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::ai_pool;
+use super::support::{AI, ai_pool};
 
-const FLAGS: &[&str] = &["error", "timeout", "neverPlayed", "selfHarm"];
+const FLAGS: &[&str] = &["error", "timeout", "neverPlayed", "selfHarm", "selfKill"];
 
-/// TS's `REASON = /^(error|timeout|neverPlayed|selfHarm)(, (error|timeout|neverPlayed|selfHarm))*: \S/`,
+/// TS's `REASON = /^(error|timeout|neverPlayed|selfHarm|selfKill)(, (error|timeout|neverPlayed|selfHarm|selfKill))*: \S/`,
 /// by hand (no regex crate in a pure crate).
 fn matches_reason(reason: &str) -> bool {
     let Some((head, rest)) = reason.split_once(": ") else {
@@ -188,6 +188,8 @@ fn stats(overrides: Value) -> Value {
             "timeouts": 0,
             "evalDeltaSum": 0,
             "evalDeltaCount": 0,
+            "losingPlays": 0,
+            "winningPlays": 0,
         }),
         Some(&overrides),
     )
@@ -391,6 +393,33 @@ fn verdict(pass1: &[Value], pass2: &[Value]) -> Value {
 
 fn reason_of(verdict: &Value) -> Option<String> {
     verdict["reason"].as_str().map(String::from)
+}
+
+/// A game in progress, the AI's seat in p1 (R390's plays are counted on a state before and after).
+fn running() -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({
+        "seed": "r390-record-play",
+        "p1": { "hand": ["core-008"], "field": ["core-011"] },
+        "p2": { "hand": ["core-005"], "field": ["core-008"] },
+    }))
+    .state()
+    .clone()
+}
+
+/// `state` with the game over, as `evaluate`'s own tests end one.
+fn finished(state: &GameState, winner: Winner) -> GameState {
+    let mut out = state.clone();
+    out.result = Some(GameResult {
+        winner,
+        reason: if winner == Winner::Draw {
+            GameOverReason::TurnCap
+        } else {
+            GameOverReason::HeroDeath
+        },
+    });
+    out.phase = Phase::Over;
+    out
 }
 
 mod the_sweep_judges_a_card_at_every_tier_r186 {
@@ -829,7 +858,8 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(
             harm(plays, bound - 1.0),
             Some(
-                "selfHarm: hard: mean evaluate change -41.0 over 8 play(s) over 24 pass-2 games".to_string()
+                "selfHarm: hard: mean evaluate change -41.0 over 8 play(s) that did not end the game over 24 pass-2 games"
+                    .to_string()
             )
         );
         assert_eq!(harm(plays - 1, bound - 100.0), None);
@@ -1066,6 +1096,238 @@ mod the_two_pass_sweep_r390 {
                 .collect()
         };
         assert_eq!(untimed(&plain["cards"]), untimed(&timed["cards"]));
+    }
+}
+
+/// R390: a play that ends the game is counted as a win or a loss and left out of the mean (#623).
+mod a_game_ending_play_r390 {
+    use super::*;
+
+    fn typed(overrides: Value) -> SweepStats {
+        json_as::<SweepStats>(stats(overrides))
+    }
+
+    fn ev(state: &GameState) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, &AI_EVAL)
+    }
+
+    /// A pass-1 result of `def_id` that raises no flag of its own.
+    fn quiet_pass_1(def_id: &str) -> Value {
+        result(json!({ "defId": def_id, "affordableTurns": 4, "plays": 2, "evalDeltaCount": 2 }))
+    }
+
+    /// The numbers of ten plays that averaged -50 and ended no game.
+    fn ten_at_minus_50() -> Value {
+        json!({ "affordableTurns": 20, "plays": 10, "evalDeltaSum": -500, "evalDeltaCount": 10 })
+    }
+
+    /// R390 ninety plays at +5 and one that loses the game raise no selfHarm at full or half strength, and the loss is counted
+    #[test]
+    fn r390_ninety_plays_at_plus_5_and_one_that_loses_the_game_raise_no_self_harm_at_full_or_half_strength() {
+        let before = running();
+        let lost = finished(&before, Winner::P2);
+        // The one play's evaluation change is what used to decide the mean.
+        assert!(ev(&lost) - ev(&before) < -AI_EVAL.win / 2.0);
+
+        let mut s =
+            typed(json!({ "affordableTurns": 40, "plays": 90, "evalDeltaSum": 450, "evalDeltaCount": 90 }));
+        record_sweep_play(&mut s, &before, &lost, AI);
+        assert_eq!(s.plays, 91);
+        assert_eq!(s.eval_delta_count, 90);
+        assert_eq!(s.eval_delta_sum, 450.0);
+        assert_eq!(s.losing_plays, 1);
+        assert_eq!(s.winning_plays, 0);
+        assert_eq!(js(sweep_flags(&s)), json!([]));
+        assert_eq!(js(half_flags(&s)), json!(["selfKill"]));
+
+        let pass2 = pass2_of("core-011", "hard", vec![js(&s)], json!([]));
+        assert_eq!(verdict(&[quiet_pass_1("core-011")], &[pass2])["flags"], json!([]));
+    }
+
+    /// R390 ten plays averaging -50 with none ending the game still raise selfHarm
+    #[test]
+    fn r390_ten_plays_averaging_minus_50_with_none_ending_the_game_still_raise_self_harm() {
+        let s = typed(ten_at_minus_50());
+        assert!(sweep_flags(&s).contains(&SweepFlag::SelfHarm));
+        assert!(half_flags(&s).contains(&SweepFlag::SelfHarm));
+        let pass2 = pass2_of("core-078", "hard", vec![ten_at_minus_50()], json!([]));
+        assert_eq!(
+            reason_of(&verdict(&[quiet_pass_1("core-078")], &[pass2])),
+            Some(
+                "selfHarm: hard: mean evaluate change -50.0 over 10 play(s) that did not end the game over 24 pass-2 games"
+                    .to_string()
+            )
+        );
+    }
+
+    /// R390 one winning play no longer lifts a mean that is otherwise below the threshold
+    #[test]
+    fn r390_one_winning_play_no_longer_lifts_a_mean_otherwise_below_the_threshold() {
+        let before = running();
+        let mut s = typed(ten_at_minus_50());
+        record_sweep_play(&mut s, &before, &finished(&before, Winner::P1), AI);
+        assert_eq!(s.winning_plays, 1);
+        assert_eq!(s.losing_plays, 0);
+        assert_eq!(s.plays, 11);
+        assert_eq!(s.eval_delta_count, 10);
+        assert_eq!(s.eval_delta_sum, -500.0);
+        assert!(sweep_flags(&s).contains(&SweepFlag::SelfHarm));
+        assert!(half_flags(&s).contains(&SweepFlag::SelfHarm));
+        let pass2 = pass2_of("core-011", "hard", vec![js(&s)], json!([]));
+        assert_eq!(
+            verdict(&[quiet_pass_1("core-011")], &[pass2])["flags"],
+            json!(["selfHarm"])
+        );
+    }
+
+    /// R390 a play the game goes on after counts in the mean, and a draw or a finished before-state in neither count
+    #[test]
+    fn r390_a_play_the_game_goes_on_after_counts_in_the_mean_and_a_draw_or_a_finished_before_state_in_neither_count()
+     {
+        let before = running();
+        let mut after = before.clone();
+        after.players[PlayerId::P2].hero.health -= 3;
+        let mut s = typed(json!({}));
+
+        record_sweep_play(&mut s, &before, &after, AI);
+        assert_eq!(s.eval_delta_count, 1);
+        assert_eq!(s.eval_delta_sum, ev(&after) - ev(&before));
+        assert_ne!(s.eval_delta_sum, 0.0);
+
+        record_sweep_play(&mut s, &before, &finished(&before, Winner::Draw), AI);
+        let over = finished(&before, Winner::P2);
+        record_sweep_play(&mut s, &over, &over, AI);
+        assert_eq!(s.plays, 3);
+        assert_eq!(s.eval_delta_count, 1);
+        assert_eq!(s.losing_plays, 0);
+        assert_eq!(s.winning_plays, 0);
+    }
+
+    /// R390 a slice written before the counts still reads and merges
+    #[test]
+    fn r390_a_slice_written_before_the_counts_still_reads_and_merges() {
+        let p1: SweepResult = serde_json::from_value(json!({
+            "defId": "core-030", "games": 8, "drawnGames": 6, "affordableTurns": 5, "plays": 3, "errors": 0,
+            "timeouts": 0, "evalDeltaSum": 12.5, "evalDeltaCount": 3, "tier": "easy", "flags": [], "unswept": false,
+        }))
+        .expect("an old pass-1 line reads");
+        let old_pass2: SweepPass2 = serde_json::from_value(json!({
+            "forced": "core-030", "tier": "easy", "games": 24,
+            "cards": [{
+                "defId": "core-030", "games": 24, "drawnGames": 20, "affordableTurns": 30, "plays": 9,
+                "errors": 0, "timeouts": 0, "evalDeltaSum": 18, "evalDeltaCount": 9,
+            }],
+            "suspects": [],
+        }))
+        .expect("an old pass-2 line reads");
+        assert_eq!((p1.losing_plays, p1.winning_plays), (0, 0));
+        assert_eq!(js(&p1)["losingPlays"], json!(0));
+
+        let merged = pass2_stats(
+            &[old_pass2.clone(), old_pass2.clone()],
+            "core-030",
+            Difficulty::Easy,
+        );
+        assert_eq!(merged.games, 48);
+        assert_eq!(merged.plays, 18);
+        assert_eq!(merged.eval_delta_count, 18);
+        assert_eq!(merged.eval_delta_sum, 36.0);
+        assert_eq!((merged.losing_plays, merged.winning_plays), (0, 0));
+
+        let judged = sweep_verdict(&[p1], &[old_pass2.clone(), old_pass2]);
+        assert!(judged.flags.is_empty());
+        assert_eq!(judged.reason, None);
+    }
+
+    /// R390 R601 selfKill is raised at 2 lost games, puts a card at risk on 1 and bans on 4 in pass 2 alone
+    #[test]
+    fn r390_r601_self_kill_is_raised_at_2_lost_games_puts_a_card_at_risk_on_1_and_bans_on_4_in_pass_2_alone()
+    {
+        assert_eq!(AI_SWEEP.min_losing_plays, 2);
+        assert_eq!(AI_SWEEP.ban_losing_plays, 2 * AI_SWEEP.min_losing_plays);
+
+        let lost = |count: i64| {
+            stats(json!({ "affordableTurns": 9, "plays": 5, "evalDeltaCount": 3, "losingPlays": count }))
+        };
+        assert_eq!(flags_of(&lost(2)), json!(["selfKill"]));
+        assert_eq!(flags_of(&lost(1)), json!([]));
+        assert_eq!(half_of(&lost(1)), json!(["selfKill"]));
+        assert_eq!(half_of(&lost(0)), json!([]));
+
+        let bans = i64::from(AI_SWEEP.ban_losing_plays);
+        let p1 = vec![quiet_pass_1("core-078")];
+        let killed = |count: i64| -> Option<String> {
+            reason_of(&verdict(
+                &p1,
+                &[pass2_of(
+                    "core-078",
+                    "hard",
+                    vec![
+                        json!({ "affordableTurns": 20, "plays": 30, "evalDeltaSum": 60, "evalDeltaCount": 26, "losingPlays": count }),
+                    ],
+                    json!([]),
+                )],
+            ))
+        };
+        let reason = killed(bans).expect("four lost games ban the card");
+        assert_eq!(
+            reason,
+            "selfKill: hard: lost the game on 4 of 30 play(s) over 24 pass-2 games"
+        );
+        assert!(matches_reason(&reason));
+        assert_eq!(killed(bans - 1), None);
+
+        // Pass 1 alone never bans for it, however many games the card lost.
+        let doomed = result(json!({
+            "defId": "core-078", "affordableTurns": 9, "plays": 20, "evalDeltaSum": 40, "evalDeltaCount": 10, "losingPlays": 10,
+        }));
+        assert_eq!(doomed["flags"], json!(["selfKill"]));
+        assert_match_object(&verdict(&[doomed], &[]), &json!({ "flags": [], "reason": null }));
+
+        // The flags come out in order, selfKill last.
+        let all = stats(json!({
+            "errors": 1,
+            "timeouts": 1,
+            "affordableTurns": AI_SWEEP.min_affordable_turns,
+            "plays": 0,
+            "evalDeltaSum": (AI_SWEEP.self_harm_delta - 10.0) * f64::from(AI_SWEEP.min_harm_plays),
+            "evalDeltaCount": AI_SWEEP.min_harm_plays,
+            "losingPlays": AI_SWEEP.min_losing_plays,
+        }));
+        assert_eq!(
+            flags_of(&all),
+            json!(["error", "timeout", "neverPlayed", "selfHarm", "selfKill"])
+        );
+
+        // A selfKill ban reads back as one, and pass 2's filler lifts it as it does a judgement ban.
+        assert_eq!(js(ban_flags(&reason)), json!(["selfKill"]));
+        assert_eq!(
+            pass2_keep_out(&[], &[("core-042", reason.as_str())]),
+            Vec::<String>::new()
+        );
+    }
+
+    /// R390 R600 a card at risk for a lost game is watched with its losses named
+    #[test]
+    fn r390_r600_a_card_at_risk_for_a_lost_game_is_watched_with_its_losses_named() {
+        let watched = verdict(
+            &[result(json!({
+                "defId": "core-078", "affordableTurns": 9, "plays": 5, "evalDeltaSum": 10, "evalDeltaCount": 4, "losingPlays": 1,
+            }))],
+            &[pass2_of(
+                "core-078",
+                "easy",
+                vec![json!({ "affordableTurns": 20, "plays": 9, "evalDeltaCount": 9 })],
+                json!([]),
+            )],
+        );
+        assert_eq!(watched["reason"], Value::Null);
+        assert_eq!(
+            watched["watch"],
+            json!(
+                "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 5 time(s), mean evaluate change 2.5, lost the game on 1 play(s)"
+            )
+        );
     }
 }
 
