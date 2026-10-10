@@ -86,6 +86,16 @@
 /// the enemy units) and every one priced by the same eval that reads the Golem's `controller`
 /// whether it lands at home or across the table (R360). Dealt ×3 by `UNBANNED_PREFER` on the same
 /// evidence as the generation-2 unban: a card the AI demonstrably plays well belongs in its decks.
+///
+/// Generation 6 removed `core-078` (/fullsend): its `neverPlayed` row is the same beam-horizon
+/// blind spot as generation-4's core-099 — the cast alone buys nothing (4 paid, 3 refreshed, a
+/// discount that pays back only across the rest of the line, and a delayed hand-exile the eval
+/// reads only once it fires), so no prefix of the line ever outbids the tempo plays beside it.
+/// What makes the row a blind spot rather than a misplay is that a cast that did survive selection
+/// would be honest: the exile is real engine state, every simulated EndTurn runs it, and an open
+/// line is scored with its turn ended — a /fullsend that fails to cash its hand costs itself by
+/// the same eval that would have to pick it. Dealt at stock weight and not in `UNBANNED_PREFER`,
+/// the never-played slot costs a fraction of a draw where it lands at all.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-042",
@@ -94,10 +104,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-076",
         "neverPlayed: hard: affordable in hand on 15 turns, never played",
-    ),
-    (
-        "core-078",
-        "neverPlayed: easy: affordable in hand on 31 turns, never played",
     ),
 ];
 
@@ -404,7 +410,11 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// above the ban table), so preferring it would only deal a dead card more.
 /// `core-055` joins them in generation 5 on the strongest numbers the sweep of
 /// record took (222 casts at easy for +4545.7, 168 at hard for +23833.0): the
-/// AI already plays the Golem well, so it should meet it often.
+/// AI already plays the Golem well, so it should meet it often. `core-078` is
+/// not preferred on the generation-4 precedent: its refresh, discount and
+/// hand-exile pay only across a whole dumped hand (the generation-6 note above
+/// the ban table), so preferring it would deal the dead slot three times as
+/// often.
 pub const UNBANNED_PREFER: &[&str] = &[
     "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
 ];
