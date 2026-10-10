@@ -94,12 +94,14 @@ pub struct AddRolledArgs {
 /// independent rolls (R60) over `table`, each card created in the hand through §6.3's Add to hand,
 /// so a full hand burns it (§2.4, R4). `radiant` makes every card Radiant. The Lucky of the card
 /// running the script applies to every roll (the Rock's Radiant face prints Lucky 2), unless
-/// `lucky` names a number. ME-LUCK's player Luck joins in MB11, not here.
+/// `lucky` names a number. ME-LUCK's player Luck (R987, MB11) adds to it.
 pub fn add_rolled(args: AddRolledArgs) -> Effect {
     Effect::new("addRolled", move |ctx| {
+        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = match args.lucky {
-            Some(lucky) => lucky,
-            None => lucky_of(ctx),
+            Some(lucky) => lucky + luck,
+            None => lucky_of(ctx) + luck,
         };
         add_rolled_from(
             ctx,
@@ -121,9 +123,11 @@ pub fn add_rolled(args: AddRolledArgs) -> Effect {
 /// fixed order (§10.7).
 pub fn add_rolled_grapes(args: AddRolledGrapesArgs) -> Effect {
     Effect::new("addRolledGrapes", move |ctx| {
+        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = match args.lucky {
-            Some(lucky) => lucky,
-            None => lucky_of(ctx),
+            Some(lucky) => lucky + luck,
+            None => lucky_of(ctx) + luck,
         };
         add_rolled_from(ctx, GRAPE_ODDS, args.count, args.radiant, lucky, args.player);
     })

@@ -42,7 +42,7 @@ use serde_json::{Value, json};
 use crate::animated::animate_on_entry;
 use crate::announce::{begin_announce, end_announce, is_announce_live};
 use crate::catalog::def_of;
-use crate::config::{MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
+use crate::config::{FENG_SHUI_BRITTLE, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
 use crate::cost_rules::why_play_banned;
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
 use crate::draw::{add_to_hand, draw};
@@ -81,6 +81,7 @@ use crate::state::{
 use crate::state_check::{sacrifice_together, state_check};
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::{copied_text_of, copies_text, fix_copied_text, text_face_of};
+use crate::subsystems::feng_shui::FengShuiVerdict;
 use crate::subsystems::glitch::count_system_play;
 use crate::targeting::target_aim;
 use crate::targeting_point::{
@@ -91,8 +92,8 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind,
-    RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, CounterKind, Enchantment, FengShuiOutcome, GameEvent, PLAYER_IDS, PlagueSpend,
+    PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -244,7 +245,7 @@ pub const RESOLVE_PARTS: &[ResolvePart] = &[
 pub const PLAY_WORK_KIND: &str = "play";
 
 /// Where the run record sits inside `resume.data`, so the rest of `data` stays the card's own.
-const RUN_KEY: &str = "__play";
+pub(crate) const RUN_KEY: &str = "__play";
 
 /// `PlayRun.awaiting`: which bucket the answer to a prompt this pipeline opened fills.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -359,6 +360,12 @@ pub struct PlayRun {
     /// no step 1 (R70), so its step 3 reads the board.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gifted: Option<bool>,
+    /// R983: Meditative #40 Feng Shui's judgements of this play, fixed at step 1 as `gifted` is
+    /// (R214) so the two agree — a Tribute's Death at step 2 can have taken a judge off the field.
+    /// Step 3 applies this answer (a cast or a replaced card, with no step 1 of its own, reads the
+    /// board there instead). Plain JSON like the rest of the run (§10.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feng_shui: Option<Vec<FengShuiVerdict>>,
     /// Step 4 has placed the card and announced the play; what is left of it is its resolution loop,
     /// which a trap's question can pause (§10.3, R17), so the step is re-entered at that loop.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -469,6 +476,10 @@ pub struct PlayRun {
     /// multiplier touches records nothing new (docs/meditative-set.md D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra_cries: Option<u32>,
+    /// MD-B22, R946: an aimed cast's named first pick — the instance id the cast card's first target
+    /// declaration takes when it is a legal pick (Meditative #98's Book of Buff). Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim_at: Option<String>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -495,6 +506,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         cast: None,
         radiant: None,
         gifted: None,
+        feng_shui: None,
         placed: None,
         target_slices: None,
         exits_from: None,
@@ -518,6 +530,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         drawn_as: None,
         copied: None,
         extra_cries: None,
+        aim_at: None,
     }
 }
 
@@ -754,6 +767,9 @@ pub fn validate_play(
     run.tributes = tributes;
     run.at = 1;
     run.gifted = Some(play_made_radiant(state, player, &card, cost));
+    // R983: the Feng Shui verdicts, fixed here as `gifted` is (R214).
+    let fixed = crate::subsystems::feng_shui::verdicts(state, player, &card);
+    run.feng_shui = (!fixed.is_empty()).then_some(fixed);
     run.target_slices = slices_for(state, player, &card, cost, &run.targets, &run.modes);
     run.exits_from = Some(exit_mark(state));
     let begins = play_begins(state, player);
@@ -973,6 +989,8 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if run.hook_ids.is_none() {
         // R449: a replacement comes first, so what step 3 makes Radiant is the card that is played.
         replace_played_card(sink, run);
+        // R983: Feng Shui judges the card that is played, before it is made Radiant.
+        feng_shui_step(sink, run);
         gifted_program_step(sink, run);
         run.hook_ids = Some(
             trigger_holders_with_hook(sink.state, HookName::OnPlayHook, None)
@@ -1038,6 +1056,52 @@ fn holder_with_on_play_hook(state: &GameState, id: Option<&str>, from: Option<u3
     } else {
         Some(holder)
     }
+}
+
+/// R983, Meditative #40 Feng Shui: judge the card that is played at §10.5 step 3, where Gifted
+/// Program's flag is read (R213, R214, R449) — after a replacement (R449), so the card judged is
+/// the card played, and before it is made Radiant. The verdicts are step 1's answer when it read
+/// one; a cast or a replaced card, with no step 1 of its own, is judged off the board now (R70),
+/// and the answer is stored back for step 7. Each verdict is a public `fengShui` event. A punished
+/// play is given Brittle 2 here, as `effects/brittle.rs` gives a count: on a copy, then written
+/// back to the live card with its `CounterChanged`.
+fn feng_shui_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    let Some(card) = snapshot(sink.state, &run.instance_id) else {
+        return;
+    };
+    let verdicts = match run.gifted {
+        Some(_) => run.feng_shui.clone().unwrap_or_default(),
+        None => crate::subsystems::feng_shui::verdicts(sink.state, run.player, &card),
+    };
+    if verdicts.is_empty() {
+        return;
+    }
+    run.feng_shui = Some(verdicts.clone());
+    for verdict in &verdicts {
+        sink.events.push(GameEvent::FengShui {
+            instance_id: card.id.clone(),
+            source_id: verdict.source_id.clone(),
+            player: run.player,
+            outcome: verdict.outcome,
+        });
+    }
+    if !verdicts
+        .iter()
+        .any(|verdict| verdict.outcome == FengShuiOutcome::Negative)
+    {
+        return;
+    }
+    let mut copy = card.clone();
+    crate::brittle_count::give_brittle_count(sink.state, &mut copy, FENG_SHUI_BRITTLE);
+    if let Some(live) = find_instance_mut(sink.state, &card.id) {
+        live.brittle = copy.brittle;
+    }
+    sink.events.push(GameEvent::CounterChanged {
+        instance_id: card.id.clone(),
+        counter: CounterKind::Brittle,
+        value: FENG_SHUI_BRITTLE,
+        placed: None,
+    });
 }
 
 /// §8 #64 Gifted Program: "the first card costing 1 or less you play each turn becomes Radiant as it
@@ -1155,6 +1219,8 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         run.cast_chosen = None;
         // R214: whether step 3 makes it Radiant is read for the card that is played, off the board now.
         run.gifted = None;
+        // R983: and so are the Feng Shui verdicts.
+        run.feng_shui = None;
     }
 }
 
@@ -2266,6 +2332,21 @@ fn ask_repeat_targets(
         if options.is_empty() {
             continue;
         }
+        // MD-B22, R946: an aimed cast takes the named legal pick for its first declaration.
+        if at == 0
+            && run.cast == Some(true)
+            && let Some(aimed) = run.aim_at.clone()
+        {
+            if let Some(pick) = options
+                .iter()
+                .find(|option| matches!(option, Selection::Instance { instance_id } if instance_id == &aimed))
+            {
+                if let Some(repeat) = run.repeat.as_mut() {
+                    repeat.targets.push(pick.clone());
+                }
+                continue;
+            }
+        }
         // R1200: while a Mayor acts a `target` repeat is drawn at random, and nobody is asked.
         if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
             let picks = crate::random_targets::draw_picks(
@@ -2562,6 +2643,25 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     }
     flag_return_to_hand_at_end_of_turn(sink.state, &run.instance_id);
     note_return_price(sink.state, &run.instance_id, played_at);
+    // R983: a punished play's hit, once it has resolved (`cardResolved` is out) — from the judge
+    // wherever it is now, through §4.4 on the playing player's hero.
+    for verdict in run.feng_shui.clone().unwrap_or_default() {
+        if verdict.outcome != FengShuiOutcome::Negative {
+            continue;
+        }
+        if sink.state.result.is_some() {
+            break;
+        }
+        deal_damage(
+            sink,
+            DamageArgs {
+                source: find_instance(sink.state, &verdict.source_id).cloned(),
+                target: DamageTarget::Hero { player: run.player },
+                amount: verdict.damage,
+                flags: None,
+            },
+        );
+    }
 }
 
 /// E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to hand"): a Spell
@@ -2899,6 +2999,8 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     if target_enemies {
         run.target_enemies = Some(true);
     }
+    // MD-B22, R946: an aimed cast names its first pick.
+    run.aim_at = options.aim_at.clone();
     run.mana_before = Some(sink.state.players[player].mana.current);
     // A cast starts past the pay step, so it owes no targeting cost (as before: casts never paid one).
     run.targeting_owed = 0;

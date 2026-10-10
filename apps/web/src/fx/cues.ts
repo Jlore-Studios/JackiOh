@@ -819,6 +819,9 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
   if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
+  // R983: a Feng Shui judgement is 吉 or 凶 on the turn banner.
+  if (event.type === "fengShui")
+    return [banner(p.D, event.outcome === "positive" ? FX_TEXT.auspicious : FX_TEXT.inauspicious, "muted")];
   if (event.type !== "turnStarted") return [];
   // R845: an extra turn's banner says so.
   if (event.extra === true) {

@@ -140,6 +140,8 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts (R426) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
+| `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
+| `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and

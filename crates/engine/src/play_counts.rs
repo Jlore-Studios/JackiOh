@@ -53,7 +53,7 @@ pub fn play_record_of(state: &GameState, card: &CardInstance) -> Option<PlayReco
 }
 
 /// A Trap or Field Trap is set face-down (§3.2, R33), so its play is never a face-up one (R451).
-fn played_face_down(type_: CardType) -> bool {
+pub(crate) fn played_face_down(type_: CardType) -> bool {
     type_ == CardType::Trap || type_ == CardType::FieldTrap
 }
 
@@ -91,9 +91,13 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
                 .game_log
                 .as_ref()
                 .and_then(|log| log.last_face_up_play.clone()),
+            last_element: side.game_log.as_ref().and_then(|log| log.last_element),
         };
         side.game_log = Some(log);
     }
+    // R982: the last element, beside R451's records and before its skip, which the record ignores
+    // (MD-C7) — a face-down play is neither judged nor recorded, by `record_element` itself.
+    crate::subsystems::feng_shui::record_element(state, player, card);
 
     let Some(record) = play_record_of(state, card) else {
         return;

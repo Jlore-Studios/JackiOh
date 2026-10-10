@@ -393,6 +393,25 @@
   filter: hue-rotate(-60deg) saturate(1.5) drop-shadow(0 0 0.8cqh rgb(255 95 210 / 0.8));
 }
 
+/* ------------------------------------------------------------------------------ element ---- */
+
+/* R980: the card's element, a small round chip opposite the cost gem, sized like the crest. */
+.cf .cf-element {
+  position: absolute;
+  z-index: 3;
+  top: 1cqh;
+  right: 1.5cqw;
+  display: grid;
+  place-items: center;
+  width: 52cqw;
+  height: 13cqh;
+  border-radius: 50%;
+  background: rgb(20 24 40 / 0.85);
+  color: #f2e9c9;
+  font-size: 8cqh;
+  line-height: 1;
+}
+
 .cf .cf-icon {
   display: block;
   width: 100%;
@@ -1342,6 +1361,7 @@
 .cf .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
 .cf .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
 .cf .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
+.cf .keyword[data-keyword="Immune to tribal tag based hate"] { --kw: #3a7bb0; }
 .cf .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
 .cf .keyword[data-keyword="Immutable"] { --kw: #52607a; }
 .cf .keyword[data-keyword="Stack"] { --kw: #2f55c2; }

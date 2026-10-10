@@ -4,6 +4,7 @@ import type { ControlHow } from "./ControlHow";
 import type { CounterKind } from "./CounterKind";
 import type { CounteredTo } from "./CounteredTo";
 import type { EmoteId } from "./EmoteId";
+import type { FengShuiOutcome } from "./FengShuiOutcome";
 import type { GameOverReason } from "./GameOverReason";
 import type { GlitchOutcome } from "./GlitchOutcome";
 import type { Keyword } from "./Keyword";
@@ -11,10 +12,12 @@ import type { LibraryOverflowOutcome } from "./LibraryOverflowOutcome";
 import type { PlayedFrom } from "./PlayedFrom";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
+import type { PredictOutcome } from "./PredictOutcome";
 import type { PromptKind } from "./PromptKind";
 import type { RedirectWhat } from "./RedirectWhat";
 import type { RotationDirection } from "./RotationDirection";
 import type { Row } from "./Row";
+import type { SecretChoice } from "./SecretChoice";
 import type { SwapWhat } from "./SwapWhat";
 import type { TuningChange } from "./TuningChange";
 import type { Winner } from "./Winner";
@@ -120,4 +123,4 @@ carried?: true, } | { "type": "deanimated", player: PlayerId, instanceId: string
 /**
  * Always "field".
  */
-zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, };
+zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, };

@@ -183,6 +183,8 @@ export type FaceModel = {
    * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
    */
   brittle?: number | null;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`); null otherwise. */
+  element?: string | null;
   /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
   tuning?: FaceTuning | null;
   /** B5 E39: in play, the enchantments riding the card (`CardView.enchantments`). */
@@ -191,6 +193,8 @@ export type FaceModel = {
   animated?: { home?: number } | null;
   /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: boolean;
+  /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
+  created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
   /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
@@ -231,6 +235,8 @@ export type InPlay = {
   params?: Readonly<Record<string, number>>;
   /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
   brittle?: number;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`). */
+  element?: string;
   /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
   tuning?: Tuning;
   /** B5 E39: the enchantments riding the card (`CardView.enchantments`). */
@@ -239,6 +245,8 @@ export type InPlay = {
   animated?: { home?: number };
   /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: true;
+  /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
+  created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
   marks?: readonly CardMark[];
   /** B5 E33, R404: the card's quest line (`CardView.quest`). */
@@ -342,10 +350,12 @@ export function faceModel(source: FaceSource): FaceModel {
         : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
+    element: inPlay?.element ?? null,
     tuning,
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     berserk: inPlay?.berserk === true,
+    created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,

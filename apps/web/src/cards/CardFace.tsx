@@ -222,6 +222,12 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
           {face.cost.alt !== null && <span className="cf-cost-alt">{face.cost.alt}</span>}
         </span>
 
+        {face.element != null && (
+          <span className="cf-element" data-testid="card-element" title={`Element ${face.element}`}>
+            {face.element}
+          </span>
+        )}
+
         {crested(rarity) && (
           <span className="cf-crest">
             <Icon name="crest" />

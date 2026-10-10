@@ -41,6 +41,7 @@
   --kw-period-edge: 3.6s;
   --kw-period-dart: 1.2s;
   --kw-period-anchor: 2.8s;
+  --kw-period-tribal: 2.4s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -376,6 +377,10 @@
   animation: kw-untributable-anchor var(--kw-period-anchor) ease-in-out infinite alternate;
 }
 
+.cf .kw-fx[data-keyword-fx="Immune to tribal tag based hate"][data-kw-motion="on"] .kw-anim {
+  animation: kw-tribal var(--kw-period-tribal) ease-in-out infinite alternate;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -597,6 +602,17 @@
   }
   to {
     transform: translateY(-4%) rotate(2deg);
+  }
+}
+
+@keyframes kw-tribal {
+  from {
+    transform: rotate(-8deg);
+    opacity: 0.85;
+  }
+  to {
+    transform: rotate(8deg);
+    opacity: 1;
   }
 }
 

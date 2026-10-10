@@ -146,7 +146,7 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
 /// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
 /// card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's hero
 /// guards read.
-fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
         .into_iter()
         .cloned()

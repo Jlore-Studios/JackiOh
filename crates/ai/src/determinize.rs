@@ -14,7 +14,7 @@ use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
     CardInstance, CardType, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, RevealAt, Rng,
-    SetAs, active_units_of, effective_cost, find_def, query, scripts_for, unit_view,
+    SecretChoice, SetAs, active_units_of, effective_cost, find_def, query, scripts_for, unit_view,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -405,6 +405,16 @@ pub fn determinize(
         }
     }
     next.players[seat].library = rng.shuffle(&next.players[seat].library);
+
+    // R865, the last draw: every dropped secret choice becomes one of the three, uniformly, so no
+    // simulation reads the true one.
+    if let Some(secrets) = next.secrets.as_mut() {
+        for secret in secrets.iter_mut() {
+            if secret.choice.is_none() {
+                secret.choice = Some(SecretChoice::ALL[rng.int(3) as usize]);
+            }
+        }
+    }
 
     // Step 6: every sampled card kept its instance id, owner, controller and zone above.
     next

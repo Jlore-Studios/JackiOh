@@ -17,6 +17,7 @@ pub mod craft;
 pub mod credit;
 pub mod damage_combat;
 pub mod datacenter;
+pub mod feng_shui;
 pub mod field;
 pub mod fruit;
 pub mod generation;

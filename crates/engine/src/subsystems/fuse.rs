@@ -1072,6 +1072,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 credit_line: numbers(|f| f.credit_line),
                 credit_instalments: numbers(|f| f.credit_instalments),
                 credit_lapses: flags(|f| f.credit_lapses),
+                no_natural_mana: flags(|f| f.no_natural_mana),
+                feng_shui: flags(|f| f.feng_shui),
+                luck: summed_number(defined.iter().map(|f| f.luck)),
             })
         }
     }
@@ -1138,6 +1141,8 @@ fn combine_objects(records: &[Script]) -> Script {
         static_flags: combine_static_flags(records),
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
+        // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
+        secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
         preview: eager_condition(records.iter().map(|s| s.preview.clone()).collect()),
         activations: concat(records.iter().map(|s| s.activations.clone())),

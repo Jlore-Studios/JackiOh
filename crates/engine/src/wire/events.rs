@@ -102,6 +102,24 @@ string_union! {
 }
 
 string_union! {
+    /// ME-SECRET, R860: Mind Games' hidden choice (`secretRevealed.choice`, a Fortify Mind's `guess`).
+    pub enum SecretChoice {
+        Greed = "greed",
+        Attack = "attack",
+        Defend = "defend",
+    }
+}
+
+string_union! {
+    /// ME-SECRET, R864: a prediction's outcome (`predicted.outcome`).
+    pub enum PredictOutcome {
+        Won = "won",
+        Same = "same",
+        Lost = "lost",
+    }
+}
+
+string_union! {
     /// `redirected.what`.
     pub enum RedirectWhat {
         Damage = "damage",
@@ -117,6 +135,14 @@ string_union! {
         Swap = "swap",
         Boards = "boards",
         Void = "void",
+    }
+}
+
+string_union! {
+    /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
+    pub enum FengShuiOutcome {
+        Positive = "positive",
+        Negative = "negative",
     }
 }
 
@@ -731,6 +757,15 @@ pub enum GameEvent {
         player: PlayerId,
         outcome: GlitchOutcome,
     },
+    /// R983: the Feng Shui `source_id` judged the play of `instance_id` by `player` at §10.5 step 3:
+    /// `positive` (it was made Radiant) or `negative` (it was given Brittle 2, and the hit follows once
+    /// it has resolved). Public: only a face-up play is judged (R982), and a hidden id is redacted.
+    FengShui {
+        instance_id: String,
+        source_id: String,
+        player: PlayerId,
+        outcome: FengShuiOutcome,
+    },
     /// R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
     /// (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
     Marked {
@@ -773,6 +808,28 @@ pub enum GameEvent {
     JadeChanged {
         player: PlayerId,
         value: i32,
+    },
+    // -------------------------------------------------------------------------------------------
+    // Meditative MB05 (ME-SECRET, R860–R865)
+    // -------------------------------------------------------------------------------------------
+    /// R860: a secret was kept. Public only that it exists: the player and the id, never the choice.
+    SecretChosen {
+        player: PlayerId,
+        secret_id: String,
+    },
+    /// R864: a secret was revealed — by its reward resolving, or by a Fortify Mind judged against it.
+    /// Public: both players read the choice from here on.
+    SecretRevealed {
+        player: PlayerId,
+        secret_id: String,
+        choice: SecretChoice,
+    },
+    /// R864: a Fortify Mind's guess was judged against its linked secret. Public.
+    Predicted {
+        player: PlayerId,
+        secret_id: String,
+        guess: SecretChoice,
+        outcome: PredictOutcome,
     },
 }
 
@@ -891,10 +948,14 @@ string_union! {
         TurnCutShort = "turnCutShort",
         Marked = "marked",
         Glitched = "glitched",
+        FengShui = "fengShui",
         Translated = "translated",
         DiscardPrevented = "discardPrevented",
         DamageAbsorbed = "damageAbsorbed",
         JadeChanged = "jadeChanged",
+        SecretChosen = "secretChosen",
+        SecretRevealed = "secretRevealed",
+        Predicted = "predicted",
     }
 }
 
@@ -1025,11 +1086,15 @@ impl GameEvent {
             GameEvent::DrawLimited { .. } => GameEventType::DrawLimited,
             GameEvent::TurnCutShort { .. } => GameEventType::TurnCutShort,
             GameEvent::Glitched { .. } => GameEventType::Glitched,
+            GameEvent::FengShui { .. } => GameEventType::FengShui,
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
             GameEvent::DiscardPrevented { .. } => GameEventType::DiscardPrevented,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
+            GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
+            GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
+            GameEvent::Predicted { .. } => GameEventType::Predicted,
         }
     }
 }
@@ -1090,7 +1155,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 70);
+        assert_eq!(GAME_EVENT_TYPES.len(), 74);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1133,7 +1198,8 @@ mod tests {
         );
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
         assert_eq!(event.event_type().as_str(), "damageAbsorbed");
-        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961).
+        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
+        // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
     }
 }

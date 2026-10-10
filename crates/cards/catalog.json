@@ -11679,6 +11679,156 @@
       "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     }
   },
+  "meditative-022": {
+    "id": "meditative-022",
+    "index": "22",
+    "name": "Mind Games",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-022-1"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "fortifyCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
+    }
+  },
+  "meditative-022-1": {
+    "id": "meditative-022-1",
+    "index": "22.1",
+    "name": "Fortify Mind",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 0,
+    "refs": [
+      "meditative-022"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discards",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 8,
+        "radiant": 8,
+        "better": "down",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 8,
+        "radiant": 8,
+        "better": "down",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Temporary"
+        }
+      ],
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Temporary"
+        }
+      ],
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+    }
+  },
   "meditative-023": {
     "id": "meditative-023",
     "index": "23",
@@ -11729,6 +11879,66 @@
     "radiant": {
       "keywords": [],
       "text": "Transform a Unit and the Units next to it into Sheep Tokens."
+    }
+  },
+  "meditative-025": {
+    "id": "meditative-025",
+    "index": "25",
+    "name": "Blue-Eyes White Felinor",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "loc": 26,
+    "base": {
+      "attack": 12,
+      "health": 9,
+      "keywords": [
+        {
+          "kind": "Immune to tribal tag based hate"
+        }
+      ],
+      "text": "Tribute 2, Immune to tribal tag based hate"
+    },
+    "radiant": {
+      "attack": 24,
+      "health": 18,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Immune to tribal tag based hate"
+        }
+      ],
+      "text": "Tribute 2, Immutable, Immune to tribal tag based hate"
+    }
+  },
+  "meditative-026": {
+    "id": "meditative-026",
+    "index": "26",
+    "name": "Alternate Fate",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "core-006"
+    ],
+    "loc": 40,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Players don't generate mana naturally.\nEnd of turn: Summon a Mana Well into every empty backrow zone, for the player whose zone it is."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Players don't generate mana naturally.\nEnd of turn: Summon a Mana Well into every empty backrow zone, for the player whose zone it is. Yours are Radiant."
     }
   },
   "meditative-027": {
@@ -11947,6 +12157,40 @@
     "radiant": {
       "keywords": [],
       "text": "Cast on draw: Heal your hero {heal}."
+    }
+  },
+  "meditative-031": {
+    "id": "meditative-031",
+    "index": "31",
+    "name": "The Conductor",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "loc": 62,
+    "base": {
+      "attack": 7,
+      "health": 9,
+      "keywords": [
+        {
+          "kind": "Deft"
+        }
+      ],
+      "text": "Deft\nCry: Draw every Created card in your deck."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 18,
+      "keywords": [
+        {
+          "kind": "Deft"
+        }
+      ],
+      "text": "Deft\nCry: Shuffle a random Prime card into your deck. Then draw every Created card in your deck."
     }
   },
   "meditative-032": {
@@ -12405,6 +12649,38 @@
         }
       ],
       "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
+    }
+  },
+  "meditative-040": {
+    "id": "meditative-040",
+    "index": "40",
+    "name": "Feng Shui",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "luck",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 35,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Every card has an element: 水, 木, 火, 金 or 土.\nAuspicious behavior will be rewarded and inauspicious behavior will be punished.\nYour last element and your opponent's last element are shown here.\nAura: You have Luck {luck}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Every card has an element: 水, 木, 火, 金 or 土.\nAuspicious behavior will be rewarded for you, and inauspicious behavior will be punished heavily for your opponent.\nYour last element and your opponent's last element are shown here.\nAura: You have Luck {luck}."
     }
   },
   "meditative-041": {
@@ -14237,6 +14513,29 @@
         }
       ],
       "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
+    }
+  },
+  "meditative-098": {
+    "id": "meditative-098",
+    "index": "98",
+    "name": "Showdown",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "classicplus-071"
+    ],
+    "loc": 154,
+    "base": {
+      "keywords": [],
+      "text": "Choose a lane. Lock every other lane until the start of your next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose a lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
     }
   },
   "meditative-099": {

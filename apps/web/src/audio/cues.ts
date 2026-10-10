@@ -603,6 +603,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
+  // R983: a Feng Shui judgement sings auspicious or stings inauspicious.
+  fengShui: { sfx: "radiant", cues: (event) => [sfx(event.outcome === "positive" ? "radiant" : "sting")] },
   translated: silent("a translation changes only the language a card is shown in (R1301)"),
 
   // R800: a discard a discard guard stopped: nothing moved, so a soft cancel.
@@ -613,6 +615,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+
+  // ---- Meditative MB05 (ME-SECRET, R860–R864) ----
+  // A secret is kept like a trap is set; its reveal stings like a trap's; a judgement notifies.
+  secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
+  secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  predicted: { sfx: "notify", cues: () => [sfx("notify")] },
 };
 
 /**

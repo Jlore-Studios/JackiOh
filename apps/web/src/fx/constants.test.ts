@@ -125,6 +125,8 @@ const S2 = {
     yourExtraTurn: "Your extra turn",
     opponentExtraTurn: "Opponent's extra turn",
     autoEnded: "No moves left",
+    auspicious: "吉",
+    inauspicious: "凶",
     chaosRolled: "Call to Chaos:",
     turnCutShort: "Turn cut short",
     victory: "Victory",

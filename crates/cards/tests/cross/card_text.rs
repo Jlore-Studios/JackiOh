@@ -394,7 +394,10 @@ fn ends_with_a_full_stop(line: &str) -> bool {
 fn failures(face: &Face) -> Vec<String> {
     let text = face.text.as_str();
     let keywords = &face.keywords;
-    if text.chars().any(is_cjk) {
+    // R988: a face printed in English that names the element glyphs (Meditative #40) is R366's
+    // English shape. A face is printed in Chinese when it is punctuated in Chinese — R1302 ends
+    // every other line with 。, so a Chinese face always is — not when it merely names a glyph.
+    if text.chars().any(is_cjk_punctuation) {
         return cjk_failures(text, keywords);
     }
     let mut out: Vec<String> = Vec::new();
@@ -509,10 +512,12 @@ fn failures(face: &Face) -> Vec<String> {
 // written, and no full-width bracket.
 // ---------------------------------------------------------------------------------------------
 
-/// A character a Chinese face is written in: CJK punctuation, the unified ideographs (with extension
-/// A) and the full-width forms ("，", "：", "（").
-pub(super) fn is_cjk(c: char) -> bool {
-    matches!(c, '\u{3000}'..='\u{303f}' | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{ff00}'..='\u{ffef}')
+/// R988: a character that punctuates a Chinese face: CJK punctuation (U+3000–U+303F) and the
+/// full-width forms (U+FF00–U+FFEF: "，", "："). The element glyphs are unified ideographs
+/// (U+3400–U+4DBF, U+4E00–U+9FFF), not punctuation, so an English face that names them is not
+/// punctuated in Chinese.
+pub(super) fn is_cjk_punctuation(c: char) -> bool {
+    matches!(c, '\u{3000}'..='\u{303f}' | '\u{ff00}'..='\u{ffef}')
 }
 
 /// `chinese-terms.json` (R1303), the frame's words in Chinese.
@@ -1636,6 +1641,27 @@ mod r1302_a_face_printed_in_chinese {
             failures(&face("core-005", "Draw a card", vec![]))
                 .iter()
                 .any(|why| why.contains("full stop"))
+        );
+    }
+
+    #[test]
+    fn r988_an_english_face_that_names_the_element_glyphs_is_read_as_english() {
+        // Meditative #40 names the five glyphs but is punctuated in English (R366): no Chinese
+        // punctuation, so both printed faces read as English and pass.
+        let faces: Vec<Face> = faces_of(&entries())
+            .into_iter()
+            .filter(|face| face.card.id == "meditative-040")
+            .collect();
+        assert_eq!(faces.len(), 2);
+        for face in &faces {
+            assert_eq!(failures(face), Vec::<String>::new(), "{}", face.text);
+        }
+        // And a punctuated face still reads as Chinese, glyphs or not: an ASCII comma fails the
+        // Chinese punctuation, never the English list.
+        assert!(
+            failures(&face("core-005", "抽一张牌,水。", vec![]))
+                .iter()
+                .any(|why| why.contains("ASCII"))
         );
     }
 }

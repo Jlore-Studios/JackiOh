@@ -248,6 +248,13 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-untributable-anchor", when: "always" },
     numbered: false,
   },
+  "Immune to tribal tag based hate": {
+    layer: "glyph",
+    priority: 27,
+    shape: "a ringed ward that turns tribal marks aside",
+    motion: { keyframes: "kw-tribal", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

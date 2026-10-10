@@ -85,6 +85,10 @@ pub struct ScopedCard {
 pub struct CardScopeOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub whole_hidden_piles: Option<bool>,
+    /// MD-B1, R940: the walk's aim. A harmful walk (`Some(Harm)`) passes an immune card by when
+    /// the scope names a tribal tag; any other aim reaches it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim: Option<crate::wire::TargetAim>,
 }
 
 /// R97, R33, §9.1: who may read a card where it sits now.
@@ -206,7 +210,19 @@ pub fn cards_in_card_scope(
         ];
         for (zone, cards) in piles {
             for card in cards {
-                let matches = matches_card_scope(ctx, &card, scope);
+                let mut matches = matches_card_scope(ctx, &card, scope);
+                // MD-B1, R940: a harmful card-scope walk passes an immune card by.
+                if matches
+                    && options.and_then(|options| options.aim) == Some(crate::wire::TargetAim::Harm)
+                    && crate::restrictions::tribal_hate_cannot_reach(
+                        state,
+                        &card,
+                        scope.tags.as_deref(),
+                        scope.not_tags.as_deref(),
+                    )
+                {
+                    matches = false;
+                }
                 let readers = readers_of(state, &card);
                 if !matches && !(whole_hidden_piles && readers != Readers::Everyone) {
                     continue;

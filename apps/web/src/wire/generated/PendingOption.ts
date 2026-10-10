@@ -28,4 +28,9 @@ recipe?: CraftRecipe,
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
  * Only ever `Some(true)`.
  */
-chinese?: true, };
+chinese?: true, 
+/**
+ * MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+ * a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+ */
+created?: true, };

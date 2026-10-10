@@ -22,6 +22,7 @@ pub mod call_to_chaos_plus;
 pub mod combo_index;
 pub mod copied_text;
 pub mod craft;
+pub mod feng_shui;
 pub mod fuse;
 pub mod glitch;
 pub mod hero_power;

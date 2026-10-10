@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::catalog::def_of;
-use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope, instance_of};
+use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, instance_of};
 use crate::plague::{permanents_on_field, place_plague_on, remove_plague};
 use crate::prelude::json_as;
 use crate::prompts::{
@@ -96,7 +96,10 @@ pub struct PlacePlagueEachArgs {
 /// face-down cards, as every backrow card is in a scope's backrow row.
 pub fn place_plague_each(args: PlacePlagueEachArgs) -> Effect {
     Effect::new("placePlagueEach", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args.scope).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let cards: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args.scope, crate::wire::TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             place_plague_on(ctx, card, args.amount);
         }
@@ -123,7 +126,10 @@ pub fn place_plague_random(args: PlacePlagueRandomArgs) -> Effect {
             Some(scope) => scope.clone(),
             None => json_as(json!({ "side": "any", "rows": ["units"] })),
         };
-        let pool: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let pool: Vec<CardInstance> = cards_in_scope_aimed(ctx, &scope, crate::wire::TargetAim::Harm)
+            .into_iter()
+            .collect();
         let count = args.count;
         if pool.is_empty() || count <= 0 {
             return;

@@ -78,6 +78,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (card.tuning !== undefined) inPlay.tuning = card.tuning;
   // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
   if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  // R980: the card's element, while a Feng Shui acts.
+  if (card.element !== undefined) inPlay.element = card.element;
   if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
   // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
   const marks = marksOf(card);
@@ -86,6 +88,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
+  // MD-B6, R943: a Created card, wherever the view carries the mark.
+  if (card.created === true) inPlay.created = true;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;

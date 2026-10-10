@@ -395,9 +395,11 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
         turn,
         extra: extra.then_some(true),
     });
+    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
+    let natural = crate::mana::natural_mana_on(sink.state);
     let side = &mut sink.state.players[player];
     let rider = side.mana.next_turn_mod;
-    crate::mana::refresh_mana(side);
+    crate::mana::refresh_mana_with(side, natural);
     let lost_spent = crate::mana::spend_lost_refresh(side);
     sink.events.push(crate::mana::mana_event(player, side));
     // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.

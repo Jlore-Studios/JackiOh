@@ -48,6 +48,10 @@ pub struct CastHow {
     /// R452, R656: target picks aim by declaration ("Each aims at enemies when it harms and at your side when it helps").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_enemies: Option<bool>,
+    /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration
+    /// (Meditative #98's Book of Buff).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim_at: Option<String>,
     /// R453: a resolved Spell goes to exile instead of its graveyard ("Cast them, then exile them").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub afterward: Option<CastAfterward>,
@@ -78,6 +82,7 @@ fn options_of(how: &CastHow) -> CastOptions {
             None
         },
         afterward: how.afterward,
+        aim_at: how.aim_at.clone(),
         ..CastOptions::default()
     }
 }
@@ -349,6 +354,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
             random: None,
             target_enemies: args.target_enemies,
             afterward: args.afterward,
+            aim_at: None,
         };
         let radiant = args.radiant == Some(true);
         EffectPart {

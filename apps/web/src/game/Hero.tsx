@@ -59,6 +59,7 @@ import {
 } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
+import { secretBadgeText } from "./secrets.ts";
 import type { HeroPowerView, PlayerView } from "@jackioh/shared";
 
 export type { HeroEmotes } from "./contract.ts";
@@ -139,7 +140,13 @@ export default function Hero(props: HeroProps): ReactElement {
     >
       {/* Issue §1: the portrait is the hero's art, with health and armor badged on it. The badges
           are the same `hero-health`/`hero-armor` elements, moved inside the oval. */}
-      <HeroPortrait portrait={portrait} health={hero.health} armor={hero.armor} reacting={reacting}>
+      <HeroPortrait
+        portrait={portrait}
+        health={hero.health}
+        armor={hero.armor}
+        luck={seat.luck}
+        reacting={reacting}
+      >
         {emotes !== undefined && (
           <button
             type="button"
@@ -215,6 +222,24 @@ export default function Hero(props: HeroProps): ReactElement {
           </span>
         ))}
       </span>
+
+      {/* R860: one badge per secret this seat holds, in the view's order. The badge names the
+          choice only where the view carries it — the owner's seat, or anyone once revealed —
+          and the opponent's badge says only "Secret". */}
+      {(seat.secrets?.length ?? 0) > 0 && (
+        <span className="modifiers secrets" data-testid={`secrets-${side}`}>
+          {(seat.secrets ?? []).map((secret) => (
+            <span
+              key={secret.id}
+              className="modifier-badge secret-badge"
+              data-secret-id={secret.id}
+              data-choice={secret.choice}
+            >
+              {secretBadgeText(secret.choice)}
+            </span>
+          ))}
+        </span>
+      )}
 
       <PopLayer pops={props.pops} />
 

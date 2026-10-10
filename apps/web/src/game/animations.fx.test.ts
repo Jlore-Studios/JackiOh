@@ -164,10 +164,14 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -207,7 +211,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 14 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 17 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -277,6 +281,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   turnCutShort: "banner",
   marked: "brand",
   glitched: "banner",
+  fengShui: "banner",
   // R1301: a translation pulses its card and nothing decorates it.
   translated: null,
   // R800: a discard a discard guard stopped fizzles over the hand.
@@ -285,6 +290,10 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   damageAbsorbed: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
+  // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
+  secretChosen: null,
+  secretRevealed: null,
+  predicted: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -395,17 +404,21 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   turnCutShort: ["jk-banner", 600, "turn-banner"],
   marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   glitched: ["jk-banner", 600, "turn-banner"],
+  fengShui: ["jk-banner", 600, "turn-banner"],
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   discardPrevented: ["jk-fatigue", 300, "hand-<side>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
   jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
+  secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
+  secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
+  predicted: ["jk-badge-fade", 400, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 56 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800) and MN05 (R1363) carry fx with the listed recipe and the other 14 carry none", () => {
+  it("B1 exactly the 57 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 17 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(56);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(57);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {
@@ -417,9 +430,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 14 rows without an effect have no fx value at all", () => {
+  it("B1 the 17 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(14);
+    expect(bare).toHaveLength(17);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

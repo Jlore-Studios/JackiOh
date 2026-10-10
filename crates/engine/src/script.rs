@@ -632,6 +632,22 @@ pub struct StaticFlags {
     /// face). The view and the AI read it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credit_lapses: Option<bool>,
+    /// MD-B2, R941: while this card acts on the field — face-up, top of its pile — no player generates
+    /// mana naturally: each start-of-turn refresh sets max mana as usual but current mana to the
+    /// next-turn rider only (Meditative #26).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_natural_mana: Option<bool>,
+    // ---- Meditative ----
+    /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
+    /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
+    /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feng_shui: Option<bool>,
+    /// R987, Meditative #40 Feng Shui: "You have Luck X". While this card acts on the field, every roll
+    /// with a best that its controller's cards make rolls X more times (`query::luck_of`); X is the
+    /// card's declared number `luck` where it declares it, else this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub luck: Option<i32>,
 }
 
 string_union! {
@@ -869,6 +885,9 @@ pub struct Script {
     /// The play-time choices this card declares (R81).
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
+    /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
+    /// play's events, and blanked from an in-flight play the other seat reads.
+    pub secret_modes: bool,
     /// R195: the condition `view_for` surfaces as `conditionActive` (§10.8).
     pub condition_met: Option<ConditionHook>,
     /// R280: the numbers the card's formula comes to now, which `view_for` surfaces as `preview` (§10.8).

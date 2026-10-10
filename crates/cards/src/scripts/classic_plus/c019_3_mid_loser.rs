@@ -9,12 +9,13 @@ pub const ID: &str = "classicplus-019-3";
 
 /// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`).
 fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
+    // R987: the controller's Luck flips extra times beside the card's own Lucky.
     let lucky = match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
             numbered_sum(&unit_view(&*ctx.state, me).keywords, KeywordKind::Lucky).unwrap_or(0)
         }
         _ => 0,
-    };
+    } + luck_of(&*ctx.state, ctx.controller);
     ctx.rng.lucky_coin(lucky)
 }
 
@@ -147,6 +148,28 @@ mod tests {
                 let me = mid(&s);
                 s.expect_stats(&me, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
+            }
+
+            #[test]
+            fn r987_feng_shui_s_luck_adds_a_roll() {
+                crate::register_all();
+                let _open = preview_sets(&[SetName::Meditative]);
+                let flips = |judge: bool| -> u32 {
+                    let mut p1 = json!({ "hand": [MID, FILLER], "library": DECK });
+                    if judge {
+                        p1["backrow"] = json!(["meditative-040"]);
+                    }
+                    let mut s = scenario(json!({
+                        "seed": "mid-loser-luck",
+                        "p1": p1,
+                        "p2": { "hand": [FILLER], "library": DECK },
+                    }));
+                    let cursor = s.state().rng_cursor;
+                    s.play(MID, json!({}));
+                    s.state().rng_cursor - cursor
+                };
+                assert_eq!(flips(false), 1);
+                assert_eq!(flips(true), 2);
             }
 
             #[test]

@@ -214,6 +214,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   // R800: a discard a discard guard stopped.
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
@@ -221,6 +222,10 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   // Patch v0.3.X (Meditative #39.2, R961).
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -292,6 +297,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   turnCutShort: "notify",
   marked: "brand",
   glitched: "whoosh",
+  fengShui: "radiant",
   translated: null,
   // R800: a discard a discard guard stopped sounds a soft cancel.
   discardPrevented: "cancel",
@@ -299,6 +305,10 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   damageAbsorbed: "armorRing",
   // Patch v0.3.X (Meditative #39.2, R961).
   jadeChanged: "uiClick",
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: "trapSet",
+  secretRevealed: "trapSting",
+  predicted: "notify",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

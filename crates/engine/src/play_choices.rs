@@ -305,10 +305,13 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
 }
 
 /// §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
-/// card (R213) or a tag rule's (Classic+ #68). Step 1 reads it to know the face the play's choices
-/// answer (R214), and step 3 applies it.
+/// card (R213), a tag rule's (Classic+ #68), or Meditative #40 Feng Shui's reward for an auspicious
+/// play (R983). Step 1 reads it to know the face the play's choices answer (R214), and step 3
+/// applies it.
 pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> bool {
-    gifted_makes_radiant(state, player, cost_paid) || tagged_play_radiant(state, player, card)
+    gifted_makes_radiant(state, player, cost_paid)
+        || tagged_play_radiant(state, player, card)
+        || crate::subsystems::feng_shui::rewards(state, player, card)
 }
 
 /// What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as
@@ -936,6 +939,16 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
+    // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
+    if crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm {
+        let (tags, not_tags) = match decl.filter.as_ref() {
+            Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+            None => (None, None),
+        };
+        if crate::restrictions::tribal_hate_cannot_reach(state, candidate, tags, not_tags) {
+            return false;
+        }
+    }
     decl.kind != PromptKind::Target
         || crate::targeting::can_pay_to_target(state, player, candidate, Some(card.id.as_str()))
 }
@@ -1151,6 +1164,15 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
+        // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
+        && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
+            && {
+                let (tags, not_tags) = match decl.filter.as_ref() {
+                    Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+                    None => (None, None),
+                };
+                crate::restrictions::tribal_hate_cannot_reach(state, &probe, tags, not_tags)
+            })
 }
 
 // ---------------------------------------------------------------------------

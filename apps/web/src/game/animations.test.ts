@@ -104,6 +104,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   turnCutShort: 600,
   marked: 400,
   glitched: 600,
+  fengShui: 600,
   translated: 400,
   // R800: a discard a discard guard stopped shakes the hand once.
   discardPrevented: 300,
@@ -111,6 +112,10 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   damageAbsorbed: 300,
   // Patch v0.3.X (Meditative #39.2, R961).
   jadeChanged: 200,
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: 300,
+  secretRevealed: 400,
+  predicted: 400,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -205,10 +210,14 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -279,7 +288,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(70);
+    expect(rows).toHaveLength(74);
   });
 
   it("gives every row an animation name and a testid template", () => {

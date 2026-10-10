@@ -79,14 +79,16 @@ const CLASSIC_PREVIEWED: [&str; 6] = [
 const DATACENTER_FIRE: &str = "classicplus-t-ai-06";
 const TWICE_FORWARD: &str = "classicplus-074";
 const NEW_SET_PREVIEWED: [&str; 2] = [TWICE_FORWARD, DATACENTER_FIRE];
-/// Meditative cards that declare one (R280), each proved in its own script file.
-const MEDITATIVE_PREVIEWED: [&str; 1] = ["meditative-008"];
 
 /// Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file.
 const SNAKE: &str = "classicplus-003"; // C+ #3's hits: test/classic-plus/003-second-amendment-snake.test.ts
 const FROZEN_WASTES: &str = "classicplus-012-6"; // C+ #12.6's exiles: test/classic-plus/012-6-frozen-wastes.test.ts
 const BOOK_WORM: &str = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
 const CLASSIC_PLUS_C_PREVIEWED: [&str; 3] = [SNAKE, FROZEN_WASTES, BOOK_WORM];
+
+/// Meditative cards that declare one, each proved in its own script file: #8, and #40 Feng Shui's
+/// last-element lines (R280, R982).
+const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 
 const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY: &str = "core-011"; // 1-cost Unit

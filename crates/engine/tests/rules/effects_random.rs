@@ -35,6 +35,7 @@ use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use jackioh_engine::zones::{card_at, lock_zone};
 
+use super::fixtures::feng_shui::{FS, register_feng_shui};
 use super::fixtures::harness::{new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
@@ -745,6 +746,34 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
 
         assert!(theirs.iter().all(|card| live(&state, &card.id).radiant));
         assert!(!mine.iter().any(|card| live(&state, &card.id).radiant));
+    }
+
+    #[test]
+    fn r987_luck_adds_a_roll_to_radiant_chance_for_its_controller_only() {
+        let run_for = |controller: PlayerId| -> Ran {
+            let mut state = game("eug-luck");
+            // After `game()`: `new_game` resets the registry, so the judge registers here.
+            register_feng_shui();
+            set_library(&mut state, PlayerId::P1, &bodies(6));
+            set_library(&mut state, PlayerId::P2, &bodies(6));
+            put(
+                &mut state,
+                &FS.judge.id,
+                slot(PlayerId::P1, Row::Backrow, 1),
+                json!({}),
+            );
+            run(
+                &mut state,
+                &[chance(json!({ "zone": "library", "chance": 0.3 }))],
+                RunOptions {
+                    controller: Some(controller),
+                    ..Default::default()
+                },
+            )
+        };
+        // p1's Luck 1 doubles the six rolls; p2 rolls as before.
+        assert_eq!(draws(&run_for(PlayerId::P1)), 12);
+        assert_eq!(draws(&run_for(PlayerId::P2)), 6);
     }
 }
 

@@ -40,6 +40,7 @@ import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { sideOf, testid, touchHoldMode } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
+import { PREDICTED_WORDS, SECRET_WORDS } from "./secrets.ts";
 import { CHAOS_TEXT } from "./showcase/constants.ts";
 import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
 
@@ -223,6 +224,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "damageAbsorbed":
       // R1361: the Armor took the whole hit, so nothing was dealt.
       return `${capitalised(name.instance(event.targetId))}'s Armor absorbed ${String(event.absorbed)} damage${event.combat ? " in combat" : ""}`;
+    case "secretChosen":
+      // R860: the line names only that a secret is held — never the choice.
+      return `${name.seat(event.player)} kept a secret`;
+    case "secretRevealed":
+      // R864: revealed, the choice is public history.
+      return capitalised(`${name.whose(event.player)} secret was ${SECRET_WORDS[event.choice]}`);
+    case "predicted":
+      // R864: the guess and what it did to the reward.
+      return `${name.seat(event.player)} guessed ${SECRET_WORDS[event.guess]}: ${PREDICTED_WORDS[event.outcome]}`;
     case "healthLost":
       return `${name.seat(event.player)} lost ${event.amount} health`;
     case "healed":
@@ -396,6 +406,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
+    case "fengShui":
+      // R983: whose play was judged, and how.
+      return capitalised(`${name.whose(event.player)} play was ${FENG_SHUI_LINE[event.outcome]}`);
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
@@ -437,6 +450,12 @@ const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched"
   swap: "the players swap seats",
   boards: "other games' boards appear",
   void: "the match never happened",
+};
+
+/** R983: each Feng Shui outcome, as its log line ends. */
+const FENG_SHUI_LINE: Readonly<Record<Extract<GameEvent, { type: "fengShui" }>["outcome"], string>> = {
+  positive: "auspicious (吉)",
+  negative: "inauspicious (凶)",
 };
 
 /** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */

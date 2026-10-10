@@ -20,9 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, Selection, Tag, Tuning, Zone,
-    ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
+    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
+    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -252,6 +252,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B6, R943 (ME-CREATED): the instance was minted after the decks were built — by an
+    /// effect or a rule during the game, never a dealt deck card. Public wherever the viewer may
+    /// read the card. Kept in every zone and through R78's and R766's resets; a card that keeps
+    /// its instance keeps it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
     /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
     /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
@@ -472,6 +479,15 @@ pub enum ModifierKind {
     AltWin {
         condition: AltWinCondition,
         threshold: i32,
+    },
+    /// MD-B22, R946: Showdown's turn watcher (Meditative #98, Radiant face) — for the rest of the
+    /// turn, after a card of this player enters one of their zones in `lane`, the stored `resume`
+    /// re-enters the card's step with the card's id in its data. Expiry `thisTurn`. `label` is its
+    /// badge (R169), the card's own words.
+    LaneWatch {
+        lane: i32,
+        resume: Resume,
+        label: String,
     },
 }
 
@@ -1160,6 +1176,12 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
+    // ---- Meditative MB05 (ME-SECRET, R860–R865) ----
+    /// R860: the hidden choices Mind Games kept. D14: absent until the first secret is kept, so a game
+    /// that never uses one hashes exactly as before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub secrets: Option<Vec<SecretRecord>>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1200,6 +1222,27 @@ pub struct LastBoardEntry {
 
 /// R417: each seat's last board in seat order, as `create_game` and `replay::fold` take them.
 pub type LastBoardInput = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
+
+/// ME-SECRET, R860: one hidden choice a Mind Games kept (`state.secrets`). The choice reaches only
+/// its owner's view until `revealed` is set — by the reward resolving, or by a Fortify Mind judged
+/// against it (R864) — and the AI's `redact` drops it while `determinize` samples it (R865).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretRecord {
+    pub id: String,
+    pub owner: PlayerId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub choice: Option<SecretChoice>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealed: Option<bool>,
+}
 
 /// R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.rs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1418,6 +1461,11 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
+    /// R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written only
+    /// while the Meditative set is open, so a shipped game never carries it (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub last_element: Option<CardElement>,
 }
 
 fn empty_row<T: Clone>(size: i32) -> Vec<Option<T>> {
@@ -1696,11 +1744,25 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
+        created: Some(true),
         set_as: None,
         granted_tags: None,
     };
     *next_id += 1;
     instance
+}
+
+/// MD-B6, R943: the dealt deck cards — `build_game`'s deck loop and a Glitch reset's new deal —
+/// are never Created. Every other `new_instance` call mints a Created card.
+pub fn new_dealt_instance(
+    state: &mut impl NextId,
+    def_id: &str,
+    owner: PlayerId,
+    zone: Zone,
+) -> CardInstance {
+    let mut card = new_instance(state, def_id, owner, zone);
+    card.created = None;
+    card
 }
 
 /// A game in phase `setup`: libraries hold the decks in list order, and `setup.rs` (M1-T5)
@@ -1804,6 +1866,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         reset_owed: None,
         seat_swaps: None,
         glitch_boards: None,
+        secrets: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -1817,7 +1880,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         let deck = deck_of(options, seat);
         let mut library: Vec<CardInstance> = deck
             .iter()
-            .map(|def_id| new_instance(&mut state, def_id, player, Zone::Library { player }))
+            .map(|def_id| new_dealt_instance(&mut state, def_id, player, Zone::Library { player }))
             .collect();
         let numbers: Vec<String> = library.iter().map(|card| card.id.clone()).collect();
         let ids = numbering.shuffle(&numbers);
@@ -2009,7 +2072,7 @@ mod tests {
                 "id": "c7", "defId": "core-001", "owner": "p2", "controller": "p2", "radiant": false,
                 "zone": { "z": "hand", "player": "p2" }, "damage": 0, "buffs": { "attack": 0, "health": 0 },
                 "grantedKeywords": [], "vanilla": false, "costMod": 0, "counters": {}, "memory": {},
-                "exertion": { "attacked": false, "switched": false }
+                "exertion": { "attacked": false, "switched": false }, "created": true
             })
         );
         assert_eq!(serde_json::from_value::<CardInstance>(json).unwrap(), card);

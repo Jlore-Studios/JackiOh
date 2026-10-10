@@ -73,7 +73,7 @@ function rowNames(section: TableSection): string[] {
  * glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
-  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based"],
+  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based", "Luck X"],
   "§6.2": ["Cry and Death", "Hand and deck triggers", 'Replacement ("would … instead")', "Targets chosen randomly", "Fatigue", "Attack summon"],
   "§6.3": [
     "Summon",
@@ -192,6 +192,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
+  "Immune to tribal tag based hate": "IT",
   Windfury: "WF",
   Temporary: "TE",
   Deft: "DE",

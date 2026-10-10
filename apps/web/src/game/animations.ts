@@ -733,6 +733,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R983: a Feng Shui judged a play; the turn banner shows 吉 or 凶, the view after it the rewarded
+  // or punished card.
+  fengShui: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
   // ME-CN, R1301: the card pulses as its words turn Chinese; the view after it draws them so. Only
   // the language changed, so no effect decorates it.
   translated: {
@@ -765,6 +774,26 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   jadeChanged: {
     animation: "jk-badge-tick",
     durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // ME-SECRET (MB05, R860–R864): a secret is kept, revealed or judged. The badge by the hero
+  // fades in or out — no number, no effects-layer work (FX "—"): the badge itself is the change.
+  secretChosen: {
+    animation: "jk-badge-fade",
+    durationMs: 300,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  secretRevealed: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  predicted: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },

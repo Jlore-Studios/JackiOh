@@ -94,3 +94,45 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
         );
     }
 }
+
+mod r943_a_hidden_cards_created_flag_goes_with_its_face {
+    use super::*;
+
+    /// R943: a hidden card's Created flag goes with its face; a public card's stays.
+    #[test]
+    fn r943_a_hidden_cards_created_flag_goes_with_its_face() {
+        jackioh_cards::register_all();
+        let base = scenario(json!({ "seed": "observe-created", "p1": p1_side(), "p2": p2_side() }))
+            .state()
+            .clone();
+        let mut changed = clone(&base);
+        let side = &mut changed.players[PlayerId::P2];
+        for card in side.hand.iter_mut().chain(side.library.iter_mut()) {
+            card.created = Some(true);
+        }
+        let unit_id = side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .next()
+            .unwrap_or_else(|| panic!("expected a unit"))
+            .id
+            .clone();
+        find_instance_mut(&mut changed, &unit_id)
+            .expect("the unit is on the field")
+            .created = Some(true);
+        let hidden = hidden_instance_ids(&changed, AI);
+        let public = redact(&changed, AI);
+        for id in &hidden {
+            let card = card_by_id(&public, id);
+            assert!(card.as_ref().is_none_or(|card| card.created.is_none()), "{id}");
+        }
+        assert_eq!(
+            card_by_id(&public, &unit_id).and_then(|card| card.created),
+            Some(true),
+            "a public card's mark stays, since the seat reads it"
+        );
+        assert_eq!(hash_state(&redact(&changed, AI)), hash_state(&redact(&base, AI)));
+    }
+}

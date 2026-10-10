@@ -15,8 +15,8 @@ use std::ops::Index;
 use serde::{Deserialize, Serialize};
 
 use crate::wire::{
-    CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice, GlitchOutcome,
-    KeywordKind, Rarity, Tag, string_union,
+    CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
+    GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
 };
 
 /// §2.6
@@ -1408,6 +1408,53 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
         multiplier: 1,
         types: &[CardType::Trap],
     },
+];
+
+// ---------------------------------------------------------------------------------------------
+// Meditative #40 Feng Shui (R980, R981, R985). Hidden numbers: printed nowhere, never tuned, and not
+// exported to the client.
+// ---------------------------------------------------------------------------------------------
+
+/// R985: the hit a punished play's player takes from the Feng Shui that judged it, once the play has
+/// resolved: 10 from the base face, 20 from the Radiant face ("punished heavily", D10).
+pub const FENG_SHUI_DAMAGE: ByFace = ByFace {
+    base: 10,
+    radiant: 20,
+};
+/// R985: the Brittle count a punished play is given at §10.5 step 3 (a given count, R638).
+pub const FENG_SHUI_BRITTLE: i32 = 2;
+/// R980: an index's last digit, 0–9, to its Hetu (河图) element: 1 and 6 水, 2 and 7 火, 3 and 8 木,
+/// 4 and 9 金, 5 and 0 土.
+pub const HETU_ELEMENTS: [CardElement; 10] = [
+    CardElement::Earth,
+    CardElement::Water,
+    CardElement::Fire,
+    CardElement::Wood,
+    CardElement::Metal,
+    CardElement::Earth,
+    CardElement::Water,
+    CardElement::Fire,
+    CardElement::Wood,
+    CardElement::Metal,
+];
+/// R980: the element of an index with no digit (T-rush, T-coin and the other named tokens): 土, the
+/// centre.
+pub const ELEMENT_WITHOUT_DIGIT: CardElement = CardElement::Earth;
+/// R981: the generating cycle, each element generating the next (木→火→土→金→水→木).
+pub const GENERATING_CYCLE: [CardElement; 5] = [
+    CardElement::Wood,
+    CardElement::Fire,
+    CardElement::Earth,
+    CardElement::Metal,
+    CardElement::Water,
+];
+/// R981: the overcoming cycle, each element overcoming the next (木→土→水→火→金→木).
+pub const OVERCOMING_CYCLE: [CardElement; 5] = [
+    CardElement::Wood,
+    CardElement::Earth,
+    CardElement::Water,
+    CardElement::Fire,
+    CardElement::Metal,
 ];
 
 #[cfg(test)]

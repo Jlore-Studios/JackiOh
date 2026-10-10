@@ -9,7 +9,9 @@
 //!
 //! Port of `packages/engine/src/effects/addToHand.ts`.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
@@ -36,6 +38,9 @@ struct HandRiders {
     chinese: Option<bool>,
     /// R1438: the card is given Lucky X (a granted keyword) as it reaches the hand.
     lucky: Option<i32>,
+    /// ME-SECRET, R862: what the new card remembers from the start (Mind Games' link rides the
+    /// Fortify Mind it hands the opponent).
+    memory: Option<IndexMap<String, Value>>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -48,6 +53,13 @@ struct HandRiders {
 fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
     if riders.radiant == Some(true) {
         card.radiant = true;
+    }
+    // ME-SECRET, R862: the link rides the instance from the start, so the card remembers its secret
+    // wherever it lands — even burned into the graveyard, where a full hand puts it (§2.4, R4).
+    if let Some(memory) = &riders.memory {
+        for (key, value) in memory {
+            card.memory.insert(key.clone(), value.clone());
+        }
     }
     // ME-CN, R1300: what the card is shown in, like what face it wears, so a burned card keeps it too.
     if riders.chinese == Some(true) {
@@ -151,6 +163,9 @@ pub struct AddToHandArgs {
     /// `statsOverride` and `tuning`. The card copied stays where it is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_of: Option<String>,
+    /// ME-SECRET, R862: what the new card remembers from the start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 impl AddToHandArgs {
@@ -163,6 +178,7 @@ impl AddToHandArgs {
             temporary: self.temporary,
             chinese: self.chinese,
             lucky: self.lucky,
+            memory: self.memory.clone(),
         }
     }
 }
@@ -263,6 +279,7 @@ impl AddRandomFromCatalogArgs {
             temporary: self.temporary,
             chinese: self.chinese,
             lucky: self.lucky,
+            memory: None,
         }
     }
 }
