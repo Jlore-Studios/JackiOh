@@ -6,6 +6,7 @@ pub mod activate;
 pub mod alt_play;
 pub mod blueprint;
 pub mod board_history;
+pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
 pub mod catalog;
 pub mod combat;
