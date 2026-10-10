@@ -4276,6 +4276,13 @@
     "620": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-10T04:57:05Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "easy rule 3 fails: the change adds a proof to spec/rulings/R0454.md's proven_in and rewrites spec/INDEX.md's R454 row; everything else is in the server crate and its tests"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
