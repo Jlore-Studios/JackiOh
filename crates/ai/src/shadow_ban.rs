@@ -107,10 +107,20 @@
 /// generation 4 and 6 named, so most deals still end with it unplayed. Not in
 /// `UNBANNED_PREFER`, dealt at stock weight (`DEALT_Q` has no row for it, so it keeps
 /// `DEALT_Q_PRIOR`): preferring it would deal a mostly-dead slot three times as often.
-pub const SHADOW_BAN: &[(&str, &str)] = &[(
-    "core-076",
-    "neverPlayed: hard: affordable in hand on 15 turns, never played",
-)];
+///
+/// Generation 8 removed `core-076` (Field of Dreams), the last entry. The two rows against it
+/// are both artifacts rather than a misplay: its easy `selfHarm` mean of -22,729.5 over 44
+/// pass-2 plays sums to within a hundred of a single -`AI_EVAL.win` swing charged to the card
+/// — the artifact #628 was written for (`record_sweep_play` now keeps a game-ending play out
+/// of the mean and counts it as a losing or winning play) — and a fresh sweep on this build
+/// watches the beam decline it on every affordable turn at both tiers (0 plays over 16 easy
+/// and 11 hard). Paying three to swap a hand for Reminisce copies reads as the loss it is in
+/// the tempo mirror while the eval prices each copy like any other one-cost, so the beam's
+/// refusal is the right call where it lands. Dealt at stock weight and not in
+/// `UNBANNED_PREFER` on the generation-4 precedent: a card the beam correctly never casts is a
+/// dead slot costing a fraction of a draw, and preferring it would deal that slot three times
+/// as often.
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -421,7 +431,9 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// the ban table), so preferring it would deal the dead slot three times as
 /// often. `core-042` is not preferred on the same precedent (the generation-7
 /// note): the sweep watched the casts it makes land near neutral, so the extra
-/// deals would buy nothing.
+/// deals would buy nothing. `core-076` is not preferred on the generation-4
+/// precedent (the generation-8 note): the beam declines it on every affordable
+/// turn, so preferring it would deal the dead slot three times as often.
 pub const UNBANNED_PREFER: &[&str] = &[
     "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
 ];
@@ -443,8 +455,9 @@ pub const DEAL_MULLIGAN_KEEP: f64 = 2.0;
 
 /// Per defId, the share of games the candidate won with it dealt into its deck,
 /// shrunk toward `DEALT_Q_PRIOR` (`(w + 60 x prior) / (n + 60)` over the lane's
-/// `self-vs-bin` records). The seven banned ids are absent: a deck dealt under
-/// this AI's ban list never holds one. Sorted by id.
+/// `self-vs-bin` records). The ids banned when the table was last fit are
+/// absent: a deck dealt under a ban list never holds one. They are all unbanned
+/// now; an absent id prices as `DEALT_Q_PRIOR`. Sorted by id.
 pub const DEALT_Q: &[(&str, f64)] = &[
     ("classic-001", 0.5742),
     ("classic-002", 0.5418),
