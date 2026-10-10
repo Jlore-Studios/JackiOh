@@ -1,18 +1,5 @@
-// The deck-selection phase of a Conquest series: both players pick at once, from their decks that
-// have not won yet, and a pick is sealed until both are in (SPEC §9.5, R331–R333, R338).
-//
-// It is built the way the board's concurrent mulligan is (R265, R266): choose, then confirm; once
-// confirmed the choice is final and the panel turns to "Waiting for your opponent…"; the opponent
-// is shown only as "Opponent is choosing…" or "Opponent has picked", never what; and one clock runs
-// for both. It wears /play's tavern (lobby.css): a numbered panel, the decks as the mode tiles are
-// drawn, the gold call to action, and the searching beacon while it waits. It lives on the series screen rather than on the board because no match exists until
-// both decks are known (a match is started with its two decks frozen into it), so a pick survives a
-// server restart as part of the series row (R263) and the engine never learns there was a choice.
-//
-// NOTHING HERE IS A RULE (CLAUDE.md rule 7). Which decks may be picked is the view's (`won`), the
-// clock is the server's deadline, and a pick the server refuses is shown in its own words by the
-// screen around this panel. A deck the view says has won is shown locked and cannot be selected,
-// but the server is the one that refuses it.
+// Concurrent Conquest picks mirror the mulligan: confirm seals them, only pick status is revealed,
+// and a shared server clock runs (SPEC §9.5, R263, R265, R266, R331–R333, R338; CLAUDE.md rule 7).
 
 import { useEffect, useId, useState, type ReactElement } from "react";
 
@@ -20,31 +7,27 @@ import type { SeriesView } from "../net/api.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
-/** Chrome this panel invented; `e2e/support/testids.ts` mirrors the strings. */
+/** Test IDs mirrored by `e2e/support/testids.ts`. */
 export const seriesPickerTestid = {
-  /** The panel: `data-state="choosing|waiting"`, and `data-auto="true"` when the pick was made for you. */
+  /** Panel state and auto-pick flags. */
   picker: "series-picker",
-  /** One of your decks in the picker: `data-won`, `data-selected`; disabled once it has won (R330). */
+  /** A deck selector, locked after it wins (R330). */
   choice: (slot: number): string => `series-pick-${String(slot)}`,
-  /** Confirms the selected deck: the pick is sealed from then on (R331). */
+  /** Seals the pick (R331). */
   lockIn: "series-lock-in",
-  /** The pick clock's whole seconds left (`data-seconds`), R333. */
+  /** Pick-clock seconds remaining (R333). */
   clock: "series-pick-clock",
-  /** "Opponent is choosing…" or "Opponent has picked" (`data-picked`), R331. */
+  /** Opponent pick status (R331). */
   opponentStatus: "series-opponent-status",
 } as const;
 
 export type SeriesPickerProps = {
   view: SeriesView;
-  /** Whole seconds left on the pick clock, on this device's clock. */
   secondsLeft: number;
-  /** A request is on its way: nothing more is sent until it answers. */
   busy: boolean;
-  /** Seals `slot` as this player's pick for the game. */
   onLockIn: (slot: number) => void;
 };
 
-/** How a deck stands in the series, from its owner's side. */
 export function deckStanding(deck: SeriesView["you"]["decks"][number]): string {
   if (deck.won) return "Won · locked";
   if (deck.games === 0) return "Not played yet";
@@ -75,7 +58,6 @@ function Clock({ secondsLeft }: { secondsLeft: number }): ReactElement {
   );
 }
 
-/** A deck's emblem on its tile: one of the Conquest tile's three shields. Decoration only. */
 function DeckIcon(): ReactElement {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className="play-mode-tile__icon">
@@ -88,11 +70,11 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
   const titleId = useId();
   const decks = [...view.you.decks].sort((a, b) => a.slot - b.slot);
   const open = decks.filter((deck) => !deck.won);
-  // With one deck left there is nothing to choose; the server picks it (R332) and the panel waits.
+  // The server auto-picks the final deck (R332).
   const [selected, setSelected] = useState<number | null>(null);
   const pick = view.you.pick;
 
-  // A selection the view no longer allows (a deck that won, a phase that moved on) is dropped.
+  // Clear a selection invalidated by a server update.
   const openSlots = open.map((deck) => deck.slot).join(",");
   useEffect(() => {
     if (selected !== null && !openSlots.split(",").includes(String(selected))) setSelected(null);

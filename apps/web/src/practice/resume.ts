@@ -1,18 +1,5 @@
-// Which free practice game this device left in progress, so a reload or a closed tab picks it up
-// again (SPEC §9.9, R668), and whether the player left it on purpose (R765).
-//
-// The game itself is the worker's to keep (`saveStore.ts`): its log names the AI's hidden cards, so
-// it never reaches the page (rule 7). The page keeps only the setup it chose itself, the seed, seat,
-// difficulty and deck, which tells it to ask the worker for a resume and what to label the game
-// while it folds. The controller writes it when a free game starts and clears it when the game
-// ends; the route clears it when the player leaves the game without saving it.
-//
-// R765: it also keeps where the player is. In the game (a reload, a closed tab, a Back), the next
-// `/practice` picks the game up at once, as R668 says; left with Save and leave (`saved`), it shows
-// the practice menu with a banner that offers the game back. A setup kept before R765 carries no
-// flag, and reads as in the game. Storage is untrusted and may be missing: a read that throws or
-// finds anything malformed is no game, and a write that throws leaves the player at the setup after
-// a reload, as before R668.
+// `saveStore.ts` keeps action logs worker-side because they name hidden AI cards (SPEC §9.9, R668;
+// rule 7). R765 records Save and leave; malformed or inaccessible storage is no resume.
 
 import { DIFFICULTIES } from "@jackioh/engine/config";
 
@@ -48,14 +35,13 @@ function isConfig(value: unknown): value is PracticeStartConfig {
   );
 }
 
-/** R765: the game kept on this device, and whether the player left it with Save and leave. */
+/** R765: persisted practice setup and its Save-and-leave state. */
 export type PracticeResume = {
   config: PracticeStartConfig;
-  /** Left with Save and leave: the practice menu offers it. False: the player was in the game (R668). */
+  /** Save and leave; otherwise the player remained in the game (R668). */
   saved: boolean;
 };
 
-/** The free game to resume, as its setup and where the player left it; or none. */
 export function readPracticeResumeState(): PracticeResume | null {
   try {
     const raw = window.localStorage.getItem(PRACTICE_RESUME_STORAGE_KEY);
@@ -70,15 +56,11 @@ export function readPracticeResumeState(): PracticeResume | null {
   }
 }
 
-/** The free game to resume, as its setup; or none. */
 export function readPracticeResume(): PracticeStartConfig | null {
   return readPracticeResumeState()?.config ?? null;
 }
 
-/**
- * Remembers `config`'s game as the one to resume: with the player in it, or (R765, `saved`) left
- * with Save and leave. A lesson is never resumed, so it clears instead.
- */
+/** R765: lessons clear because they cannot resume. */
 export function writePracticeResume(config: PracticeStartConfig, options: { saved?: boolean } = {}): void {
   if (config.lesson !== undefined) {
     clearPracticeResume();
@@ -93,7 +75,6 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
   }
 }
 
-/** No game to resume. */
 export function clearPracticeResume(): void {
   try {
     window.localStorage.removeItem(PRACTICE_RESUME_STORAGE_KEY);

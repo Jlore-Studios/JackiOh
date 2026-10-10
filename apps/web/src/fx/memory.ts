@@ -1,23 +1,10 @@
 // What the cue planner remembers across the entries of one FxLayer mount (docs/polish/1-animations.md
-// S6): who played which card, and which zone a trap fired from. A spell's `damage` names only its
-// `sourceId`, and by the time it lands the spell may be rendered nowhere, so the planner falls back to
-// the zone the trap flipped in or the hero of the player who cast it.
-//
-// R502 adds two things, because the runner plans one entry (usually one event) at a time and a
-// flourish sometimes needs the events around it:
-// - the last few events, in order, so a `cardPlayed` that comes right after its own `drawn` is known
-//   to be a cast on draw (`castOnDraw.ts`), even though the two are separate entries;
-// - the plays still resolving, innermost last: a `cardPlayed` opens one, its `cardResolved` (or its
-//   `countered`) closes it. A per-card recipe (`cardFx.ts`) decorates the events inside its card's
-//   own resolution (#21 Hinder's mana loss, #27 Blood Ridden's Radiant pick and its blood price), and
-//   each play counts the events it has seen, in all and by type (Crushing Walls' first `destroyed`).
-//
-// R202: only ids the viewer may read are kept as ids. An event redacted to the "hidden" sentinel is
-// ignored by the id maps, and a hidden play is kept as a hidden play, so every hidden card looks the
-// same to the planner whatever it hides.
-//
-// Each map keeps at most `limit` entries in insertion order. Remembering an id again refreshes it, and
-// the oldest entry is evicted first once the map is full.
+// S6): who played which card, which zone a trap fired from, the last few events (so a `cardPlayed` right
+// after its own `drawn` is a cast on draw, `castOnDraw.ts`) and the plays still resolving, innermost
+// last: a `cardPlayed` opens one, its `cardResolved` or `countered` closes it (R502). A per-card recipe
+// (`cardFx.ts`) decorates the events inside its card's resolution (#21 Hinder, #27 Blood Ridden).
+// R202: only ids the viewer may read are kept; a hidden play stays a hidden play, so every hidden card
+// looks the same to the planner. Each map keeps at most `limit` entries, the oldest evicted first.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 

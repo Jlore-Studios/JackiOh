@@ -1,32 +1,7 @@
-// BUILD M8 `01-hotseat-full-game.cy.ts` — "Seeded game to completion via the UI with two aggro
-// decks". With spec 13, docs/v0.3.0/README.md V19: a hotseat game on the WASM engine.
-//
-// Key assertions (BUILD M8's table, verbatim):
-//
-//   "result overlay appears; final state hash equals the vitest replay of the recorded actions"
-//
-// The second half is the point of this spec and the reason it exists alongside the engine's own
-// replay tests: the log is recorded by the BROWSER, action by action, as a human would build it
-// out of clicks, and is then folded by the engine's replay (`crates/engine/src/replay.rs`, run as
-// the `jackioh replay` CLI) from Node (`cy.task("replayHash")` → `e2e/support/tasks/replay-runner.ts`)
-// and hashed. Equal hashes mean
-// the client sent nothing the engine did not accept, in the order it accepted it — BUILD M5-T3's
-// "the same seed and actions reproduce the same final state hash in the browser and in vitest".
-//
-// House rules (BUILD M8): the seed is set here and overridable with `--expose seed=…`, so BUILD
-// §4's "nightly run of 01 over 20 seeds" needs no edit to this file; there is no fixed
-// `cy.wait(ms)` — every wait is `cy.settled()` (`data-animating` drained) or a retried assertion;
-// and every selector comes from `e2e/support/testids.ts`.
-//
-// Why the game is driven generically rather than from a scripted turn plan: a spec that is re-run
-// over twenty seeds cannot know its own draw order. So each turn plays whatever the client has
-// highlighted as playable, attacks with whatever it has highlighted as able to attack, and ends
-// the turn — which is also the shape of a real game and touches nothing but the board. The two
-// fixture decks are built so that path never meets a choice it cannot answer: every card in
-// `01-aggro-a` / `01-aggro-b` is choice-free at play time (no target, mode, direction, X,
-// embiggen or Tribute declaration — R81) and opens no `PendingChoice` while it resolves, so the
-// only pickers in the whole game are the opening mulligan, which `cy.seedGame` answers, and the
-// zone grid, which a board click finishes (BUILD M5-T2).
+// BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
+// The browser records actions, then `jackioh replay` folds and hashes them; equality proves accepted client actions in order (M5-T3).
+// The seed is overridable for §4's 20-seed run; waits use `cy.settled` or retry, and selectors come from `support/testids.ts`.
+// Fixture decks are choice-free, so generic play and attack open no `PendingChoice` (R81); seedGame and board clicks answer M5-T2.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -40,12 +15,11 @@ import {
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
 
-/** Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it for the nightly sweep. */
+/** BUILD M8's seed; `--expose seed=…` overrides it for the nightly sweep. */
 const SEED = seedFor("01-hotseat");
 
-/** §2.5 / R2 cap the game at 30 player-turns; the budget is that plus slack for `turnAutoEnded`. */
+/** §2.5 / R2 cap player turns; allow slack for `turnAutoEnded`. */
 const MAX_TURNS = 40;
-/** A turn cannot hold more than five plays and five attacks (five lanes, one exertion each). */
 const MAX_PLAYS_PER_TURN = 12;
 
 const ROWS: readonly Row[] = ["units", "backrow"];
@@ -55,13 +29,7 @@ function other(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";
 }
 
-/**
- * One seat's hand and unit piles, read off `window.__jackioh.state` with the same cast
- * `e2e/support/commands.ts` uses in `instanceInHand` and `instanceAt`. It answers exactly one
- * question — "which instance ids might I click?" — and never what the game says happened: every
- * assertion below reads the DOM, which is `viewFor` (CLAUDE.md rule 7). A `cy.handIds(player)` /
- * `cy.unitIds(player)` pair in `support/commands.ts` would delete this (reported).
- */
+/** Read only likely instance IDs; assertions stay on DOM `viewFor` (CLAUDE.md rule 7). */
 type SidePeek = {
   hand?: { id: string; defId: string }[];
   units?: ({ id: string }[] | null)[];
@@ -75,7 +43,7 @@ function handOf(state: GameStateLike, player: PlayerId): string[] {
   return (peek(state, player).hand ?? []).map((card) => card.id);
 }
 
-/** The top card of each of a seat's unit zones — §3.2: only a Stack pile's top card is active. */
+/** §3.2: only a Stack pile's top card is active. */
 function unitsOf(state: GameStateLike, player: PlayerId): string[] {
   return (peek(state, player).units ?? []).flatMap((pile) => {
     const top = pile === null ? undefined : pile[0];
@@ -83,22 +51,16 @@ function unitsOf(state: GameStateLike, player: PlayerId): string[] {
   });
 }
 
-/**
- * The first of `testids` the client has marked `data-legal="true"`, or null when none is.
- * `data-legal` is the client's copy of `legalActions` (BUILD M5-T2), so this asks the engine what
- * is playable and never decides it here. The `cy.get("body")` probe is `support/commands.ts`'s own
- * pattern for "is this in the DOM at all", which `cy.get` cannot answer without failing.
- */
+/** Ask client `data-legal`, which mirrors engine `legalActions` (BUILD M5-T2). */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
-    // Wrapped rather than returned bare: Cypress reads a bare `null` from `.then` as "keep the
-    // current subject", which would hand back the body element instead of the answer.
+    // Cypress treats bare `null` as the current subject, so wrap the answer.
     return cy.wrap(found ?? null, { log: false });
   });
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: hand the hotseat device to the active seat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
@@ -108,7 +70,6 @@ function ensureSeat(player: PlayerId): void {
   });
 }
 
-/** Play cards while the client offers one. Each play is a hand click plus, for a permanent, a zone. */
 function playWhilePossible(budget: number): void {
   if (budget <= 0) return;
   cy.gameState().then((state) => {
@@ -117,8 +78,7 @@ function playWhilePossible(budget: number): void {
       if (card === null) return;
       cy.get(ts(card)).click();
       cy.settled();
-      // R81: the zone travels inside the `play` action, and M5-T2 has the board click finish the
-      // play — a spell needs no zone, and then no zone is highlighted and nothing is clicked.
+      // R81 / M5-T2: the zone is in `play`; click only a highlighted zone.
       firstLegal(ROWS.flatMap((row) => LANES.map((lane) => zoneId("you", row, lane)))).then((zone) => {
         if (zone !== null) {
           cy.get(ts(zone)).click();
@@ -130,11 +90,7 @@ function playWhilePossible(budget: number): void {
   });
 }
 
-/**
- * Try each of this seat's units as an attacker, once. The target is the enemy hero when the client
- * offers it and otherwise the first enemy unit it offers, which is how Taunt (§4.2 step 3) steers
- * the run without this spec knowing the rule.
- */
+/** Target an offered hero or unit; Taunt (§4.2 step 3) steers the run. */
 function attackWith(attackers: readonly string[], index: number): void {
   const attacker = attackers[index];
   if (attacker === undefined) return;
@@ -148,9 +104,7 @@ function attackWith(attackers: readonly string[], index: number): void {
       cy.get(ts(cardId(attacker))).click();
       const targets = [heroId("opponent"), ...unitsOf(state, other(state.active)).map(cardId)];
       firstLegal(targets).then((target) => {
-        // A unit the client highlighted only because it may switch position (M5-T2 puts
-        // `switchPosition` on the card too) has no attack to declare; clicking it again puts it
-        // down and the run moves to the next unit.
+        // M5-T2: clicking a `switchPosition`-only unit again resets selection.
         cy.get(ts(target ?? cardId(attacker))).click();
         cy.settled();
         attackWith(attackers, index + 1);
@@ -163,8 +117,7 @@ function takeTurns(remaining: number): void {
   cy.gameState().then((state) => {
     expect(remaining, "the game reached a result inside the turn budget").to.be.greaterThan(0);
     if (state.result !== null) return;
-    // Both fixture decks are choice-free (see the header), so a prompt open here means the decks or
-    // the client have changed under the spec rather than that the spec missed an answer.
+    // Fixture decks are choice-free; a prompt here means contract drift.
     expect(state.pending, "01-aggro-a/b open no prompt once the mulligan is answered").to.eq(null);
 
     const me = state.active;
@@ -177,8 +130,7 @@ function takeTurns(remaining: number): void {
 
       cy.gameState().then((afterAttacks) => {
         if (afterAttacks.result !== null) return;
-        // R82: with nothing else legal the engine ends the turn itself and emits `turnAutoEnded`,
-        // so there is no `end-turn` to press — only a device to hand over.
+        // R82: auto-ended turns only hand the device over.
         if (afterAttacks.active === me) cy.endTurn();
         else cy.handOver();
         takeTurns(remaining - 1);
@@ -193,8 +145,7 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
 
     takeTurns(MAX_TURNS);
 
-    // "result overlay appears" — and it says what the engine's result says for the seat holding
-    // the device (§10.8: the client renders `viewFor`, so Win / Loss is viewer-relative).
+    // §10.8: `viewFor` makes Win / Loss viewer-relative.
     cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.game }).should("be.visible");
     cy.jackioh().then((handle) => {
       const result = handle.state.result;
@@ -202,15 +153,11 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
       if (result === null) return;
       const shown = result.winner === "draw" ? "Draw" : result.winner === handle.seat ? "Win" : "Loss";
       cy.get(ts(RESULT_OVERLAY)).should("contain.text", shown);
-      // The engine's reason travels in `data-reason`; the text says it as a sentence (Result.tsx).
       cy.get(ts(RESULT_OVERLAY)).should("have.attr", "data-reason", result.reason);
     });
 
-    // "final state hash equals the vitest replay of the recorded actions": `cy.replayCheck` hands
-    // (seed, decks, log, final state) to `cy.task("replayHash")`, which folds the log through the
-    // `jackioh replay` CLI (`crates/engine/src/replay.rs`, SURFACE §12) and compares `hashState` on
-    // both sides.
-    // It also asserts the fold rejected none of the recorded actions.
+    // `cy.replayCheck` folds the log with `jackioh replay` and compares `hashState` (§12).
+    // It also requires the fold to accept every recorded action.
     cy.replayCheck("01-hotseat-full-game");
   });
 });

@@ -1,13 +1,4 @@
-// `net/auth.ts`, the browser's arrow to the auth provider (SPEC §9.2), after polish 5
-// (docs/polish/5-sign-in.md, B25-B28, B32, B34).
-//
-// Every provider answer maps to one AuthFailure, and the screen shows only AUTH_MESSAGES[failure]:
-// the provider's own text is never relayed (R160). A rate limit reads as a rate limit (R192), except
-// on resend and recover, which answer the same neutral way whether they sent or were limited,
-// because the provider limits those per address. A session is renewed through one shared request
-// and revoked without being waited for (R194).
-//
-// One test per cell of the classification table follows. The table is data here, row for row.
+// Auth provider flows (SPEC §9.2; R160, R192, R194; B25, B28, B32, B34).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -75,12 +66,9 @@ const TOKEN_BODY = {
   user: { id: "user-1", email: EMAIL },
 };
 
-/** Provider text that must never reach a message. */
 const PROVIDER_TEXT = ["PROVIDER-MSG-7f3a", "PROVIDER-DESCRIPTION-7f3a", "PROVIDER-MESSAGE-7f3a"] as const;
 
-// ---------------------------------------------------------------------------------------------
-// the stubbed provider
-// ---------------------------------------------------------------------------------------------
+// Stubbed provider
 
 type Call = {
   url: URL;
@@ -129,7 +117,6 @@ function providerResponse(status: number, body?: unknown): Response {
   return response as unknown as Response;
 }
 
-/** Answer every provider request with one status and body, recording what was sent. */
 function serve(status: number, body?: unknown): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -163,7 +150,7 @@ async function refusal(promise: Promise<unknown>): Promise<AuthError> {
   return caught as AuthError;
 }
 
-/** Refresh tokens are single-flight by value, so each call gets its own. */
+/** Refresh tokens are single-flight by value. */
 let refreshCounter = 0;
 function freshRefreshToken(): string {
   refreshCounter += 1;
@@ -178,7 +165,7 @@ const CALL: Record<AuthEndpoint, () => Promise<unknown>> = {
   updatePassword: () => updatePassword(ACCESS, PASSWORD),
   changeEmail: () => requestEmailChange(ACCESS, EMAIL),
   refresh: () => refreshSession(freshRefreshToken()),
-  // R664, R665: their tables are in auth-methods.test.ts; here they join the unreachable check.
+  // R664, R665: included in the unreachable check.
   otp: () => requestEmailSignIn(EMAIL),
   verifyOtp: () => verifyEmailCode(EMAIL, "123456"),
   mfaVerify: () => verifySecondFactor({ accessToken: ACCESS }, "factor-1", "123456"),
@@ -198,9 +185,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// ---------------------------------------------------------------------------------------------
-// the classification table, one test per cell
-// ---------------------------------------------------------------------------------------------
+// Classification table
 
 type Outcome = AuthFailure | "neutral";
 type Row = {
@@ -220,9 +205,7 @@ const RATE_LIMITED_OTHER = {
   refresh: "rateLimited",
 } as const;
 
-// R192: the two mailers answer every provider answer the same way (bar an invalid address and an
-// unreachable provider), because only a KNOWN address can reach the provider's mailer and fail
-// there: a 500 or an allow-list refusal would say the address has an account.
+// R192: mailers flatten provider failures so an address cannot be enumerated.
 const SERVICE = {
   signIn: "service",
   signUp: "service",
@@ -376,9 +359,7 @@ const ROWS: readonly Row[] = [
   },
   { answer: "404", status: 404, body: {}, outcomes: OTHER_4XX },
   {
-    // A password past the provider's byte limit (a long passphrase outside ASCII is the likely
-    // one): a sentence about the password, not "the service had a problem", which a retry can
-    // never get past.
+    // A byte-limit refusal names the password: retrying cannot succeed.
     answer: "422 validation_failed",
     status: 422,
     body: { error_code: "validation_failed", msg: PROVIDER_TEXT[0] },
@@ -443,7 +424,7 @@ describe("B25 every provider answer maps to one failure", () => {
     expect(
       classifyProviderRefusal("updatePassword", 422, { code: "same_password", error: "weak_password" }),
     ).toBe("samePassword");
-    // GoTrue's newer shape carries a numeric `code` (the status); it is not an error code.
+    // GoTrue's numeric `code` is the status, not an error code.
     expect(classifyProviderRefusal("updatePassword", 422, { code: 422, error: "weak_password" })).toBe(
       "weakPassword",
     );
@@ -456,9 +437,7 @@ describe("B25 every provider answer maps to one failure", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B25: messages are the client's own
-// ---------------------------------------------------------------------------------------------
 
 describe("B25 messages", () => {
   it("B25 AuthError carries its failure and AUTH_MESSAGES' sentence for it", () => {
@@ -523,7 +502,6 @@ describe("B25 messages", () => {
     expect(error.message).toMatch(/data breach/);
     expect(error.message).not.toMatch(/\d|for this server/);
 
-    // One reason reads exactly its own sentence; sign-in's refusal is never widened.
     serve(422, { error_code: "weak_password", weak_password: { reasons: ["pwned"] } });
     expect((await refusal(signUp(EMAIL, PASSWORD))).message).toBe(AUTH_MESSAGES.weakPasswordPwned);
     serve(422, { error_code: "weak_password", weak_password: { reasons: ["length", "characters"] } });
@@ -572,9 +550,7 @@ describe("B25 messages", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B26 / R192: a rate limit is a rate limit
-// ---------------------------------------------------------------------------------------------
+// B26 / R192: rate limits
 
 describe("R192 B26 rate limits", () => {
   it("R192 a 429 at sign-in reads rateLimited, never the credentials sentence", async () => {
@@ -617,9 +593,7 @@ describe("R192 B26 rate limits", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B27, B28, B31: what each request sends
-// ---------------------------------------------------------------------------------------------
+// B27, B28, B31: requests
 
 describe("the requests", () => {
   function expectPublishableHeaders(call: Call): void {
@@ -707,9 +681,7 @@ describe("the requests", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B32 / R194: renewal
-// ---------------------------------------------------------------------------------------------
 
 describe("R194 B32 refreshSession", () => {
   it("R194 posts the refresh grant and returns the new session in epoch ms", async () => {
@@ -718,7 +690,7 @@ describe("R194 B32 refreshSession", () => {
     const before = Date.now();
     const session = await refreshSession(token);
 
-    // `expires_in` from now, on this device's clock (see the next test for why not `expires_at`).
+    // `expires_in` uses this device's clock.
     expect(session).toMatchObject({
       accessToken: TOKEN_BODY.access_token,
       refreshToken: TOKEN_BODY.refresh_token,
@@ -737,7 +709,6 @@ describe("R194 B32 refreshSession", () => {
 
   it("R194 counts a session's expiry on this device's clock, so a fast clock does not read it as expired", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    // The provider's clock says 12:00; this device's runs 90 minutes fast.
     const providerNow = Date.UTC(2026, 8, 22, 12, 0, 0);
     const deviceNow = providerNow + 90 * 60_000;
     vi.setSystemTime(deviceNow);
@@ -807,9 +778,7 @@ describe("R194 B32 refreshSession", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B34 / R194: sign-out revokes without waiting
-// ---------------------------------------------------------------------------------------------
+// B34 / R194: sign-out revocation
 
 describe("R194 B34 revokeSession and signOut", () => {
   it("R194 revokeSession posts logout?scope=local with the access token and keepalive", async () => {
@@ -853,7 +822,7 @@ describe("R194 B34 revokeSession and signOut", () => {
       "fetch",
       vi.fn((input: unknown, init?: RequestInit) => {
         calls.push(toCall(input, init));
-        // The provider never answers: signOut must not be waiting on it.
+        // The provider never answers.
         return new Promise<Response>(() => {});
       }),
     );
@@ -874,11 +843,7 @@ describe("R194 B34 revokeSession and signOut", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B34 / R194: sign-out then loads `/`. It is a real page load (`window.location.assign`), which
-// jsdom cannot follow, so `location` is swapped for a copy whose `assign` records the destination,
-// what storage held and whether the revoke had been sent when the load began.
-// ---------------------------------------------------------------------------------------------
+// B34 / R194: jsdom records page loads through a replacement location.
 
 describe("R194 B34 signOut loads the landing page", () => {
   it("R194 B34 loads / after clearing both keys and firing the revoke, without waiting for it", () => {
@@ -908,7 +873,7 @@ describe("R194 B34 signOut loads the landing page", () => {
 
     signOut();
 
-    // Synchronously: the load has begun while the provider has not answered (and never will).
+    // The load starts before the provider answers.
     expect(loads).toEqual([{ to: paths.landing, session: null, e2eSession: null, revokeSent: true }]);
   });
 
@@ -937,12 +902,10 @@ describe("R194 B34 signOut loads the landing page", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R194: an expired session is renewed so it can be revoked (the adversarial panel's finding)
-// ---------------------------------------------------------------------------------------------
+// R194: renew expired sessions before revocation.
 
 describe("R194 signing out a session whose access token has expired", () => {
-  /** GoTrue's /logout: an expired JWT is refused (bad_jwt) and revokes nothing. */
+  /** GoTrue refuses expired JWTs at /logout. */
   function provider(): Call[] {
     const calls: Call[] = [];
     vi.stubGlobal(
@@ -1049,7 +1012,7 @@ describe("R194 signing out a session whose access token has expired", () => {
       vi.fn((input: unknown, init?: RequestInit) => {
         const call = toCall(input, init);
         if (call.url.searchParams.get("grant_type") === "refresh_token") {
-          // A slow mobile network: the renewal is still out when the player presses again.
+          // Keep the renewal pending for the second press.
           return new Promise<Response>((resolve) => {
             releaseRefresh = resolve;
           });
@@ -1070,7 +1033,6 @@ describe("R194 signing out a session whose access token has expired", () => {
 
     signOut();
     await Promise.resolve();
-    // Nothing seemed to happen (the renewal is out), so the player presses again.
     signOut();
     expect(assign, "the second press did not cut the renewal off with a page load").not.toHaveBeenCalled();
 
@@ -1082,9 +1044,7 @@ describe("R194 signing out a session whose access token has expired", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R193: a reset request remembers the address, so only its link is accepted
-// ---------------------------------------------------------------------------------------------
+// R193: reset links apply only to their requested address.
 
 describe("R193 requestPasswordReset remembers the address it asked for", () => {
   it("R193 remembers the address on any provider answer", async () => {
@@ -1102,10 +1062,6 @@ describe("R193 requestPasswordReset remembers the address it asked for", () => {
     expect(pendingReset()).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------------------------
-// A provider that never answers gives the button back
-// ---------------------------------------------------------------------------------------------
 
 describe("B25 a provider request that never answers", () => {
   it("B25 is a network failure after AUTH_PROVIDER_TIMEOUT_SECONDS, and its request is aborted", async () => {
@@ -1138,7 +1094,7 @@ describe("R323 R324 PKCE: the mailers' challenge and the code's exchange", () =>
     await requestPasswordReset(EMAIL);
     const [signup, resend, recover] = calls.map((call) => call.body as { code_challenge?: string; code_challenge_method?: string });
     for (const body of [signup, resend, recover]) expect(body?.code_challenge_method).toBe("s256");
-    // The resend reuses the sign-up's verifier, so the first email's link still exchanges.
+    // Resend reuses the sign-up verifier so the original link still exchanges.
     expect(resend?.code_challenge).toBe(signup?.code_challenge);
     const kept = Object.fromEntries(storedVerifiers().map((entry) => [entry.flow, entry.verifier]));
     expect(await challengeFor(kept.signup ?? "")).toBe(signup?.code_challenge);

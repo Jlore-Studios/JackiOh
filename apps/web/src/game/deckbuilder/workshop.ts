@@ -1,19 +1,14 @@
-// The deck workshop's pure facts (SPEC §9.4, R250–R253): the status chip a deck row wears, the
-// verdicts the shared validator gives a deck and a trio, which cards the decks being compared
-// hold, the two moves the editor makes on a deck's cards, and the names a new deck or trio starts
-// with. The components draw what this module returns and decide nothing themselves.
+// The deck workshop's pure facts (SPEC §9.4, R250–R253): a deck row's status chip, the validator's
+// verdicts on a deck and a trio, which cards the compared decks hold, the editor's two moves on a
+// deck's cards, and the names a new deck or trio starts with.
 //
-// NO RULE LIVES HERE (CLAUDE.md rule 7). Whether a deck may queue Best-of-1 is `validateDeck`'s;
-// whether a trio may queue Conquest is `validateTrio`'s; which cards two decks of a trio share is
-// `trioConflicts`'s (R251: a card is its catalog id, so that is the whole comparison). This module
-// only hands them the decks under the names they will be saved with, so the validator's sentences
-// name the decks the player sees, and it never writes one of those sentences itself.
+// No rule lives here (CLAUDE.md rule 7): `validateDeck`, `validateTrio` and `trioConflicts` (R251: a
+// card is its catalog id) decide. This module hands them the decks under their saved names and never
+// writes one of their sentences.
 //
-// THE TWO REFUSALS it does make are the builder declining to create a state a save would refuse
-// or the player asked to avoid: a second copy of a card (D4, `MAX_COPIES`), a card past
-// `DECK_SIZE` (D2), and a card a compared deck already holds (R251's "unavailable, used in
-// <deck>"). None is a verdict: a deck that already breaks one (an import, a card added before the
-// comparison was switched on) keeps its cards and the verdict says why.
+// The two refusals it does make decline a state a save would refuse: a second copy (D4, `MAX_COPIES`),
+// a card past `DECK_SIZE` (D2), or a card a compared deck holds (R251's "unavailable, used in
+// <deck>"). None is a verdict: a deck that already breaks one keeps its cards and the verdict says why.
 
 import {
   trioConflicts,
@@ -27,9 +22,7 @@ import {
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import { deckNameForSave, trioNameForSave, type DeckItem, type TrioItem } from "./sync.ts";
 
-// ---------------------------------------------------------------------------------------------
 // Names
-// ---------------------------------------------------------------------------------------------
 
 /** Cuts a typed name to `max` characters as D1 counts them: code points, an emoji being one. */
 export function clampName(raw: string, max: number): string {
@@ -55,14 +48,12 @@ export function nextName(prefix: string, taken: readonly string[]): string {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Verdicts (R253), and the status chip
-// ---------------------------------------------------------------------------------------------
 
 /**
- * The collection to judge with when `GET /api/collection` could not be read: every card owned
- * exactly as often as the decks use it. L5 then never fires, so nothing is claimed to be unowned
- * (or owned) on a guess, and every other rule still speaks. The server checks L5 at queue anyway.
+ * The collection to judge with when `GET /api/collection` could not be read: every card owned as
+ * often as the decks use it, so L5 never fires and nothing is claimed unowned on a guess.
+ * The server checks L5 at queue anyway.
  */
 export function ownershipUnknown(cardLists: readonly (readonly string[])[]): Collection {
   const counts: Record<string, number> = {};
@@ -88,10 +79,8 @@ export type DeckStatusKind = "ready" | "complete" | "incomplete" | "unowned" | "
 export type DeckStatus = { kind: DeckStatusKind; label: string };
 
 /**
- * The deck row's chip, read off the verdict: "Ready" (it may queue), "Incomplete" (L2, the count
- * beside it says how far), "N not owned" (L5 only), or "Needs a fix" (anything else, which the
- * editor's verdict spells out). With no collection a legal deck is "Complete", not "Ready": its
- * ownership was not checked.
+ * The deck row's chip: "Ready" (may queue), "Incomplete" (L2), "N not owned" (L5 only) or "Needs a
+ * fix" (anything else). With no collection a legal deck is "Complete", not "Ready".
  */
 export function deckStatus(verdict: LoadoutResult, collectionKnown: boolean): DeckStatus {
   if (verdict.ok) return collectionKnown ? { kind: "ready", label: "Ready" } : { kind: "complete", label: "Complete" };
@@ -127,9 +116,8 @@ export function trioVerdict(
 }
 
 /**
- * For each slot (0-based, in trio order): card id → the names of the OTHER slots' decks that hold
- * it too. `trioConflicts` decides what is shared; this only says it from each deck's side, which
- * is what the side-by-side compare marks ("Also in <deck>").
+ * For each slot (trio order): card id → the names of the OTHER slots' decks that hold it too, which
+ * the compare marks ("Also in <deck>"). `trioConflicts` decides what is shared.
  */
 export function trioSharedCards(
   slots: readonly (DeckItem | null)[],
@@ -152,9 +140,7 @@ export function trioSharedCards(
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // Comparing a deck with others (R251)
-// ---------------------------------------------------------------------------------------------
 
 /** At most this many decks are compared at once: with the open one, a trio's worth. */
 export const MAX_COMPARED_DECKS = 2;
@@ -223,9 +209,7 @@ export function holdersOf(compared: readonly DeckItem[], nameLength: number): Re
   return holders;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The editor's moves
-// ---------------------------------------------------------------------------------------------
 
 export type AddResult =
   | { ok: true; cards: readonly string[] }

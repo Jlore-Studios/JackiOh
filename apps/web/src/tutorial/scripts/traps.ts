@@ -1,31 +1,6 @@
-// Lesson "traps"'s coach script (SPEC §9.10): the steps the coach walks the player through, and the
-// tips it shows when something new happens. Written against this lesson's fixed seed and decks
-// (lessons.ts), so it may name the cards the seed deals.
-//
-// The coach's line, turn by turn (the player's turns; the AI's in brackets). Each of the player's
-// turns ends in "Your move" (../advice.ts), which names the next sensible move and points at it, so
-// the coach is never silent on the player's own turn and a player who does only what it names plays
-// exactly this line:
-//  1. Going Long (Quickdraw) is in the opening hand. Set Bear Honeypot face-down; with no mana left
-//     and nothing on the board the turn ends by itself (R82).
-//     [The AI plays The Coin, which costs 0: Bear Honeypot springs and makes two Rush Tokens. Then
-//     Duplicating Felinors, which copies itself; one copy goes to Defense Position.]
-//  2. Play Rush Token Farm, a Field Spell; the Tokens tip; a Rush Token attacks the Felinors in
-//     Defense, whose Taunt guards the hero, and the advice sends the other one to finish it.
-//     [Deft Duelist charges the hero.]
-//  3. The farm made a Rush Token at the start of the turn. Play Going Long: Armor 2 for the hero;
-//     then True Strike destroys Deft Duelist.
-//     [Prem Panther; the AI's hit on the hero is 2 smaller; with its last crystal the AI sets a
-//     face-down card, Sheepish: the only card of its deck that costs 1.]
-//  4. Test the face-down card with Tempo Timmy, which Sheepish turns into a Sheep; then Gravedigger.
-//  5–7. "Win the game" names each move: Twisted Sorcerer, Prem Panther and Hit Job clear the way,
-//     and the enemy hero falls on the player's 7th turn.
-//
-// Every step reads only the view and the legal actions (CLAUDE.md rule 7). A card step whose card
-// the seed deals later waits for the draw rather than going moot, and every step that waits on the
-// AI goes moot once its moment has passed, so a player who plays in another order is never stranded.
-// No more than two "Got it" bubbles come in a row: the trap springing follows the hidden-trap step on
-// the AI's turn, so the Tokens tip waits for the player's own turn.
+// Lesson "traps" script (SPEC §9.10): it reads only the view and legal actions (CLAUDE.md rule 7).
+// Scheduled cards wait for their draw and missed moments retire; an automatic turn can end (R82).
+// The Tokens tip waits for the player's turn so no more than two "Got it" bubbles stack.
 
 import { COIN_DEF_ID } from "@jackioh/engine/config";
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
@@ -53,7 +28,6 @@ const FARM = "core-058";
 const RUSH_TOKEN = "core-t-rush";
 const SHEEP = "core-t-sheep";
 
-/** The cheap units of the lesson's deck a player may test a face-down card with, best first. */
 const CHEAP_UNITS: Readonly<Record<string, string>> = {
   "core-011": "Tempo Timmy",
   "core-015": "Me and Mr Token",
@@ -64,13 +38,11 @@ function enemyFaceDown(ctx: CoachCtx): boolean {
   return ctx.view.opponent.backrow.some((card) => card !== null && card.faceDown);
 }
 
-/** The backrow lane (1-based) holding the human's own card of this definition, if any. */
 function myBackrowLane(ctx: CoachCtx, defId: string): number | undefined {
   const index = ctx.view.you.backrow.findIndex((card) => card !== null && !card.faceDown && card.defId === defId);
   return index < 0 ? undefined : index + 1;
 }
 
-/** The card has been played already: it is on the field, or has gone to the graveyard or exile. */
 function played(ctx: CoachCtx, defId: string): boolean {
   const you = ctx.view.you;
   return (
@@ -87,11 +59,7 @@ function trapFiredBy(ctx: CoachCtx, mine: boolean, defId?: string): boolean {
   );
 }
 
-/**
- * "Play this card", for a card the seed deals a turn or two in: it waits for the draw rather than
- * going moot while the card is still in the library, and goes moot only once it has been played
- * without the coach.
- */
+/** Wait for a scheduled draw; retire only after the card has been played without the coach. */
 function playWhenDrawn(options: Parameters<typeof playCard>[0]): CoachStep {
   const step = playCard(options);
   return {
@@ -100,7 +68,6 @@ function playWhenDrawn(options: Parameters<typeof playCard>[0]): CoachStep {
   };
 }
 
-/** The cheap unit in hand the coach suggests testing a face-down card with, if the engine offers its play. */
 function baitIn(ctx: CoachCtx): CardView | undefined {
   const hand = myHand(ctx.view);
   for (const defId of Object.keys(CHEAP_UNITS)) {
@@ -117,18 +84,11 @@ function baitPlayed(ctx: CoachCtx): boolean {
   );
 }
 
-/** The bait moment: the AI has a face-down card and the engine offers the play of a cheap unit. */
 function baitMoment(ctx: CoachCtx): boolean {
   return enemyFaceDown(ctx) && baitIn(ctx) !== undefined;
 }
 
-/**
- * "Test the face-down card with a cheap unit." It comes after the Armor turn, and its moment is the
- * player's next main phase: it shows there while the AI has a face-down card and a cheap unit can be
- * played, and is done once one has been played (or a trap of the AI's has sprung). With no such
- * moment on that main phase it retires at once, so the next step's advice covers the turn and the
- * coach is never silent; it also retires when the turn it showed on ends without a cheap unit.
- */
+/** Retire a missed bait moment so the turn's next advice is never hidden. */
 const bait: CoachStep = {
   id: "bait",
   kind: "act",
@@ -151,7 +111,6 @@ const bait: CoachStep = {
   },
 };
 
-/** Rush Token Farm is in the backrow and has just made a Rush Token (at the start of the turn). */
 function farmWorked(ctx: CoachCtx): boolean {
   return (
     myBackrowLane(ctx, FARM) !== undefined &&
@@ -159,12 +118,10 @@ function farmWorked(ctx: CoachCtx): boolean {
   );
 }
 
-/** The instance ids of the human's Rush Tokens on this view. */
 function myTokenIds(view: PlayerView): Set<string> {
   return new Set(view.you.units.filter((unit) => unit !== null && unit.defId === RUSH_TOKEN).map((unit) => unit?.instanceId ?? ""));
 }
 
-/** The engine offers an attack by one of the human's Rush Tokens. */
 function tokenCanAttack(ctx: CoachCtx): boolean {
   const tokens = myTokenIds(ctx.view);
   return ctx.legal.some((action) => action.type === "attack" && tokens.has(action.attackerId));
@@ -175,13 +132,7 @@ function tokenAttacked(ctx: CoachCtx, since: PlayerView): boolean {
   return freshOf(ctx, "attackDeclared").some((event) => !event.forced && tokens.has(event.attackerId));
 }
 
-/**
- * "Attack with a Rush Token." `attackWith` finds its unit by definition, and the trap made two
- * tokens of one definition, so this one remembers the tokens standing when it showed: done once
- * any of them has attacked, even when that attack ended the turn by itself (R82) and so arrived
- * on the next turn's view; moot when the turn ends without one. It comes right after the farm, and
- * with no token able to attack on that main phase it retires at once, so the turn's advice follows.
- */
+/** Remember the shown instances: either token can complete this step, even after an automatic turn end (R82). */
 const tokenAttack: CoachStep = {
   id: "token-attack",
   kind: "act",
@@ -200,18 +151,15 @@ const tokenAttack: CoachStep = {
   },
 };
 
-// A tip's text is read again on every view while it shows, so these read what stays on the board
-// (the graveyards, the units, the view's recent events) rather than only the events that set the
-// tip off, which the next view no longer carries.
+// Tips re-read each view, so their text derives from state that persists beyond the triggering event.
 
-/** "Your trap sprang": names The Coin when that is what the AI played into it (§7: it costs 0). */
+/** Names The Coin when the AI played it into the trap (§7: it costs 0). */
 function honeypotText(ctx: CoachCtx): string {
   const coin = ctx.view.opponent.graveyard.some((card) => card.defId === COIN_DEF_ID);
   const what = coin ? "The AI played The Coin, which costs (0)" : "The AI played a (1) Cost or less card";
   return `${what}, so your Bear Honeypot sprang on its turn and made two Rush Tokens. A trap that has fired goes to the graveyard.`;
 }
 
-/** "The AI's trap": names Sheepish, and the unit it turned into a Sheep, when that is what happened. */
 function enemyTrapText(ctx: CoachCtx): string {
   const sheepish = ctx.view.opponent.graveyard.some((card) => card.defId === SHEEPISH) || unitOf(ctx.view, "you", SHEEP) !== undefined;
   if (!sheepish) return "The AI's face-down card was a trap, and your play set it off. Its zone is empty again.";
@@ -254,8 +202,7 @@ export const script: LessonScript = {
         return lane === undefined ? { kind: "backrow", side: "you" } : { kind: "backrow", side: "you", lane };
       },
       when: (ctx) => myBackrowLane(ctx, HONEYPOT) !== undefined,
-      // Set, it shows at once (the turn usually ends by itself, R82, so on the AI's turn); not set
-      // by the player's next main phase, or already sprung, its moment has passed.
+      // A missed or sprung trap expires; the turn may already have ended automatically (R82).
       moot: (ctx, since) =>
         since === null && myBackrowLane(ctx, HONEYPOT) === undefined && (myMain(ctx) || played(ctx, HONEYPOT)),
       holdAi: true,
@@ -275,8 +222,7 @@ export const script: LessonScript = {
       anchor: (ctx) =>
         unitOf(ctx.view, "you", RUSH_TOKEN) === undefined ? { kind: "backrow", side: "you" } : { kind: "unit", side: "you", defId: RUSH_TOKEN },
       when: (ctx) => myMain(ctx) && farmWorked(ctx),
-      // Its moment is the start of the player's next turn: a main phase without the farm's new token
-      // (the farm never played, gone, or the board full) retires it, and the turn's own steps follow.
+      // Without the next-turn token, retire it so the turn's own steps follow.
       moot: (ctx, since) => since === null && myMain(ctx) && !farmWorked(ctx),
     }),
     playCard({
@@ -304,8 +250,7 @@ export const script: LessonScript = {
       title: "Tokens",
       text: "A Rush Token is a token: a unit another card makes. It is 3/3 with Rush. A token vanishes for good when it leaves the field.",
       anchor: { kind: "unit", side: "you", defId: RUSH_TOKEN },
-      // On the player's own turn, once the farm is played (or cannot be), just before the coach asks
-      // a token to attack: never stacked behind the trap's own two bubbles on the AI's turn.
+      // Show before the token prompt, not behind the trap bubbles on the AI's turn.
       when: (ctx) => myMain(ctx) && tokenCanAttack(ctx) && legalPlays(ctx, FARM).length === 0,
     }),
     tip({

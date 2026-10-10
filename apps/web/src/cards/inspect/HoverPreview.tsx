@@ -1,17 +1,13 @@
-// The enlarged card a resting mouse or pen pointer opens (B22): the live face at
-// PREVIEW_HEIGHT_PX with its glossary beside it, fixed beside the anchor card. It never takes
-// pointer events and is hidden from assistive tech, so it can never cover what a click aims at.
-// A face in play whose printed text differs (SPEC §10.10) has that text above its glossary, and a
-// face whose text names other cards has their faces in a column of their own beyond it
-// (References.tsx, R279), since a reference inside a preview that takes no pointer events cannot
-// be hovered itself.
+// The enlarged card a resting mouse or pen pointer opens (B22): the live face at PREVIEW_HEIGHT_PX
+// with its glossary beside it, fixed beside the anchor. It takes no pointer events and is hidden
+// from assistive tech, so it never covers what a click aims at; for the same reason a reference in
+// its text cannot be hovered, so the cards the text names get a column of their own (References.tsx, R279).
 //
-// Patch v0.2.0 (SPEC §10.8): a face in play whose view gives it states — tuned (R386), Brittle (R385),
-// enchantments (E39), standing as a Unit (R383) — has them in words at the top of that column
-// (StateNotes.tsx), since the badges' tooltips cannot be hovered here, and a printed text beside a
-// tuned face whose numbers moved. Whenever the column is drawn it ends with the card's lines of code
-// (E36): a meta line fits there, and a face with nothing beside it stays alone. Above that line, the
-// card's flavour line and artist credit (R660, Flavour.tsx), which draw the column on their own.
+// In that column (SPEC §10.8, §10.10): a face in play whose printed text differs has that text above
+// its glossary, and one whose view gives it states (tuned R386, Brittle R385, enchantments E39, a
+// Unit R383) has them in words at the top (StateNotes.tsx), since badge tooltips cannot be hovered
+// here. It ends with the card's lines of code (E36), above which sit the flavour line and artist
+// credit (R660, Flavour.tsx); a face with nothing beside it stays alone.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";

@@ -1,11 +1,7 @@
-// The segmented invite-code field (docs/polish/5-sign-in.md, B15-B19), and R191's promise that the
-// client reads a code exactly as the server does.
-//
-// The field is one real <input> drawn as four groups. Everything asserted here is what a player
-// or a screen reader can observe: the input's value and caret, the segments' `data-state`, the
-// progress line and the hint. The shared table `CODE_INPUT_CASES` is the same one the server's
-// parity test redeems, so a row the server accepts is a row this field fills, character for
-// character.
+// The segmented invite-code field (docs/polish/5-sign-in.md, B15-B19) and R191's promise that the
+// client reads a code exactly as the server does. Everything asserted is what a player or a screen
+// reader can observe. The shared table `CODE_INPUT_CASES` is the one the server's parity test
+// redeems, so a row the server accepts is a row this field fills, character for character.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -57,9 +53,7 @@ type CodeInputCase = {
 
 const CODE_INPUT_CASES = codeInputCases as readonly CodeInputCase[];
 
-// ---------------------------------------------------------------------------------------------
 // fixtures, built from config rather than spelled
-// ---------------------------------------------------------------------------------------------
 
 const G = INVITE_CODE_GROUP_SIZE;
 
@@ -180,9 +174,7 @@ const READ_WITH_PROBLEM = CODE_INPUT_CASES.filter(
   (row) => row.canonical === null && !row.foundInText && row.problem !== null,
 );
 
-// ---------------------------------------------------------------------------------------------
 // the table is not empty (a table-driven suite over nothing would pass)
-// ---------------------------------------------------------------------------------------------
 
 describe("the shared table", () => {
   it("R191 B17 has rows the paste handler fills and rows of each problem kind", () => {
@@ -200,9 +192,7 @@ describe("the shared table", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B15: one input, four segments, a progress line
-// ---------------------------------------------------------------------------------------------
 
 describe("B15 the field's DOM", () => {
   it("B15 is one text input with the invite testid, no maxLength, and the input attributes", () => {
@@ -318,9 +308,7 @@ describe("B15 the field's DOM", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B16: typing upper-cases and groups; the caret follows
-// ---------------------------------------------------------------------------------------------
 
 describe("B16 typing", () => {
   it("B16 typing abcdefgh shows ABCD-EFGH with the caret at the end", async () => {
@@ -379,9 +367,7 @@ describe("B16 typing", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B17 / R191: every row of the shared table
-// ---------------------------------------------------------------------------------------------
 
 describe("R191 B17 pasting", () => {
   it.each(FILLED_BY_PASTE.map((row) => [row.name, row] as const))(
@@ -526,9 +512,7 @@ describe("R191 B17 pasting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B18 / R191: an excluded character is refused and named, never dropped
-// ---------------------------------------------------------------------------------------------
 
 describe("R191 B18 excluded characters", () => {
   it.each(EXCLUDED.map((character) => [character] as const))(
@@ -617,9 +601,7 @@ describe("R191 B18 excluded characters", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B19: Backspace never sticks on a separator
-// ---------------------------------------------------------------------------------------------
 
 describe("B19 Backspace", () => {
   it("B19 Backspace right after a separator deletes the character before it", async () => {
@@ -679,9 +661,7 @@ describe("B19 Backspace", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B19: nor do Delete and the arrow keys (the adversarial panel's findings)
-// ---------------------------------------------------------------------------------------------
 
 describe("B19 Delete and the arrows at a group boundary", () => {
   it("B19 Delete right before a separator deletes the character after it, and the caret stays", async () => {
@@ -729,9 +709,7 @@ describe("B19 Delete and the arrows at a group boundary", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B17: text that arrives without a paste event is read like a paste
-// ---------------------------------------------------------------------------------------------
 
 describe("R191 B17 text dropped or inserted by a keyboard's clipboard chip", () => {
   it("R191 B17 fills the field from an invite sentence inserted in one change", () => {
@@ -801,9 +779,7 @@ describe("R191 a keyboard that types through IME composition (Android's Gboard)"
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A pasted message, a selection, and a letter from another keyboard
-// ---------------------------------------------------------------------------------------------
 
 describe("R191 B17 a whole chat message pasted", () => {
   it.each([

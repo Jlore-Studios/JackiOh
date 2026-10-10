@@ -1,59 +1,7 @@
-// SPEC §9.4's gate, as the client renders it.
-//
-// The gate is the SERVER's: every endpoint but `/api/auth/me` and `/api/codes/*` is declared
-// `auth: "active"` and answers 403 `account_pending` to anyone else. This module enforces nothing
-// (CLAUDE.md rule 7) — it reads `GET /api/auth/me`, which is the endpoint §9.4 provides precisely
-// so "the client knows to show the code screen", and reports what it said. A screen that renders
-// on a `pending` account is a UX mistake, not a security hole: the data it would need is already
-// refused at the door.
-//
-// §9.4: "A pending account can log in, verify its email and see the code screen, and nothing
-// else." So `/decks`, `/play` and `/match/<id>` send a pending account to `/invite`, and an
-// account with no session at all to `/login`.
-//
-// RENEWAL (R194). An access token lasts an hour. The refresh token that came with it used to be
-// stored and never read, so an hour after signing in every screen quietly sent the player back to
-// `/login`. Now the gate renews ONCE, in two cases: the stored token is within
-// `AUTH_SESSION_REFRESH_MARGIN_SECONDS` of expiring, or `/api/auth/me` answers 401. It writes the
-// new session and reads `/api/auth/me` again. A renewal the provider refuses ends the session, and
-// the account comes back `anonymous` with reason `expired` so the sign-in screen can say so rather
-// than failing silently. A renewal that could not reach the provider (`network`, `service`) keeps
-// the session and reports an error with a retry. A session with no refresh token (the e2e
-// fixtures) is never renewed and behaves exactly as before.
-//
-// ANOTHER TAB (R632). A session belongs to the tab that signed in (`net/session.ts`), so a sign-out
-// or a renewal in another tab does not change what this one holds. What tabs still share is
-// `localStorage`: the e2e fixture's session, and a session an older build left there. `useAccount`
-// listens for `storage` events on those keys (they fire only in the OTHER tabs) and reads the
-// account again, so a device whose fixture session was removed is not shown a gated screen from a
-// token that is already gone.
-//
-// THE BACK BUTTON. Sign-out leaves by a real page load, but browsers keep the page it left in the
-// back/forward cache, frozen with the account it had read, and a frozen page hears no `storage`
-// event. So a page restored from that cache (`pageshow` with `persisted`) reads the account again,
-// and a signed-out device is sent to sign in instead of being handed the old screen.
-//
-// A RENEWAL OUTLIVED BY ITS SESSION. A renewal is a round trip, and the device can sign out (here or
-// in another tab), or sign in as someone else, while it is out. So storage is read again when the
-// provider answers: a renewal is written back only over the very session it renewed. And it must
-// hand back the SAME account: a refresh token answers with the session of whoever owns it,
-// whatever access token came with it, so a renewal naming another user id ends the session instead.
-//
-// A TOKEN THAT STAYS FRESH UNDER AN OPEN SCREEN (R194). The gate hands its token down, and a screen
-// can stay open for longer than the token lives (a queue wait, an hour in the deckbuilder). So
-// while a screen is open the gate renews `AUTH_SESSION_REFRESH_MARGIN_SECONDS` before the token it
-// handed down expires, and hands down the new one. A sleeping tab's timers are frozen, so the page
-// coming back into view checks the clock at once.
-//
-// A RE-READ IN THE BACKGROUND KEEPS THE SCREEN. Once a screen is open, the re-reads above (another
-// tab, the back/forward cache, a renewal) must not tear it down for nothing:
-//   - one that fails (a blip, a sleeping server) keeps the account the screen already has, unless
-//     the device has moved to another account meanwhile. Only the player's own "Try again" (which
-//     starts from "loading") shows the error panel.
-//   - one that finds the same session renewed keeps the token the screen already holds while that
-//     token still has more than the margin to live: it is as good as the new one (same session),
-//     and a screen that keys something live on it (the match socket) would be torn down and
-//     reopened for nothing.
+// Client view of SPEC §9.4's server gate (CLAUDE.md rule 7): `/api/auth/me` sends pending accounts
+// to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401; refusal
+// ends a session as `expired`, and transient failure leaves it retryable. R632 re-reads a tab-owned
+// session after storage or back/forward-cache changes; background reads keep a ready screen when safe.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -146,19 +94,8 @@ function differentAccounts(a: string, b: string): boolean {
 }
 
 /**
- * One renewal. The new session is written even if the screen that asked has since unmounted: the
- * provider has already rotated the refresh token, and dropping the new one would strand the player.
- *
- * `stale` is the session this read started from. If storage already holds a different one, another
- * screen renewed in the meantime (its request settled before this one's 401 came back, so the
- * single flight in `refreshSession` could not merge them). Spending `stale`'s refresh token now
- * would be a reuse, which the provider treats as theft, so the stored session is used instead.
- *
- * Storage is read again once the provider answers (see A RENEWAL OUTLIVED BY ITS SESSION):
- *   - empty: the device signed out meanwhile. Nothing is written, the renewed session is revoked
- *     (sign-out's own revocation may have used the tokens it held), and the account is anonymous.
- *   - another session: someone signed in (or renewed) meanwhile, and that session stands.
- *   - still `stale`: the renewal is written, unless it is another account's (then the session ends).
+ * Renew only the session that started the read: a rotated refresh token must be retained, but a
+ * changed store wins; sign-out revokes the result and an account mismatch ends the session.
  */
 async function renew(stale: Session, refreshToken: string, retry: () => void): Promise<Renewal> {
   const stored = readSession();
@@ -361,12 +298,8 @@ export function settleAccount(previous: Account, next: Account, now: number): Ac
 const LONGEST_TIMER_MS = 2_147_483_647;
 
 /**
- * R194 while a screen is open: re-read (and so renew) the account when the token it handed down
- * comes within `AUTH_SESSION_REFRESH_MARGIN_SECONDS` of expiring. A timer, and the page coming back
- * into view, since a sleeping tab's timers are frozen. A token that is already due (it came due
- * between the read and now) is renewed at once, but never more often than once per
- * `AUTH_SESSION_RENEWAL_FLOOR_SECONDS`, so a provider that issues tokens shorter-lived than the
- * margin cannot set off a loop of renewals.
+ * R194: re-read near expiry and when a sleeping page wakes, never more often than
+ * `AUTH_SESSION_RENEWAL_FLOOR_SECONDS`, so short-lived tokens cannot loop renewals.
  */
 function useRenewalBeforeExpiry(account: Account, reread: () => void): void {
   const renewAt =
@@ -413,12 +346,7 @@ function useRenewalBeforeExpiry(account: Account, reread: () => void): void {
   }, [renewAt, reread]);
 }
 
-/**
- * Reads the session, renews it if it needs renewing, then reads `/api/auth/me`. One read per mount
- * (and one more per `retry`, per change the device's session goes through, and before the token it
- * handed down expires); the result is the only thing a screen needs to decide whether to render
- * itself or hand over to the gate.
- */
+/** Reads and, when needed, renews the session before `/api/auth/me`. */
 export function useAccount(): Account {
   const [attempt, setAttempt] = useState(0);
   const [account, setAccount] = useState<Account>({ kind: "loading" });

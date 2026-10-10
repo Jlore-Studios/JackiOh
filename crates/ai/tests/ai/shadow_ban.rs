@@ -1012,14 +1012,14 @@ mod the_two_pass_sweep_r390 {
         let banned = banned_ids();
         let keep_out: Vec<String> = ai_pool()
             .into_iter()
-            .filter(|id| !banned.contains(id) && id != "core-012")
+            .filter(|id| !banned.contains(id) && id != "classic-013")
             .take(10)
             .collect();
         let mut at_risk: Vec<String> = banned
             .iter()
             .cloned()
             .chain(keep_out.iter().cloned())
-            .chain(["core-012".to_string()])
+            .chain(["classic-013".to_string()])
             .collect();
         at_risk.sort();
         let clock = Cell::new(0.0_f64);
@@ -1028,7 +1028,7 @@ mod the_two_pass_sweep_r390 {
             clock.get()
         };
         let timed = js(sweep_at_risk(
-            "core-012",
+            "classic-013",
             &at_risk,
             &keep_out,
             &SweepOptions {
@@ -1037,14 +1037,14 @@ mod the_two_pass_sweep_r390 {
                 tier: Some(Difficulty::Easy),
             },
         ));
-        assert_eq!(timed["forced"], json!("core-012"));
+        assert_eq!(timed["forced"], json!("classic-013"));
         assert_eq!(timed["games"], json!(1));
         let cards = timed["cards"].as_array().cloned().unwrap_or_default();
         let ids: Vec<String> = cards
             .iter()
             .map(|card| card["defId"].as_str().unwrap_or_default().to_string())
             .collect();
-        assert_eq!(ids.first().map(String::as_str), Some("core-012"));
+        assert_eq!(ids.first().map(String::as_str), Some("classic-013"));
         for id in &ids {
             assert!(at_risk.contains(id), "{id}");
         }
@@ -1070,13 +1070,13 @@ mod the_two_pass_sweep_r390 {
         for entry in &suspects {
             assert_match_object(
                 entry,
-                &json!({ "seed": "sweep2:easy:core-012:1", "forced": "core-012", "errors": 0, "timeouts": forced["timeouts"] }),
+                &json!({ "seed": "sweep2:easy:classic-013:1", "forced": "classic-013", "errors": 0, "timeouts": forced["timeouts"] }),
             );
         }
 
         // The same game without a clock: the clock only measures, so the deal and the play are the same.
         let plain = js(sweep_at_risk(
-            "core-012",
+            "classic-013",
             &at_risk,
             &keep_out,
             &SweepOptions {
@@ -1390,17 +1390,13 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// The unban lane's generation-4 table: removals only from TypeScript's eleven — every retained
-    /// entry is verbatim in it, and the seven it dropped are exactly the ones the sweep of record
+    /// The unban lane's generation-5 table: removals only from TypeScript's eleven — every retained
+    /// entry is verbatim in it, and the eight it dropped are exactly the ones the sweep of record
     /// cleared or the eval now sees (`SHADOW_BAN`'s own doc comment).
     const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[
         (
             "core-042",
             "neverPlayed: hard: affordable in hand on 21 turns, never played",
-        ),
-        (
-            "core-055",
-            "neverPlayed: hard: affordable in hand on 22 turns, never played",
         ),
         (
             "core-076",
@@ -1413,7 +1409,7 @@ mod v12 {
     ];
 
     #[test]
-    fn v12_the_unban_lanes_table_is_the_four_entries_it_left_of_typescripts_eleven() {
+    fn v12_the_unban_lanes_table_is_the_three_entries_it_left_of_typescripts_eleven() {
         assert_eq!(SHADOW_BAN, UNBAN_LANE_SHADOW_BAN);
         for entry in SHADOW_BAN {
             assert!(
