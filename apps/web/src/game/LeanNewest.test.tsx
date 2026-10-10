@@ -33,7 +33,8 @@ describe("R1371 the newest set that ships", () => {
   it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Classic+ until the Meditative set ships", () => {
     expect(newestShippedSet()).toBe(SHIPPED_SETS[SHIPPED_SETS.length - 1]);
     expect(setShips(newestShippedSet())).toBe(true);
-    expect(newestShippedSet()).toBe("Classic+");
+    // Meditative from the patch that ships it (issue #553), with no other line to change.
+    expect(newestShippedSet()).toBe(setShips("Meditative") ? "Meditative" : "Classic+");
   });
 
   it("R1371 the switch names it, and the share it asks for is the deck builder's own number", () => {

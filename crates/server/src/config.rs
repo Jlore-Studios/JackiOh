@@ -428,14 +428,15 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
 /// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
-/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused.
+/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
+/// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
 /// SPEC §11 R255: the one older deck-code version still read. Every code minted before patch v0.2.0
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -444,15 +445,20 @@ pub struct CatalogNumberSetOffsets {
     pub classic: i32,
     #[serde(rename = "Classic+")]
     pub classic_plus: i32,
+    #[serde(rename = "Meditative")]
+    pub meditative: i32,
 }
 
-/// SPEC §11 R255, R339 (B2.2): a card's catalog number in a version 2 deck or trio code is its §5
-/// index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n — still written as
-/// LEB128. No set holds 1000 cards, so a number names one set and one card.
+/// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
+/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
+/// 3000 + n — still written as LEB128. No set holds 1000 cards, so a number names one set and one
+/// card. Meditative's offset is the next thousand in catalog order (R1420), and it moved no other
+/// set's, so a code minted before the set shipped reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
     classic_plus: 2000,
+    meditative: 3000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a

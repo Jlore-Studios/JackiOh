@@ -612,7 +612,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` — and records them in `app.migrations`. Expected
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_meditative_set.sql` — and records them in
+   `app.migrations`. Expected
    result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -637,7 +638,9 @@ step that is not yet implemented says which BUILD task delivers it.
    project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
    Catalyst, Prime and Acclaimed, as 0020 did with Plague. 0027 adds `tickets.lean_newest` and
    `matches.room_lean_newest`, where All Random's "More cards from the newest set" waits for the deal
-   (R1372); both default to false, so nothing is backfilled.
+   (R1372); both default to false, so nothing is backfilled. 0028 comes with the patch that ships the
+   Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -647,8 +650,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
-   (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 450
+   (370 cards + 80 tokens over Core, Classic, Classic+ and Meditative: patch v0.2.0, Glitch, issue #170,
+   and the Meditative set, issue #553) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts

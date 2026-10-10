@@ -34,10 +34,10 @@ The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`268 cards`, `318`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (the Meditative set while issue #496 builds it, R1420) differs in five places:
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and a set held the same way later is one too) differs in five places, the Meditative paths below standing for its own:
 - Its script goes in `src/scripts/meditative/`.
 - Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
   `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build

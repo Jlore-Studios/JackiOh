@@ -1,6 +1,6 @@
 ## 1. Overview
 
-JackiOh is a 1v1 collectible card game: a Hearthstone-style mana curve, combat math and keyword vocabulary, played on Yu-Gi-Oh-style lanes with a hidden backrow of traps. This document is the complete specification: the rules, all 268 cards of the three sets (100 Core, 90 Classic, 78 Classic+) and their 50 tokens described by what they do to game state, and the architecture and engine they run on. Patch v0.2.0 (issue #40, [[R380]] on) added Classic and Classic+.
+JackiOh is a 1v1 collectible card game: a Hearthstone-style mana curve, combat math and keyword vocabulary, played on Yu-Gi-Oh-style lanes with a hidden backrow of traps. This document is the complete specification: the rules, all 370 cards of the four sets (100 Core, 90 Classic, 78 Classic+, 102 Meditative) and their 80 tokens described by what they do to game state, and the architecture and engine they run on. Patch v0.2.0 (issue #40, [[R380]] on) added Classic and Classic+, and the Meditative set (issue #496) shipped with issue #553 ([[R1420]]).
 
 Design pillars:
 

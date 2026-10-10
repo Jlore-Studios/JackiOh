@@ -15,8 +15,10 @@
 // - A card is carried as its catalog NUMBER, not its id: numbers are what the printed set shows,
 //   and a code stays valid through an id rename. Version 2 (patch v0.2.0, B2.2) writes the set
 //   with it: the §5 index plus the set's offset (`CATALOG_NUMBER_SET_OFFSETS`: Core n, Classic
-//   1000 + n, Classic+ 2000 + n). Only whole-number indices are encodable; Tokens carry numbers
-//   like "51.1" or "T-AI-1" and are never deckable anyway (R251).
+//   1000 + n, Classic+ 2000 + n, and since the patch that ships it Meditative 3000 + n, R1410).
+//   A set that ships takes the next offset and leaves the version alone, so a code minted before
+//   it reads as it always did. Only whole-number indices are encodable; Tokens carry numbers like
+//   "51.1" or "T-AI-1" and are never deckable anyway (R251).
 // - The name is the deck's name as it is stored (`normalizeName`), cut to `DECK_NAME_MAX_LENGTH`
 //   characters; a name the draft rule D1 would refuse is written as "Imported deck" instead.
 // - The checksum is FNV-1a (32-bit) over every byte before it, folded to 16 bits. It is not

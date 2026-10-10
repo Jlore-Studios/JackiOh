@@ -1,11 +1,11 @@
 # `jackioh-cards`
 
-318 catalog entries in the three shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all, and the
-Meditative set (102 cards and 30 tokens, spec §8.8) joining the catalog part by part before it ships
-(R1420: no pool that names no set, no deck and no random deck holds its cards until the release, and a
-test opens it with the testkit's `preview_sets`); one script file
-per entry with its tests inside it; the catalog query every random pool goes through; and the
+450 catalog entries in the four shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+Glitch, a hidden token), Classic+ (78 cards and 38 tokens) and Meditative (102 cards and 30 tokens,
+spec §8.8), 370 cards and 80 tokens in all. A set the catalog holds before it ships, as Meditative
+was while issue #496 built it, is in no pool that names no set, no deck and no random deck until the
+patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
+`preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure

@@ -66,4 +66,4 @@ This is the only turn sequence; [[§6.2]] and [[§10.3]] follow it ([[R62]]). Th
 
 ### 2.6 Deckbuilding
 
-Exactly 20 cards, no duplicate card ids, no Token-tagged cards. There is one format: a deck may mix Core, Classic and Classic+ cards under these rules, and nothing is set-restricted ([[R380]]). The three decks of a trio, which Conquest plays (section 9.5), share no card (section 9.4), so a trio needs 60 distinct cards, now from 268 non-token cards. A saved deck may be incomplete while it is being built; these rules are checked when it is queued ([[R250]], [[R253]]).
+Exactly 20 cards, no duplicate card ids, no Token-tagged cards. There is one format: a deck may mix Core, Classic, Classic+ and Meditative cards under these rules, and nothing is set-restricted ([[R380]], [[R1420]]). The three decks of a trio, which Conquest plays (section 9.5), share no card (section 9.4), so a trio needs 60 distinct cards, now from 370 non-token cards. A saved deck may be incomplete while it is being built; these rules are checked when it is queued ([[R250]], [[R253]]).

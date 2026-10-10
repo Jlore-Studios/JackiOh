@@ -15,7 +15,7 @@ rule 4), and it hands them the clock as a callback where they need one.
 | `fuzz [--from N] [--seeds N] [--handicap]` | `fuzz.rs` | random-policy games (spec §10.7) from every non-token card of every set, the I1–I4 invariants checked each step and every game folded back to its live hash; seeds 1–1,000 by default, `--handicap` rotates one seat through Medium and Hard. CI plays `--seeds 200`, the daily run 10,000 of each |
 | `replay` | `replay.rs` | reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?}` on stdin and prints `{"hash", "errors"}`: e2e specs 01 and 13 check the browser's hash with it |
 | `trace [matchup] [n] [full]` | `trace.rs` | one AI gate game, turn by turn |
-| `catalog check` | `catalog.rs` | `crates/cards/catalog.json`'s shape and census, set by set (spec §5, §6.1, §7, §8): 268 cards and 50 tokens, the rarity counts, the tag counts, the patch v0.2.0 fields |
+| `catalog check` | `catalog.rs` | `crates/cards/catalog.json`'s shape and census, set by set (spec §5, §6.1, §7, §8): 370 cards and 80 tokens, the rarity counts, the tag counts, the patch v0.2.0 fields |
 | `catalog loc <script path>` | `catalog.rs` | a new card script's `loc` (its non-blank, non-comment, non-`use` lines above `#[cfg(test)]`); prints, writes nothing |
 | `catalog-version` | `catalog.rs` | the newest version in `crates/cards/patches/patches.json` |
 | `patches <version> [date] "<title>" [--source …] [--notes …] [--cards …]` | `patches.rs` | claim a card patch as `crates/cards/patches/pending/<version>.json` (R388, R646) |
