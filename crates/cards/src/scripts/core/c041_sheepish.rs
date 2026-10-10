@@ -1,44 +1,17 @@
 //! #41 Sheepish (SPEC §8.2). Trap, cost 1, Epic.
-//!   Base:    "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep
-//!            Token."
-//!   Radiant: the same, "Add a Lava Golem to your hand. It costs (0)." — the Radiant face adds the
-//!            Lava Golem and keeps every clause of the base face (§8 Conventions, R277).
+//!   Base:    "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token."
+//!   Radiant: the same, "Add a Lava Golem to your hand. It costs (0)." (keeps every clause of base, §8, R277).
 //!
-//! TIMING (R427, patch v0.2.0; rewrites R17's Sheepish half). Sheepish no longer costs the Unit its
-//! Cry: it waits for the play to resolve — the Cry and every Echo repeat — and then turns the Unit into
-//! a Sheep. That moment is §10.5 step 7's `cardResolved`, the event #60 Bear Honeypot, #33 Unstable
-//! Clone Machine and #85 Unlicensed Experimentation answer too (R17's other half, R61). A cast Unit
-//! resolves the same way (R70), so a cast is answered after its Cry as well. A Unit with no Cry is
-//! answered at the same step: "after it resolves" names the moment, not a condition on the text.
-//!
-//! `cardResolved` rather than `summoned`: the condition is "your opponent PLAYS a Unit", and the play
-//! pipeline's step-7 event carries the player who played it, where `summoned` also covers Recruit,
-//! copies, tokens and Reborn — none of which is a play (R1, R61).
-//!
-//! ARMING (R61). `traps.ts` rules that `run` returning `[]` is "a trap that fired for nothing" and "can
-//! never mean 'this event was not mine'", so every condition that must leave the trap armed and
-//! face-down lives in the `when` predicate: the opponent's play, and a Unit. A Spell, a Field Spell, a
-//! Trap, or the controller's own Unit therefore leaves Sheepish set.
-//!
-//! A UNIT THAT HAS LEFT (R427, R174). The play of a Unit is what Sheepish answers, so it fires on it
-//! even when the Unit left the field in its own resolution — its own Cry took it off (a Radiant #52
-//! Silly Silas rotating itself across) — `cardResolved.permanent` is false from the start, the
-//! Transform has no Unit in play to land on and finds nothing (it never reaches into a hand or a
-//! graveyard, or onto a Reborn body, a new arrival, R83), and the trap is consumed, the Radiant face's
-//! Lava Golem still added (R120). A Unit that something answering the same play took off the field
-//! after it resolved — an earlier trap of the same dispatch: a first Sheepish, #60 Bear Honeypot's
-//! tokens — is no play left to answer (R174, `traps.standingEvent`): this one stays set, as a trap is
-//! never offered a step-4 arrival an earlier trap has taken (`query.leftFieldSinceResolved`).
-//!
-//! IMMUTABLE (R17, R23). `transform` already refuses an Immutable target, which is exactly R17's
-//! "Sheepish on an Immutable unit still fires and is consumed with no effect". This card neither
-//! checks Immutable nor consumes itself: `fireTrap` emits `trapFired`, runs the state check and
-//! consumes the trap "whatever its effects achieved". R33's face-down identity is the view's.
-//!
-//! NO GLOW (R662). Sheepish waits on an event and on nothing the board holds: any Unit the opponent
-//! plays sets it off, and an Immutable one still consumes it (R17). A glow would be on whenever the
-//! trap is, which says nothing, and the one thing that would make it useful, whether the opponent
-//! holds a Unit, is their hidden hand (§9.1). So it declares no `conditionMet`.
+//! TIMING (R427; rewrites R17's Sheepish half): it answers §10.5 step 7's `cardResolved`, after the Cry and
+//! every Echo repeat (a cast Unit too, R70). Not `summoned`, which also covers Recruit, copies, tokens and
+//! Reborn, none of them a play (R1, R61). A `run` returning `[]` still consumes the trap, so every
+//! condition lives in `when`: a Spell, a backrow card or the controller's own Unit leaves it armed (R61).
+//! A Unit that left the field in its own resolution still fires it: nothing to Transform (it never reaches
+//! a hand, a graveyard or a Reborn body, R83), the trap consumed, the Lava Golem still added (R120). One an
+//! earlier trap took off the field is no play left to answer: it stays set (R174). Immutable (R17, R23):
+//! `transform` refuses it and `fireTrap` consumes the trap regardless. A face-down trap's identity is the
+//! view's (R33). No glow (R662): the trap waits on an event, and what a glow would tell, a Unit in the
+//! opponent's hand, is hidden (§9.1).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{add_to_hand, transform};
@@ -53,8 +26,7 @@ const SHEEP_TOKEN: &str = "core-t-sheep";
 /// `setCost` (R386).
 const LAVA_GOLEM: &str = "core-055";
 
-/// The two faces differ only in whether the Lava Golem comes with the Sheep. (TS `TrapTrigger`, which
-/// `traps.ts` defines as `TriggerDef`.)
+/// The two faces differ only in whether the Lava Golem comes with the Sheep.
 fn sheepish(lava_golem: bool) -> TriggerDef {
     TriggerDef::new(
         if lava_golem { "sheepish-radiant" } else { "sheepish" },
@@ -121,32 +93,22 @@ pub fn script() -> CardScripts {
 }
 
 // #41 Sheepish (SPEC §8.2, §5.1, §10.3, §10.5 step 7; R17, R23, R33, R61, R70, R120, R174, R427).
-//
-// The must-pass row (BUILD M4-T4 #41), as patch v0.2.0 rewrites it (R427, R17's Sheepish half):
-// "Opponent's Unit becomes a Sheep after its Cry resolves; trap consumed; Immutable target → consumed
-// with no effect; radiant adds 0-cost Lava Golem."
-//
-// "After its Cry" is proved with an observable Cry rather than with event order alone: #53 Reno's Cry
-// is "heal your hero up to 30 health", so a p1 hero left at 10 that is at 30 after the play is a Cry
-// that ran — and the Unit standing in its zone is a Sheep all the same.
-//
-// R662: it declares no `conditionMet` and never glows, on either face (the script's header says why);
-// the last describe below holds that.
+// Must-pass row (BUILD M4-T4 #41, as R427 rewrites it): "Opponent's Unit becomes a Sheep after its Cry
+// resolves; trap consumed; Immutable target → consumed with no effect; radiant adds 0-cost Lava Golem."
+// "After its Cry" is proved with an observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
 #[cfg(test)]
 mod tests {
     use super::script;
     use jackioh_engine::testkit::*;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
     }
 
     /// p1 is active with `card` to play; p2 holds Sheepish face-down in backrow lane 1.
-    ///
-    /// #16 Hit Job rides along in p1's hand purely so the turn has something meaningful left after the
-    /// play and does not auto-end into p2's turn (R82; see the harness header).
+    /// #16 Hit Job rides along so the turn does not auto-end into p2's turn after the play (R82).
     fn trap_set(card: Value, radiant_trap: bool) -> Scenario {
         scn(json!({
             "seed": "sheepish",
@@ -447,7 +409,6 @@ mod tests {
     mod sheepish_never_glows_r662_nothing_on_the_board_decides_it {
         use super::*;
 
-        /// TS's `for (const radiant of [false, true])` `it`, run for one face.
         fn armed_on_either_turn_it_never_lights_up(radiant: bool) {
             let face = if radiant { "radiant" } else { "base" };
             let scripts = script();

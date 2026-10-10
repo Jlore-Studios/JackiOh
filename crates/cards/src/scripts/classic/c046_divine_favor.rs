@@ -8,10 +8,9 @@
 //!            can't loop; a hand already at the mark draws nothing. A `preview` (R280) shows how many
 //!            cards it would draw now. Tunes: multiplier 2 ↑, on the Radiant face only (R749)."
 //!
-//! The loop is the engine's `drawWhile`: the mark read before each draw, the first draw that adds no
-//! card ending it. The Spell is resolving, out of the hand (§10.5 step 4). `preview` (R280, proved in
-//! `test/preview.test.ts`): the draws it asks for now, from the two hands' public sizes, this card
-//! left out of "yours" in hand; label "Draw". `param(ctx, "multiplier")` (R386).
+//! The loop is the engine's `drawWhile`; the Spell is resolving, out of the hand (§10.5 step 4). The
+//! `preview` (R280, proved in `test/preview.test.ts`) is the draws it asks for now, from the two hands'
+//! public sizes, this card left out of "yours"; `param(ctx, "multiplier")` (R386).
 
 use jackioh_engine::effects::{DrawWhileArgs, draw_while};
 use jackioh_engine::prelude::*;
@@ -22,8 +21,7 @@ pub const ID: &str = "classic-046";
 const PREVIEW_LABEL: &str = "Draw";
 
 /// The cards still wanted: `multiplier ×` the opponent's hand less your own, never below 0. `leaving`
-/// counts the cards about to leave your hand before the draws begin (this card, asked in hand; TS's
-/// default is 0, which every caller here writes out).
+/// counts the cards about to leave your hand before the draws begin (this card, asked in hand).
 fn draws_wanted(state: &GameState, player: PlayerId, multiplier: i32, leaving: i32) -> i32 {
     let yours = zone_count(state, player, OffFieldZone::Hand) - leaving;
     let mark = multiplier * zone_count(state, opponent_of(player), OffFieldZone::Hand);
@@ -63,14 +61,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: "Read as it resolves (this Spell has
-// left your hand): draws one at a time until your hand holds as many cards as the opponent's; level or
-// ahead → no draw; a draw that adds no card (fatigue, a burn, a cast-on-draw card, a draw a limit
-// stops) ends it, so it never loops; its preview is the number of draws it asks for now (R280); radiant:
-// until you hold twice as many; its tuned number (multiplier) reads through `param()` (R386)". The base
-// face prints no multiplier, so it is tuned on the Radiant face only (R749).
-//
-// The preview's proofs are in `test/preview.test.ts` (its C #46 section), with the set of hooked cards.
+// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: draws one at a time (this Spell
+// already out of your hand) until your hand holds as many cards as the opponent's; a draw that adds no
+// card ends it; its preview is the draws asked for now (R280); radiant: twice as many; its tuned number
+// (multiplier) reads through `param()` (R386), on the Radiant face only (R749).
+// The preview's proofs are in `test/preview.test.ts` (its C #46 section).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -87,12 +82,10 @@ mod tests {
 
     use crate::js;
 
-    /// The TS default for `player` is `"p1"`; every caller passes it.
     fn drawn(events: &[GameEvent], player: PlayerId) -> Vec<Value> {
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == js(&player)).collect()
     }
 
-    /// The TS default for `defId` is `STOCKPILE`; every caller passes it.
     fn many(count: usize, def_id: &str) -> Vec<String> {
         (0..count).map(|_| def_id.to_string()).collect()
     }
@@ -112,7 +105,7 @@ mod tests {
             );
             let scripts = script();
             assert!(scripts.base.preview.is_some());
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script, the same hooks present.
+            // The Radiant face is the same script, the same hooks present.
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
         }

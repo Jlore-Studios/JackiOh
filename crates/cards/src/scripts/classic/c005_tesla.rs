@@ -1,25 +1,16 @@
-//! C #5 Tesla (SPEC §8.6 row 5). Field Trap, cost 2, Epic, 1/4 → 2/8 (its unit face).
-//!   Both faces: "Animated, Lifesteal
-//!                Activates when your opponent summons a Unit: Deal {damage} damage to it. Then summon
-//!                this as a Unit in Defense Position." — damage 4 on the base face, 8 on the Radiant.
+//! C #5 Tesla (SPEC §8.6 row 5). Field Trap, cost 2, Epic, 1/4 → 2/8 (its unit face). Both faces:
+//! "Animated, Lifesteal. Activates when your opponent summons a Unit: Deal {damage} damage to it. Then
+//! summon this as a Unit in Defense Position." Damage 4 base, 8 Radiant.
 //!
-//! A Field Trap answering each Unit that arrives on the opponent's side, however it is summoned (§6.3
-//! Summon: played, cast, a token, a Recruit, a Reborn body); a card already on the field that crosses
-//! to that side by a steal (R171) or steps into a unit zone by animating (R383) was not summoned and
-//! leaves it set, as does any Unit of its own controller's. A played (or cast) Unit is answered after it
-//! resolves (`cardResolved`), as #60 Bear Honeypot answers (R17, Hearthstone's Snipe), so its Cry
-//! happens first: the placement §10.5 step 4 reports as that play's `summoned` — the one summon that
-//! carries the play's stays (`exitsFrom`, R174) — is left to the `cardResolved` that follows, which
-//! answers only while the played card's stay on the field lasts (`permanent`). Every other `summoned`
-//! is answered at once.
+//! It answers each Unit summoned on the opponent's side (§6.3 Summon); a steal across (R171) or an
+//! animating card (R383) was not summoned and leaves it set. A played Unit is answered after it resolves
+//! (`cardResolved`, as #60 Bear Honeypot, R17), so its Cry happens first: the play's own `summoned`
+//! (§10.5 step 4, which carries `exitsFrom`, R174) is skipped.
 //!
-//! The hit's source is Tesla, whose printed Lifesteal heals its controller the amount actually dealt
-//! (§4.4 step 8; 0 into a Divine Shield). Then it animates in Defense Position (Animated, B3.1, R383):
-//! into the unit zone in its own lane when open, else the leftmost open, unlocked, unreserved one
-//! (R64); already a Unit, it stays put in its position; with no open unit zone it stays face-up in its
-//! backrow zone. A Field Trap is never consumed, so it keeps firing — from the backrow or animated, a
-//! turret. Face-down it is hidden like any trap until it first fires (R33). The condition lives in
-//! `when` (R99), so an event it declines leaves it set.
+//! The hit's source is Tesla, whose Lifesteal heals the amount dealt (§4.4 step 8). It then animates in
+//! Defense Position (Animated, B3.1, R383): its own lane when open, else the leftmost open, unlocked,
+//! unreserved zone (R64); with none open it stays face-up in its backrow zone. A Field Trap is never
+//! consumed. Face-down it is hidden until it first fires (R33). The condition lives in `when` (R99).
 
 use jackioh_engine::effects::{animate, damage};
 use jackioh_engine::prelude::*;
@@ -54,7 +45,6 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     }
 }
 
-/// TS `const zap: TrapTrigger`.
 fn zap() -> TriggerDef {
     TriggerDef::new("tesla-zap", &[GameEventType::Summoned, GameEventType::CardResolved], |ctx, event| {
         let Some(target) = arrival(ctx, event) else {
@@ -84,19 +74,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #5 Tesla — SPEC §8.6 row 5, BUILD M9 Classic row C 5: "Face-down, read by its controller only
-// (R33); fires on every Unit summoned on the opponent's side however it is summoned (played, cast,
-// token, Recruit, Reborn), while a Unit stolen across (R171) or an Animated card animating there (R383)
-// was not summoned and leaves it set; a played one only after it resolves so its Cry happens first
-// (R17's Bear Honeypot timing); your own Units never set it off; deals 4 to it with Tesla as the
-// source, its Lifesteal healing you the amount dealt (0 into a Divine Shield); then animates (R383) in
-// Defense Position into its own lane's unit zone, else the leftmost open, unlocked, unreserved one; no
-// open zone → it stays face-up in its backrow zone and keeps firing; a Field Trap, it is never
-// consumed; already a Unit when it fires again → it stays put in its position; animated, it is a Unit
-// for every rule (attacked, damaged, counted among your Units, to its owner's graveyard when it dies)
-// and still fires; the move keeps its damage and counters (R78 does not apply) and it is summoning
-// sick; the opponent's view never names it before it fires, and `animated` names it after; radiant
-// 2/8, 8 damage; its tuned number (damage) reads through `param()` (R386)".
+// C #5 Tesla — SPEC §8.6 row 5, BUILD M9 Classic row C 5: face-down, read by its controller only (R33);
+// fires on a Unit summoned on the opponent's side, not on a steal (R171) or an animating card (R383); a
+// played one only after it resolves (R17); Lifesteal heals the amount dealt; the move keeps its damage and
+// counters (R78 does not apply); radiant 2/8, 8 damage; its tuned number (damage) reads via `param()` (R386).
 //
 // Tesla sits face-down in p1's backrow lane 3; p2, the opponent, is active and brings Units in.
 #[cfg(test)]
@@ -153,7 +134,7 @@ mod tests {
             assert_eq!(def.type_, CardType::FieldTrap);
             let kinds: Vec<KeywordKind> = def.base.keywords.iter().map(Keyword::kind).collect();
             assert_eq!(kinds, vec![KeywordKind::Animated, KeywordKind::Lifesteal]);
-            // TS `expect(radiant).toBe(base)`: the radiant face is the very same script.
+            // The radiant face is the very same script.
             let scripts = script();
             assert_eq!(scripts.base.triggers.len(), scripts.radiant.triggers.len());
             for (base, radiant) in scripts.base.triggers.iter().zip(&scripts.radiant.triggers) {

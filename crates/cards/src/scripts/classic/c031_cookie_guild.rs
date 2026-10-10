@@ -6,17 +6,10 @@
 //!            the board is full. Tunes: cost limit 2 ↑; units 1 ↑."
 //!
 //! §6.3 Recruit is one top-down scan for the first permanent that matches, summoned per R64 into the
-//! leftmost open zone with no Cry (R1), the library otherwise keeping its order. "Recruit N" is N scans
-//! in order, as #69 Call to Arms writes it, and each scan takes the card it found, so the next finds the
-//! next match further down. A scan that finds a Unit but no open zone leaves it in the library, which is
-//! what "stopping when the board is full" is.
-//!
-//! The filter is `type: "Unit"` (the scan would otherwise take any permanent) and `costRange.max`: the
-//! scan reads each library card's cost out of play (R65: its own cost plus its `costMod`, no player
-//! discount; an X card 0, R396), which is `recruit`'s own reading.
-//!
-//! Both numbers are declared (`units`, `costLimit`, R386) and read through `param`; the faces differ
-//! only in `units` (1 or 3), so both run this one script.
+//! leftmost open zone with no Cry (R1). "Recruit N" is N scans, each taking the card it found, as #69
+//! Call to Arms writes it; a scan that finds a Unit but no open zone leaves it in the library.
+//! The filter is `type: "Unit"` and `costRange.max`: the scan reads each library card's cost out of
+//! play (R65: its own cost plus its `costMod`, no player discount; an X card 0, R396).
 
 use jackioh_engine::prelude::*;
 
@@ -40,12 +33,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #31 Cookie Guild — SPEC §8.6 row 31, BUILD M9 Classic row C 31: "Cry: Recruit the first (2) Cost
-// or less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0, skipped unless the
-// only valid target per R690), summoned without
-// a Cry into your leftmost open zone; none, or a full unit row, → nothing; the deck otherwise keeps its
-// order and no event carries a position; radiant 4/8: three scans, stopping when the row fills (as
-// #69); its tuned numbers (cost limit, units) read through `param()` (R386)".
+// C #31 Cookie Guild — SPEC §8.6 row 31, BUILD M9 Classic row C 31: Cry: Recruit the first (2) Cost or
+// less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0, skipped unless the only
+// valid target, R690), summoned without a Cry into your leftmost open zone; radiant 4/8: three scans,
+// stopping when the row fills (as #69); numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +74,7 @@ mod tests {
             .collect()
     }
 
-    /// The five lanes as TS writes them: a def id, or `null`.
+    /// The five lanes: a def id, or `None`.
     fn lanes(defs: [Option<&str>; 5]) -> Vec<Option<String>> {
         defs.into_iter().map(|def| def.map(str::to_string)).collect()
     }
@@ -96,7 +87,7 @@ mod tests {
             crate::register_all();
             assert_eq!(crate::card_def(GUILD).id, GUILD);
             let scripts = script();
-            // TS `toBe(base)`: the Radiant face is the base Script itself, the same Cry.
+            // The Radiant face is the base Script itself, the same Cry.
             match (&scripts.base.cry, &scripts.radiant.cry) {
                 (Some(base), Some(radiant)) => assert!(Arc::ptr_eq(base, radiant)),
                 _ => panic!("both faces have the Cry"),

@@ -9,15 +9,13 @@
 //! §8's Conventions: "target" is any unit or hero on either side, and a bare `target` declaration is
 //! units only (R90), so the heroes are named. The pick travels in the play action (R81). The hit is
 //! one §4.4 instance, so Armor, Divine Shield, the anti-oneshot cap and Indestructible all apply.
-//!
-//! The amount is the declared number `damage` (R386), read through `param`: 4 on the base face, 8 on
-//! the Radiant one. Both faces run this one script.
+//! The amount is the declared `damage` (R386), read through `param`; both faces run this one script.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-016";
 
-/// §8 Conventions: any unit or hero, either side. (TS `const targets: TargetDecl[]`.)
+/// §8 Conventions: any unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))]
 }
@@ -61,7 +59,7 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": unit.id }])
     }
 
-    /// TS `hits(s)`: each `damage` event's `{ targetId, amount }`.
+    /// Each `damage` event's `{ targetId, amount }`.
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.events()
             .iter()
@@ -84,7 +82,7 @@ mod tests {
             serde_json::to_value(&base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
         );
-        // TS `expect(radiant).toBe(base)`: one script, so one hook.
+        // One script, so one hook.
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(radiant.targets, base.targets);
     }

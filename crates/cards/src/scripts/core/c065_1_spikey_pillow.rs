@@ -2,38 +2,23 @@
 //!
 //! Base 0/2: "Cannot be in Defense Position. Aura: your units have −2 attack".
 //! Radiant 0/4: "Aura: your non-Spikey-Pillow units have −2 attack" — a restated clause, so it
-//! replaces the base aura while the Defense-Position ban is kept (§8 Conventions, and §5.2's ruling
-//! that a token with a radiant face still has one).
+//! replaces the base aura while the Defense-Position ban is kept (§8 Conventions, §5.2).
 //!
-//! §8.3's Engine cell: "Position validator flag; aura floors attack at 0".
-//!
-//! §4.1 and the §3 ruling ("Spikey Pillow cannot be switched to Defense"): the ban is the
-//! `never_defense` static flag, which `reduce.rs` enforces on the `switchPosition` action and
-//! `legal_actions` leaves out of its list, and `combat.rs` checks for a switch made as an effect
-//! (R20, #48 5pek Controller: "Spikey Pillow stays ATK"). Nothing here re-implements it.
-//!
-//! §10.4 layer 5: an aura contributes stat layers while its card is in play and is computed on read,
-//! never stored, so the −2 is gone the instant the Pillow leaves. `layers.rs` floors the total
-//! attack at 0, which is why a 1-attack unit lands on 0 rather than −1 and why the Pillow's own
-//! 0 attack is unaffected by its own aura.
-//!
-//! `applies` reads INSTANCE fields only — controller, zone and def_id — and never calls back into
-//! `unit_view`, which `layers.rs` requires or the layers would recurse. "Your units" is the Pillow's
-//! controller (§8 Conventions), and "on the field" is the unit row: a card dormant under a Stack
-//! pile is not on the field for this (R13).
+//! §8.3's Engine cell: "Position validator flag; aura floors attack at 0". The ban is the
+//! `never_defense` flag, enforced by `reduce.rs` and `combat.rs` (§4.1, §3, R20, #48 5pek Controller).
+//! §10.4 layer 5: the aura is computed on read, so the −2 goes the instant the Pillow leaves, and
+//! `layers.rs` floors attack at 0. `applies` reads INSTANCE fields only, never `unit_view`, or the
+//! layers would recurse. "Your units" is the controller's (§8 Conventions), and a card dormant under
+//! a Stack pile is not on the field for this (R13).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-065-1";
 
-/// −2 attack to the controller's units in the unit row. `spares_own_kind` is the whole of the radiant
-/// text: "your NON-Spikey-Pillow units", i.e. every unit that is not a Spikey Pillow — this Pillow
-/// itself included, so a radiant Pillow keeps whatever attack it has been given.
-///
-/// A Spikey Pillow is the card this file defines, so the test is against `ID` and never
-/// `self.def_id`: a Pillow #85 fused with another card carries this text in full (R102) but is a
-/// transient definition named "A + Spikey Pillow", and its aura still spares every Spikey Pillow its
-/// controller has while draining the fused card itself, which is not one.
+/// −2 attack to the controller's units in the unit row. `spares_own_kind` is the radiant text: every
+/// unit that is not a Spikey Pillow, so this Pillow itself is spared. The test is against `ID`, never
+/// `self.def_id`: a Pillow #85 fused with another card carries this text (R102) but is named "A +
+/// Spikey Pillow", and its aura still spares every Spikey Pillow while draining the fused card itself.
 fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
     aura_hook(move |args| {
         // "−2 attack": the declared number `drain` (R386), less being better for the Pillow's controller.

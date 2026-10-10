@@ -3,27 +3,14 @@
 //! Base: "Destroy all permanents". Radiant: "Choose: all enemy permanents, or all".
 //! Engine cell: "Indestructibles survive; backrow included."
 //!
-//! §8's Conventions: the radiant cell restates the whole clause as a modal one, so the radiant face
-//! is the same board-wide destroy with a side chosen at play time.
-//!
-//! The mode is a DECLARED play choice, not a prompt. R81's card list names #88, and §10.6 is
-//! explicit: a card's own declared modes "travel in the `play` action" and are "not prompts";
-//! `playChoices.ts` enumerates them for `legalActions` and refuses a play that answers none. So the
-//! declaration below and `chosenOptions(ctx)` are the whole of the radiant choice — and they work
-//! today, which is why they are written out rather than left for later.
-//!
-//! `destroyAll({ side, rows })` is the board-wide destroy (`effects/destroy.ts`), written in the
-//! shared `BoardScope` of `effects/targets.ts`. It MARKS and never moves — `markedDestroyed` on
-//! every card the scope matches, walked in R68's order — so §4.5 step 1 collects the whole board at
-//! once and R59's single state check does the rest. Only cards ON the field are matched, so a card
-//! dormant under a Stack pile is not (R13).
-//!
-//! INDESTRUCTIBLE IS NOT THIS CARD'S BUSINESS, and the scope does NOT pre-exclude it. §4.5's
-//! `resolveIndestructibleMarks` drops the mark on an Indestructible unit, switches it to Attack
-//! Position and suppresses its Taunt for the turn (R46) — effects that only happen if the mark was
-//! actually applied. An Indestructible unit whose max health is already 0 or less dies anyway,
-//! because no destroy effect is involved (R69). So "Indestructibles survive" falls out of the state
-//! check, and asking the scope to skip them would quietly lose R46.
+//! §8's Conventions: the radiant face is the same board-wide destroy with a side chosen at play time.
+//! The mode is a DECLARED play choice, not a prompt: R81 names #88 and §10.6 says a card's declared
+//! modes "travel in the `play` action". `destroyAll` MARKS and never moves, walked in R68's order, so
+//! §4.5 step 1 collects the whole board at once and R59's one state check does the rest. Only cards
+//! ON the field match, so one dormant under a Stack pile is safe (R13). The scope does NOT
+//! pre-exclude Indestructibles, or R46 would be lost: §4.5 drops their mark, switches them to Attack
+//! Position and suppresses Taunt only if the mark was applied, and one with max health 0 or less dies
+//! anyway (R69).
 
 use jackioh_engine::prelude::*;
 
@@ -33,7 +20,6 @@ pub const ID: &str = "core-088";
 const MODE_ENEMY: &str = "enemy";
 const MODE_ALL: &str = "all";
 
-/// TS `modes: ModeDecl[] = [{ kind: "mode", options: [MODE_ENEMY, MODE_ALL] }]`.
 fn modes() -> Vec<ModeDecl> {
     vec![ModeDecl {
         kind: PromptKind::Mode,
@@ -44,8 +30,6 @@ fn modes() -> Vec<ModeDecl> {
 /// Which side the destroy reaches. The base face has no choice to read and always hits both sides;
 /// the radiant face hits what the play named, and a play carrying no mode fizzles rather than
 /// guessing — the spell still counts as played (§6.3, §8 Conventions).
-///
-/// `"any" | "enemy" | null`: the `BoardScope` side, as the literal the scope takes.
 fn side_for(mode_name: Option<&str>, modal: bool) -> Option<&'static str> {
     if !modal {
         return Some("any");
@@ -83,11 +67,6 @@ pub fn script() -> CardScripts {
 
 // #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88): "Every permanent on both rows destroyed,
 // Indestructibles survive; radiant enemy-only mode".
-//
-// These six cases were held as `it.todo` with their bodies intact while the board-wide destroy was
-// missing from the effects barrel. `destroyAll({ side, rows })` has since landed in
-// `engine/src/effects/destroy.ts` and is re-exported from the barrel, so every case below is live:
-// the assertions are unchanged from the ones written as the acceptance for that verb.
 #[cfg(test)]
 mod tests {
     use super::*;

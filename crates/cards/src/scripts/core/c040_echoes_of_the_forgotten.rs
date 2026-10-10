@@ -1,35 +1,15 @@
 //! #40 Echoes of the Forgotten (SPEC §8.2): 2-cost Field Spell, "Start of your turn: deal damage to
 //! the enemy hero equal to the cards in your exile; then exile the bottom card of your library",
-//! radiant "… equal to twice the cards in your exile; …" (R275; it was "+3 damage"). The Radiant
-//! face changes only that multiple, so everything else is kept — the same count, the same target, the
-//! same library exile.
+//! radiant "… equal to twice the cards in your exile; …" (R275): only that multiple changes.
 //!
-//! R280: the damage it would deal if its controller's turn started now is its `preview`, labelled
-//! "the cards in your exile" / "twice the cards in your exile" and computed by the same `damageNow`
-//! the hook deals. It reads its controller's exile count, which is public (§3).
+//! R280: its `preview` is the damage it would deal if its controller's turn started now (`damage_now`,
+//! the hook's own); the exile count is public (§3). R72: "cards in exile" is YOUR OWN pile, never the
+//! game-wide `counters.exiled` (R55) or the opponent's.
 //!
-//! R72 fixes what is counted: "cards in exile" means YOUR OWN exile pile, so the count is
-//! `players[controller].exile.length` and never the game-wide `counters.exiled` (which R55 uses for
-//! Ceaseless Void) and never the opponent's pile.
-//!
-//! ORDER is load-bearing: the damage is counted BEFORE the new card enters exile, so the card this
-//! turn exiles does not pay out until next turn. The count is read in the hook, which is a pure read
-//! of `ctx.state` (CLAUDE.md rule 5 bans writing it, not reading it), and the number is then frozen
-//! into the `damage` effect, so it cannot drift while the list runs.
-//!
-//! "Start of your turn" is `startOfTurn`, which `turn.ts` runs for the active player alone
-//! (`triggerOrder(sink, "startOfTurn", player)`), so "your turn" needs no clause here. R62 puts
-//! those triggers before the draw, and a draw takes the TOP of the library (`drawOne` reads
-//! `library[0]`), so the bottom card this exiles is the same card either way.
-//!
-//! "Empty library → no exile, no fatigue" (§8.2 Engine) needs nothing of its own: this card never
-//! draws, so §2.4's fatigue (R3) is never in play, and an empty library simply has no bottom card.
-//! An amount of 0 is emitted as-is: `dealDamage` treats a hit of 0 before step 1 as no damage
-//! instance at all (R63), so an empty exile pile does nothing on either face (twice 0 is 0).
-//!
-//! "Exile the bottom card of your library" is the engine's `exileBottomOfLibrary` (shared with #65
-//! Masochism Mask's mode of the same words): `exile` takes a `TargetSpec`, which cannot name a
-//! library card, and the clause is not a choice (R81).
+//! ORDER is load-bearing: the damage is counted BEFORE the new card enters exile, so this turn's exile
+//! pays out next turn. The hook reads `ctx.state` (CLAUDE.md rule 5 bans writing it) and freezes the
+//! number into the `damage` effect. The bottom card goes through `exileBottomOfLibrary` (shared with #65):
+//! `exile` takes a `TargetSpec`, which cannot name a library card, and the clause is not a choice (R81).
 
 use jackioh_engine::effects::{damage, exile_bottom_of_library};
 use jackioh_engine::prelude::*;
@@ -38,7 +18,7 @@ use jackioh_engine::zones::OffFieldZone;
 
 pub const ID: &str = "core-040";
 
-/// TS `PER_EXILED_CARD`'s and `FORMULA`'s shape: one value per face (SURFACE §4.2's constant object).
+/// One value per face (SURFACE §4.2's constant object).
 #[derive(Clone, Copy)]
 struct PerFace<T: Copy> {
     base: T,
@@ -46,7 +26,6 @@ struct PerFace<T: Copy> {
 }
 
 impl<T: Copy> PerFace<T> {
-    /// TS `OBJECT[face]`.
     fn of(&self, face: FaceKind) -> T {
         match face {
             FaceKind::Base => self.base,
@@ -65,8 +44,7 @@ const FORMULA: PerFace<&str> = PerFace {
 };
 
 /// The damage the hook deals if it runs now. R72: your own exile pile, read before anything new
-/// enters it, through the engine's read-only `zoneCount` (engine/src/query.ts) rather than off
-/// `PlayerState` (BUILD M3-T1).
+/// enters it, through the engine's read-only `zoneCount` rather than off `PlayerState` (BUILD M3-T1).
 fn damage_now(state: &GameState, controller: PlayerId, per_card: i32) -> i32 {
     per_card * zone_count(state, controller, OffFieldZone::Exile)
 }
@@ -105,24 +83,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40: "Start of turn: damage =
-// exile count, then bottom card exiled; empty library → no exile, no fatigue"; the Radiant face deals
-// twice the exile count (R275 raised it from "+3").
-// The damage it would deal now, its R280 `preview`, is proved in test/preview.test.ts.
-//
-// The rulings these tests are named after:
-//   R72  "cards in exile" means YOUR OWN exile pile — never the opponent's and never the game-wide
-//        `counters.exiled`;
-//   R62  start-of-turn triggers run before the draw, so the bottom card this exiles is gone before
-//        the top card is drawn;
-//   R63  a hit of 0 is not a damage instance: an empty exile pile emits no `damage` event at all,
-//        on either face (twice 0 is 0);
-//   §2.4/R3  fatigue belongs to the DRAW. "Empty library → no fatigue" means this card's exile
-//        clause adds none, so a turn that starts on an empty library shows exactly ONE fatigue
-//        instance (the draw's, FATIGUE_DAMAGE(1) = 1) and not two.
-//
-// Every test drives the hook with `startTurn()`, which is the engine's own start of turn for the
-// player who is active now: turn counter, mana, delayed effects, start-of-turn triggers, one draw.
+// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40: "Start of turn: damage = exile
+// count, then bottom card exiled; empty library → no exile, no fatigue"; Radiant: twice the count (R275).
+// R280's `preview` is proved in test/preview.test.ts. R72: your own exile pile only. R62: the bottom
+// card is exiled before the draw. R63: a hit of 0 is no damage instance, so an empty pile emits none
+// (twice 0 is 0). §2.4/R3: fatigue is the draw's, so an empty library shows exactly one instance.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -2,32 +2,14 @@
 //! lowest", radiant "Cry: draw both". The radiant cell restates the whole Cry, so it replaces the
 //! base clause (§8 Conventions) — the radiant face asks nothing and takes both cards.
 //!
-//! The mode is a DECLARED play-time choice, so it travels in the play action's `modes` and never
-//! pauses resolution (R81); `chosenOptions` reads it back out of the context. The radiant face
-//! declares no modes, because it has nothing left to ask.
-//!
-//! R24: highest and lowest are read with costs per R65, so an X-cost card in a library counts 0 and
-//! an embiggen card counts its base price, and ties go to the card nearest the top. `library[0]` is
-//! the top (engine/src/draw.ts draws it), so scanning top down and keeping only a STRICTLY better
-//! cost keeps the first card seen, which is the one nearest the top. The cost function is
-//! `mana.effectiveCost`, the one R65 calculation for an instance: it starts from `costOverride` or
-//! the printed cost and adds the instance's `costMod` (which persists in every zone, R78). The
-//! player's discounts price a play from the hand and never a library card (R65), so Professor
-//! Curvature's or Lunar Eclipse's discount does not make a 4 in the library a 3 that ties with a 3
-//! above it. For a library card the printed cost is already R65's out-of-play number,
-//! since a card that was never played has no `x` and is not `embiggened`. `queryCost` is the other
-//! half of R65 and is the wrong one here: it reads a DEFINITION, so it cannot see the `costMod` #7
-//! Jewelosco Scarab left on the instance or the discount #95 Call to Chaos put on the library, and
-//! BUILD M4-T4 asks for "current cost".
+//! The mode is a DECLARED play-time choice: it travels in the play action's `modes` and never pauses
+//! resolution (R81); `chosenOptions` reads it back. The radiant face declares no modes.
 //!
 //! An empty library draws nothing and the Cry fizzles; the unit still enters (§8 Conventions). With
-//! exactly one card in the library that card is both the highest and the lowest, so the radiant face
-//! draws it once — `setRadiant`-style de-duplication is not needed because the two picks are
-//! compared by instance before the second draw is emitted.
+//! one card it is both highest and lowest, so the radiant face draws it once (compared by instance).
 //!
-//! The draw is §6.3's Draw of a card the script named, `drawFromLibrary` (#94 Genn's Greed uses it
-//! too): the library card itself leaves the library as a draw — a `drawn` event, R55's counter, the
-//! hand cap (R4) and the cast-on-draw path (§2.4, R58) — rather than a fresh copy landing in hand.
+//! The draw is §6.3's `drawFromLibrary` (#94 Genn's Greed too): the card itself leaves as a draw — a
+//! `drawn` event, R55's counter, the hand cap (R4), the cast-on-draw path (§2.4, R58).
 
 use jackioh_engine::prelude::*;
 
@@ -38,9 +20,10 @@ const HIGHEST: &str = "highest";
 const LOWEST: &str = "lowest";
 
 /// R24: the library card with the extreme current cost, ties going to the card nearest the top.
-/// Reading state to name a card is not mutation; nothing here writes (CLAUDE.md rule 5), and the
-/// read is `zoneCards` (engine/src/query.ts), which gives the pile top-first as a copy — so this
-/// file never names a field of `PlayerState` (BUILD M3-T1). `want` is `HIGHEST` or `LOWEST`.
+/// Costs are R65's out-of-play numbers: X counts 0, embiggen its base price, the instance's `costMod`
+/// persists (R78), and player discounts never price a library card. `effective_cost` is the one
+/// calculation; `queryCost` reads a DEFINITION, blind to #7's `costMod` and #95's library discount.
+/// Reads through `zoneCards` and writes nothing (CLAUDE.md rule 5, BUILD M3-T1).
 fn extreme(ctx: &EffectContext<'_>, want: &str) -> Option<CardInstance> {
     let mut best: Option<CardInstance> = None;
     let mut best_cost = 0;
@@ -108,14 +91,6 @@ pub fn script() -> CardScripts {
 
 // #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30): "Mode chosen with the play (R81); highest/lowest
 // by current cost, ties nearest top, X counts 0 (R24); radiant draws both".
-//
-// Costs used below, per R65 read out of play: #10 Rapid Replenish 0, #5 Stockpile 1, #28 Knockoff
-// Temu 2, #13 Jlockeed Shredder-10 3, #17 Flood 3, #25 "4-mana 7/7" 4, #24 Efficiency Dividend X
-// (counts 0), #46 Suppressive Aura "2 embiggen 4" (counts 2, its base price).
-//
-// NOTE — one case here is RED on purpose: "draws the card out of the library" fails until the
-// engine gains a verb that moves an existing library card to a hand (`drawFromLibrary`). See the
-// BLOCKED note at the top of src/scripts/030-archivist.ts.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

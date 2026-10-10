@@ -5,14 +5,12 @@
 //!   Engine:  "Counter (§6.3), in §10.5's announce window (`cardAnnounced`): a Spell whose declared
 //!            targets (R81) include a Unit you control (Radiant: your hero or any card you control or
 //!            hold). The countered Spell goes to its owner's graveyard, treated as never played: no
-//!            `cardPlayed`, no counts, no Echo repeats; its mana stays spent. Picks made during
-//!            resolution are not targets of the play. The Radiant's draw is its controller's. Tunes: none."
+//!            `cardPlayed`, no counts, no Echo repeats; its mana stays spent."
 //!
 //! E1, R448: the announce names the play's declared targets (a card by its id, a hero as `hero-<p>`), so
-//! the condition is a read of those ids against your side as the window opens — your units on the field
-//! (a carried Unit included, R446), or on the Radiant face your hero, your field and your hand. It lives
-//! in `when` (R99), so any other Spell, a Field Spell, a Trap or a Unit leaves it armed and face-down; a
-//! cast is announced like a play (R70), so a cast Spell that declared one of yours sets it off too.
+//! the condition is a read of those ids against your side, in `when` (R99): your units on the field (a
+//! carried Unit included, R446), or on the Radiant face your hero, your field and your hand. A cast is
+//! announced like a play (R70).
 
 use jackioh_engine::effects::{counter_play, draw};
 use jackioh_engine::prelude::*;
@@ -22,8 +20,8 @@ pub const ID: &str = "classicplus-t-ai-09";
 /// §8.7: the Radiant face's "Draw 1". An AI card declares no params (B8).
 const RADIANT_DRAW: i32 = 1;
 
-/// TS `typeof yourUnit`: which of the announced ids reach your side. A plain function, so both the
-/// trigger's `when` and its `run` can carry it.
+/// Which of the announced ids reach your side: a plain `fn`, so both the trigger's `when` and its
+/// `run` can carry it.
 type Reaches = fn(&GameState, PlayerId, &str) -> bool;
 
 /// "One of your Units": a Unit of yours on the field, as the announce names it.
@@ -64,7 +62,7 @@ fn refused(event: &GameEvent, state: &GameState, you: PlayerId, reaches: Reaches
     }
 }
 
-/// TS `TrapTrigger`: part 1's `TriggerDef`, which carries the `when` (R99).
+/// The trap's `TriggerDef`: its `when` is the condition (R99).
 fn refusal(reaches: Reaches, drawn: i32) -> TriggerDef {
     TriggerDef::new("refusal", &[GameEventType::CardAnnounced], move |ctx, event| {
         let countered = refused(event, &*ctx.state, ctx.controller, reaches).unwrap_or_default();
@@ -92,14 +90,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-9 Refusal — SPEC §8.7 row T-AI-9, BUILD M9 Classic+ row T-AI-9: "Face-down Trap in the announce
-// window of §10.5 (the price paid, the card not yet moved): when the opponent plays or casts a Spell
-// whose declared targets include one of your Units, it Counters it: the Spell goes to its owner's
-// graveyard unresolved and is treated as never played (no `cardPlayed`, no count for Combo,
-// Quickstriker, Ceaseless Void or the turn log; its Echo repeats never happen), the mana and Tributes
-// staying spent; `countered` is public; a Spell with no declared target, a Field Spell or a Trap never
-// sets it off; with two Refusals the first cancels and the second stays set; hidden until it fires
-// (R33); radiant also when the Spell targets you or any card of yours, and you draw 1".
+// T-AI-9 Refusal — SPEC §8.7 row T-AI-9, BUILD M9 Classic+ row T-AI-9: in §10.5's announce window a Spell
+// whose declared targets include one of your Units is Countered and treated as never played (no count,
+// no Echo repeats; mana and Tributes stay spent); with two Refusals the first cancels and the second
+// stays set; hidden until it fires (R33); radiant also for you or any card of yours, and you draw 1.
 //
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
 #[cfg(test)]
@@ -125,7 +119,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
     fn spread(base: Value, extra: &Value) -> Value {
         let mut out = base;
         if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {

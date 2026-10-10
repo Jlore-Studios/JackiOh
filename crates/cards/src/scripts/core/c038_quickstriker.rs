@@ -1,39 +1,15 @@
 //! #38 Quickstriker (SPEC §8.2): Field Spell, "Your cards gain 'Combo X: deal X damage to the enemy
 //! hero', X = cards you played earlier this turn"; radiant "… deal 2X damage …" (R275, R281).
 //!
-//! ROUTE: §10.5 step 5 — "Resolve Combo checks, Quickstriker, /fullsend's Combo draw, then the card's
-//! own Cry or spell script". Quickstriker is one of the two Combo abilities another permanent grants
-//! everything its controller plays, so the play pipeline resolves it (`playSteps.quickstrikerCombo`)
-//! for every play and every cast (R70), before the played card's own text, reading this card's
-//! static flag off the field. X is `turnLog.cardsPlayed` before the card being played (§8.2's Engine
-//! cell), which the pipeline reads at that moment: 0 for the first play of a turn, 1 for the second.
+//! ROUTE: §10.5 step 5 resolves it with the Combo checks for every play and cast (R70), before the card's
+//! own text, off this card's static flag (`playSteps.quickstrikerCombo`). X is `turnLog.cardsPlayed`
+//! before the card being played (§8.2's Engine cell). A `cardPlayed` trigger would read the count late:
+//! a cast's events wait for the loop of the effect that cast it (§2.4). R119: the play that puts this
+//! Field Spell onto the field does not answer it.
 //!
-//! It used to be a trigger on `cardPlayed`, which read the count whenever the event was dispatched.
-//! A play dispatches at step 4, but a cast's events wait for the loop of the effect that cast it —
-//! §2.4's draw — so a chain of two cast-on-draw cards read the count after the chain and dealt 1 and
-//! 1 rather than 0 and 1. The flag also gives the card the property §8.2 asks for, "nothing when not
-//! on the field", for free: the pipeline reads permanents on the field and nothing else.
-//!
-//! "Your cards" is the controller's own plays (the pipeline reads the playing player's side), and
-//! R119 excludes the play that puts this Field Spell onto the field: the pipeline never counts the
-//! card being played as one of its own Quickstrikers.
-//!
-//! THE RADIANT FACE (R281). Both faces carry the same flag, one grant each; the multiple of X a
-//! grant deals is the granting card's face's, `QUICKSTRIKER_COMBO_MULTIPLE` in the engine's config
-//! (1, radiant 2), which the pipeline picks off the instance as #84's Armor is picked. 2X is ONE hit,
-//! so Armor and the Anti-oneshot cap apply to it once, and a base and a Radiant Quickstriker together
-//! deal X and then 2X.
-//!
-//! THE PREVIEW (R280). "X = cards you played earlier this turn {n}": the X the next card its
-//! controller plays would count, which is every play so far this turn (`cardsPlayedThisTurn`, the
-//! count `playedEarlier` gives a card still in hand, and the one the pipeline reads at step 5). It
-//! reads the controller's plays this turn, which are public, and the same X shows on both faces.
-//!
-//! THE GLOW (R662). The condition this card prints is its grant's, so the cards that glow are the
-//! ones in its controller's hand: while a Quickstriker acts for them and they have played a card this
-//! turn, the next play takes the Combo branch (X ≥ 1), and `condition.ts` lights every hand card
-//! (`query.grantedComboLive`, the facts `playSteps.quickstrikerCombo` reads). The card itself declares
-//! no `conditionMet`: it prints no condition of its own, and its own play never answers its grant (R119).
+//! RADIANT (R281): both faces carry the one flag; the multiple of X is the granting face's
+//! (`QUICKSTRIKER_COMBO_MULTIPLE`, 1 or 2); 2X is ONE hit, so Armor and the Anti-oneshot cap apply once.
+//! PREVIEW (R280) is the next play's X; GLOW (R662) lights its controller's hand, so no `conditionMet` here.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::query::cards_played_this_turn;
@@ -43,7 +19,6 @@ pub const ID: &str = "core-038";
 /// R280: the part of the text the value belongs to, on both faces.
 const X_LABEL: &str = "X = cards you played earlier this turn";
 
-/// TS `const preview: Script["preview"]`.
 fn preview() -> PreviewHook {
     condition_hook(|ctx| {
         vec![PreviewValue {
@@ -71,13 +46,8 @@ pub fn script() -> CardScripts {
 }
 
 // #38 Quickstriker (SPEC §8.2, BUILD M4-T4): "First play deals 0, second 1, third 2 to the enemy
-// hero; nothing when not on the field". The Radiant face (R275) grants "Combo X: deal 2X damage to
-// the enemy hero", and R281 makes 2X one hit: Armor and the Anti-oneshot cap apply to it once, and a
-// base and a Radiant Quickstriker together deal X and then 2X.
-// The X its next play would count, its R280 `preview`, is proved in test/preview.test.ts.
-//
-// R662's yellow glow: the condition is the grant's, so while it acts for its controller and they have
-// played a card this turn, their hand cards glow (`condition.ts`), both faces, at the end of this file.
+// hero; nothing when not on the field". The Radiant face (R275) deals 2X as one hit (R281). The R280
+// `preview` is proved in test/preview.test.ts; R662's yellow glow, both faces, is at the end of this file.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -132,7 +102,7 @@ mod tests {
             // §10.5 step 5 resolves it for every play and cast, off this flag (R70); the pipeline picks the
             // multiple, 1 or 2, off the Quickstriker's own face (`QUICKSTRIKER_COMBO_MULTIPLE`).
             let scripts = script();
-            // TS `expect(radiant).toBe(base)`: the same script, so the same flag and the same hook.
+            // The same script, so the same flag and the same hook.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.preview.as_ref().expect("the base face has a preview"),
@@ -392,7 +362,6 @@ mod tests {
     mod quickstriker_lights_its_controllers_hand_once_its_combo_would_hit_r662 {
         use super::*;
 
-        /// TS's `for (const radiant of [false, true])` first `it`, run for one face.
         fn after_a_play_this_turn_the_next_card_glows(radiant: bool) {
             let face = if radiant { "radiant" } else { "base" };
             let mut s = scn(json!({
@@ -415,7 +384,6 @@ mod tests {
             assert_eq!(hits_on_p2(&s), vec![if radiant { 2 } else { 1 }]);
         }
 
-        /// TS's `for (const radiant of [false, true])` second `it`, run for one face.
         fn the_quickstriker_in_hand_does_not_light_itself_or_the_hand(radiant: bool) {
             let face = if radiant { "radiant" } else { "base" };
             let mut s = scn(json!({

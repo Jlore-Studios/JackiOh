@@ -3,23 +3,13 @@
 //! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
 //! target, controller's end of turn".
 //!
-//! R51 ("all enemies"): every enemy unit plus the enemy hero, ONE damage instance each — not one
-//! area effect, so each hit goes through §4.4's pipeline on its own and meets that target's Armor,
-//! Divine Shield and Anti-oneshot cap by itself.
+//! R51: every enemy unit plus the enemy hero, ONE damage instance each, so each hit goes through
+//! §4.4's pipeline alone and meets that target's Armor, Divine Shield and Anti-oneshot cap.
 //!
-//! R59 (when the state check runs): "after each action, each whole effect or trigger … never between
-//! the hits of one effect". So a unit the first hit kills is still on the field while the rest land,
-//! and every death happens together once the hook has finished. `end_turn` in `engine/src/turn.rs`
-//! runs `state_check` after each end-of-turn hook, which is exactly that point.
-//!
-//! "The controller's end of turn" is not this card's business either:
-//! `run_hooks_in_trigger_order(sink, "endOfTurn", player)` narrows the scan to the player whose turn
-//! is ending, so the hook simply never runs on the opponent's end of turn (the comment there cites
-//! this card).
-//!
-//! The hits are `damage_all` (engine/src/effects/damage.rs): one `deal_damage` per enemy unit in lane
-//! order and then, with `heroes`, one to the enemy hero — all inside ONE effect, so no state check
-//! runs between the hits (R59).
+//! R59: the state check never runs between the hits of one effect, so a unit the first hit kills is
+//! still on the field while the rest land. `damage_all` (engine/src/effects/damage.rs) is one effect
+//! and `end_turn` runs `state_check` after each end-of-turn hook. The scan for `endOfTurn` hooks is
+//! narrowed to the player whose turn is ending, so this card needs no check of its own.
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
@@ -45,18 +35,11 @@ pub fn script() -> CardScripts {
 // enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on
 // the opponent's end; radiant 5 (R51)".
 //
-// R51 fixes what "each enemy unit and the enemy hero" means: every enemy unit plus the enemy hero,
-// ONE damage instance each. R59 fixes when they die: the state check "never runs between the hits
-// of one effect", so a unit the first hit kills is still standing while the later hits land and dies
-// only when the whole end-of-turn hook has finished.
-//
 // The board: p2 lane 1 is Pointmaster (7/1), which 2 damage kills, and lane 2 is Mr. Vanilla (4/4),
-// which survives at 2. A lane-1 death is what makes R59 observable — the lane-2 hit and the hero
-// hit still have to land after it.
+// which survives at 2. A lane-1 death makes R59 observable: the later hits must still land.
 //
-// Every scenario gives both sides a library, so nobody takes §2.4 fatigue damage when `end_turn`
-// hands the turn over and the opponent draws, and a spare hand card, so the fresh turn always has a
-// meaningful action and cannot auto-end onwards (§2.5).
+// Both sides get a library, so nobody takes §2.4 fatigue damage when the opponent draws, and a spare
+// hand card, so the fresh turn has an action and cannot auto-end onwards (§2.5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

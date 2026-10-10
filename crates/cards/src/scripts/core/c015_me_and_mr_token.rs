@@ -15,8 +15,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-015";
 
-/// §7: the Rush Token def. TS named it through `cardDef` so a wrong id threw at load; here the
-/// card's tests summon it, and a wrong id fails them.
+/// §7: the Rush Token def.
 const RUSH_TOKEN: &str = "core-t-rush";
 
 /// One Rush Token into the leftmost free unit zone of the controller's row (R64).
@@ -39,22 +38,15 @@ pub fn script() -> CardScripts {
 }
 
 // #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15): "1 Rush Token; radiant 3; fewer when the
-// board is nearly full".
-//
-// The "fewer" clause is R64: a laneless summon takes the leftmost empty, unlocked, unreserved unit
-// zone and fizzles silently when the row has none, so three independent summons produce however
-// many zones were free.
-//
-// HARNESS GAP: `SideSetup.hand` is `string[]`, so a RADIANT card cannot be seeded in a hand and a
-// radiant Cry can only be reached by playing one. Until `hand` takes `{ def, radiant }` the radiant
-// tests set the flag on the hand instance themselves; see `play_radiant`.
+// board is nearly full". The "fewer" clause is R64: a laneless summon takes the leftmost empty,
+// unlocked, unreserved unit zone and fizzles silently when the row has none.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// HARNESS GAP (see the header): make the hand copy radiant, then play it.
+    /// Make the hand copy radiant (`SideSetup.hand` takes def ids only), then play it.
     fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {

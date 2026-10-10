@@ -18,8 +18,7 @@ pub const ID: &str = "classic-047";
 
 const ANCIENT_ACQUISITION: &str = "classic-034";
 
-/// TS `costOverride?: (ctx: EffectContext) => number`: the cost the returned card takes, read as the
-/// trigger runs.
+/// The cost the returned card takes, read as the trigger runs.
 type ReturnCost = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
 fn recur(cost_override: Option<ReturnCost>) -> TriggerDef {
@@ -67,18 +66,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #47 Recurring Felinor — SPEC §8.6 row 47, BUILD M9 Classic row C 47: "Cry: cast a generated Ancient
-// Acquisition (C #34, base face), free and counted as played (R70), returning 2 at random (R684), the
-// Spell going to your graveyard afterwards (R87); while this card is in your graveyard, whenever one
-// of your Traps or Field Traps fires (`trapFired`), return this to hand (a graveyard trigger, R68); an
-// opponent's trap doesn't, and in a hand or on the field it doesn't; the returned card follows R97 in
-// the opponent's view; radiant 6/4: it returns and costs (0) (`costOverride`); its tuned number
-// (radiant cost) reads through `param()` (R386)".
-//
-// C #34 Ancient Acquisition ("Return 2 random cards from your graveyard to hand") has its
-// own tests. The traps that fire are Core's Sheepish (a Trap answering a played Unit) and Bread and
-// Butter (a Field Trap answering a turn's end with mana unspent), and C #52 Final Gambit (a Trap that
-// fires as it replaces a lethal hit).
+// BUILD M9 Classic row C 47 (SPEC §8.6 row 47): the Cry casts a free generated C #34 (R70, R684, R87);
+// the graveyard return answers your own Traps and Field Traps only (R68) and follows R97 in the
+// opponent's view; radiant costs (0) through `param()` (R386). C #34 has its own tests; the traps that
+// fire are Core's Sheepish and Bread and Butter, and C #52 Final Gambit.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -100,7 +91,6 @@ mod tests {
     use crate::js;
 
     /// p2 plays Mr. Vanilla into p1's face-down Sheepish, with p1's Recurring Felinor in its graveyard.
-    /// TS defaults: `felinor` `{ def: FELINOR }`, `p1Hand` `[FILLER]`; every caller passes both.
     fn sheepish_fires(felinor: Value, p1_hand: Vec<&str>) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": p1_hand, "backrow": [{ "def": SHEEPISH, "faceUp": false }], "graveyard": [felinor] },

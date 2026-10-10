@@ -2,28 +2,13 @@
 //! target backrow card; Lock its original zone". The radiant cell restates BOTH base clauses, so it
 //! replaces both and nothing base-only survives (§8 Conventions).
 //!
-//! The target is a DECLARED play-time choice, so it travels in the `play` action and never pauses
-//! resolution (R81); `legalActions` builds the picker from the declaration below without running
-//! this script. §8's Conventions paragraph says "target" means "from all legal units and heroes on
-//! either side unless narrowed", and neither cell narrows it, so an ALLY backrow card is a legal
-//! pick (unlike #49, which prints "target enemy permanent"). Stealing your own card does nothing
-//! (`steal` refuses a card you already control, R76) while the Lock still lands, which is the
-//! literal reading of the cell.
+//! The target is declared, so it travels in the `play` action and resolution never pauses (R81).
+//! Unnarrowed means either side: an ALLY backrow card is a legal pick (unlike #49), and stealing it
+//! does nothing (`steal` refuses your own card, R76) while the Lock still lands (§3.2).
 //!
-//! EFFECT ORDER is load-bearing. `lock({ zone: { of: "chosen" } })` resolves the zone from where the
-//! chosen card sits right now (see the `ZoneSpec` comment in `effects/counters.ts`), and `steal`
-//! MOVES the card to the thief's side (R15: same lane if free, else the first free zone, else it
-//! stays put). So the lock runs FIRST, and the zone it locks is the original one — the opponent's.
-//! `destroy` only marks the card for the next state check (§4.5), so it never moves it and the base
-//! order is not load-bearing; it is written the same way so the two faces read alike.
-//!
-//! Nothing else is this card's business:
-//!   - R15's placement is inside `steal`.
-//!   - §3.2's "the zone accepts no summons for the rest of the game" is inside `lock`/`isOpen`, so
-//!     "locked zone rejects play" is the engine's refusal, not a clause here.
-//!   - R33 ("only the current controller sees a face-down trap's identity") is decided by `viewFor`
-//!     from `controller`, and `effects/steal.ts` deliberately leaves `faceUp` untouched, so a stolen
-//!     face-down trap needs no line here: moving `controller` IS the visibility change.
+//! EFFECT ORDER is load-bearing: `lock` reads the zone where the chosen card sits now and `steal`
+//! MOVES it (R15), so the lock runs FIRST. `destroy` only marks the card (§4.5), so the base order
+//! is not load-bearing. R33's visibility needs no line here: `viewFor` keys it on `controller`.
 
 use jackioh_engine::effects::{destroy, lock, steal};
 use jackioh_engine::prelude::*;
@@ -78,7 +63,7 @@ mod tests {
     /// A spare hand card, so no side runs out of meaningful actions and auto-ends its turn.
     const SPARE: &str = "core-005";
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -92,7 +77,7 @@ mod tests {
         serde_json::to_value(s.view(seat)).expect("a view is JSON")
     }
 
-    /// TS `toMatchObject`: every key of `expected` is in `actual` with that value.
+    /// Every key of `expected` is in `actual` with that value.
     fn assert_matches_object(actual: &Value, expected: &Value) {
         let expected = expected.as_object().expect("toMatchObject takes an object");
         for (key, value) in expected {

@@ -5,15 +5,10 @@
 //!            whoever places them. Tunes: multiplier 2 ↑."
 //!
 //! B5 E19, R471: the multiplier is the card's `plagueMultiplier`, which `plague.placePlagueOn` reads on
-//! every placement onto it — "Place N Plague Counters on this" puts N × multiplier, one placement of a
-//! "Place N Plague Counters" split puts 1 × multiplier — so each placement is still ONE placement,
-//! reported by one `counterChanged` carrying how many it put (`placed`), and a "whenever Plague Counters
-//! are placed on this" answers it once. It is the card's text, so it holds whoever places the tokens,
-//! and a Vanilla Slime multiplies by 1. Its tokens are counters, which R78 clears when it leaves the
-//! field.
-//!
-//! The multiplier is the declared `multiplier` (R386), read through `param` on the face it wears; both
-//! faces run this one script.
+//! every placement onto it, so "Place N" puts N × multiplier and each placement of a split puts 1 ×
+//! multiplier. Each is still ONE placement, one `counterChanged` carrying `placed`, so a "whenever
+//! Plague Counters are placed on this" answers once. A Vanilla Slime multiplies by 1; R78 clears its tokens.
+//! The multiplier is the declared `multiplier` (R386), read through `param`; both faces run this script.
 
 use jackioh_engine::prelude::*;
 
@@ -21,8 +16,6 @@ pub const ID: &str = "classic-027";
 
 pub fn script() -> CardScripts {
     let base = Script {
-        // TS `({ state, self, radiant }) => param({ state, self, radiant }, "multiplier")`: the hook's
-        // own `{ state, self, radiant }` is what `param` reads.
         plague_multiplier: Some(read_hook(|args| param(&args, "multiplier"))),
         ..Script::default()
     };
@@ -32,14 +25,9 @@ pub fn script() -> CardScripts {
 }
 
 // C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27: "Every placement onto it is
-// doubled: "place N Plague Counters on this" puts 2N, and each one-token placement of a split puts 2,
-// still one placement for "whenever Plague Counters are placed" triggers; `counterChanged` shows the
-// count; its tokens reset when it leaves (R78); radiant 2/2: tripled; its tuned number (multiplier)
-// reads through `param()` (R386)".
-//
-// The placements come from C #39 Outbreak ("Place {tokens} Plague Counters on a permanent", one
-// placement) and C #70 Book of Plague ("Place {tokens} Plague Counters": one placement per token, all
-// on the one permanent a single prompt names, R689).
+// doubled (tripled radiant), still one placement for "whenever Plague Counters are placed" triggers;
+// its tokens reset when it leaves (R78); its tuned number (multiplier) reads through `param()` (R386)".
+// Placements come from C #39 Outbreak (one) and C #70 Book of Plague (one per token, R689).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,7 +44,7 @@ mod tests {
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";
 
-    /// TS `placements`: the `counterChanged` events of the plague counter on this card (TS `Placement`).
+    /// The `counterChanged` events of the plague counter on this card.
     fn placements(s: &Scenario, instance_id: &str) -> Vec<GameEvent> {
         s.events()
             .iter()
@@ -101,7 +89,7 @@ mod tests {
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, SLIME);
             assert!(scripts.base.plague_multiplier.is_some());
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
+            // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(
                 scripts.radiant.plague_multiplier.as_ref().unwrap(),
                 scripts.base.plague_multiplier.as_ref().unwrap()

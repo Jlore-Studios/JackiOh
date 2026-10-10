@@ -2,35 +2,24 @@
 //!
 //! Base: "Start of turn: choose one: exile the bottom card of your library, lose 3 health, or summon
 //! a Spikey Pillow". Radiant: "Choose twice from: nothing, exile bottom, lose 3, summon Spikey
-//! Pillow" — a restated clause, so it replaces the base's single pick (§8 Conventions) while the
+//! Pillow" — a restated clause, so it replaces the base's single pick (§8 Conventions); the
 //! Quickdraw tag and the start-of-turn timing are kept.
 //!
-//! §8.3's Engine cell: "Two sequential pending choices; 'lose' is not damage".
-//!
-//! §6.2: the Quickdraw tag is the `quickdraw` static flag, so the card starts in the opening hand
-//! and replaces one of the opening draws; `setup.rs` reads the flag, nothing here does.
-//!
-//! §10.6 and §10.1: a choice made DURING resolution is a `PendingChoice` in state, never a callback,
-//! and a card that asks twice is "a step that opens the next one" — prompts.rs names this card's two
-//! picks as exactly that pattern. So each face's `start_of_turn` opens one mode prompt whose answer
-//! re-enters a named step of the `resume` table, and the radiant face's first step applies its own
-//! pick and then opens the second prompt. The prompt effect is LAST in every list it appears in, so
-//! the sequence is correct whether the caller is `apply_resumable` (which parks a tail) or
-//! `resolve::apply_effects` (which does not) — `turn.rs` still runs start-of-turn hooks with the
-//! latter (reported).
-//!
-//! R18: "lose 3 health" is not damage. `lose_health` skips the §4.4 pipeline, so no Armor is spent,
-//! no Anti-oneshot cap applies and no on-damage effect sees it.
-//!
-//! R62: start-of-turn triggers run before the draw, so "the bottom card of your library" is the
-//! bottom before this turn's draw — a draw takes the top and never changes which card is last.
+//! §8.3's Engine cell: "Two sequential pending choices; 'lose' is not damage". §6.2: Quickdraw is
+//! the `quickdraw` static flag, which `setup.rs` reads. §10.6, §10.1: a choice made during
+//! resolution is a `PendingChoice`, so each face's `start_of_turn` opens one mode prompt whose answer
+//! re-enters a named `resume` step, and the radiant first step applies its pick, then opens the
+//! second prompt. The prompt effect is LAST in every list, correct under `apply_resumable` (parks a
+//! tail) and `resolve::apply_effects` (does not; `turn.rs` runs start-of-turn hooks with it).
+//! R18: "lose 3 health" is not damage: `lose_health` skips the §4.4 pipeline. R62: start-of-turn
+//! triggers run before the draw, so "the bottom card" is the bottom before this turn's draw.
 
 use jackioh_engine::effects::{choose_mode, chosen_options, exile_bottom_of_library, lose_health, summon};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-065";
 
-/// #65.1, the token this card defines (§7, §8.3). (TS `cardDef("core-065-1").id`.)
+/// #65.1, the token this card defines (§7, §8.3).
 const SPIKEY_PILLOW: &str = "core-065-1";
 
 // The option names, worded as §8.3's two cells list them and in that order. These are prompt

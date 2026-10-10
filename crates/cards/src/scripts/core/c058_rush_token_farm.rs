@@ -1,24 +1,14 @@
 //! #58 Rush Token Farm (SPEC §8.3): Field Spell, cost 2. "Start of turn: summon a Rush Token" /
 //! radiant "Aura: your Rush Tokens +3/+3; same". Engine cell: "Aura keyed on def T-rush".
 //!
-//! §8 Conventions: "'same' says so explicitly", so the radiant cell ADDS the aura and KEEPS the
-//! base start-of-turn summon — the radiant face summons a token every turn AND pumps them.
-//!
-//! R62's turn sequence puts "start-of-turn triggers" after the mana refresh and the start-of-turn
-//! delayed effects and before the draw, and §6.2 defines "Start of turn" as the CONTROLLER's turn
-//! start, so this fires on its controller's turns only and never on the opponent's (`run_hooks_in_
-//! trigger_order(sink, "startOfTurn", player)` in engine/src/triggers.rs owns that).
-//!
-//! R64 places the token: with no lane named, the leftmost empty, unlocked, unreserved unit zone.
-//! A full board summons nothing and the trigger still resolved (§3.2: "a summon into a full row
-//! fails silently"), which is #15's "Board full -> fewer" rule applied one token at a time.
-//!
-//! The aura is §10.4 layer 5: a function of the board, recomputed on every read by `unit_view`, so it
-//! vanishes the instant this Field Spell leaves the backrow and it lowers nothing permanently.
-//! §7's token rules name this card as the reason `stats_override` is not the mechanism here: "Rush
-//! Token Farm radiant gives all your Rush Tokens +3/+3 as an aura", not as a summon-time stat.
-//! Keyed on the def id per the Engine cell, so it touches only Rush Tokens (`core-t-rush`) that this
-//! card's controller controls: an opponent's Rush Token is outside it, and so is any other 3/3.
+//! §8 Conventions: "'same' says so explicitly", so the radiant face ADDS the aura and KEEPS the summon.
+//! R62/§6.2: "Start of turn" is the CONTROLLER's turn start (after the mana refresh, before the draw), so
+//! this fires on its controller's turns only (`run_hooks_in_trigger_order` in engine/src/triggers.rs).
+//! R64 places the token in the leftmost empty, unlocked, unreserved unit zone; a full board summons
+//! nothing and the trigger still resolves (§3.2).
+//! The aura is §10.4 layer 5, recomputed on every read by `unit_view`, so it vanishes with this Field Spell
+//! and lowers nothing permanently; §7 names this card as why `stats_override` is not the mechanism. Keyed
+//! on the def id, so it touches only Rush Tokens (`core-t-rush`) this card's controller controls.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -66,15 +56,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: "Token each start of turn; radiant +3/+3
-// aura only on Rush Tokens"). Engine cell: "Aura keyed on def T-rush".
-//
-// Rulings proved here: R62 and §6.2 (start-of-turn triggers fire on the controller's turn only, and
-// after the mana refresh, before the draw), R64 (leftmost empty unlocked zone; a full row summons
-// nothing), §10.4 layer 5 (the aura is a computed layer, not a buff), §7 ("Rush Token Farm radiant
-// gives all your Rush Tokens +3/+3 as an aura").
-//
-// §8 Conventions: the radiant cell ends in "same", so the radiant face summons AND pumps.
+// #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: token each start of turn; radiant +3/+3 aura only on
+// Rush Tokens). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the
+// mana refresh, before the draw), R64 (leftmost empty unlocked zone; a full row summons nothing), §10.4
+// layer 5 (the aura is a computed layer, not a buff), §7, §8 Conventions ("same": the face summons AND pumps).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -94,7 +79,7 @@ mod tests {
         json!({ "hand": ["core-005"], "library": ["core-008", "core-011"] })
     }
 
-    /// TS `{ ...base, ...extra }` over two JSON objects: the later keys win.
+    /// Merges two JSON objects: the later keys win.
     fn spread(base: Value, extra: Value) -> Value {
         let mut all = base.as_object().cloned().unwrap_or_default();
         for (key, value) in extra.as_object().cloned().unwrap_or_default() {
@@ -103,7 +88,7 @@ mod tests {
         Value::Object(all)
     }
 
-    /// A unit that must be there: TS's `expect(x).not.toBeNull()` and its early return.
+    /// A unit that must be there.
     fn present(unit: Option<CardInstance>) -> CardInstance {
         match unit {
             Some(unit) => unit,

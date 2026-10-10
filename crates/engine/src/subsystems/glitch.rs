@@ -1,23 +1,17 @@
-//! The Glitch Easter egg (issue #170; SPEC §7, R673–R679).
+//! The Glitch Easter egg (SPEC §7, R673–R679).
 //!
 //!   - `count_system_play` (R673): a play of a "… in the System" card (`SYSTEM_CARD_DEF_IDS`), by either
-//!     player, adds one to `state.system_plays`, which `catalog::pick_generated` reads: every card
-//!     generated into a hand or a deck after that is Glitch with odds n/10000.
-//!   - `glitch` (R676): Glitch's own text. One draw of the match rng picks one of `GLITCH_OUTCOMES`,
-//!     and a public `glitched` event names it:
-//!     reset  — the match starts again from `create_game`'s decks, shuffled and dealt by the match
-//!     rng, mulligans and all (`reset_match`, run by `reduce` once the action has settled,
-//!     so nothing of the old game is still resolving when it goes);
-//!     swap   — each account now plays the other seat (R677). The engine's game is unchanged; the
-//!     hosts read `state.seat_swaps` (`seats_swapped`), and the server credits results by it;
-//!     boards — both fields become the boards of two other players' games, a frozen setup input
-//!     like C+ #29's last boards (`state.glitch_boards`, R678); hands, decks and life stay;
-//!     void   — the game ends with no winner and reason `voided`, and the server keeps no trace of
-//!     it but a log line (R679).
+//!     player, adds one to `state.system_plays`; `catalog::pick_generated` then makes each card
+//!     generated into a hand or a deck Glitch with odds n/10000.
+//!   - `glitch` (R676): one draw of the match rng picks one of `GLITCH_OUTCOMES`; a `glitched` event names it.
+//!     reset  — the match starts again from `create_game`'s decks (`reset_match`, run by `reduce` once
+//!     the action has settled, so nothing of the old game is still resolving);
+//!     swap   — each account plays the other seat (R677); hosts read `state.seat_swaps`, and the server
+//!     credits results by it;
+//!     boards — both fields become two other games' boards, frozen like C+ #29's (`state.glitch_boards`, R678); hands, decks and life stay;
+//!     void   — no winner, reason `voided`, and the server keeps only a log line (R679).
 //!
-//! All of it is plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
-//!
-//! Port of `packages/engine/src/subsystems/glitch.ts`.
+//! All plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
 
 use crate::config::{GLITCH_OUTCOMES, SETUP_TURN, SYSTEM_CARD_DEF_IDS};
 use crate::script::{Effect, EngineSink};
@@ -74,7 +68,6 @@ pub fn glitch() -> Effect {
                 ctx.sink.state.seat_swaps = Some(ctx.sink.state.seat_swaps.unwrap_or(0) + 1);
             }
             GlitchOutcome::Boards => place_glitch_boards(ctx.sink.state),
-            // TS hands `endGame` a plain sink over the context's state, events and rng.
             GlitchOutcome::Void => {
                 crate::game_over::end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided)
             }
@@ -83,10 +76,10 @@ pub fn glitch() -> Effect {
 }
 
 /// R678: every card on both fields ceases to exist (no Death, no graveyard, R11's way out), the Locks
-/// go, and each side takes its frozen other game's board in order: its Units into the unit zones and
-/// the rest into the backrow, left to right, until a row is full. Each card is a new one its side owns,
-/// on its entry's face, as having entered this turn (R171). Nothing is summoned or played, so nothing
-/// triggers. A side with no board frozen is left empty.
+/// go, and each side takes its frozen other game's board in order: Units into the unit zones, the rest
+/// into the backrow, left to right, until a row is full. Each is a new card its side owns, on its
+/// entry's face, entered this turn (R171). Nothing is summoned or played, so nothing triggers. A side with no board
+/// frozen is left empty.
 fn place_glitch_boards(state: &mut GameState) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
@@ -138,11 +131,10 @@ fn place_glitch_boards(state: &mut GameState) {
     }
 }
 
-/// R676: the reset a Glitch owed, once its action has settled. The state becomes a new game made from
-/// the decks the match began with — its seats' handicaps, last boards and Glitch boards, the seat
-/// swaps and the nonce log kept — with fresh ids, numbered from where the old game stopped by a stream
-/// of this reset's own (R223), and setup runs again on the match rng. A state that keeps no record of
-/// its opening (one the AI redacted) does nothing.
+/// R676: the reset a Glitch owed, once its action has settled: a new game from the decks the match began
+/// with, keeping handicaps, last and Glitch boards, seat swaps and the nonce log. Ids are fresh, numbered
+/// from where the old game stopped by a stream of this reset's own (R223); setup runs again on the match
+/// rng. A state with no record of its opening (one the AI redacted) does nothing.
 pub fn reset_match(sink: &mut EngineSink<'_>) {
     sink.state.reset_owed = None;
     if sink.state.result.is_some() {

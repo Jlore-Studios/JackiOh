@@ -3,29 +3,14 @@
 //!
 //! Base: 10/10 "Rush, Lifesteal, Divine Shield, First Strike". Radiant: 20/20 "Charge, Lifesteal,
 //! Divine Shield, First Strike" (R276 gave the token a Radiant face: R275 doubles its stats and, a
-//! keyword-only unit, trades Rush for the stronger Charge). There is no script: all four keywords
-//! and the stats of each face are printed on the catalog, and §10.4 layer 1 reads them off the face
-//! the instance's radiant flag picks, so granting any of them here would either duplicate them in the
-//! keyword set or re-print a stat the catalog already owns (the contract: a script never restates its
-//! card's data).
+//! keyword-only unit, trades Rush for the stronger Charge). There is no script: the keywords and
+//! stats of each face are printed on the catalog and §10.4 layer 1 reads them off the face the
+//! radiant flag picks, so a script never restates them.
 //!
-//! Where each keyword's behaviour lives instead:
-//!   Rush          — §4.1: lifts summoning sickness for UNIT targets only, so the turn it arrives it
-//!                   may attack a unit but not the hero. `isSick`/`whyCannotAttack` in `combat.ts`.
-//!   Charge        — the radiant face's in Rush's place: no summoning sickness at all, so a Golem
-//!                   made Radiant the turn it arrived may attack the hero at once (§5.2: a keyword
-//!                   the radiant face gains applies immediately).
-//!   Lifesteal     — §4.4 step 8: heals its controller's hero by the amount actually dealt, after
-//!                   Armor and the Anti-oneshot cap, and by nothing when R63 reduced the hit to 0.
-//!   Divine Shield — §4.4 step 1: negates the whole first hit and is spent (`divineShieldSpent`),
-//!                   and R63's zero rule keeps the shield when the hit was 0 to begin with.
-//!   First Strike  — §4.3: it deals its damage before the defender strikes back, so a defender it
-//!                   kills never hits it.
-//!
-//! R11 and §7 are the rest of the card, and are likewise data: `token: true` with `type: "Unit"`
-//! makes `isUnitToken` true, so `moveToZone` has it cease to exist the moment it leaves the field —
-//! bounce, destroy, exile or transform — and it never enters a graveyard or exile, which is also why
-//! it can never feed #89 Corpse Eater (R11).
+//! The behaviour lives in the engine: Rush §4.1 (unit targets only), Charge in its place on the
+//! radiant face (§5.2), Lifesteal §4.4 step 8 (nothing when R63 zeroes the hit), Divine Shield §4.4
+//! step 1, First Strike §4.3. R11 and §7 are data too: `token: true` with `type: "Unit"` makes it
+//! cease to exist off the field, so it never feeds #89 Corpse Eater.
 
 use jackioh_engine::prelude::*;
 

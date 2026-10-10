@@ -3,33 +3,14 @@
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
-//!   Engine:  "Base: one firing covers every Unit of yours that one state-check pass collects (§4.5);
-//!            each card still in a graveyard afterwards goes to its owner's hand (§3.2) with
-//!            `costOverride` 0, the hand cap applying (R4). Tokens have ceased to exist (R11); a Reborn
-//!            unit that came back is on the field, not in a graveyard, and is skipped. Radiant: a
-//!            replacement (§6.2 Replacement) at the "would die" point, §4.5 step 1, before cards move:
-//!            those units leave the collection and Flicker (§6.3): back in their zones, reset (R78), at
-//!            full health, summoning sick, no Cry, no Death; a fresh copy of each (radiant flag kept,
-//!            R57) goes to your hand with `costOverride` 0. Tunes: cost 0 ↓."
 //!
-//! THE BASE FACE answers a `destroyed` event of a Unit of yours (R99: the condition is its `when`, so
-//! an enemy's death leaves it set). §4.5 step 1 collects a pass's deaths together and reports each with
-//! its own `destroyed`, one after another, so the firing reads the whole run of `destroyed` events the
-//! one it answers stands in — that pass — and takes every Unit of yours among them: one firing for all
-//! of them. By the time a trap answers, the pass is over: a unit token has ceased to exist (R11) and a
-//! Reborn unit is back on the field, so only the cards still in a graveyard go back, each to its
-//! owner's hand (§3.2, R12) through §2.4's pipeline (a full hand burns it, R4, R317), costing the
-//! card's number (`costOverride`, `param(ctx, "setCost")`, which R78 keeps in every zone).
-//!
-//! "Your Units" are the Units you controlled as they died — the event's `controller` (R172: a stolen
-//! unit dies as its controller's) — while each card still goes back to its owner's hand (§3.2).
-//!
-//! THE RADIANT FACE is a replacement at "would die" (B5 E5, `Script.replacements`): §4.5 step 1 offers
-//! it the units the check collected, and it takes its controller's among them — one firing for all —
-//! and Flickers them in place (E22: reset, full health, summoning sick, no Cry, no Death, no Reborn).
-//! A face-down Trap that replaces fires (`trapFired`, face-up) and is spent. Its follow-up, owed after
-//! the event (B5 E5), adds a fresh copy of each flickered card to your hand (its radiant flag kept, R57)
-//! costing the card's number; a copy in your hand is yours alone to read (R97).
+//! BASE: a `destroyed` of a Unit of yours (R99: the condition is its `when`, so an enemy's death leaves
+//! it set). One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
+//! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
+//! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78).
+//! RADIANT: a replacement at "would die" (B5 E5): your collected units Flicker (E22: reset, full health,
+//! no Cry, no Death), then a fresh copy of each joins your hand, radiant flag kept (R57), unread by them
+//! (R97).
 
 use jackioh_engine::prelude::*;
 
@@ -38,8 +19,6 @@ pub const ID: &str = "classic-014";
 /// The `destroyed` events of the state-check pass the answered one belongs to: the unbroken run of
 /// `destroyed` reports it stands in (a card a replacement took elsewhere reports its landing there
 /// instead, and still belongs to the run). The answered event itself when the list holds no run.
-///
-/// (TS `passOf(ctx, answered: Destroyed)`: `answered_id` is the answered event's `instanceId`.)
 fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> Vec<GameEvent> {
     let events: &[GameEvent] = &ctx.events[..];
     let found = events.iter().rposition(
@@ -128,19 +107,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: "Face-down (R33); fires once for
-// all of your Units one state-check pass collects; each card still in a graveyard afterwards returns
-// to its owner's hand (a stolen one to the opponent's, §3.2) and costs (0) (`costOverride`, kept,
-// R78), a full hand burning the overflow (R317); unit tokens have ceased to exist (R11), a Reborn Unit
-// already back is skipped, and an Indestructible Unit is collected only when its max health falls to
-// 0 (R69); enemy deaths don't fire it; radiant: fires in the "would die" window at §4.5 step 1: those
-// Units leave the collection and flicker (the same zone, reset per R78, full health, summoning sick,
-// no Cry, no Death), and a fresh copy of each (its Radiant flag kept, R57) goes to your hand and costs
-// (0); the copies are never named in the opponent's view (R97); its tuned number (cost) reads through
-// `param()` (R386)".
-//
-// The stolen-unit case needs the `destroyed` event to say who controlled the unit as it died (it names
-// the owner only): it waits for that engine change.
+// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass
+// (§4.5); cards left in a graveyard return to their owner's hand (§3.2) at cost 0 (R78), overflow burned
+// (R317); tokens (R11) and a Reborn Unit already back are skipped, and an Indestructible Unit is
+// collected only when its max health falls to 0 (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden
+// (R97); number via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,7 +138,7 @@ mod tests {
     const SUPPRESSIVE_AURA: &str = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
 
     /// p1 sets the trap; p2, active, plays Big Felinor and destroys every non-Felinor Unit in one pass.
-    /// (TS `wipe(radiantFace, mine, opts = {})`, `opts`' keys `myHand` and `theirs` as TS named them.)
+    /// `opts` keys: `myHand` and `theirs`.
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
             "active": "p2",

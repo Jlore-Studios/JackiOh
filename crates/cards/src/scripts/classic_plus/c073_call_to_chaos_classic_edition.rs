@@ -8,10 +8,9 @@
 //!            Call to Chaos cards, which cost (0); cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Core #95's subsystem (`subsystems/callToChaos.ts`) with this edition's table (`CHAOS_PLUS_EFFECTS`,
-//! `subsystems/callToChaosPlus.ts`): the roll, the announcement both players read (R436), the chain cap
-//! counting casts of either edition (R28) and the order the Radiant's three resolve in (R423) are the one
-//! rule both editions share. The face is passed explicitly, as #95's file does.
+//! Core #95's subsystem with this edition's table (`CHAOS_PLUS_EFFECTS`): the roll, the announcement both
+//! players read (R436), the chain cap counting casts of either edition (R28) and the order the Radiant's
+//! three resolve in (R423) are the one rule both editions share.
 
 use jackioh_engine::prelude::*;
 
@@ -43,25 +42,13 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #73 Call to Chaos (Classic+ Edition) — SPEC §8.7 row 73, BUILD M9 Classic+ row C+ 73: "One random
-// effect of ten, each with its own test: 5 random Fruit-pool cards (R382) that cost (0); 3 random Books
-// that cost (0); destroy every enemy permanent (face-down included, Indestructible staying); 3 random
-// non-token Classic cards that cost (0); Upgrade every card in your hand and deck twice (R386); fuse a
-// random non-token card of any set but this one into each card of your deck, each keeping its cost
-// (`costOverride`; Immutable cards skipped, R23); Degrade every card on the opponent's field and in their
-// hand 3 times; summon a Classic Golem (C+ #73.1); replace your deck with random Call to Chaos cards (Core
-// #95 or this, the named pool R387 allows) that cost (0), the deck keeping its size; cast a random Call
-// to Chaos of either edition; the chain counts casts of both editions against `CALL_TO_CHAOS_CHAIN_CAP`
-// (20, R28), and a recursion roll at the cap resolves into nothing (R87); both players read which
-// effects rolled (R436) while deck and hand changes stay hidden (R97, R177, R311); fused deck cards
-// survive JSON (R179); radiant three different effects, resolved in the list's order with the recursion
-// where it falls (R423)".
-//
-// HOW AN EFFECT IS FORCED, as `../095-call-to-chaos.test.ts` does it: the roll is the play's first rng
-// draw, so setting `state.rngCursor` before the play pins it, and `cursorFor` finds a cursor for each
-// entry by asking the engine's own roll with this card's table. The machinery (each entry against
-// fixture pools, Immutable deck cards skipped, the chain cap) is proved in
-// `packages/engine/test/callToChaosPlus.test.ts`; this file proves the card against the real catalog.
+// BUILD M9 Classic+ row C+ 73, one test per entry of the ten: the Fruit pool (R382), Upgrade twice (R386),
+// fuse with Immutable skipped (R23), the Golem (C+ #73.1), a deck of either edition (R387), and recast,
+// where the chain counts both editions (R28) and a roll at the cap resolves into nothing (R87). Both
+// players read which effects rolled (R436); deck and hand changes stay hidden (R97, R177, R311); fused
+// deck cards survive JSON (R179); the Radiant resolves its three in the list's order (R423).
+// The roll is the play's first rng draw: setting `state.rng_cursor` pins it, and `cursor_for` finds the
+// cursor of each entry by asking the engine's own roll with this card's table.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,7 +76,7 @@ mod tests {
 
     use crate::js;
 
-    /// The names of the entries `rollChaosEffects` rolls at `cursor` of `seed`, with this card's table.
+    /// The names of the entries rolled at `cursor` of `seed`, with this card's table.
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
         let mut rng = Rng::new(seed, cursor);
         subsystems::roll_chaos_effects(&mut rng, radiant, Some(subsystems::CHAOS_PLUS_EFFECTS))
@@ -116,7 +103,6 @@ mod tests {
         panic!("no radiant cursor");
     }
 
-    /// TS `chaos(entry, opts)`'s options.
     #[derive(Default)]
     struct Opts {
         p1: Option<Value>,
@@ -125,7 +111,6 @@ mod tests {
         chain: Option<i32>,
     }
 
-    /// TS `{ …base, …extra }` on a side setup.
     fn spread(target: &mut Value, extra: Option<Value>) {
         if let Some(Value::Object(extra)) = extra {
             for (key, value) in extra {
@@ -150,7 +135,6 @@ mod tests {
         s
     }
 
-    /// TS `s.card(CHAOS).memory[subsystems.CHAOS_CHAIN_KEY] = chain`.
     fn set_chain(s: &mut Scenario, chain: i32) {
         let id = s.card(CHAOS).id.clone();
         find_instance_mut(s.state_mut(), &id)
@@ -180,7 +164,7 @@ mod tests {
         s.events().iter().map(|event| event.event_type().as_str()).collect()
     }
 
-    /// TS `indexOf(kind, from)`: −1 when absent; a negative `from` counts back from the end.
+    /// −1 when absent; a negative `from` counts back from the end.
     fn index_of_from(order: &[&str], kind: &str, from: i64) -> i64 {
         let len = order.len() as i64;
         let start = (if from < 0 { (len + from).max(0) } else { from }) as usize;
@@ -196,7 +180,7 @@ mod tests {
         index_of_from(order, kind, 0)
     }
 
-    /// TS `Object.keys(script)`: the fields this script sets, in `Script`'s order.
+    /// The fields this script sets, in `Script`'s order.
     fn object_keys(script: &Script) -> Vec<&'static str> {
         let mut keys = Vec::new();
         let mut set = |key: &'static str, present: bool| {

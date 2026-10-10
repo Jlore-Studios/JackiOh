@@ -1,15 +1,14 @@
 //! #32 Prem Panther (SPEC §8.2 row 32): 5/4 "Rush / After this attacks, draw 2 for each Unit that
-//! attack destroyed", radiant 10/8 "Rush, Cleave / the same" (balance patch 1: the draw happens even
-//! when the Panther died in the combat; R426).
+//! attack destroyed", radiant 10/8 "Rush, Cleave / the same"; the draw happens even when the Panther
+//! died in the combat (R426).
 //!
 //! Rush and Cleave are printed on the catalog faces, so §10.4 layer 1 grants them. The text is the
 //! engine's `afterAttack` hook, which runs once the state check that closes each combat the Panther
-//! attacked in has run, declared or forced (R53, R59), and hands it the combat's facts
-//! (`afterAttackOf`): the Units whose lethal hit it dealt in that combat (its strike and its Cleave's;
-//! a defender's strike back is the defender's, and a defending Panther runs no hook). Survival is no
-//! longer asked (R212 still pins the stay: a Panther back through Reborn draws for the kill of its
-//! last stay, and a defending one draws nothing). The hook acts for the player who controlled it in
-//! that combat, though a Death in the check (#86 Mrow's) took it since.
+//! attacked in (declared or forced, R53, R59) has run, with the combat's facts (`afterAttackOf`): the
+//! Units whose lethal hit it dealt there (its strike and its Cleave's; a defender's strike back is the
+//! defender's, and a defending Panther runs no hook). Survival is not asked (R212: a Panther back
+//! through Reborn draws for its last stay's kill, a defending one draws nothing). The hook acts for
+//! the player who controlled it in that combat, though a Death in the check (#86 Mrow's) took it since.
 
 use jackioh_engine::combat::after_attack_of;
 use jackioh_engine::effects::draw;
@@ -17,8 +16,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-032";
 
-/// TS `const afterAttack: Hook`. §8 row 32: "draw 2 for each Unit that attack destroyed", the 2 the
-/// declared number `draw` (R386).
+/// §8 row 32: "draw 2 for each Unit that attack destroyed", the 2 the declared number `draw` (R386).
 fn after_attack() -> Hook {
     hook(|ctx| {
         let Some(facts) = after_attack_of(ctx) else {
@@ -46,22 +44,18 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32, patch v0.2.0 (R426) as
-// amended by balance patch 1 (issue #88): "Rush / After this attacks, draw 2 for each Unit that
-// attack destroyed"; radiant "Rush, Cleave / the same".
+// #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426): "Rush / After this
+// attacks, draw 2 for each Unit that attack destroyed"; radiant "Rush, Cleave / the same".
 //
-// R426 rewrites the old reading (R42's "whenever this destroys a unit", on either side of a combat):
-// it draws only after an attack it made — declared or forced (R53) — 2 for each Unit that attack
-// destroyed (the Unit it attacked, plus the Cleave kills of the Radiant face). It never draws for a
-// Unit it kills defending. Survival is no longer asked: the hook is owed on the snapshot the Panther
-// fought with, so it draws even when it dies in the combat, even one back through Reborn. R42 still
-// says who killed a Unit, per Unit.
+// R426: it draws only after an attack it made, declared or forced (R53), 2 for each Unit that attack
+// destroyed (the Unit it attacked, plus the Radiant face's Cleave kills); never for a Unit it kills
+// defending. Survival is not asked: the hook is owed on the snapshot the Panther fought with, so it
+// draws even when it dies in the combat, even one back through Reborn. R42 says who killed a Unit.
 //
-// The sparring partners: #15 Me and Mr Token is a 1/1 with no keywords (its Cry does not fire from a
-// `field` setup), #13 Jlockeed Shredder-10 is an 8/10 with no keywords, so it kills a 5/4 Panther on
-// the swing back and survives, #11 Tempo Timmy is a 3/3 Rush, First Strike that attacks a Panther
-// and dies to its strike back, and #9 Moths to the Flame (1/14) makes every enemy Unit attack it at
-// its controller's start of turn.
+// Sparring partners: #15 Me and Mr Token (1/1, no keywords; its Cry does not fire from a `field`
+// setup), #13 Jlockeed Shredder-10 (8/10, kills a 5/4 Panther on the swing back and survives), #11
+// Tempo Timmy (3/3 Rush, First Strike, dies to a Panther's strike back) and #9 Moths to the Flame
+// (1/14, makes every enemy Unit attack it at its controller's start of turn).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -76,8 +70,6 @@ mod tests {
         card.unwrap_or_else(|| panic!("the scenario has no {what}"))
     }
 
-    /// TS `s.events.find((event) => event.type === "destroyed" && event.instanceId === id)`, as JSON
-    /// so `toMatchObject` reads its keys.
     fn destroyed_event(s: &Scenario, instance_id: &str) -> Value {
         s.events()
             .iter()

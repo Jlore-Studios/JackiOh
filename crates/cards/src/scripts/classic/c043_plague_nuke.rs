@@ -10,24 +10,13 @@
 //!            no Cry, R1), into your leftmost open zones in lane order (R64); a Reborn unit already
 //!            back on the field is not summoned again; tokens are gone (R11). Tunes: mana per token 1 ↑."
 //!
-//! "Them" is every Unit on the field as the Spell resolves — the top of each unit pile on both sides,
-//! never a card dormant under a Stack (R13) — read once, first: the Plague Counters on them all, and the
-//! ones that carry any. Then every Unit is destroyed, and the deaths happen in ONE §4.5 check
-//! (`afterStateCheck` runs it at this point of the list, R59), so an Indestructible unit survives with
-//! its tokens counted all the same. After that check comes the temporary mana (§2.3): {mana} per token.
-//!
-//! Radiant, after the same check: each of those Units that had a token, is not a token (R11: a token is
-//! gone) and now lies in a graveyard — not one Reborn already put back on the field, not one exiled
-//! instead of dying — is summoned for the caster (§6.3 Summon: no Cry, R1; its owner unchanged, §3.2),
-//! in the order they stood on the board (R68: the active side first, lane order), each into the
-//! caster's leftmost open zone (R64); a full row leaves the rest where they are. The rest of the text
-//! runs on a stay that begins after the check (R174), which is what lets it name a card in its
-//! graveyard.
-//!
-//! R280: the preview is the mana it would give now — the Plague Counters on the Units on the field,
-//! which are public (§10.8), times {mana} — read by the same count the resolution uses.
-//!
-//! The number is the declared `mana` (R386), read through `param`.
+//! "Them" is the top of each unit pile on both sides, never a card dormant under a Stack (R13), read
+//! once, first. The one §4.5 check runs where `afterStateCheck` sits in the list (R59), so an
+//! Indestructible survivor's tokens still count; the temporary mana follows (§2.3). Radiant summons
+//! (§6.3) in R68's order (the active side first, lane order) and skips a unit exiled instead of dying;
+//! it runs on a stay that begins after the check (R174), which lets it name a card in its graveyard.
+//! R280: the preview is the mana it would give now, off public counters (§10.8). The number is the
+//! declared `mana` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{after_state_check, destroy_all, gain_mana, summon};
@@ -105,18 +94,15 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #43 Plague Nuke — SPEC §8.6 row 43, BUILD M9 Classic row C 43: "Counts the Plague Counters on every
-// Unit first, then destroys all Units in one state check (§4.5), then gives 1 mana this turn per token
-// counted, an Indestructible survivor's tokens included; its preview is that mana (R280); radiant:
-// after that check, each non-token Unit card that had a token and now lies in a graveyard is summoned
-// to your side under your control, its owner unchanged, into your leftmost open zones in lane order,
-// without a Cry; a Reborn Unit already back is not summoned again; tokens are gone (R11); a full board
-// leaves the rest; a Unit exiled instead of dying into a graveyard (C #50) is not summoned; its tuned
-// number (mana per token) reads through `param()` (R386)".
+// C #43 Plague Nuke — SPEC §8.6 row 43, BUILD M9 Classic row C 43: counts the Plague Counters on every
+// Unit first, destroys all Units in one state check (§4.5), then gives 1 mana per token counted, an
+// Indestructible survivor's included (preview, R280); radiant summons the non-token Units that had a
+// token, except a Reborn one already back and one exiled instead of dying (C #50); tokens are gone
+// (R11); the tuned number reads through `param()` (R386).
 //
-// The preview's proofs (R280) are in `../preview.test.ts`, with the other cards'. The C #50 cases use
-// C #50 Voidwalker's real script, whose Aura exiles what would go to a graveyard while it is on the
-// field; a Voidwalker the Nuke kills leaves the field with the others and exiles none of them (R398, R463).
+// The preview's proofs (R280) are in `../preview.test.ts`. The C #50 cases use Voidwalker's real
+// script, whose Aura exiles what would go to a graveyard while it is on the field; a Voidwalker the
+// Nuke kills exiles none of them (R398, R463).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -136,7 +122,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `plagued(defId, n, extra = {})`: `{ def, counters: { plague: n }, ...extra }`.
     fn plagued_with(def_id: &str, n: i32, extra: Value) -> Value {
         let mut entry = json!({ "def": def_id, "counters": { "plague": n } });
         if let (Some(into), Some(from)) = (entry.as_object_mut(), extra.as_object()) {
@@ -147,7 +132,6 @@ mod tests {
         entry
     }
 
-    /// TS `plagued(defId, n)`, the default `extra` of `{}`.
     fn plagued(def_id: &str, n: i32) -> Value {
         plagued_with(def_id, n, json!({}))
     }
@@ -157,7 +141,7 @@ mod tests {
         s.view(PlayerId::P1).you.mana.current
     }
 
-    /// Each lane's def id, `null` for an empty lane, as the JSON array the TS compares.
+    /// Each lane's def id, `null` for an empty lane.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Value {
         Value::Array(
             [1, 2, 3, 4, 5]
@@ -212,7 +196,6 @@ mod tests {
                 let destroyed: Vec<usize> =
                     kinds.iter().enumerate().filter_map(|(at, kind)| if kind == "destroyed" { Some(at) } else { None }).collect();
                 assert_eq!(destroyed.len(), 3);
-                // TS `lastIndexOf`: none is -1, which no index is less than.
                 let gain = kinds.iter().rposition(|kind| kind == "manaChanged");
                 for at in destroyed {
                     assert!(gain.is_some_and(|gain| at < gain));
@@ -413,14 +396,12 @@ mod tests {
             #[test]
             fn c_50_a_unit_exiled_instead_of_dying_into_a_graveyard_is_not_summoned() {
                 crate::register_all();
-                // C #50 Voidwalker's base Aura: "Cards that would go to a graveyard are exiled instead", live while
-                // it is on the field (SPEC §8.6 row 50). An Indestructible Voidwalker survives the Nuke (R46), so
-                // the plagued Vanilla dying beside it goes to exile instead (R461: it has not died).
+                // C #50 Voidwalker's Aura (SPEC §8.6 row 50) exiles what would go to a graveyard; an Indestructible
+                // one survives the Nuke (R46), so the plagued Vanilla beside it is exiled (R461: it has not died).
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1), VOIDWALKER] },
                 }));
-                // TS wrote through the live instance `s.card()` handed back; here the state's own copy.
                 let voidwalker = s.card(VOIDWALKER).id.clone();
                 find_instance_mut(s.state_mut(), &voidwalker)
                     .expect("the Voidwalker is on the field")

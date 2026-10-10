@@ -1,28 +1,16 @@
 //! C #40 MC Tech (SPEC §8.6 row 40). (1) Unit, Rare, 3/3 → 6/6.
 //!   Base:    "Cry: If your opponent controls {threshold} or more permanents, steal a random one." — 4
 //!   Radiant: "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice." — 4
-//!   Engine:  "The count and the pick at resolution (the Radiant's pick is a prompt, since the
-//!            condition is read then); a random pick over their permanents, the tops of piles and the
-//!            backrow. R15's placement; with no free zone, it stays with them. A stolen face-down trap
-//!            is readable by you from then on (R33). Tunes: threshold 4 ↓."
 //!
-//! "Permanents your opponent controls": the top card of each of their unit piles (a card dormant under
-//! a Stack is not on the field, R13) and every card in their backrow, face-down ones included — the
-//! count is public, since both rows' occupancy is. It is read as the Cry resolves.
-//!
-//! Base: one of them at random (R60), drawn from the match rng as the Cry reaches the clause. Radiant:
-//! the player picks one in a target prompt opened then (§10.6) — the condition is only known at
-//! resolution, so the pick cannot be declared with the play (R81); a face-down option names nothing
-//! but its id to its chooser (R177).
-//!
-//! §6.3 Steal: R15 puts the card in the same lane of MC Tech's controller's row when that is free,
-//! else the first free zone of it; with none it stays with its owner and nothing happens. The change
-//! of control is an entry (R171). R33: a stolen face-down trap stays face-down, read by its new
-//! controller from then on.
-//!
-//! R195: in hand the card glows when the opponent controls enough permanents now.
-//!
-//! The threshold is the declared `threshold` (R386), read through `param`.
+//! Permanents your opponent controls: the top card of each of their unit piles (a card dormant under
+//! a Stack is not on the field, R13) and every backrow card, face-down ones included; the count is
+//! public. It is read as the Cry resolves. Base: a random pick (R60) from the match rng. Radiant: a
+//! target prompt opened then (§10.6): the condition is only known at resolution, so the pick cannot be
+//! declared with the play (R81); a face-down option names nothing but its id to its chooser (R177).
+//! §6.3 Steal: R15 places it in the same lane of the controller's row if free, else the first free zone;
+//! with none it stays with its owner. The change of control is an entry (R171). R33: a stolen
+//! face-down trap stays face-down, read by its new controller. R195: in hand the card glows when the
+//! opponent controls enough permanents now. The threshold is the declared `threshold` (R386).
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, steal};
@@ -46,9 +34,7 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 }
 
 /// "If your opponent controls {threshold} or more permanents": the one test the Cry and the glow make.
-/// TS takes `EffectContext | ConditionContext` and reads `state`, `controller` and
-/// `param(ctx, "threshold")` off it; the two are different types here, so the caller hands over those
-/// three readings.
+/// The Cry's and the glow's contexts are different types, so the caller hands over the three readings.
 fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
     enemy_permanents(state, controller).len() as i32 >= threshold
 }
@@ -58,7 +44,7 @@ fn condition_met(c: ConditionContext) -> bool {
     c.zone == ConditionZone::Hand && enough_permanents(c.state, c.controller, param(&c, "threshold"))
 }
 
-/// R60: one of them at random, drawn as the Cry reaches the clause (the base `forEachCard`'s `cards`).
+/// R60: one of them at random, drawn as the Cry reaches the clause.
 fn random_permanent(c: &mut EffectContext) -> Vec<String> {
     let permanents = enemy_permanents(c.state, c.controller);
     c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
@@ -74,7 +60,6 @@ pub fn script() -> CardScripts {
             let threshold = param(ctx, "threshold");
             if enough_permanents(ctx.state, ctx.controller, threshold) {
                 vec![for_each_card(ForEachCardArgs {
-                    // R60: one of them at random, drawn as the Cry reaches the clause.
                     cards: Arc::new(random_permanent),
                     each: Arc::new(steal_it),
                 })]
@@ -107,19 +92,14 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40: "Cry: at resolution, if your opponent
-// controls 4 or more permanents (tops of unit piles and backrow cards, face-down ones included;
-// dormant cards don't count, R13), steal one at random (R60), placed per R15 (no free zone: it stays
-// with them), an entry (R171); 3 or fewer → nothing; `conditionMet` answers in hand whether they
-// control 4 or more now (R195); a stolen face-down trap is read by you from then on (R33); radiant
-// 6/6: you pick it in a prompt at resolution, a face-down option carrying only its id (R177); its
-// tuned number (threshold) reads through `param()` (R386)".
-//
+// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40: at resolution, if the opponent controls 4+
+// permanents (unit-pile tops and backrow, face-down included; dormant cards don't count, R13), steal one at
+// random (R60), placed per R15, an entry (R171); radiant 6/6: you pick, a face-down option carrying only
+// its id (R177); a stolen face-down trap is read by you (R33); threshold reads through `param()` (R386).
 // The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
-//
-// The face-down traps used below never fire during these plays: My Pawn answers only a lethal
-// attack, Bread and Butter and Intern Stimmy the end of a turn, and Unlicensed Experimentation a
-// permanent of a type its controller controls (p2 controls no Unit when they hold only traps).
+// The face-down traps used below never fire during these plays: My Pawn answers only a lethal attack,
+// Bread and Butter and Intern Stimmy the end of a turn, and Unlicensed Experimentation a permanent of a
+// type its controller controls (p2 controls no Unit when they hold only traps).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -139,7 +119,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `FACE_DOWN_TRAPS`: the four traps, each face-down.
+    /// The four traps, each face-down.
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
     }
@@ -153,7 +133,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stolen[0] ?? ""`.
     fn first_or_empty(ids: &[String]) -> String {
         ids.first().cloned().unwrap_or_default()
     }
@@ -419,7 +398,7 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                // TS `JSON.stringify(view.pending ?? null)`: an absent prompt serialises as `null`.
+                // An absent prompt serialises as `null`.
                 let prompt = js(&s.view(PlayerId::P1).pending).to_string();
                 assert_ne!(prompt, "null");
                 for trap in [PAWN, BREAD, STIMMY, UNLICENSED] {

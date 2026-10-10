@@ -1,57 +1,17 @@
 //! #60 Bear Honeypot (SPEC §8.3): Trap, cost 1, Epic. "When your opponent plays a (1) Cost or less
 //! card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it." /
 //! radiant "When your opponent plays a card, if you have an empty unit zone: Fill your board with Rush
-//! Tokens. If it's a Unit, they attack it." Engine cell: "Fires after the played card resolves
-//! (ruling), so the unit is on the field; forced attacks per 4.2 during the opponent's turn; cost =
-//! cost paid".
+//! Tokens. If it's a Unit, they attack it." The Radiant face drops the cost threshold and fills the
+//! board; the rest is kept (§8 Conventions, R277).
 //!
-//! The Radiant face drops the cost threshold, fills the board in place of the two tokens, and keeps
-//! the rest — the empty-zone condition and the attack on a played Unit (§8 Conventions, R277).
-//!
-//! R430 (patch v0.2.0): "if you have an empty unit zone" is part of the condition. While its
-//! controller has no empty, unlocked, unreserved unit zone — R64's zones a summon may take, the same
-//! `open_zones` a summon places into — the trap does not fire and is not consumed: it stays face-down
-//! and armed for a play that comes when there is room. So it can never be spent on a board that
-//! cannot take a single token.
-//!
-//! What this card does NOT do, because §5.1, §10.3 and traps.rs own it: emit `trapFired`, run the
-//! post-trap state check, or send itself to the graveyard. `fire_trap` does all three, and because
-//! this is a Trap and not a Field Trap it is consumed by `consume_trap` the moment it fires — once
-//! per game, whatever the effects achieved (R17, R61).
-//!
-//! THE CONDITION IS A `when`, NOT AN EARLY RETURN FROM `run`. traps.ts: "`run` returning `[]` is a
-//! trap that fired for nothing — it can never mean 'this event was not mine'. A condition that must
-//! leave the trap armed (Bear Honeypot's 'costing 1 or less' …) therefore belongs in a predicate".
-//! A 2-cost play must leave this trap face-down and armed, so the threshold lives in `when`.
-//!
-//! R56: "'Costing 1 or less' … uses the cost actually paid after modifiers", which is
-//! `event.costPaid`, not the printed cost. R70: "a cast is free and counts as a play … with cost
-//! paid 0", and names this card, so a cast card is always "costing 1 or less".
-//!
-//! R53 (all of it) is the forced attack: skip §4.2 steps 1-3, so position, summoning sickness and
-//! Taunt are ignored and no exertion is spent; the target still strikes back; the attackers go in
-//! lane order; each attack is its own combat followed by its own state check; and the next attacker
-//! attacks only if the target is still on the field. `force_attacks_on` (engine/src/combat.rs) is
-//! exactly that, and `forced_attacks` in the effects library is its Effect wrapper.
-//!
-//! WHICH EVENT, AND WHY NOT `cardPlayed` (R17, §10.5 steps 4 and 7). This card fires at step 7,
-//! "after the card resolves", which is `cardResolved` (`echo::land_after_resolution` emits it once per
-//! play or cast, after step 6 has drained every Echo repeat) — the moment #41 Sheepish shares since
-//! patch v0.2.0 (R427), the two answering in lane order (R68). Watching `cardPlayed`
-//! would be wrong and not merely early: the Engine cell requires the played unit to be on the field
-//! with its Cry already resolved, which is what makes "they attack it" reach anything.
-//!
-//! `cardResolved` also carries `costPaid` for R89's sake — a trigger answering an event reads what
-//! it needs OFF the event, because step 7's instance may have been reset since step 4 — so the R56
-//! threshold below never re-derives a cost from the board.
-//!
-//! `summonedThisScript` on the forced-attack filter is what makes "they attack it" mean the tokens
-//! THIS trap just summoned rather than every Rush Token its controller happens to own.
-//!
-//! THE GLOW (R662). The trap lights up on its controller's field while they have an empty, unlocked,
-//! unreserved unit zone, R430's "if you have an empty unit zone" read by the same `open_zones` as
-//! `match_` below: the half of the trigger the board decides. The play that sets it off is the other
-//! half and has not happened yet, so the glow is the same on both faces.
+//! R430: "an empty unit zone" is R64's `open_zones`; with none the trap stays armed, unconsumed. §5.1,
+//! §10.3 and traps.rs own `trapFired`, the state check and consuming it (R17, R61). The condition is a
+//! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): a play over the
+//! threshold, by R56's cost actually paid (read off the event, R89), leaves it armed; a cast pays 0
+//! (R70), so it always qualifies. R53 is the forced attack (§4.2 steps 1-3 skipped,
+//! `force_attacks_on`). It answers `cardResolved` (§10.5 step 7, R17), not `cardPlayed`: the unit is
+//! on the field with its Cry resolved, the moment #41 Sheepish shares since R427, the two answering
+//! in lane order (R68). R662: the glow, both faces.
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{fill_board, forced_attacks, summon};
@@ -63,9 +23,8 @@ pub const ID: &str = "core-060";
 /// §7's shared Rush Token, 3/3 with Rush.
 const RUSH_TOKEN: &str = "core-t-rush";
 
-/// §10.5 step 7's event: the play this trap answers, with the cost R56 reads. (TS
-/// `Extract<GameEvent, { type: "cardResolved" }>`: here the fields of it this card reads after
-/// `match_` has read the rest.)
+/// §10.5 step 7's event: the play this trap answers, with the cost R56 reads (the fields of
+/// `cardResolved` this card reads after `match_` has read the rest).
 #[derive(Clone, Debug)]
 struct ResolvedPlay {
     instance_id: String,
@@ -75,7 +34,6 @@ struct ResolvedPlay {
 
 /// "When your opponent plays a (1) Cost or less card, if you have an empty unit zone" (radiant: any
 /// card). Returns the play when the trap answers this event and `None` when it must stay armed.
-/// (TS `match`, a Rust keyword: SURFACE §4.1's trailing underscore.)
 fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<ResolvedPlay> {
     let GameEvent::CardResolved {
         player,
@@ -107,13 +65,12 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
     })
 }
 
-/// "summon 2 Rush Tokens" / "fill your board with Rush Tokens"; then "if it was a Unit, they attack
-/// it". A played Spell, Field Spell, Trap or Field Trap leaves the tokens standing and attacks
-/// nothing. The Unit test reads the def rather than the board, so a played unit that died during its
-/// own resolution still counts as a Unit — but "it" is the played card's stay on the field (R174),
-/// so once that has ended the tokens attack nothing: `permanent` says so, including when an earlier
-/// trap answering the same play took the card off the field and Reborn brought a new body back
-/// (`traps.rs` reads the flag again for each trap).
+/// "summon 2 Rush Tokens" / "fill your board with Rush Tokens"; then, if it was a Unit, "they attack
+/// it" with only the tokens this trap summoned (`summonedThisScript`). The Unit test reads the def, so
+/// a unit that died in its own resolution still counts; "it" is the played card's stay on the field
+/// (R174), so once `permanent` says that has ended nothing attacks, including when an earlier trap
+/// answering the same play took the card off the field and Reborn brought a new body back (`traps.rs`
+/// reads the flag again for each trap).
 fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> Vec<Effect> {
     let mut tokens: Vec<Effect> = if fill {
         vec![fill_board(json_as(json!({ "defId": RUSH_TOKEN })))]
@@ -134,10 +91,8 @@ fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> 
     tokens
 }
 
-/// One face's trigger. TS's `TrapTrigger` is `TriggerDef` plus the `when` predicate traps.ts reads,
-/// and the whole condition lives in that predicate (R99, R61): `run` is reached only once the trap
-/// really is firing, so the `None` branch below is narrowing and never a decision — a 2-cost play
-/// has already been declined by `when` and left the trap armed and face-down.
+/// One face's trigger. The whole condition lives in the `when` predicate (R99, R61): `run` is reached
+/// only once the trap really is firing, so the `None` branch below is narrowing and never a decision.
 fn honeypot(any_cost: bool, fill: bool) -> TriggerDef {
     TriggerDef::new("bear-honeypot", &[GameEventType::CardResolved], move |ctx, event| {
         match match_(ctx, event, any_cost) {
@@ -170,25 +125,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #60 Bear Honeypot (SPEC §8.3, BUILD M4-T4 row 60: "Fires after the opponent's ≤1-cost play
-// resolves (R17, R56); a unit is attacked by each token in order until dead, one combat each (R53);
-// radiant any card and fills the board"), and patch v0.2.0's condition (R430): "if you have an empty
-// unit zone" — while its controller's unit row has no empty, unlocked, unreserved zone the trap does
-// not fire and is not consumed.
-//
-// Every test here puts the trap face-down in p1's backrow and makes p2 the active player, which is
-// the whole point of a Trap: it fires on the OPPONENT's turn and resolves to completion before their
-// action continues (§10.3). Bear Honeypot opens no prompt, so the "a trap may prompt its own
-// controller" path of §10.3 has nothing to exercise here.
-//
-// Rulings proved here: R17 (this trap fires after the played card has resolved, the moment #41
-// Sheepish shares since R427), R56 (the threshold reads the cost actually paid), R70 (a cast pays 0,
-// so it is "costing 1 or less"), R53 (forced attacks in full), R64 ("fill your board" is every empty
-// unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), R430 (no empty unit
-// zone: the trap waits), §5.1 (a Trap is consumed when it fires).
-//
-// R662's yellow glow (`conditionMet`): on its controller's field while they have an open unit zone,
-// both faces, checked against the opponent's play, at the end of this file.
+// #60 Bear Honeypot (SPEC §8.3, BUILD M4-T4 row 60). Every test puts the trap face-down in p1's
+// backrow and makes p2 the active player: a Trap fires on the OPPONENT's turn and resolves to
+// completion before their action continues (§10.3); this one opens no prompt. Rulings proved here:
+// R17 (fires after the played card has resolved, the moment #41 Sheepish shares since R427), R56 (the
+// cost actually paid), R70 (a cast pays 0), R53 (forced attacks in full), R64 ("fill your board" is
+// every empty unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), R430 (no
+// empty unit zone: the trap waits), §5.1 (a Trap is consumed when it fires), R662 (the yellow glow,
+// at the end of this file).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -225,7 +169,7 @@ mod tests {
         json!({ "hand": ["core-005"], "library": ["core-011", "core-016"] })
     }
 
-    /// TS `{ ...base, ...extra }` over two JSON objects: the later keys win.
+    /// Merges two JSON objects: the later keys win.
     fn spread(base: Value, extra: Value) -> Value {
         let mut all = base.as_object().cloned().unwrap_or_default();
         for (key, value) in extra.as_object().cloned().unwrap_or_default() {
@@ -234,7 +178,6 @@ mod tests {
         Value::Object(all)
     }
 
-    /// `s.backrow(p, lane)?.faceUp`.
     fn face_up_at(g: &Scenario, player: PlayerId, lane: i32) -> Option<bool> {
         g.backrow(player, lane).and_then(|card| card.face_up)
     }
@@ -566,7 +509,7 @@ mod tests {
             g.play("core-015", json!({ "zone": 1 }));
 
             // The tokens were summoned this very turn and attacked anyway (sickness skipped), and the
-            // attack cost them nothing, so their own turn is still ahead of them.
+            // attack cost them no exertion (§4.1), so their own turn is still ahead of them.
             let first = g.unit(P1, 1);
             assert_eq!(
                 first.map(|unit| serde_json::to_value(unit.exertion).expect("exertion serialises")),
@@ -733,7 +676,6 @@ mod tests {
         }
     }
 
-    // TS: one `it` per face in a `for (const radiant of [false, true])` loop, titled with the face.
     mod glows_while_its_controller_has_an_open_unit_zone_r662_r430 {
         use super::*;
 

@@ -2,7 +2,7 @@
 //!   Base:    "Draw a curve y = ax³ + bx² + cx + d across the board, … Exile every card on the curve."
 //!   Radiant: "… Exile every enemy card on the curve."
 //!
-//! The curve is the engine's (`subsystems/papaya.ts`, E32): the player picks 1 to 4 cells in different
+//! The curve is the engine's (E32): the player picks 1 to 4 cells in different
 //! lanes, one board-cell prompt at a time, the curve is the lowest-degree polynomial through them in
 //! exact rationals, and the top card at every cell on it is exiled. The picks are board cells, not
 //! cards, so they keep the cell chrome: the Discover rule is for card selections, and twenty cells
@@ -24,13 +24,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, BUILD M9 row C+ 62: the cells asked one board-cell
-// prompt at a time (20, then every cell of the unused lanes and "done", at most 21 answers), x the lane
-// and y the row from the caster's seat, the lowest-degree curve through the cells in exact rationals,
-// every card on it exiled (the top of a pile, a card beneath resuming; face-down cards openly; tokens
-// ceasing to exist; nothing between lanes); cells never cards (R177); a random cast's answers (R452);
-// a pause that survives JSON and a game that replays; radiant only enemy cards. The engine's own
-// proofs are `packages/engine/test/papaya.test.ts`.
+// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, BUILD M9 row C+ 62: one board-cell prompt at a time (20
+// cells, then the unused lanes' cells and "done"), x the lane and y the row from the caster's seat, the
+// lowest-degree curve in exact rationals, every card on it exiled (a pile's top; face-down openly; tokens
+// cease; nothing between lanes); cells never cards (R177); a random cast answers itself (R452); radiant only enemy cards.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{cast_new, lock};
@@ -68,7 +65,6 @@ mod tests {
         format!("zone:{player}:{row}:{}", x + 1)
     }
 
-    /// TS `cell(x, y)`: from p1's seat.
     fn cell(x: i32, y: usize) -> String {
         cell_for(x, y, PlayerId::P1)
     }
@@ -103,9 +99,7 @@ mod tests {
         ids
     }
 
-    /// TS's hand-built sink: `{ state, events: [], rng: createRng(state.seed, state.rngCursor) }`,
-    /// `applyEffects(effects, makeContext(sink, self, { controller }))`, `settle(sink)` when asked,
-    /// then `state.rngCursor = sink.rng.cursor`. Answers the sink's events.
+    /// Runs `effects` on a hand-built sink at the state's rng cursor, settling when asked; returns its events.
     fn by_hand(
         s: &mut Scenario,
         effects: Vec<Effect>,
@@ -138,7 +132,6 @@ mod tests {
         crate::register_all();
         assert_eq!(crate::card_def(super::ID).id, PAPAYA);
         let scripts = super::script();
-        // TS `expect(radiant).toBe(base)`: the one Cry hook.
         assert!(std::sync::Arc::ptr_eq(
             scripts.radiant.cry.as_ref().expect("a Cry"),
             scripts.base.cry.as_ref().expect("a Cry"),

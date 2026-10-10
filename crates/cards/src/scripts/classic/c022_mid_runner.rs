@@ -1,33 +1,15 @@
 //! C #22 Mid Runner (SPEC §8.6 row 22). (1) Unit, Human, Common, 2/1 → 4/2.
 //!   Base:    "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you
 //!            played this, bounce {bounces|random enemy permanent|random enemy permanents}." — 4, 2
-//!   Radiant: the same text but bounce 3; its Radiant face is its doubled stats, the designer's word,
-//!            recorded against R275 in `docs/radiant-audit.md`.
-//!   Engine:  "Two independent checks. Midlane is computed from the lane count (R685: an odd count's
-//!            center lane, an even count's both center lanes). "When you played this" is the
-//!            mana before paying for it, recorded as the play begins (§10.5 step 1). Two different
-//!            random enemy permanents (R60; Radiant: three) go to their controllers' hands (Bounce,
-//!            §6.3, R747: the hand cap applies and tokens vanish). Tunes: mana threshold 4 ↓; bounces 2 ↑."
+//!   Radiant: the same text, bounce 3; the doubled stats are the designer's word (R275, `docs/radiant-audit.md`).
 //!
-//! The two checks are read as the Cry begins and act in the text's order. In midlane the card
-//! Tributes itself: §6.3's Sacrifice, a death (Death, Reborn and the destroyed count), which bypasses
-//! Indestructible. Anywhere else it stays.
-//!
-//! "If you had N or more mana when you played this" is the mana its controller held as the play began
-//! (§10.5 step 1), before paying — the engine's record of it, `ctx.manaBeforePlay`, which the played
-//! card's own Cry carries (a cast's too, R70, read as the cast began). A Cry run any other way (another
-//! card triggering it, E13) was not played now, so it reads its controller's mana as it runs.
-//!
-//! The bounce: that many DIFFERENT enemy permanents (R60), fewer if fewer exist — the tops of their
-//! unit piles (R13) and their backrow cards, face-down ones included — drawn from the match rng as the
-//! Cry reaches it, each to its controller's hand (R747): the hand cap burns one that does not fit (R4, R317) and
-//! a unit token ceases to exist (R11). A bounced face-down card lands in a hand its bouncer may not
-//! read, so no view of theirs names it (R97).
-//!
-//! R195: in hand the card glows when playing it now would bounce — its controller's mana now is the
-//! mana it would have "when it was played" — read by the same threshold test the Cry uses.
-//!
-//! Both numbers are the declared `threshold` and `bounces` (R386), read through `param`.
+//! Two independent checks, read as the Cry begins, in the text's order. Midlane comes from the lane
+//! count (R685); there the card Tributes itself: §6.3's Sacrifice, a death that bypasses Indestructible.
+//! "When you played this" is the mana before paying (§10.5 step 1), `ctx.manaBeforePlay` (a cast's too,
+//! R70); a Cry run any other way (E13) reads its controller's mana as it runs. The bounce takes that
+//! many DIFFERENT random enemy permanents (R60: unit-pile tops, R13, and backrow, face-down included)
+//! to their controllers' hands (R747): a full hand burns it (R4, R317), a unit token ceases to exist
+//! (R11), and no view of theirs names a bounced face-down card (R97). R195: the hand glow uses the same test.
 
 use jackioh_engine::effects::{ForEachCardArgs, bounce, cards_in_scope, for_each_card, sacrifice};
 use jackioh_engine::prelude::*;
@@ -46,15 +28,12 @@ fn mana_when_played(ctx: &EffectContext<'_>) -> i32 {
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    // TS's `ctx.self` was the live card: read it as it stands now.
     let Some(self_) = ctx.live_self().cloned() else {
         return vec![];
     };
-    // R685: midlane is computed from the lane count, never hardcoded — read through the engine
-    // helper, since card scripts never reach into state themselves (M3-T1).
+    // R685: midlane is computed from the lane count, never hardcoded, through the engine helper (M3-T1).
     let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
     let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
-        // `self.zone.z === "field" && self.zone.row === "units"`
         && matches!(self_.zone, Zone::Field { row: Row::Units, .. });
     let bounces = param(&*ctx, "bounces");
     let mana = mana_when_played(ctx);
@@ -98,16 +77,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: "Cry, two independent checks at
-// resolution: in midlane (computed from the lane count, R685) it Tributes itself (a death), anywhere
-// else it stays; if you had 4 or more mana before paying for it (recorded as the play begins, §10.5
-// step 1), two different random enemy permanents (R60; fewer if fewer) return to their controllers'
-// hands (R747), tokens ceasing to exist (R11) and a full hand burning (R317); both may happen in one Cry;
-// `conditionMet` answers in hand whether your mana is 4 or more now (R195); a bounced face-down trap
-// is never named in your view (R97); radiant 4/2 returning 3; its tuned numbers (mana threshold,
-// bounces) read through `param()` (R386)".
-//
-// The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
+// C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: both checks may pass in one Cry;
+// `conditionMet` answers in hand whether your mana is 4 or more now (R195); radiant 4/2 returns 3;
+// its tuned numbers (mana threshold, bounces) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,7 +128,7 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, RUNNER);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
+            // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(
                 scripts.radiant.cry.as_ref().unwrap(),
                 scripts.base.cry.as_ref().unwrap()

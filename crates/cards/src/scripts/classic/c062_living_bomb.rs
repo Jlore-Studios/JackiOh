@@ -3,25 +3,13 @@
 //!            Plague Counter on it."
 //!   Radiant: "At the start of your opponent's turn: Destroy every permanent they control with a Plague
 //!            Token on it."
-//!   Engine:  "A start-of-turn trigger on both players' turns (Radiant: the opponent's only), in R68's
-//!            order; the designer's "Plague Counter" is the Plague Counter. "They destroy all cards" is the
-//!            turn player's own permanents, face-down ones included (R400): the only reading under which
-//!            the Radiant face is the stronger one. Indestructible permanents stay (§6.1). Tunes: none."
 //!
-//! R400: at the start of a player's turn, every permanent THAT player controls with at least one Plague
-//! Token on it is destroyed — the top of each unit pile and every backrow card, face-down ones included,
-//! Living Bomb itself when it is the turn player's and carries a token — and the other player's are left
-//! alone. Each is an ordinary §6.3 destroy, all in one effect, so they die together at the one state
-//! check after it (§4.5, R59): an Indestructible one is knocked into Attack Position and stays (R46), a
-//! Reborn unit comes back, Death hooks run. A card's tokens are counters, which R78 clears when it leaves
-//! the field, so a card bounced and played again carries none. The set is read as the trigger resolves.
+//! R400: at the start of a player's turn, every permanent that player controls with a Plague Counter
+//! is destroyed (face-down cards and Living Bomb included; §6.3). All die together at the state
+//! check (§4.5, R59); Indestructible stays (§6.1, R46), and R78 clears tokens on leave.
 //!
-//! Each turn's half is a start-of-turn hook queued at R62's start-of-turn trigger point in R68's order:
-//! its controller's own turn is its `startOfTurn` (the base face only), the opponent's its
-//! `startOfOpponentTurn`, which the engine queues right after the active player's own hooks — so a
-//! plagued Fed Fauci of the turn player's still gains its mana before it is destroyed.
-//!
-//! No declared numbers: the text has none.
+//! Hooks queue at R62's start-of-turn trigger point in R68's order: `startOfTurn` on own turn (base),
+//! `startOfOpponentTurn` on opponent's turn, queued after the active player's own hooks.
 
 use jackioh_engine::effects::destroy;
 use jackioh_engine::prelude::*;
@@ -68,14 +56,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #62 Living Bomb — SPEC §8.6 row 62, BUILD M9 Classic row C 62: "At the start of each player's turn,
-// in R68's order: destroy every permanent that player controls with a Plague Counter on it, face-down ones
-// and Living Bomb itself included, the other player's untouched (R400); Indestructible ones survive
-// (R46); a card's tokens are gone once it leaves (R78); radiant: only at the start of your opponent's
-// turn, and only their permanents; no tuned numbers".
-//
-// Both halves are start-of-turn hooks queued at R62's start-of-turn trigger point in R68's order: its own
-// turn's `startOfTurn`, and the opponent's turn's `startOfOpponentTurn`, after the turn player's hooks.
+// C #62 Living Bomb (SPEC §8.6 row 62): at the start of each player's turn, in R68's order,
+// destroy every permanent that player controls with a Plague Counter (R400; Indestructible stays,
+// R46; tokens cleared on leave, R78). Radiant: only at the start of opponent's turn.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -157,7 +140,7 @@ mod tests {
             assert!(scripts.base.start_of_turn.is_some());
             assert!(scripts.base.start_of_opponent_turn.is_some());
             assert!(scripts.radiant.start_of_turn.is_none());
-            // TS `expect(radiant.startOfOpponentTurn).toBe(base.startOfOpponentTurn)`: the same shared hook.
+            // The same shared hook.
             assert!(match (&scripts.radiant.start_of_opponent_turn, &scripts.base.start_of_opponent_turn) {
                 (Some(radiant_hook), Some(base_hook)) => Arc::ptr_eq(radiant_hook, base_hook),
                 _ => false,

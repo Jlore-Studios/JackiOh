@@ -1,20 +1,15 @@
 //! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "50" — a radiant cell that changes only
 //! a number changes only that number (§8 Conventions), so the two faces are one effect at two sizes.
 //!
-//! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): the declaration below says
-//! `of: ["unit", "hero"]` with `side: "any"`, so the picker offers both heroes and every unit on
-//! either side, and healing the opponent's board is legal if the player wants it.
+//! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): `side: "any"` with
+//! `of: ["unit", "hero"]`, so either side's units and both heroes are offered.
 //!
-//! The pick is a DECLARED play-time target, so it travels in the play action's `targets` and never
-//! pauses resolution (R81); `legalActions` builds the picker from the declaration without running
-//! this script, and R90 validates what the play carried. It arrives as `{ of: "chosen" }`. An empty
-//! target set — no units and, impossibly, no heroes — fizzles and the spell still counts as played
-//! (§8 Conventions).
+//! The pick is a DECLARED play-time target: it travels in the play action's `targets` and never
+//! pauses resolution (R81), and R90 validates what the play carried. It arrives as `{ of: "chosen" }`.
+//! An empty target set fizzles and the spell still counts as played (§8 Conventions).
 //!
-//! What "heal 20" means is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never
-//! rises past its max health (healing never raises max health), while a hero simply gains 20 health
-//! with no cap, because §3 gives a hero no maximum — a 30-health hero reaches 50. `effects/heal.ts`
-//! is that split, so this file only names the amount.
+//! "Heal 20" is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never rises past
+//! its max health, while a hero gains 20 with no cap, since §3 gives a hero no maximum.
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;
@@ -50,17 +45,12 @@ pub fn script() -> CardScripts {
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
 // radiant 50".
 //
-// R19 is the §8.2 Engine cell in full: "Fig of Life may target any unit or hero", so the
-// declaration says `side: "any"` with `of: ["unit", "hero"]` and the tests below heal an ally unit,
-// an enemy unit, an own hero and an enemy hero.
+// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
+// an ally unit, an enemy unit, an own hero and an enemy hero.
 //
-// §8's "an empty target set fizzles" cannot arise for this card: both heroes are always legal
-// targets, so there is always something to pick. What is asserted instead is the §6.3 Heal split —
-// a unit never rises past its max health because healing only removes damage, while a hero has no
-// maximum (§3) and goes straight past 30.
-//
-// The props are cards with no script beyond printed keywords, so nothing but the heal moves a
-// number: #25 4-mana 7/7 (7/7, Armor 7) and #20 Pointmaster (7/2, First Strike).
+// §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. What is
+// asserted instead is the §6.3 Heal split: a unit never rises past its max health, while a hero
+// has no maximum (§3) and goes straight past 30. The props have no script beyond printed keywords.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -68,7 +58,7 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS's `def` (`cardDef("core-047")`): the catalog card this file scripts.
+    /// The catalog card this file scripts.
     fn def() -> CardDef {
         crate::register_all();
         crate::card_def(ID)

@@ -94,12 +94,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #79 Risky Die — SPEC §8.6 row 79, BUILD M9 Classic row C 79: "Draw 3; the cards those draws put in
-// your hand (not a cast-on-draw card, a burned one or a draw a limit stopped) cost (1) less (`costMod`,
-// R78), then each of them that costs (1) or more is exiled; an X-cost card costs 0 in hand (R65) and
-// stays; cards already in your hand are untouched; kept cards are never named in the opponent's view
-// and exiled ones are public; radiant: only those that cost (2) or more are exiled; its tuned numbers
-// (draw, kept threshold) read through `param()` (R386)".
+// SPEC §8.6 row 79: Draw 3; drawn hand cards get `costMod` −1 (R78) and exile if
+// cost exceeds threshold (0 base, 1 radiant; R65). Kept cards hidden, exiled public
+// (R97). Tuned numbers read via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -129,7 +126,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `drawnIds(events, player = "p1")`.
+    /// Instance IDs of cards drawn by `player`.
     fn drawn_ids(events: &[GameEvent], player: PlayerId) -> Vec<String> {
         events
             .iter()

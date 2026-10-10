@@ -3,33 +3,13 @@
 //!   Base:    "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}."
 //!   Radiant: "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}.
 //!            Recruit a card from their exile. If it's a Unit, it attacks the enemy hero at once."
-//!   Engine:  "One hit of N on the enemy hero, N = the opponent's exile size as it resolves: "for each
-//!            card" in one sentence is one hit, so Armor applies once, as Hearthstone reads it, and
-//!            N = 0 is no hit (R63); then the draw. The Radiant face keeps the draw. Recruit (§6.3) from
-//!            the opponent's exile: exile is chronological (§3), so Recruit's top-down scan is newest
-//!            first, and the most recently exiled permanent card there is summoned under your control,
-//!            no Cry (R1), its owner unchanged, so it goes to its owner's piles when it leaves the field
-//!            (§3.2); a Unit then makes one forced attack on the enemy hero (R53), summoning sickness
-//!            ignored; with no permanent in their exile nothing is recruited. Tunes: damage per card 1
-//!            ↑; draw 1 ↑."
 //!
-//! ONE HIT: the damage per card (`param(ctx, "damage")`) times the opponent's exile size, read as the
-//! Spell resolves, is a single `damage` on the enemy hero, so Armor and a hit cap meet it once. A total
-//! of 0 is no damage instance at all (R63), so nothing is dealt. Then the draw (`param(ctx, "draw")`).
-//!
-//! THE PREVIEW (R280) is that total, computed by the same function the Cry deals with, under the label
-//! "for each card in their exile" (the formula as both faces print it). It reads the opponent's exile
-//! size and the card's own number, both public.
-//!
-//! THE RADIANT RECRUIT is the engine's E25 `recruit({ from: "exile", whose: "enemy" })`: their exile
-//! scanned newest first for a permanent (never a Spell), summoned on your side under your control with
-//! its owner unchanged (a Unit to your leftmost open unit zone, a Trap face-down to your backrow, read by
-//! you alone, R33); with no open zone for it, or no permanent there, nothing is recruited. A Unit it
-//! recruited then makes one forced attack on the enemy hero (`forcedAttacks` over the units of its
-//! definition this list summoned, R53): no Taunt, position or summoning sickness stops it, and it spends
-//! no exertion. Which card the Recruit takes is known before it happens (the newest permanent in their
-//! exile), so the attacker is named by that definition as well as by "summoned by this list": a Unit a
-//! card cast on the draw summoned (R58) is this list's too, and it does not attack.
+//! One hit: the damage per card times their exile size as the Spell resolves is a single `damage`,
+//! so Armor applies once and a total of 0 is no hit (R63); then the draw. The preview (R280) is that
+//! total. The Radiant Recruit (§6.3) takes the newest permanent in their exile (chronological, §3)
+//! under your control, owner unchanged (§3.2), no Cry (R1); a Trap is set face-down (R33). A Unit it
+//! took makes one forced attack on the enemy hero (R53). The attacker is named by its definition, as a
+//! Unit a card cast on the draw summoned (R58) is summoned by this list too and must not attack.
 
 use jackioh_engine::effects::{damage, draw, forced_attacks, recruit};
 use jackioh_engine::prelude::*;
@@ -39,8 +19,7 @@ pub const ID: &str = "classic-001";
 /// The label both faces print the formula under (R280).
 const FORMULA: &str = "for each card in their exile";
 
-/// N: the damage per card times the opponent's exile size, now. (TS took an `EffectContext |
-/// ConditionContext`; both are a `ParamContext`, and the state they read is handed beside it.)
+/// N: the damage per card times the opponent's exile size, now.
 fn curse_damage(ctx: &impl ParamContext, state: &GameState, controller: PlayerId) -> i32 {
     param(ctx, "damage") * zone_count(state, opponent_of(controller), OffFieldZone::Exile)
 }
@@ -55,7 +34,7 @@ fn hit_and_draw(ctx: &EffectContext<'_>) -> Vec<Effect> {
     ]
 }
 
-/// TS `const preview: Script["preview"]`: the total under the formula's label (R280).
+/// The total under the formula's label (R280).
 fn preview() -> PreviewHook {
     condition_hook(|c| {
         vec![PreviewValue {
@@ -91,8 +70,7 @@ pub fn script() -> CardScripts {
             let recruited = newest_permanent_of_theirs(ctx);
             let mut effects = hit_and_draw(ctx);
             effects.push(recruit(json_as(json!({ "from": "exile", "whose": "enemy" }))));
-            // "If it's a Unit, it attacks": the unit this list summoned of that definition — not a Unit a
-            // card cast on the draw summoned (C+ #26 Tommy Tempo), which is summoned by this list too.
+            // Only a Unit of the recruited definition attacks, not one a card cast on the draw summoned (C+ #26).
             if let Some(card) = recruited
                 && def_of(Some(&*ctx.state), &card.def_id).type_ == CardType::Unit
             {
@@ -110,17 +88,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #1 Curse of the Forgotten Classic — SPEC §8.6 row 1, BUILD M9 Classic row C 1: "One hit of N on
-// the enemy hero, N = the size of their exile as it resolves, so Armor applies once; an empty exile
-// deals no hit (R63); then draw 1; its preview is N (R280); radiant: the same hit and draw (the
-// Radiant keeps "Draw 1"), then Recruit from their exile its most recently exiled permanent card, under
-// your control with its owner unchanged, back to their piles when it leaves the field (§3.2); a Unit
-// recruited that way makes one forced attack on the enemy hero at once, summoning sickness ignored
-// (R53); no permanent in their exile, or no open zone, → nothing recruited; a recruited trap is set
-// face-down and read by you alone (R33); its tuned numbers (damage per card, draw) read through
-// `param()` (R386)".
-//
-// The preview (R280) is proved in `test/preview.test.ts`, with the other cards that declare one.
+// C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1: one hit of N (R63), then the draw; its preview
+// is N (R280); radiant: the same, then Recruit their newest permanent, back to its owner's piles when
+// it leaves the field (§3.2), a Unit attacking at once (R53), a Trap set face-down (R33); tuned
+// numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

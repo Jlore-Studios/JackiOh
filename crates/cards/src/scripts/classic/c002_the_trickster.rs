@@ -2,20 +2,12 @@
 //! 2/1 → 4/2.
 //!   Base:    "Cry: Your next Trap or Field Spell costs ({discount}) less."
 //!   Radiant: "Cry: Your next Trap or Field Spell costs (0)."
-//!   Engine:  "A player modifier like #35 Lunar Eclipse's next-Spell discount (`costDiscount`; Cost,
-//!            §6.3, R65) for Traps, Field Traps and Field Spells, consumed by the next such card you
-//!            play; "next" has no "this turn", so it waits across turns until used; Field Trap counts
-//!            as Trap. The Radiant face sets that card's cost to (0) instead of discounting it. Tunes:
-//!            discount 2 ↑."
 //!
-//! THE MODIFIER is a price rule on its controller (B5 E15, `addCostRule`) that lasts "until used": it
+//! The modifier is a price rule on its controller (B5 E15, `addCostRule`) that lasts "until used": it
 //! reaches Traps, Field Traps and Field Spells ("Trap" names "Field Trap" too), and the first play of
-//! one whose price it changed spends it (`mana.costRulesSpentBy`), whatever turn that is. A Spell or
-//! a Unit is never reached, so it neither uses nor spends it. R65 floors the price at (0). A cast pays
-//! nothing, so it never uses the rule and never spends it (R70).
-//!
-//! The base face's discount is the card's declared number (`param(ctx, "discount")`), a negative
-//! `amount`; the Radiant face's "costs (0)" is a `setTo`, which wins over every add (B5 E15).
+//! one whose price it changed spends it, whatever turn that is. A Spell or a Unit never reaches it.
+//! R65 floors the price at (0); a cast pays nothing, so it never uses the rule (R70). The Radiant
+//! face's "costs (0)" is a `setTo`, which wins over every add (B5 E15).
 
 use jackioh_engine::effects::add_cost_rule;
 use jackioh_engine::prelude::*;
@@ -50,13 +42,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #2 The Trickster — SPEC §8.6 row 2, BUILD M9 Classic row C 2: "Cry: your next Trap, Field Trap
-// or Field Spell costs (2) less, a player modifier with no "this turn" that waits across turns until
-// the first such play consumes it; Spells and Units neither use nor consume it; floors at (0) (R65); a
-// cast never uses it (R70); the opponent's view of your changed hand costs shows −1 (R177); radiant
-// 4/2: the next one costs (0); its tuned number (discount) reads through `param()` (R386)".
-//
-// The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
+// C #2 — SPEC §8.6 row 2, BUILD M9 Classic row C 2: the next Trap, Field Trap or Field Spell costs (2)
+// less, waiting across turns (R65 floors at (0)); a cast never uses it (R70), shown by Classic+ #37
+// Wardrum's end-of-turn cast Trap; the opponent's view shows −1 (R177); radiant: (0); tuned number
+// read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,24 +1,17 @@
 //! Board snapshots (docs/classic-sets.md B5 E29; SPEC §2.2, §10.1, §8.7 C+ #35; R419, R562, R563, R566):
 //! the history C+ #35 Rollback returns the field to.
+//!   - `record_board_snapshot` starts every turn, before the mana refresh (R62): both sides' zones as
+//!     whole instances, their Locks and the homes held then (R383), the last BOARD_HISTORY_DEPTH kept
+//!     in `state.board_history`. Plain data (§9.3), never in `view_for` (§10.8), renamed in it when a
+//!     card takes a fresh id (`state::rename_in_board_history`, R227).
+//!   - `restore_board` is R419's three steps, each on every restored side before the next: 1. a card there the
+//!     restored part of the snapshot does not hold goes to its controller's hand (R78, §2.4, R11, R747); 2. each card it holds
+//!     goes back to its zone and place (a fresh id going face-down, R227); 3. the Locks become the snapshot's.
+//!     R562 picks the snapshot, R563 the held zones, R566 what a card keeps of the present.
 //!
-//!   - `record_board_snapshot` is the first step of every turn's start, before the mana refresh (R62): both
-//!     sides' zones as whole instances (dormant cards, backrow piles and carried Units included), their
-//!     Locks and the homes held then (R383), the last BOARD_HISTORY_DEPTH kept in `state.board_history`.
-//!     Plain data (§9.3); `view_for` never names it (§10.8). A card that takes a fresh id is renamed in it
-//!     (`state::rename_in_board_history`, R227), so it always names a card by the id it has now.
-//!   - `restore_board` is R419's three steps, each on every restored side before the next: 1. a card there
-//!     the restored part of the snapshot does not hold goes to its controller's hand (a Bounce: R78, §2.4, R11, R747);
-//!     2. each card it holds goes back to its zone and place, moved from wherever it is or recreated, with
-//!     a fresh id when it goes face-down from anywhere but a face-down zone (R227); 3. the Locks become
-//!     the snapshot's. R562 picks the snapshot, R563 the held zones, R566 what a card keeps of the present.
-//!
-//! Not plays, summons or deaths: `rolledBack`, then `bounced`/`burned` (step 1), `controlChanged` for a
-//! card that entered the side (step 2, as a board swap's do, R73) and `locked`/`unlocked` (step 3). A card
-//! that only moved along its own side entered nothing (R171): `rolledBack` covers it, as `rotated` does.
-//!
-//! Port of `packages/engine/src/subsystems/boardHistory.ts`. TS moved live card objects; here a card is
-//! a copy, and what TS wrote on the object after placing it is written on the card in the state, by id.
-//! TS's `copyOf` (a JSON round trip) is `clone()` (SURFACE §4.4.8).
+//! Not plays, summons or deaths: `rolledBack`, `bounced`/`burned` (step 1), `controlChanged` for a card
+//! that entered the side (step 2, as a board swap's do, R73) and `locked`/`unlocked` (step 3). A card
+//! that only moved along its own side entered nothing (R171): `rolledBack` covers it.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -121,7 +114,6 @@ fn same_slot(a: &ZoneSlot, b: &ZoneSlot) -> bool {
     a.player == b.player && a.row == b.row && a.lane == b.lane
 }
 
-/// `locks[row]`.
 fn row_flags(locks: &RowFlags, row: Row) -> &Vec<bool> {
     match row {
         Row::Units => &locks.units,
@@ -129,7 +121,6 @@ fn row_flags(locks: &RowFlags, row: Row) -> &Vec<bool> {
     }
 }
 
-/// `locks[row][lane − 1] === true`.
 fn locked_at(locks: &RowFlags, slot: &ZoneSlot) -> bool {
     usize::try_from(slot.lane - 1)
         .ok()
@@ -188,7 +179,7 @@ pub fn restore_board(
         .into_iter()
         .filter(|player| only.contains(player))
         .collect();
-    // A copy: the fresh ids handed out below rename the stored history's cards (R227), not these.
+    // A copy (SURFACE §4.4.8): the fresh ids handed out below rename the stored history's cards (R227), not these.
     let snapshot: BoardSnapshot = snapshot_for(sink.state, turns_ago)?.clone();
     if sides.is_empty() {
         return None;
@@ -409,7 +400,7 @@ pub enum RollBackSides {
     Both,
 }
 
-/// `roll_back`'s argument (TS `{ turnsAgo: number; sides: "self" | "enemy" | "both" }`).
+/// `roll_back`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct RollBackArgs {

@@ -65,17 +65,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #56 Spell Tyrant — SPEC §8.6 row 56, BUILD M9 Classic row C 56: "Cry: choose up to 3 Spells (the
-// Spell type) in your graveyard and cast each in turn (free, counted as played, your choices, R70),
-// each exiled after it resolves instead of returning to the graveyard; fewer than 3 → those there;
-// none → nothing; radiant 10/10: every Spell there as the Cry begins, oldest first, with no choice; a
-// Spell a cast puts in the graveyard is not cast; its tuned number (spells) reads through `param()`
-// (R386)".
-//
-// The Spells are Core cards with their own tests: Stockpile (draw 2, heal 2), Friend of Felinors
-// (fill your board with Felinor Tokens), 5pek Controller (switch every Unit's position), Lunar Eclipse
-// (3 damage to a target, chosen as the cast begins) and Zao Gao (discard 2 at random). Mana Well is a
-// Field Spell and Mr. Vanilla a Unit, neither of them a Spell.
+// C #56 Spell Tyrant, SPEC §8.6 row 56: the Cry casts up to 3 Spells (`spells`, R386) from your
+// graveyard, free, counted as played, your choices (R70), each exiled after it resolves. Radiant: every
+// Spell there as the Cry begins, oldest first, no choice; a Spell a cast puts in the graveyard is not cast.
+// Mana Well is a Field Spell and Mr. Vanilla a Unit, neither of them a Spell.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -99,7 +92,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    /// The state written out and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serialises");
         serde_json::from_str(&text).expect("the state parses back")

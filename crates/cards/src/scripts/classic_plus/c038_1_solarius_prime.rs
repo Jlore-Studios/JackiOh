@@ -5,16 +5,14 @@
 //!            harms and at your side when it helps."
 //! E12's random casts (R452, R656): non-token Spells of every set (R380), repeats allowed (R60), every
 //! choice random, each target pick aimed by its declaration — enemies when it harms, friends when it
-//! helps. Its own Spell Damage (the catalog keyword) raises their hits, since it is on the field
-//! during its Cry.
+//! helps; X is the current mana, at least 1 (R348). Its own Spell Damage (the catalog keyword) raises
+//! their hits, since it is on the field during its Cry.
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-038-1";
 
-/// `castRandom({ query, count, radiant, targetEnemies: true })` (part 6.2's `CastRandomArgs`: a fixed
-/// query and count, the `how` half from TS's literal).
 fn cast_random_spells(count: i32, radiant: bool) -> Effect {
     cast_random(CastRandomArgs {
         query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
@@ -39,19 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38.1 Solarius Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
-// casts 5 random non-token Spells of any set one after another (R380), every choice random with no
-// prompt, each target aimed by its declaration (R656: harm at enemies, help at friends), X the current
-// mana and at least 1 (R348), each
-// cast a play (R70) whose hits its own Spell Damage raises (it is on the field during its Cry); a cast
-// with no legal target fizzles and the next goes; a game that ends midway stops the rest; the casts are
-// public, what they add to your hand hidden (R97); Spell Damage and casts read through `param()`;
-// radiant Spell Damage +7 and the Spells are Radiant".
-//
-// The casts are random, so these tests read their shape off the event stream rather than naming the
-// Spells: a cast is a `cardAnnounced` by its caster at cost 0, and the Prime's own casts are the ones
-// announced while only the Prime itself is still resolving (a Spell that casts more, a Call to Chaos,
-// opens a deeper level until its own `cardResolved`).
+// C+ #38.1 Solarius Prime (SPEC §8.7): Cry casts 5 random non-token Spells of any set (R380),
+// aimed by declaration (R656), each a play (R70) raised by Spell Damage, additions hidden (R97).
+// Tests read casts off the event stream at depth 1 (until `cardResolved`), handling nested casts.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;

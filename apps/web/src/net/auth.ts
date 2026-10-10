@@ -10,6 +10,7 @@ import {
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
 } from "@jackioh/server-config";
 import { challengeForRequest, forgetVerifier, storedVerifiers, type PkceChallenge, type PkceFlow } from "../auth/pkce.ts";
+import { ApiRequestError, apiRequest } from "./api.ts";
 import { paths } from "./navigate.ts";
 import {
   forgetPendingAddresses,
@@ -43,6 +44,10 @@ export type AuthEndpoint =
 
 export type AuthFailure =
   | "credentials"
+  /** R1443: a sign-in by username, refused. */
+  | "usernameCredentials"
+  /** R1443, R192: a sign-in by username, refused for going too fast, by name or by address. */
+  | "usernameRateLimited"
   | "signUpRefused"
   | "rateLimited"
   | "emailRateLimited"
@@ -70,6 +75,8 @@ export type AuthFailure =
 
 /** R160: account-dependent sign-in and sign-up outcomes use one refusal per endpoint. */
 export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an account.";
+/** R1443: the one refusal of a sign-in by username, as the server words it. */
+export const USERNAME_SIGN_IN_FAILED_MESSAGE = "That username and password do not match an account.";
 export const SIGN_UP_FAILED_MESSAGE = "Could not create that account.";
 
 /** What a player reads when this build has no auth provider. The fix goes to the console instead. */
@@ -83,6 +90,9 @@ const AUTH_UNCONFIGURED_DETAIL =
 /** R192: account-dependent failures use neutral sentences. */
 export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   credentials: SIGN_IN_FAILED_MESSAGE,
+  usernameCredentials: USERNAME_SIGN_IN_FAILED_MESSAGE,
+  usernameRateLimited:
+    "Too many sign-in attempts with that username or from this network. Wait a few minutes, then try again.",
   signUpRefused: SIGN_UP_FAILED_MESSAGE,
   rateLimited: "Too many attempts from this network. Wait a few minutes, then try again.",
   emailRateLimited: "We couldn't send an email just now. Wait a few minutes, then try again.",
@@ -519,6 +529,59 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     emailVerified:
       typeof body.user?.email_confirmed_at === "string" && body.user.email_confirmed_at.length > 0,
     secondFactor: secondFactorIn(body, session.accessToken),
+  };
+}
+
+/** `POST /api/auth/username-signin`'s answer (`crates/server/src/api/auth.rs`, R1443). */
+type UsernameSignInResponse = {
+  session?: { accessToken?: unknown; refreshToken?: unknown; expiresIn?: unknown } | null;
+  emailVerified?: unknown;
+  secondFactor?: unknown;
+};
+
+/** The failure a refused username sign-in reads as: our own sentences, never the server's text. */
+function usernameRefusal(cause: unknown): AuthFailure {
+  if (!(cause instanceof ApiRequestError)) return "network";
+  if (cause.status === 401) return "usernameCredentials";
+  if (cause.status === 429) return "usernameRateLimited";
+  return "service";
+}
+
+/**
+ * R1443: a sign-in by username. The provider signs in by email alone and this client never learns
+ * another player's address, so our server makes the password grant for the account that holds the
+ * name and answers the session it got, never the address. What follows is a password sign-in's:
+ * the session is the provider's, renewed and ended against it.
+ */
+export async function signInWithUsername(username: string, password: string): Promise<SignInResult> {
+  requireConfig();
+  let body: UsernameSignInResponse | null;
+  try {
+    body = await apiRequest<UsernameSignInResponse | null>("/api/auth/username-signin", {
+      method: "POST",
+      body: { username, password },
+    });
+  } catch (cause) {
+    throw new AuthError(usernameRefusal(cause));
+  }
+  const answered = body?.session;
+  const accessToken = answered?.accessToken;
+  if (typeof accessToken !== "string" || accessToken.length === 0) throw new AuthError("service");
+  const session: Session = { accessToken };
+  session.refreshToken =
+    typeof answered?.refreshToken === "string" && answered.refreshToken.length > 0 ? answered.refreshToken : null;
+  const expiresIn = answered?.expiresIn;
+  session.expiresAt =
+    typeof expiresIn === "number" && Number.isFinite(expiresIn) && expiresIn > 0 ? Date.now() + expiresIn * 1000 : null;
+
+  forgetPendingAddresses();
+
+  const secondFactor = body?.secondFactor;
+  return {
+    session,
+    // §9.4: only the server trusts verification; this is screen wording.
+    emailVerified: body?.emailVerified === true,
+    secondFactor: typeof secondFactor === "string" && secondFactor.length > 0 ? secondFactor : null,
   };
 }
 

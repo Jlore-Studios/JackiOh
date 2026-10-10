@@ -44,17 +44,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #1 Big D-fender. BUILD M4-T4 row 1: "DEF ally takes 3 less (1 position + 2 aura), ATK
-// ally unaffected; it never attacks; radiant +4".
-//
-// The aura is only observable through the damage pipeline (§4.4 step 2 subtracts total Armor), so
-// every case here is one combat and one health assertion.
-//   attacker  #25 "4-mana 7/7" — 7 attack, 7 health, printed Armor 7, no hooks at all. Its own
-//             Armor keeps it alive through the retaliation, so nothing else moves.
-//   ally      #19 Midrange Menace — 9/9 with printed Taunt, so the attack MUST go to it (§4.2
-//             step 3) whatever position it is in, and 9 health is enough to survive every case.
-// 7 damage less (1 Defense Position + 2 aura) = 4, so a 9/9 ends at 5; without the aura, 2; with
-// the radiant aura's 4, 7.
+// BUILD M4-T4 row 1: "DEF ally takes 3 less (1 position + 2 aura), ATK ally unaffected; it never
+// attacks; radiant +4". The aura shows only in damage (§4.4 step 2 subtracts total Armor), so each
+// case is one combat and one health assertion: #25 (7/7, Armor 7) attacks #19 (9/9, Taunt, so the
+// attack must go to it, §4.2 step 3).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

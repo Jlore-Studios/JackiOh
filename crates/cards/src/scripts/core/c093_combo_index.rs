@@ -1,54 +1,22 @@
 //! #93 Combo-Index (SPEC §8.4, R27, R60, R62, R85, R86, BUILD M4-T4 row 93).
 //!
-//! Base: a Field Spell carrying a grade counter that starts at E and rises at the end of its
-//! controller's turn whenever they played at least `grade` cards that turn, running every step from
-//! E up to the new grade. Radiant: "Start of turn: add a Combo-Fodder to your hand; same" — one
-//! clause ADDED ("same" keeps the whole base text, §8 Conventions), so the radiant face is the base
-//! script plus a `startOfTurn`.
+//! Base: a Field Spell with a grade counter starting at E; at the end of its controller's turn it
+//! rises if they played at least `grade` cards, running every step from E to the new grade. Radiant:
+//! "Start of turn: add a Combo-Fodder to your hand; same" — one clause ADDED ("same" keeps the base
+//! text, §8 Conventions), so the radiant face is the base script plus a `startOfTurn`.
 //!
-//! Almost none of that is in this file, and deliberately: `engine/src/subsystems/comboIndex.ts` owns
-//! the grade counter and the cascade, and its header names this file's shape — "the card file (M4)
-//! stays a list of effects: `endOfTurn: (ctx) => comboIndexEndOfTurn(ctx, ctx.self)`". Calling the
-//! subsystem instead of re-deriving the cascade is what keeps the counter, `viewFor` and a replay
-//! reading the same number (§10.1), and it is the only place `counters.grade` is written.
-//!
-//! The two hooks:
-//!   `cry`        — "Grade counter, starts at E": `startGrade()` writes the counter as the card
-//!                  arrives so the client has a grade to show before the first end of turn. `cry` is
-//!                  a Field Spell's on-resolve hook as well as a unit's Cry (§10.5 step 5, and
-//!                  `runHook`'s doc in `engine/src/resolve.ts`); #73 Anti-oneshot Armor is the other
-//!                  Field Spell that uses it.
-//!   `endOfTurn`  — the whole threshold-and-cascade check, at its R62 point (end-of-turn triggers,
-//!                  before the trap window, while `turnLog.cardsPlayed` is still this turn's count:
-//!                  `turn.ts` runs the hooks before `cleanup`).
-//!
-//! The rulings the subsystem implements, named here so a change has a test with its name on it:
-//! R27 (E adds a fresh copy keeping the radiant flag, D picks 2 DIFFERENT hand cards, steps run
-//! E→new grade in order, S is terminal), R60 (a random "becomes Radiant" pick only considers
-//! non-Radiant cards), R85 (grade A's 8 damage has Lifesteal of its own without #93 gaining the
-//! keyword) and R86 (grade E's pool skips cards that have ceased to exist).
-//!
-//! R195, the yellow glow: on the field, during its controller's turn, the card glows exactly when
-//! the end of this turn would raise the grade — the cards played reach the grade and it is not at S.
-//! `conditionMet` reads the subsystem's own `gradeRises`, the predicate `comboIndexEndOfTurn` checks,
-//! so the glow and the rise cannot disagree; `yourTurn` stands for "the end of turn that fires
-//! `endOfTurn` is this one" without the card reading `state.active`. In hand it never glows: the
-//! grade is a counter on a card in play.
-//!
-//! R372, the grade in play: the printed text starts "Grade (starts at E)" and names the threshold as
-//! "N = the grades from E to the current one", so a player reading the card in play needs the letter
-//! it has reached and the N it asks for now. `preview` returns both, on the field only (in hand the
-//! card has no grade yet, and the text already says it starts at E): "Grade {C}", the letter carried
-//! as the value's `display` because the text names a grade by its letter, and "N … {3}", which is
-//! the same number `gradeRises` compares the plays with. At S nothing rises (R27), so there is no N to
-//! show. Both read the counter through the subsystem, so the view, the glow and the rise agree.
+//! The `combo_index` subsystem owns the counter and the cascade and is the only writer of
+//! `counters.grade`, so the counter, `view_for` and a replay read one number (§10.1); the hooks only
+//! call it. `cry` writes the counter on resolve (§10.5 step 5); `endOfTurn` runs at R62's point,
+//! before the trap window, while `turnLog.cardsPlayed` is still this turn's. Rulings, each with a
+//! test: R27 (S is terminal), R60, R85 (grade A's Lifesteal is the effect's own) and R86.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-093";
 
 /// §7, §8: the token the radiant face hands you each turn. `build.rs` proves the id is a catalog
-/// entry (SURFACE §7.4), as `cardDef` did.
+/// entry (SURFACE §7.4).
 const COMBO_FODDER: &str = "core-093-1";
 
 /// "Grade counter, starts at E" (§8, §10.1).
@@ -70,7 +38,8 @@ fn end_of_turn() -> Hook {
     })
 }
 
-/// R195: field only, on its controller's turn, when `endOfTurn` would raise the grade now.
+/// R195: field only, on its controller's turn, when `endOfTurn` would raise the grade now. It reads
+/// the subsystem's `grade_rises`, the predicate `endOfTurn` checks, so the glow and the rise agree.
 fn condition_met() -> ConditionHook {
     condition_hook(|ctx| {
         matches!(ctx.zone, ConditionZone::Field)
@@ -84,7 +53,7 @@ const GRADE_LABEL: &str = "Grade";
 const THRESHOLD_LABEL: &str = "N = the grades from E to the current one";
 
 /// R372: "Grade {C}" and "N = … {3}" on the field; nothing in hand, where the card has no grade yet.
-/// The counter is public on the Field Spell (§10.8), so the values say nothing the board does not.
+/// The counter is public on the Field Spell (§10.8). At S nothing rises (R27), so only the letter.
 fn preview() -> PreviewHook {
     condition_hook(|ctx| {
         if !matches!(ctx.zone, ConditionZone::Field) {
@@ -138,37 +107,11 @@ pub fn script() -> CardScripts {
 // BUILD M4-T4 row 93:   "Grade 1 needs 1 play, grade 2 needs 2; cascade E→new grade in order;
 //                        E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each
 //                        start of turn".
-// BUILD M4-T4 row 93.1: "2 damage with Lifesteal; no radiant change". R276 has since given it a
-//                        Radiant face, 4 damage (R275). Since v0.1.1 the faces print
-//                        "Lifesteal / Deal 2 damage." and "Lifesteal / Deal 4 damage." (R372).
+// BUILD M4-T4 row 93.1: "2 damage with Lifesteal; no radiant change" (R276 gave it a Radiant face,
+//                        4 damage, R275). One file: #93.1 only exists through radiant #93.
 //
-// The two are one file because #93.1 is the radiant text's companion: radiant #93 is "Start of
-// turn: add a Combo-Fodder to your hand; same", so the token only ever exists because of #93.
-//
-// THE MODEL (engine/src/subsystems/comboIndex.ts): the grade is STATE, in `instance.counters.grade`
-// as 1..6 for E..S (§10.1), so a replay and `viewFor` read the same number. At the end of its
-// controller's turn — an ordinary end-of-turn trigger at R62's point — the grade rises by one if
-// the cards that player played this turn is at or above the CURRENT grade, and then every step from
-// E up to the NEW grade runs, in order (R27). Grade S is terminal: at S nothing rises and no step
-// runs, and the S step is "run E–A again".
-//
-//   E  add a copy of a random card played this turn to your hand   → `addedToHand`
-//   D  2 different random hand cards cost 1 less                   → `costChanged` ×2
-//   C  the opponent exiles a random hand card                      → `exiled`
-//   B  a random hand card becomes Radiant                          → `radiantSet`
-//   A  8 damage to the enemy hero with Lifesteal                   → `damage` + `healed`
-//
-// That one-step-one-event-type mapping is what makes R27's "in order" testable: the cascade's
-// event log is the step list, and grade S shows it twice.
-//
-// HARNESS GAP (reported): `SideSetup` cannot seed `counters`, so `setGrade` below writes the
-// counter the way the engine would have. Reaching grade A by playing 1 + 2 + 3 + 4 cards over four
-// of the controller's own turns is the same arithmetic with four cascades of side effects in the
-// way, so the boundary tests drive the counter naturally (E→D, D→C) and the deep-cascade tests
-// seed it.
-//
-// R195's yellow glow (`conditionMet`): both answers of this card's hook, checked against the branch
-// its resolution then takes, are in condition-active.test.ts with the other hooked cards (README §5).
+// The grade is STATE, `counters.grade` as 1..6 for E..S (§10.1); the S step is "run E–A again".
+// R195's glow answers are checked in condition-active.test.ts with the other hooked cards (README §5).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,7 +123,7 @@ mod tests {
     const COMBO_INDEX: &str = "core-093";
     const COMBO_FODDER: &str = "core-093-1";
 
-    /// E..S as 1..6 (§8, `comboIndex.GRADES`).
+    /// E..S as 1..6 (§8).
     const E: i32 = 1;
     const D: i32 = 2;
     const C: i32 = 3;
@@ -213,7 +156,6 @@ mod tests {
         s.card(COMBO_INDEX).counters.grade
     }
 
-    /// `type` of an event, as TS names it.
     fn type_of(event: &GameEvent) -> String {
         event.event_type().to_string()
     }
@@ -272,19 +214,16 @@ mod tests {
 
     use crate::js;
 
-    /// An event's `instanceId`, read off its JSON (TS `event.instanceId`).
+    /// An event's `instanceId`, read off its JSON.
     fn instance_id_of(event: &GameEvent) -> Option<String> {
         js(event).get("instanceId").and_then(Value::as_str).map(str::to_string)
     }
 
-    /// `[...a, ...b]` over card id lists.
     fn cards(parts: &[&[&'static str]]) -> Vec<&'static str> {
         parts.concat()
     }
 
-    // =========================================================================================
     // #93 — the grade counter (§8, §10.1)
-    // =========================================================================================
 
     mod n93_combo_index_the_grade_counter {
         use super::*;
@@ -365,9 +304,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93 — R372 the grade in play: its letter, and the N it asks for now
-    // =========================================================================================
 
     mod n93_combo_index_r372_the_grade_in_play {
         use super::*;
@@ -389,7 +326,6 @@ mod tests {
             }
         }
 
-        /// TS `onField(seed, radiant = false)`.
         fn on_field(seed: &str, radiant: bool) -> Scenario {
             scenario(json!({
                 "seed": seed,
@@ -537,9 +473,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93 — R27's threshold
-    // =========================================================================================
 
     mod n93_combo_index_r27_the_threshold {
         use super::*;
@@ -633,9 +567,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93 — R27's cascade, in order, and grade S
-    // =========================================================================================
 
     /// A board that is one play short of rising from `grade`, with material for every step.
     fn cascade(seed: &str, grade: i32, plays: usize) -> Scenario {
@@ -769,9 +701,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93 — the individual steps
-    // =========================================================================================
 
     mod n93_combo_index_step_e_r27_r86 {
         use super::*;
@@ -1042,9 +972,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93 — radiant
-    // =========================================================================================
 
     mod n93_combo_index_radiant {
         use super::*;
@@ -1166,9 +1094,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #93.1 Combo-Fodder
-    // =========================================================================================
 
     mod n93_1_combo_fodder_base {
         use super::*;
@@ -1363,7 +1289,7 @@ mod tests {
         }
     }
 
-    /// TS `query(args).map((card) => card.id)`: the ids `catalog.query` answers (§5.1).
+    /// The ids `catalog.query` answers (§5.1).
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as::<CatalogQueryArgs>(args))
             .iter()

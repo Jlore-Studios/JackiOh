@@ -1,15 +1,11 @@
 //! The AI's shared types (docs/polish/3-ai.md §Surface, SPEC §9.9). Every name here is exact: the
 //! harness, the web worker and the tests write against these before the code behind them exists.
 //!
-//! Port of `packages/ai/src/types.ts` (SURFACE §9). Two Rust shapes TS had no need of:
-//!
-//! - `SearchStats["stoppedBy"]` is named `StoppedBy`.
-//! - `NodeCounter` is a trait whose methods take `&self`: a TS counter is one shared object that the
-//!   lethal solver, the beam, the replies and `decide` itself all draw from, a sub-counter holding its
-//!   parent the while, so the counters keep their tallies in `Cell`s (`simulate.rs`) and every
-//!   function that spends nodes takes `&dyn NodeCounter`. `sim_error_tally`/`set_sim_error_tally`
-//!   stand for TS's loose `(counter as { simErrors?: unknown }).simErrors` (`simulate.ts`): a counter
-//!   that tallies failed simulations answers `Some`, any other `None`.
+//! `NodeCounter` is a trait whose methods take `&self`: one counter is shared by the lethal solver,
+//! the beam, the replies and `decide` itself, a sub-counter holding its parent, so the counters keep
+//! their tallies in `Cell`s (`simulate.rs`) and every function that spends nodes takes
+//! `&dyn NodeCounter`. A counter that tallies failed simulations answers `Some` to
+//! `sim_error_tally`, any other `None`.
 
 use jackioh_engine::{ActionBody, Rng};
 use serde::{Deserialize, Serialize};
@@ -36,20 +32,19 @@ pub struct SearchBudget {
     pub finalists: usize,
 }
 
-/// SURFACE §9: `decide`'s options. TS's optional `budget` defaults to AI_BUDGET (`AiOptions::new`).
+/// SURFACE §9: `decide`'s options; `budget` defaults to AI_BUDGET (`AiOptions::new`).
 pub struct AiOptions<'a> {
     /// The AI's own stream; determinize is its only consumer. The caller reads `rng.cursor()` back
     /// afterwards.
     pub rng: Rng,
-    /// Default AI_BUDGET.
     pub budget: SearchBudget,
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.
-    /// The browser's clock (SURFACE §9, §10.1): this crate never reads one.
+    /// The browser's clock (SURFACE §10.1): this crate never reads one.
     pub should_stop: Option<&'a dyn Fn() -> bool>,
 }
 
 impl<'a> AiOptions<'a> {
-    /// TS `{ rng }`: the AI's stream at AI_BUDGET, with no clock.
+    /// The AI's stream at AI_BUDGET, with no clock.
     pub fn new(rng: Rng) -> AiOptions<'a> {
         AiOptions {
             rng,
@@ -58,7 +53,7 @@ impl<'a> AiOptions<'a> {
         }
     }
 
-    /// TS `{ rng, budget }`.
+    /// The AI's stream at `budget`, with no clock.
     pub fn with_budget(rng: Rng, budget: SearchBudget) -> AiOptions<'a> {
         AiOptions {
             rng,
@@ -88,7 +83,6 @@ pub enum DecisionReason {
 }
 
 impl DecisionReason {
-    /// The literal, as TS writes it (`${d.reason}`).
     pub fn as_str(self) -> &'static str {
         match self {
             DecisionReason::Forced => "forced",
@@ -118,7 +112,6 @@ pub enum StoppedBy {
 }
 
 impl StoppedBy {
-    /// The literal, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             StoppedBy::Exhausted => "exhausted",
@@ -165,12 +158,11 @@ pub trait NodeCounter {
     /// Polls shouldStop, then takes one node; false when the budget or the clock is spent.
     fn take(&self) -> bool;
     fn stopped_by(&self) -> StoppedBy;
-    /// TS `(counter as { simErrors?: unknown }).simErrors` when it is a number: the failed
-    /// simulations this counter tallies (`SearchStats.simErrors`), or `None` for a counter that
-    /// tallies none.
+    /// The failed simulations this counter tallies (`SearchStats.simErrors`), or `None` for a
+    /// counter that tallies none.
     fn sim_error_tally(&self) -> Option<usize> {
         None
     }
-    /// TS's assignment to that same property; a counter that tallies none ignores it.
+    /// Sets that tally; a counter that tallies none ignores it.
     fn set_sim_error_tally(&self, _value: usize) {}
 }
