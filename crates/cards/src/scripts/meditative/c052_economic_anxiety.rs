@@ -83,16 +83,32 @@ mod tests {
         s.stats(card).attack
     }
 
+    /// What the last step's hit from `source` on `target` dealt: its `damage` event's amount. A unit
+    /// the hit destroyed lies in the graveyard with its damage gone, so the event is the record.
+    fn dealt(s: &Scenario, source: &str, target: &str) -> Option<i32> {
+        s.last_events().iter().find_map(|event| match event {
+            GameEvent::Damage {
+                source_id,
+                target_id,
+                amount,
+                ..
+            } if source_id.as_deref() == Some(source) && target_id == target => Some(*amount),
+            _ => None,
+        })
+    }
+
     #[test]
     fn unshared_tags_bonus() {
         let mut s = anxiety_game();
         // Felinor into Vanilla (Felinor vs Human): 3 shown, 3 + 3 dealt.
         let attacker = s.unit(P1, 1).unwrap().id;
         let victim = s.unit(P2, 1).unwrap().id;
-        s.attack(&attacker, &victim);
         assert_eq!(shown(&s, &attacker), 3);
-        assert_eq!(s.card(&victim).damage, 6);
+        s.attack(&attacker, &victim);
+        assert_eq!(dealt(&s, &attacker, &victim), Some(6));
         s.expect_in_zone(&victim, "graveyard");
+        // The strike back is the Vanilla's own 4, never bonused.
+        assert_eq!(dealt(&s, &victim, &attacker), Some(4));
     }
 
     #[test]
@@ -109,9 +125,10 @@ mod tests {
     fn untagged_qualifies() {
         let mut s = anxiety_game();
         // The untagged Scarab shares nothing, so it qualifies even against a tagged foe: 1 + 3.
+        let scarab = s.unit(P1, 2).unwrap().id;
         let foe = s.unit(P2, 1).unwrap().id;
-        s.attack(&s.unit(P1, 2).unwrap().id, &foe);
-        assert_eq!(s.card(&foe).damage, 4);
+        s.attack(&scarab, &foe);
+        assert_eq!(dealt(&s, &scarab, &foe), Some(4));
         s.expect_in_zone(&foe, "graveyard");
     }
 
@@ -119,19 +136,19 @@ mod tests {
     fn radiant_yours_only_poisonous() {
         let mut s = anxiety_game();
         make_radiant(&mut s, ID);
-        // The opponent's own attacker gets nothing from the Radiant face: printed 3, and no
-        // Poisonous mark with it (the strike back is never bonused either way).
+        // The opponent's attacker gets nothing from the Radiant face: their Human into our Felinor
+        // shares no tag, which the base face would bonus, yet deals its printed 4.
         s.end_turn();
-        let big_foe = s.unit(P2, 2).unwrap().id;
+        let vanilla = s.unit(P2, 1).unwrap().id;
         let ours = s.unit(P1, 1).unwrap().id;
-        s.attack(&big_foe, &ours);
-        assert_eq!(s.card(&ours).damage, 3);
-        s.expect_in_zone(&ours, "field");
-        // Ours gets the bonus and the Poisonous mark with it: a 1-attack hit destroys a 3/10.
+        s.attack(&vanilla, &ours);
+        assert_eq!(dealt(&s, &vanilla, &ours), Some(4));
+        // Ours gets the bonus and the Poisonous mark with it: the Scarab's 1 + 3 destroys a 3/10.
         s.end_turn();
         let scarab = s.unit(P1, 2).unwrap().id;
+        let big_foe = s.unit(P2, 2).unwrap().id;
         s.attack(&scarab, &big_foe);
-        assert_eq!(s.card(&big_foe).damage, 3 + 4);
+        assert_eq!(dealt(&s, &scarab, &big_foe), Some(4));
         s.expect_in_zone(&big_foe, "graveyard");
     }
 
@@ -139,9 +156,11 @@ mod tests {
     fn bonus_tunes() {
         let mut s = anxiety_game();
         set_param(s.card_mut(ID), "bonus", 1);
-        // Felinor into big Felinor: 3 + 1 dealt.
+        // The untagged Scarab into big Felinor: 1 + 1 dealt, which the 3/10 survives.
+        let scarab = s.unit(P1, 2).unwrap().id;
         let foe = s.unit(P2, 2).unwrap().id;
-        s.attack(&s.unit(P1, 1).unwrap().id, &foe);
-        assert_eq!(s.card(&foe).damage, 4);
+        s.attack(&scarab, &foe);
+        assert_eq!(dealt(&s, &scarab, &foe), Some(2));
+        assert_eq!(s.card(&foe).damage, 2);
     }
 }

@@ -2122,18 +2122,21 @@ mod r1127_emotes_become_actions_while_heard {
         h.p1.clear();
         h.p2.clear();
 
-        // An emote rides its own message, never the action channel — even while heard.
+        // An emote rides its own message, never the action channel — even while heard. The answer is
+        // the actor's usual malformed one, code and reason back to the sender alone.
         h.p2.receive_json(json!({
             "type": "action",
             "action": { "type": "emote", "emote": "laugh", "nonce": "n9" },
         }));
         h.idle().await;
-        assert!(
-            errors(&h.p2)
-                .iter()
-                .any(|error| error["reason"]
-                    == json!("\"emote\" is an emote message, never an action (R1127)"))
+        let refused = errors(&h.p2);
+        assert_eq!(refused.len(), 1, "{refused:?}");
+        assert_eq!(refused[0]["code"], json!("malformed"));
+        assert_eq!(
+            refused[0]["message"],
+            json!("\"emote\" is an emote message, never an action (R1127)")
         );
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
         assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
     }

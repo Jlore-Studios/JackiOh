@@ -110,13 +110,33 @@ mod tests {
     #[test]
     fn r1126_pareto_attack_animates_and_returns() {
         let mut s = cane_game();
+        // Pareto's trigger answers the opponent's play, so the attack comes on p2's turn.
+        s.end_turn();
         let events = strike_and_return(&mut s);
         let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
         assert!(kinds.contains(&"animated"), "the Cane animated: {kinds:?}");
-        assert!(kinds.contains(&"attackDeclared"), "the Cane attacked: {kinds:?}");
-        // After that combat's state check it is home: no unit stands, the backrow holds it.
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
+            "the Cane made a forced attack: {kinds:?}"
+        );
+        // After that combat's state check it is home, it not being p1's turn: no unit stands, the
+        // backrow holds it.
+        assert!(kinds.contains(&"deanimated"), "the Cane went home: {kinds:?}");
         assert!(s.unit(P1, 1).is_none());
         assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(ID.to_string()));
+    }
+
+    #[test]
+    fn r1126_on_its_own_turn_it_stays_a_unit() {
+        // On its controller's turn the attack happens all the same, and the Cane stays a Unit.
+        let mut s = cane_game();
+        let events = strike_and_return(&mut s);
+        let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
+        assert!(kinds.contains(&"attackDeclared"), "the Cane attacked: {kinds:?}");
+        assert!(!kinds.contains(&"deanimated"), "the Cane stayed a Unit: {kinds:?}");
+        assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(ID.to_string()));
     }
 
     #[test]

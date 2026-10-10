@@ -126,7 +126,8 @@ fn r1124_shield_indestructible_zero_stop_it() {
     assert!(exiled_ids(&events).is_empty());
     assert_eq!(by_id(&state, &defender.id).divine_shield_spent, Some(true));
 
-    // Indestructible takes nothing: nothing marked, nothing exiled.
+    // Indestructible takes nothing: nothing marked, nothing exiled, the defender still on the field.
+    // Only the Banisher is destroyed, by the 4/4's strike back.
     let mut state = board("r1124-indestructible");
     let attacker = put(
         &mut state,
@@ -144,7 +145,9 @@ fn r1124_shield_indestructible_zero_stop_it() {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
     });
     assert!(exiled_ids(&events).is_empty());
-    assert!(destroyed_ids(&events).is_empty());
+    assert_eq!(destroyed_ids(&events), vec![attacker.id.clone()]);
+    assert_eq!(by_id(&state, &defender.id).zone.z(), ZoneName::Field);
+    assert_eq!(by_id(&state, &defender.id).marked_exiled, None);
 
     // The zero rule: a 0-damage hit from the Banisher marks nothing.
     let mut state = board("r1124-zero");

@@ -1,8 +1,10 @@
 //! ME-EMOTE (docs/meditative-set.md M5, MD-D29): emotes as engine actions (R1127).
 //!
-//! An emote becomes an `Emote` action with an `emoted` event, legal for either seat only while a
-//! card hears it — never with a prompt or a mulligan open, never unheard. The random policy never
-//! emotes, an auto-end due ignores the emote, and the view carries `emotesHeard` only as `true`.
+//! An emote becomes an `Emote` action with an `emoted` event, legal for either seat — on its own
+//! turn or the other's — only while the other seat controls an acting card that hears it ("whenever
+//! your opponent emotes"): never with a prompt or a mulligan open, never unheard, never to its own
+//! controller's judge. The random policy never emotes, an auto-end due ignores the emote, and the
+//! view carries `emotesHeard` only as `true`, on the seat that is heard.
 //!
 //! Port of `packages/engine/test/emotes.test.ts`.
 
@@ -23,59 +25,78 @@ fn emote_action(player: PlayerId, nonce: &str) -> Action {
     )
 }
 
-/// P1's main phase with the hearing judge on P1's backrow.
-fn heard(seed: &str) -> GameState {
+/// P1's main phase with no judge yet.
+fn main_phase(seed: &str) -> GameState {
     let mut state = combat_judge_game(seed, None);
     state.turn = 4;
     state.active = P1;
     state.phase = Phase::Main;
+    state
+}
+
+/// P1's main phase with the hearing judge on `judge_side`'s backrow, so the other seat is heard.
+fn heard_against(seed: &str, judge_side: PlayerId) -> GameState {
+    let mut state = main_phase(seed);
     put(
         &mut state,
         &judge_emote.id,
-        slot(P1, Row::Backrow, 1),
+        slot(judge_side, Row::Backrow, 1),
         Default::default(),
     );
     state
 }
 
+/// The emotes `player` is offered.
+fn listed(state: &GameState, player: PlayerId) -> Vec<EmoteId> {
+    jackioh_engine::reduce::legal_actions(state, player)
+        .into_iter()
+        .filter_map(|body| match body {
+            ActionBody::Emote { emote } => Some(emote),
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
 fn r1127_legal_either_seat_only_while_heard() {
-    let state = heard("r1127-heard");
-    // Either seat lists every emote while a card hears them.
-    for player in [P1, P2] {
-        let emotes: Vec<EmoteId> = jackioh_engine::reduce::legal_actions(&state, player)
-            .into_iter()
-            .filter_map(|body| match body {
-                ActionBody::Emote { emote } => Some(emote),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(emotes, EMOTE_IDS.to_vec(), "seat {player} lists every emote");
-        let out = jackioh_engine::reduce::reduce(&state, &emote_action(player, "n1"));
-        assert!(out.error.is_none());
-        assert_eq!(out.events.len(), 1);
+    // Each seat in turn is the judge's opponent: P2 off its turn, P1 on its own.
+    for (judge_side, emoter) in [(P1, P2), (P2, P1)] {
+        let mut state = heard_against("r1127-heard", judge_side);
+        // Nothing but the emote happens: no automatic turn end can follow it here.
+        state.players[P1].auto_end_turn = Some(false);
         assert_eq!(
-            out.events[0],
-            GameEvent::Emoted {
-                player,
-                emote: EmoteId::Greetings,
-            }
+            listed(&state, emoter),
+            EMOTE_IDS.to_vec(),
+            "seat {emoter} lists every emote while the judge across hears it"
         );
+        let out = jackioh_engine::reduce::reduce(&state, &emote_action(emoter, "n1"));
+        assert_eq!(out.error, None);
+        assert_eq!(
+            out.events,
+            vec![GameEvent::Emoted {
+                player: emoter,
+                emote: EmoteId::Greetings,
+            }]
+        );
+
+        // The judge's own controller is not its opponent: its emotes stay R643's relay.
+        assert!(
+            listed(&state, judge_side).is_empty(),
+            "seat {judge_side} lists no emote to its own judge"
+        );
+        let out = jackioh_engine::reduce::reduce(&state, &emote_action(judge_side, "n2"));
+        assert_eq!(out.error.as_deref(), Some("no card hears emotes"));
+        assert!(out.events.is_empty());
     }
 }
 
 #[test]
 fn r1127_refused_unheard_in_prompt_or_mulligan() {
     // No card hears them: the action is refused, and no seat lists one.
-    let mut state = combat_judge_game("r1127-unheard", None);
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
+    let state = main_phase("r1127-unheard");
     for player in [P1, P2] {
         assert!(
-            !jackioh_engine::reduce::legal_actions(&state, player)
-                .iter()
-                .any(|body| matches!(body, ActionBody::Emote { .. })),
+            listed(&state, player).is_empty(),
             "seat {player} lists no emote unheard"
         );
         let out = jackioh_engine::reduce::reduce(&state, &emote_action(player, "n1"));
@@ -83,40 +104,52 @@ fn r1127_refused_unheard_in_prompt_or_mulligan() {
         assert!(out.events.is_empty());
     }
 
-    // Heard, but a prompt is open: refused, unlisted.
-    let mut state = heard("r1127-prompt");
+    // Heard, but a prompt is open: refused, unlisted, as every action but the prompt's own answer
+    // and the game's ending ones is (BUILD M1-T3).
+    let mut state = heard_against("r1127-prompt", P1);
     state.pending = Some(json_as(json!({
         "id": "q1",
         "playerId": "p1",
         "kind": "answer",
         "prompt": "test prompt",
-        "options": [{ "key": "a", "label": "A", "selection": "None" }],
+        "options": [{ "key": "a", "label": "A", "selection": { "pick": "none" } }],
         "min": 1,
         "max": 1,
-        "resume": { "defId": "cj-judge-emote", "hook": "q", "step": "q", "radiant": false },
+        "resume": { "defId": "cj-judge-emote", "hook": "q", "step": "q", "radiant": false, "data": {} },
     })));
-    let out = jackioh_engine::reduce::reduce(&state, &emote_action(P1, "n1"));
-    assert_eq!(out.error.as_deref(), Some("no card hears emotes"));
+    assert!(
+        listed(&state, P2).is_empty(),
+        "no emote is listed with a prompt open"
+    );
+    let out = jackioh_engine::reduce::reduce(&state, &emote_action(P2, "n1"));
+    assert_eq!(out.error.as_deref(), Some("a prompt is open: answer it first"));
 
-    // Heard, but the mulligans are open: the same refusal.
-    let mut state = heard("r1127-mulligan");
+    // Heard, but the mulligans are open: refused, unlisted, the same way.
+    let mut state = heard_against("r1127-mulligan", P1);
     state.phase = Phase::Mulligan;
     let seat = json!({
         "prompt": {
             "id": "m1",
-            "playerId": "p1",
+            "playerId": "p2",
             "kind": "mulligan",
             "prompt": "mulligan",
             "options": [],
             "min": 0,
             "max": 10,
-            "resume": { "defId": "cj-judge-emote", "hook": "q", "step": "q", "radiant": false },
+            "resume": { "defId": "cj-judge-emote", "hook": "q", "step": "q", "radiant": false, "data": {} },
         },
         "keep": null,
     });
     state.mulligan = Some(json_as(json!({ "p1": seat, "p2": seat })));
-    let out = jackioh_engine::reduce::reduce(&state, &emote_action(P1, "n1"));
-    assert!(out.error.is_some());
+    assert!(
+        listed(&state, P2).is_empty(),
+        "no emote is listed with the mulligans open"
+    );
+    let out = jackioh_engine::reduce::reduce(&state, &emote_action(P2, "n1"));
+    assert_eq!(
+        out.error.as_deref(),
+        Some("the mulligan is open: answer it first")
+    );
 }
 
 #[test]
@@ -127,12 +160,12 @@ fn r1127_policy_never_emotes_auto_end_ignores() {
         "the random policy skips emotes"
     );
     // An auto-end due is not held up by the emote: with nothing else to do, the emote resolves and
-    // the turn still ends by itself.
-    let mut state = heard("r1127-policy");
+    // the turn still ends by itself. P1 is heard, by P2's judge.
+    let mut state = heard_against("r1127-policy", P2);
     state.players[P1].hand.clear();
     state.players[P1].mana.current = 0;
     let out = jackioh_engine::reduce::reduce(&state, &emote_action(P1, "n1"));
-    assert!(out.error.is_none());
+    assert_eq!(out.error, None);
     let kinds: Vec<&str> = out
         .events
         .iter()
@@ -147,14 +180,16 @@ fn r1127_policy_never_emotes_auto_end_ignores() {
 
 #[test]
 fn r1127_view_emotes_heard_only_true() {
-    let state = heard("r1127-view");
+    // P1's judge hears P2: P2's view says so, P1's says nothing.
+    let state = heard_against("r1127-view", P1);
+    let view = serde_json::to_value(view_for(&state, P2)).expect("serialises");
+    assert_eq!(view["emotesHeard"], serde_json::json!(true));
     let view = serde_json::to_value(view_for(&state, P1)).expect("serialises");
-    assert_eq!(view["you"]["emotesHeard"], serde_json::json!(true));
-    // The opponent hears nothing: their judge is nobody's.
-    let mut state = combat_judge_game("r1127-view-off", None);
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
-    let view = serde_json::to_value(view_for(&state, P1)).expect("serialises");
-    assert!(view["you"].get("emotesHeard").is_none());
+    assert!(view.get("emotesHeard").is_none());
+    // No judge: neither view carries the field.
+    let state = main_phase("r1127-view-off");
+    for player in [P1, P2] {
+        let view = serde_json::to_value(view_for(&state, player)).expect("serialises");
+        assert!(view.get("emotesHeard").is_none());
+    }
 }

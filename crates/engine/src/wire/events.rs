@@ -1211,6 +1211,9 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
+        // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
+        // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
+        // `deradianted` (R1102) and `manaSpent` (R1109).
         assert_eq!(GAME_EVENT_TYPES.len(), 76);
     }
 

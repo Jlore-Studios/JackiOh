@@ -142,7 +142,8 @@ mod attack_mods_r1120 {
             (Some(attacker.id.clone()), neighbour.id.clone(), 5)
         );
 
-        // The Trample excess: 6 + 2 over a 3-health body sends 5 on.
+        // The Trample excess: 6 + 2 over a 3-health body sends 5 on. The body's own `damage` event
+        // reads what it took, its 3 health (§4.4 step 5, R63); the bonus shows in the 5 carried on.
         let mut state = board("r1120-trample");
         put(
             &mut state,
@@ -162,7 +163,7 @@ mod attack_mods_r1120 {
         });
         assert_eq!(
             hits(&events)[0],
-            (Some(attacker.id.clone()), defender.id.clone(), 8)
+            (Some(attacker.id.clone()), defender.id.clone(), 3)
         );
         assert_eq!(
             hits(&events)[1],
@@ -251,6 +252,9 @@ mod attack_mods_r1120 {
 
     #[test]
     fn r1120_lethal_reads_bonus() {
+        // My Pawn projects what an attack would deal the defending hero (R44): a 6/4 Trample with the
+        // +2 on a 3/3 carries 8 - 3 = 5 on, where its listed 6 alone would carry 3; on the hero
+        // itself it deals the listed 6.
         let mut state = board("r1120-lethal");
         put(
             &mut state,
@@ -258,7 +262,12 @@ mod attack_mods_r1120 {
             slot(P1, Row::Backrow, 1),
             Default::default(),
         );
-        let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        let attacker = put(
+            &mut state,
+            &trampler.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let attacker = live(&state, &attacker.id);
         let defender = live(&state, &defender.id);
@@ -276,7 +285,7 @@ mod attack_mods_r1120 {
                 &attacker,
                 &AttackTarget::Hero { player: P2 }
             ),
-            3
+            6
         );
     }
 }
@@ -326,10 +335,10 @@ mod attack_mods_r1121 {
             "playerId": "p1",
             "kind": "answer",
             "prompt": "test prompt",
-            "options": [{ "key": "a", "label": "A", "selection": "None" }],
+            "options": [{ "key": "a", "label": "A", "selection": { "pick": "none" } }],
             "min": 1,
             "max": 1,
-            "resume": { "defId": "cj-herald", "hook": "q", "step": "q", "radiant": false },
+            "resume": { "defId": "cj-herald", "hook": "q", "step": "q", "radiant": false, "data": {} },
         })));
         assert_eq!(condition_targets(&state, P1, &attacker.id), None);
         // Nor once the attacker has acted.
