@@ -4491,6 +4491,13 @@
     "645": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-10T17:02:03Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Design across crates: the server must start brokering a password grant, which SPEC \u00a79.4 and crates/server/src/auth.rs rule out today, plus the web form and a new ruling. 'Several crates' alone would be medium, but this security design is what makes it hard."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
