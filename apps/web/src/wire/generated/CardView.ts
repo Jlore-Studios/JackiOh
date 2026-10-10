@@ -19,6 +19,11 @@ export type CardView = { instanceId: string, defId: string, radiant: boolean,
  */
 chinese?: true, 
 /**
+ * MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+ * a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+ */
+created?: true, 
+/**
  * Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
  */
 cost: number, 

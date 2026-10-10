@@ -113,6 +113,13 @@ timesPlayed?: number,
  */
 chinese?: true, 
 /**
+ * MD-B6, R943 (ME-CREATED): the instance was minted after the decks were built — by an
+ * effect or a rule during the game, never a dealt deck card. Public wherever the viewer may
+ * read the card. Kept in every zone and through R78's and R766's resets; a card that keeps
+ * its instance keeps it. Only ever `Some(true)`.
+ */
+created?: true, 
+/**
  * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
  * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
  * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off

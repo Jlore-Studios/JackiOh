@@ -25,6 +25,7 @@ import type { PlayRecord } from "./PlayRecord";
 import type { PlayerId } from "./PlayerId";
 import type { PlayerState } from "./PlayerState";
 import type { QueuedTrigger } from "./QueuedTrigger";
+import type { SecretRecord } from "./SecretRecord";
 import type { WorkItem } from "./WorkItem";
 import type { ZoneRef } from "./ZoneRef";
 
@@ -181,4 +182,9 @@ seatSwaps?: number,
  * R678: the two boards of other players' games a Glitch may put on the field, a `create_game` input
  * frozen like `lastBoards` (R417, R564). Never in a view.
  */
-glitchBoards?: PerPlayerOpt<Array<LastBoardEntry>>, };
+glitchBoards?: PerPlayerOpt<Array<LastBoardEntry>>, 
+/**
+ * R860: the hidden choices Mind Games kept. D14: absent until the first secret is kept, so a game
+ * that never uses one hashes exactly as before this field existed.
+ */
+secrets?: Array<SecretRecord>, };

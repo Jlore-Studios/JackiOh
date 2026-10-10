@@ -5,4 +5,9 @@
  * (R311) and how many such cards are there. No instance id and no position, so nothing in it can
  * say where a card lies.
  */
-export type LibraryEntryView = { defId: string, radiant: boolean, count: number, };
+export type LibraryEntryView = { defId: string, radiant: boolean, count: number, 
+/**
+ * MD-B6, R943: the entry's cards are Created (`CardInstance.created`, read off the live card
+ * the owner's `known_as` record names). Only ever `Some(true)`.
+ */
+created?: true, };
