@@ -3051,14 +3051,12 @@
     },
     "517": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "b08821179ca42d5fddf17d536b3605d61a41b149",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3067,13 +3065,11 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-08T09:25:32Z",
       "requested_by": "squishy-squooby",
       "run_id": "37941838190",
       "started_at": "2026-10-09T14:08:15Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "518": {
       "action": "build",
@@ -3180,22 +3176,11 @@
     },
     "522": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-09T01:26:16Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nBuild #522 implemented; verification INCOMPLETE (step budget + slow shared machine with corrupt\nincremental link \u2014 `cargo clean -p jackioh-cards` done, rebuild pending).\n\nDone: engine ME-CRAFT, card + catalog (loc 38)/flavour/audio, server parse+test, WASM preview,\nexport_config (22), web wiring + CraftEditor/tests, rulings R0880\u2013R883 + spec rows + INDEX\n(596 rows), engine fixture + 14 rules tests + AI test. fmt clean. DEBUG lines removed.\n\nKnown red (from the one full card run, pre-fix code): r882 spell test got p2 at 24, want 25\n(N=5 dealt 6 \u2014 unexplained); burn test (setup trims hands \u2014 fixed via state_mut fill, unrun).\nEngine craft tests had 5 compile errors (action/with_sink/by/degrade scope, fixture catalog\ntype) \u2014 fixed, unrun. Wire regen + spec index rerun needed after grantKeyword/keyword-table\nfixes. Web tests + typecheck unrun.\n\nNext: rebuild cards tests, run engine craft tests, rerun regen + spec index, web tests,\nclippy, spec/catalog checks. Do NOT stack cargo jobs (target-lock contention); one at a time.\n\n## Log\n\n- See journal. Last: removed DEBUG eprintlns; engine test compile fixes applied.\n",
-        "provider": "muse",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- <!-- bot: {\"status\": \"blocked\", \"question\": \"Build #522 is implemented but NOT green: the card test r882_a_crafted_spell_deals_its_damage fails (p2 at 24, want 25 \u2014 an N=5 recipe dealt 6, cause unknown) and the full verification (cards rebuild after cargo clean, engine craft tests, wire regen, web \u2026\n- **What changed.** Meditative #17 True Craft a Card plus the ME-CRAFT system: engine wire types (`wire/craft.rs`), `CRAFT_*` config tables, `subsystems/craft.rs` (validator, recipe\u2192transient-def compiler with digest ids, seeded presets, preview), `craft_card`/`choose_craft` effects, `PromptKind::Cra\u2026\n- **How tested.** `cargo fmt --check` clean; engine lib + testkit check clean; `cargo jackioh catalog check` passes (entry counted outside shipped totals per R1420); one full card-test run showed 5/7 passing with 2 failures (above). Engine craft-test compile errors found and fixed in-tree but never r\u2026\n- **Decisions made.** Self-contained pointer drag in the editor (board drag layer is board-target-specific); targeted blocks read play-time targets instead of prompt chaining; `damageEachEnemy` hits heroes; no `chinese.json` entry (not on `main`); spell plural text uses `{bK|one|many}`.\n- **Reviewer attention.** The 6-for-5 damage is the load-bearing mystery: recipe N=5, single `damageEnemyHero` effect, yet p2 went 30\u219224. Suspects not yet ruled out: double hook execution for crafted spells, or a second damage source in the scenario. The burn test was rewritten (state_mut fill) but n\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-522 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-522/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- muse: runtime host shutdown timed out after 2s"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
@@ -3203,13 +3188,11 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "Build #522 is implemented but NOT green: the card test r882_a_crafted_spell_deals_its_damage fails (p2 at 24, want 25 \u2014 an N=5 recipe dealt 6, cause unknown) and the full verification (cards rebuild after cargo clean, engine craft tests, wire regen, web tests, clippy, spec/catalog checks) never completed on the loaded shared machine. Continue verification from .bot-notes.md, or rule on whether the 6-damage observation changes the R882 compiler design?",
       "queued_at": "2026-10-08T09:26:59Z",
       "requested_by": "squishy-squooby",
       "run_id": "37856779013",
       "started_at": "2026-10-08T22:59:40Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "523": {
       "action": "build",
@@ -3235,14 +3218,12 @@
     },
     "524": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "7e9e51df412ee32cdc28b03f0d254a20c950603a",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3251,17 +3232,12 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:27:34Z",
       "requested_by": "squishy-squooby",
       "run_id": "37879931639",
       "started_at": "2026-10-09T03:36:11Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
-      ],
-      "strikes": 1,
-      "taken_asks": []
+      "strikes": 1
     },
     "525": {
       "action": "build",
@@ -3287,14 +3263,12 @@
     },
     "526": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-526",
       "part_of": 575,
@@ -3303,24 +3277,20 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:28:30Z",
       "requested_by": "squishy-squooby",
       "run_id": "37912443310",
       "started_at": "2026-10-09T09:38:00Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "527": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-527",
       "part_of": 575,
@@ -3329,32 +3299,19 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:28:38Z",
       "requested_by": "squishy-squooby",
       "run_id": "37869833835",
       "started_at": "2026-10-09T01:27:44Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "528": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-09T03:41:42Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\nBlocked at Step 0 (2026-10-09): `meditative-039-1` (Auspicious Rock, #525) is absent from `crates/cards/catalog.json` on this base, so per the hard gate no build was started and no deliverable files were changed. Next: rebuild after #525 lands, then follow the plan from Step 1.\n\n## Log\n(earlier lines of the log were cut here)\ns `market`: a night market's deals, one per answer, its `budget` the yuan left and a barter's `cost` negative ([[R1000]], [[R1001]]).\"\n    - **\u00a78.8 row 42:**\n      - `(MD-C13)` becomes `([[R1000]])`;\n      - `(MD-C14)` becomes `([[R1001]])`;\n      - the timeout clause becomes \"the random policy answers uniformly ([[\u00a710.7]]) and a timeout leaves ([[R79]], [[R1002]])\".\n    - **BUILD.md `M 42`:** replace `MD-C13` and `MD-C14` with `R1000` and `R1001`, and the timeout clause with \"a timeout leaves (R1002)\".\n    - Run `cargo jackioh spec index`.\n\n16. **Regenerate the wire types.** Run `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` and keep the rewritten files in `apps/web/src/wire/generated/`.\n\n## Tests\n\n**Engine: `crates/engine/tests/rules/night_market.rs`.**\n\nUse `prompt_harness`'s `board`, `cast_now`, `answer_keys`, `open_as`, `round_trip` and `act`, and `harness`'s `in_hand`. A refusal is `reduce(&s, &json_as::<Action>(\u2026)).error.is_some()`. The stall is `pending.resume.data[MARKET_STALL_KEY]`.\n\n- **`r1000_the_stall_is_three_different_cn_cards_two_rocks_and_one_ai_card`:** the stall holds 6 ids:\n  - 2 Rocks;\n  - 3 distinct ids from `query({\"tags\":[\"CN\"]})`, never `nm-market` over 20 seeds;\n  - 1 id from `query({\"tags\":[\"AI\"],\"token\":true})`.\n- **`r1000_prices_are_ten_yuan_a_mana_plus_five_a_rarity_rank_doubled_when_radiant`:** `yuan_price` on inline defs:\n\n  | Def | Price |\n  |---|---|\n  | Common, cost 1 | 15 |\n  | Rare, cost 2 | 30 |\n  | Legendary, cost 4 | 60 |\n  | Mythic, cost 0 | 25 |\n  | Epic, cost X | 15 |\n  | Common, embiggen `{base:2,embiggen:5}` | 25 |\n  | Token printed Rare, cost 0 | 10 |\n  | Token with no printed rarity, cost 1 | 15 |\n  | Radiant Rare, cost 2 | 60 |\n\n- **`r1000_only_affordable_lots_are_offered_and_an_unoffered_lot_is_refused`:** with a seed whose stall holds `nm-cn-4`, the base face offers no `mode:nm-cn-4` and answering it is refused. The Radiant face offers it.\n- **`r1000_a_buy_adds_the_base_face_card_and_reopens_with_the_yuan_left`:** buying the Rock adds a non-Radiant Rock to the hand and reopens the market with budget 40.\n- **`r1000_leave_closes_the_market_and_unspent_yuan_is_lost`:** after `none`, no prompt is open and the hand is unchanged.\n- **`r1000_a_full_hand_offers_no_lot_and_with_nothing_to_do_no_market_opens`:** at `HAND_CAP`, the base face opens nothing and the Radiant face offers only barters and Leave.\n- **`r1001_barter_is_offered_on_the_radiant_face_only`.**\n- **`r1001_a_barter_exiles_the_card_and_adds_its_price_doubled_if_radiant`:** the card is in exile, an `exiled` event is emitted, and the budget is 80 + price.\n- **`r1000_paused_at_the_market_the_state_survives_json_and_answers_to_the_same_game`:** a copy of KY's `r420_9_3_\u2026`.\n- **`r1000_a_game_with_a_night_market_replays_from_its_log_to_the_same_hash`:** KY's replay test with `nm-market-qd`: buy the first lot, Leave, then `fold`.\n- **`r97_r1000_the_opponent_sees_only_an_open_prompt_and_a_hidden_card_arriving`:**\n  - p2's pending is `{\"forYou\":false,\"pendingFor\":\"p1\"}`;\n  - p2's view JSON names no stall id, before or after a buy;\n  - p1's options carry `defId`s and budget 50.\n- **`r1002_a_timeout_leaves_the_market`:** `act` a `timeout` for p1. No prompt is open, no lot is in the hand, and the turn has passed.\n- **`r1000_the_random_policy_answers_a_market_until_it_closes`:** on the Radiant face, alternate `choose_action` and `reduce` until the market closes. Every answer is accepted, and it closes within 40 answers.\n\n**Card tests** (through `scenario`, after `crate::register_all()`):\n- `r1000_it_opens_a_market_of_50_yuan_or_80_on_the_radiant_face`\n- `r1000_the_stall_holds_three_cn_cards_two_auspicious_rocks_and_one_ai_generated_card`: the CN cards are non-token and never `meditative-042`; the AI card is one of `classicplus-t-ai-*`.\n- `r1000_a_rock_costs_10_yuan_and_an_ai_card_prices_as_a_common`\n- `r1000_a_bought_rock_arrives_on_its_base_face_and_the_market_reopens`\n- `r1000_leave_loses_the_yuan_and_the_spell_is_played`: the card ends in the graveyard.\n- `r1001_the_base_face_never_barters`\n- `r1001_the_radiant_face_barters_a_hand_card_for_its_price_doubled_if_radiant`\n- `r97_the_opponent_sees_only_that_a_prompt_is_open`\n\n**AI test,** in a new `mod` in `prompts_v020.rs`: `r1000_the_ai_answers_a_night_market_with_a_legal_deal`.\n1. Call `jackioh_cards::register_all()`.\n2. Build a scenario where p1 holds `[\"meditative-042\",\"core-005\"]` and both players have libraries.\n3. Call `s.play(\"meditative-042\", json!({}))`.\n4. Assert that the open prompt's kind is `Market`, then call `answered(&state, \"ai-market\")`.\n\n**Web tests:**\n- **`MarketPrompt.test.tsx`.** Copy `PromptE18.test.tsx`'s pattern. Build the prompt with `pendingFor(\"market\", \u2026, { budget: 50 })`, offering `core-080` at 30, `classicplus-t-ai-01` at 15 and the barter `instance:h1` at \u221230. Check that:\n  - the lots, the prices and `\u00a550` render;\n  - a lot answers `[{ pick: \"mode\", option: \"core-080\" }]`;\n  - Leave answers `[{ pick: \"none\" }]`;\n  - a barter shows `+\u00a530` and answers its instance, and the barter section is absent when none is offered;\n  - the first option has focus on open, and ArrowRight moves it;\n  - a waiting seat gets no `data-prompt-kind=\"market\"`.\n- **`actions.test.ts`:** \"market \u2192 a lot's mode, a barter's instance, Leave's none\".\n- **`Log.test.tsx`:** \"R1000 a night market reads as a deal at the night market\".\n\n**Commands:**\n- `cargo test -p jackioh-engine --features testkit --test rules night_market` (and the same with `prompts`)\n- `cargo test -p jackioh-cards c042`\n- `cargo test -p jackioh-cards --test cross`\n- `cargo test -p jackioh-ai --test ai r1000`\n- `pnpm --dir apps/web exec vitest run src/game/MarketPrompt.test.tsx src/game/actions.test.ts src/game/Log.test.tsx`\n- `pnpm --dir apps/web typecheck`\n- `pnpm exec eslint apps/web e2e`\n\n## Done when\n\n- [ ] Step 0 passed, and the four card entries are in catalog order.\n- [ ] Every test above passes.\n- [ ] R1000\u2013R1002 are written, and `spec/INDEX.md` is regenerated.\n- [ ] \u00a78.8, \u00a710.6, BUILD and R79 are edited.\n- [ ] No fragment was added, and `cargo jackioh golden check` is clean.\n- [ ] The harness checks, `cargo jackioh fuzz --seeds 200`, `pnpm --dir apps/web test`, typecheck and eslint are all green.\n- [ ] The notes say the voice-line audio is owed by the set's release (`docs/ADDING_CARDS.md` \u00a77).\n\n## Risks\n\n- **Determinism:** only `nightMarketRoll` draws from the rng, and deals draw nothing. Use `IndexMap`, never `HashMap`.\n- **`legal_actions` and `reduce` must agree:** only affordable lots are options. That way neither the plain answer walk nor R452's `answer_at_random` (whose budget is `None`) ever lists an answer `reduce` refuses. Never offer an unaffordable lot.\n- **Hidden information:** the options reach only the chooser, and `PromptOpened` names only the kind. The AI's `redact` keeps its own prompt's resume data, as it does for KY's rolls, so the AI also knows the lots it can't afford. That is accepted.\n- **Termination:** each lot sells once, and each barter spends a hand card, so the market always closes.\n- **Golden traces:** no state field is added (D14).\n- **If #525 is already on the base:** put #42 between 041 and 043 in every ordered file.\n\n## Open questions\n\n- **Timeout:**\n  - The issue says a timeout leaves the market.\n  - \u00a78.8 says it answers uniformly at random.\n  - BUILD allows either.\n\n  This plan follows the issue (R1002) and corrects \u00a78.8 and BUILD. To keep R79's random answer instead, drop step 6 and R1002.\n- **Unaffordable lots aren't shown to the player.** I rejected showing them greyed out because the plain answer walk and R452 don't read a budget.\n",
-        "provider": "muse",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- <!-- bot: {\"status\": \"blocked\", \"question\": \"Issue #528 is blocked by #525: meditative-039-1 (Auspicious Rock) is absent from crates/cards/catalog.json on this base, and the plan's Step 0 hard gate forbids building #42 without it. Should this item wait until #525 lands, or should the gate be waived\u2026\n- Blocked at Step 0, no code changed.\n- What I checked and why:\n- - Ran the plan's Step 0 gate: `python3 -I -c \"import json;print('meditative-039-1' in json.load(open('crates/cards/catalog.json')))\"` \u2192 printed `False`.\n- - Confirmed with a second probe that no `meditative-039*` or `meditative-04*` ids exist in `catalog.json`, so neither the Rock nor #42 is on this base (`7c93be3e`).\n- - Per the plan (\"If it prints `False`... stop and report the item blocked. Do not add the Rock\"), I started nothing: no catalog entry, script, subsystem, tests, web UI, or spec notes were touched. Working tree otherwise unchanged.\n- Decision made: obeyed the hard gate rather than standing in a Rock fixture under the real id, since the plan explicitly forbids adding the Rock and a stand-in would conflict with #525's landing.\n- To unblock: land #525 (Auspicious Rock `meditative-039-1`) on the base, then rebuild this item from Step 1 of the plan.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-4/_work/_temp/work/item-528 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-4/_work/_temp/work/item-528/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
@@ -3362,24 +3319,20 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "Issue #528 is blocked by #525: meditative-039-1 (Auspicious Rock) is absent from crates/cards/catalog.json on this base, and the plan's Step 0 hard gate forbids building #42 without it. Should this item wait until #525 lands, or should the gate be waived?",
       "queued_at": "2026-10-08T09:28:50Z",
       "requested_by": "squishy-squooby",
       "run_id": "37880280564",
       "started_at": "2026-10-09T03:40:17Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "529": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-529",
       "part_of": 575,
@@ -3388,13 +3341,11 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:29:05Z",
       "requested_by": "squishy-squooby",
       "run_id": "37875370274",
       "started_at": "2026-10-09T02:37:15Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "53": {
       "failures": 0,
@@ -3414,14 +3365,12 @@
     },
     "530": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "078a44d6e7f374ed83d8162b471631392f691432",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3430,28 +3379,21 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-09T04:07:44Z",
       "requested_by": "squishy-squooby",
       "run_id": "37896993480",
       "started_at": "2026-10-09T07:05:30Z",
       "stop_requested": false,
-      "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
-      ],
-      "strikes": 1,
-      "taken_asks": []
+      "strikes": 1
     },
     "531": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-531",
       "part_of": 575,
@@ -3460,24 +3402,20 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:29:39Z",
       "requested_by": "squishy-squooby",
       "run_id": "37881775283",
       "started_at": "2026-10-09T03:59:57Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "532": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-532",
       "part_of": 575,
@@ -3486,24 +3424,20 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:29:53Z",
       "requested_by": "squishy-squooby",
       "run_id": "37887213691",
       "started_at": "2026-10-09T05:10:13Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "533": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-533",
       "part_of": 575,
@@ -3512,28 +3446,21 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-09T06:16:03Z",
       "requested_by": "squishy-squooby",
       "run_id": "37900549363",
       "started_at": "2026-10-09T07:43:07Z",
       "stop_requested": false,
-      "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
-      ],
-      "strikes": 1,
-      "taken_asks": []
+      "strikes": 1
     },
     "534": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "8220706f51d55c76cabfb36ebbc6b77b5dbabc7c",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3542,24 +3469,20 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:30:22Z",
       "requested_by": "squishy-squooby",
       "run_id": "37884322214",
       "started_at": "2026-10-09T04:32:49Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "535": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "941914724d01e4e989b930de770f24d096c8e0aa",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3568,24 +3491,20 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:30:49Z",
       "requested_by": "squishy-squooby",
       "run_id": "37908057383",
       "started_at": "2026-10-09T08:57:06Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "536": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-536",
       "part_of": 575,
@@ -3594,24 +3513,20 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:30:58Z",
       "requested_by": "squishy-squooby",
       "run_id": "37893985337",
       "started_at": "2026-10-09T06:32:40Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "537": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "8a4e3dd0948d5e708239c7145af24b04d9ea36b9",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3620,32 +3535,19 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-08T09:31:12Z",
       "requested_by": "squishy-squooby",
       "run_id": "37942173875",
       "started_at": "2026-10-09T14:11:12Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "538": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-09T08:55:16Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nBuilder run starting from the approved plan (no prior build work; 3 earlier runs only planned). Branch `bot/issue-538`, clean tree, base `7e9e51df`. Surveyed: engine (combat/damage/replacements/prompts/play_choices/reduce/work/state), spec rows (\u00a78.8 #86/#91/#91.1/#92, \u00a77 token row, BUILD M10, radiant-audit \u2014 all pre-written by foundation), rulings R1200\u2013R1204 free, catalog holds Meditative up to #38, `chinese.json` exists. Next: engine steps 1\u201313 in plan order, then cards/sidecars/client/spec/tests.\n\nDecisions so far: per plan's open-questions list (substitute keeps declared/forced; random prompt pick meets no targeting point; Lucky ranks by stats; joiners pool includes deck tokens; bounce even when cancelled; `attackCancelled` only on Prime path). `mayor_luck` simplified to sum over chooser's acting Mayors. Client: drag returns the whole legal action (no target UI); badge reads `view.randomTargets` only; added `.random-targets` CSS rule next to `.board-status`.\n\n## Log\n(earlier lines of the log were cut here)\noss/chinese.rs`. Use these terms: \u732e\u796d1\uff0c\u98ce\u6012; \u7a81\u88ad\uff0c\u98ce\u6012\uff0c\u5148\u653b; \u62a4\u75323/7; \u5e78\u8fd01; \u5149\u73af\uff1a; \u4ea1\u8bed\uff1a; \u5f39\u56de; \u5149\u8f89\u81f3\u5c0a\u72c2\u98ce; `{joiners}`.\n      - Never write \"\u5148\u653b\" on the Prime's base face.\n\n16. **Cross tests (`tests/cross/catalog.rs`).**\n    - `b2_5_\u2026`: keep the Classic+ map as it is, add `{ \"meditative-091-1\": \"Epic\" }` keyed by id, and allow Meditative tokens in the final check.\n    - The Catalyst test adds `meditative-091`; rename it `\u2026_and_meditative_91_windfast_catalyst_\u2026`.\n    - The Prime test adds `meditative-091-1` and exempts it from the \"`<catalyst> Prime`\" naming rule, since the designer named it.\n\n17. **Client.**\n    - `actions.ts`, idle click on your own unit: when its only attack has `targetId === RANDOM_ATTACK_TARGET` (from `@jackioh/engine/config`), return `{ interaction: IDLE, action }`.\n    - `drag/model.ts`: `planAttack` returns `null` for such a unit.\n    - `Board.tsx`: when `view.randomTargets`, set `data-random-targets` on the board root and render `<div className=\"random-targets\" data-testid=\"random-targets\" role=\"status\">Targets are random</div>` in the control bar.\n\n18. **Spec.**\n    - **Ruling notes.** Each lists `crates/engine/tests/rules/mb22.rs` and its card file in `proven_in`:\n      - **R1200** \u2014 MD-E9, plus: attacks name `\"random\"`, a named target is refused, and a random prompt pick meets no targeting point, as R452's does.\n      - **R1201** \u2014 MD-E10; Lucky ranks attacks by stats.\n      - **R1202** \u2014 MD-E14. The substitute keeps the attack declared or forced, the event carries `insteadOf`, and the substitute is bounced whether or not it fought.\n      - **R1203** \u2014 MD-E15.\n      - **R1204** \u2014 MD-E16. A unit already killed (R42) opens no window, and a Trample excess keeps the hit's catchers.\n    - **`spec/11-rulings.md`:** add a paragraph \"**[[R1200]] to [[R1204]] are Meditative batch 22 (issue #538, part MB22 of #496, 2026-10-08)**\" before the next higher block's paragraph.\n    - **\u00a74:** a paragraph on attack summons after \u00a74.2's Forced attacks paragraph; \u00a74.4 step 4a covers heroes and Units.\n    - **\u00a76:**\n      - \u00a76.1: the Windfury row's last column becomes `M #91, M #91.1`.\n      - \u00a76.2: update the Replacement and Targets chosen randomly rows, and add an Attack summon row.\n      - \u00a76.3: update the Redirect row.\n    - **\u00a710:** one sentence each in \u00a710.5 step 1 and \u00a710.6.\n    - **\u00a78.8 and BUILD M10 rows:** cite R1200\u2013R1204 in place of the MD numbers. #91's \"with its own trap window\" becomes \"a declared attack keeps its window; a forced one stays forced\".\n    - Run `cargo jackioh spec index`.\n\n## Tests\n\n**Fixtures.** `crates/engine/tests/rules/fixtures/mb22.rs` copies `def`, `unit`, `register`, `playing`, `act` and `recorder` from `fixtures/damage_combat.rs`. Use ids `mb22-\u2026` and indexes from 9200; grep first to confirm they are free. It defines:\n- a Mayor (Radiant face Lucky 1);\n- a bolt Spell with one target;\n- a Cry that opens a `target` prompt;\n- a Spell with a hand pick;\n- a Windfast and a Prime;\n- a guard with Armor 3;\n- plain and Taunt units.\n\n**Engine tests** in `crates/engine/tests/rules/mb22.rs`:\n- **R1200**\n  - `r1200_legal_actions_offer_plays_and_attacks_without_targets`\n  - `r1200_a_declared_target_is_drawn_and_replays`\n  - `r1200_a_target_prompt_is_answered_at_once_for_either_player`\n  - `r1200_hand_picks_and_modes_stay_choices`\n  - `r1200_an_attack_target_is_drawn_and_taunt_holds`\n  - `r1200_a_named_target_is_refused_and_the_view_flags_it`\n  - `r1200_choices_return_once_the_mayor_leaves`\n- **R1201**\n  - `r1201_lucky_keeps_the_aimed_side_the_opponent_rolls_once`\n- **R1202**\n  - `r1202_a_unit_from_hand_makes_the_attack_and_is_bounced`\n  - `r1202_several_units_ask_one_asks_nothing`\n  - `r1202_no_unit_or_zone_attacks_itself`\n  - `r1202_a_forced_attack_is_replaced_on_the_opponents_turn`\n  - `r1202_windfury_summons_twice_and_the_invariant_monitor_is_clean`\n- **R1203**\n  - `r1203_joiners_attack_first_in_lane_order`\n  - `r1203_a_fallen_target_cancels_the_attack_exertion_spent`\n  - `r1203_fewer_zones_fewer_joiners_no_pool_no_draw`\n- **R1204**\n  - `r1204_a_lethal_hit_reaches_the_guard_through_its_armor`: 10 damage aimed at a 4-health ally reaches the guard as 7.\n  - `r1204_shield_indestructible_and_survivable_hits_are_not_caught`\n  - `r1204_a_second_guard_catches_what_kills_the_first`\n  - `r1204_the_hero_is_guarded_enemy_units_are_not`\n  - `r1204_trample_into_the_guard_tramples_into_its_hero`\n\n**Card tests.** Each script file's `mod tests` has a `mod base` and a `mod radiant` that together cover the card's BUILD M10 row.\n\n**Web tests.**\n- `actions.test.ts`: \"sends a random attack on the attacker's click\".\n- `Board.test.tsx`: \"shows the random-targets badge only when the view flags it\".\n\n**Commands:**\n- `cargo test -p jackioh-engine --features testkit --test rules mb22`\n- `cargo test -p jackioh-engine --features testkit,ts`\n- `cargo test -p jackioh-cards meditative`\n- `cargo test -p jackioh-cards --test cross`\n- `pnpm --dir apps/web exec vitest run src/game/actions.test.ts src/game/Board.test.tsx`\n- `cargo jackioh golden check`\n\n## Done when\n\n- [ ] Four catalog entries, scripts with their tests, audio and flavour lines (Chinese too if the file exists); no pending fragment.\n- [ ] The three systems with their engine tests; R1200\u2013R1204 written and `spec index` run; every row matches the build.\n- [ ] Generated wire files committed; golden traces unchanged.\n- [ ] fmt, clippy, the workspace tests, the catalog, patches and spec checks, fuzz at 200 seeds, and the web tests are all green.\n- [ ] The pull request lists the decisions below and says the voice-line audio is owed to a person with macOS.\n\n## Risks\n\n- **Golden traces (D14):** every new field is an `Option` skipped when `None`, luck 0 draws exactly once, and the unit window answers only `SelfCard`. If a golden trace moves, a shipped path changed: find it.\n- **Replay:** draw only from `sink.rng`; all owed work is plain JSON.\n- **R113 order:** owe the Prime's combat after `force_attacks_on` has parked the rest of its run.\n- **Fuzz:** Windfast spends its exertion without emitting its own `attackDeclared`; step 9 keeps the I2 and I4 invariants clean. Chains of Primes or Windfasts are bounded by the five zones and the hand.\n- **Rule 7:** the client reads only `randomTargets` and the legal actions.\n- **One split:** the strip and the draw must split a target list the same way, by `subsets_for`'s bounds.\n\n## Open questions\n\nNone block the build. State these decisions in the pull request:\n- A substitute keeps Windfast's attack declared or forced, as Windfast's was, so a declared one opens its trap window. Rejected: always forced, which would let Windfast dodge every attack trap.\n- A target prompt answered at random under a Mayor meets no targeting point, as R452's random picks do.\n- Lucky ranks attack targets by stats alone.\n- The joiners' pool includes unit tokens in the deck.\n- A substitute is bounced even when its attack was cancelled.\n- `attackCancelled` is emitted only on the Prime's path.\n",
-        "provider": "muse",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- <!-- bot: {\"status\": \"blocked\", \"question\": \"The build disk filled to 100%, so no test or check could finish this run \u2014 I freed 8.1G with `cargo clean`; should the next run rebuild from scratch and continue verifying (mb22/engine/cards/cross tests, spec index, fmt/clippy, catalog/patches/spec/golde\u2026\n- # Patch v0.3.X: Meditative batch 22, combat replacements \u2014 progress report\n- ## What changed this run\n- **Client (finished, untested):** idle click on your own unit sends the whole `random`-target legal attack at once ([actions.ts](apps/web/src/game/actions.ts)); drag's `planAttack` returns that action instead of opening target UI ([model.ts](apps/web/src/game/drag/model.ts), with an `Extract<\u2026>` nar\u2026\n- **Engine test compile errors (fixed, unproven):** `mb22.rs` now imports `PlayerId::{P1, P2}` and the fixture's `playing`; `result.error.map(|error| error.message)` corrected to `result.error` (`Option<String>`); all 41 static-shadowing `let` bindings fixed by importing the fixture module as `fx` an\u2026\n- **Spec (written, unproven):** new notes [R1200](spec/rulings/R1200.md)\u2013[R1204](spec/rulings/R1204.md); \u00a78.8 MD-numbers replaced with ruling cites plus the #91 \"a declared attack keeps its window; a forced one stays forced\" correction; \u00a76.1 Windfury \u2192 `M #91, M #91.1`, \u00a76.2 Targets row updated + new\u2026\n- ## Why blocked\n- The `mb22 --no-run` build died with `No space left on device` (root at 100%); the only evidence is that error plus `df` output. I ran `cargo clean` (regenerable artifacts only), freeing 8.1G (fs now 86%). Nothing was verified this run: still owed are the mb22/cards/cross tests, `spec index`, fmt/cl\u2026\n- ## Decisions for the reviewer\n- Sub-issue states the six open-question decisions (substitute keeps declared/forced so declared keeps its trap window; random prompt pick meets no targeting point per R452; Lucky ranks by stats alone; deck unit tokens join the joiner pool; bounce even when cancelled; `attackCancelled` only on the Pr\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-4/_work/_temp/work/item-538 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-4/_work/_temp/work/item-538/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 2000ms (attempt 3/10)\n- muse: retrying model turn in 1000ms (attempt 2/3): no first model event within 180000ms\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: session log flush degraded: 92 failed\n- muse: runtime host shutdown timed out after 2s"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
@@ -3653,24 +3555,20 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "The build disk filled to 100%, so no test or check could finish this run \u2014 I freed 8.1G with `cargo clean`; should the next run rebuild from scratch and continue verifying (mb22/engine/cards/cross tests, spec index, fmt/clippy, catalog/patches/spec/golden checks, wire regen, web tests, real catalog loc values), or is the environment itself the problem to fix first?",
       "queued_at": "2026-10-08T09:31:26Z",
       "requested_by": "squishy-squooby",
       "run_id": "37894088597",
       "started_at": "2026-10-09T06:33:27Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "539": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-539",
       "part_of": 575,
@@ -3679,34 +3577,20 @@
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-08T09:31:45Z",
       "requested_by": "squishy-squooby",
       "run_id": "37941545576",
       "started_at": "2026-10-09T14:06:05Z",
-      "stop_requested": false,
-      "taken_asks": []
-    },
-    "54": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-01T03:41:43Z",
-      "requested_by": "MaxGoetzmann",
       "stop_requested": false
     },
     "540": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-540",
       "part_of": 575,
@@ -3715,28 +3599,21 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-08T09:32:03Z",
       "requested_by": "squishy-squooby",
       "run_id": "37948133767",
       "started_at": "2026-10-09T14:58:46Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
-      ],
-      "strikes": 1,
-      "taken_asks": []
+      "strikes": 1
     },
     "541": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "fddebbade0c751e523ed361a6e6d5e4c43368071",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3745,24 +3622,20 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-08T09:32:11Z",
       "requested_by": "squishy-squooby",
       "run_id": "37948705922",
       "started_at": "2026-10-09T15:03:13Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "542": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-542",
       "part_of": 575,
@@ -3771,13 +3644,11 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-08T09:32:33Z",
       "requested_by": "squishy-squooby",
       "run_id": "37973571468",
       "started_at": "2026-10-09T18:29:30Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "543": {
       "failures": 0,
@@ -3793,14 +3664,12 @@
     },
     "544": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "76364fd4d66581287ca4611a17ae29466b0f93dc",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3809,13 +3678,11 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-08T23:06:55Z",
       "requested_by": "squishy-squooby",
       "run_id": "37974373314",
       "started_at": "2026-10-09T18:36:23Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "545": {
       "failures": 0,
@@ -3889,14 +3756,12 @@
     },
     "550": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "b39a443cb5913352e718b480bd13e90f4cc873cf",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3905,13 +3770,11 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-08T23:06:58Z",
       "requested_by": "squishy-squooby",
       "run_id": "37974456576",
       "started_at": "2026-10-09T18:37:13Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "551": {
       "failures": 0,
@@ -3982,7 +3845,6 @@
     },
     "559": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-09T10:37:34Z",
@@ -3995,22 +3857,18 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T10:37:37Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 615,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-08T14:38:59Z",
       "requested_by": "squishy-squooby",
       "run_id": "38003661467",
       "started_at": "2026-10-09T23:17:57Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "560": {
       "action": "build",
@@ -4052,7 +3910,6 @@
     },
     "562": {
       "action": "build",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-08T17:26:45Z",
         "difficulty": "hard",
@@ -4062,18 +3919,8 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-09T03:21:30Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nPlan: the issue's Plan section (steps 1\u20138). Four files: triggers.rs guard, testkit/invariants.rs `never_made`,\ntwo cross tests (game_over.rs, invariants.rs).\n\n- Done: all steps 1\u20137 in the working tree (claude-1 committed the tests; its engine edits were lost when it was\n  killed mid-revert, and claude-3 re-applied steps 1\u20135). Comment tweak: R216 test says \"Fuzz seed 329 (#562), cut\n  down:\" since the scenario is a reduction, not the seed itself.\n- Verified (claude-3): both tests fail without the fix and pass with it; seeds 329 and h163/5967/7862/8113 pass;\n  8 shard runs 0 failed; golden 240/240; engine + cards suites, fmt, clippy, catalog/patches/spec checks green.\n- Re-verified on merged tree 7b70e86b (claude-2): fmt, both tests, 5 seeds, 8 shards 0 failed, golden 240/240,\n  catalog/patches/spec, clippy all green. Its workspace cargo test was killed (exit 137) before finishing.\n- claude-3 (2nd pass) on 4e324059: workspace cargo test (testkit,ts) exit 0, no FAILED, wire unchanged; clippy,\n  catalog/patches/spec, 5 seeds, golden green. Its 8-shard rerun was cut off by its session limit.\n- main merged again at e180b12a (61f2651e, v0.3.4 Degrade->Nerf / Upgrade->Buff patch). Re-verified on e180b12a\n  (2026-10-09): fmt, both tests (and both FAIL without the engine fix), 5 seeds, 8 shards 0 failed, golden\n  240/240, catalog/patches/spec, clippy, workspace test (9330 passed, 0 failed, wire unchanged). Done: report.\n\n## Log\n- claude-3 start: engine files are back at main; re-applying steps 1\u20135.\n- steps 1\u20135 re-applied (triggers.rs guard; invariants.rs never_made + docs). Next: fmt, run the two new tests.\n- proving tests fail without fix: engine patch saved at /home/runner/work/JackiOh/JackiOh/.git/worktrees/item-562/engine-fix-562.patch; if interrupted, re-apply plan steps 1\u20135 (or git apply that patch).\n- verified: both new tests FAIL without the engine fix (marked after gameOver; 4 I6 lines), pass with it. Fix restored.\n- building release jackioh-tools for fuzz/golden/spec checks\n- seeds 329 plain + 163/5967/7862/8113 handicap all pass (0 failed). Running the 8 shard runs next.\n- fmt/catalog/patches/spec checks ok; shards running in bg; now engine tests (testkit)\n- 8 shard runs (1/2501/5001/7501 x plain/handicap, 1000 seeds each): 0 failed. Engine testkit suites ok. Next: golden, cards tests, clippy, workspace tests.\n- golden 240/240, cards 4619+696 ok. Next: clippy workspace.\n- clippy workspace clean. Running the harness's workspace cargo test (bg).\n- workspace cargo test (testkit,ts): exit 0, no FAILED, apps/web/src/wire unchanged. Done; writing report.\n- claude-2 start (review round was refused by claude-3's usage limit): main merged again at 7b70e86b (4e324059, hand of 8). Re-verifying diff and checks on the merged tree.\n- rewrapped R216 test comment to 110 cols. Running fmt + the two new tests + release build on merged tree.\n- merged tree: seeds 329 + h163/5967/7862/8113 pass. Running 8 shards in bg + golden.\n- merged tree: golden 240/240, catalog/patches/spec ok. Running clippy.\n- clippy clean on merged tree. Running workspace cargo test (testkit,ts).\n- merged tree: 8 shards (1/2501/5001/7501 x plain/handicap) 0 failed. Waiting on workspace test.\n- claude-1 (opus) start: base still 4e324059. Reviewing diff, then running workspace cargo test.\n- running workspace cargo test (testkit,ts) in bg, log at $(git rev-parse --git-dir)/ws-test-562.log\n- claude-3 (opus) start: base 4e324059, tree clean at add0d909. Reviewing diff, then workspace cargo test.\n- running workspace cargo test (testkit,ts) in bg, log at $(git rev-parse --git-dir)/ws-test-562.log\n- workspace cargo test (testkit,ts) on merged tree: exit 0, 21 result lines, no FAILED; wire unchanged. Writing report.\n- re-running clippy, release build, catalog/patches/spec, 5 seeds, golden on this machine\n- clippy, catalog/patches/spec, h163/5967/7862/8113, golden 240/240 all ok here. Running seed 329 + 8 shards.\n- claude-? (opus, 2026-10-09) start: main merged at e180b12a (v0.3.4). Re-verifying everything on the merged tree.\n- running verify script (fmt, two tests, release build, 5 seeds, golden, checks, 8 shards) in bg; log at $(git rev-parse --git-dir)/verify-562.log\n- merged tree: two tests ok, h163/5967/7862/8113 0 failed, golden 240/240, catalog/patches/spec ok, handicap shards 0 failed; plain tails cut the failed line, re-running plain 329 + 4 shards with exit codes\n- plain 329 + 4 plain shards: exit 0, 0 failed. Running clippy workspace, then workspace cargo test.\n- clippy workspace clean on e180b12a. Running workspace cargo test (testkit,ts) in bg, log $(git rev-parse --git-dir)/ws-test-562.log\n- workspace cargo test on e180b12a: EXIT 0, 21 result lines, wire unchanged. Now checking both tests fail without the engine fix (patch at $G/engine-fix-562b.patch).\n- both tests fail without the engine fix on e180b12a (marked after gameOver; 4 I6 lines); fix restored, fmt ok, tests pass. Writing the report.\n",
-        "provider": "claude-1",
-        "reason": "`claude-1` stops mid-call: 5-hour usage is 98%, at or over its 98% cap; it resets at 2026-10-09T03:30:00Z",
-        "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; cat .bot-notes.md 2>/dev/null | head -60; echo ----; tail -30 .bot-journal.md; echo ----; git status --short; git log --oneline -3; git diff mai\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; git diff main; echo ----; git log --oneline 4e324059..main | head -20; git diff --stat 4e324059 main | tail -3\", \"description\": \"Show branch dif\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; git diff --stat 4e324059 main | head -60; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: workspace cargo test (te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; G=$(git rev-parse --git-dir); cat > $G/verify-562.sh <<'EOF'\\nset -u\\ncd /home/runner/work/_temp/work/item-562\\nstep() { echo \\\"=== $1 ($(date -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; cat spec/rulings/R0316.md; grep -rn \\\"LibraryOverflowOutcome::\\\" crates/engine/src | grep -v \\\"^.*test\\\" | head -30\", \"description\": \"Read R316 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; sed -n 115,200p crates/engine/src/draw.rs; G=$(git rev-parse --git-dir); tail -5 $G/verify-562.log\", \"description\": \"Read library overflow emiss\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; sed -n 215,240p crates/engine/src/stays.rs; echo ...; sed -n 285,310p crates/engine/src/stays.rs; grep -rn \\\"shuffle_into_library(\\\" crates/engi\u2026\n- Bash: {\"command\": \"sleep 240; cd /home/runner/work/_temp/work/item-562; cat $(git rev-parse --git-dir)/verify-562.log\", \"description\": \"Wait and read verification log\", \"timeout\": 300000}\n- Bash: {\"command\": \"sleep 280; cd /home/runner/work/_temp/work/item-562; tail -n +8 $(git rev-parse --git-dir)/verify-562.log\", \"description\": \"Wait and read verification log\", \"timeout\": 300000}\n- Bash: {\"command\": \"sleep 75; cd /home/runner/work/_temp/work/item-562; G=$(git rev-parse --git-dir); tail -n 6 $G/verify-562.log; echo \\\"- merged tree: two tests ok, h163/5967/7862/8113 0 failed, golden 24\u2026\n- said: Everything on the merged tree has passed so far. I'm rerunning the plain seed and shards so the output includes their failure counts and exit codes, and running clippy in the same pass.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; for a in \\\"329 1\\\" \\\"1 1000\\\" \\\"2501 1000\\\" \\\"5001 1000\\\" \\\"7501 1000\\\"; do set -- $a; target/release/jackioh fuzz --from $1 --seeds $2 > /tmp/f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; echo \\\"- plain 329 + 4 plain shards: exit 0, 0 failed. Running clippy workspace, then workspace cargo test.\\\" >> .bot-notes.md; cargo clippy --w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; G=$(git rev-parse --git-dir); echo \\\"- clippy workspace clean on e180b12a. Running workspace cargo test (testkit,ts) in bg, log \\\\$(git rev-pars\u2026\n- Bash: {\"command\": \"sleep 540; cd /home/runner/work/_temp/work/item-562; L=$(git rev-parse --git-dir)/ws-test-562.log; grep -cE \\\"^test result\\\" $L; grep -E \\\"FAILED|panicked|^error|EXIT|WIRE\\\" $L | head; t\u2026\n- Bash: {\"command\": \"sleep 540; cd /home/runner/work/_temp/work/item-562; L=$(git rev-parse --git-dir)/ws-test-562.log; grep -cE \\\"^test result\\\" $L; grep -E \\\"FAILED|panicked|^error|EXIT|WIRE\\\" $L | head; t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; L=$(git rev-parse --git-dir)/ws-test-562.log; grep -E \\\"^test result\\\" $L | awk '{p+=$4; f+=$6; i+=$8} END {print \\\"passed\\\",p,\\\"failed\\\",f,\\\"ig\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; G=$(git rev-parse --git-dir); git apply -R $G/engine-fix-562b.patch && git diff --stat main -- crates/engine; cargo test -p jackioh-cards --test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-562; cargo fmt --check && echo FMT_OK; cargo test -p jackioh-cards --test cards -- r216_r437 r316_i6 2>&1 | grep -E \\\"test result\\\"; python3 - <<'EOF\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} --> ## What changed and why Fuzz shards 1, 3 and 4 of the daily super run failed for two separate reasons, and this fixes both without weakening the gate. 1. **I5 / R216: something was said after `gameOver`.** This failed plain see\u2026"
-      },
       "interruptions": 3,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T17:26:47Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -4083,8 +3930,7 @@
       "requested_by": "squishy-squooby",
       "run_id": "37873000747",
       "started_at": "2026-10-09T02:07:27Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "57": {
       "died": 0,
@@ -4103,14 +3949,12 @@
     },
     "571": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "1d97eff885d1d686c7f9b63f330290a6cf48544f",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -4119,13 +3963,11 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-08T17:08:00Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "37969191602",
       "started_at": "2026-10-09T17:52:04Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "575": {
       "closeout": false,
@@ -4190,30 +4032,24 @@
     },
     "579": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T03:52:37Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 619,
       "provider": "claude-6",
-      "question": "",
       "run_id": "38002521958",
       "started_at": "2026-10-09T23:04:43Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "587": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-09T09:56:08Z",
@@ -4226,68 +4062,39 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T09:56:10Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 606,
       "provider": "claude-3",
-      "question": "",
       "run_id": "37941399999",
       "started_at": "2026-10-09T14:04:52Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "599": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-09T14:35:16Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "## State\n\nDone. The plan's apply script ran with the exact expected output (store.rs 1832->1685,\nresults.rs 1210->1184 lines). `cargo fmt` ran; `cargo fmt --check` clean. Checker printed\n`2 files, 345 lines changed; comment bytes 53010 -> 38731 (27% less)` then `OK`, with the six\nexpected `note` lines (merged repeat cites). `cargo jackioh spec check` ok (595 rulings,\n23114 citations). `git status` shows only the two files. Spot-checked header/StoreError/\nresults.rs header splices: all coherent, doc-test fence preserved. No departures from the plan.\n\n## Log\n(earlier lines of the log were cut here)\nown counter\",\n            \"    /// by retrying, and a rejection is RETURNED, never thrown, so step 4's attempt row is never\",\n            \"    /// rolled back. \u00a79.4's \\\"identical time\\\" is R107's response floor in `codes.rs`, not SQL's.\",\n        ]),\n    ],\n    \"crates/server/tests/api/results.rs\": [\n        (9, 24, [\n            \"//! The scripted engine is the real one: `support::engine` installs the scripted cards as real\",\n            \"//! scripts and `play` drives `reduce` from a testkit `scenario()`, so every outcome and turn count\",\n            \"//! is one the engine emitted. A scenario starts its match through the registry (`app.matches`); one\",\n            \"//! backdated past its ceiling is written to the store with no actor, the crashed-actor case \u00a79.5's\",\n            \"//! reaper exists for. Rows are compared as their JSON, so the cases depend on the port types' wire\",\n            \"//! shape (`docs/v0.3.0/SURFACE.md` \u00a711.2, \u00a711.3).\",\n        ]),\n        (74, 74, [\"/// The JSON a row or any port value serialises to.\"]),\n        (79, 79, [\"/// Every key `expected` names holds the same value in `actual` (objects\"]),\n        (96, 96, []),\n        (106, 106, [\"/// A slot in whatever integer type the series rules take.\"]),\n        (122, 122, [\"/// `test_app()` holds the E2E fixtures\"]),\n        (128, 128, [\"/// A profile written without the API (status `active` unless set).\"]),\n        (133, 133, [\"/// One read of the fake's raw tables, as JSON.\"]),\n        (151, 151, [\"/// The catalog version every match here is created at.\"]),\n        (162, 163, [\"/// The seats of a match as its row records them: index 0 is p1.\"]),\n        (180, 181, [\"/// A recording logger: every `tracing` line this thread writes, kept for the test to read.\"]),\n        (216, 216, [\"    /// The first line naming `event`.\"]),\n        (224, 224, [\"// The file's own helpers\"]),\n        (245, 249, [\n            \"/// The game is a testkit `scenario()` on turn 1 with both scripted cards in p1's hand. An input\",\n            \"/// names a card by its id; `play` puts the instance id in. Both seats switch off R345's automatic\",\n            \"/// end of turn first, so a turn ends only when an input ends it.\",\n        ]),\n        (298, 298, [\"/// player's deviation and volatility), `score_a` being the first one's score.\"]),\n        (309, 311, [\n            \"/// The last two player-turns before the cap end the match in a draw (\u00a72.5). The cap is reached\",\n            \"/// here from the turn before it (`play_from`), since that many real turns of empty libraries\",\n        ]),\n        (322, 322, [\"/// Scenario options: both ratings, how long ago the match started, and whether the queue\"]),\n        (471, 472, [\n            \"        // to prove is that the writer scores it 0.5/0.5 and names no winner, deciding on the\",\n            \"        // outcome's winner alone; a writer that read the reason instead (or\",\n        ]),\n        (556, 556, []),\n        (671, 671, [\"        // reports as `StoreError::Duplicate`. Simulate exactly that: this\"]),\n        (676, 676, [\"        // The fake's one seam is `on_call`, called with the\"]),\n        (838, 839, [\"            // The server rates in the season of the patch it was built at.\"]),\n        (975, 975, [\"        /// filler deck, so the real engine accepts every game they play.\"]),\n        (1045, 1047, []),\n        (1130, 1131, [\"            // The row has the real ceiling (R79), so game 5's actor is stopped, as a crashed\"]),\n    ],\n}\n\nfor path, edits in EDITS.items():\n    full = os.path.join(ROOT, path)\n    blob = subprocess.run([\"git\", \"hash-object\", full], capture_output=True, text=True, check=True).stdout.strip()\n    if blob != BLOB[path]:\n        sys.exit(f\"STOP: {path} is not the file this plan was written for (main moved, or already edited)\")\n    lines = open(full, encoding=\"utf-8\").read().split(\"\\n\")\n    out = lines[:]\n    for first, last, new in sorted(edits, reverse=True):\n        if not all(l.strip().startswith(\"//\") for l in lines[first - 1:last]):\n            sys.exit(f\"STOP: {path}:{first}-{last} is not all whole-line comments\")\n        out[first - 1:last] = new\n    out = [l for l in out if not RULE.match(l)]\n    open(full, \"w\", encoding=\"utf-8\").write(\"\\n\".join(out))\n    print(f\"{path}: {len(lines)} -> {len(out)} lines\")\n```\n\n### Decisions (copy into the pull request body)\n\n- **SURFACE cites stay once per file.** The issue's rule 1 says to delete every `SURFACE \u00a7\u2026` mention, but the checker counts `\u00a74.3`, `\u00a711.2` and `\u00a711.3` as cites and fails with `CITE LOST` if they go. So each file keeps them once, as a pointer to `docs/v0.3.0/SURFACE.md` in its `//!` header.\n- **No R376 in the clocks line.** store.rs's list of \"what `ports.ts` held\" goes. The one pointer in it that still matters stays as ``//! Clocks and limits: `config.rs` (R79; \u00a79.4, \u00a79.5).`` The issue's sample line also cited R376, but R376 is about game records, not a `config.rs` limit. R376 is still cited four more times in the file.\n- **TS method names became Rust names.** Where a rewritten line named a TS method, it now names the Rust one (`profiles_create`, `player_stats_list_public`).\n- **Blocks shortened to their reason:** `RedeemResult`, `RedeemInviteCodeInput.code_hash`, `SESSION_SQL`, `Tx::redeem`, and results.rs's header and `play`. `Tx::redeem` keeps the two orderings that `api/codes.rs`'s header sends readers to.\n\n### Left alone (copy into the pull request body)\n\n- **Over the line budget:**\n  - `getByMatch` (the old name of `results_get_by_match`) in `StoreError::Duplicate`'s doc and in the race test's comment;\n  - `UpsertOutcome | \"unknown_deck\"` in `TrioUpsertOutcome`'s doc.\n\n  Rewording these would take the change past the 350-line stop.\n- **Still live:** `results.insert` is still the fake's `on_call` key.\n- **Only reasons, no history:** blocks of 5 or 6 lines in `UpsertOutcome`, `ACTING_ROLE`, `purge_expired`, `profiles_remove`, `codes_claim`, `matches_discard_open`, `ranked_lock_seasons` and the race test's comment.\n\n## Tests\n\nNo test is added or changed. The change is comments only, and the checker proves no code line differs.\n\nIf your machine runs Rust tests, these must pass; otherwise CI runs them:\n- `cargo test -p jackioh-server --test server api::results`\n- `cargo clippy -p jackioh-server --all-targets -- -D warnings`\n\nThe planner ran both on this edit in a scratch clone: clippy was clean and 20 tests passed. The tests ran before a final one-line `//!` rewording, and clippy ran after it.\n\n## Done when\n\n- [ ] Step 3 printed the two expected lines and no `STOP:`.\n- [ ] The checker prints `OK` with the numbers in step 5.\n- [ ] `cargo fmt --check` and `cargo jackioh spec check` pass.\n- [ ] Only the two files changed, and neither `/tmp` script is in the repository.\n- [ ] The pull request title and body are as in step 8.\n\n## Risks\n\n- **Line numbers drift** if `main` edits either file first. The script's blob check stops it (step 3), and the builder must not hand-edit in that case.\n- **Clippy's doc lints** can trip on a doc-comment edit. The planner ran `cargo clippy -p jackioh-server --all-targets -- -D warnings` on the result, `cargo jackioh spec check` too, and both passed.\n- **Files read as text:** tests read `env.rs` and `seed_accounts.rs` as text, and neither is touched. Behaviour, replay, hidden information and the wire contract do not change.\n\n## Open questions\n\nNone.\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may review it, so it waits for a review run",
-        "trail": "- get_output: {\"shell_id\": \"3aeebf\", \"timeout\": 240000}\n- said: The spec check is compiling the tools crate (release build). Waiting for it to finish.\n- ran `sed -n '1,30p' crates/server/src/db/store.rs`\n- said: All checks pass. Let me spot-check the diff result \u2014 particularly the `//!` header where multi-line splices happened \u2014 to confirm the text reads coherently.\n- ran `sed -n '44,60p' crates/server/src/db/store.rs && echo \"===200===\" && sed -n '200,215p' crates/server/src/db/store.rs && echo \"===results 1-15===\" && sed -n '1,15p' crates/server/tests/api/results.rs`\n- said: Header splices cleanly. Spot-checking a few more splice points in both files.\n- ran `python3 - <<'EOF' notes = open('.bot-notes.md').read() new_state = '''## State Done. The plan's apply script ran with the exact expected output (store.rs 1832->1685, results.rs 1210->1184 lines). `ca\u2026`\n- said: All splices read coherently, the banner collapsed correctly, and preserved cites are intact. Updating `.bot-notes.md` and doing a final review pass of the full diff stats.\n- said: All checks green. The diff is exactly what the plan predicted: 2 files, 345 changed lines (86+/259\u2212), comments only. <!-- bot: {\"status\": \"done\", \"title\": \"Architecture: compact comments in crates/server, the pilot\"} --> Closes #599 Part of #598 ## What changed Whole-line comments only, in `c\u2026\n- --- answer ---\n- I'll start by reading the bot notes and journal, then check the working tree state.The tree is clean on `bot/issue-599`. The earlier run only planned \u2014 nothing built yet. The plan is a script-based mechanical edit. Let me verify the target files' blob hashes match what the plan expects.Both blob ha\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Architecture: compact comments in crates/server, the pilot\"} -->\n- Closes #599\n- Part of #598\n- ## What changed\n- Whole-line comments only, in `crates/server/src/db/store.rs` and `crates/server/tests/api/results.rs`: `//!` headers rewritten to keep only the live contracts, TypeScript-port notes and banner rules deleted, restating comments deleted, and long blocks (`RedeemResult`, `code_hash`, `SESSION_SQL`, `T\u2026\n- ## Checker output\n- ```\n- 2 files, 345 lines changed; comment bytes 53010 -> 38731 (27% less)\n- OK\n- ```\n- ## Tests run\n- - `python3 -I /tmp/compact_check.py origin/main` \u2192 `OK` (output above; six `note` lines for merged repeat cites: R376, \u00a711.2, \u00a711.3, \u00a74.3, \u00a79.4 in store.rs, \u00a711.3 in results.rs)\n- - `cargo fmt` then `cargo fmt --check` \u2192 clean\n- - `cargo jackioh spec check` \u2192 `595 rulings, 1171 proofs, 23114 citations in 1577 files, 5632 links: ok`\n- - `git status --porcelain` \u2192 only the two files modified\n- Clippy, the server tests and e2e run in CI on the pull request. The change was applied by the plan's tested script (blob-verified against base `1ff8a292`), and the checker proves no non-comment line differs.\n- ## Decisions\n- - **SURFACE cites stay once per file.** The issue's rule 1 says to delete every `SURFACE \u00a7\u2026` mention, but the checker counts `\u00a74.3`, `\u00a711.2` and `\u00a711.3` as cites and fails with `CITE LOST` if they go. So each file keeps them once, as a pointer to `docs/v0.3.0/SURFACE.md` in its `//!` header.\n- - **No R376 in the clocks line.** store.rs's list of \"what `ports.ts` held\" goes. The one pointer in it that still matters stays as ``//! Clocks and limits: `config.rs` (R79; \u00a79.4, \u00a79.5).`` The issue's sample line also cited R376, but R376 is about game records, not a `config.rs` limit. R376 is sti\u2026\n- - **TS method names became Rust names.** Where a rewritten line named a TS method, it now names the Rust one (`profiles_create`, `player_stats_list_public`).\n- - **Blocks shortened to their reason:** `RedeemResult`, `RedeemInviteCodeInput.code_hash`, `SESSION_SQL`, `Tx::redeem`, and results.rs's header and `play`. `Tx::redeem` keeps the two orderings that `api/codes.rs`'s header sends readers to.\n- ## Left alone\n- - **Over the line budget:**\n- - `getByMatch` (the old name of `results_get_by_match`) in `StoreError::Duplicate`'s doc and in the race test's comment;\n- - `UpsertOutcome | \"unknown_deck\"` in `TrioUpsertOutcome`'s doc.\n- Rewording these would take the change past the 350-line stop.\n- - **Still live:** `results.insert` is still the fake's `on_call` key.\n- - **Only reasons, no history:** blocks of 5 or 6 lines in `UpsertOutcome`, `ACTING_ROLE`, `purge_expired`, `profiles_remove`, `codes_claim`, `matches_discard_open`, `ranked_lock_seasons` and the race test's comment.\n- Rulings added: none. Patch version: none (no card data changes)."
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T14:02:30Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 605,
       "provider": "devin",
-      "question": "",
       "run_id": "37942064534",
       "started_at": "2026-10-09T14:10:03Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "600": {
       "action": "build",
-      "asks": [],
-      "handoff": {
-        "at": "2026-10-09T19:26:18Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nBASE=836edd5670a9c6b3b79a5ef0382a95215762ef4b   (origin/main at this run's start; use it wherever the brief says origin/main)\nChecker saved at /tmp/compact_check.py (regex fixed). /tmp is not kept across runs: if gone, redo plan steps 2-4.\nWorklist /tmp/worklist.txt (79 groups, 235 files); skip list /tmp/skip.sh -> /tmp/skip.txt; /tmp/groups.py -> /tmp/groups.txt (74 groups) and /tmp/skipped.txt (67 files).\nSkipped files (in-flight branches): see the end of this file under \"Skipped files\".\nDone: steps 1-4. Next: step 5 dispatch (waves of 15), step 6 per-wave cargo fmt + status check, groups done are recorded in the Log as \"DONE Gnnn\".\nDecisions: none beyond the plan yet.\n\n## Goal\n\nCompact the whole-line comments across #600's scope (`crates/server`, `crates/tools`, `crates/wasm`, `crates/ai/tests`, `crates/engine/tests`, `crates/cards/tests`, `crates/cards/src/lib.rs`, `crates/cards/src/query.rs`), following the issue's rules card. No code line changes. The builder works as an orchestrator: it runs `plan` mode, sends one subagent per group with the issue's brief, checks the whole diff, re-sends any group that fails, and delivers one pull request. Done means:\n- the checker prints `OK` over the scope;\n- comment bytes drop by at least 25%, or the shortfall is explained;\n- `cargo fmt --check`, `cargo jackioh spec check`, clippy and the tests pass;\n- files that open work is touching are skipped and listed.\n\n## Files to touch\n\n| Path | Change | What |\n|---|---|---|\n| `crates/server/src/**`, `crates/server/tests/**` (`.rs`) | change | whole-line comments only, in the files `/tmp/groups.txt` lists |\n| `crates/tools/src/**`, `crates/tools/tests/**` (`.rs`) | change | same |\n| `crates/wasm/src/lib.rs` | change | same, if it is not skipped |\n| `crates/ai/tests/**`, `crates/engine/tests/**`, `crates/cards/tests/**` (`.rs`) | change | same |\n| `crates/cards/src/lib.rs`, `crates/cards/src/query.rs` | change | same, if they are not skipped |\n\nOnly files listed in the generated `/tmp/groups.txt` are edited, and nothing else.\n\nMust not touch:\n- the checker's built-in exclusions: `crates/server/src/env.rs`, `crates/server/src/cli/seed_accounts.rs`, `crates/engine/src/` (including `wire/`, `config.rs`, `state.rs`, `validator.rs`), `apps/web/`;\n- `crates/cards/src/scripts/`, `crates/ai/src/`, `crates/server/migrations/`, `crates/cards/build.rs`;\n- every `Cargo.toml`, Markdown file and `spec/` file;\n- `.github/`, `.harness/`, `.squishy/`, `bot/`.\n\nNo spec section or ruling governs this change. CLAUDE.md rule 3 is why every cite must survive: `spec check` reads them. Rulings added: none. Patch version: none.\n\n## Steps\n\n1. **Base.** Run `git merge-base HEAD origin/main` and write the SHA as `BASE` at the top of `.bot-notes.md`. At a fresh start it is `b1eefe946d4f11f9946d89e86b654d138f6f260b`, the same commit as `origin/main`. Wherever the issue or its brief says `origin/main` as the checker's base, use this SHA. The builder never commits, so `BASE` keeps the check honest if the harness has merged `main` or left WIP commits from an earlier run. Do not run `git fetch`.\n\n2. **Checker.** Copy the issue's \"The checker\" script word for word to `/tmp/compact_check.py`. It does not run as quoted: the `HIST` regex opens with `(?<[`, where a negative lookbehind was meant, and Python stops with `unknown extension ?<[`. Fix it with this exact command, which inserts `chr(33)` after `(?<` and does nothing if the copy is already right:\n   ```\n   python3 -I -c \"import pathlib; p = pathlib.Path('/tmp/compact_check.py'); p.write_text(p.read_text().replace('(?<[', '(?<' + chr(33) + '['))\"\n   ```\n\n3. **Worklist.** From the repository root:\n   ```\n   python3 -I /tmp/compact_check.py plan --scope crates/server crates/tools crates/wasm crates/ai/tests crates/engine/tests crates/cards/tests crates/cards/src/lib.rs crates/cards/src/query.rs --group 3 > /tmp/worklist.txt\n   ```\n   At `b1eefe94` its last line is `235 files, 79 groups, about 7439 comment lines to re\n(the rest of the state was cut here)\n\n## Log\n(earlier lines of the log were cut here)\n- run 2 (sonnet): steps 1-4 done; BASE=836edd5670a9c6b3b79a5ef0382a95215762ef4b; 74 groups to dispatch\n- wave 1 (G003-G017) about to be dispatched; subagents read the rules card+addendum from /tmp/rules_card.md (deviation from plan: file instead of pasting it 74 times, for byte-identical briefs)\n- DONE wave 1 (G003-G017, 33 files): checker OK, 232956 -> 178368 bytes (23%). Subagents left inline-after-code comments and <=4-line blocks. Several (G007 G008 G009 G012 G013 G014 G015 G016? G017) kept \"SURFACE \u00a74.1/\u00a78\" cites (checker requires them): some folded them into SPEC cite lists (misattribution) -> TODO final pass: make each such cite read as `docs/v0.3.0/SURFACE.md \u00a7x` (files: see git diff for `\u00a74.1`).\n- wave 2 (G018-G032): prompts add: aim >=30%, and keep SURFACE-only cites attributed to SURFACE in one short line.\n- DONE wave 2 (G018-G032, 35 files): cargo fmt run, status clean (only group files), checker OK cumulative 373603 -> 273270 (27%). Subagents kept SURFACE cites in \"Surface contract\" lines.\n- wave 3 (G033-G047) dispatching.\n",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "/crates/engine/tests/rules/fixtures/play_pipeline_b.rs\", \"old_string\": \"/// Reduce one action with a fresh nonce; a refusal p\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/rotation.rs\", \"old_string\": \"(R212, `withPile`).\", \"new_string\": \"(R212).\"}\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/play_pipeline_b.rs\", \"old_string\": \"/// A card of `defId` put straight into `player`'s gr\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/play_pipeline_b.rs\", \"old_string\": \"/// The `play` actions `legalActions` offers for one \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/play_pipeline_b.rs\", \"old_string\": \"/// `JSON.parse(JSON.stringify(state))`, the round tr\u2026\n- Bash: {\"command\": \"cat > /tmp/cmp600/edit2.py <<'EOF'\\nexec(open(\\\"/tmp/cmp600/edit.py\\\").read().split(\\\"root =\\\")[0])\\nroot = \\\"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/\\\"\\napply(ro\u2026\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Bash: {\"command\": \"grep -n -i \\\"dormant\\\\|opponent's hand\\\\|^//!\\\" crates/engine/tests/rules/play_choices.rs | head -20\"}\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nfor p in [\\\"replacements\\\",\\\"replay_scripted\\\",\\\"restrictions\\\"]:\\n t=open(f\\\"crates/engine/tests/rules/{p}.rs\\\").read()\\n com=[];inb=False\\n for l in t.split(\\\"\\\\n\u2026\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"//! Port of `packages/engine/test/fixtures/turn.ts`.\\n//!\\n//! T\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"// -------------------------------------------------------------\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"// -------------------------------------------------------------\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"// -------------------------------------------------------------\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"// -------------------------------------------------------------\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"// -------------------------------------------------------------\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"/// `turnCatalog(base = {})`: `base` with every turn fixture ove\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/fixtures/turn.rs\", \"old_string\": \"/// This file's scripts, by id (the brief's `scripts()`): `TURN_\u2026\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"//! The quests subsystem (docs/classic-sets.md B5 E33; `src/subsystems/\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// One action's result: the state after it and the events it emitted.\\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// Play a card from its owner's hand, with declared targets.\\nfn play(\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// TS `play(state, hand(state, defId, player), targets)`: a new copy o\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// `playQuestCard`'s answer: the step, and the quest card as it stands\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// vitest's `toMatchObject`: every key the expected object names match\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// The card's quest line, as JSON (TS `QuestMemory`).\", \"new_string\": \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// A number a goal names (TS `GOALS.draws.count`, `GOALS.unspentManaAt\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// One field of every event of a type, as JSON.\\nfn field_of(\", \"new_s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-600/crates/engine/tests/rules/quests.rs\", \"old_string\": \"/// TS `fuse(sinkFor(state), { ingredients, target })`: the sink's curs\u2026\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- Bash: {\"command\": \"mkdir -p /tmp/cc_work && cat > /tmp/cc_work/pauses.py <<'EOF'\\nimport sys\\np = \\\"crates/engine/tests/rules/pauses.rs\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\n\\ndef rep(old, new):\\n glo\u2026\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)\n- said: You've hit your session limit \u00b7 resets 12:10am (UTC)"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T14:55:55Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4296,9 +4103,7 @@
       "run_id": "37978416266",
       "started_at": "2026-10-09T19:11:18Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "601": {
       "action": "build",
@@ -4352,16 +4157,6 @@
     },
     "603": {
       "action": "plan",
-      "asks": [],
-      "handoff": {
-        "at": "2026-10-09T14:16:09Z",
-        "family": "claude",
-        "kind": "plan",
-        "notes": "# Plan (opus, strong)\n\n## Goal\n\nMove history, superseded notes and directory listings word for word out of three files into three new ones:\n\n| Source | History file |\n| --- | --- |\n| `apps/web/README.md` | `docs/history/web-readme.md` |\n| `e2e/README.md` | `docs/history/e2e-readme.md` |\n| `docs/architecture.md` | `docs/history/architecture.md` |\n\nThe three sources must total 102,000 B or less; a dry run of this plan gives 99,132 B, down from 169,722 B. Every heading stays where it is. Under each moved heading the first line is `Moved to docs/history/<file>.md.`. A6, A8, both \u00a74.2 sections, \u00a78 and \u00a710 stay. The pull request lists each moved block's cites and decision, and pastes the byte counts. Nothing changes in code, tests, workflows or contracts.\n\n## Files to touch\n\n| Path | new/change | What |\n| --- | --- | --- |\n| `apps/web/README.md` | change | \"Layout\": the fenced listing moves; the web-fonts paragraph stays. \"`PlayerView` gaps found while building M5 (SPEC \u00a710.8)\": the whole body moves. |\n| `e2e/README.md` | change | \"Layout\": the fenced listing moves; the workspace/tsconfig paragraph stays. \"Assumptions beyond that contract\": rows A1\u2013A5, A7 and A9\u2013A22 move; the intro, table header, A6 and A8 stay. \"Which spec needs which milestone\": every row except 23 moves; the header, row 23, and the spec 14 paragraph and command stay. |\n| `docs/architecture.md` | change | \u00a711, \u00a712, \u00a713: the whole bodies move. The `---` after \u00a711 stays. |\n| `docs/history/web-readme.md` | new | the moved web text, under its old headings |\n| `docs/history/e2e-readme.md` | new | the moved e2e text |\n| `docs/history/architecture.md` | new | the moved architecture text |\n\nTouch nothing else:\n- not `CLAUDE.md`, `AGENTS.md` or any other README (nothing links `docs/history/`);\n- no code or tests, not even comments that cite moved text;\n- not `spec/`, `.github/`, `.harness/`, `.squishy/` or `bot/`.\n\nNo ruling governs this change and none is added. No patch version.\n\n## Steps\n\n1. **Survey as an orchestrator.** Start three subagents in parallel, one per source file. Each reads its file in full and edits nothing. Brief each one:\n\n   > \"Read `<file>` in full. For each block below that the plan moves out of it, return a table row: Block | Bytes | Why history or only a listing | What cites it | Decision. Find cites with `git grep -n -F '<heading text>'`, `git grep -n '<file path>'` and the block's ids (`git grep -nwE 'A<n>'`; `git grep -nE '\u00a71[123]'`); write 'nothing' if there are none. Flag code, a test or a workflow that reads the moved text, a comment that depends on a sentence only the moved text holds, and anything stale or wrong in it. You may start one subagent per 15 KB of the file to check cites.\"\n\n   Below is my evidence. Have the subagents confirm or correct it, then copy it into the pull request.\n\n   **apps/web/README.md**\n   - **Layout listing (16,427 B): move.** It restates the directory tree. Cited by:\n     - `README.md:31`, which only links the file;\n     - `crates/wasm/README.md:44`, for `src/wire/`, which the kept section \"The engine as WebAssembly\" also covers;\n     - old briefs: `docs/polish/1-animations.md:828`, `2-sound.md:1098`, `6-cards.md:1211`, `7-mobile-ux.md:963`.\n   - **`PlayerView` gaps (630 B): move.** It is cited only by the Layout listing's `catalog.ts` line, which moves too. It is superseded: the view now carries `defs` (`apps/web/src/wire/generated/PlayerView.ts`) and the catalog ships in the bundle.\n   - **\"Patch v0.2.0 at the table\": keep.** e2e A20 and the Layout listing cite it, and both move. But it describes the current Activate control, payment pickers and graveyard plays in the present tense, like \"Three flows at the table\". That makes it contract, not history. Rejected: moving it, since the target is met without it.\n\n   **e2e/README.md**\n   - **Layout listing (16,188 B): move.** Each spec's own header describes the spec. Cited by:\n     - `e2e/cypress.config.ts:17`, which cites the README for the artifacts folder; that is covered by the kept \"Run\" section;\n     - old briefs: `docs/polish/2-sound.md:1100`, `3-ai.md:1359`, `5-sign-in.md:762`, `7-mobile-ux.md:902`.\n   - **Assumptions A1\u2013A5, A7, A9\u2013A22 (12,195 B): move.**\n     - Code cites these ids:\n       - A1: `apps/web/src/game/decks.ts:138`, `routes/dev/hotseat.tsx:40,82`, `hotseat.test.tsx:188`, `e2e/support/commands.ts:59,461`\n       - A2: `apps/web/src/game/net.ts:712`, `hotseat.tsx:213,359`\n       - A3: `12-rotation-and-swaps.cy.ts`\n       - A4, A5, A11, A13, A16, A18: `e2e/support/testids.ts`\n       - A9, A10, A12, A17: `commands.ts`, `config.ts`\n     - `e2e/support/testids.ts:55` says \"Each is listed in e2e/README.md\". After the move it resolves through the stub. Rewording it is a code change, which this issue rules out.\n     - Only A6 and A8 are cited by the README's name:\n       - A6: `apps/web/src/net/auth.ts:8`, `net/session.ts:22`, `crates/server/src/api/e2e.rs:6`\n       - A8: `e2e/support/tasks/wsPlayer.ts:7`\n     - The other ids label blocks in `support/` that already carry their own convention.\n     - Rejected: keeping every row that code cites by id. That leaves about 3.5 KB to move, and the target is missed.\n   - **\"Which spec needs which milestone\", all rows except 23 (8,468 B): move.** The milestones have shipped.\n     - `e2e/cypress/e2e/07-my-pawn-ai.cy.ts:10` cites it by heading. The heading stays and points to the history file.\n     - Specs 05, 06, 09, 10, 18, 19, 20 and 26 say \"Needs: \u2026 See e2e/README.md.\" Each of them states its own needs.\n     - Row 23 stays: `e2e/support/tasks/lessons.ts:8` relies on \"the README says to rebuild after a lesson changes\", and only row 23 says that.\n     - The spec 14 paragraph stays, because it is a live run instruction.\n\n   **docs/architecture.md**\n   - **\u00a711 (3,107 B): move.**\n     - The Scope paragraph cites it (line 6, \"\u00a711 below collects all nine\"). The heading stays.\n     - `CLAUDE.md:13` says the file covers \"R104\u2013R112\"; the Scope line still names them.\n     - `spec/rulings/R0104.md`\u2013`R0112.md` cite nothing in this section.\n     - Stale: the R105 row says `core-1`, but `R0105.md` makes the version the latest patch's (now `v0.3.4`). The R111 row counts a \"legal loadout\", which R254 retired.\n   - **\u00a712 (8,711 B): move.**\n     - Cited by \u00a710 step 5 (\"all of \u00a712's checks\"), whose heading stays, and by \u00a713, which moves too.\n     - Its `### Rnnn: \u2026 ###` convention is also stated in `crates/tools/src/spec.rs:25` and `spec/README.md:43`.\n     - Stale: it says \"20 tables\" (\u00a710 step 4 says 25), lists migrations only up to 0018, and has no `crates/server/tests/sql/06`, `07` or `11`\u2013`14`.\n   - **\u00a713 (5,160 B): move.** Nothing outside the file cites it, and `crates/server/README.md` holds the module contract. Stale: no `cli/export_records.rs` and none of the later sql files.\n\n   **All three files.** Nothing in `crates/`, `apps/` or `e2e/` reads Markdown prose (`crates/tools/tests/acceptance.rs`, V23). `cargo jackioh spec check` reads no `.md` outside `spec/` (`CITING_ROOTS` and `CODE_EXTENSIONS` in `crates/tools/src/spec.rs`).\n\n2. **Reconcile.** If a subagent flags a live dependency this plan does not handle, keep that block in place: drop or split its tuple in `MOVES` in step 3. If the total then goes over 102,000 B, stop and report it. Never move the block anyway.\n\n3. **Apply.** Write this script exactly to `/tmp/p603-move.py`, outside the repository, and run `python3 -I /tmp/p603-move.py` from the repository root. It writes nothing unless every marker is found, and a second run fails without writing.\n\n```python\nimport os, sys\nF = \"```\"\n# source: (history file, [(heading, first moved line, last moved line)]). A line matches exactly or,\n# but for F, by prefix. F as the last line is the fence that closes the first one; None is the\n# section's last non-blank line.\nMOVES = {\n    \"apps/web/README.md\": (\"docs/history/web-readme.md\", [\n        (\"## Layout\", F, F),\n        (\"## `PlayerView` gaps found while building M5 (SPEC \u00a710.8)\", \"`CardView` is",
-        "provider": "claude-3",
-        "reason": "planned on opus",
-        "trail": "/item-603; echo '--- code reading README/architecture files'; git grep -nE 'README\\\\.md|architecture\\\\.md' -- 'crates/**/*.rs' 'apps/web/src/**/*.ts' 'apps\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; for p in 'Verifying the schema' 'File map' 'Decisions this document' 'architecture[^ ]* \\u00a71[123]' 'architecture.md, \\u00a71[123]' 'which spe\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/p603 && cat > /tmp/p603/move.py <<'EOF'\\n\\\"\\\"\\\"Issue #603: move blocks word for word into docs/history/, leaving each heading and a stub.\\\"\\\"\\\"\\nimport sys, os\\n\\nROOT = sy\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; for f in apps/web/README.md e2e/README.md docs/architecture.md; do echo \\\"=== $f\\\"; diff \\\"$f\\\" /tmp/p603/sim/$f | grep -v '^< ' | head -40; don\u2026\n- Bash: {\"command\": \"cd /tmp/p603/sim; sed -n 120,140p e2e/README.md; echo ----; sed -n 150,175p e2e/README.md; echo ----; tail -c 300 apps/web/README.md | od -c | tail -3; echo; sed -n 700,720p docs/archite\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; grep -rn '\\\"e2e\\\"\\\\|\\\"apps/web/src\\\"\\\\|\\\"docs' crates/tools/src/spec*.rs crates/tools/src/spec/ 2>/dev/null | head -20; ls crates/tools/src | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; sed -n 60,110p crates/tools/src/spec.rs; grep -n 'fn .*cit\\\\|extension\\\\|\\\\.md\\\\b\\\\|\\\"md\\\"' crates/tools/src/spec.rs | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; git grep -n 'heading form\\\\|`### R\\\\|### Rnnn\\\\|-- ### R' -- '*.md' 'crates/tools/src/spec.rs' | cut -c1-200 | head; echo ---; sed -n 550,575p c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; sed -n 40,46p crates/wasm/README.md; grep -n 'SQL\\\\|sql' spec/README.md | head -5; echo ---; git grep -n 'README' -- e2e/scripts e2e/support e2e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; sed -n 1,14p e2e/support/tasks/lessons.ts; git grep -n -i 'rebuild the client\\\\|rebuild after' -- e2e apps/web CLAUDE.md | cut -c1-200\", \"descri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; ls crates/server/tests/sql/; ls crates/server/migrations | tail -3; ls crates/server/src/cli/; grep -c '' e2e/support/cards.ts; grep -n 'TOKEN_N\u2026\n- Bash: {\"command\": \"cd /tmp/p603 && python3 - <<'EOF'\\np='/tmp/p603/move.py'\\ns=open(p).read()\\ns=s.replace(''' (\\\"## Which spec needs which milestone\\\", \\\"| Spec | Needs |\\\", \\\"| 34 |\\\"),''',''' (\\\"## Whic\u2026\n- Bash: {\"command\": \"set -e; S=/tmp/p603/sim; W=/home/runner/work/_temp/work/item-603; mkdir -p $S/apps/web $S/e2e $S/docs; cp $W/apps/web/README.md $S/apps/web/; cp $W/e2e/README.md $S/e2e/; cp $W/docs/arch\u2026\n- Bash: {\"command\": \"cd /tmp/p603 && python3 - <<'EOF'\\np='/tmp/p603/verify.py'\\ns=open(p).read()\\nold=''' size = lambda ls: len(\\\"\\\\\\\\n\\\".join(ls).encode())\\n print(f\\\" {h}: old {size(ob)} B = kept {size(nb\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; git grep -nE 'include_str!\\\\([^)]*(md|docs)|read_to_string\\\\([^)]*(md|docs|README)|readFileSync\\\\([^)]*(md|README|docs)' -- crates apps/web e2e \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; sed -n 1,30p crates/tools/tests/acceptance.rs\", \"description\": \"Read the tools acceptance test header\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; ls spec/rulings/R010[4-9].md spec/rulings/R011[0-2].md; grep -n '\\\"version\\\"' crates/cards/patches/patches.json | tail -2; grep -rn 'defs' apps/\u2026\n- Bash: {\"command\": \"cat > /tmp/p603/move.py <<'EOF'\\nimport os, sys\\nF = \\\"```\\\"\\n# source: (history file, [(heading, first moved line, last moved line)]). A line matches exactly or,\\n# but for F, by prefix\u2026\n- Bash: {\"command\": \"cd /tmp/p603/sim2; awk '/^## Which spec/,0' e2e/README.md | cut -c1-150; echo; awk '/^## Layout/,/^## Install/' e2e/README.md; awk '/^## Layout/,/^## Three/' apps/web/README.md | cut -c1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; grep -rn 'passWithNoTests' --include=*.ts --include=*.mts --include=*.json . 2>/dev/null | grep -v node_modules | head; ls vitest.* apps/web/vit\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; f=$(grep -rl 'No affected test files found' node_modules/.pnpm/vitest@*/node_modules/vitest/dist 2>/dev/null | head -1); echo \\\"$f\\\"; [ -n \\\"$f\\\u2026\n- tool error: Exit code 1\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; ls node_modules/.pnpm | grep -i '^vitest' | head; d=$(ls -d node_modules/.pnpm/vitest@*/node_modules/vitest/dist 2>/dev/null | head -1); echo \\\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-603/.bot-plan.md\", \"content\": \"## Goal\\n\\nMove shipped-work history, superseded notes and directory listings out of `apps/web/README.md`, `e2e/README.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; wc -w -c .bot-plan.md; awk '/^```python/{f=1;n++;next} /^```$/{if(f){f=0;next}} f' .bot-plan.md > /tmp/p603/extract_all.txt; python3 - <<'EOF'\\n\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\nt=open(p).read()\\nreps=[\\n(\\\"Move shipped-work history, superseded notes and directory listings out of `apps/web/README.md`, `e2e/README.md` and `doc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; sed -n 1,25p .bot-plan.md\", \"description\": \"Read the start of the draft\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; python3 - <<'PYEOF'\\nimport re\\nt = open('.bot-plan.md').read()\\nblocks = re.findall(r\\\"```python\\\\n.*?\\\\n```\\\\n\\\", t, re.S)\\nmove, verify = blo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-603; git status --short; git check-ignore -v .bot-plan.md\", \"description\": \"Confirm the worktree is clean and the draft ignored\"}\n- said: ## Goal Move history, superseded notes and directory listings word for word out of three files into three new ones: | Source | History file | | --- | --- | | `apps/web/README.md` | `docs/history/web-readme.md` | | `e2e/README.md` | `docs/history/e2e-readme.md` | | `docs/architecture.md` | `docs/his\u2026"
-      },
       "kind": "build",
       "pending_request": false,
       "planned_at": "2026-10-09T14:16:29Z",
@@ -4370,12 +4165,10 @@
       "provider": "claude-3",
       "run_id": "37941283512",
       "started_at": "2026-10-09T14:03:43Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "605": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-09T14:46:02Z",
         "by": "`claude` (strong)",
@@ -4398,28 +4191,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "37945815529",
-      "self_check_findings": [],
       "started_at": "2026-10-09T14:40:35Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "cognition",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37945815529",
-            "tier": "strong"
-          }
-        ],
-        "sha": "29e0d1b5e5a8180e8b15d15e7e9f40cddf9d5a5a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "606": {
       "cleared": {
@@ -4433,30 +4206,10 @@
       "feedback_since": "2026-10-09T14:04:52Z",
       "issue": 587,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37941399999",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ca3151c4c27c7449ecba6859f74ac2a2e61f62e8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "613": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-09T23:17:03Z",
         "by": "`gemini` (medium) twice",
@@ -4477,35 +4230,10 @@
       "review_notes": "",
       "run_id": "38002057129",
       "started_at": "2026-10-09T22:59:21Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "37990783836",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38002057129",
-            "tier": "medium"
-          }
-        ],
-        "sha": "19dcac4f237d11efc8a30ad1fa29dc755474f06a",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "615": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T00:08:23Z",
         "by": "`gemini` (medium) twice",
@@ -4528,33 +4256,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38006630054",
-      "self_check_findings": [],
       "started_at": "2026-10-09T23:54:47Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38003661467",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38006630054",
-            "tier": "medium"
-          }
-        ],
-        "sha": "933f508b075a27696677f50fb8582e0655d7e2ef",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "619": {
       "cleared": {
@@ -4568,26 +4271,7 @@
       "feedback_since": "2026-10-09T23:04:43Z",
       "issue": 579,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38002521958",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f59fdfa7bc41372ed2402ab1e8515f7838f12649",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "620": {
       "action": "build",
@@ -4657,30 +4341,6 @@
       "started_at": "2026-10-03T09:24:23Z",
       "stop_requested": false
     },
-    "66": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-02T06:44:41Z",
-      "requested_by": "squishy-squooby",
-      "stop_requested": true,
-      "stopped_at": "2026-10-02T06:59:26Z",
-      "stopped_by": "squishy-squooby"
-    },
-    "67": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-02T06:44:47Z",
-      "requested_by": "squishy-squooby",
-      "stop_requested": true,
-      "stopped_at": "2026-10-02T06:59:27Z",
-      "stopped_by": "squishy-squooby"
-    },
     "68": {
       "action": "build",
       "died": 0,
@@ -4717,18 +4377,6 @@
       "started_at": "2026-10-03T18:22:45Z",
       "stop_requested": false
     },
-    "79": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-02T06:46:09Z",
-      "requested_by": "squishy-squooby",
-      "stop_requested": true,
-      "stopped_at": "2026-10-02T06:59:30Z",
-      "stopped_by": "squishy-squooby"
-    },
     "85": {
       "died": 0,
       "failures": 0,
@@ -4759,26 +4407,6 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37253548709",
       "started_at": "2026-10-05T02:07:37Z",
-      "stop_requested": false
-    },
-    "90": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-02T20:16:19Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "96": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-02T23:19:53Z",
-      "requested_by": "MaxGoetzmann",
       "stop_requested": false
     }
   },
@@ -8202,9 +7830,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-09T02:38:34Z",
-    "dropped": 2,
-    "shed": 21
+    "at": "2026-10-10T04:01:36Z",
+    "dropped": 6,
+    "shed": 35
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
