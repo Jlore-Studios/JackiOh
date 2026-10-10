@@ -41,19 +41,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #60 Pile On — SPEC §8.6 row 60, BUILD M9 Classic row C 60: "(5) Cost, so it needs mana above the
-// cap of 4 (§2.3); Recruits every permanent in your deck, top to bottom, each into its row until that
-// row is full (Units to unit zones, the rest to backrow zones, traps face-down and never named in the
-// opponent's view, R33), without a Cry; Spells, and permanents that no longer fit, stay in the deck in
-// order; no event carries a deck position; base: if this card would go to your graveyard, from
-// resolving, a discard or a burn, it goes to the bottom of your deck instead (a replacement); radiant:
-// no return clause, so it goes to the graveyard; no tuned numbers".
-//
-// The deck holds Core cards with their own tests: Units Mr. Vanilla, Gary the Gambler and Bigot (whose
-// Cry would destroy an enemy Unit — a Recruit fires none, R1), the Field Spell Mana Well, the Trap
-// Sheepish and the Field Trap Bread and Butter, and Spells (Stockpile, Lunar Eclipse); a Rush Token
-// card stands for a unit-token card a deck may hold (R11). Zao Gao discards and Stockpile's draw into a
-// full hand burns.
+// The deck holds Core cards with their own tests; Bigot's Cry would destroy an enemy Unit, which a
+// Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -102,8 +91,7 @@ mod tests {
             assert_eq!(def["cost"], 5);
             assert!(def["params"].is_null());
             let scripts = script();
-            // TS `toEqual([{ id: "pile-on", on: "toGraveyard", where: "self", instead: { to: "bottomOfLibrary" } }])`:
-            // a declaration holds a hook slot (`when`), so it is compared field by field.
+            // A declaration holds a hook slot (`when`), so it is compared field by field.
             assert_eq!(scripts.base.replacements.len(), 1);
             let replacement = &scripts.base.replacements[0];
             assert_eq!(replacement.id, "pile-on");
@@ -114,7 +102,6 @@ mod tests {
             assert!(replacement.then.is_none());
             assert!(replacement.by.is_none());
             assert!(scripts.radiant.replacements.is_empty());
-            // TS `expect(radiant.cry).toBe(base.cry)`: the same shared hook.
             assert!(match (&scripts.radiant.cry, &scripts.base.cry) {
                 (Some(radiant_cry), Some(base_cry)) => Arc::ptr_eq(radiant_cry, base_cry),
                 _ => false,

@@ -4,15 +4,12 @@
 //!            owes one more keyword or a stronger one (R275), and Taunt is out (R347).
 //!   Engine:  "Keywords only; under R347 it never has Taunt."
 //!
-//! There is nothing to script. The stats and both faces' keywords are printed on the catalog entry
-//! (`base.keywords = [Indestructible]`, `radiant.keywords = [Indestructible, Lifesteal]`), and §10.4
-//! layer 1 reads them from there; granting them here would only say the same thing twice. Where the
-//! behaviour lives instead:
+//! Nothing to script: both faces' keywords are printed on the catalog entry and §10.4 layer 1 reads
+//! them from there. Where the behaviour lives instead:
 //!   Indestructible — §4.4 step 4 (it takes no damage), §4.5 step 1 and R46 (a destroy mark is
 //!                    ignored and knocks it into Attack Position), R69 (it still dies if its max
 //!                    health falls to 0), §6.1 (exile, bounce and a Tribute still remove it), and
-//!                    R347 (§10.4's keyword set drops Taunt whenever it holds Indestructible, so it has
-//!                    no Taunt even in Defense Position).
+//!                    R347 (§10.4 drops Taunt whenever it holds Indestructible, even in Defense).
 //!   Lifesteal      — §4.4 step 8 heals its controller's hero the amount it actually deals.
 
 use jackioh_engine::prelude::*;
@@ -27,16 +24,11 @@ pub fn script() -> CardScripts {
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41: "3/3 Indestructible: damage
-// and destroy effects don't remove it (a destroy knocks it into Attack Position, R46), while exile,
-// bounce and a Tribute do; never has Taunt, even in Defense Position (R347); radiant 6/6
-// Indestructible, Lifesteal (the adopted Radiant face): its damage heals your hero".
-//
-// The Engine cell is "Keywords only", so both scripts are empty and these fixtures prove that the
-// keywords printed on the catalog faces do the work through §4.1, §4.2, §4.4 and §4.5. The removals
-// need a source, each a Core card with its own tests: Hit Job (core-016, "Destroy target Unit"),
-// Collateral Damage (core-034, exile a target permanent), Flood (core-017, bounce all Units) and
-// Carnivorous Cube (core-022, whose Cry Tributes one of your other Units, R428).
+// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41: damage and destroy effects
+// don't remove it (a destroy knocks it into Attack Position, R46), while exile, bounce and a Tribute do;
+// never has Taunt (R347); radiant adds Lifesteal. Both scripts are empty: these fixtures prove the
+// catalog keywords do the work (§4.1, §4.2, §4.4, §4.5). Removal sources: Hit Job (core-016),
+// Collateral Damage (core-034), Flood (core-017) and Carnivorous Cube (core-022, whose Cry Tributes, R428).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -59,8 +51,7 @@ mod tests {
         s.stats(&unit.id).keywords.iter().map(|keyword| js(keyword)["kind"].as_str().unwrap_or("").to_string()).collect()
     }
 
-    /// TS `expect(script).toEqual({})`: every field of the TS `Script` type is absent (the Rust
-    /// `Script` minus `activate`, which SURFACE §7.2 does not port).
+    /// Every field of `Script` but `activate` is absent (`activate` is not ported, SURFACE §7.2).
     fn is_empty_script(script: &Script) -> bool {
         script.cost.is_none()
             && script.cry.is_none()

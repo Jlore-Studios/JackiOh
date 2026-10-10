@@ -5,20 +5,11 @@
 //!   Radiant: "Draw 2" — §8 Conventions: a cell that changes only a number changes only that number.
 //!
 //! The whole card is one Draw. Everything §2.4 hangs off a draw — cast-on-draw, fatigue, the hand
-//! cap of 10 (R4) and R58's chain cap — belongs to the draw pipeline (engine/src/draw.rs), so
-//! neither face counts cards or checks the library here.
+//! cap of 10 (R4) and R58's chain cap — belongs to the draw pipeline, so neither face counts cards.
 //!
-//! Being a token is data, not script (§7): `def.token` is true and `def.tags` carries "Token", and
-//! §5.1's one query is what keeps this card out of every random pool — "Random pools never include
-//! Token-tagged cards … unless the card names the pool itself" — so even `query({ tags: ["KY"] })`,
-//! the #57 Conjure KY pool, leaves it out while offering #31, #51 and #82. There is nothing for
-//! this file to opt out of; the tests below prove the exclusion against `crates/cards/src/query.rs`,
-//! which is §5.1's single pool source.
-//!
-//! R11 is the other half of being a token and also costs this file nothing: a SPELL token "goes to
-//! the GY like any spell", so this card behaves as an ordinary hand and library card (§3.2) and is
-//! then Discover-eligible out of the graveyard (R50, #72 Reminisce) — unlike a unit token, which
-//! ceases to exist when it leaves the field.
+//! Being a token is data (§7): §5.1's one query keeps Token-tagged cards out of every random pool
+//! unless the card names the pool itself; the tests prove it against `crates/cards/src/query.rs`.
+//! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
 
 use jackioh_engine::prelude::*;
 
@@ -55,7 +46,7 @@ mod tests {
     /// Spell, so it adds no body to the board and nothing to a draw or a hand-size count but its own.
     const ANCHOR: &str = "core-010";
 
-    /// The ids a query answers, in its order (TS `.map((card) => card.id)`).
+    /// The ids a query answers, in its order.
     fn ids<T: std::borrow::Borrow<CardDef>>(defs: Vec<T>) -> Vec<String> {
         defs.iter().map(|def| <T as std::borrow::Borrow<CardDef>>::borrow(def).id.clone()).collect()
     }
@@ -109,12 +100,10 @@ mod tests {
         #[test]
         fn s2_4_an_empty_library_draws_nothing_but_fatigue_and_the_token_still_counts_as_played() {
             crate::register_all();
-            // The anchor is what makes this case readable at all. Without it, playing the Notebook empties
-            // p1's hand and p1's only remaining legal actions are ending the turn, conceding and offering a
-            // draw — so §2.5 auto-ends the turn under the assertions, p2 takes a turn off an empty library
-            // too, and `start_turn` clears `turn_log` before `cards_played` is read (it comes back 0) while
-            // the hero collects a second helping of fatigue. The tell is a `turnAutoEnded` followed by a
-            // `damage amount: 1, combat: false, sourceId: null`.
+            // The anchor keeps the turn alive. Without it the Notebook empties p1's hand, §2.5 auto-ends
+            // the turn under the assertions, p2 takes one off an empty library too, and `start_turn`
+            // clears `turn_log` before `cards_played` is read. The tell is a `turnAutoEnded` followed by
+            // a fatigue `damage`.
             let mut s = scenario(json!({ "p1": { "hand": ["core-051-1", ANCHOR], "library": [] } }));
 
             s.play("core-051-1", json!({}));

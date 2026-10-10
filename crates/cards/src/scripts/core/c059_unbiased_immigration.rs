@@ -1,30 +1,15 @@
 //! #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Start of turn: add a
 //! random card to your hand (paid 4: it costs 0)" / radiant "A random Radiant card (paid 4: it costs
-//! 0)". Engine cell: "Non-token pool excluding #59" — every set's since patch v0.2.0 (R380).
+//! 0)". Engine cell: "Non-token pool excluding #59", every set's (R380). §8 Conventions: the radiant
+//! cell restates the whole clause, so it replaces it: one card per start of turn either way.
 //!
-//! §8 Conventions: the radiant cell restates the whole clause, so it replaces it — one random card
-//! per start of turn either way, Radiant on the radiant face. The parenthesis is restated too and
-//! means the same thing on both faces.
+//! The embiggen price is not a prompt (R81, §10.6): it travels in the `play` action, so the card
+//! declares no `targets` or `modes`; `make_context` hands it to every hook as `ctx.embiggened`, so a
+//! trigger turns later still knows what was paid. R65 is why the discount is a `cost_override`, not a
+//! `cost_mod`: 0 makes the card free whatever its printed cost, in every zone (R78).
 //!
-//! THE EMBIGGEN PRICE IS NOT A PROMPT (R81, §10.6): "Zone, X, embiggen, Tribute … travel in the
-//! `play` action", and "No Core card opens an `x`, `embiggen`, `zone`, `tribute` or `direction`
-//! prompt, since all five are play choices". So this card declares NOTHING — no `targets`, no
-//! `modes`. `reduce`'s `play_card` writes the answer onto the instance (`card.embiggened`) and
-//! `make_context` hands it to every hook of that instance as `ctx.embiggened`, which is why a trigger
-//! that fires turns later still knows what was paid (R65: the chosen embiggen price is the cost).
-//!
-//! R65 is also why the discount is a `cost_override` and not a `cost_mod`: "start from `costOverride`,
-//! else the printed cost … floor at 0" — an override of 0 makes the added card free whatever it was
-//! printed at, and it persists in every zone (R78).
-//!
-//! R60: the pool may repeat across turns; nothing here says "different". §5.1: a random pool never
-//! offers a Token-tagged card nor the generating card, which `excludeDefId` spells out (R387). R380:
-//! "a random card" names no set, so it draws from every set. R4: an eleventh card is burned to the
-//! graveyard by the add-to-hand pipeline.
-//!
-//! A hook may not roll dice — `ctx.rng.*` advances `rngCursor`, which is state — so the pick happens
-//! inside `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), the verb #54 Straaza and #57
-//! Conjure KY use too.
+//! R60: the pool may repeat; §5.1 and R387 keep Tokens and #59 out of it; R4 burns an eleventh card.
+//! A hook may not roll dice (`ctx.rng.*` advances state), so `add_random_from_catalog` picks.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -32,7 +17,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-059";
 
 /// §5.1's "a random card": the non-token catalog of every set (R380), minus this card (R387).
-/// (TS `const CARD_POOL: CatalogQueryArgs`, written as the literal the effect's argument takes.)
 fn card_pool() -> Value {
     json!({ "excludeDefId": ID })
 }
@@ -74,14 +58,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #59 Unbiased Immigration (SPEC §8.3, BUILD M4-T4 row 59: "Random non-token card each start of
-// turn; paid 4 → cost 0; radiant gives a radiant card"). Engine cell: "Non-token Core pool
-// excluding #59".
-//
-// Rulings proved here: R65 (the chosen embiggen price is the cost, and `costOverride` starts the
-// calculation), R81 (embiggen travels in the `play` action and opens no prompt), R62 and §6.2 (the
-// controller's turn only, trigger before the draw), R60 and §5.1 (the pool: no tokens, never #59),
-// R74 (the added card is Radiant by flag).
+// #59 Unbiased Immigration (SPEC §8.3, BUILD M4-T4 row 59). Rulings proved here: R65 (the chosen
+// embiggen price is the cost, and `costOverride` starts the calculation), R81 (embiggen travels in
+// the `play` action and opens no prompt), R62 and §6.2 (the controller's turn only, trigger before
+// the draw), R60 and §5.1 (the pool: no tokens, never #59), R74 (the added card is Radiant by flag).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -125,7 +105,7 @@ mod tests {
         json!({ "field": [{ "def": "core-008", "lane": 1 }], "library": ["core-011", "core-016"] })
     }
 
-    /// TS `{ ...base, ...extra }` over two JSON objects: the later keys win.
+    /// Merges two JSON objects: the later keys win.
     fn spread(base: Value, extra: Value) -> Value {
         let mut all = base.as_object().cloned().unwrap_or_default();
         for (key, value) in extra.as_object().cloned().unwrap_or_default() {

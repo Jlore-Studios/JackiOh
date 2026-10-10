@@ -7,10 +7,8 @@
 //! is rebuilt from its id into this match the first time it is offered or made
 //! (`subsystems::fuse::rebuild_fused_def`, R179). An empty board opens no prompt and draws nothing (R129).
 //!
-//! Port of `packages/engine/src/effects/lastBoard.ts`. Its two numbers, `LAST_BOARD_DISCOVER_OPTIONS`
-//! (§6.3 Discover: "choose 1 of 3") and `LAST_BOARD_CARD_COST` (C+ #29: "It costs (0)", "Each costs
-//! (0)" — a `costOverride`, R65), live in `crate::config` (CLAUDE.md rule 9), and `effects/mod.rs`
-//! re-exports them where TS's barrel did.
+//! Its two numbers, `LAST_BOARD_DISCOVER_OPTIONS` (§6.3 Discover) and `LAST_BOARD_CARD_COST` (C+ #29,
+//! a `costOverride`, R65), live in `crate::config` (CLAUDE.md rule 9).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -48,7 +46,6 @@ fn add_entry(ctx: &mut EffectContext<'_>, entry: &LastBoardEntry, cost_override:
     if rebuild_fused_def(&mut *ctx.state, &entry.def_id, controller).is_none() {
         return;
     }
-    // `addToHand`'s argument as the TS literal `{ defId, radiant, ...(costOverride ? { costOverride } : {}) }`.
     let mut literal = Map::new();
     literal.insert("defId".into(), json!(entry.def_id));
     literal.insert("radiant".into(), json!(entry.radiant));
@@ -117,7 +114,7 @@ pub fn discover_from_last_board(args: DiscoverFromLastBoardArgs) -> Effect {
     })
 }
 
-/// `addFromLastBoard`'s argument (TS default `{}`).
+/// `addFromLastBoard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AddFromLastBoardArgs {

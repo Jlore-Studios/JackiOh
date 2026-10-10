@@ -1,29 +1,15 @@
 //! #61 Prejudiced Postdoc (SPEC §8.3, R23, R57, R64, R81, R90).
-//!
 //! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
-//! unit", which per §8's Conventions restates only which units the pick may name — the Cry, the
-//! Vanilla copy and the side it lands on are all kept.
+//! unit", which per §8's Conventions restates only which units the pick may name.
 //!
-//! §8.3's Engine cell: "Copy per R57 with `vanilla` set and no granted keywords: the target's form,
-//! radiant flag and buffs, no damage; auras apply to it afresh; an Immutable target is legal (R23)."
-//! So the copy is R57's copy — defId, radiant flag, permanent buffs and `statsOverride` carried,
-//! damage, exertion and counters reset — with two deviations R57 does not make on its own and that
-//! only #61 asks for: the copy's Vanilla flag is on, and the copy carries NO granted keywords
-//! (BUILD M4-T4 #8: "copy is stats only"). Both are arguments to `summon_copy`, never work this file
-//! does: a card file composes effects and never touches state (CLAUDE.md rule 5).
+//! The copy is R57's (form, radiant flag and buffs carried; damage, exertion and counters reset) with
+//! two deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla
+//! flag is on and it has no granted keywords (BUILD M4-T4 #8). R23: Immutable blocks Vanilla on the
+//! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
 //!
-//! R23: Immutable blocks the Vanilla and Transform verbs on the Immutable card ITSELF. Here the
-//! Vanilla applies to a brand-new card, so an Immutable target is a legal pick and the copy comes
-//! out textless — the ruling names #61 for exactly this.
-//!
-//! Auras are layer 5 of §10.4 and are computed on read, never stored, so "auras apply to it afresh"
-//! needs no code: the copy is a new instance under whatever auras its own side has.
-//!
-//! R81/R90: the pick travels in the `play` action as a declared target, so resolution never pauses.
-//! The Postdoc is still in hand when the play's choices are validated (§10.5 step 1) and only
-//! reaches the field at step 4, so it can never be its own target and needs no `excludeSelf`.
-//! A declaration the board cannot satisfy does not refuse the play: the Cry fizzles and the unit
-//! still enters (§8 Conventions, R90).
+//! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
+//! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
+//! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -97,8 +83,8 @@ mod tests {
     /// next one. With an empty p1 board that is lane 1 for the Postdoc and lane 2 for the copy.
     const COPY_LANE: i32 = 2;
 
-    /// The message a refused step panics with, for a TS `toThrow(/a|b|c/i)` whose pattern is a real
-    /// regex (no regex crate in a pure crate, SURFACE §8): the caller matches it by hand.
+    /// The message a refused step panics with; the caller matches it by hand (no regex crate in a
+    /// pure crate).
     fn refusal(s: &mut Scenario, step: impl FnOnce(&mut Scenario)) -> String {
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| step(s))) {
             Ok(()) => panic!("expected the step to be refused"),
@@ -279,7 +265,6 @@ mod tests {
             }));
             let shredder = s.card(SHREDDER).clone();
 
-            // TS `toThrow(/Human|not a legal|option/i)`.
             let message = refusal(&mut s, |s| {
                 s.play(POSTDOC, json!({ "targets": [sel(&shredder)] }));
             })

@@ -52,18 +52,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #50 Voidwalker — SPEC §8.6 row 50, BUILD M9 Classic row C 50: "Cry: exile every card in both
-// graveyards; Aura, while it is on the field: every card that would go to a graveyard (a death, a
-// discard, a resolved Spell, a fired trap, a burn) is exiled instead; unit tokens still cease to exist
-// (R11); its own card goes to its owner's graveyard when it dies, its aura having left with it (R398);
-// radiant: exile only the opponent's graveyard, and only cards the opponent owns are exiled instead,
-// judged by owner, so a stolen Unit of theirs dying on your side is exiled and your own cards reach
-// your graveyard; no tuned numbers".
-//
-// The moves come from Core cards with their own tests: Hit Job destroys a Unit (a death, and a Spell
-// that resolves), Zao Gao discards 2 at random and summons 2 Rush Tokens, Stockpile draws into a full
-// hand (a burn), Sheepish is a Trap that fires on a played Unit and is spent, Snom Bunny Mind Control
-// steals a permanent, and Felinor Fiender's Stack buries a card beneath it.
+// C #50 Voidwalker (SPEC §8.6 row 50, BUILD M9 Classic row C 50): the aura takes a death, a discard, a
+// resolved Spell, a fired trap and a burn; unit tokens still cease to exist (R11); its own card reaches
+// the graveyard (R398). Radiant judges by owner: a stolen Unit of theirs dying on your side is exiled.
 //
 // A scenario places its graveyards after its field, through the engine's own moves, so a Voidwalker
 // already on the field would exile them as they were laid; the Cry's cases play it from hand instead.

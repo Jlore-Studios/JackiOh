@@ -8,10 +8,6 @@
 //! Every entry is built when it resolves, not when the Cry returns (a part of the list, `lazy_part`), as
 //! Core's are: a recursion rolled before it resolves its whole chain first and changes the hand, the deck
 //! and the board each later entry reads (R87), and a pause inside one parks the rest of it (R113).
-//!
-//! Port of `packages/engine/src/subsystems/callToChaosPlus.ts`. TS's `addFree(name, pool, count)`
-//! returned the entry's builder; here each entry's builder is a named function (`build_fruits`, …), so
-//! the table is a constant like Core's.
 
 use std::sync::Arc;
 
@@ -71,12 +67,11 @@ fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
     })
 }
 
-/// Entry 9: "replace your deck with random Call to Chaos cards, which cost (0)" — each card of the deck as
-/// the entry resolves is Replaced (§6.3, R35) one for one, where it lies, by a random card of the "Call
-/// to Chaos" pool (both editions, this one included: the text names its pool, R387, R28), each pick its
-/// own (R60), the old card ceasing to exist and the new one a card its owner was never shown (R311), with
-/// a `costOverride` of (0) it carries until it reaches a graveyard or an exile pile (R78, R766). The deck keeps its size; an empty one draws
-/// nothing (R129).
+/// Entry 9: "replace your deck with random Call to Chaos cards, which cost (0)": each deck card as the entry
+/// resolves is Replaced (§6.3, R35) one for one, where it lies, by a random card of the "Call to Chaos"
+/// pool (both editions, this one included: R387, R28), each pick its own (R60) and unseen by its owner
+/// (R311). The new card carries a `costOverride` of (0) until it reaches a graveyard or an exile pile
+/// (R78, R766). An empty deck draws nothing (R129).
 pub fn replace_deck_with_call_to_chaos() -> Effect {
     entry("replace", |ctx| {
         let deck: Vec<CardInstance> = ctx.sink.state.players[ctx.controller].library.clone();

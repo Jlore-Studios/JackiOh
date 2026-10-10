@@ -1,7 +1,7 @@
 //! C+ #38 Solarius (SPEC §8.7 row 38): (2) Unit, Epic, 3/2 → 6/4.
 //!   Base:    "Spell Damage +2. Death: Shuffle a Solarius Prime into your deck." (no Cry, balance patch 1)
 //!   Radiant: "Spell Damage +5. Death: Shuffle a Radiant Solarius Prime into your deck."
-//! Spell Damage is the catalog's numbered keyword, which §4.4 step 0 (`damage.ts`) reads off the field;
+//! Spell Damage is the catalog's numbered keyword, which §4.4 step 0 reads off the field;
 //! the Death shuffles a fresh C+ #38.1 in at a random position, R80's cap turning it away.
 
 use jackioh_engine::effects::shuffle_into;
@@ -27,16 +27,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38 Solarius — SPEC §8.7 row 38, BUILD M9 Classic+ row C+ 38: "Spell Damage +2 while on the
-// field: each hit of a Spell you play or cast gains 2 (§4.4 step 0), every hit of a multi-hit Spell,
-// never a Field Spell's, a Trap's, a Unit's or an activation's hit, never the opponent's Spells; two
-// sources add; no Cry on either face (balance patch 1); Death shuffles a Solarius Prime (C+ #38.1)
-// into your deck at a random position (R80's cap), shown in your library list; radiant Spell Damage +5,
-// the Solarius Prime Radiant".
-//
-// Spell Damage is a numbered keyword (§6.1), so B3.4's X change tunes it rather than a param (R482).
-// A Trap's hit is proved in C+ #22 Blood Moon's test, the one Trap of these sets whose text deals
-// damage from itself.
+// C+ #38 Solarius (SPEC §8.7): Spell Damage +2 on field adds to each hit of a Spell you play or cast
+// (§4.4 step 0), never a Field Spell's, a Trap's, a Unit's or an activation's, never the opponent's;
+// Death shuffles Solarius Prime (C+ #38.1) into deck up to cap (R80).
+// Numbered keyword (§6.1), so B3.4 X change tunes it rather than a param (R482).
+// A Trap's hit, which Spell Damage never raises, is proved in C+ #22 Blood Moon's test.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -75,7 +70,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `power.memory[subsystems.POWER_KEY] = power` on the live Heroic Power card.
     fn set_power(s: &mut Scenario, id: &str, power: &str) {
         let live = find_instance_mut(s.state_mut(), id).expect("the Heroic Power card");
         live.memory.insert(subsystems::POWER_KEY.to_string(), json!(power));

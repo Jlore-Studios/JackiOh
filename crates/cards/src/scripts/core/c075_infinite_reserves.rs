@@ -1,26 +1,16 @@
-//! #75 Infinite Reserves (SPEC §8.3): "Draws from an empty library give you a Rush Token card
-//! instead of fatigue", radiant "Cry: draw 3; same" — "same" says so explicitly (§8 Conventions), so
-//! the radiant face keeps the replacement and ADDS a Cry.
+//! #75 Infinite Reserves (SPEC §8.3): an empty-library draw gives a Rush Token card instead of
+//! fatigue; radiant "Cry: draw 3; same" keeps the replacement and ADDS a Cry (§8 Conventions).
 //!
-//! The replacement is a draw hook, not an effect: `static_flags.infinite_reserves` is the whole of it.
-//! `draw_one` (engine/src/draw.rs) walks the player's backrow for the flag before it takes fatigue,
-//! creates the Rush Token card in that player's HAND — §8.3's Engine cell, "the token is a 1-cost
-//! hand card", so `add_to_hand`, never a summon — emits `drawn` for it, and returns without touching
-//! `fatigue_count` or dealing the R3 fatigue damage. Three things follow that this card cannot
-//! influence and must not duplicate:
-//!   - R4: the token goes through the same `add_to_hand` a real draw uses, so a full hand burns it;
-//!   - R11: a unit-token card may sit in a hand or library and ceases to exist if it leaves that
-//!     zone other than by being drawn or played — `move_to_zone` enforces that, not this file;
-//!   - the token's identity: `draw_one` looks it up by §5 index "T-rush", i.e. the shipped Rush Token
-//!     (3/3 Rush, cost 1), so the card it gives you is a real catalog card with no override.
+//! The replacement is a draw hook: `static_flags.infinite_reserves` is the whole of it. `draw_one`
+//! (engine/src/draw.rs) reads it off the BACKROW before taking fatigue and `add_to_hand`s the §5 index
+//! "T-rush" token (§8.3's Engine cell: a hand card, never a summon), skipping `fatigue_count` and R3's
+//! damage. The engine owns the rest: R4 (a full hand burns the token) and R11 (a unit-token card in a
+//! hand or library ceases to exist if it leaves other than drawn or played). It is a Field Spell, so
+//! §3.2 makes it public and permanent.
 //!
-//! The flag is read off the BACKROW, so this only works while Infinite Reserves is on the field; it
-//! is a Field Spell, so §3.2 makes it public and permanent and nothing here touches `face_up`.
-//!
-//! The radiant Cry is an ordinary draw of 3 and fires only when the card is played from hand or cast
-//! (R1). It is deliberately NOT special-cased against its own flag: a radiant Infinite Reserves
-//! played on an empty library draws three Rush Token cards, because the flag is already in play by
-//! the time the Cry runs (§10.5 puts the card on the field at step 4 and fires the Cry at step 5).
+//! The radiant Cry is an ordinary draw of 3 (R1), deliberately NOT special-cased against its own flag:
+//! played on an empty library it draws three Rush Token cards, since §10.5 puts the card on the field
+//! at step 4, before the Cry fires at step 5.
 
 use jackioh_engine::effects::draw;
 use jackioh_engine::prelude::*;
@@ -52,13 +42,9 @@ pub fn script() -> CardScripts {
 // #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4: "Empty-library draw yields a Rush Token card and
 // no fatigue damage; radiant Cry draws 3".
 //
-// The empty-library draw is reached with `library: []` and `startTurn()`, which is where §2.2 puts
-// the draw. Each test pairs the outcome with a control — the same draw with no Infinite Reserves on
-// the field takes R3's fatigue — so the flag is what is being proved, not the harness.
-//
-// "The token is a 1-cost hand card" (§8.3 Engine cell): the assertions check the zone (hand, not a
-// unit lane), the def (the catalog's own core-t-rush, so 3/3 Rush at cost 1 with no stat override —
-// the contrast with #74's X/X token), and that it can then be played out of the hand.
+// The empty-library draw is `library: []` plus `startTurn()` (§2.2). Each test pairs the outcome with a
+// control: the same draw without Infinite Reserves takes R3's fatigue. The token is checked as a hand
+// card (§8.3 Engine cell), the catalog's own core-t-rush at 3/3 with no stat override, and playable.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -66,7 +52,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)

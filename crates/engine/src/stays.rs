@@ -1,28 +1,15 @@
 //! A card's stay in a zone, read off the event stream (SPEC §10.3, R174, R212).
 //!
-//! §10.3 has every visible state change emit an event, so the events that follow a moment say
-//! everything that happened to a card since: whether it left the field, whether it has moved zones
-//! at all, and whether its controller changed. Two questions are asked of them:
-//!
+//! §10.3 has every visible change emit an event, so the events after a moment say what happened since:
 //!   * R174: has a card left the field since this point? A Reborn body is back under the same id by
-//!     the time the state check returns (§4.5 step 4), so "is it on the field now" cannot tell it
-//!     from a card that never left; the `destroyed` it went out with can.
-//!   * R212: did a card arrive where it is now after an event, or change hands after it? The
-//!     resolution loop hands an event to the triggers some time after it happened — the state check
-//!     that follows a combat, an Echo repeat or a whole Cry runs first — so the board it is offered to
-//!     can hold a Reborn body, a card drawn since, or a unit a Death has stolen since. The events
-//!     still owed behind it say which.
+//!     the time the state check returns (§4.5 step 4), so only the `destroyed` it went out with tells.
+//!   * R212: did a card arrive where it is now after an event, or change hands after it? The loop
+//!     hands an event to the triggers some time after it happened, so the board can hold a Reborn
+//!     body, a card drawn since or a unit a Death stole since; the events still owed say which.
 //!
-//! No instance field records a stay: the design keeps `CardInstance` as it is (docs/polish). The
-//! event stream answers the first question inside one action, but a sequence a prompt splits resumes
-//! in a later action, whose event list begins after the pause: #68's damage in a crafted Cube +
-//! Scarab + Sorcerer resumes after the Scarab's Discover, and the sacrifice before it is in the
-//! action that asked. So R174's question is also kept in state, as the field's departures counted
-//! (`GameState.field_exits`): a sequence takes a mark when it begins (`exit_mark`) and carries it
-//! across any pause, and `left_field_after` answers against it whatever action it resumes in.
-//!
-//! Port of `packages/engine/src/stays.ts`. `EventStay` lives in `state.rs` (part 1), because the
-//! context and paused work carry one; it is re-exported here under its TS path.
+//! No instance field records a stay (docs/polish), and a sequence a prompt splits resumes in a later
+//! action whose events begin after the pause, so R174 is also kept in state: `exit_mark` when a
+//! sequence begins, `left_field_after` against `GameState.field_exits` whatever action it resumes in.
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
@@ -37,12 +24,10 @@ pub fn exit_mark(state: &GameState) -> u32 {
     state.field_exits.as_ref().map_or(0, |exits| exits.count)
 }
 
-/// R174, R212: the stays an event happened on, when it carries them — the play pipeline's step-4
-/// `cardPlayed` and `summoned` and step 7's `cardResolved` name the played card, and the loop can hand
-/// them to a response well after they happened (a cast's `cardResolved` waits for the list that cast
-/// it, R70). A reader that aims at the card an event names judges its stay from here: a card that has
-/// left the field since, even one back through Reborn by now, is not the card the event is about
-/// (R83). `None` for an event that carries no mark, which is judged from when it is dispatched.
+/// R174, R212: the stay an event happened on, when it carries one: the play pipeline's `cardPlayed`,
+/// `summoned` and `cardResolved` name the played card, and the loop can hand them to a response well
+/// after they happened (a cast's `cardResolved` waits for the list that cast it, R70). A card that has left the field since, even one back through Reborn, is
+/// not the card the event is about (R83). `None` for an event with no mark, judged from its dispatch.
 pub fn event_mark(event: &GameEvent) -> Option<u32> {
     match event {
         GameEvent::CardPlayed { exits_from, .. }
@@ -52,8 +37,7 @@ pub fn event_mark(event: &GameEvent) -> Option<u32> {
     }
 }
 
-/// The fields of an event that name a card, read as TS read them off the event object: every one of
-/// these that holds a string.
+/// The fields of an event that name a card: every one of these that holds a string.
 const CARD_FIELDS: &[&str] = &[
     "instanceId",
     "newInstanceId",
@@ -89,8 +73,7 @@ pub fn event_stay_of(state: &GameState, event: &GameEvent) -> EventStay {
 /// R174: a card has just left the field — died, bounced, exiled, returned to a library, or ceased to
 /// exist there (replaced by a Transform, fused away). Called from `zones::move_to_zone` and
 /// `zones::cease_to_exist`, the two funnels every such move goes through, so a reader that names the
-/// card by the id an event carried — a trap owed the play of a unit the first Sheepish turned into a
-/// Sheep — finds it gone.
+/// card by the id an event carried finds it gone.
 pub fn note_field_exit(state: &mut GameState, instance_id: &str) {
     let exits = state.field_exits.get_or_insert_with(FieldExits::default);
     exits.count += 1;
@@ -141,16 +124,13 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
 
 /// §3.2, R153, R212: a card has just been taken off the field, and `resumed` is the card beneath it in
 /// its Stack pile that is the pile's top now, if it was on top of one. A dormant card registers nothing
-/// (R153), so the resumed card did not see what happened before it resumed — the death that uncovered
-/// it above all — and no event reports a resume, so it is kept here against the card whose leaving
-/// caused it, for `uncovered_by` to read off the events that report that leaving.
+/// (R153), so the resumed card did not see what happened before it resumed, and no event reports a
+/// resume: it is kept here against the card whose leaving caused it, for `uncovered_by` to read.
 ///
-/// A note belongs to one removal. It lasts while the report of that removal is still owed to the loop
+/// A note belongs to one removal. It lasts while that removal's report is still owed to the loop
 /// (`note_reported`) and while the card that left has not moved again (`note_moved`), and goes once
-/// both have happened: a later move of the same card — exiled out of the graveyard it died into,
-/// discarded, shuffled back — is no removal from a pile's top, so a card that resumed long before is
-/// not taken for one that resumed after whatever that move's batch did first. Every removal is such a
-/// move, whether or not it uncovers anything.
+/// both have happened: a later move of the same card is no removal from a pile's top, so a card that
+/// resumed long before is not taken for one that resumed after it. Every removal is such a move.
 pub fn note_uncovered(state: &mut GameState, removed_id: &str, resumed: Option<&str>) {
     note_moved(state, removed_id);
     let Some(resumed) = resumed else {

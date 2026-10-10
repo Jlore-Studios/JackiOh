@@ -4,19 +4,11 @@
 //!   Engine:  "#35 Lunar Eclipse's modifier (`costDiscount`, `onlyType: "Spell"`, this turn, consumed
 //!            on use or at cleanup; Cost, §6.3, R65). Tunes: discount 2 ↑."
 //!
-//! The discount is Core #35 Lunar Eclipse's player modifier, the same shape:
-//!   * `onlyType: "Spell"` — `effectiveCost` skips it for a Unit, a Field Spell or a Trap, so those
-//!     plays neither pay less nor spend it;
-//!   * `oncePerTurn` — §10.5 step 2 (`playSteps.consumeUsedDiscounts`) removes it on the first Spell
-//!     it priced, so only the next Spell is cheaper;
-//!   * `{ until: "thisTurn" }` — §2.2's cleanup takes it if no Spell used it.
-//!
-//! R65 floors the price at (0), so a (1) Spell under a 2 discount costs (0) and gives nothing back.
-//! R70: a cast pays nothing and never uses a discount, so a Spell cast this turn leaves it for the
-//! next Spell played.
-//!
-//! The amount is the declared number `discount` (R386), 2 or 4, read through `param`; both faces run
-//! this one script.
+//! Core #35 Lunar Eclipse's player modifier: `onlyType: "Spell"` (a Unit, Field Spell or Trap play
+//! neither pays less nor spends it), `oncePerTurn` (§10.5 step 2 removes it on the first Spell it
+//! priced) and `{ until: "thisTurn" }` (§2.2's cleanup takes it unused). R65 floors the price at (0).
+//! R70: a cast pays nothing and never uses a discount, so it is left for the next Spell played.
+//! The amount is the declared `discount` (R386), read through `param`; both faces run this script.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::add_player_modifier;
@@ -92,7 +84,6 @@ mod tests {
         fn runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(js(&registered_catalog()[ID])["id"], PREP);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script, the same Cry.
             let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());

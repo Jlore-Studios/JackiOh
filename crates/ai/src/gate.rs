@@ -3,9 +3,6 @@
 //! its log to prove it replays. The gate tests turn a report into a pass or a fail; this module plays
 //! and measures, and says how many wins a run of a given size needs (`gate_needed`), so a tuner can
 //! rerun one losing seed with `game_config(matchup, n, …)`.
-//!
-//! Port of `packages/ai/src/gate.ts`. TS's `Record<Matchup, number>` fields are `ByMatchup<T>`,
-//! indexed by `Matchup` (`AI_GATE.full_seeds[matchup]`).
 
 use std::ops::Index;
 
@@ -31,10 +28,8 @@ pub enum Matchup {
 }
 
 impl Matchup {
-    /// Every matchup, in TS's order.
     pub const ALL: &'static [Matchup] = &[Matchup::AiVsRandom, Matchup::AiVsGreedy, Matchup::HardVsEasy];
 
-    /// The literal TS wrote.
     pub fn as_str(self) -> &'static str {
         match self {
             Matchup::AiVsRandom => "ai-vs-random",
@@ -50,7 +45,7 @@ impl std::fmt::Display for Matchup {
     }
 }
 
-/// `Record<Matchup, T>`: one value per matchup, serialised `{ "ai-vs-random": …, … }`.
+/// One value per matchup, serialised `{ "ai-vs-random": …, … }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct ByMatchup<T> {
     #[serde(rename = "ai-vs-random")]
@@ -77,22 +72,13 @@ impl<T> Index<Matchup> for ByMatchup<T> {
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiGate {
-    /// The frozen seed series: game n of a matchup is `${seedSeries}:${matchup}:${n}`. No tuning run
-    /// plays it. The first series, `gate`, was also the strength pass's tuning set (its seeds 1–300
-    /// of ai-vs-greedy held the gate's own 50), so its result said as much about the tuning as about
-    /// the AI. Tuning plays `AI_TUNING_SERIES` instead (`scripts/bench.ts`), and this one is read only
-    /// by the gate.
+    /// The frozen seed series: game n of a matchup is `${seedSeries}:${matchup}:${n}`. Only the gate
+    /// plays it; tuning plays `AI_TUNING_SERIES`, so no tuning run touches a gate seed.
     ///
-    /// `gate:v3` replaces `gate:v2` because setup changed, not the AI (R635: a card that casts on draw
-    /// is set aside and shuffled in after the mulligan, which re-deals every game whose deck holds one,
-    /// 36 of 100 seats here). `gate:v2` sat on its floor: Hard against Easy won 41 of 50 (40 needed)
-    /// before and 38 after, with 5 of its first 20 games flipping both ways, and on 60 tuning games
-    /// the same AI won 58. `gate:v3` was played once, on the new setup, never tuned on: 97 of 100
-    /// against random, 41 of 50 against greedy and 48 of 50 for Hard against Easy. No count or floor
-    /// moved. This is a re-roll of the deals, not tuning and not a lower floor: reviews/2026-09-23-
-    /// polish-part-b.md B-3 warned that a gate on its floor goes red on any neutral reshuffle, and its
-    /// two ways out were cutting the floor or keeping whichever variant passes the frozen series.
-    /// Whoever next sees this gate fail with the AI untouched should look at the deals first.
+    /// `gate:v3` is a re-roll of the deals, not tuning and not a lower floor: R635 (a card that casts
+    /// on draw is set aside and shuffled in after the mulligan) re-dealt every game whose deck holds
+    /// one, and a gate on its floor goes red on any neutral reshuffle (reviews/2026-09-23-polish-part-b.md
+    /// B-3). If it fails with the AI untouched, look at the deals first.
     pub seed_series: &'static str,
     /// What `pnpm test` runs per matchup (seeds 1..20), under the same rule as the full run
     /// (`gate_needed`: 17, 10 and 16 wins). At four games no count could tell a working AI from a broken
@@ -155,7 +141,7 @@ pub const AI_GATE: AiGate = AiGate {
     calibration_ref_ms: 72.0,
 };
 
-/// The series tuning runs play (`scripts/bench.ts`'s default), so no tuned seed is a gate seed.
+/// The series tuning runs play, so no tuned seed is a gate seed.
 pub const AI_TUNING_SERIES: &str = "tune";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -222,13 +208,11 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
     }
 }
 
-/// Game n (1-based) of a matchup: seed `${series}:${matchup}:${n}` (series AI_GATE.seedSeries unless
-/// a tuner passes another; TS's two defaults, `AI_GATE_BUDGET` and the series, are passed explicitly);
-/// the subject (the AI, or the Hard AI) sits p1 when n is odd and p2 when even. Every seat's deck is
-/// built by one rule, `build_ai_deck(Rng::new(`${seed}:deck:${seat}`, 0), its handicap's deckSize,
-/// { manaCap })`, the shadow ban (R186) included: the gates measure play, so neither side is dealt
-/// cards the other side's rule keeps out. Handicaps: ai-vs-* use Easy for both seats; hard-vs-easy
-/// gives the subject AI_DIFFICULTY.hard and the other AI_DIFFICULTY.easy.
+/// Game n (1-based) of a matchup: seed `${series}:${matchup}:${n}`, the subject (the AI, or the Hard
+/// AI) on p1 when n is odd. Every seat's deck is built by one rule, `build_ai_deck` with its
+/// handicap's deck size and mana cap, the shadow ban (R186) included: the gates measure play, so
+/// neither side is dealt cards the other side's rule keeps out. Handicaps: ai-vs-* use Easy for both
+/// seats; hard-vs-easy gives the subject AI_DIFFICULTY.hard and the other AI_DIFFICULTY.easy.
 pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
     let seed = format!("{series}:{}:{n}", matchup.as_str());
     let subject_seat = subject_seat_of(n);
@@ -291,8 +275,7 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     }
 }
 
-/// Plays games 1..seeds; each is folded with its handicaps to fill replay_hash/replay_errors. (TS's
-/// default budget, `AI_GATE_BUDGET`, is passed explicitly.)
+/// Plays games 1..seeds; each is folded with its handicaps to fill replay_hash/replay_errors.
 pub fn run_gate(matchup: Matchup, seeds: i32, budget: SearchBudget) -> GateReport {
     let numbers: Vec<i32> = (1..=seeds.max(0)).collect();
     run_gate_games(matchup, &numbers, budget)

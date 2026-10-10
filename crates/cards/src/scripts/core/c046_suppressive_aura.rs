@@ -1,32 +1,17 @@
 //! #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Paid (4): −2/−2 instead.", radiant
-//! "Aura: Enemy Units have −2/−2. Paid (4): −4/−4 instead." (patch v0.1.1 halved the paid-2 numbers
-//! and cut the paid-4 ones from −5/−5 and −10/−10).
+//! "Aura: Enemy Units have −2/−2. Paid (4): −4/−4 instead." The radiant cell restates the whole
+//! clause and replaces the base one (§8 Conventions). Neither face prints a keyword.
 //!
-//! Reading the radiant cell (§8 Conventions): it restates the whole clause, so it replaces the base
-//! one — the radiant face touches enemy units only and carries its own two numbers. Neither face
-//! prints a keyword, so the keyword list stays empty on both.
+//! A pure §10.4 layer-5 contribution: `Script.aura` is read on every stat read, never applied once
+//! and stored, which is all of "leaving restores them" (§8.2 Engine). Nothing here mutates
+//! (CLAUDE.md rule 5), and an aura's `applies` predicate reads instance data only, or the layers recurse.
 //!
-//! This is a pure §10.4 layer-5 contribution and nothing else. `Script.aura` is read on every stat
-//! read (`layers.unitView`), never applied once and stored, which is the whole of "leaving restores
-//! them" in the §8.2 Engine cell: when the Field Spell leaves the backrow `layers.auraSources` stops
-//! finding it and the next read of a survivor is its unmodified self again. Nothing in this file
-//! mutates anything (CLAUDE.md rule 5); an aura's `applies` predicate also reads instance data only
-//! and never calls back into `unitView`, or the layers would recurse.
+//! Attack floors at 0, max health does not: a unit at 0 max health dies at the next state check (§4.5
+//! step 1), Indestructible too, since no destroy effect is involved (R69).
 //!
-//! Attack floors at 0 but max health does not: §10.4 layer 5 lets it fall to 0 or less, and §4.5
-//! step 1 collects such a unit at the next state check — R69 spells out that this reaches an
-//! Indestructible unit too, because no destroy effect is involved: it dies, fires Death, may Reborn
-//! and counts toward Ceaseless Void's destroyed counter. So radiant paid 4 (−4/−4) kills an
-//! Indestructible unit with 4 health or less while no `destroy` verb appears anywhere below.
-//!
-//! The price is not a choice this card asks for. R81 lists #46: zone, X, embiggen, Tribute and the
-//! declared targets and modes all travel in the `play` action, and §10.6 adds that no Core card ever
-//! opens an `embiggen` prompt. `reduce.playCard` writes the answer to `instance.embiggened` and R65
-//! makes that the cost actually paid, so the aura simply reads the flag off `self` — no `targets`
-//! and no `modes` declaration belongs here.
-//!
-//! R78: `embiggened` is one of the fields leaving the field resets, so a Suppressive Aura that is
-//! bounced and replayed for 2 is a −1/−1 aura again, which is what "the chosen embiggen price" means.
+//! The price rides in the `play` action (R81; §10.6: no Core card opens an `embiggen` prompt), and R65
+//! makes `instance.embiggened` the price paid, so the aura reads it off `self`. R78: leaving the
+//! field resets it.
 
 use jackioh_engine::prelude::*;
 
@@ -87,34 +72,23 @@ pub fn script() -> CardScripts {
 // #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4: "Embiggen price chosen with the play (R81);
 // −1/−1 to all, 1-health units die, restored on leaving; paid 4 → −2/−2; radiant enemy only −2/−2,
 // paid 4 → −4/−4; enough of them together kill an enemy The Rock despite Indestructible (R69)"
-// (patch v0.1.1 cut the numbers from −2/−2 and −5/−5, radiant −4/−4 and −10/−10).
 //
-// Every stat assertion goes through `expectStats`, which reads the engine's `unitView`, so the
-// number already has §10.4 layer 5 in it — the aura is never asserted by inspecting the script.
+// Stat assertions go through `expect_stats`, which reads the engine's `unitView`, so §10.4 layer 5
+// is already in the number. The props have no script beyond printed keywords, so only the aura
+// moves their numbers.
 //
-// The props, chosen for having no script of their own beyond printed keywords, so nothing but the
-// aura moves their numbers:
-//   #25 4-mana 7/7 (7/7, Armor 7)   — the survivor, and the unit whose restoration is asserted.
-//   #20 Pointmaster (7/1, First Strike) — the 1-health unit §8.2's Engine cell kills.
-//   #45 Deft Duelist (4/3, Charge)  — survives −1/−1 and −2/−2.
-//   #56 Jilliax (3/2, Rush, Taunt, Lifesteal, Divine Shield) — survives −1/−1, dies to −2/−2.
-//   #66 The Rock (10/10, Indestructible) — R69's unit, killed only once its max health reaches 0.
-//
-// The embiggen price cannot be set on a card the scenario builder PLACES — no setup entry carries
-// `embiggened` — which is as it should be: R81 makes the price part of the play. So every paid-4
-// case here plays the card out of hand with `{ embiggen: true }` and checks the mana as well, and
-// `reduce.playCard` is what writes the answer to `instance.embiggened` (R65).
+// A scenario cannot place a card with `embiggened` set (R81 makes the price part of the play), so
+// every paid-4 case plays from hand with `{ embiggen: true }`, which writes it (R65).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
-    // The harness has no verb for "a permanent leaves the field" and none of #46's own text removes
-    // one, so the engine's own mover is used for that one step (see the "restored on leaving" test).
+    // The harness has no verb for a permanent leaving the field, so that one step uses the engine's mover.
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{OffFieldZone, move_to_zone};
 
     use crate::scenario;
 
-    /// TS's `def` (`cardDef("core-046")`): the catalog card this file scripts.
+    /// The catalog card this file scripts.
     fn def() -> CardDef {
         crate::register_all();
         crate::card_def(ID)
@@ -290,8 +264,7 @@ mod tests {
 
             g.play(AURA, json!({ "embiggen": true }));
 
-            // R69: no destroy effect is involved, so Indestructible does not save a unit at 0 max health;
-            // it is collected like any other, which is why this is a death and not a survival.
+            // R69: no destroy effect is involved, so Indestructible does not save a unit at 0 max health.
             g.expect_in_zone(&doomed, "graveyard");
             g.expect_events(json!(["destroyed"]));
             let death = g.last_events().iter().find_map(|event| match event {

@@ -5,15 +5,12 @@
 //!            — cards 1, discount 1
 //!   Engine:  "A player effect for the rest of the game (§10.1): a `never`-expiry player modifier on the
 //!            caster that acts at their start of turn, among the start-of-turn triggers (R62). The pool
-//!            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51.
-//!            Several
-//!            contracts stack, one card each. Radiant: `costMod` −1 on the card. The hand cap burns
-//!            extras (§2.4). Tunes: cards 1 ↑; Radiant discount 1 ↑."
+//!            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51."
 //!
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's
-//! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price lands
-//! only on a card that reached the hand (§2.4, R4).
+//! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price
+//! lands only on a card that reached the hand (§2.4, R4).
 
 use jackioh_engine::effects::{add_random_from_catalog, for_rest_of_game};
 use jackioh_engine::prelude::*;
@@ -62,12 +59,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #52 Jlockheed's Permanent Defense Contract — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52: "Leaves
-// a player modifier for the rest of the game (nothing on the field to remove) that adds, at each start
-// of your turn, a random non-token Jlockeed card to your hand: Core #13, #14, Classic #4 or C+ #48,
-// C+ #51, never this card (R387); two Contracts add two; a full hand burns; the cards are hidden from
-// the opponent (R97); count and discount read through `param()`; radiant the card is Radiant and costs
-// (1) less (`costMod` −1, floor 0)".
+// C+ #52 — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52: a rest-of-game player modifier (nothing on the
+// field to remove) adds a random non-token Jlockeed card each start of your turn, never this card (R387);
+// two Contracts add two; a full hand burns; hidden from the opponent (R97); count and discount via
+// `param()`; radiant: the card is Radiant and costs (1) less (`costMod` −1, floor 0).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -79,7 +74,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `signed({ radiant?, seed?, contracts?, fillers? })`: `None` is the TS default.
     fn signed(radiant: bool, seed: Option<&str>, contracts: Option<usize>, fillers: Option<usize>) -> Scenario {
         let contract = json!({ "def": CONTRACT, "radiant": radiant });
         let mut hand: Vec<Value> = (0..contracts.unwrap_or(1)).map(|_| contract.clone()).collect();

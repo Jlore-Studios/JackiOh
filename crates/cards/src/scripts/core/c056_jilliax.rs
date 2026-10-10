@@ -1,27 +1,17 @@
-//! #56 Jilliax (SPEC §8.3): 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield" / radiant "Charge,
-//! Taunt, Lifesteal, Indestructible". Engine cell: "Keywords only".
+//! #56 Jilliax (SPEC §8.3): 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield" / radiant "Rush,
+//! Taunt, Lifesteal, Divine Shield, Reborn". Engine cell: "Keywords only".
 //!
 //! Both faces are empty scripts on purpose. §10.4's keyword layer reads the printed keywords off the
-//! running face of the def (`face_of` in engine/src/layers.rs), and every one of these six keywords is
-//! a pipeline or validator rule the engine already owns (§6.1):
-//!   Rush            sickness exemption for unit targets only (`why_cannot_declare`, §4.1, §4.2 step 1)
-//!   Charge          full sickness exemption, hero included
-//!   Taunt           attack-target validator (`taunt_wall`, §4.2 step 3)
-//!   Lifesteal       damage pipeline step 8 (§4.4), heals the source's controller's hero
-//!   Divine Shield   pipeline step 1: negate the whole hit, lose the shield
-//!   Indestructible  pipeline step 4 and the state check (§4.5 step 1, R46, R69)
-//! A card file that re-stated any of them would be a second implementation of a printed keyword, so
-//! there is nothing here to write (CLAUDE.md rule 5, BUILD M4-T4 "keywords only").
+//! running face of the def (`face_of` in engine/src/layers.rs), and each keyword is a rule the engine
+//! owns (§6.1): Rush (`why_cannot_declare`, §4.1, §4.2 step 1), Taunt (`taunt_wall`, §4.2 step 3),
+//! Lifesteal (§4.4 step 8), Divine Shield (damage pipeline step 1), Reborn. Re-stating any would be a
+//! second implementation (CLAUDE.md rule 5, BUILD M4-T4).
 //!
-//! §8 Conventions on the radiant cell: it lists keywords with no "Plus", so it "gives the radiant
-//! form's complete keyword list" — it REPLACES the base list rather than adding to it. Radiant
-//! Jilliax therefore has no Rush and no Divine Shield. `catalog.json`'s `radiant.keywords` for
-//! core-056 is exactly [Charge, Taunt, Lifesteal, Indestructible], which matches, so no script
-//! compensates for the swap; `tests/cross/catalog.rs` (M4-T1) is what pins that data.
-//!
-//! R46/R69 are the two rulings the radiant face leans on: a marked Indestructible unit switches to
-//! Attack Position and loses Taunt for the turn instead of dying, and it is still collected when its
-//! max health falls to 0 or less — while Sacrifice and Exile go around Indestructible entirely (§6.3).
+//! §8 Conventions: a keyword cell with no "Plus" "gives the radiant form's complete keyword list", so it
+//! REPLACES the base list; `tests/cross/catalog.rs` (M4-T1) pins `catalog.json`'s data.
+//! R46/R69 (Indestructible, pipeline step 4 and §4.5 step 1), which neither face prints now: a marked
+//! Indestructible unit goes to Attack Position and loses Taunt for the turn instead of dying, and is
+//! still collected at 0 max health; Sacrifice and Exile go around it (§6.3).
 
 use jackioh_engine::prelude::*;
 
@@ -37,9 +27,6 @@ pub fn script() -> CardScripts {
 // #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
 // A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword
 // layer, read through `view_for`) or the rule each keyword names in §6.1.
-//
-// Patch v0.1.1: the radiant face is "Rush, Taunt, Lifesteal, Divine Shield, Reborn" — the base list
-// plus Reborn, where it used to trade Rush and Divine Shield for Charge and Indestructible.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -91,11 +78,9 @@ mod tests {
 
             // The same sick unit may attack a unit: 3 into a Mr. Vanilla at 3 health, which kills it.
             //
-            // The kill cannot be read as `health: 0` on the card. R78 resets an instance's damage as it
-            // leaves the field, so the graveyard copy reads its printed 4/4 undamaged — an assertion on
-            // its computed health could never hold. R89 is where the stats as they were survive: "the
-            // `destroyed` event carries what the card was … its attack and max health as the layers
-            // computed them at the moment it died".
+            // R78 resets an instance's damage as it leaves the field, so the kill cannot be read as
+            // `health: 0` on the card. R89: the `destroyed` event carries what the card was, its attack and
+            // max health as the layers computed them at the moment it died.
             g.attack("core-056", "core-008");
             g.expect_in_zone("core-008", "graveyard");
 
@@ -151,14 +136,10 @@ mod tests {
         fn s4_4_step_8_lifesteal_heals_its_controller_s_hero_by_the_amount_dealt_r63() {
             crate::register_all();
             let mut g = scenario(json!({
-                // R82/§2.5 TURN ANCHOR: the attack below spends Jilliax's only exertion and kills the only
-                // enemy unit, so without a card in hand p1's remaining legal actions would be ending the
-                // turn, conceding and offering a draw — `reduce` would auto-end the turn underneath the
-                // assertion, p2 would take a turn and both heroes would take fatigue off an empty library
-                // (the tell is `turnAutoEnded` followed by `damage amount: 1, sourceId: null`). #10 Rapid
-                // Replenish is a 0-cost Spell and therefore always an affordable play, so it holds the turn
-                // open without putting a second body on the board — which matters here, because the attacker
-                // is named by def id.
+                // R82/§2.5 TURN ANCHOR: the attack spends Jilliax's only exertion and kills the only enemy unit,
+                // so without a card in hand `reduce` would auto-end the turn under the assertion (the tell is
+                // `turnAutoEnded` then `damage amount: 1, sourceId: null`). #10 Rapid Replenish is a 0-cost
+                // Spell, always affordable, and adds no second body: the attacker is named by def id.
                 "p1": { "field": [{ "def": "core-056", "lane": 1 }], "hand": [ANCHOR], "health": 20 },
                 "p2": { "field": [{ "def": "core-008", "lane": 1 }] },
             }));
@@ -240,7 +221,8 @@ mod tests {
         #[test]
         fn s4_2_step_3_taunt_is_still_on_the_radiant_face() {
             crate::register_all();
-            // Patch v0.1.1 took Indestructible off this face, so R347 leaves its printed Taunt standing.
+            // R347 (an Indestructible unit has no Taunt) leaves this face's printed Taunt standing: it is
+            // no longer Indestructible.
             let mut g = scenario(json!({
                 "p1": { "field": [{ "def": "core-025", "lane": 1 }] },
                 "p2": {

@@ -2,19 +2,13 @@
 //!   Both faces: "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
 //!   — the multiplier is 1 on the base face and 2 on the Radiant face (a declared number).
 //!
-//! Activate ♾️ (R384): any number of uses a turn, bounded by `ACTIVATE_UNLIMITED_CAP` and, in
-//! practice, by the units there are to Tribute. The cost is "sacrifice one of your units", a pick
-//! carried in the `activate` action (`tributes`) — never Turtinator itself (R683,
-//! `cost.tributeExcludesSelf`), paid as the ability is activated (`cost.tribute`); the Tribute is a
-//! Sacrifice, so it is a death (Death fires, §6.3) and it bypasses Indestructible. One unit is one
-//! Tribute here: a Sheep Token's "worth 2" counts only toward a play's Tribute X (§6.3), and an
-//! activation needs no zone (R391 is about plays).
-//!
-//! The hit's amount is the tributed unit's Attack as it stood when it was paid — its last-known
-//! state (R78), which the activation records (`subsystems.activationPaid`), since the unit is in a
-//! graveyard, reset, by the time the effect runs — times the multiplier. The hit comes from Turtinator
-//! (the source is the card as it last stood, §4.4). An amount of 0 is no hit at all (R63), so nothing
-//! is dealt and nothing is reported.
+//! Activate ♾️ (R384): unlimited uses a turn, bounded by `ACTIVATE_UNLIMITED_CAP`. The cost is a pick
+//! carried in the `activate` action (`tributes`), never Turtinator itself (R683,
+//! `cost.tributeExcludesSelf`). The Tribute is a Sacrifice: a death (Death fires, §6.3) that bypasses
+//! Indestructible. One unit is one Tribute: a Sheep's "worth 2" is only a play's Tribute X (§6.3), and
+//! an activation needs no zone (R391). The hit is the tributed unit's Attack as it stood when paid
+//! (last-known, R78; `subsystems.activationPaid` records it, the unit being reset by then) times the
+//! multiplier, from Turtinator (§4.4). An amount of 0 is no hit at all (R63).
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -61,17 +55,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #21 Turtinator — SPEC §8.6 row 21, BUILD M9 Classic row C 21: "Activate ♾️ (R384): its cost,
-// Tributing one of your Units (a pick carried in the action, Turtinator itself allowed), is paid as it
-// activates, so with no Unit it can't activate; then one hit from Turtinator on a declared target equal
-// to that Unit's attack as it stood (last-known, R78), the hit still coming when it tributed itself;
-// 0 attack → no hit (R63); a Sheep or C #82 is one Unit here (a script's Tribute, §6.3); the Tribute is
-// a death (Death fires); it needs no zone (R391); at most `ACTIVATE_UNLIMITED_CAP` uses per turn; not a
-// play; radiant 10/8: twice that attack; its tuned number (multiplier) reads through `param()` (R386)".
-//
-// Turtinator is always one of its controller's Units while it can be activated, so "no Unit" never
-// arises on the field; what the cost refuses is an activation that names no Tribute, or a Tribute that
-// is not one of its controller's own Units.
+// BUILD M9 Classic row C 21: the Tribute is paid as it activates, then one hit from Turtinator on the
+// declared target for that Unit's attack as it stood (R78); 0 attack, no hit (R63); radiant 10/8: twice
+// that attack; numbers via `param()` (R386). Turtinator is always one of its controller's Units when
+// activated, so the cost refuses a missing Tribute or one that is not that controller's own Unit.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,7 +82,7 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// TS's `{ …defaults, ...side }`: the side's own keys over the defaults.
+    /// The side's own keys over the defaults.
     fn spread(mut defaults: Value, side: Value) -> Value {
         if let (Some(into), Some(from)) = (defaults.as_object_mut(), side.as_object()) {
             for (key, value) in from {
@@ -112,7 +99,6 @@ mod tests {
         }))
     }
 
-    /// TS `eat(s, tribute, targets = ENEMY_HERO, who = TURTLE)`, the defaults written out.
     fn eat<'a>(s: &'a mut Scenario, tribute: &str, targets: Value, who: &str) -> &'a mut Scenario {
         s.activate(who, json!({ "tributes": [tribute], "targets": targets }))
     }
@@ -140,8 +126,8 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, TURTLE);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself, so its
-            // ability's hook is the very same closure.
+            // The Radiant face is the base script itself, so its ability's hook is the very same
+            // closure.
             assert!(Arc::ptr_eq(&scripts.radiant.activations[0].run, &scripts.base.activations[0].run));
             let ability = &scripts.base.activations[0];
             assert_eq!(ability.uses, ActivationUses::Unlimited);

@@ -4,21 +4,18 @@
 //!   Engine:  "The Field Spells on both sides (Traps and Field Traps are not), an Ivory Tower included
 //!            whatever it has fused (R418, R588); Indestructible ones (#98) survive and don't count. The
 //!            damage is one instance per hero, 1 (Radiant 2) times the count, through §4.4, so Spell
-//!            Damage raises it once (§4.4 step 0); none destroyed, no damage. Its preview (R280) is the
-//!            damage each hero would take now. The base face burns your own Claude's Datacenter too
-//!            while it stands in its backrow zone; animated, it is a Unit and stays (R588). Tunes: none."
+//!            Damage raises it once (§4.4 step 0); none destroyed, no damage. The base face burns your
+//!            own Claude's Datacenter too while it stands in its backrow zone; animated, it is a Unit
+//!            (R383) and stays (R588). Its preview is the damage each hero would take now. Tunes: none."
 //!
-//! The sweep and the count are one engine verb (`destroy_field_spells_and_hit`, effects/datacenter.rs),
-//! and the preview reads the same count (`field_spells_doomed`) off the public backrows, times the face's
-//! number — the hit before Spell Damage, as every Core preview reads its own number (R280). An Animated
-//! Field Spell standing in a unit zone is a Unit there (R383) and no Field Spell of the sweep's (R588).
+//! The sweep and the count are one engine verb (`destroy_field_spells_and_hit`, effects/datacenter.rs);
+//! the preview reads the same count (`field_spells_doomed`) times the face's number, before Spell Damage (R280).
 
 use jackioh_engine::effects::{FieldSpellSide, SweepReader, destroy_field_spells_and_hit, field_spells_doomed};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-06";
 
-/// TS's `{ base, radiant } as const`: one number per face.
 #[derive(Clone, Copy)]
 struct ByFaceDamage {
     base: i32,
@@ -29,10 +26,9 @@ struct ByFaceDamage {
 const DAMAGE_PER: ByFaceDamage = ByFaceDamage { base: 1, radiant: 2 };
 
 /// R280: the formula as each face prints it, read off the catalog text so it is always a substring.
-///
-/// TS matched `/Deal \d+ damage to [^.]+ for each one destroyed/` (no regex crate in a pure crate,
-/// SURFACE §8): the leftmost "Deal <digits> damage to ", then the longest run of non-"." characters (one
-/// at least) that ends in " for each one destroyed", as the greedy class backtracks to.
+/// Matches `/Deal \d+ damage to [^.]+ for each one destroyed/` by hand (no regex crate in a pure crate,
+/// SURFACE §8): the leftmost "Deal <digits> damage to ", then the longest non-"." run ending in
+/// " for each one destroyed".
 fn formula_in(text: &str) -> String {
     const HEAD: &str = "Deal ";
     const MIDDLE: &str = " damage to ";
@@ -57,7 +53,7 @@ fn formula_in(text: &str) -> String {
     panic!("T-AI-6's text names no damage formula: {text}");
 }
 
-/// The face's sweep (`"any"` or `"enemy"`, TS `FieldSpellSide`) and its preview.
+/// The face's sweep (`"any"` or `"enemy"`) and its preview.
 fn fire(side: &'static str, damage_per: i32, label: String) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
@@ -85,19 +81,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6: "Destroys every Field
-// Spell on both sides, yours included (a Claude's Datacenter too); Field Traps and Traps are no Field
-// Spells; an Indestructible one (Heroic Power) stays and doesn't count; then each hero takes one hit of
-// 1 per Field Spell destroyed, one instance of N as 'for each' in one sentence always is (so Spell Damage
-// adds once and Anime Armor caps it at 1); none destroyed, no damage; a destroyed Field Spell that
-// prints Death fires it (§4.5); its preview is the damage each hero would take now (R280); radiant only
-// enemy Field Spells, and 2 damage to the enemy hero for each".
-//
-// The preview's own proofs (labels, values against the resolution, what the hook reads) are in
-// `../preview.test.ts`. Each hero's hit is one `damage` event of N, so a per-hit cap (C+ #11 Anime Armor)
-// caps it once, and an Ivory Tower holding a Unit (R418) is swept: both are proved through fixtures in
-// `packages/engine/test/effects-datacenter.test.ts`, since neither card's script (C+ #11, #33) is part of
-// this slice.
+// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6. A destroyed Field Spell that
+// prints Death fires it (§4.5); the preview is the damage each hero would take now (R280). Each hero's hit
+// is one `damage` event of N, so a per-hit cap (C+ #11 Anime Armor) caps it once, and an Ivory Tower
+// holding a Unit (R418) is swept: both are proved with fixtures in the engine's tests.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -119,7 +106,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
     fn spread(base: Value, extra: &Value) -> Value {
         let mut out = base;
         if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {

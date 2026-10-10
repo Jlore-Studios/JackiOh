@@ -1,34 +1,20 @@
 //! #95 Call to Chaos (Core Edition) (SPEC §8.4, R28, R58, R60, R70, R87, R423, R436, BUILD M4-T4 row 95).
 //!
-//! Base: "One random effect" out of ten. Radiant (patch v0.2.0, R423): "Three different random
-//! effects, resolved in the order listed" — the shape Classic+ #73 has, so both editions follow one
-//! rule. The recursion is one of the ten like any other: rolled only when it falls among the three,
-//! and resolved where the list puts it.
+//! Base: "One random effect" out of ten. Radiant (R423): "Three different random effects, resolved
+//! in the order listed", the shape Classic+ #73 has. The recursion is one of the ten like any other.
 //!
-//! The whole card is `engine/src/subsystems/callToChaos.ts` (`subsystems::call_to_chaos`), whose
-//! header names this file's shape: "#95's own file is a one-line hook that returns `[callToChaos()]`".
-//! The subsystem owns the ten effects, the roll, the announcement and the chain counter, for reasons
-//! that are all engine concerns:
-//!   * each effect must read the board when it RESOLVES, not when the hook builds it, because a
-//!     rolled recursion resolves its whole chain before the effects after it (R87), and a nested cast
-//!     draws cards, summons units and changes costs in between. Every effect there is a lazy wrapper.
-//!   * the chain length is game state, on the cast instance's `memory` (§10.1,
-//!     `CHAOS_CHAIN_KEY`), so a paused and serialized game resumes with the same cap left and two
-//!     independent Calls in one turn never share a counter.
-//!   * R28's cap of 20 (`CALL_TO_CHAOS_CHAIN_CAP`) is a HARD stop: a recursion rolled once the chain
-//!     is at the cap resolves into nothing and no substitute effect is rolled (R87), so a Radiant
-//!     Call at the cap runs only its other two.
+//! The whole card is `subsystems::call_to_chaos`; each face here is a one-line hook. The subsystem
+//! owns the ten effects, the roll, the announcement and the chain counter:
+//!   * each effect reads the board when it RESOLVES, not when the hook builds it: a rolled recursion
+//!     resolves its whole chain before the effects after it (R87).
+//!   * the chain length is game state on the cast's `memory` (§10.1, `CHAOS_CHAIN_KEY`), so a resumed
+//!     game keeps its cap and two Calls in one turn never share a counter.
+//!   * R28's cap of 20 (`CALL_TO_CHAOS_CHAIN_CAP`) is a HARD stop: a recursion rolled at the cap
+//!     resolves into nothing and no substitute is rolled (R87).
 //!   * R436: before anything resolves, `chaosRolled` names the rolled clauses to both players.
 //!
-//! Rebuilding any of that here would be a second source of truth for the same rules.
-//!
-//! The face is passed explicitly, so each face states which text of §8 it is, rather than leaning on
-//! the flag `makeContext` puts in the context (the same flag `scriptOf` used to pick this face).
-//!
-//! Two rulings worth naming here because they are invisible in the one-liner: R70 makes the
-//! recursion a Cast — free, counted as a play, running the card's own script, with the caster
-//! picking targets — and R87 sends a card cast from no zone to the caster's graveyard when it
-//! resolves (§10.5 step 7), which is what feeds Gravedigger and Reminisce down a long chain.
+//! R70 makes the recursion a Cast (free, counted as a play, the card's own script, the caster picks
+//! targets); R87 sends a card cast from no zone to the graveyard (§10.5 step 7), feeding Gravedigger.
 
 use jackioh_engine::prelude::*;
 
@@ -70,28 +56,20 @@ pub fn script() -> CardScripts {
 // #95 Call to Chaos (Core Edition) and #95.1 Chaos Golem — SPEC §8.4, §7, §5.1, §10.5, §10.8,
 // R4, R11, R28, R60, R64, R70, R87, R423, R436.
 //
-// BUILD M4-T4 row 95, as patch v0.2.0 rewrites it: "Each of the 10 effects has a test; recursion
-// stops at 20 (R28); radiant rolls three different effects of the ten, resolved in the list's order
-// (R423); what was rolled is named to both players (R436)".
-// BUILD M4-T4 row 95.1: "10/10 with all four keywords". R276 has since given it a Radiant face:
-//                        20/20 "Charge, Lifesteal, Divine Shield, First Strike" (R275).
+// BUILD M4-T4 row 95: "Each of the 10 effects has a test; recursion stops at 20 (R28); radiant rolls
+// three different effects of the ten, resolved in the list's order (R423); what was rolled is named
+// to both players (R436)". Row 95.1: "10/10 with all four keywords"; its Radiant face (R276) is 20/20
+// "Charge, Lifesteal, Divine Shield, First Strike" (R275).
 //
-// HOW AN EFFECT IS FORCED. §8.4 rolls one of ten, so a test that wants a named effect has to pin
-// the roll. `subsystems::roll_chaos_effects` is the roll and it is a pure function of the rng, whose
-// whole state is `(state.seed, state.rngCursor)` (§9.3, §10.7). The roll is also the FIRST rng draw
-// of the play action — paying, the Gifted Program hook, the move to `resolving` and the play event
-// take none — so setting `state.rngCursor` before the play decides which of the ten resolves, and
-// `cursor_for` finds a cursor for each by asking the engine's own roll. Nothing about an effect's
-// behaviour is predicted that way: `cursor_for` only picks the fixture, and each test then asserts
-// what the card actually did. The assumption itself is pinned by
-// `s9_3_the_roll_is_a_pure_function_of_seed_cursor_…`, so a pipeline that starts drawing rng
-// earlier fails there by name instead of silently derailing the other ten.
+// HOW AN EFFECT IS FORCED. `subsystems::roll_chaos_effects` is a pure function of the rng, whose
+// whole state is `(state.seed, state.rngCursor)` (§9.3, §10.7), and it is the FIRST rng draw of the
+// play action, so setting `state.rngCursor` before the play pins which of the ten resolves.
+// `cursor_for` finds that cursor with the engine's own roll; each test asserts what the card did.
+// `s9_3_the_roll_is_a_pure_function_of_seed_cursor_…` pins the assumption by name.
 //
-// The ten effects' own machinery — the lazy wrappers, the chain counter on `memory`, R87's order —
-// is proved against fixtures in `crates/engine/tests/rules/call_to_chaos.rs`. What this file owes is
-// the card: that both faces of #95 are wired to that subsystem with the right §5.2 flag, and that
-// the ten effects do the right thing against the REAL catalog (the real 3-cost Unit pool, the real
-// Rush Token and Chaos Golem indices, the real backrow types) down the real §10.5 play path.
+// The effects' machinery (lazy wrappers, chain counter, R87's order) is proved in
+// `crates/engine/tests/rules/call_to_chaos.rs`. This file owes the card: both faces wired to it
+// with the right §5.2 flag, and the ten effects against the REAL catalog down the §10.5 play path.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,7 +118,7 @@ mod tests {
         out
     }
 
-    /// The keys TS's `Object.keys(script)` would list: every member the face sets.
+    /// The keys of every member the face sets.
     fn members(script: &Script) -> Vec<&'static str> {
         let mut keys = Vec::new();
         let mut note = |present: bool, key: &'static str| {
@@ -187,7 +165,7 @@ mod tests {
         keys
     }
 
-    /// `cards/src/query.ts`'s `query(args)`, by id.
+    /// `query(args)`, by id.
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as(args))
             .iter()
@@ -250,7 +228,7 @@ mod tests {
         chain: Option<i32>,
     }
 
-    /// Writes `memory[key]` on the card a reference names, as TS wrote through the live instance.
+    /// Writes `memory[key]` on the card a reference names.
     fn set_memory(s: &mut Scenario, card: &str, key: &str, value: Value) {
         let id = s.card(card).id.clone();
         find_instance_mut(s.state_mut(), &id)
@@ -344,9 +322,7 @@ mod tests {
         event["instanceId"].as_str().unwrap_or_default().to_string()
     }
 
-    // -------------------------------------------------------------------------------------------
     // The card, its two faces and the fixture assumption.
-    // -------------------------------------------------------------------------------------------
 
     mod n95_call_to_chaos_the_card {
         use super::*;
@@ -412,9 +388,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // The ten effects of §8.4, in the order the card lists them.
-    // -------------------------------------------------------------------------------------------
 
     mod n95_call_to_chaos_base_the_ten_effects {
         use super::*;
@@ -535,9 +509,8 @@ mod tests {
                 tokens.iter().map(|unit| unit.def_id.clone()).collect::<Vec<_>>(),
                 vec![RUSH_TOKEN.to_string(); 5],
             );
-            // §7: the printed token is 3/3 and its Radiant face is 6/6. #95 used to invent a 5/5 through
-            // `statsOverride` — the only card in the set that chose its own Rush Token size — and now
-            // summons the token's own Radiant face, so the stats live in the catalog and nowhere else.
+            // §7: the printed token is 3/3 and its Radiant face is 6/6. #95 summons the token's own
+            // Radiant face with no `statsOverride`, so the stats live in the catalog and nowhere else.
             let token_def = js(&crate::card_def(RUSH_TOKEN));
             assert_eq!(token_def["base"]["attack"], 3);
             assert_eq!(token_def["radiant"]["attack"], 6);
@@ -696,9 +669,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // R4's hand cap and R28's chain cap.
-    // -------------------------------------------------------------------------------------------
 
     mod n95_call_to_chaos_the_two_caps {
         use super::*;
@@ -777,9 +748,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // The radiant face (§8.4, R423: "Three different random effects, resolved in the order listed").
-    // -------------------------------------------------------------------------------------------
 
     /// The labels `chaosRolled` named, in order (R436).
     fn announced(s: &Scenario) -> Vec<Vec<String>> {
@@ -924,9 +893,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // R436: what was rolled, named to both players.
-    // -------------------------------------------------------------------------------------------
 
     mod n95_call_to_chaos_r436_names_what_it_rolled_to_both_players {
         use super::*;
@@ -1012,9 +979,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // #95.1 Chaos Golem (§8.4, §7, R11).
-    // -------------------------------------------------------------------------------------------
 
     mod n95_1_chaos_golem {
         use super::*;
@@ -1046,8 +1011,7 @@ mod tests {
             );
 
             // The difference is data on the catalog's two faces; there is no script on either (§10.4
-            // layer 1 reads the stats and keywords straight off the face the flag picks). TS compared the
-            // two exports by identity; here both faces are the same empty script.
+            // layer 1 reads the stats and keywords straight off the face the flag picks).
             let golem_scripts = crate::scripts::core::c095_1_chaos_golem::script();
             assert_eq!(members(&golem_scripts.radiant), members(&golem_scripts.base));
             assert!(members(&golem_scripts.base).is_empty());
@@ -1199,16 +1163,15 @@ mod tests {
         #[test]
         fn names_the_radiant_rush_tokens_it_summons_not_the_5_5s_issue_n1_took_out_s8_4_n95_s7() {
             crate::register_all();
-            // §8.4 #95's base effect: "summon five Radiant Rush Tokens", and §7: "Call to Chaos is NOT one
-            // of these any more: it summons the token's own Radiant face (6/6) rather than a bespoke 5/5".
-            // The engine does that ("6/10 summons five RADIANT Rush Tokens" above), and the catalog's
-            // printed text — what apps/web's Card and Prompt render for the card — says so too.
+            // §8.4 #95's base effect: "summon five Radiant Rush Tokens", and §7: it summons the token's
+            // own Radiant face (6/6), not a bespoke 5/5. The catalog's printed text, which the web
+            // renders, says so too.
             let text = js(&crate::card_def(CHAOS))["base"]["text"]
                 .as_str()
                 .unwrap_or_default()
                 .to_string();
             assert!(!text.contains("5/5"));
-            // Patch v0.1.1's wording pass writes the count as a number: "summon 5 Radiant Rush Tokens".
+            // The count is written as a number: "summon 5 Radiant Rush Tokens".
             assert!(text.contains("summon 5 Radiant Rush Tokens"));
         }
     }

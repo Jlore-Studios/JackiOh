@@ -1,50 +1,22 @@
 //! #37 Gravedigger (SPEC §8.2): 4/5 → 8/10, "Start of turn: add a random card from your GY to your
 //! hand", radiant "Discover one from your GY; it costs 1 less". The radiant cell restates the whole
-//! clause — the random add becomes a Discover — and adds the discount, so the radiant face is a
-//! prompt where the base face is a seeded pick (§8 Conventions).
+//! clause: the random add becomes a Discover plus the discount (§8 Conventions).
 //!
-//! Base is one verb: `addRandomFromGraveyard` already draws from `ctx.rng` (CLAUDE.md rule 4) and
-//! returns without doing anything when the graveyard is empty (§8.2 Engine: "Empty GY → nothing").
-//! `startTurn` (engine/src/turn.ts) runs the start-of-turn hooks BEFORE `draw(sink, player, 1)`, so
-//! "before the draw" is the turn loop's order and not a clause here.
+//! Base is one verb: `addRandomFromGraveyard` draws from `ctx.rng` (CLAUDE.md rule 4) and does nothing
+//! on an empty graveyard (§8.2 Engine: "Empty GY → nothing"). Start-of-turn hooks run before the draw.
 //!
-//! Radiant is a genuine RESOLUTION prompt, not a play-time choice: the card is already on the field
-//! and the Discover happens at the start of a later turn, so R81's "travels in the play action" does
-//! not apply and it opens a `PendingChoice` through `discoverFromGraveyard` (R50: the options come
-//! from the actual graveyard, so spell tokens there are eligible). An empty graveyard opens no
-//! prompt at all, which is the same "nothing" the base face does.
-//!
-//! The answer re-enters this script through the continuation `prompts.ts` documents: `resumeSelf`
-//! records `hook: "resume"` (`RESUME_HOOK`) and `step: "picked"`, and `runResume` looks up
-//! `script.resume.picked`. So the resume step is a TABLE on the `Script` and NOT the `startOfTurn`
-//! hook that opened the prompt — which is exactly what makes a start-of-turn Discover land in the
-//! right place even though a `Resume` cannot say which hook asked for it.
-//!
-//! The pick arrives in `ctx.targets` as `{ pick: "instance", instanceId }` (that is what
-//! `discoverFromGraveyard` offers, R50), so `{ of: "chosen" }` names it. Two verbs finish the job:
-//!   - `bounce` moves the named card to its controller's hand — its owner's, out of a graveyard
-//!     (R747). §6.3 Bounce is "return to controller's hand" with no zone restriction, the hand cap
-//!     burns it when the hand is full (§2.4, R4), and #72
-//!     Reminisce's Engine cell prints this same move as "chosen card moves GY → hand"; #23
-//!     Reoccurring Dream already uses it to come back out of the graveyard. There is no
-//!     `moveToHand` verb and there should not be: §6.3's Add to hand row is one verb that "Creates
-//!     OR MOVES the card", so `addToHand({ instance })` moves the chosen instance while
-//!     `addToHand({ defId })` creates a fresh one. #72 Reminisce uses the `instance` form.
-//!   - `setCostMod({ amount: -1 })` is R65's "costs 1 less": it adds to the instance's `costMod`,
-//!     which R78 keeps in every zone, so the discount survives the card's next trip to the
-//!     graveyard. `cost.ts` names this card as the reason that verb exists.
-//!
-//! The order is bounce-then-discount so the discount is the price of a card that reached the hand:
-//! `inHandOnly` skips it for a pick a full hand burned straight back to the graveyard (§2.4, R4),
-//! which would otherwise keep a discount for a return it never made (R78). The `costChanged` event
-//! then reports the card as it now stands, in hand.
+//! Radiant opens a RESOLUTION prompt at the start of a later turn, so R81's "travels in the play action"
+//! does not apply: it offers the actual graveyard (R50), and an empty one opens no prompt. The answer
+//! re-enters through the `resume.picked` step table, not the `startOfTurn` hook that opened it, with the
+//! pick in `ctx.targets`; `bounce` moves it to its owner's hand (R747, §6.3), then `setCostMod -1` is
+//! R65's "costs 1 less", kept in every zone (R78); a pick a full hand burns gets none (§2.4, R4).
 
 use jackioh_engine::effects::{add_random_from_graveyard, bounce, discover_from_graveyard, set_cost_mod};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-037";
 
-/// The step name the Discover's continuation carries (`prompts.ts`: `script.resume[step]`).
+/// The step name the Discover's continuation carries (`script.resume[step]`).
 const PICKED: &str = "picked";
 
 // R65: "costs 1 less" is a −1 `costMod` on the chosen instance, permanent and zone-proof (R78); the 1
@@ -142,7 +114,6 @@ mod tests {
             assert!(scripts.base.start_of_turn.is_some());
             assert!(scripts.base.resume.is_empty());
             assert!(scripts.radiant.start_of_turn.is_some());
-            // `prompts.ts`: `resumeSelf` files the continuation under `hook: "resume"`, `step: "picked"`.
             assert!(scripts.radiant.resume.contains_key("picked"));
         }
 
@@ -256,22 +227,10 @@ mod tests {
             assert_eq!(sorted(left), sorted(strings(&[HIT_JOB, STOCKPILE])));
         }
 
-        /// KNOWN FAILING, and deliberately so — the assertion states R62's order, not the engine's.
-        ///
-        /// R62: "Refresh → start-of-turn delayed effects → start-of-turn triggers → draw". So a
-        /// start-of-turn trigger that opens a prompt must hold the draw until the prompt is answered and
-        /// the trigger has run to the end. The engine draws first: the log today is
-        ///     turnStarted, manaChanged, promptOpened, drawn, addedToHand, promptAnswered, …
-        /// with the turn's draw landing INSIDE the open prompt. That is the same bug class R62/R113 just
-        /// fixed at the end of a turn — the end of turn now parks its remainder in `state.work` and the
-        /// answer finishes it (R122) — still present at the start of one.
-        ///
-        /// THE FIX IS NOT IN THIS DIRECTORY: `packages/engine/src/turn.ts`'s `startTurn` runs
-        /// `queueHooksInTriggerOrder` + `settle` and then `draw` straight through, so a pause inside the
-        /// trigger queue leaves the draw to run under the prompt. It needs the end of turn's shape: a
-        /// start-of-turn work item that owes the draw, parked when the triggers pause and resumed by the
-        /// action that answers (R113, R117, R122). Everything else in this test passes — the resume does
-        /// happen, the draw does happen and the turn does land in `main`; only the ORDER is wrong.
+        /// KNOWN FAILING, deliberately: the assertion states R62's order ("start-of-turn triggers → draw"),
+        /// not the engine's, which draws INSIDE the open prompt (log: promptOpened, drawn, addedToHand,
+        /// promptAnswered). The fix is in the engine's start of turn, not here: park the owed draw in
+        /// `state.work` as the end of turn does and let the answer finish it (R113, R117, R122).
         #[test]
         fn r62_radiant_resumes_across_the_prompt_the_draw_comes_after_the_start_of_turn_trigger() {
             let mut s = scn(json!({
@@ -292,7 +251,7 @@ mod tests {
             assert_eq!(sorted(def_ids_in_hand(&s)), sorted(strings(&[DRAWN, MANA_WELL])));
             assert_eq!(s.state().phase, Phase::Main);
             // R62's order, as a subsequence: the Discover opens, is answered and puts its pick in hand,
-            // and only then does the turn draw. Red until `turn.ts` owes the draw to `state.work`.
+            // and only then does the turn draw. Red until the engine owes the draw to `state.work`.
             s.expect_events(json!(["promptOpened", "promptAnswered", "addedToHand", "drawn", "addedToHand"]));
         }
 

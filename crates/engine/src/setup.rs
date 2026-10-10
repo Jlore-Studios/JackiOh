@@ -7,16 +7,9 @@
 //! is cast at the start of the game, before turn 1 (R748). A Quickdraw card replaces an opening draw,
 //! so a seat is dealt at most as many as it has draws (R640).
 //!
-//! The mulligan is concurrent (R265): once the opening deal is done both seats' prompts open at
-//! once, either seat may answer first, and an answer is sealed — it changes nothing until the other
-//! seat has answered too (R266). The second answer resolves both, always in seat order (player 1's
-//! replacement draws and shuffle-back, then player 2's), so the game that follows is the same
-//! whichever seat answered first — the game the one-at-a-time mulligan dealt for the same answers,
-//! though the ids and `nextSeq` that setup's own events and casts take may be numbered differently.
-//!
-//! Port of `packages/engine/src/setup.ts` (part 5). TS registered `runOwedSetup` with
-//! `registerWorkHandler(SETUP_WORK, …)` at import time; Rust has no registration hooks (SURFACE
-//! §6.6): `work.rs`'s dispatcher calls `run_owed_setup` for `SETUP_WORK` directly.
+//! The mulligan is concurrent (R265): both seats' prompts open at once and an answer is sealed until
+//! the other seat has answered too (R266). The second answer resolves both in seat order, so the game
+//! is the same whichever seat answered first. `work.rs`'s dispatcher calls `run_owed_setup` (SURFACE §6.6).
 
 use indexmap::IndexSet;
 use serde::Serialize;
@@ -158,15 +151,12 @@ pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]
 }
 
 /// R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup deals
-/// is never cast while it deals (R635, R748), so what can still ask during the deal is a start-of-game
-/// clause on arrival (R151): the opening draw and R9's replacement draws put cards in a hand, and a
-/// clause that runs as one arrives can ask its owner something (R224). The question is state until it
-/// is answered (§9.3), and §10.1 allows one prompt at a time, so setup cannot open the mulligans over
-/// it, or go on resolving them: it owes the rest of itself — the other seats' opening draws and the
-/// mulligans, or the shuffle-back, the seats still to resolve and the game — and the answer's drain
-/// brings it back (R122). A start-of-game clause and R748's casts at the start of the game can ask
-/// too, and owe the clauses or casts after them and turn 1 the same way. `work.rs`'s dispatcher runs
-/// it (`run_owed_setup`).
+/// is never cast while it deals (R635, R748), so only a start-of-game clause on arrival (R151) can ask
+/// there, as the opening draw and R9's replacement draws arrive (R224). The question is state until it
+/// is answered (§9.3) and §10.1 allows one prompt at a time, so setup owes the rest of itself — the
+/// other seats' draws and the mulligans, or the shuffle-back and the game — and the answer's drain
+/// brings it back (R122); start-of-game clauses and R748's casts owe what follows them and turn 1 the
+/// same way. `work.rs`'s dispatcher runs it (`run_owed_setup`).
 pub const SETUP_WORK: &str = "@setup";
 
 /// Which part of setup is owed: the opening deal from a seat on, a seat's Quickdraw cards and then
@@ -209,21 +199,17 @@ fn drawable_count(state: &GameState, player: PlayerId) -> i32 {
 
 /// §2.1 steps 1 and 2 for each seat from `seat` on, then both mulligans (R265).
 ///
-/// R225, R640: each Quickdraw card "replaces one of these draws" (§2.1, §6.2) — the last ones — and a
-/// card cannot replace a draw that does not exist, so a seat is dealt at most as many as its opening
-/// hand holds (the first ones in the shuffle's order); the others stay in the library as ordinary
-/// cards. The seat draws its other opening cards first, off the top of a library whose dealt Quickdraw
-/// cards wait at the bottom, and then each goes to the hand as the draw it replaces: counted by R55's
-/// draw counter and reported as a draw. So the opponent can tell from none of it — #100's price, the
-/// deal's events, the hand and library counts while a start-of-game clause on arrival is asking (R224),
-/// the size of the opening hand, which is always §2.1's table entry — whether the opening hand holds
-/// one (§9.1).
+/// R225, R640: each Quickdraw card replaces one of the last opening draws (§2.1, §6.2), so a seat is
+/// dealt at most as many as its hand holds (the first ones in the shuffle's order); the others stay in
+/// the library as ordinary cards. The other cards are drawn first, then each Quickdraw card goes to
+/// the hand as the draw it replaces (R55's counter, reported as a draw), so nothing the opponent sees
+/// says whether the hand holds one: #100's price, the deal's events, the counts while a clause is
+/// asking (R224) or the hand's size (§9.1).
 ///
-/// R635: the cards that cast on draw wait just above them, at the bottom of the library, out of reach
-/// of the draws. They stay in the library, so its count says nothing about them, and are shuffled in
-/// once the mulligans are done. R748: when the library holds too few other cards for the hand, the
-/// rest of it is dealt from them, uncast (`deal_suspended`), and they are cast at the start of the game;
-/// the draw is `min` of the hand and what may be drawn, so setup still never deals a fatigue draw.
+/// R635: the cards that cast on draw wait just above the Quickdraw cards at the bottom of the library,
+/// out of the draws' reach, and are shuffled in once the mulligans are done. R748: when too few other cards
+/// remain, the rest of the hand is dealt from them uncast (`deal_suspended`), so setup never deals a
+/// fatigue draw.
 fn deal_from(sink: &mut EngineSink, seat: usize) {
     for (at, &player) in PLAYER_IDS.iter().enumerate().skip(seat) {
         let size = opening_hand_size(sink.state, player);
@@ -325,10 +311,9 @@ fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
 }
 
 /// R748: `count` of the set-aside cards (`deal_from`), dealt to fill a hand the other cards cannot: each
-/// goes to the hand uncast, as a draw (R225's report and count, as `deal_quickdraw` deals), and is
-/// marked to be cast at the start of the game (`cast_suspended`). The first ones in the library's
-/// order, never a Quickdraw card, which is never cast (R635). Short only when the library runs out of
-/// them.
+/// goes to the hand uncast, as a draw (R225's report and count), marked to be cast at the start of the
+/// game (`cast_suspended`). The first ones in the library's order, never a Quickdraw card (R635). Short
+/// only when the library runs out of them.
 fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
     if count <= 0 {
         return;
@@ -555,7 +540,7 @@ pub fn returned_awaiting_shuffle(state: &GameState) -> Vec<String> {
         .collect()
 }
 
-/// TS `oweSetup(sink, owed)`: `owed` is the `OwedSetup` record, its `step` among its keys.
+/// `owed` is the `OwedSetup` record, its `step` among its keys.
 fn owe_setup(sink: &mut EngineSink, owed: Value) {
     let step = owed
         .get("step")
@@ -673,15 +658,14 @@ fn sealed_in(raw: Option<&Value>) -> Vec<SealedMulligan> {
 /// of its hand. After the mulligan, so a Coin is never returned, redrawn or shuffled in (R9); and
 /// whatever the seat's handicap, whose extra opening card the mulligan has already seen (R182).
 ///
-/// It is §6.3's add to hand, not a draw: `draw::add_to_hand` puts it in, or burns it into the
-/// graveyard off a full hand (§2.4, R4, which no Core opening hand reaches), and it emits `addedToHand`
-/// alone, leaving #100's draw counter where it was (R55). It takes the next instance id and no rng
-/// draw, so `(seed, decks, handicaps, log)` still folds exactly (§9.3, R187).
+/// It is §6.3's add to hand, not a draw: `draw::add_to_hand` puts it in, or burns it off a full hand
+/// (§2.4, R4, which no Core opening hand reaches), and emits `addedToHand` alone, leaving #100's draw
+/// counter where it was (R55). It takes the next instance id and no rng draw, so
+/// `(seed, decks, handicaps, log)` still folds exactly (§9.3, R187).
 ///
-/// A registered catalog without The Coin deals none. The shipped catalog always holds it (the cards
-/// package's catalog tests and `validate-catalog.ts` count it); the engine's own tests register
-/// partial fixture catalogs, and a rule that threw on them would make every one of those catalogs
-/// carry a card none of their tests is about.
+/// A registered catalog without The Coin deals none. The shipped catalog always holds it (the cards'
+/// catalog tests count it); the engine's tests register partial fixture catalogs, and a rule that
+/// threw on them would make each carry a card none of its tests is about.
 pub fn deal_coins(sink: &mut EngineSink) {
     if sink.state.result.is_some() {
         return;
@@ -699,10 +683,9 @@ pub fn deal_coins(sink: &mut EngineSink) {
 }
 
 /// R635: both mulligans are resolved, so each seat's cast-on-draw cards, which waited at the bottom of
-/// its library out of the draws' reach, are shuffled in: taken out and put back one at a time at a
-/// uniform random place among the rest, with the match rng. Left where they lay they would be the last
-/// cards the seat drew. A seat with none takes no rng draw, so a deck without one deals as it always
-/// did. Nothing is reported: a `shuffledIn` per card would tell the other seat how many the deck holds
+/// its library, are put back one at a time at a uniform random place among the rest, with the match
+/// rng (left where they lay they would be the last cards drawn). A seat with none takes no rng draw.
+/// Nothing is reported: a `shuffledIn` per card would tell the other seat how many the deck holds
 /// (§9.1, R97).
 fn shuffle_in_set_aside(sink: &mut EngineSink) {
     for player in PLAYER_IDS {
@@ -794,10 +777,9 @@ fn next_suspended(state: &GameState) -> Option<CardInstance> {
 /// casts after it and turn 1 are owed behind its tail (`SUSPENDED_STEP`, R113), so turn 1 waits for
 /// the answer (R224). Then turn 1.
 ///
-/// Setup is turn 0 (BUILD M1-T1), which is no player's turn (§2.1 step 5): a Spell cast during it
-/// was played on no turn of its controller's, so the return §10.5 step 7 flagged it for is over before
-/// turn 1, as a turn's cleanup ends it (R155). `start_turn` empties the turn logs that cleanup reads,
-/// so setup clears it first.
+/// Setup is turn 0 (BUILD M1-T1), no player's turn (§2.1 step 5): a Spell cast during it was played on
+/// no turn of its controller's, so the return §10.5 step 7 flagged it for is over before turn 1, as a
+/// turn's cleanup ends it (R155). `start_turn` empties the logs that cleanup reads, so setup clears it first.
 fn cast_suspended(sink: &mut EngineSink) {
     while let Some(mut card) = next_suspended(sink.state) {
         card.memory.shift_remove(SUSPENDED_CAST_KEY);

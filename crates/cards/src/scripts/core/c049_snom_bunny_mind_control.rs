@@ -1,32 +1,23 @@
 //! #49 Snom Bunny Mind Control (SPEC §8.2): "Steal target enemy permanent", radiant "It also becomes
 //! Radiant".
 //!
-//! Reading the radiant cell (§8 Conventions): "Also" adds an effect and the base clause it does not
-//! restate is kept, so the radiant face steals the same permanent and then sets its flag.
+//! Reading the radiant cell (§8 Conventions): "Also" adds an effect and keeps the base clause, so the
+//! radiant face steals the same permanent and then sets its flag.
 //!
-//! "Permanent" is §6.3's word (the Recruit row names them): Unit, Field Spell, Trap and Field Trap.
-//! Units sit in the units row and the other three in the backrow, so the declaration below offers
-//! both rows of the enemy board. It is a DECLARED play-time target travelling in the play action's
-//! `targets` (R81), validated by R90 — which also means a face-down enemy trap is a legal pick the
-//! client can name without ever seeing what it is (§9.1), and that only the top card of a Stack pile
-//! is on offer (R13). An empty enemy board fizzles and the spell still counts as played (§8
-//! Conventions).
+//! "Permanent" is §6.3's word: Unit, Field Spell, Trap and Field Trap, so the declaration offers
+//! both rows of the enemy board. It is a DECLARED play-time target in the play action's `targets`
+//! (R81), validated by R90: a face-down enemy trap is a legal pick the client can name without
+//! seeing it (§9.1), and only the top card of a Stack pile is on offer (R13). An empty enemy board
+//! fizzles and the spell still counts as played (§8 Conventions).
 //!
-//! Everything about where the card lands is §6.3 Steal and R15, in `effects/steal.rs`: the same lane
-//! on this side when that zone is free, else the first free zone of the same row, and if the row has
-//! no free zone at all the card stays with the opponent. Control is a field-only notion (R12), so
-//! the steal moves `controller` and nothing else: the card keeps its owner and will still go to that
-//! owner's graveyard, hand or library when it later leaves the field, and because it never leaves
-//! the field it keeps its damage, buffs, counters and position (R78 is about leaving). R33 does the
-//! rest for a face-down trap: `face_up` is untouched, so the new controller is the one who may read
-//! it and the previous controller stops seeing it.
+//! Where the card lands is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12), so
+//! the steal moves `controller` and nothing else: the card keeps its owner, damage, buffs, counters
+//! and position (R78 is about leaving). R33: `face_up` is untouched, so the new controller is the
+//! one who may read a face-down trap.
 //!
-//! The radiant clause is `set_radiant`, which is the flag and nothing else (R74). On the field that
-//! means the base stat layer swaps at once while damage and buffs stay and no Cry re-fires (R22), so
-//! a stolen 4/3 that had taken 2 damage becomes an 8/6 that has taken 2. Order matters only for
-//! readability: both effects resolve the same selection, and `set_radiant` resolves it by instance id
-//! (`resolve_target` → `find_instance`), so the steal having already moved the card between zones
-//! cannot make the second effect miss.
+//! The radiant clause is `set_radiant`, the flag and nothing else (R74): the base stat layer swaps at
+//! once, damage and buffs stay and no Cry re-fires (R22). It resolves the selection by instance id,
+//! so the steal having moved the card between zones cannot make it miss.
 
 use jackioh_engine::prelude::*;
 
@@ -60,20 +51,14 @@ pub fn script() -> CardScripts {
 // #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
 // flag on the stolen card".
 //
-// R15 has three clauses and each gets its own case: the same lane when that zone is free, the first
-// free zone of the row when it is not, and "excess remain with the opponent" when the row is full.
-// R12 is asserted alongside every steal: `controller` moves and `owner` never does.
+// R15 has three clauses, one case each: the same lane when free, the first free zone of the row,
+// and "excess remain with the opponent" when the row is full. R12 is asserted alongside every steal:
+// `controller` moves and `owner` never does.
 //
-// The radiant clause is R22/R74: the flag swaps the base stat layer at once while damage and buffs
-// stay and no Cry re-fires, and a card that is already Radiant is untouched (§6.3 Make Radiant).
-// The order inside the script (steal, then set_radiant) is proved safe here: `set_radiant` resolves
-// the same selection by instance id, so the card having already changed zone cannot make it miss.
-//
-// Props with no script beyond printed keywords: #25 4-mana 7/7, #20 Pointmaster, #45 Deft Duelist
-// (4/3 → 8/6, the damage-and-radiant case), #11 Tempo Timmy, #8 Mr. Vanilla. #15 Me and Mr Token
-// carries a Cry that would summon a Rush Token, which is how "no Cry re-fires" is checked, and
-// #41 Sheepish is the face-down Trap: a Trap that fires on a UNIT play, so playing this Spell can
-// never set it off.
+// The radiant clause is R22/R74; an already Radiant card is untouched (§6.3 Make Radiant). The
+// props are #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would
+// summon a Rush Token, which checks "no Cry re-fires") and #41 Sheepish, a face-down Trap that
+// fires on a UNIT play, so this Spell never sets it off.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,49 +1,16 @@
-//! #99 Craft a Card (SPEC §8.5, §6.3 Fuse and Discover, §10.6, R77). Spell, cost 3, Mythic.
+//! #99 Craft a Card (SPEC §8.5, §6.3 Fuse and Discover, §10.6, R77). Spell, Mythic.
 //!   Base:    "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to
 //!             your hand"
-//!   Radiant: "Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0
-//!             and goes to your hand" (§8's cell "Three Discovers"). "Fuse them; the result costs 0
-//!             and goes to your hand" is kept (§8 Conventions), and R77 agrees: "Craft a Card fuses
-//!             two or three cards". Patch v0.2.7 (#126) took off the draw R275's pass had added.
+//!   Radiant: the same with a third Discover (§8's cell "Three Discovers", R275). Neither face draws.
 //!   Engine:  "Fuse per 6.3 creates a transient definition stored in match state".
 //!
-//! THE CHAIN (§10.6). Each Discover is one `PendingChoice` whose `resume` names the next step, and
-//! `prompts::hook_for` looks the step up in the card's own `resume` table, so the chain is a table of
-//! named continuations and nothing else — no callback, no closure in state (§9.3). The picks are
-//! carried forward in `data`, the only place a chained effect may keep anything: `resume_self` merges
-//! the running step's `data` into the next step's, so each step appends the id it just received and
-//! hands the whole list on. `chosen_options` is how a Discover's pick is read (a `mode` selection
-//! carrying a catalog id), never `ctx.targets` by hand.
-//!
-//! WHAT FUSE DOES WITH THEM (R77, `subsystems/fuse.rs`). "Fuse creates a transient definition. Its
-//! base form sums the ingredients' base attack and health, unions their base keywords and tags, and
-//! concatenates their base scripts; its radiant form does the same with their radiant forms. Its
-//! cost is min(sum of the printed costs per R65, 4). Its type is the target's, or the ingredients'
-//! shared type when there is no target on the field … Craft a Card fuses two or three cards with no
-//! target on the field, and its result is a fresh, non-Radiant hand card with `costOverride` 0."
-//! So: no `target`, `toHand` the caster; the def lands in `state.transientDefs` with BOTH faces
-//! fused, which is what makes "make the hand card Radiant later" switch to the fused radiant form;
-//! and the fused cost (min(sum, 4)) is overridden to 0 on the instance, not on the definition —
-//! `CRAFTED_CARD_COST`. Every one of those decisions is the subsystem's; this card only says which
-//! definitions go in and whose hand the result goes to.
-//!
-//! The ingredients are Discovered DEFINITIONS that were never cards on a board, so nothing ceases to
-//! exist that a player could see, and the fused type is the ingredients' shared type — always "Unit",
-//! because both (or all three) Discovers query `type: "Unit"`.
-//!
-//! TOKENS AND REPEATS. `catalog::query({ type: "Unit" })` drops tokens (§5.1's `asksForTokens` is
-//! false for a plain type filter), so no Rush Token or Chaos Golem can be crafted. The second and
-//! third Discovers are independent draws over the same pool, so the same Unit can be offered — and
-//! picked — twice; §8.5 and R77 neither forbid it nor de-duplicate, and R60 has generated cards
-//! repeating elsewhere, so nothing here narrows the later pools.
-//!
-//! THE VERB (§8.5 #99 "Fuse them; the result costs 0 and goes to your hand"): `fuse_cards` in the
-//! effects library, which is `subsystems/fuse.rs` wrapped and nothing more. `fuse(sink, { ingredients,
-//! target?, toHand? })` has the whole rule but takes an `EngineSink` and mutates state, which a card
-//! file may not do (CLAUDE.md rule 5), and its `ingredients` are `CardInstance`s while a Discover
-//! hands over catalog ids — so `defIds` is the spelling this card uses, and the effect makes each
-//! pick an ingredient in no pile at all (R86's `{ z: "gone" }`) before handing the list over. R102
-//! composes the result member by member; none of it is reimplemented here.
+//! THE CHAIN (§10.6). Each Discover is a `PendingChoice` whose `resume` names the next step in the
+//! card's own `resume` table (`prompts::hook_for`): no callback or closure in state (§9.3). The picks
+//! ride in `data`, the only place a chained effect keeps anything; `resume_self` merges it onward.
+//! FUSE (R77, `subsystems/fuse.rs`): no `target`, `toHand` the caster, both faces fused into
+//! `state.transientDefs`, cost overridden to 0 on the instance (`CRAFTED_CARD_COST`), not the def.
+//! The ingredients are Discovered definitions never on a board, so nothing a player could see ceases
+//! to exist.
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -58,7 +25,9 @@ const THIRD: &str = "third";
 /// The `data` key the picks travel in; `data` is the only place a chained step may keep anything.
 const PICKS: &str = "picks";
 
-/// §6.3 Discover: 1 of 3 Units, drawn without replacement and shown only to the chooser.
+/// §6.3 Discover: 1 of 3 Units, drawn without replacement and shown only to the chooser. A plain
+/// `type` filter drops tokens (§5.1), and each Discover is an independent draw over the same pool,
+/// so a Unit can be offered twice; §8.5 and R77 don't forbid it, and R60 lets generated cards repeat.
 fn discover_unit(step: &'static str, picks: &[String]) -> Effect {
     discover_from_catalog(json_as(json!({
         "step": step,
@@ -99,15 +68,15 @@ fn craft(picks: &[String]) -> Vec<Effect> {
     if picks.len() < subsystems::FUSE_MIN_INGREDIENTS {
         return vec![];
     }
-    // No target: nothing of this fusion was ever on a board, so R77 takes the ingredients' shared
-    // type ("Unit", both Discovers query it) and hands back a fresh non-Radiant card with
-    // `costOverride` 0. "your hand" is the caster's (§8.5).
+    // No target: R77 takes the ingredients' shared type ("Unit") and "your hand" is the caster's
+    // (§8.5). `fuse_cards` wraps `subsystems/fuse.rs`, taking catalog ids (`defIds`) where `fuse`
+    // takes instances and a sink, so no state is mutated here (CLAUDE.md rule 5); each pick is an
+    // ingredient in no pile (`{ z: "gone" }`, R86) and R102 composes the result.
     vec![fuse_cards(json_as(json!({ "defIds": picks, "toHand": "self" })))]
 }
 
 /// `discovers` is the whole of the difference between the two faces (§8.5's radiant cell): 2 or 3.
 fn craft_a_card(discovers: i32) -> Script {
-    // Each step appends the id it was answered with and hands the list to the next one.
     let open_second: Hook = hook(|ctx| vec![discover_unit(SECOND, &with_answer(ctx))]);
     let open_third: Hook = hook(|ctx| vec![discover_unit(THIRD, &with_answer(ctx))]);
     let fuse_them: Hook = hook(|ctx| craft(&with_answer(ctx)));
@@ -135,22 +104,9 @@ pub fn script() -> CardScripts {
 }
 
 // #99 Craft a Card — SPEC §8.5, §6.3 (Fuse, Discover), §10.5, §10.6, R4, R23, R60, R65, R77, R86,
-// R102, R113.
-//
-// BUILD M4-T4 row 99: "Two Discovers, fused def in `transientDefs` with both forms fused, no
-// on-field target and the ingredients' shared type (R77), cost 0 in hand, making it Radiant later
-// switches to the fused radiant form; radiant three" (patch v0.2.7 took off the radiant draw).
-//
-//   Base:    "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to
-//            your hand"
-//   Radiant: "Discover a Unit, then Discover another, then a third; Fuse them; the result costs 0
-//            and goes to your hand" — §8's cell "Three Discovers". Neither face draws.
-//
-// R102's "the whole verb does nothing at all" guards are unreachable from a #99 play (it always
-// brings two or three definitions and a destination hand), so they are asserted against
-// `subsystems::fuse`, where that rule lives.
-//
-// `FUSE_COST_CAP` and `HAND_CAP` are R77's and R4's numbers and live in `config.rs`.
+// R102, R113; BUILD M4-T4 row 99. R102's "the whole verb does nothing at all" guards are
+// unreachable from a #99 play, so they are asserted against `subsystems::fuse`, where that rule
+// lives. `FUSE_COST_CAP` and `HAND_CAP` are R77's and R4's numbers, in `config.rs`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,7 +126,7 @@ mod tests {
 
     use crate::js;
 
-    /// The keys TS's `Object.keys(script)` would list: every member the face sets.
+    /// The name of every member the face sets.
     fn members(script: &Script) -> Vec<&'static str> {
         let mut keys = Vec::new();
         let mut note = |present: bool, key: &'static str| {
@@ -324,8 +280,8 @@ mod tests {
             .collect()
     }
 
-    /// The rng a sink over the live state starts from, threaded the way the harness's own direct
-    /// engine calls are. (The sink itself is built where it is used: in Rust it borrows the state.)
+    /// The rng a sink over the live state starts from; the sink itself is built where it is used,
+    /// since it borrows the state.
     fn rng_for(s: &Scenario) -> Rng {
         Rng::new(&s.state().seed, s.state().rng_cursor)
     }
@@ -341,9 +297,7 @@ mod tests {
             .collect()
     }
 
-    // -------------------------------------------------------------------------------------------
     // The card and the Discover chain (§8.5, §10.6, R113).
-    // -------------------------------------------------------------------------------------------
 
     mod n99_craft_a_card_the_discover_chain {
         use super::*;
@@ -476,9 +430,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // The fused result (R77, R102).
-    // -------------------------------------------------------------------------------------------
 
     mod n99_craft_a_card_the_fused_result_r77_r102 {
         use super::*;
@@ -653,11 +605,9 @@ mod tests {
         #[test]
         fn r4_the_crafted_card_goes_through_s2_4_s_pipeline_and_takes_the_slot_n99_vacated() {
             crate::register_all();
-            // §2.4's cap is HAND_CAP. #99 leaves the hand at step 4 to resolve, so a hand that was full
-            // has one slot free by the time the fusion lands: the crafted card fits and nothing burns.
-            // The card can never burn itself out of its own play, which is why this is the reachable
-            // half of R4 for #99 — a burn would need a card added between #99 leaving and the fusion
-            // landing.
+            // §2.4's cap is HAND_CAP. #99 leaves the hand at step 4, so a full hand has one slot free
+            // by the time the fusion lands: the crafted card fits and nothing burns. A burn would need
+            // a card added between #99 leaving and the fusion landing, so this is R4's reachable half.
             let filler = vec![json!(SPARE); (HAND_CAP - 2) as usize];
             let (s, _) = craft(CraftOpts { p1: Some(json!({ "hand": filler, "mana": 8 })), ..CraftOpts::default() });
             let fused = fused_def_of(s.state());
@@ -731,10 +681,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
-    // R102's "the whole verb does nothing at all". Unreachable from a #99 play — it always brings two
-    // or three definitions and a destination hand — so asserted where the rule lives.
-    // -------------------------------------------------------------------------------------------
+    // R102's "the whole verb does nothing at all", asserted where the rule lives.
 
     mod fuse_does_nothing_at_all_r102_r23 {
         use super::*;
@@ -746,7 +693,7 @@ mod tests {
             }
         }
 
-        /// `subsystems::fuse`'s argument, from TS's object literal (instances as their JSON).
+        /// `subsystems::fuse`'s argument, from a literal (instances as their JSON).
         fn fuse_args(literal: Value) -> subsystems::FuseArgs {
             json_as(literal)
         }

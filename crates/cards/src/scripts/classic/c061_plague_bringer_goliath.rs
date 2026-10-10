@@ -2,25 +2,16 @@
 //!   Base:    "Tribute 1, Rush, Trample
 //!             Cry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}." — 3 tokens, draw 1
 //!   Radiant: the same text — 3 tokens, draw 3
-//!   Engine:  "Tribute (§6.3, R101), which may pay for its own zone (R391, §3.2). Plague Counters (§6.3):
-//!            three placements of 1, each on a permanent you choose (either side, face-down cards
-//!            included, repeats allowed), one prompt per token; then the draw. Tunes: tokens 3 ↑;
-//!            draw 1 ↑."
 //!
-//! Rush and Trample are printed on both catalog faces and §10.4 layer 1 reads them there. The Tribute is
-//! the play's price (§6.3, R101): one of your Units, or one worth more (a Sheep Token's 2 overpays it),
-//! paid at §10.5 step 2, so with no Unit to tribute the card can't be played at all; on a full unit row
-//! it may take the zone its own Tribute empties (R391).
+//! Rush and Trample are printed on both catalog faces; §10.4 layer 1 reads them there. Tribute is the play's
+//! price (§6.3, R101), paid at §10.5 step 2, so with no Unit to tribute it can't be played; on a full unit
+//! row it may take the zone its own Tribute empties (R391, §3.2).
 //!
-//! "Place N Plague Counters" names no card, so it is N placements (`placePlagueTokens`), all on the one
-//! permanent a single `target` prompt names for the Goliath's controller over every permanent on the
-//! field — either side, the Goliath itself and face-down cards included (a face-down card the chooser
-//! may not read is offered by its id alone, R177) (R689). Each placement is one placement of 1,
-//! multiplied by the card that receives it (C #27), and each is its own for "whenever Plague Counters
-//! are placed on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the
-//! draw comes after the placements. The other player sees only that a prompt is open.
-//!
-//! Both numbers are the declared `tokens` and `draw` (R386), read through `param`.
+//! "Place N Plague Counters" is N placements of 1 (`placePlagueTokens`), all on the one permanent a single
+//! `target` prompt names, either side, face-down cards included (offered by id alone, R177) (R689). Each
+//! placement is multiplied by the receiver (C #27) and is its own for "whenever Plague Counters are placed
+//! on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the draw comes after.
+//! Both numbers are `tokens` and `draw` (R386).
 
 use jackioh_engine::effects::{draw, place_plague_tokens};
 use jackioh_engine::prelude::*;
@@ -52,12 +43,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61: "Tribute 1, Rush, Trample:
-// can't be played without a Unit to Tribute, and may take the tributed Unit's zone on a full board
-// (R391); Cry: place 3 Plague Counters as three placements, all on the one permanent a single prompt
-// names (R689), on any permanent either side, face-down ones included (a face-down option carries only
-// its id, R177), then draw 1; Trample's excess hits the hero (R63); radiant 14/14: draw 3; its tuned
-// numbers (tokens, draw) read through `param()` (R386)".
+// C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61. Tribute: can't be played without
+// a Unit to tribute, may take its zone on a full board (R391). Cry: three placements on the one permanent a
+// prompt names, face-down ones by id alone (R689, R177), then draw; Trample's excess hits the hero (R63);
+// radiant draws 3; tuned numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -78,7 +67,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    /// The state written out and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serialises");
         serde_json::from_str(&text).expect("the state parses back")
@@ -88,7 +77,7 @@ mod tests {
         vec![X; n]
     }
 
-    /// TS `must(value, what)`: the value, or a failure naming what is missing.
+    /// The value, or a failure naming what is missing.
     fn must<T>(value: Option<T>, what: &str) -> T {
         value.unwrap_or_else(|| panic!("missing: {what}"))
     }
@@ -118,7 +107,7 @@ mod tests {
     }
 
     /// Goliath in hand with a Vanilla to tribute, and a board to place on. `extra`: `p2Backrow` and
-    /// `library`, as the TS helper's (defaults `[]` and 5).
+    /// `library` (defaults `[]` and 5).
     fn ready(radiant_face: bool, extra: Value) -> Scenario {
         let p2_backrow = if extra["p2Backrow"].is_null() { json!([]) } else { extra["p2Backrow"].clone() };
         let library = extra["library"].as_u64().map_or(5, |n| n as usize);
@@ -153,7 +142,7 @@ mod tests {
             );
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration and the same hooks.
+            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.static_flags), js(&scripts.base.static_flags));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
         }

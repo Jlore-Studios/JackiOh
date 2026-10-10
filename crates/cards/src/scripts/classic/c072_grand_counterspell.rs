@@ -30,8 +30,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-072";
 
-/// The opponent's announce of anything but a Unit (§6.3 Counter, B5 E1). `to` is TS's
-/// `CounterDestination` literal ("graveyard" | "exile" | "thief"), written into the effect's argument.
+/// The opponent's announce of anything but a Unit (§6.3 Counter, B5 E1).
 fn answers(to: &'static str) -> TriggerDef {
     TriggerDef::new("grand-counter", &[GameEventType::CardAnnounced], move |_ctx, event| {
         match event {
@@ -64,15 +63,6 @@ pub fn script() -> CardScripts {
         },
     }
 }
-
-// C #72 Grand Counterspell — SPEC §8.6 row 72, BUILD M9 Classic row C 72: "Renamed from the designer's
-// second Counterspell (R381); face-down (R33); fires on the opponent's announce of any non-Unit (Spell,
-// Field Spell, Trap, Field Trap), a cast included (R70), and counters it before it reaches the backrow
-// (a face-down set is announced by its zone only while the engine knows what it is), treated as never
-// played as C #17's is, mana and Tributes spent; a Unit play leaves it set; the countered card goes to
-// its owner's graveyard, where a countered trap is public; radiant: steals it instead: countered and
-// moved to your hand as yours (its owner changes, R12), burned at a full hand (R317), and hidden in
-// the opponent's view once there (R97); no tuned numbers".
 
 /// `describe("C #72 Grand Counterspell")`.
 #[cfg(test)]
@@ -122,7 +112,7 @@ mod tests {
         s.last_events().iter().any(|event| event.event_type() == GameEventType::CardPlayed)
     }
 
-    /// R381 is Grand Counterspell, a (2) Trap, renamed from the designer's second Counterspell; no card names it
+    /// R381 is Grand Counterspell, a (2) Trap; no card names it
     #[test]
     fn r381_is_grand_counterspell_a_2_trap_renamed_from_the_designers_second_counterspell_no_card_names_it() {
         crate::register_all();

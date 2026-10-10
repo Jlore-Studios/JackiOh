@@ -2,20 +2,16 @@
 //!   Base:    "Start of turn: Draw {cards|card|cards} from the bottom of your opponent's deck." (1)
 //!   Radiant: "Start of turn and end of turn: Draw {cards|card|cards} from the bottom of your
 //!            opponent's deck." (1)
-//!   Engine:  "Cards between players' piles (§6.3 Steal, §3.2): a draw of yours taken from the bottom of
-//!            the opponent's deck, at the start of your turn (Radiant: and at the end of it); it is your
-//!            draw for your hand cap, cast on draw, your draw limit (§2.4) and your per-turn draw count
-//!            (§10.1), and the card becomes yours (its owner changes, R12). An empty enemy deck gives
-//!            nothing, and fatigue for no one. Tunes: cards 1 ↑."
 //!
-//! Each draw is B5 E16's `drawFromOpponent`: one draw of this card's controller's out of the bottom of
-//! the other player's library (`ownership.drawFromLibraryOf`), the owner changing as it leaves (R12, a
-//! `stolen` event hidden per zone, R97, B5 E16), then §2.4's draw finishing it as the drawer's own — the
-//! draw counters and `drawn`, a cast on draw for the drawer (R58), the drawer's hand cap (a burn goes
-//! to the drawer's graveyard, R317). "Draw N" is N draws (§2.4), so the declared count (`param`, R386)
-//! is that many effects, each its own draw, and a cast on draw that asks pauses the list between them
-//! (R113). The hooks are §6.2's start- and end-of-turn triggers: their controller's turn only, while the
-//! card acts on the field (R153), the start one before the turn's own draw (§2.2, R62).
+//! Each draw is B5 E16's `drawFromOpponent`: one draw of the controller's out of the bottom of the other
+//! player's library (§6.3 Steal, §3.2). The drawer's draw limit (§2.4) stops it before any card moves
+//! (R457); otherwise the owner changes as it leaves (R12; a `stolen` event hidden per zone, R97), then
+//! §2.4's draw finishes it as the drawer's own: draw counters and `drawn`, cast on draw (R58), hand cap
+//! (a burn goes to the drawer's graveyard, R317), per-turn count (§10.1).
+//! An empty enemy deck gives nothing, and fatigue for no one. "Draw N" is N draws (§2.4), so the declared
+//! count (`param`, R386) is that many effects, and a cast on draw that asks pauses the list (R113). The
+//! hooks are §6.2's start- and end-of-turn triggers: their controller's turn only, while the card acts on
+//! the field (R153), the start one before the turn's own draw (§2.2, R62).
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::draw_from_opponent;
@@ -42,16 +38,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #58 Common Resources — SPEC §8.6 row 58, BUILD M9 Classic row C 58: "Start of your turn: a draw of
-// yours taken from the bottom of the opponent's deck, the card becoming yours (its owner changes, R12),
-// under your hand cap (a burn goes to your graveyard, R317), your cast on draw and your draw limit; an
-// empty enemy deck gives nothing and nobody takes fatigue; the opponent's view never names the card
-// (R97) and no event carries a deck position; radiant: at the start and at the end of your turn; its
-// tuned number (cards) reads through `param()` (R386)".
-//
-// The draw limit is C #49 Anti-Greed Machine's (B5 E3); the start-of-turn trigger runs before the
-// turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own draw is the one a
-// limit of 1 stops.
+// C #58 Common Resources, SPEC §8.6 row 58: the opponent's view never names the card (R97) and no
+// event carries a deck position. The draw limit is C #49 Anti-Greed Machine's (B5 E3); the start-of-turn
+// trigger runs before the turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own
+// draw is the one a limit of 1 stops.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -75,13 +65,13 @@ mod tests {
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == player).collect()
     }
 
-    /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
+    /// `opts[key]`, or `fallback` where it is absent.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
     /// p1's Common Resources face-up in the backrow, on p2's turn; `endTurn()` starts p1's turn.
-    /// `opts`: `radiant`, `p1Library`, `p2Library`, `p1Hand`, `p2Field`, as the TS helper's.
+    /// `opts`: `radiant`, `p1Library`, `p2Library`, `p1Hand`, `p2Field`.
     fn waiting(opts: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -306,7 +296,6 @@ mod tests {
                 }
                 for viewer in [PlayerId::P1, PlayerId::P2] {
                     for event in s.view(viewer).events.iter().map(js) {
-                        // TS `not.toHaveProperty("position", expect.any(Number))`.
                         assert!(!event["position"].is_number());
                     }
                 }
