@@ -11855,7 +11855,7 @@
       "attack": 1,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      "text": "Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.\nAura: You may play your Units face-down as Animated Field Traps that reveal at the start of your next turn.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
     },
     "radiant": {
       "attack": 2,
@@ -11865,7 +11865,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nCry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "text": "Divine Shield\nCry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.\nAura: You may play your Units face-down as Animated Field Traps that reveal at the start of your next turn.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {
@@ -11904,7 +11904,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nCry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn."
+      "text": "Rush\nCry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.\nAura: You may play your Units face-down as Animated Field Traps that reveal at the start of your next turn."
     },
     "radiant": {
       "attack": 12,
@@ -11917,7 +11917,7 @@
           "kind": "Poisonous"
         }
       ],
-      "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn."
+      "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: You may play your Units face-down as Animated Field Traps that reveal at the start of your next turn."
     }
   },
   "meditative-052": {
@@ -12888,7 +12888,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
+      "text": "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
     },
     "radiant": {
       "attack": 10,
@@ -12905,7 +12905,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
+      "text": "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
     }
   },
   "meditative-097-6": {
