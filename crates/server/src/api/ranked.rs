@@ -34,8 +34,8 @@ use crate::db::store::{
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
-    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of, place_of, target_ladder,
-    tier_index_of, visible_rank, with_jlorious_peak,
+    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
+    place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
 

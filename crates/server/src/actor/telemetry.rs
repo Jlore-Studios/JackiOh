@@ -20,7 +20,9 @@
 //! evaluation read the true state here on the server, and nothing here reaches a socket.
 
 use jackioh_ai::{AI_EVAL, NextSwing, evaluate};
-use jackioh_engine::{Action, ActionBody, ActionType, EmoteId, GameEventType, PLAYER_IDS, PerPlayer, PlayerId};
+use jackioh_engine::{
+    Action, ActionBody, ActionType, EmoteId, GameEventType, PLAYER_IDS, PerPlayer, PlayerId,
+};
 
 use crate::actor::contracts::one_tx;
 use crate::actor::engine::{self, EngineState, MatchSnapshot};
@@ -263,7 +265,11 @@ impl Recorder {
 /// folds it (`dealt` must be the registry's for the match's mode, R258, or this is another game),
 /// then each logged action as `on_action` and its push at the action's own `at`. A row the engine
 /// refuses is skipped, as `fold` skips it. Answers the recorder and how many rows were refused.
-pub fn replay(match_row: &MatchRow, log: &[MatchActionRow], dealt: Option<Vec<PlayerId>>) -> (Recorder, usize) {
+pub fn replay(
+    match_row: &MatchRow,
+    log: &[MatchActionRow],
+    dealt: Option<Vec<PlayerId>>,
+) -> (Recorder, usize) {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
     let mut state = engine::fold(&engine::fold_args(
         &match_row.seed,

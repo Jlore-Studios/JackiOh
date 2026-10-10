@@ -101,11 +101,11 @@ use crate::db::store::{
     ActionTimingRow, BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db,
     EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind,
     MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus, PerMode, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
-    SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
@@ -2131,8 +2131,14 @@ pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreE
         .iter()
         .filter(|row| {
             row.status == MatchStatus::Finished
-                && tables.match_actions.iter().any(|action| action.match_id == row.id)
-                && !tables.action_timings.iter().any(|timing| timing.match_id == row.id)
+                && tables
+                    .match_actions
+                    .iter()
+                    .any(|action| action.match_id == row.id)
+                && !tables
+                    .action_timings
+                    .iter()
+                    .any(|timing| timing.match_id == row.id)
         })
         .collect();
     unfolded.sort_by(|a, b| {
@@ -2368,9 +2374,15 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
         .flatten()
         .collect();
     let seat_held = |match_id: &str, seat: PlayerId| held.contains(&(match_id.to_string(), seat));
-    keep_only(&mut tables.action_timings, |row| !seat_held(&row.match_id, row.seat));
-    keep_only(&mut tables.emote_events, |row| !seat_held(&row.match_id, row.seat));
-    keep_only(&mut tables.match_signals, |row| !seat_held(&row.match_id, row.seat));
+    keep_only(&mut tables.action_timings, |row| {
+        !seat_held(&row.match_id, row.seat)
+    });
+    keep_only(&mut tables.emote_events, |row| {
+        !seat_held(&row.match_id, row.seat)
+    });
+    keep_only(&mut tables.match_signals, |row| {
+        !seat_held(&row.match_id, row.seat)
+    });
     for attempt in tables.attempts.iter_mut() {
         if attempt.profile_id.as_deref() == Some(profile_id) {
             attempt.profile_id = None;

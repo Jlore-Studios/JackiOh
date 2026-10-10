@@ -55,9 +55,8 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
         let log = tx.matches_actions(&match_id).await?;
         let mode = tx.matches_mode_of(&match_id).await?;
         // R258: the deal the registry folds the match with, or the fold is another game.
-        let replayed = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            replay(&match_row, &log, dealt_for(mode))
-        }));
+        let replayed =
+            std::panic::catch_unwind(AssertUnwindSafe(|| replay(&match_row, &log, dealt_for(mode))));
         let recorder = match replayed {
             Ok((recorder, 0)) => recorder,
             Ok((_, refused)) => {

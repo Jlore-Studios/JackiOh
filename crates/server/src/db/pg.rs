@@ -73,12 +73,11 @@ use crate::db::store::{
     FrozenTrio, GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
     MatchSignalRow, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice,
-    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus, PublicPlayerSummary,
+    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput,
+    RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide,
+    StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -4058,7 +4057,6 @@ fn action_timing_of(row: &PgRow) -> Result<ActionTimingRow, StoreError> {
         pilot: from_literal(&get::<String>(row, "pilot")?)?,
     })
 }
-
 
 /// Three selects, one per table, in the orders the port names.
 pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {

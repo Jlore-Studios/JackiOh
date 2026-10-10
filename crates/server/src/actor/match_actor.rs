@@ -44,12 +44,12 @@ use crate::actor::contracts::{
     SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
-use crate::actor::telemetry::{self, LIVE_PILOTS, Recorder};
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
     ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
     parse_client_message, portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
+use crate::actor::telemetry::{self, LIVE_PILOTS, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::app::now_ms;
 use crate::config::{
@@ -322,8 +322,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         deal_emote_hand(&match_row.seed, PlayerId::P2),
     );
     let opening = engine::snapshot(&state);
-    let telemetry =
-        telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
+    let telemetry = telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
 
     let core = Core {
         state,

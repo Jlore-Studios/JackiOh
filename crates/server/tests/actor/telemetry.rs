@@ -201,7 +201,10 @@ async fn play(app: &Arc<App>, match_id: &str) -> Played {
 
     sleep_ms(500).await;
     let snapshot = actor.snapshot();
-    assert!(snapshot.pending_for.is_none(), "no prompt opens the first turn under this seed");
+    assert!(
+        snapshot.pending_for.is_none(),
+        "no prompt opens the first turn under this seed"
+    );
     let ender = snapshot.active;
     let end_turn: Action = from(json!({ "type": "endTurn", "playerId": ender, "nonce": "probe" }));
     let end_event = jackioh_engine::reduce(&actor.engine_state(), &end_turn)
@@ -219,8 +222,7 @@ async fn play(app: &Arc<App>, match_id: &str) -> Played {
     socket(ender).receive_json(json!({ "type": "emote", "emote": deal_emote_hand(SEED, ender)[0] }));
     settle().await;
     sleep_ms(500).await;
-    socket(conceder)
-        .receive_json(json!({ "type": "emote", "emote": deal_emote_hand(SEED, conceder)[0] }));
+    socket(conceder).receive_json(json!({ "type": "emote", "emote": deal_emote_hand(SEED, conceder)[0] }));
     settle().await;
 
     sleep_ms(300).await;
@@ -275,7 +277,10 @@ mod r1442_play_telemetry_through_the_actor {
             assert_eq!(row["pilot"], "human", "row {n}");
         }
         assert_eq!(timings[0]["turn"], timings[1]["turn"]);
-        assert_eq!(timings[3]["turn"], json!(timings[2]["turn"].as_i64().map(|turn| turn + 1)));
+        assert_eq!(
+            timings[3]["turn"],
+            json!(timings[2]["turn"].as_i64().map(|turn| turn + 1))
+        );
 
         let turn = timings[3]["turn"].clone();
         assert_eq!(
@@ -332,8 +337,8 @@ mod r1442_play_telemetry_through_the_actor {
         assert!(
             store!(app, t => t.results_get_by_match("m-tel-2").await.expect("results.getByMatch")).is_some()
         );
-        let row = store!(app, t => t.matches_get("m-tel-2").await.expect("matches.get"))
-            .expect("the match row");
+        let row =
+            store!(app, t => t.matches_get("m-tel-2").await.expect("matches.get")).expect("the match row");
         assert_eq!(row.status, MatchStatus::Finished);
         assert_eq!(telemetry_of(&app, "m-tel-2").await, PlayTelemetry::default());
         for profile in [P1, P2] {
@@ -341,6 +346,74 @@ mod r1442_play_telemetry_through_the_actor {
                 .expect("the profile");
             assert_eq!(held.in_match_id, None, "{profile} is let go");
         }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1442_a_rebuilt_actor_carries_on_from_the_telemetry_its_log_holds() {
+        let app = world().await;
+        let (actor, _one, _two) = start(&app, "m-tel-4").await;
+        let mut walk = Submitter {
+            actor: actor.clone(),
+            n: 0,
+        };
+        sleep_ms(1_000).await;
+        walk.submit(PlayerId::P1, keep_all(&actor, PlayerId::P1)).await;
+        sleep_ms(2_000).await;
+        walk.submit(PlayerId::P2, keep_all(&actor, PlayerId::P2)).await;
+        actor.idle().await;
+
+        // The server restarts; the next socket rebuilds the actor from the log.
+        app.matches.stop("m-tel-4").await;
+        let revived = app
+            .matches
+            .actor_for(&app, "m-tel-4")
+            .await
+            .expect("the rebuilt actor");
+        let (one, two) = (create_fake_socket(), create_fake_socket());
+        for (profile, socket) in [(P1, &one), (P2, &two)] {
+            app.matches
+                .attach(&app, "m-tel-4", profile, socket.socket())
+                .await
+                .expect("the account attaches again");
+        }
+        settle().await;
+        let mut walk = Submitter {
+            actor: revived.clone(),
+            n: walk.n,
+        };
+        sleep_ms(500).await;
+        let ender = revived.snapshot().active;
+        walk.submit(ender, json!({ "type": "endTurn" })).await;
+        sleep_ms(1_000).await;
+        walk.submit(ender.opponent(), json!({ "type": "concede" })).await;
+        revived.idle().await;
+
+        // The moves before the restart come from the log, with no clock; the turn's end counts from
+        // the last logged move, and the concede from the push of the turn's end.
+        let timings = to_json(&telemetry_of(&app, "m-tel-4").await.action_timings);
+        let seen: Vec<Value> = timings
+            .as_array()
+            .expect("the timings")
+            .iter()
+            .map(|row| {
+                json!([
+                    row["seq"],
+                    row["actionKind"],
+                    row["thinkMs"],
+                    row.get("clockLeftMs").is_some(),
+                    row["rankBucket"]
+                ])
+            })
+            .collect();
+        assert_eq!(
+            seen,
+            vec![
+                json!([1, "mulligan", 1_000, false, "raisin"]),
+                json!([2, "mulligan", 3_000, false, "raisin"]),
+                json!([3, "endTurn", 500, true, "raisin"]),
+                json!([4, "concede", 1_000, true, "raisin"]),
+            ]
+        );
     }
 
     #[tokio::test(start_paused = true)]

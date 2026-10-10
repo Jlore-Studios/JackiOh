@@ -45,10 +45,11 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery, InviteCode,
-    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
-    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
-    StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
+    ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck,
+    SavedTrio, Season, SeriesRow, StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -4348,7 +4349,11 @@ mod r1442_play_telemetry {
         let mut stray = telemetry(&match_id, 1_500);
         stray.match_signals[1].match_id = id();
         let refused = call!(harness, t => t.play_telemetry_insert(&stray));
-        assert!(refused.is_err(), "{}: a row naming no match was written", harness.name);
+        assert!(
+            refused.is_err(),
+            "{}: a row naming no match was written",
+            harness.name
+        );
 
         // Nothing of the write landed, and the result it would have followed is untouched.
         assert_eq!(
@@ -4443,7 +4448,10 @@ mod r1442_play_telemetry {
         };
         q!(harness, t => t.play_telemetry_insert(&signals_only));
 
-        assert_eq!(q!(harness, t => t.play_telemetry_unfolded()), vec![earlier, later]);
+        assert_eq!(
+            q!(harness, t => t.play_telemetry_unfolded()),
+            vec![earlier, later]
+        );
     }
 
     both_stores!(

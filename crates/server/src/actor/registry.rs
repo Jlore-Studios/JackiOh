@@ -271,14 +271,22 @@ impl Registry {
             glitch_boards,
             dealt.clone(),
         );
+        let folded = std::panic::catch_unwind(AssertUnwindSafe(|| engine::fold(&args)))
+            .map_err(|payload| RebuildError::Internal(panic_text(payload)))?;
         // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A match
-        // already finished has none left to write, and is not replayed twice.
-        let live = match_row.status == MatchStatus::Live;
-        let (folded, telemetry) = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            let telemetry = live.then(|| telemetry::replay(&match_row, &log, dealt.clone()).0);
-            (engine::fold(&args), telemetry)
-        }))
-        .map_err(|payload| RebuildError::Internal(panic_text(payload)))?;
+        // already finished has none left to write, and is not replayed twice. A replay that panics
+        // costs the telemetry alone: the actor records afresh from the match's creation.
+        let replayed = (match_row.status == MatchStatus::Live).then(|| {
+            std::panic::catch_unwind(AssertUnwindSafe(|| telemetry::replay(&match_row, &log, dealt).0))
+        });
+        let telemetry = match replayed {
+            Some(Ok(recorder)) => Some(recorder),
+            Some(Err(payload)) => {
+                tracing::warn!(event = "telemetry.replay_failed", matchId = %match_id, message = %panic_text(payload));
+                None
+            }
+            None => None,
+        };
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
             // longer reconstructs the match (§9.3). Rebuild anyway — a live match is better than a dead
