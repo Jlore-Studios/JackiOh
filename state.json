@@ -4701,18 +4701,28 @@
     "642": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-10T13:22:13Z",
       "issue": 602,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The PR body's list of skipped files, which the issue asks for 'for a later pass', is partly invented: its crates/engine/src and effects sections name 47 files that exist neither on main nor on any remote branch, while the real skipped engine files are left out under 'and others'.",
+          "evidence": "I recomputed the plan's step-3 skip list from the remote branches (284 files) and checked each listed name with test -e. Thirty root files (ai.rs, attack.rs, authoritative.rs, board.rs, cards.rs, deck.rs, determinism.rs, end_turn.rs, events.rs, fuzz.rs, graveyard.rs, hand.rs, health.rs, history.rs, init.rs, lanes.rs, mulligan.rs, outcome.rs, phase.rs, play.rs, prompt.rs, response.rs, sink.rs, spell.rs, stack.rs, summon.rs, surrender.rs, targeting_validation.rs, types.rs, view.rs) and 17 effects files (armor.rs, attach.rs, bounce.rs, burn.rs, card.rs, clear.rs, control.rs, copy.rs, counter.rs, deal_damage.rs, discard.rs, equip.rs, exile.rs, lock.rs, mill.rs, modify.rs, move_zone.rs) are on main and in no branch. Real skipped files on main are never named: layers.rs, play_steps.rs, query.rs, traps.rs, turn.rs, view_for.rs, state_check.rs, cost_rules.rs, effects/plague.rs, effects/locks.rs and others. The crates/ai and card-script sections do match the recomputed list.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-10-10T14:15:32Z",
+      "queued_at": "2026-10-10T14:32:16Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38058909634",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-10T14:17:02Z",
       "stop_requested": false,
       "taken_asks": [],
