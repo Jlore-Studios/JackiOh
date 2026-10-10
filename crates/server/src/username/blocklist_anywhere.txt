@@ -1,0 +1,24 @@
+# R1433: words refused wherever they appear in a username, once the name is NFKC case-folded,
+# stripped of combining marks and underscores, and mapped back from digit substitutions
+# (0→o, 1→i, 3→e, 4→a, 5→s, 7→t). Only words that rarely occur inside innocent words belong
+# here: slurs and the strongest profanity. A word that does occur inside innocent words
+# (`ass` in `Cassandra`, `cunt` in `Scunthorpe`) goes in blocklist_token.txt instead.
+#
+# One lowercase word per line, as it reads after that folding. Blank lines and lines starting
+# with `#` are skipped. English to start: another language's words may be added below, folded
+# the same way. A refusal never echoes the word that matched.
+fuck
+bullshit
+shithead
+bitch
+asshole
+cocksucker
+faggot
+nigger
+nigga
+whore
+dildo
+jizz
+bollocks
+bastard
+hitler

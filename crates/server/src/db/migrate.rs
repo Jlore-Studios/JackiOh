@@ -129,6 +129,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0027_lean_newest.sql",
         include_str!("../../migrations/0027_lean_newest.sql"),
     ),
+    (
+        "0028_usernames.sql",
+        include_str!("../../migrations/0028_usernames.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

@@ -761,7 +761,6 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
             email: user.email.clone().unwrap_or_default(),
             rating: RATING_START,
             at: now_ms(),
-            display_name: None,
         })
         .await?;
     tx.commit().await?;
