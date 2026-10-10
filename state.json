@@ -4442,7 +4442,9 @@
     },
     "642": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6099092550"
+      ],
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -4462,7 +4464,9 @@
       "issue": 602,
       "kind": "revise",
       "last_findings": [],
-      "pending_request": false,
+      "pending_at": "2026-10-10T15:28:08Z",
+      "pending_by": "jgoetzmann",
+      "pending_request": true,
       "provider": "agy",
       "queued_at": "2026-10-10T14:32:16Z",
       "review_floor": "",
