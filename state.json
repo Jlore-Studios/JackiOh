@@ -5268,7 +5268,7 @@
   ],
   "providers": {
     "agy": {
-      "refused_until": "2026-10-09T17:49:15Z",
+      "refused_until": "2026-10-10T03:56:35Z",
       "spent": [
         {
           "at": "2026-10-03T02:02:07Z",
@@ -5529,17 +5529,21 @@
         {
           "at": "2026-10-10T00:08:09Z",
           "minutes": 12.6
+        },
+        {
+          "at": "2026-10-10T00:33:35Z",
+          "minutes": 23.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-10T03:54:19Z",
-          "utilization": 0.47
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-10T00:08:09Z",
+        "observed_at": "2026-10-10T00:33:35Z",
         "seven_day": {
           "resets_at": "2026-10-16T17:47:52Z",
-          "utilization": 0.25
+          "utilization": 0.34
         },
         "status": "allowed"
       }
