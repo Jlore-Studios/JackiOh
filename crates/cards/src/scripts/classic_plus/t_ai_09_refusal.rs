@@ -8,8 +8,9 @@
 //!            `cardPlayed`, no counts, no Echo repeats; its mana stays spent."
 //!
 //! E1, R448: the announce names the play's declared targets (a card by its id, a hero as `hero-<p>`), so
-//! the condition is a read of those ids against your side, in `when` (R99): your units (a carried Unit
-//! included, R446); Radiant adds your hero and hand. A cast is announced like a play (R70).
+//! the condition is a read of those ids against your side, in `when` (R99): your units on the field (a
+//! carried Unit included, R446), or on the Radiant face your hero, your field and your hand. A cast is
+//! announced like a play (R70).
 
 use jackioh_engine::effects::{counter_play, draw};
 use jackioh_engine::prelude::*;

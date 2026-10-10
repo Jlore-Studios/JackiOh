@@ -4,7 +4,7 @@
 //!
 //! TIMING (R427; rewrites R17's Sheepish half): it answers §10.5 step 7's `cardResolved`, after the Cry and
 //! every Echo repeat (a cast Unit too, R70). Not `summoned`, which also covers Recruit, copies, tokens and
-//! Reborn, none of them a play (R1, R61). A `run` returning [] still consumes the trap, so every
+//! Reborn, none of them a play (R1, R61). A `run` returning `[]` still consumes the trap, so every
 //! condition lives in `when`: a Spell, a backrow card or the controller's own Unit leaves it armed (R61).
 //! A Unit that left the field in its own resolution still fires it: nothing to Transform (it never reaches
 //! a hand, a graveyard or a Reborn body, R83), the trap consumed, the Lava Golem still added (R120). One an

@@ -51,7 +51,8 @@ pub fn script() -> CardScripts {
 }
 
 // #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: pool #31, #51, #82 with repeats allowed; radiant 2
-// base + 2 radiant). The pool is asserted twice: against §5.1's query directly and through seeded play (R380).
+// base + 2 radiant). The pool, every set's KY cards (R380), is asserted twice: against §5.1's query
+// directly and through seeded play.
 // Also proved: R60 (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated
 // Radiant card carries the instance flag), §5.1 (no tokens, never the generating card).
 #[cfg(test)]

@@ -9,7 +9,8 @@
 //! ride in `data`, the only place a chained effect keeps anything; `resume_self` merges it onward.
 //! FUSE (R77, `subsystems/fuse.rs`): no `target`, `toHand` the caster, both faces fused into
 //! `state.transientDefs`, cost overridden to 0 on the instance (`CRAFTED_CARD_COST`), not the def.
-//! The ingredients are Discovered definitions never on a board, so nothing ceases to exist.
+//! The ingredients are Discovered definitions never on a board, so nothing a player could see ceases
+//! to exist.
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -26,7 +27,7 @@ const PICKS: &str = "picks";
 
 /// §6.3 Discover: 1 of 3 Units, drawn without replacement and shown only to the chooser. A plain
 /// `type` filter drops tokens (§5.1), and each Discover is an independent draw over the same pool,
-/// so a Unit can be offered twice (R60); §8.5 and R77 don't forbid it.
+/// so a Unit can be offered twice; §8.5 and R77 don't forbid it, and R60 lets generated cards repeat.
 fn discover_unit(step: &'static str, picks: &[String]) -> Effect {
     discover_from_catalog(json_as(json!({
         "step": step,

@@ -8,8 +8,8 @@
 //! card its chooser may not read is offered by id alone and the placement never names it to them (R177).
 //! One placement of {tokens} (`placePlague`, B5 E19, R471; `param`, R386; Pestilent Slime multiplies it), then, read
 //! after it lands: an enemy permanent with counters at least its cost (R396's `costNow`: an X card on the field its X,
-//! 0 with none chosen; any other R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays with
-//! them and nothing is drawn. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
+//! 0 with none chosen; any other card R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays
+//! with them and nothing is drawn, since "otherwise" is the condition's, not the steal's. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, instance_of, place_plague, steal};

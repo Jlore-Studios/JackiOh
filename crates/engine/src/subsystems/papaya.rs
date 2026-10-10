@@ -6,10 +6,14 @@
 //! rationals so "y = p(x) exactly" is an integer test; a cell is on it when p(x) is a whole row 0 to 3 (R422).
 //!
 //! Cells are asked one `cell` prompt at a time (E18, `choose_cell`): every cell of the unused lanes and,
-//! after the first, "done". The cells so far ride the prompt's resume data as plain points (R113); options
-//! are cells, never cards (R177). The top of the pile at each cell on the curve is then exiled: face-down
-//! cards too (R97), tokens ceasing to exist (R11), a dormant card beneath resuming (§3.2, R13); the
-//! Radiant face only the enemy's rows 2 and 3.
+//! after the first, "done", at most 21 answers, so `legal_actions`, the fuzz suite and the AI reach every
+//! curve. The cells so far ride the prompt's resume data as plain points (R113); options are cells, never
+//! cards (R177). Then the board is read once and the top of the pile at each cell on the curve is exiled:
+//! face-down cards too (openly, once in exile, R97), tokens ceasing to exist (R11), a dormant card beneath
+//! resuming and not exiled again (§3.2, R13); the Radiant face only the enemy's rows 2 and 3.
+//!
+//! A card script: `cry: hook(|_| subsystems::papaya_begin())`,
+//! `resume: [(subsystems::PAPAYA_STEP, hook(subsystems::papaya_answered))]`.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};

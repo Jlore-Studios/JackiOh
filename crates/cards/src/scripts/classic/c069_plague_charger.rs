@@ -5,8 +5,9 @@
 //!   Radiant: the same text — +4
 //!
 //! First Strike while it has a Plague Counter (§6.1, §10.4) and +{attack} Attack per token (self aura,
-//! §10.4 layer 5) follow its tokens; both clear when it leaves the field (R78; vanilla has neither, §6.3).
-//! Glows on the field while it has a Plague Counter (R195). The attack bonus tunes through `param` (R386).
+//! §10.4 layer 5) follow its tokens; both clear when it leaves the field (R78); a Vanilla Charger has no
+//! text, so neither (§6.3). Glows on the field while it has a Plague Counter (R195). The attack bonus
+//! tunes through `param` (R386).
 
 use jackioh_engine::prelude::*;
 

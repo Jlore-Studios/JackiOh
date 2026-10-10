@@ -9,7 +9,8 @@
 //! log; it raises the card's own cost (R65) by 1, never above (4).
 //! R429, R766: only the climb survives the graveyard (R766 takes every price off a card reaching it):
 //! the return gives back the climb earlier returns gave (`return_price_of`) plus (1), capped at (4).
-//! Any other price change stays gone, and a #31 that reaches its graveyard otherwise gets no return.
+//! Any other price change stays gone, and a #31 that reaches its graveyard any other way (discarded,
+//! burned, countered) was never flagged for a return, so nothing is noted for it.
 
 use jackioh_engine::prelude::*;
 

@@ -9,7 +9,8 @@
 //!
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's
-//! data (R594). The pool leaves this card out by its def id (R387); the price lands only on a hand card (§2.4, R4).
+//! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price
+//! lands only on a card that reached the hand (§2.4, R4).
 
 use jackioh_engine::effects::{add_random_from_catalog, for_rest_of_game};
 use jackioh_engine::prelude::*;

@@ -1,10 +1,11 @@
 //! C #90 In Too Deep (SPEC §8.6 row 90). (1) Field Spell, Quickdraw (§2.1), Mythic.
-//! Indestructible; ten quests, thirteen rewards. Base offers reward prompt (§10.6, R79); Radiant
-//! gives every reward and opens all paths (R543).
-//! Engine: Quests (§10.1, R404), split B5, views (§10.8).
+//! Indestructible; ten quests, thirteen rewards. Base offers a reward prompt (§10.6), to a non-active
+//! player too (R79); Radiant gives every reward and opens all paths (R543).
+//! Engine: Quests (§10.1, R404), the engine/card split (B5 E33), views (§10.8).
 //! Rewards: A heal, B damage (§8), C return (R60, §2.4), D Plague (§6.3, R471, R689), E buff (R60),
 //! F bounce (R78), G discard (R16), H draw, I Recruit (§6.3), J mana (R540), K exile deck,
-//! L graveyard play (§6.3, R78), M Indestructible aura (§10.4 layer 5, R347). Indestructible (R46).
+//! L graveyard play (§6.3), M Indestructible aura (§10.4 layer 5, R347); L and M hold while it stays on
+//! the field, and leaving it resets the quest line (R78). Indestructible (R46).
 //! Quests (R404): 1 draws (R541); 2 kills; 3 board; 4 float; 5 damage (R542); 6 totals; 7 float;
 //! 8 exiles; 9 empty deck; 10 grave units.
 
@@ -384,7 +385,7 @@ mod tests {
     const BOOK_OF_BOOKS: &str = "classicplus-054";
     /// C+ #57 Book of Stats, (1) Spell: give a Unit +5/+5
     const BOOK_OF_STATS: &str = "classicplus-057";
-    /// Loop seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
+    /// Issue #473's loop: the seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
     /// two adds, so the first few seeds find one), and the mana the replays may spend.
     const BOOK_OF_STATS_SEEDS: u32 = 64;
     const REPLAY_MANA: i32 = 6;

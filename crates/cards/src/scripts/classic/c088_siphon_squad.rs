@@ -11,7 +11,6 @@
 //!            after it is set included. … live while face-down … (R403). The base face's `preview` (R280)
 //!            shows X, to its controller only while it is face-down (§10.8). Tunes: multiplier 2 ↑."
 
-
 use jackioh_engine::effects::reveal;
 use jackioh_engine::prelude::*;
 
@@ -88,7 +87,7 @@ pub fn script() -> CardScripts {
 // SPEC §8.6 (R403): aura works while face-down, revealed at start of turn (R686). Enemy units have
 // −X Attack floored at 0; the opponent's view shows the drop and never names the card (R33); preview
 // shows X (§10.8, R280). Multiplier is tuned via param() (R386). Radiant sets attack to 0 after all
-// other layers (§10.4, R63).
+// other layers (§10.4), so their hits are no hits (R63).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

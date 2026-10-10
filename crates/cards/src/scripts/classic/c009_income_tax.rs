@@ -7,8 +7,9 @@
 //! The condition (R99, a trap's `when`) is the engine's draw count per player per turn (§10.1, B5 E4),
 //! on either turn, riding each `drawn` event as `turnDraw`: it counts the start-of-turn draw and a burned
 //! or cast-on-draw card, not a draw a limit stops; an empty-deck draw counts but draws no card, so it
-//! fires nothing (R521). A card cast on it goes first (R58). The opponent keeps one hand card (R177); `giveFromHand` (B5 E16) gives you the rest as yours
-//! (R12, §3.2), your hand cap burning the overflow (R317), unread by them (R97); one card or none asks
+//! fires nothing (R521). A card cast on it goes first (R58). The opponent keeps one hand card, its
+//! options theirs alone to read (R177); `giveFromHand` (B5 E16) gives you the rest as yours (R12,
+//! §3.2), your hand cap burning the overflow (R317), unread by them (R97); one card or none asks
 //! nothing (R61). The Radiant `costMod` (R78) is read at firing and carried to the answer: the trap is
 //! in the graveyard by then.
 

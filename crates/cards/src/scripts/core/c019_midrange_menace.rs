@@ -4,7 +4,8 @@
 //! The radiant cell lists keywords without "Plus", so `[Taunt, Immutable]` is the radiant form's
 //! complete keyword list, and "same" restates the end-of-turn clause (§8 Conventions): both faces carry
 //! the identical hook. Neither keyword is granted here: both are PRINTED in the catalog and applied by
-//! §10.4's layer system (R23's scope is the effects library's), so a re-grant would double it.
+//! §10.4's layer system (combat enforces the Taunt; R23's Immutable scope is the effects library's), so
+//! a re-grant would double it.
 //!
 //! "End of turn" is the controller's own (§6.2), never the opponent's, as in #13. "Heal to full" is
 //! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between

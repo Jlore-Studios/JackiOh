@@ -23,7 +23,8 @@ pub fn script() -> CardScripts {
 }
 
 // #25 4-mana 7/7 — SPEC §8.2, BUILD M4-T4 row 25: "Armor 7 zeroes a 7 hit; radiant 14/14 Armor 7,
-// Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good".
+// Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good"
+// (patch v0.1.1: the Radiant face used to be Indestructible).
 // Both scripts are empty, so these fixtures prove the catalog faces' keywords do the work (§4.4, §4.5).
 // The Tribute is #22 Carnivorous Cube (§6.3 Tribute, R428), the exile #34 Collateral Damage (both
 // fixtures depend on those scripts too).

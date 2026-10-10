@@ -87,7 +87,8 @@ fn chaos_kind(name: ChaosEffectName) -> &'static str {
 /// One of the ten effects, built when it resolves rather than when the hook returns it, so every state
 /// read happens after the effects before it have landed. It is a part of the list that holds it
 /// (`resolve.lazyPart`): an effect inside it that asks pauses the rest until the answer (R113), so the
-/// mana of "draw your whole library and gain 4 mana" waits for the draw (R87).
+/// mana of "draw your whole library and gain 4 mana" waits for the draw, as the partner waits for the
+/// recursion (R87).
 fn chaos_effect(
     name: ChaosEffectName,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,

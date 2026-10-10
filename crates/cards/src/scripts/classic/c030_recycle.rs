@@ -71,7 +71,8 @@ pub fn script() -> CardScripts {
 // C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30: shuffles every graveyard card into your
 // deck at random positions; R80's cap: cards that don't fit stay in the graveyard; positions are blank
 // in both views and your deck list names the cards (R311); then draw 1; radiant: each shuffled card costs
-// (1) less (`costMod`, R78). Its name is a rules word, C #64's "Recycler" no reference (R381); numbers: R386.
+// (1) less (`costMod`, R78). Its name is a rules word, and C #64's "Recycler" is no reference to it
+// (R381); numbers: R386.
 #[cfg(test)]
 mod tests {
     use super::*;

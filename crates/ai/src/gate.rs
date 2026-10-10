@@ -211,7 +211,8 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
 /// Game n (1-based) of a matchup: seed `${series}:${matchup}:${n}`, the subject (the AI, or the Hard
 /// AI) on p1 when n is odd. Every seat's deck is built by one rule, `build_ai_deck` with its
 /// handicap's deck size and mana cap, the shadow ban (R186) included: the gates measure play, so
-/// neither side is dealt cards the other side's rule keeps out.
+/// neither side is dealt cards the other side's rule keeps out. Handicaps: ai-vs-* use Easy for both
+/// seats; hard-vs-easy gives the subject AI_DIFFICULTY.hard and the other AI_DIFFICULTY.easy.
 pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
     let seed = format!("{series}:{}:{n}", matchup.as_str());
     let subject_seat = subject_seat_of(n);

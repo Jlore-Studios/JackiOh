@@ -30,8 +30,9 @@ fn priced(card: &CardInstance, in_hand_only: Option<bool>) -> bool {
 
 /// R65: the event reports what the card costs now, which is `effectiveCost` and nothing else. R177: a
 /// change made to a card in a library is one nobody could read where it happened (§3), so the event
-/// says it was made there (`hiddenFrom`) and a view keeps it unread: a library-wide change (#95) emits
-/// one event per card in library order, which would give away a card's place in the batch.
+/// says it was made there (`hiddenFrom`) and a view keeps it unread for good: a library-wide change (#95)
+/// emits one event per card in library order, so once a card reads openly its event would give away its
+/// place in the batch.
 fn emit_cost(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     let cost = effective_cost(ctx.sink.state, card, Default::default());
     let hidden_from = if card.zone.z() == ZoneName::Library {

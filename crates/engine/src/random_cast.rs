@@ -3,13 +3,19 @@
 //! A cast (R70) is §10.5's pipeline entered at step 3 (`play_steps::cast_through_pipeline`). A random
 //! cast (Classic+ #47 Jogg's Box, #38.1 Solarius Prime) makes every choice its caster would make at
 //! random from the match rng: its targets, modes and Echo picks, and every prompt opened for the
-//! caster while it resolves (Discover included). A cast made while it resolves is random too, and the
-//! chain is capped (RANDOM_CAST_CHAIN_CAP); the other player's prompts are asked as usual. A cast that
-//! targets enemies when it can (`targetEnemies`, Classic+ #40 Appropriations, E39) aims each target
-//! pick by its declaration (R656): a harmful pick narrows to the enemies, a helpful one to the friends.
+//! caster while it resolves (Discover included). Its X is the caster's current mana, at least 1, as
+//! every cast's is. A cast made while it resolves is random too, and the chain is capped
+//! (RANDOM_CAST_CHAIN_CAP); the other player's prompts are asked as usual. A cast that targets enemies
+//! when it can (`targetEnemies`, Classic+ #40 Appropriations, E39) aims each target pick by its
+//! declaration (R656): a harmful pick narrows to the enemies among its options, a helpful one to the
+//! friends, when there is one (its declared targets, its Echo repeats' and the prompts its own text
+//! opens for its caster).
 //!
 //! While a cast's steps run its mode sits on `state.castsResolving` (`with_cast_mode`, read by
-//! `prompts::open_prompt`); a state at rest, a paused one included, never carries it.
+//! `prompts::open_prompt`). The stack is transient: a step that pauses returns through `with_cast_mode`,
+//! which takes the mode off again, so a state at rest, a paused one included, never carries it, and the
+//! owed step puts it back when it is driven again (the run record keeps `random` and `targetEnemies`,
+//! which are JSON).
 
 use indexmap::IndexSet;
 
@@ -83,6 +89,7 @@ pub fn count_chain_cast(state: &mut GameState, player: PlayerId) {
     }
 }
 
+/// How a prompt is to be answered while casts are being driven.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CastPromptMode {
     pub random: bool,

@@ -11,7 +11,6 @@
 //! Placements go in R68's order to every permanent (the firing trap included, R550, R78), unrevealed to
 //! players who may not read them (R97). Both numbers are declared `tokens` and `draw` (R386).
 
-
 use jackioh_engine::effects::{draw, place_plague_each};
 use jackioh_engine::prelude::*;
 

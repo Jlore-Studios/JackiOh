@@ -3,13 +3,14 @@
 //! Base: "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand." Radiant adds
 //! "gain 'Combo: Draw 1'" to the discount. §8's Engine cell: "Turn-scoped player modifiers plus an
 //! end-of-turn delayed exile": `refreshMana` (§6.3 Refresh, R364: spent mana back, never past max); a
-//! `costDiscount` for this turn, flat before Curvature (R65: "your CARDS", so no `onlyType`, and an X-cost
-//! card still costs exactly X); on Radiant a PLAYER-scoped `comboDraw` rider read once per card played
-//! (§10.5 step 5); and a delayed effect at the controller's end phase that exiles the hand, after the
-//! end-of-turn trap window (R68 order) and before cleanup, so the modifiers are still live (R62). Its
-//! `resume` step is the one registration (R126); the stored `Resume` names the script and the face
-//! (`radiant` persists in every zone, R78) and re-enters even with no instance left (R127). R662: the Radiant rider lights every hand card once a
-//! card was played this turn; the base face grants a discount, not a condition (cost is on the faces, R280).
+//! `costDiscount` for this turn ("your CARDS", so no `onlyType`), flat before Curvature and leaving an
+//! X-cost card at exactly X (R65); on Radiant a PLAYER-scoped `comboDraw` rider read once per card
+//! played (§10.5 step 5); and a delayed effect at the controller's end phase that exiles the hand, after
+//! the end-of-turn trap window (R68 order) and before cleanup, so the modifiers are still live (R62).
+//! Its `resume` step is the one registration (R126); the stored `Resume` names the script and the face
+//! (`radiant` persists in every zone, R78) and re-enters even with no instance left (R127). R662: the
+//! Radiant rider lights every hand card once a card was played this turn; the base face grants a
+//! discount, not a condition (cost is on the faces, R280).
 
 use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};
 use jackioh_engine::prelude::*;
@@ -296,8 +297,8 @@ mod tests {
 
             // R62 puts the exile between the trap window and cleanup. `turnEnded` is emitted at the TOP of
             // the window, because its traps read it (#18 Bread and Butter answers `event.unspentMana`), so
-            // the exile follows it and cleanup follows the exile: the `modifierChanged` that retires
-            // /fullsend's own "this turn" discount.
+            // the exile follows it and cleanup follows the exile, visible as the `modifierChanged` that
+            // retires /fullsend's own "this turn" discount.
             let types: Vec<GameEventType> = s.events().iter().map(GameEvent::event_type).collect();
             let window_opened = index_of(types.iter().position(|kind| *kind == GameEventType::TurnEnded));
             let last_exile = index_of(types.iter().rposition(|kind| *kind == GameEventType::Exiled));

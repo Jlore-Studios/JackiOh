@@ -5,10 +5,10 @@
 //! still counts as played and goes to the graveyard (§8 Conventions, R40, R70).
 //!
 //! THE OFF-BY-ONE: §6.2's "Combo X" is "X or more cards were played EARLIER this turn", but §10.5
-//! step 4 counts this spell before step 5 runs its script, and step 5's granted Combo draw can cast a
-//! cast-on-draw card (R70) that is in the count too. §6.2 checks "at play time", so the script reads
-//! `played_earlier`, this play's own place in the controller's turn log. BUILD M4-T4: two prior
-//! plays draw nothing, three draw 3.
+//! step 4 counts this spell before step 5 runs its script, and step 5's granted Combo draw, run before
+//! this script, can cast a cast-on-draw card (R70) that is in the count too, though played after it.
+//! §6.2 checks "at play time", so the script reads `played_earlier`, this play's own place in the
+//! controller's turn log. BUILD M4-T4: two prior plays draw nothing, three draw 3.
 //!
 //! R195, the yellow glow: `condition_met` asks `played_earlier` from the hand too (every play this
 //! turn is earlier), so the glow and the draw cannot disagree.
@@ -55,9 +55,11 @@ pub fn script() -> CardScripts {
 //
 // §6.2 counts cards played EARLIER and §10.5 step 4 has already counted this spell, so "2 prior
 // plays" and "3 prior plays" are `turnLog.cardsPlayed` of 3 and 4. "Counts as played either way"
-// (R40, R70) is proved with a second copy, which finds three earlier plays. The last case (hunt
-// round 8): a cast-on-draw Hinder cast by /fullsend's Combo draw at §10.5 step 5 is played after,
-// not earlier (§6.2). R195's yellow glow (`conditionMet`) is in condition_active.rs (README §5).
+// (R40, R70) is proved with a second copy, which finds three earlier plays. Nothing in the other
+// libraries is cast-on-draw (#21, #27, #90.1 are), so a draw is just a draw; the last case is the
+// exception (hunt round 8): a cast-on-draw Hinder cast by /fullsend's Combo draw at §10.5 step 5 is
+// played after, not earlier (§6.2). R195's yellow glow (`conditionMet`) is in condition_active.rs
+// (README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

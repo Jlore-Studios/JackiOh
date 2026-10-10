@@ -5,13 +5,14 @@
 //! The count is the card's own (`memory.plays`, §10.1), so it survives JSON, a replay and the Fuse that
 //! keeps this instance (R77; nothing here is a `remember` note, so a Fuse never re-roots it,
 //! `work::reroot_remembered`). The trap trigger's own predicate keeps it: §10.3 offers a trap each event
-//! once (`traps::fire_trap`; a predicate that declined is never owed it again, R99), and a fired Field
-//! Trap is face-up from then on (R33), while this one must stay face-down until it first activates. So
-//! the predicate counts each play (`cardPlayed`, §10.5 step 4), notes the card an even count names
-//! (`memory.fuseOn`), and admits that card's `cardResolved` only when there is a card to fuse; with none
-//! left it reveals and gains its Brittle there (R687). Counting plays, not resolutions, keeps "every
-//! second card" right when a play casts a card that resolves before it (R70). The predicate writes the
-//! card, so its `when` takes `&mut EffectContext`.
+//! once (`traps::fire_trap`; a predicate that declined is never owed it again, R99), and the predicate
+//! is the only part of a trap that runs without firing it: a fired Field Trap is face-up from then on
+//! (R33), while this one must stay face-down until it first activates. So the predicate counts each
+//! play (`cardPlayed`, §10.5 step 4), notes the card an even count names (`memory.fuseOn`), and admits
+//! that card's `cardResolved` only when there is a card to fuse; with none left it reveals and gains
+//! its Brittle there (R687). Counting plays, not resolutions, keeps "every second card" right when a
+//! play casts a card that resolves before it (R70): the cast is the later play. The predicate writes
+//! the card, so its `when` takes `&mut EffectContext`.
 //! ponytail: a trap predicate that writes its card's own counter; a watch-without-firing trigger kind in
 //! traps.rs is the upgrade path if a second card ever needs one.
 

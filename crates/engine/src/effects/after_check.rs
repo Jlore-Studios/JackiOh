@@ -7,9 +7,9 @@
 //! calls a card the check moved gone wherever it is, and a Reborn body the check put back is a new
 //! arrival (R83).
 //!
-//! A Death hook in the check may ask something (R113): the check effect is the part's first entry and
-//! the rest its second, so a resume re-enters at the rest (`prompts::run_resumable_list`), built after
-//! the answer and run once; the mark is kept as the rest's memo.
+//! A Death hook in the check may ask something (R113): `prompts::run_resumable_list` parks a part by its
+//! index and memo, the check effect is the part's first entry and the rest its second, so a resume
+//! re-enters the part at the rest, built after the answer and run once; the mark is kept as the rest's memo.
 
 use std::sync::Arc;
 

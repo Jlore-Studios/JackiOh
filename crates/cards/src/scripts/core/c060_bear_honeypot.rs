@@ -7,9 +7,11 @@
 //! R430: "an empty unit zone" is R64's `open_zones`; with none the trap stays armed, unconsumed. §5.1,
 //! §10.3 and traps.rs own `trapFired`, the state check and consuming it (R17, R61). The condition is a
 //! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): a play over the
-//! threshold, by R56's cost actually paid, leaves it armed; a cast pays 0 (R70), so it always qualifies. R53 is the forced attack (§4.2
-//! steps 1-3 skipped, `force_attacks_on`). It answers `cardResolved` (§10.5 step 7: R17, R427, R68,
-//! R89), not `cardPlayed`: the unit is on the field with its Cry resolved. R662: the glow, both faces.
+//! threshold, by R56's cost actually paid (read off the event, R89), leaves it armed; a cast pays 0
+//! (R70), so it always qualifies. R53 is the forced attack (§4.2 steps 1-3 skipped,
+//! `force_attacks_on`). It answers `cardResolved` (§10.5 step 7, R17), not `cardPlayed`: the unit is
+//! on the field with its Cry resolved, the moment #41 Sheepish shares since R427, the two answering
+//! in lane order (R68). R662: the glow, both faces.
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{fill_board, forced_attacks, summon};
@@ -66,7 +68,9 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
 /// "summon 2 Rush Tokens" / "fill your board with Rush Tokens"; then, if it was a Unit, "they attack
 /// it" with only the tokens this trap summoned (`summonedThisScript`). The Unit test reads the def, so
 /// a unit that died in its own resolution still counts; "it" is the played card's stay on the field
-/// (R174), so once `permanent` says that has ended (even if Reborn returned a new body) nothing attacks.
+/// (R174), so once `permanent` says that has ended nothing attacks, including when an earlier trap
+/// answering the same play took the card off the field and Reborn brought a new body back (`traps.rs`
+/// reads the flag again for each trap).
 fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> Vec<Effect> {
     let mut tokens: Vec<Effect> = if fill {
         vec![fill_board(json_as(json!({ "defId": RUSH_TOKEN })))]

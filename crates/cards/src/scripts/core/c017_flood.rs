@@ -87,7 +87,9 @@ pub fn script() -> CardScripts {
 // tested plus draw 1". Engine cell: "Tokens vanish on bounce; hand cap burns extras" — R11 and R4.
 //
 // R81 is why no test calls `answer()`: the radiant "choose one" is a DECLARED mode that travels in
-// the play action and never opens a `PendingChoice`.
+// the play action and never opens a `PendingChoice`. The strings are the same constants the script
+// declares; a drift between the two would fail `refuse_modes` (play_choices.rs) rather than silently
+// pick the first option.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

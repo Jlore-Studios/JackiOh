@@ -8,8 +8,9 @@
 //! and the unit still enters; a Locked zone takes it (R688). `summon`'s `zone_for`/`can_place`
 //! already does both, so this card must not grow a check. §3.2, R33: the trap is face-down; R1: a
 //! summon pays nothing. Pool: base is the Cost (1) traps, radiant every trap, #85 included, with
-//! §5.2's flag set. `TRAP_TYPES` is "Trap" and "Field Trap": filters match `def.type` exactly (R35, R61).
-//! `summon_random` draws the def (§5 index order, §5.1, §9.3, R60); a card file never picks it.
+//! §5.2's flag set. `TRAP_TYPES` is "Trap" and "Field Trap" because filters match `def.type`
+//! exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61). `summon_random` draws
+//! the def (§5 index order, §5.1, §9.3, R60); a card file never picks it (CLAUDE.md rules 4 and 5).
 
 use jackioh_engine::effects::summon_random;
 use jackioh_engine::prelude::*;
@@ -97,9 +98,9 @@ mod tests {
     }
 
     /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
-    /// `reduce` checks that after EVERY action, so a play that leaves no unit would hand the turn over
-    /// under the assertion. Each scenario keeps one free 0-cost Spell in p1's hand, never played, so
-    /// one legal action always remains.
+    /// `reduce` checks that after EVERY action, so a play that empties the hand and leaves no unit
+    /// would hand the turn over under the assertion. Each scenario keeps one free 0-cost Spell in
+    /// p1's hand, never played, so one legal action always remains.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.

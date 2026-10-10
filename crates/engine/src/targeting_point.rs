@@ -7,7 +7,8 @@
 //!      whose `replacements` declare `{ on: "targeted", where: "hand" }` and answer this source (`by:
 //!      "spell"` needs a Spell, R651) is summoned (R64's leftmost open unit zone; with none, nothing
 //!      happens), no Cry, summoning sick, and the first pick it answers moves to it (`redirected`
-//!      "target"), only when it is itself a legal pick of that declaration (Spellbender).
+//!      "target"), only when it is itself a legal pick of that declaration (Spellbender); a cost
+//!      already paid for the first pick stays paid.
 //!
 //! The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with `what: "attack"`; a
 //! play's own prompts go through `play_steps::answer_play_prompt` (R122), the rest through `prompts.rs`
@@ -107,7 +108,7 @@ pub fn intercept_targeting(sink: &mut EngineSink<'_>, args: InterceptArgs<'_>) -
 }
 
 /// R450, R682, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
-/// player's hand outside `keep`, drawn through the match rng. `keep` is what the refusal kept
+/// player's hand outside `keep`, drawn through the match rng. Fewer cards than the cost ends it. `keep` is what the refusal kept
 /// (`why_targeting_discards_unpayable`): the card a play is taking out of that hand and any hand card
 /// the same play or activation picks; a prompt answer keeps nothing (pass `&[]`).
 pub fn pay_targeting_discards(sink: &mut EngineSink<'_>, player: PlayerId, count: i32, keep: &[String]) {

@@ -9,8 +9,9 @@
 //!
 //! "Place N Plague Counters" is N placements of 1 (`placePlagueTokens`), all on the one permanent a single
 //! `target` prompt names, either side, face-down cards included (offered by id alone, R177) (R689). Each
-//! placement is multiplied by the receiver (C #27) and is its own for C #53. The prompt parks the rest of the
-//! Cry on `state.work` (R113), so the draw comes after. Both numbers are `tokens` and `draw` (R386).
+//! placement is multiplied by the receiver (C #27) and is its own for "whenever Plague Counters are placed
+//! on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the draw comes after.
+//! Both numbers are `tokens` and `draw` (R386).
 
 use jackioh_engine::effects::{draw, place_plague_tokens};
 use jackioh_engine::prelude::*;

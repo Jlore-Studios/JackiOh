@@ -71,9 +71,9 @@ mod tests {
     const SPONGE: &str = "core-019"; // Midrange Menace, 9/9 → 18/18, no Armor: a target that survives.
 
     /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
-    /// `reduce` checks that after EVERY action, so a play that leaves no unit would hand the turn over
-    /// under the assertion. Each scenario keeps one free 0-cost Spell in p1's hand, never played, so
-    /// one legal action always remains.
+    /// `reduce` checks that after EVERY action, so a play that empties the hand and leaves no unit
+    /// would hand the turn over under the assertion. Each scenario keeps one free 0-cost Spell in
+    /// p1's hand, never played, so one legal action always remains.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// The refusal's word, checked by hand (no regex crate): it is lower-case.

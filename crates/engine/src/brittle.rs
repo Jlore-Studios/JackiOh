@@ -8,7 +8,7 @@
 //!
 //! Hidden information (R440): a count that ticks on a card the other player may not read — a face-down
 //! trap — ticks silently, since a `counterChanged` there would tell them it is Brittle. Its owner reads
-//! the count on the card (`CardView.brittle`). A crumble is never silent: the card goes to a graveyard.
+//! the count on the card (`CardView.brittle`). A crumble is never silent: the card goes to a graveyard, which is public.
 
 use serde_json::json;
 

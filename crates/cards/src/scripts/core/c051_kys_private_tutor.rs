@@ -26,6 +26,7 @@
 //!                                       costRange?: { min?: number; max?: number } },
 //!                            prompt?: string, data?: Record<string, unknown> }): Effect
 //!      ```
+//!
 //! Its options are library INSTANCES drawn without replacement with `ctx.rng.shuffle` (R60, §6.3);
 //! `add_to_hand`'s `{ instance: { of: "chosen" } }` MOVES the card library → hand, keeping its
 //! identity, radiant flag and `costOverride` (R78), and the hand cap burns it when full (R4).
@@ -318,7 +319,8 @@ pub fn script() -> CardScripts {
 // #51 KY's Private Tutor — SPEC §8.3 row 51, §6.3 (Discover), §10.5 steps 5-6, §10.6, §10.8, §5.1;
 // R4, R60, R65, R113. BUILD M4-T4 row 51: "Only types and brackets with a match offered; 3 random
 // matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice".
-// Cases are chains (play, then `answer` per prompt): R113's resumable work, and §9.3's pause that survives JSON.
+// Cases are chains (play, then `answer` per prompt): R113's rule that a paused sequence is never
+// dropped, and §9.3's pause that survives a JSON round trip.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

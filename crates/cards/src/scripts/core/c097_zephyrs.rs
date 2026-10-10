@@ -312,7 +312,8 @@ mod tests {
 
     /// Every Core card whose own text removes a whole enemy board of ordinary units: #17 Flood, #43 Big
     /// Felinor, #88 Twisting Nether and #100 Ceaseless Void. #87 Pocket Chaos, #16 Hit Job and #55 Lava
-    /// Golem are allowed too: its Tribute 3 may take enemy units (R101), so it is paid with the three 7/7s.
+    /// Golem are allowed too; Lava Golem's Tribute 3 may take enemy units (R101), so it is paid with
+    /// the three 7/7s.
     const CLEARERS: &[&str] = &["core-017", "core-043", "core-088", "core-100", "core-087", "core-016", "core-055"];
 
     /// Every Core card that, played from p1's 4 mana, deals 3 or more to the enemy hero this turn:

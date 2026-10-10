@@ -10,7 +10,7 @@
 //!
 //! `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1) gives every copy the
 //! meal's radiant flag and §7 stats (R41). Nothing to tribute: the Cry fizzles; nothing eaten: Death
-//! does nothing.
+//! does nothing. It can never eat itself: the declared target excludes it and the hook re-checks.
 
 use jackioh_engine::prelude::*;
 

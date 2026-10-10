@@ -5,11 +5,15 @@
 //! R34 token cards are copied too (no token filter); R11 lets a unit-token card sit in a library.
 //! R57 a copy is a fresh instance carrying only the radiant flag (and `statsOverride`, see ENGINE GAP).
 //! R80 a library never takes a copy past `LIBRARY_CAP` (60), so no cap check here; R316 reports the
-//!     refusal as `libraryOverflow`, `copyOf` naming the played card, so a face-down Trap stays unnamed.
+//!     refusal as `libraryOverflow`, `copyOf` naming the played card for a view to judge it by: a Trap
+//!     set face-down stays unnamed.
 //! R70 a cast is a play too. R17 it answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a
 //!     Stockpile could draw its own copies; the event carries the resolved face (R34, R57), since #41
-//!     Sheepish transforms a played Unit at step 4. R119: a permanent starts counting from the next play.
-//! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats (R57).
+//!     Sheepish transforms a played Unit at step 4. R119: a permanent is on the field before its own
+//!     `cardResolved` (the play places it at step 4), so it would copy itself; it starts counting from
+//!     the next play.
+//! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
+//! which R57 says it should keep.
 
 use jackioh_engine::effects::shuffle_into;
 use jackioh_engine::prelude::*;

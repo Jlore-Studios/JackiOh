@@ -9,8 +9,9 @@
 //! The count is `counters.plague` (§10.1), written only by the `plague` effect (CLAUDE.md rule 5).
 //! R63: a 0 hit emits no `damage` event, so the trigger counts EVENTS, one per instance. R78: leaving
 //! the field resets counters. The condition is R99's `when` and also a guard in `run`, since queued
-//! unit triggers never consult `when`. R280: the preview is `mana_now` off its public counters
-//! (§10.8), the number the hook gains.
+//! unit triggers never consult `when`. R280: the preview is the mana it gives at its controller's next
+//! start of turn, `mana_now` off its own Plague Counters, which travel on its public view (§10.8); a
+//! card in hand holds none (R78).
 
 use jackioh_engine::prelude::*;
 

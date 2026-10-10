@@ -7,7 +7,19 @@
 //!            its (1). Radiant: `legalActions` offers the opponent no play of a card that costs (3) or
 //!            more at that moment (R65); casts (R70) are not plays from hand and are unaffected. Tunes:
 //!            surcharge 1 ↑; threshold 3 ↓."
-//! Cost aura (B5): radiant ban refused in §10.5 step 1; numbers read through param (R386).
+//!
+//! The aura is B5 E15's price rule (`Script.costAura`), laid while the Lobbyist acts on the field
+//! (the top of its pile) and read by R65's `effectiveCost` on every card a play would take:
+//!   - Base: a threshold rung on every player's cards, `minCost` the declared threshold and `amount` the
+//!     declared surcharge; the ladder tests the threshold against the price the flat rungs left (R363),
+//!     before this rule adds its own, so a (2) Cost card is never lifted into range. An X-cost card
+//!     costs exactly its X and takes no rule (R65); a cast pays nothing (R70).
+//!   - Radiant: a ban (`ban: true`) on the opponent's cards whose finished price is the threshold or
+//!     more (an X card at its chosen X included): `legalActions` never offers such a play and §10.5
+//!     step 1 refuses it, read last (R65); its controller's own plays and every cast are untouched.
+//!
+//! Both numbers are declared and read through `param` (R386); "threshold ↓" moves toward harder for a
+//! Degrade: up, so fewer cards are caught.
 
 use jackioh_engine::prelude::*;
 

@@ -4,7 +4,8 @@
 //!   Radiant: "… their 2nd card …"
 //!   Engine:  "Counts the opponent's plays that turn (casts included, R70; a countered card is never
 //!            played) and fires as the 3rd (Radiant 2nd) is played (`cardPlayed`, §10.5 step 4), on that
-//!            play only, to the graveyard (§3.2). It resolves first (§10.5 step 7); then End the turn (§6.3)."
+//!            play only, to the graveyard (§3.2). The play resolves first (§10.5 step 7); then End the turn
+//!            (§6.3): the turn ends as if they had pressed End turn, every end-of-turn step running."
 //!
 //! The condition is `when` (R99). §10.5 step 4 counts the play before it emits `cardPlayed`, so "that play
 //! only" is the count being exactly N, on their own turn (casts they make on yours leave it set). E10's

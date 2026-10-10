@@ -50,10 +50,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its cost,
-// a random discard, is paid as it activates, so an empty hand can't activate it; then exile the bottom card of
-// the opponent's deck (empty: nothing); usable the turn it is played, not a play (R384); radiant 6/2 also exiles
-// a random card from their hand; its tuned number (exiled) reads through `param()` (R386).
+// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its
+// cost, a random discard, is paid as it activates, so an empty hand can't activate it; then exile the
+// bottom card of the opponent's deck (empty: nothing); usable the turn it is played, not a play (R384);
+// radiant 6/2 also exiles a random card from their hand; its tuned number (exiled) reads through
+// `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -46,7 +46,7 @@ mod tests {
 
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// Make the hand copy radiant, then play it.
+    /// Make the hand copy radiant (`SideSetup.hand` takes def ids only), then play it.
     fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {

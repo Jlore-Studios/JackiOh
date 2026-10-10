@@ -1,13 +1,16 @@
 //! Swap (SPEC §6.3's Swap row, R73): Pocket Chaos (#87) exchanges one thing between the two players
 //! — the two heroes' health, the board contents lane by lane, or the libraries.
 //!
-//! - Health: the two values change places, armor stays with its hero. Not damage, a heal or "lose
-//!   health" (R18): no pipeline, no armor step; the only event is `swapped` (§10.3).
+//! - Health: the two values change places, armor stays with its hero. Not damage, not a heal and not
+//!   "lose health" (R18): no pipeline, no armor step; the only event is `swapped` (§10.3).
 //! - Board: contents change sides lane by lane, in both rows of §3.1. A swapped card never leaves the
 //!   field, so R78's reset never runs and everything on it comes along (R14). `controller` changes,
 //!   which is an entry (R171): every card that lands, a dormant Stack card included, takes this turn
-//!   as its `summonedTurn` and a fresh exertion. `owner` stays on a swap (R12); a later bounce makes
-//!   the controller its owner (R747). Locks stay with their zones (R73, §3.2); a face-down trap stays face-down, its `faceUp` untouched (R33).
+//!   as its `summonedTurn` and a fresh exertion. `owner` does not change on a swap (R12); a bounce
+//!   takes the card to its controller's hand as theirs (R747), and it goes to its owner's library,
+//!   graveyard or exile when it later leaves. Locks stay with their zones (R73, §3.2). A face-down trap
+//!   stays face-down and is readable by its new controller only: `view_for` keys that on `controller`,
+//!   so `faceUp` is deliberately untouched here (R33).
 //! - Library: the piles change places whole, in order, and each card's owner becomes the player
 //!   whose library holds it, R12's one exception (R73). Fatigue is player state (§2.4) and stays.
 

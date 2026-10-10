@@ -1,16 +1,26 @@
 //! The lethal solver (SPEC §9.9): a bounded search for a line that wins this turn on every
 //! determinization, through attack orderings, removing Taunt first, buffs before attacks, a spell to
-//! the face, and prompts answered on the way. Nothing in this crate recurses, so both walks keep
-//! their own explicit frontier. Two stages share one node allowance:
-//!   1. Depth-first in move order (`candidate_actions` puts face attacks and winning trades first) for
-//!      AI_SEARCH.lethalQuickNodes nodes. If it runs out of moves before nodes, the whole tree has
-//!      been searched and there is no lethal.
-//!   2. Otherwise best-first with what is left: it expands the position closest to lethal (`ready_gap`),
-//!      trying its first AI_SEARCH.lethalWidth moves at once, so a lethal that starts with a card late
-//!      in move order is found on a wide board, where depth-first spends everything below its first
-//!      move. A move past the first lethalWidth of its position is never tried by either walk.
+//! the face, and prompts answered on the way. Nothing in this crate recurses, so both of its walks
+//! keep their own explicit frontier.
+//!
+//! It runs in two stages on one node allowance:
+//!   1. A depth-first walk in move order (`candidate_actions` puts face attacks and winning trades
+//!      first) for AI_SEARCH.lethalQuickNodes nodes. The usual lethal, a few swings at the face, is
+//!      the first path it tries. When the walk runs out of moves before it runs out of nodes, the
+//!      whole tree has been searched and there is no lethal to find.
+//!   2. Otherwise a best-first walk with what is left: it expands the position closest to lethal
+//!      (`ready_gap`: the enemy hero's health less what the attacks still to come would deal past its
+//!      Taunts), trying its first AI_SEARCH.lethalWidth moves at once. A depth-first walk spends
+//!      everything below its first move, so a lethal that starts with a card late in move order (a
+//!      spell that kills one's own unit for its Death, a tribute of the enemy's Taunts) is out of its
+//!      reach on a wide board. The best-first walk tries each of the first lethalWidth moves and
+//!      ranks what they leave by `ready_gap`, so such a card is found when it is among those moves. A
+//!      move past the first lethalWidth of its position is never tried by either walk.
 //!
 //! A line counts only when it wins on every determinization.
+//!
+//! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed
+//! from it; here they share it through an `Rc`.
 
 use std::rc::Rc;
 
@@ -114,9 +124,10 @@ fn holds_everywhere(
 }
 
 /// Whether `legal_actions` would list an attack for `unit`, which `seat` controls, in a position
-/// where `seat` may act in its main phase: some target passes `combat::can_attack`, the engine's own
-/// filter. Asked unit by unit, a spent attack ruled out first, because enumerating every legal action
-/// cost the best-first walk more than simulating its moves did.
+/// where `seat` may act in its main phase: some target passes the engine's own test
+/// (`combat::can_attack`, the filter `attack_targets` applies). Asked unit by unit, with a unit whose
+/// attack is spent ruled out first, because enumerating every legal action (every play, target and
+/// mode of a wide hand) cost the best-first walk more than simulating its moves did.
 fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     if !has_exertion(state, unit, ExertionKind::Attack) {
         return false;
@@ -154,7 +165,9 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
         return f64::from(health);
     }
-    // Fused scripts are built from the state on every lookup (SURFACE §6.6), so no sync is needed here.
+    // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
+    // were this state's own before its layers were read. Rust builds fused scripts from the state on
+    // every lookup (SURFACE §6.6), so there is nothing to sync.
     let mut attacks: Vec<i32> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
@@ -293,10 +306,13 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
     Walk::Exhausted
 }
 
-/// The lethal solver on dets[0]: `lethal_moves`, lines at most AI_SEARCH.lethalMaxDepth long, a visited
-/// set keyed on `search_signature`. Depth-first gets AI_SEARCH.lethalQuickNodes; if it neither found a
-/// lethal nor searched the whole tree, best-first by `ready_gap` gets the rest. A line is returned only
-/// if it also wins on every other determinization; spends at most `limit` nodes of `counter`.
+/// The lethal solver on dets[0]: candidate_actions minus switchPosition and endTurn, lines at most
+/// AI_SEARCH.lethalMaxDepth long, a visited set keyed on `search_signature`. A depth-first walk in
+/// move order gets AI_SEARCH.lethalQuickNodes; if it neither found a lethal nor searched the whole
+/// tree, a best-first walk by `ready_gap` gets the rest (the header says why). A line is lethal when
+/// simulate leaves state.result.winner === seat, and it is returned only if replaying it (action_key
+/// equality with legal_actions at each step) also wins on every other determinization; otherwise the
+/// search continues. Spends at most `limit` nodes of `counter`.
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,
@@ -306,8 +322,8 @@ pub fn find_lethal(
     find_lethal_with_quick_nodes(dets, seat, counter, limit, AI_SEARCH.lethal_quick_nodes as usize)
 }
 
-/// `find_lethal` with the depth-first walk's share given, so a test can set it at run time
-/// (`tests/ai/lethal.rs`).
+/// `find_lethal` with the depth-first walk's share given: TS's test set `AI_SEARCH.lethalQuickNodes`
+/// at run time, which a Rust `const` cannot be (`tests/ai/lethal.rs`).
 pub fn find_lethal_with_quick_nodes(
     dets: &[GameState],
     seat: PlayerId,

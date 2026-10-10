@@ -7,8 +7,11 @@
 //!            (R687); it turns face-up at its first activation (R33), its play count read by its
 //!            controller alone until then (a card destroyed unrevealed reads public, R97). It counts the
 //!            opponent's plays since it was set (casts count, R70; a countered card never played). On
-//!            each even count, once that card resolves (§10.5 step 7), it is fused into this (Fuse, §6.3,
-//!            R77, R102): this is the kept instance, a fused Cry never runs, and this gains +1 Brittle.
+//!            each even count, once that card resolves (§10.5 step 7), the card, if it still exists, is
+//!            fused into this (Fuse, §6.3, R77, R102): this is the kept instance and stays a Field Trap,
+//!            and the opponent's card ceases to exist (the Radiant fuses in a Radiant copy instead and
+//!            leaves the card where it is). The fused texts work for you where they can, a fused Cry
+//!            never runs, and this gains +1 Brittle.
 //!
 //! All of it is `subsystems/twice_forward.rs`' trap trigger; Brittle tunes through B3.4's X change.
 

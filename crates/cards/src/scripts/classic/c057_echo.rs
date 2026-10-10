@@ -43,8 +43,8 @@ pub fn script() -> CardScripts {
 }
 
 // C #57 Echo, SPEC §8.6 row 57, R399: the Radiant Echo is a numbered keyword Degrade and Upgrade move
-// as an X (R386), so its R386 proof steps that X. R545 (an X-cost text), R546 (the copy fixed as the
-// play begins; "this" is Echo) and R547 (static text: Cast on draw yes, end-of-turn return no).
+// as an X (R386), so its R386 proof steps that X. Rulings R545 (an X-cost text), R546 (the copy fixed
+// as the play begins; "this" is Echo) and R547 (static text: Cast on draw yes, end-of-turn return no).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};

@@ -4,8 +4,10 @@
 //!   Engine:  "An effect's switch, which spends no exertion (R20); units already in Defense stay (R91);
 //!            #65.1 Spikey Pillow never enters Defense. Tagged Human, not Felinor, as the designer
 //!            tagged it. Tunes: none."
-//! Keywords: Pierce (§6.1, R346: hits skip Armor), Rush. Cry switches top of pile (R13), including animated
-//! cards (R383); read once (R113); Spikey Pillow (§4.1) stays in Attack. Radiant runs the same script.
+//!
+//! Keywords: Pierce (§6.1, R346: hits skip Armor), Rush. The Cry switches the top of each enemy pile (R13),
+//! animated cards included (R383), reading the set of units once (R113); Spikey Pillow (`neverDefense`, §4.1)
+//! is refused and stays in Attack. The Radiant face runs the same script.
 
 use jackioh_engine::effects::{ForEachCardArgs, for_each_card, switch_position_of};
 use jackioh_engine::prelude::*;

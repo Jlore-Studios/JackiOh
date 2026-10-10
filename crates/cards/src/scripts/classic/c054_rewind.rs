@@ -38,9 +38,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #54 — SPEC §8.6 row 54, BUILD M9 Classic row C 54: Cry runs with that Unit as `self` under your control,
-// choices yours as prompts (R70). No Unit with a Cry still plays and fizzles (§8 conventions, R90).
-// Radiant runs twice; repeats tuned on Radiant face only (R749; `param()`, R386).
+// C #54 — SPEC §8.6 row 54, BUILD M9 Classic row C 54: the chosen Unit's Cry runs with it as `self`
+// under your control, choices yours as prompts (R70). No Unit with a Cry still plays and fizzles (§8
+// conventions, R90). Radiant runs twice; repeats tuned on Radiant face only (R749; `param()`, R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

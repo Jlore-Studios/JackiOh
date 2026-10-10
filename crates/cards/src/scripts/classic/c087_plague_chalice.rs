@@ -5,9 +5,11 @@
 //!
 //! X is at least 1 (R348), and on the field costs the X paid (R396). Counter (§6.3) in §10.5's announce
 //! window when cost paid equals the current Plague count (R56; Radiant: opponent only); free casts (R70)
-//! are countered only at count 0. It never counters itself.
+//! are countered only at count 0. It is not on the field during its own announce, so it never counters
+//! itself.
 //!
-//! R667: `wouldCounter` uses the same match ahead of a play to mark hand cards (`counteredOnPlay`).
+//! R667: `wouldCounter` uses the same match ahead of a play to mark hand cards (`counteredOnPlay`). Both
+//! halves call `counters`, so the warning and the counter cannot disagree.
 
 use jackioh_engine::effects::{counter_play, place_plague};
 use jackioh_engine::prelude::*;

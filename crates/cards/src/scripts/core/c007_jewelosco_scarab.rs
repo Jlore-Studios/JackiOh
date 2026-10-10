@@ -197,7 +197,8 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-radiant",
-                // #26 Glowy Jelly Bean makes a chosen hand card Radiant.
+                // #26 Glowy Jelly Bean makes a chosen hand card Radiant, the only way to hold one in hand:
+                // `SideSetup.hand` takes def ids only.
                 "p1": { "hand": ["core-026", "core-007"], "mana": 8, "library": ["core-020"] },
                 "p2": { "field": ["core-020"] }
             }));

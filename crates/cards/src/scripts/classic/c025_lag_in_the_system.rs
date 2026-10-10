@@ -7,9 +7,10 @@
 //! The set is read once, as the Spell resolves (`forEachCard`, R66, R113), and each card is then its
 //! own exile (R135), so a card a sweep uncovers (one dormant under a Stack pile, not on the field,
 //! §3.2, R13) is not in it. Zones: the field (unit-pile tops, every backrow card, face-down included,
-//! both sides in R68's walk), then each side's hand and deck, the Spell's controller first; never
-//! graveyards or exile. The resolving Spell (§10.5) is in none of them, so it is spared. Cost is
-//! `costNow` (R396), R65's at resolution: an X card costs its X on the field and 0 anywhere else.
+//! both sides in R68's walk), then each side's hand and deck, the Spell's controller first (the Radiant
+//! face reads the opponent's side only); never graveyards or exile. The resolving Spell (§10.5) is in
+//! none of them, so it is spared. Cost is `costNow` (R396), R65's at resolution: an X card costs its X
+//! on the field and 0 anywhere else.
 
 use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
 use jackioh_engine::prelude::*;

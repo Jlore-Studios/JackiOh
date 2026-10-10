@@ -3,13 +3,18 @@
 //! it is `effects::tune`.
 //!
 //! Echo, Activate, Tribute (flags a script declares, not `Keyword`s) and an X-cost card's X are read
-//! through `tuned_count`; the numbered `Keyword`s (Armor, Lucky, Brittle, Spell Damage) are tuned in
+//! through `tuned_count` wherever the engine reads them, so a Degrade or Upgrade of that number is felt
+//! where the number is used; the numbered `Keyword`s (Armor, Lucky, Brittle, Spell Damage) are tuned in
 //! the layers (§10.4) by `tuned_keywords`, read by `layers::face_of`.
 //!
-//! `attack`/`health` are deltas beside the layer-4 buffs (B3.4 rule 6); `addKeywords`/`removeKeywords`
-//! an Upgrade's additions and a Degrade's removed printed kinds; `x` and `numbers` step counts (each
-//! step `TUNE_X_STEP` or `params::param_step`); `set` KY's Constant, steps counting from it. Keys: a
-//! `params` key (camelCase) or a keyword kind (capitalised), never shared. The cost is `costMod` (R65).
+//! `attack`/`health` are summed deltas beside the layer-4 buffs, moving max health on the field and the
+//! face a card will enter with anywhere else (B3.4 rule 6); `addKeywords`/`removeKeywords` an Upgrade's
+//! additions and a Degrade's removed printed kinds; `x` a step count per numbered keyword or X (`X_KEY`),
+//! each step `TUNE_X_STEP`; `numbers` a step count per declared number, each step that number's own
+//! (`params::param_step`), so a card made Radiant keeps its steps on its Radiant numbers; `set` a number
+//! KY's Constant sets outright, the steps after it counting from it (`tuned_count`). A declared number's
+//! key is a `params` key (camelCase), a keyword's its kind (capitalised), so the two never share a key.
+//! The cost change is the card's `costMod` (R65), never a field here.
 
 use indexmap::IndexMap;
 

@@ -152,11 +152,11 @@ pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]
 
 /// R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup deals
 /// is never cast while it deals (R635, R748), so only a start-of-game clause on arrival (R151) can ask
-/// there, as the opening draw and R9's replacement draws arrive (R224). §10.1 allows one prompt at a
-/// time (§9.3), so setup owes the rest of itself — the other seats' draws and the mulligans, or the
-/// shuffle-back and the game — and the answer's drain brings it back (R122); start-of-game clauses and
-/// R748's casts owe what follows them and turn 1 the same way. `work.rs`'s dispatcher runs it
-/// (`run_owed_setup`).
+/// there, as the opening draw and R9's replacement draws arrive (R224). The question is state until it
+/// is answered (§9.3) and §10.1 allows one prompt at a time, so setup owes the rest of itself — the
+/// other seats' draws and the mulligans, or the shuffle-back and the game — and the answer's drain
+/// brings it back (R122); start-of-game clauses and R748's casts owe what follows them and turn 1 the
+/// same way. `work.rs`'s dispatcher runs it (`run_owed_setup`).
 pub const SETUP_WORK: &str = "@setup";
 
 /// Which part of setup is owed: the opening deal from a seat on, a seat's Quickdraw cards and then
@@ -206,8 +206,8 @@ fn drawable_count(state: &GameState, player: PlayerId) -> i32 {
 /// says whether the hand holds one: #100's price, the deal's events, the counts while a clause is
 /// asking (R224) or the hand's size (§9.1).
 ///
-/// R635: the cards that cast on draw wait just above them at the bottom of the library, out of the
-/// draws' reach, and are shuffled in once the mulligans are done. R748: when too few other cards
+/// R635: the cards that cast on draw wait just above the Quickdraw cards at the bottom of the library,
+/// out of the draws' reach, and are shuffled in once the mulligans are done. R748: when too few other cards
 /// remain, the rest of the hand is dealt from them uncast (`deal_suspended`), so setup never deals a
 /// fatigue draw.
 fn deal_from(sink: &mut EngineSink, seat: usize) {
@@ -312,7 +312,8 @@ fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
 
 /// R748: `count` of the set-aside cards (`deal_from`), dealt to fill a hand the other cards cannot: each
 /// goes to the hand uncast, as a draw (R225's report and count), marked to be cast at the start of the
-/// game (`cast_suspended`). The first ones in the library's order, never a Quickdraw card (R635).
+/// game (`cast_suspended`). The first ones in the library's order, never a Quickdraw card (R635). Short
+/// only when the library runs out of them.
 fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
     if count <= 0 {
         return;
@@ -772,7 +773,7 @@ fn next_suspended(state: &GameState) -> Option<CardInstance> {
 /// would have cast it (`draw::cast_dealt_card`), with a state check after each (R59) and no draw
 /// repeated; a Unit with no open zone stays in the hand (R459). A cast that asks pauses the rest: the
 /// casts after it and turn 1 are owed behind its tail (`SUSPENDED_STEP`, R113), so turn 1 waits for
-/// the answer (R224).
+/// the answer (R224). Then turn 1.
 ///
 /// Setup is turn 0 (BUILD M1-T1), no player's turn (§2.1 step 5): a Spell cast during it was played on
 /// no turn of its controller's, so the return §10.5 step 7 flagged it for is over before turn 1, as a

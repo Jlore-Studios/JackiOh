@@ -28,7 +28,6 @@ pub fn script() -> CardScripts {
     }
 }
 
-
 /// `describe("C #75 Argusland")`.
 #[cfg(test)]
 mod tests {

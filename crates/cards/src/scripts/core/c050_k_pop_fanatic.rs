@@ -6,8 +6,9 @@
 //! The choice is a declared target made at PLAY time (R81) over both enemy rows ("permanent", §6.3);
 //! R90 validates it, a face-down trap may be named unseen (§9.1), a Stack pile offers its top (R13).
 //! The delay (§8.2 Engine cell) is keyed to the TARGET, not this unit, so it fires even if K-Pop
-//! Fanatic died (R76, R127); R62 and R68 order it and `run_resume` re-enters it (§10.6, R126). Its
-//! fizzles (R76, R174, R15) are the engine's, not re-checked here.
+//! Fanatic died (R76, R127); R62 and R68 order it and `run_resume` re-enters it (§10.6), through the
+//! `resume` table alone, hence `hook: RESUME_HOOK` (R126). Its fizzles (R76, R174) and R15's
+//! placement are the engine's, not re-checked here.
 //! The rider (R282) lands only on a card the steal took: `takeable` before it, `held_now` after.
 //! THE MARK (R437): the pending steal's target carries a purple `steal` mark until it resolves.
 

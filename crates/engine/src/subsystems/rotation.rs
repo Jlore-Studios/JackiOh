@@ -150,6 +150,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         direction: args.direction,
     });
 
+    // Read first, then place: every card comes off the field before any card lands.
     for entry in &entries {
         for card in &entry.cards {
             let options = crate::zones::RemoveFromFieldOptions {

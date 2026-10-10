@@ -9,7 +9,10 @@
 //! last-known snapshot as a Death hook runs (R78, R89). Defending is not attacking. A trigger on
 //! `attackDeclared` could not serve: a queued entry is dropped when its card leaves the field (R174),
 //! and a forced attack's event reaches no card that died in its combat (R212).
-//! Radiant: §6.3 Recruit, per R64 with no Cry (R1), a Trap face-down (R33). Numbers: `param` (R386).
+//!
+//! Radiant: §6.3 Recruit, the first permanent from the top of your deck, summoned into its row per R64
+//! with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full. The
+//! numbers are the declared `draw` and `recruits` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
 

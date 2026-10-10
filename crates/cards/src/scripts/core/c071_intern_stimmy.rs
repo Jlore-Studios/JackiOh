@@ -6,10 +6,10 @@
 //! trigger watches the plain `turnEnded`, which `traps.rs` withholds from immediate dispatch),
 //! "NEVER consumed" (the Field Trap type, §5, §5.1, §3.2; face-up once fired, R33) and WHOSE
 //! library and Recruit ("your" is the TRAP'S CONTROLLER, R62, R52; `ctx.controller` is that player).
-//! The condition is a `when` predicate, the one thing `traps.rs` reads. R61: `run` returning `[]`
-//! would flip this Field Trap face-up (R33) on every turn end it does not answer; a predicate
-//! leaves it armed. R195, the yellow glow: in hand and backrow exactly when `library_is_larger`
-//! holds, the same function the trap's `when` and `run` read (public counts, §9.1).
+//! The condition is a `when` predicate, which is what `traps.rs` reads (the only module that fires this
+//! card). R61: `run` returning `[]` would flip this Field Trap face-up (R33) on every turn end it does
+//! not answer; a predicate leaves it armed. R195, the yellow glow: in hand and backrow exactly when
+//! `library_is_larger` holds, the same function the trap's `when` and `run` read (public counts, §9.1).
 
 use jackioh_engine::effects::recruit;
 use jackioh_engine::prelude::*;

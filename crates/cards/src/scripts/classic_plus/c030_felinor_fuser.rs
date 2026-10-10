@@ -3,8 +3,8 @@
 //!   Base:    "Cry: Discover a Felinor Unit, then another. Fuse both into this."
 //!   Radiant: "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
 //!
-//! Two chained Discovers (R352): the first answer re-enters with the pick in the second prompt's
-//! data, and the second fuses both picks onto this unit. Each Discover offers three different
+//! Two chained Discovers, the shape #98 Heroic Power's Stitching makes them (R352): the first answer
+//! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit. Each Discover offers three different
 //! non-token Felinor-tagged Units of every set (R380, R405), never Felinor Fuser itself (R387).
 //!
 //! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,

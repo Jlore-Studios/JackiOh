@@ -73,7 +73,8 @@ pub fn script() -> CardScripts {
 }
 
 // SPEC §8.7 row 8: degrades {cards} different changeable cards in opponent's deck (R60,
-// R386), or all/none with no RNG (R129); padded with `none` cues (R569, R440).
+// R386), all of them when fewer, none when none and then no random number is drawn (R129);
+// padded with `none` cues (R569, R440).
 // Degraded events stay unread while in deck (R177, R311).
 #[cfg(test)]
 mod tests {

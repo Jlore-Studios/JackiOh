@@ -1,6 +1,7 @@
 //! C #7 InfiniScepter (SPEC §8.6 row 7). Field Spell, cost 1, Legendary.
 //!   Both faces: "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.
 //!                Activate: Cast a copy of that Spell." — costLimit 1 on the base face, 2 on the Radiant.
+//!
 //! The Cry (a Field Spell's Cry, as #73 Anti-oneshot Armor's) declares a hand pick (R81): a Spell in your
 //! hand whose cost now (R65; an X Spell 0) is ({costLimit}) or less. Degrade and Upgrade move that number,
 //! so it is a `targetChecks` rule (§10.6). It exiles the card and remembers its definition and Radiant
@@ -106,7 +107,7 @@ pub fn script() -> CardScripts {
 // C #7 InfiniScepter — SPEC §8.6 row 7, BUILD M9 Classic row C 7: the Cry's hand pick (R81); Activate,
 // once per turn (R384), casts a free copy counted as played (R70) that lands in your graveyard (R87);
 // activating is not a play while the cast is one; leaving the field clears the memory (R78); radiant:
-// a (2) Cost or less Spell, still from your hand; the cost limit reads through `param()` (R386); R520.
+// a (2) Cost or less Spell, still from your hand; the cost limit reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

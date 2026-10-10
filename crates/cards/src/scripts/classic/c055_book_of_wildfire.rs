@@ -7,8 +7,9 @@
 //! so C #23 and C #29 never make it (R381).
 //!
 //! The swap (R671) is the engine's Book-swap hand trigger (`BOOK_SWAP_TRIGGER`): on its owner's
-//! `turnEnded` in hand, it becomes a random non-token Book from §5.1's pool (R380, except Wildfire)
-//! on the same face, carrying the swap (`swapsBook`) so it keeps changing each turn.
+//! `turnEnded` in hand, it becomes a random non-token Book from §5.1's pool (R380, Book of Flame
+//! included, except Wildfire) in its place in the hand on the same face, carrying the swap (`swapsBook`)
+//! so it keeps changing each turn.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -37,9 +38,9 @@ pub fn script() -> CardScripts {
 }
 
 // C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: targeted hit on any unit or hero
-// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); tuned damage reads through `param()`
-// (R386). At the end of its owner's turn in hand, it swaps to a random other non-token Book on the same face,
-// keeping the swap (R671).
+// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a Book;
+// tuned damage reads through `param()` (R386). At the end of its owner's turn in hand, it swaps to a
+// random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

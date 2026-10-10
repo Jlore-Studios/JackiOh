@@ -32,8 +32,8 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #14 Forever& — SPEC §8.7 row 14, R410: leaves a waiting modifier that stamps the next
-// Spell (never Forever& itself) with "After this resolves, return to hand. Can't cost less
-// than (2)". The enchantment rides the card; discarded or countered does not return (R410);
+// Spell (never Forever& itself) with "After this resolves, return it to hand. This can't cost
+// less than (2)". The enchantment rides the card; discarded or countered does not return (R410);
 // full hand burns the returning card (R4); radiant floor is (1) with no draw.
 
 #[cfg(test)]

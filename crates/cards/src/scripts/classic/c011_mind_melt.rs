@@ -1,5 +1,7 @@
 //! C #11 Mind Melt (SPEC §8.6 row 11, §6.3 Look at a hand, §10.6, §10.8; R65, R81, R177). Spell, cost 1,
 //! Common.
+//!   Base:    "Look at your opponent's hand. Exile {cards|card|cards} from it."
+//!   Radiant: "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
 //!
 //! LOOKING AT THE HAND is the prompt itself (B5 E17): `chooseFromHand({ of: "enemy" })` offers the
 //! opponent's hand cards to you, and `viewFor` shows an open prompt's options to the player it is for

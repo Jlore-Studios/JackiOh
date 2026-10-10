@@ -5,8 +5,8 @@
 //! Permanents your opponent controls: the top card of each of their unit piles (a card dormant under
 //! a Stack is not on the field, R13) and every backrow card, face-down ones included; the count is
 //! public. It is read as the Cry resolves. Base: a random pick (R60) from the match rng. Radiant: a
-//! target prompt opened then (§10.6), since the condition is only known at resolution (R81); a
-//! face-down option names nothing but its id to its chooser (R177).
+//! target prompt opened then (§10.6): the condition is only known at resolution, so the pick cannot be
+//! declared with the play (R81); a face-down option names nothing but its id to its chooser (R177).
 //! §6.3 Steal: R15 places it in the same lane of the controller's row if free, else the first free zone;
 //! with none it stays with its owner. The change of control is an entry (R171). R33: a stolen
 //! face-down trap stays face-down, read by its new controller. R195: in hand the card glows when the

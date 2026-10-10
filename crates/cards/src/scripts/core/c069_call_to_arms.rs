@@ -66,9 +66,9 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush"; // Unit token, cost 1 — a card that leaves a library only by a draw (R11).
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends, and `reduce` checks that after
-    /// EVERY action, so a play that empties the hand hands the turn over and the numbers under test move.
-    /// Every scenario below therefore keeps one free 0-cost Spell in p1's hand: never played, it only
-    /// keeps one legal action on the turn.
+    /// EVERY action, so a play that empties the hand and leaves no unit hands the turn over and the
+    /// numbers under test move. Every scenario below therefore keeps one free 0-cost Spell in p1's
+    /// hand: never played, it only keeps one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.

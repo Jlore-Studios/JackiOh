@@ -8,8 +8,10 @@
 //! Never the opponent's hand, a library card, a card dormant under a Stack (R13) or one in a
 //! graveyard, exile or the resolving zone: the guards below refuse those without calling the hook.
 //!
-//! The hook runs as the card does (its own face and controller, the zone, `yourTurn`) and reads only
-//! what that controller may read, so it reveals nothing. An empty answer is no preview: no key, not `[]`.
+//! The hook runs as the card does (its own face and controller, the zone, `yourTurn`; the other seat's
+//! for a public card of theirs, since the number is the card's and not the viewer's) and reads only
+//! what that controller may read (§9.1), and everything it may read is public or the viewer's own
+//! wherever it is shown, so it reveals nothing. An empty answer is no preview: no key, not `[]`.
 
 use crate::script::{ConditionContext, ConditionZone};
 use crate::state::{CardInstance, GameState};
@@ -25,8 +27,9 @@ pub fn backrow_is_public(state: &GameState, card: &CardInstance, viewer: PlayerI
 
 /// R33, R371, R686: a backrow Trap or Field Trap that has not flipped face-up, so only its
 /// controller may read it — unless it is revealed, which both players read while it stays armed.
-/// `view_for` marks the controller's own view of such a card `unrevealed` from the same answer, so the
-/// mark a client draws and the back the other player sees cannot disagree.
+/// `backrow_is_public` above is this plus the controller's exception, and `view_for` marks the
+/// controller's own view of such a card `unrevealed` from the same answer, so the mark a client draws
+/// and the back the other player sees cannot disagree.
 pub fn is_face_down(state: &GameState, card: &CardInstance) -> bool {
     let card_type = crate::faces::card_type_of(state, card);
     if card_type != CardType::Trap && card_type != CardType::FieldTrap {

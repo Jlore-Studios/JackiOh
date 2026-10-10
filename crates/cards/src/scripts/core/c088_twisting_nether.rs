@@ -8,8 +8,9 @@
 //! modes "travel in the `play` action". `destroyAll` MARKS and never moves, walked in R68's order, so
 //! §4.5 step 1 collects the whole board at once and R59's one state check does the rest. Only cards
 //! ON the field match, so one dormant under a Stack pile is safe (R13). The scope does NOT
-//! pre-exclude Indestructibles: §4.5 drops their mark, switches them to Attack Position and
-//! suppresses Taunt (R46), and one with max health 0 or less dies anyway (R69).
+//! pre-exclude Indestructibles, or R46 would be lost: §4.5 drops their mark, switches them to Attack
+//! Position and suppresses Taunt only if the mark was applied, and one with max health 0 or less dies
+//! anyway (R69).
 
 use jackioh_engine::prelude::*;
 

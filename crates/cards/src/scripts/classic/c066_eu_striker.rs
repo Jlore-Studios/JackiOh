@@ -9,7 +9,16 @@
 //!            returning this to your hand (R78's reset; the hand cap applies).
 //!            Neither trigger answers the play that moved the card (R401, R119): the Unit that summons it
 //!            doesn't bounce it, and the card that bounces it doesn't summon it back. Tunes: none."
-//! Dispatch (§10.3, R212, §10.5, R70, B5), bounce (§6.3, §2.4), printed Rush (§10.4).
+//!
+//! R548: both triggers answer a play of yours once it has resolved, §10.5 step 7's `cardResolved`, which a
+//! cast's play emits too (R70) and a countered play never does (B5 E1). R401 then holds by the dispatch
+//! itself (§10.3, R212): an event is offered to the cards where they stand as it is dispatched, so the Unit
+//! that summons the Striker reaches it in hand and never on the field, and the card that bounces it reaches
+//! it on the field and never in hand. Its own play does not bounce it (R119): the field trigger passes over
+//! the play naming this card. "Summon this" is B5 E26's `summonThis`: from the hand only, no Cry (R1),
+//! summoning sick, R64's leftmost open zone; a summon is no play, so it answers nothing that answers plays.
+//! The return is §6.3 Bounce: R78's reset, and the hand cap burns a card to the graveyard (§2.4). Rush on
+//! the Radiant face is printed (§10.4 layer 1).
 
 use jackioh_engine::effects::{bounce, summon_this};
 use jackioh_engine::prelude::*;

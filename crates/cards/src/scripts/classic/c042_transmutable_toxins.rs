@@ -8,7 +8,8 @@
 //! THE AURA is §10.4's layer 5, recomputed on every read: each unit on the field carrying Plague Tokens
 //! gets an entry of `param(ctx, "stats")` per token, up for its controller's Units, down for the enemy's.
 //! Lowering max health kills an enemy at the state check at 0 (§4.5), an Indestructible one too (R69). A
-//! unit dormant under a Stack pile is not on the field (R13). The hook is a pure read of instance data.
+//! unit dormant under a Stack pile is not on the field (R13). The hook is a pure read of instance data: it
+//! never asks the layers for a stat, so it cannot recurse.
 //! THE ACTIVATE (B3.2, R384: once per turn, by its controller, while it acts on the field) places one
 //! token on each of `param(ctx, "tokens")` different random units on the field, either side
 //! (`placePlagueRandom`, R60: fewer units, fewer placements; none, nothing). Each is a placement, so a

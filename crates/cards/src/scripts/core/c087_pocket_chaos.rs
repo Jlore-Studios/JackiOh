@@ -94,7 +94,8 @@ pub fn script() -> CardScripts {
 
 // #87 Pocket Chaos (SPEC §8.5, BUILD M4-T4 row 87): "Health swap, lane-preserving board swap
 // including face-down traps with locks staying put, library swap that transfers ownership of the
-// swapped cards (R73); opponent gains a Pocket Chaos; exiled; radiant may skip the gift" (R275).
+// swapped cards (R73); opponent gains a Pocket Chaos; exiled; radiant may skip the gift". Patch
+// v0.1.1 removed the draw R275 had added to the radiant face.
 #[cfg(test)]
 mod tests {
     use super::*;

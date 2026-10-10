@@ -10,7 +10,7 @@
 //! pile, since cards under a Stack are not on the field (R13, §3.2); control, not ownership, decides
 //! what is yours (R12). A permanent converts in place, the Cry not re-firing (§5.2, R22).
 //!
-//! Cost 6 is catalog data. MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95): §2.3.
+//! Cost 6 is catalog data. MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95); §2.3 lets current mana exceed max.
 
 use jackioh_engine::prelude::*;
 

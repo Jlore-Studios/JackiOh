@@ -586,8 +586,8 @@ fn complete(state: &GameState, card: &CardInstance, quest: &QuestDef, memory: &Q
 /// §4.5, R404: the state check has settled the board, so every card with a quest tree on the field opens
 /// its first quest if it has none yet, and every open quest whose count reached its goal or whose board
 /// condition holds now is completed — moved to `done` and reported by `questCompleted`, in R68's order
-/// and each card's quests in the order they opened. Each completion runs its own rewards, even one
-/// another completed quest offers.
+/// and each card's quests in the order they opened. A reward two completed quests offer is granted by
+/// each (each completion runs its own rewards); the card's trigger answers each report.
 pub fn notice_quests(sink: &mut EngineSink<'_>) {
     for card in quest_cards_in_order(sink.state) {
         open_first_if_new(sink, &card.id);

@@ -8,8 +8,11 @@
 //!            (`GLITCH_NUMBERS`), so the options reveal nothing. Costs read per R65 at resolution:
 //!            a hand card at its hand cost, a deck or field card at its own (as R66 reads #94 Genn's
 //!            Greed's); an X-cost card counts its X on the field and 0 anywhere else (R396)."
+//!
 //! The sweep is C #25 Lag in the System's: read once as the Spell resolves (`forEachCard`, R66, R113),
-//! each card its own exile (R135), in R68's walk. A card dormant under a Stack pile is off (§3.2, R13).
+//! each card its own exile (R135), in R68's walk. A card dormant under a Stack pile is not on the
+//! field (§3.2, R13). The Spell itself is resolving, in no pile, and is spared; graveyards and exile
+//! are untouched.
 
 use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
 use jackioh_engine::prelude::*;

@@ -5,7 +5,8 @@
 //!
 //! The Cry targets another permanent on either side (R81, §6.3; face-down offered by id alone, R177;
 //! fizzles if none). "Whenever Plague Counters are placed on this" triggers once per placement naming
-//! it, whoever placed them (R99; removal draws nothing).
+//! it, however many tokens and whoever placed them (removal draws nothing). The condition is the trigger's
+//! `when` (R99), checked again in `run`.
 //! Tuned numbers `tokens` and `draw` (R386) read through `param` on the running face.
 
 use jackioh_engine::effects::{draw, place_plague};

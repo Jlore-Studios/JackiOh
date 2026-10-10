@@ -14,7 +14,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-027";
 
-/// "Refresh your mana": every spent crystal, capped at max mana (§9.9, R364).
+/// "Refresh your mana": every spent crystal, capped at max mana (R364), whatever the player's max is
+/// (§9.9's handicaps).
 /// An `i32` has no infinity; the Refresh adds this to current mana before capping
 /// (`mana::refresh_some_mana`), so `i32::MAX` would overflow: half of it is still
 /// more than any max mana, and the sum stays in range.

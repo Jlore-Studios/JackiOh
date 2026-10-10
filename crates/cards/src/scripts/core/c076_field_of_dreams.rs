@@ -4,11 +4,11 @@
 //! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.
 //!
 //! R31: the replacement is a DISCARD of the whole hand, so the old cards land in the graveyard, the pool
-//! #72 Reminisce discovers from (R50); a unit-token card there ceases to exist (R11, `discard`'s rule).
-//! N is the hand size AT RESOLUTION: §10.5 step 4 already moved this card to `resolving`, so it never
-//! counts itself. N = 0 discards nothing and still exiles this. R4's cap never bites: N ≤ HAND_CAP − 1
-//! and the copies arrive into an emptied hand. `discard_hand` is deterministic; `discard_random` would
-//! shift `rng_cursor` and break replay parity (§9.3, §10.7).
+//! #72 Reminisce discovers from (R50); a unit-token card in that hand ceases to exist instead (R11,
+//! `discard`'s rule). N is the hand size AT RESOLUTION: §10.5 step 4 already moved this card to
+//! `resolving`, so it never counts itself. N = 0 discards nothing and still exiles this. R4's cap never
+//! bites: N ≤ HAND_CAP − 1 and the copies arrive into an emptied hand. `discard_hand` is deterministic;
+//! `discard_random` would shift `rng_cursor` and break replay parity (§9.3, §10.7).
 
 use jackioh_engine::effects::{add_to_hand, discard_hand, exile};
 use jackioh_engine::prelude::*;

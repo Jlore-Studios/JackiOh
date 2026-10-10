@@ -63,8 +63,8 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
 /// "a permanent of yours of that type" (§8), which R61 narrows twice: the firing trap is "neither
 /// matched nor fused onto", and R13 leaves a card dormant under a Stack off the field. Never the
 /// played card either: #52 Silly Silas rotated onto this side (§3.1) would be counted, then fused onto
-/// himself, which `fuse` refuses, spending the trap for nothing (R61 spends it only with no legal
-/// target). Left out of both, the trap stays armed when he is the only match (R99).
+/// himself, which `fuse` refuses, spending the trap for nothing although another permanent of the
+/// type was there (R61 spends it only with no legal target). Left out of both, the trap stays armed when he is the only match (R99).
 fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardInstance) -> Vec<CardInstance> {
     let wanted = type_key(type_);
     let self_id = ctx.self_.as_ref().map(|card| card.id.clone());

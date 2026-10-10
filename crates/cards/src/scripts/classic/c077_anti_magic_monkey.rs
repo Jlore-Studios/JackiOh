@@ -5,9 +5,12 @@
 //!            takes them from (a hand, or a graveyard a permission lets its owner play from, §6.3 Play),
 //!            as a price for a play; a cast pays nothing (R70). Tunes: surcharge 1 ↑ (Radiant 2)."
 //!
-//! The aura is B5's price rule (`Script.costAura`, R386) on all Spells (B2.7), read by R65's
-//! `effectiveCost`. An X-cost Spell costs its X (R65). Dormant under a Stack pile it is off (§3.2,
-//! R13), and gone when it leaves. Stack is printed on both faces (§10.4 layer 1, §6.2).
+//! The aura is B5 E15's price rule (`Script.costAura`): a flat rung of the declared surcharge
+//! (`param`, R386) on every player's cards of the Spell type (a card's type is its running face's, B2.7),
+//! read by R65's `effectiveCost`. An X-cost Spell costs exactly its X and takes no rule (R65). The rule is
+//! laid only while the Monkey acts on the field: dormant under a Stack pile it is not on the field for
+//! effects (§3.2, R13), and it is gone the moment it leaves. Stack is printed on both faces (§10.4 layer
+//! 1), so it may be played onto an occupied unit zone (§6.2).
 
 use jackioh_engine::prelude::*;
 

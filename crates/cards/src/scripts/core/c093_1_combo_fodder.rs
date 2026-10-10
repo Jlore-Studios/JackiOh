@@ -5,10 +5,11 @@
 //! Radiant face, R275 doubles its number). The faces print "Lifesteal / Deal 2 damage." (R372).
 //!
 //! §7: spell tokens live in hand and library and go to the graveyard after resolving, yet stay out of
-//! random pools. Both are data: `token: true` with `type: "Spell"` keeps it out of `catalog.query`
-//! (§5.1) and it is no unit token, so after §10.5 step 7 it reaches the graveyard (R11), where R50
-//! lets #72 Reminisce find it. "A target" is a DECLARED play-time choice, never a prompt (R81,
-//! §10.6); no target fizzles the damage but the spell still counts as played (§8 Conventions).
+//! random pools and Discover unless named. Both are data: `token: true` with `type: "Spell"` keeps it
+//! out of `catalog.query` (§5.1) and it is no unit token, so after §10.5 step 7 it reaches the
+//! graveyard (R11), where R50 lets #72 Reminisce Discover it back. "A target" is a DECLARED
+//! play-time choice, never a prompt (R81, §10.6); no target fizzles the damage but the spell still
+//! counts as played (§8 Conventions).
 //! Lifesteal is also passed as a flag: §8 states it as part of the EFFECT (R85, §4.4 step 8). The
 //! sources are ORed, so it heals once, by the amount dealt (R63's zero rule, Armor and the cap apply).
 

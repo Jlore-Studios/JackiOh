@@ -2,8 +2,8 @@
 //!   Base:    "Cast Whirlwind until a Unit dies." (the round cap stays a declared number, not shown)
 //!   Radiant: "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
 //!
-//! Each round is one effect list followed by its own state check (R59, beside R283) so killed Units die
-//! and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
+//! Each round is one effect list followed by its own state check (one of the two lists R59 lets check
+//! inside themselves, beside R283's) so killed Units die and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
 //! (Reborn counts), after its round cap, or when no Unit is left. Cap is declared `rounds` (R386),
 //! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces. Base face casts Whirlwind (C+ #21)
 //! as a real Spell cast (R70, §4.4), so Divine Shield, Armor, Spell Damage apply round by round.

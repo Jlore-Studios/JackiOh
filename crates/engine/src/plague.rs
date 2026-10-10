@@ -5,11 +5,17 @@
 //! field. This module owns all three things that touch it, so no caller can disagree about them:
 //!   - a placement (`place_plague_on`): N tokens on one card, multiplied by what that card says
 //!     (Classic #27 Pestilent Slime's "doubled", `Script.plague_multiplier`), reported once as
-//!     `counterChanged` with `placed`, however many tokens (R471). Every gain is a placement, Core #91
-//!     Fed Fauci's "+1 Plague Counter" included;
+//!     `counterChanged` with `placed`, which "whenever Plague Counters are placed on this" answers once
+//!     per placement however many tokens (R471). Every gain is a placement, Core #91 Fed Fauci's
+//!     "+1 Plague Counter" included;
 //!   - a removal (`remove_plague`): Classic #78 Mutate Spell's "remove a Plague Counter" and Classic
 //!     #74 Corpse Plantation's tokens spent as mana, paid through this. It carries no `placed`;
 //!   - the reads (`plague_on`, `plague_on_field`, `permanents_on_field`), re-exported by `query.rs`.
+//!
+//! Only a permanent on the field carries tokens: the top of a unit pile or a backrow card, face-down
+//! ones included (R471), never a card dormant under a Stack (R13) or one in a hand, deck or pile. The
+//! two writers take the card as the caller holds it and write the counter on the card as it stands in
+//! the state (found by id).
 
 use crate::config::PLAGUE_MULTIPLIER_NONE;
 use crate::script::{EngineSink, HookArgs};

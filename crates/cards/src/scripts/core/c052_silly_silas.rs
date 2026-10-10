@@ -10,13 +10,15 @@
 //! pick [travels] in `modes`"), and §10.6 says no Core card opens a `direction` prompt. So the script
 //! declares `modes`, `legal_actions` enumerates both, and the answer arrives in `ctx.modes`, which
 //! `chosen_options(ctx)` reads like a prompt-mode answer.
-//! The rotation is `subsystems/rotation.rs`'s (R14), which the effects barrel keeps out so a card stays
-//! pure (CLAUDE.md rule 5); the `rotate` verb calls it with the controller's perspective and the
-//! running face's `radiant`, so both faces share one hook. What it already does:
-//!   * both rings turn together, read whole before anything is placed (§3.1); a Stack travels whole
-//!     (§3.2, R13); a card never leaves the field, so R78's reset never runs and damage travels (R14);
-//!   * a crossing card enters its new side summoning sick (R171); `controller` changes, `owner` never
-//!     (R12), and a face-down trap is read by its new controller (R33);
+//! The rotation is `subsystems/rotation.rs`'s (R14), which mutates the board and so is not in the
+//! effects barrel (CLAUDE.md rule 5); the `rotate` verb (engine/src/effects/rotate.rs) wraps it with
+//! the controller's perspective and the running face's `radiant`, so both faces share one hook. What
+//! it already does:
+//!   * two rings turn together, the rotating player's lanes 1→5 then the opponent's 5→1, read whole
+//!     before anything is placed (§3.1); a Stack travels whole (§3.2, R13); a card never leaves the
+//!     field, so R78's reset never runs and damage travels (R14);
+//!   * a crossing card enters its new side summoning sick (R171); `controller` changes and `owner`
+//!     does not, a bounce aside (R12, R747), and a face-down trap is read by its new controller (R33);
 //!   * a Locked or Reborn-reserved destination bounces the card to its controller's hand (R14, R88,
 //!     R747): the hand cap applies (R4) and a unit token ceases to exist (R11);
 //!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65); cards crossing
@@ -75,7 +77,8 @@ pub fn script() -> CardScripts {
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
 // R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes
 // on crossing, damage travels, Silas moves too; Locked destination bounces; radiant bounces crossing
-// cards to their owner's hand at cost 0 (R14)". "Right" is one step forward on p1's ring (§3.1).
+// cards to their owner's hand at cost 0 (R14)". The ring, from p1's seat (§3.1): p1 lanes 1→5, then
+// p2 lanes 5→1, back to p1 lane 1; "right" is one step forward along it, "left" one back.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

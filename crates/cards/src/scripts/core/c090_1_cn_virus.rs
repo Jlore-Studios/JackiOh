@@ -8,8 +8,9 @@
 //! hero (control follows ownership off the field, R12) as damage, not "lose health" (R18): §4.4's
 //! pipeline, so Armor applies, and a hit reduced to 0 triggers nothing (R63) but the copies are owed.
 //! The copies wait for the end of the turn it was cast on, whoever's (R350), at §2.2's delayed-effect
-//! point in R68's order, so a chain casts only library viruses; a later cast is due next time (R62).
-//! They are fresh copies with the cast face's radiant flag (R57); a full library refuses (R80, R316).
+//! point in R68's order, so a chain casts only library viruses; a cast after those have begun is due
+//! at the next such point for the same player (R62). They are fresh copies with the cast face's
+//! radiant flag (R57); a full library refuses (R80, R316).
 
 use jackioh_engine::prelude::*;
 

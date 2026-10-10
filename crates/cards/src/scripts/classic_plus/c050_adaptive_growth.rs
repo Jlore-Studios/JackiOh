@@ -62,7 +62,7 @@ pub fn script() -> CardScripts {
 
 // C+ #50, BUILD M9 row C+ 50: equal counts take the second branch; −2/−2 on both sides kills a unit at
 // 0 max health, an Indestructible one too (R69); played from a hand it does the same; `conditionMet` in
-// hand says whether you control fewer Units now (R195; README §5).
+// hand says whether you control fewer Units now (R195); its proofs live where README §5 says.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

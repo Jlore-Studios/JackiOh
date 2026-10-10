@@ -80,7 +80,8 @@ pub fn script() -> CardScripts {
 // Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
 // hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if
 // both heroes are at 0" needs a second hit inside the same effect, after the trap is spent: Prem
-// Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health opponent.
+// Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health opponent and
+// whose second then lands on you.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};

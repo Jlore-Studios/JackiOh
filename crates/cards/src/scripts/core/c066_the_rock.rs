@@ -9,9 +9,10 @@
 //! Chosen units travel in the `play` action's `tributes` (R81, R90), so there is no hook.
 //!
 //! Engine-side: Indestructible takes no damage (§4.4 step 4); R46 and §4.5 step 1 ignore a destroy
-//! mark, and the unit switches to Attack Position and loses Taunt for the turn; R69 it dies once max
-//! health is 0 or less; §6.1 Sacrifice and Exile still remove it. Immutable (R23) blocks Vanilla,
-//! Transform and Fuse-onto; Radiant is still allowed and #41 Sheepish still fires, consumed for nothing (R17).
+//! mark, and the unit switches to Attack Position and loses Taunt for the turn; R69: it dies anyway
+//! once max health is 0 or less, since no destroy effect is involved; §6.1: Sacrifice and Exile still
+//! remove it. Immutable (R23) blocks Vanilla, Transform and Fuse-onto; Radiant is still allowed and
+//! #41 Sheepish still fires, consumed for nothing (R17).
 
 use jackioh_engine::prelude::*;
 

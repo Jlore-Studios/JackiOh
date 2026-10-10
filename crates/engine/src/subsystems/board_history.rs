@@ -4,12 +4,14 @@
 //!     whole instances, their Locks and the homes held then (R383), the last BOARD_HISTORY_DEPTH kept
 //!     in `state.board_history`. Plain data (§9.3), never in `view_for` (§10.8), renamed in it when a
 //!     card takes a fresh id (`state::rename_in_board_history`, R227).
-//!   - `restore_board` is R419's three steps, each on every restored side before the next: 1. a card the
-//!     snapshot does not hold goes to its controller's hand (R78, §2.4, R11, R747); 2. each card it holds
+//!   - `restore_board` is R419's three steps, each on every restored side before the next: 1. a card there the
+//!     restored part of the snapshot does not hold goes to its controller's hand (R78, §2.4, R11, R747); 2. each card it holds
 //!     goes back to its zone and place (a fresh id going face-down, R227); 3. the Locks become the snapshot's.
+//!     R562 picks the snapshot, R563 the held zones, R566 what a card keeps of the present.
 //!
 //! Not plays, summons or deaths: `rolledBack`, `bounced`/`burned` (step 1), `controlChanged` for a card
-//! that entered the side (R73, R171) and `locked`/`unlocked` (step 3).
+//! that entered the side (step 2, as a board swap's do, R73) and `locked`/`unlocked` (step 3). A card
+//! that only moved along its own side entered nothing (R171): `rolledBack` covers it.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};

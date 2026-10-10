@@ -5,7 +5,7 @@
 //!
 //! The Engine cell `health = max(health, 30)` is §6.3's "Heal up to 30": `heal_hero_up_to`
 //! (engine/src/damage.rs) is a floor, never a ceiling, so a hero at 35 stays 35 and no `healed`
-//! event is emitted. §3 gives a hero no maximum health, so nothing caps the 30 or the 60 (§6.3, R19).
+//! event is emitted. §3 gives a hero no maximum health, so nothing caps the 30 or the 60 (§6.3).
 //!
 //! R19 makes the hero a legal heal target ("a heal may name any unit or hero"). "Your hero" is
 //! `{ of: "selfHero" }`, named not chosen (§8 Conventions, "'Your' means the controller"): no prompt (R81).

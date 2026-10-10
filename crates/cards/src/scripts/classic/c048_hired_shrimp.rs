@@ -67,7 +67,7 @@ pub fn script() -> CardScripts {
 // BUILD M9 Classic row C 48 (SPEC §8.6 row 48): the base Cry targets any permanent, never itself (R397,
 // R70, R90), destroying only a longer `loc`; Indestructible survives (R46); a face-down option carries
 // its id alone (R177). Every `loc` is read off the catalog, never a literal. Fused cards come from
-// Unlicensed Experimentation, which fuses the opponent's played permanent onto one of yours (R77, R102).
+// Unlicensed Experimentation, which fuses the opponent's played permanent onto one of its controller's of that type (R77, R102).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

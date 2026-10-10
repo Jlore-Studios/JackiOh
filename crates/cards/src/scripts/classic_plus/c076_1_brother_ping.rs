@@ -9,7 +9,8 @@
 //!
 //! The activate subsystem counts the uses per turn on the instance and reads the count through B3.4's X
 //! change: an Upgrade makes it Activate 2, a Degrade never takes it below 1. The hit is one §4.4 instance
-//! sourced by this Unit, so its Pierce skips Armor (R346); no Spell's hit, so Spell Damage never raises it.
+//! sourced by this Unit, so its Pierce skips Armor (R346); it is not a Spell's hit, so Spell Damage never
+//! raises it.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -54,8 +55,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1 (R384, R346, R386): activating is
-// no play (Combo, Quickstriker, Ceaseless Void ignore it); `activated` is public.
+// C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1 (R384, R346, R386).
+// Activating is no play (R384: Combo, Quickstriker, Ceaseless Void ignore it); `activated` is public.
 // "Its count resets on leaving the field" (R78): Brother Ping is a unit token, so leaving the field it
 // ceases to exist (R11) and no instance comes back with a count; the reset itself is the activate subsystem's.
 #[cfg(test)]

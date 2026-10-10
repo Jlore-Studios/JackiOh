@@ -16,9 +16,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-065-1";
 
 /// −2 attack to the controller's units in the unit row. `spares_own_kind` is the radiant text: every
-/// unit that is not a Spikey Pillow, this one included. The test is against `ID`, never `self.def_id`:
-/// a Pillow #85 fused with another card carries this text (R102) but is named "A + Spikey Pillow", and
-/// its aura still spares every Spikey Pillow while draining the fused card itself.
+/// unit that is not a Spikey Pillow, so this Pillow itself is spared. The test is against `ID`, never
+/// `self.def_id`: a Pillow #85 fused with another card carries this text (R102) but is named "A +
+/// Spikey Pillow", and its aura still spares every Spikey Pillow while draining the fused card itself.
 fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
     aura_hook(move |args| {
         // "−2 attack": the declared number `drain` (R386), less being better for the Pillow's controller.

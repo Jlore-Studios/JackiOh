@@ -3,13 +3,15 @@
 //! and GY (X-cost cards exempt); gain 2 mana". Radiant: "Gain 6" — only the number moves (§8
 //! Conventions), so the draw and the exile are kept verbatim.
 //! R26 (`GENN_GREED_EXILES = "odd"`) settles the garbled source line as "exile all odd-cost cards".
-//! R66: both clauses read each card's cost per R65 AT RESOLUTION, `effectiveCost` (the printed cost
-//! plus the instance's `costMod`, which persists in every zone, R78); X-cost cards are exempt.
+//! R66: both clauses read each card's cost per R65 AT RESOLUTION, `effectiveCost` (`costOverride`,
+//! else the printed cost, plus the instance's `costMod`, which persists in every zone, R78); X-cost
+//! cards are exempt.
 //! Player discounts price a play from the hand, so they reach no library or graveyard card (R65),
 //! and `queryCost` reads a DEFINITION, so it cannot see a `costMod`.
 //! THE ORDER IS §8's AND R135's: the draw runs first, so 2-cost cards are in hand before the exile
 //! looks at hands, and 2 is even. Each exile is its own, so R55's counter moves once per card. Each
-//! clause reads its set once (R113); reading is no mutation (CLAUDE.md rule 5); see §6.3 Draw, Exile.
+//! clause reads its set once (the draw's R113, the exile's R135); reading is no mutation
+//! (CLAUDE.md rule 5); see §6.3 Draw, Exile.
 
 use jackioh_engine::prelude::*;
 

@@ -7,8 +7,8 @@
 //! only and never calls back into `unit_view`, or the layers would recurse.
 //!
 //! "Your units": the controller's units in the `units` row, so the aura skips its own backrow card and
-//! a stolen unit stops matching because `controller` is compared (R78). Rush from this aura is what
-//! R83's "a Reborn body the board has granted Rush may attack again" refers to.
+//! a stolen unit stops matching because `controller` is compared (R78 resets it on the way out). Rush
+//! from this aura is what R83's "a Reborn body the board has granted Rush may attack again" refers to.
 
 use jackioh_engine::prelude::*;
 

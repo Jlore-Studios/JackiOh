@@ -8,7 +8,7 @@
 //!     the action has settled, so nothing of the old game is still resolving);
 //!     swap   — each account plays the other seat (R677); hosts read `state.seat_swaps`, and the server
 //!     credits results by it;
-//!     boards — both fields become two other games' boards, frozen like C+ #29's (`state.glitch_boards`, R678);
+//!     boards — both fields become two other games' boards, frozen like C+ #29's (`state.glitch_boards`, R678); hands, decks and life stay;
 //!     void   — no winner, reason `voided`, and the server keeps only a log line (R679).
 //!
 //! All plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
@@ -78,7 +78,8 @@ pub fn glitch() -> Effect {
 /// R678: every card on both fields ceases to exist (no Death, no graveyard, R11's way out), the Locks
 /// go, and each side takes its frozen other game's board in order: Units into the unit zones, the rest
 /// into the backrow, left to right, until a row is full. Each is a new card its side owns, on its
-/// entry's face, entered this turn (R171). Nothing is summoned or played, so nothing triggers.
+/// entry's face, entered this turn (R171). Nothing is summoned or played, so nothing triggers. A side with no board
+/// frozen is left empty.
 fn place_glitch_boards(state: &mut GameState) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {

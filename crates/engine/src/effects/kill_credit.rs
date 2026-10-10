@@ -46,10 +46,12 @@ impl std::fmt::Debug for WithKillCreditArgs {
     }
 }
 
-/// R42, R412: apply `during` with `killer`'s kills watched (`pairs`). With `transfer`, `killer`'s lethal hit
-/// on a paired victim names that unit as R42's killer (the `destroyed` event's `killerId` and its kill
-/// triggers). Then `then(pair)` applies for each pair whose victim `during` destroyed, killed by the credited
-/// unit with `transfer` or by `killer` without (its effects must not ask). A killer off the field watches nothing.
+/// R42, R412: apply `during` with `killer`'s kills watched. `pairs`, read before `during`, names each
+/// victim that matters and the unit it is paired with. With `transfer`, `killer`'s lethal hit on a
+/// paired victim names that unit as R42's killer (the `destroyed` event's `killerId` and its kill
+/// triggers). Then `then(pair)` applies for each pair whose victim `during` destroyed, killed by the
+/// credited unit with `transfer` or by `killer` without; its effects must not ask. A killer not on the
+/// field watches nothing, and `during` still applies.
 pub fn with_kill_credit(args: WithKillCreditArgs) -> Effect {
     Effect::new("withKillCredit", move |ctx| {
         let killer = instance_of(ctx, &args.killer);

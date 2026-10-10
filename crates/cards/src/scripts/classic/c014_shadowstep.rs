@@ -9,7 +9,8 @@
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78).
 //! RADIANT: a replacement at "would die" (B5 E5): your collected units Flicker (E22: reset, full health,
-//! no Cry, no Death), then a fresh copy of each joins your hand, radiant flag kept (R57, R97).
+//! no Cry, no Death), then a fresh copy of each joins your hand, radiant flag kept (R57), unread by them
+//! (R97).
 
 use jackioh_engine::prelude::*;
 
@@ -106,10 +107,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass (§4.5);
-// cards left in a graveyard return to their owner's hand (§3.2) at cost 0 (R78), overflow burned (R317); tokens
-// (R11) and a Reborn Unit already back are skipped, an Indestructible one only when its max health falls to 0
-// (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden (R97); number via `param()` (R386).
+// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass
+// (§4.5); cards left in a graveyard return to their owner's hand (§3.2) at cost 0 (R78), overflow burned
+// (R317); tokens (R11) and a Reborn Unit already back are skipped, an Indestructible one only when its
+// max health falls to 0 (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden
+// (R97); number via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

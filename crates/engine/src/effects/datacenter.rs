@@ -34,7 +34,7 @@ pub struct DrawWhileCheapArgs {
     pub player: Option<PlayerId>,
 }
 
-/// T-AI-4: "Draw 1. If it costs (`maxCost`) or less, repeat, up to `repeats` more times." Each round is one
+/// T-AI-4: "Draw 1. If it costs (`maxCost`) or less, repeat this, up to `repeats` more times." Each round is one
 /// §2.4 draw; "it" is the card THAT draw put in the hand (R596), priced as it arrives (R65: X-cost reads 0).
 /// A card cast on draw (R58, R596), a burned card, a fatigue or limited draw and the game's end (R216) end
 /// the chain; a cast that asks (R158) parks its own remainder (R113), so the chain owes nothing.
@@ -133,8 +133,8 @@ fn reader_unaffected_by(reader: &SweepReader<'_>, card: &CardInstance) -> bool {
 /// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now: those of the sides in a
 /// backrow zone (the acting card of each: an Ivory Tower beneath its Unit counts, R418; a card dormant
 /// under a backrow pile does not, §3.2), except Indestructible (R46) or unaffected by the running Spell
-/// (B5 E35). An animated card in a unit zone is a Unit there (R383, R588). A pure read, so `preview` (R280)
-/// and resolution agree.
+/// (B5 E35). Traps and Field Traps are no Field Spells, and an animated one standing in a unit zone is a
+/// Unit there (R383), so not one (R588). A pure read, so `preview` (R280) and resolution agree.
 pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec<CardInstance> {
     let sides: Vec<PlayerId> = if side == FieldSpellSide::Enemy {
         vec![opponent_of(reader.controller)]
@@ -172,8 +172,9 @@ pub struct DestroyFieldSpellsAndHitArgs {
 /// T-AI-6 Datacenter Fire: "Destroy all Field Spells. Deal `damagePer` damage to each hero for each one
 /// destroyed" (Radiant: the enemy's, and the enemy hero). Every Field Spell of those sides is marked destroyed
 /// (§6.3; §4.5's check collects them together, R59, and fires their Death); the ones the mark will take
-/// (`fieldSpellsDoomed`, as C+ #12.6's "each one destroyed", R408) set one §4.4 instance per hero of `damagePer`
-/// times that count, from the running Spell (Spell Damage and a per-hit cap apply once), in R68's order.
+/// (`fieldSpellsDoomed`, read as the sweep lands, as C+ #12.6's "each one destroyed" is, R408) set one §4.4
+/// instance per hero of `damagePer` times that count, from the running Spell (Spell Damage and a per-hit cap
+/// apply once), in R68's order. None doomed, no damage.
 pub fn destroy_field_spells_and_hit(args: DestroyFieldSpellsAndHitArgs) -> Effect {
     Effect::new("destroyFieldSpellsAndHit", move |ctx| {
         let doomed = field_spells_doomed(SweepReader::of_context(ctx), args.side).len() as i32;

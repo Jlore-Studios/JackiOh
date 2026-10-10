@@ -5,8 +5,9 @@
 //!   Radiant: "… If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your
 //!            hand or in your deck, or exile it if you have none. …" — draw 4, 2 attacks
 //!   Engine:  "Activate ♾️ (§6.2, R81, R384; R402 target in action): remove a Plague Counter. Forced
-//!            attack (R53, §4.2; Radiant second attack R96). Radiant fuse (§6.3, R77, R102) never
-//!            offers an Immutable card of yours (R23) and exiles if none. Tunes: draw 2 ↑; attacks 1 ↑."
+//!            attack (R53, §4.2); the Radiant's second attack happens only if the unit is still on the
+//!            field (R96). Radiant fuse (§6.3, R77, R102) never offers an Immutable card of yours (R23)
+//!            and exiles if none. Tunes: draw 2 ↑; attacks 1 ↑."
 
 use jackioh_engine::effects::{
     consume_plague, draw, exile, forced_attack_random, fuse_onto_your_card, instance_of,

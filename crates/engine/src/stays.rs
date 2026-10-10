@@ -26,7 +26,7 @@ pub fn exit_mark(state: &GameState) -> u32 {
 
 /// R174, R212: the stay an event happened on, when it carries one: the play pipeline's `cardPlayed`,
 /// `summoned` and `cardResolved` name the played card, and the loop can hand them to a response well
-/// after they happened (R70). A card that has left the field since, even one back through Reborn, is
+/// after they happened (a cast's `cardResolved` waits for the list that cast it, R70). A card that has left the field since, even one back through Reborn, is
 /// not the card the event is about (R83). `None` for an event with no mark, judged from its dispatch.
 pub fn event_mark(event: &GameEvent) -> Option<u32> {
     match event {

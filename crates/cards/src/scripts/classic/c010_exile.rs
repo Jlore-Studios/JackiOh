@@ -1,16 +1,22 @@
 //! C #10 Exile (SPEC §8.6 row 10). Trap, cost 2, Common.
+//!   Base:    "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
+//!             exile it."
+//!   Radiant: "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
+//!             exile it. Then exile random enemy permanents that together cost up to ({threshold})
+//!             minus its cost."
 //!
 //! Counter (§6.3, B5 E1, R448), in §10.5's announce window (`cardAnnounced`), before the card moves:
 //! the countered card never resolves or enters the field and goes to exile, not the graveyard. "Costs"
 //! is the cost paid (`costPaid`), as #60 Bear Honeypot reads it (R56), so a free cast (R70) always
-//! qualifies. The condition lives in `when` (R99, R61), so a dearer play or its own leaves it set.
+//! qualifies. The condition lives in `when` (R99, R61), so a dearer play, or its controller's own,
+//! leaves it set.
 //!
 //! Radiant: budget = threshold minus the countered card's cost paid. One at a time, pick a random
 //! enemy permanent (unit-pile top or backrow, face-down included) whose cost now fits the budget left
 //! (R396: R65's cost, an X card at its X, 0 with none; `costNow`), exile it and take its cost off; stop
 //! at 0 or when nothing fits. The picks are drawn as the clause resolves and kept (`forEachCard`), so a
-//! pause never re-rolls them (R113). The name is a rules word, so no text refers to it unless `refs`
-//! lists it (R381).
+//! pause never re-rolls them (R113). The name is a rules word, so a mention of it is no reference unless
+//! `refs` lists it (R381).
 
 use jackioh_engine::prelude::*;
 

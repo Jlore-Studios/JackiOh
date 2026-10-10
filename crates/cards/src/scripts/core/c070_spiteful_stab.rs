@@ -6,7 +6,8 @@
 //! has more": `missing = max(0, HERO_HEALTH - health)` (§2's 30, `config.rs`, BUILD §2) and
 //! `amount = base + floor(missing / step) + perExiled * exileCount`. The exile is the controller's
 //! own pile (§3), never the opponent's or the game-wide `counters.exiled` (R55).
-//! R280: the `preview` is each face's text, its value the damage `stab_amount` comes to now (§10.8).
+//! R280: the `preview` is each face's text, its value the damage `stab_amount` comes to now, from the
+//! hero's health and exile count, both public (§10.8).
 //! §8 Conventions: a bare `target` is a unit only (`pick_kinds_for`, R90), so the heroes are named.
 //! R81: the pick travels in the `play` action, so nothing pauses. §4.4: one damage instance, R63's
 //! zero rule applies. R662, the glow: in hand when a scaling term adds damage, built on `stab_amount`.
@@ -98,9 +99,9 @@ mod tests {
     const FODDER: &str = "core-010"; // Rapid Replenish, a Spell: filler for an exile pile.
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends, and `reduce` checks that after
-    /// EVERY action, so a play that empties the hand hands the turn over and the numbers under test move.
-    /// Every scenario below therefore keeps one free 0-cost Spell in p1's hand: never played, it only
-    /// keeps one legal action on the turn.
+    /// EVERY action, so a play that empties the hand and leaves no unit hands the turn over and the
+    /// numbers under test move. Every scenario below therefore keeps one free 0-cost Spell in p1's
+    /// hand: never played, it only keeps one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// The refusal's word, lower-case (a hand check: no regex crate).
