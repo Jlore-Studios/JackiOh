@@ -28,7 +28,7 @@ fn is_prime(n: u32) -> bool {
     }
     let mut divisor = SMALLEST_PRIME;
     while divisor * divisor <= n {
-        if n % divisor == 0 {
+        if n.is_multiple_of(divisor) {
             return false;
         }
         divisor += 1;
@@ -46,7 +46,7 @@ fn prime_indexed(state: &GameState, card: &CardInstance) -> bool {
 fn prime_ids(ctx: &EffectContext<'_>, take: Option<i32>) -> Vec<String> {
     let mut ids: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library)
         .iter()
-        .filter(|card| prime_indexed(&ctx.state, card))
+        .filter(|card| prime_indexed(ctx.state, card))
         .map(|card| card.id.clone())
         .collect();
     if let Some(take) = take {

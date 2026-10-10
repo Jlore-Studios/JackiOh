@@ -106,7 +106,7 @@ mod tests {
             let prevented: Vec<Value> = s
                 .last_events()
                 .iter()
-                .map(|event| js(event))
+                .map(js)
                 .filter(|event| event["type"] == "discardPrevented")
                 .collect();
             assert_eq!(prevented, vec![json!({ "type": "discardPrevented", "player": "p1", "count": 2 })]);

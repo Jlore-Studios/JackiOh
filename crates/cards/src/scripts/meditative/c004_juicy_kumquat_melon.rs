@@ -63,7 +63,7 @@ fn draw_picked(instance_id: &str) -> Effect {
 
 /// The six picks, chosen as the effect begins, then one `draw_from_library` each.
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let state: &GameState = &ctx.state;
+    let state: &GameState = ctx.state;
     let choices: Vec<Value> =
         COSTS.iter().filter_map(|cost| topmost_of_cost(state, ctx.controller, *cost)).map(Value::from).collect();
     vec![
