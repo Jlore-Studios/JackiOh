@@ -3885,10 +3885,8 @@
       "run_id": "38055395433",
       "started_at": "2026-10-10T13:22:13Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-6` (claude, opus) rejected it: `task`: The PR body's list of skipped files, which the issue asks for 'for a later pass', is partly invented: its crates/engine/src and effects sect"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "603": {
