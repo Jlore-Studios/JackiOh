@@ -8,8 +8,9 @@
 //! query with this card's index excluded, never listed by hand. A board card takes a same-type
 //! Legendary in place (Field Trap counts as Trap, so it becomes #85); Immutable cards stay (R23).
 //! Cards under a Stack are dormant, so "your board" is each pile's top (R13, §3.2). The pool holds no
-//! tokens, which cannot sit in a graveyard or exile (R11). Picks draw from `ctx.rng` while the list
-//! is built (CLAUDE.md rule 4, §9.3): deterministic, since the hook runs once and opens no prompt.
+//! tokens, and a unit token cannot sit in a graveyard or exile (R11), so no replacement vanishes on
+//! arrival and thins a zone. Picks draw from `ctx.rng` while the list is built (CLAUDE.md rule 4,
+//! §9.3): deterministic, since the hook runs once and opens no prompt.
 
 use jackioh_engine::prelude::*;
 

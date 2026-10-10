@@ -44,8 +44,10 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
-// leftmost open unit zone, ending the turn after the drawing effect resolves. With no open zone it
-// goes to hand uncast (R560), as R58's cap sends one. Radiant allows one more main-phase action before ending (R415).
+// leftmost open unit zone, then your turn ends once the drawing effect's list resolves, as if you had
+// pressed End turn. Drawn on the opponent's turn only the summon happens; played from a hand it is a
+// plain Unit. With no open zone it goes to hand uncast (R560), as R58's cap sends one. Radiant allows
+// one more main-phase action before the turn ends (R415).
 #[cfg(test)]
 mod tests {
     use super::*;
