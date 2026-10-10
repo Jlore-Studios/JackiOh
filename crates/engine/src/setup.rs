@@ -658,12 +658,14 @@ fn sealed_in(raw: Option<&Value>) -> Vec<SealedMulligan> {
 /// of its hand. After the mulligan, so a Coin is never returned, redrawn or shuffled in (R9); and
 /// whatever the seat's handicap, whose extra opening card the mulligan has already seen (R182).
 ///
-/// It is §6.3's add to hand, not a draw: `draw::add_to_hand` burns it off a full hand (§2.4, R4) and
-/// emits `addedToHand` alone, leaving #100's draw counter where it was (R55). It takes the next
-/// instance id and no rng draw, so `(seed, decks, handicaps, log)` still folds exactly (§9.3, R187).
+/// It is §6.3's add to hand, not a draw: `draw::add_to_hand` puts it in, or burns it off a full hand
+/// (§2.4, R4, which no Core opening hand reaches), and emits `addedToHand` alone, leaving #100's draw
+/// counter where it was (R55). It takes the next instance id and no rng draw, so
+/// `(seed, decks, handicaps, log)` still folds exactly (§9.3, R187).
 ///
-/// A registered catalog without The Coin deals none: the engine's tests register partial fixture
-/// catalogs, and a rule that threw on them would make each carry a card none of its tests is about.
+/// A registered catalog without The Coin deals none. The shipped catalog always holds it (the cards'
+/// catalog tests count it); the engine's tests register partial fixture catalogs, and a rule that
+/// threw on them would make each carry a card none of its tests is about.
 pub fn deal_coins(sink: &mut EngineSink) {
     if sink.state.result.is_some() {
         return;

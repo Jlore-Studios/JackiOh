@@ -109,8 +109,8 @@ pub fn script() -> CardScripts {
 
 // C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass
 // (§4.5); cards left in a graveyard return to their owner's hand (§3.2) at cost 0 (R78), overflow burned
-// (R317); tokens (R11) and a Reborn Unit already back are skipped, an Indestructible one only when its
-// max health falls to 0 (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden
+// (R317); tokens (R11) and a Reborn Unit already back are skipped, and an Indestructible Unit is
+// collected only when its max health falls to 0 (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden
 // (R97); number via `param()` (R386).
 #[cfg(test)]
 mod tests {
