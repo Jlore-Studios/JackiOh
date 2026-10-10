@@ -739,6 +739,12 @@ pub enum GameEvent {
     Translated {
         instance_id: String,
     },
+    /// R800: an effect's discard from `player`'s hand that a discard guard stopped — no card moved and no
+    /// random number was drawn. `count` is how many cards it would have taken. Public: it names no card.
+    DiscardPrevented {
+        player: PlayerId,
+        count: i32,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M8, MN05). Its BUILD M5-T4 row, `ANIMATIONS` and
     // `SOUND_CUES` rows came with it, and `viewFor` redacts it as it does `damage`.
@@ -862,6 +868,7 @@ string_union! {
         Marked = "marked",
         Glitched = "glitched",
         Translated = "translated",
+        DiscardPrevented = "discardPrevented",
         DamageAbsorbed = "damageAbsorbed",
         JadeChanged = "jadeChanged",
     }
@@ -996,6 +1003,7 @@ impl GameEvent {
             GameEvent::Glitched { .. } => GameEventType::Glitched,
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
+            GameEvent::DiscardPrevented { .. } => GameEventType::DiscardPrevented,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
         }
@@ -1054,7 +1062,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 68);
+        assert_eq!(GAME_EVENT_TYPES.len(), 70);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

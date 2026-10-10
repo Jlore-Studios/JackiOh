@@ -44,17 +44,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::ACTIVATE_UNLIMITED_CAP;
-use crate::effects::move_::discard_random;
+use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
 use crate::mana::{mana_event, spend_mana};
 use crate::play_choices::{
     DeclaredChoices, in_declared_order, play_choice_combinations, targeting_discards_required,
     why_declared_choices_refused,
 };
-use crate::prelude::json_as;
 use crate::preview::is_face_down;
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
-use crate::resolve::{HookOptions, make_context};
 use crate::script::{
     ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs,
     activation_decls, activation_hook,
@@ -680,22 +678,10 @@ fn pay_costs(
         pay_targeting_discards(sink, run.player, owed, &hand_picks(&run.targets));
     }
 
+    // R800: a random discard paid as the price is no forced discard, so a discard guard never stops it.
     let random = cost.discard_random.unwrap_or(0).max(0);
     if random > 0 {
-        // TS handed the context the live card; it is read again here, as it stands after the discards.
-        let live = find_instance(sink.state, &card.id)
-            .cloned()
-            .unwrap_or_else(|| card.clone());
-        let discard = discard_random(json_as(json!({ "count": random })));
-        let mut ctx = make_context(
-            sink,
-            Some(&live),
-            HookOptions {
-                controller: Some(run.player),
-                ..HookOptions::default()
-            },
-        );
-        (discard.apply)(&mut ctx);
+        discard_random_cards(sink, run.player, random);
     }
 
     let units: Vec<CardInstance> = tributes

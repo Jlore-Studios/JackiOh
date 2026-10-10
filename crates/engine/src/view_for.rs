@@ -1912,7 +1912,8 @@ fn redact_event(
         | GameEventType::HealthSet
         | GameEventType::RolledBack
         | GameEventType::Glitched
-        | GameEventType::DrawLimited => {
+        | GameEventType::DrawLimited
+        | GameEventType::DiscardPrevented => {
             let source_hidden = event.event_type() == GameEventType::HealthSet
                 && nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source));
             if !source_hidden {

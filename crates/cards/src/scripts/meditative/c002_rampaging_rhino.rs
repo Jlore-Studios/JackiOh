@@ -1,4 +1,4 @@
-//! M #2 Rampaging Rhino (SPEC §8.8 row 2, R59, R63, R174, R212, R386, R682, R780): (2) Unit, Common,
+//! M #2 Rampaging Rhino (SPEC §8.8 row 2, R59, R63, R174, R212, R386, R682, R780, R800): (2) Unit, Common,
 //! 5/9 → 11/20.
 //!
 //! Base:    "Whenever this takes damage, discard {discards|card|cards}."
@@ -8,7 +8,8 @@
 //! of a sweep is its own (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no
 //! `damage` event (R63), so it costs nothing. The discard is random (R682) and comes from the hand of
 //! whoever controls the Rhino as the hit lands (R212); an empty hand discards nothing and draws no random
-//! number (R129). A hit that kills it discards nothing: the state check removes it before its trigger
+//! number (R129); on the opponent's turn the discard is a forced one, which M #1 Disruptive Disruptor's
+//! guard stops (R800). A hit that kills it discards nothing: the state check removes it before its trigger
 //! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Trample is
 //! catalog data, so the Radiant face's script is the base's.
 
@@ -238,6 +239,32 @@ mod tests {
             assert_eq!(s.hand(P1).len(), 2);
             assert_eq!(discarded(&s, P2), 0);
             assert_eq!(s.hand(P2).len(), 2);
+        }
+
+        #[test]
+        fn r800_on_the_opponents_turn_a_disruptive_disruptor_stops_the_discard() {
+            // M #1 on p1's side guards p1's hand while p2 is active: the hit lands, the discard does not.
+            let mut s = crate::scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "field": [ID],
+                    "backrow": [{ "def": "meditative-001", "faceUp": true, "lane": 1 }],
+                    "hand": [FILLER, FILLER, FILLER],
+                    "library": [VANILLA, VANILLA],
+                },
+                "p2": { "field": [POSTDOC], "hand": [FILLER], "library": [VANILLA, VANILLA] },
+            }));
+            let cursor = s.state().rng_cursor;
+            s.attack(POSTDOC, ID);
+            s.expect_stats(ID, json!({ "attack": 5, "health": 7, "maxHealth": 9 }));
+            assert_eq!(discarded(&s, P1), 0);
+            assert_eq!(s.hand(P1).len(), 3);
+            assert_eq!(s.state().rng_cursor, cursor);
+            assert!(
+                s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::DiscardPrevented { player, count: 1 } if *player == P1))
+            );
         }
 
         #[test]

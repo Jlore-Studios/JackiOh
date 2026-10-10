@@ -953,11 +953,29 @@
   "classicplus-t-ai-10": {
     "flavour": "A little more training and it'll be perfect."
   },
+  "meditative-001": {
+    "flavour": "The meeting ran long, but nobody lost a single card."
+  },
   "meditative-002": {
     "flavour": "Every bruise costs it something. It keeps running anyway."
   },
   "meditative-003": {
     "flavour": "Built to watch the other side of the table, and to panic accordingly."
+  },
+  "meditative-004": {
+    "flavour": "Six slices, one for every budget."
+  },
+  "meditative-005": {
+    "flavour": "It was never the cut. It was the count."
+  },
+  "meditative-006": {
+    "flavour": "Regifting is a love language, and the receipt pays well."
+  },
+  "meditative-007": {
+    "flavour": "Sit with your thoughts until they start hitting back."
+  },
+  "meditative-014": {
+    "flavour": "Two, three, five, seven: the deck only answers to the indivisible."
   },
   "meditative-015": {
     "flavour": "Nobody wants to sit next to Steven during finals week."
@@ -967,6 +985,9 @@
   },
   "meditative-017": {
     "flavour": "Twenty-four lines of code, not one more."
+  },
+  "meditative-021": {
+    "flavour": "Dear valued user, please confirm your password to keep your cards."
   },
   "meditative-023": {
     "flavour": "Every neighbor he greets ends up a little woollier."

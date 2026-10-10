@@ -371,12 +371,13 @@ fn your_turn_trigger(text: &str) -> bool {
     .any(|phrase| has_words(text, phrase, true))
 }
 
-/// `/^(Tribute|Echo) \d+$/`.
+/// `/^(Tribute \d+|Echo (\d+|X))$/`: a computed Echo X (R802) prints "Echo X".
 fn is_tribute_or_echo_count(item: &str) -> bool {
-    ["Tribute ", "Echo "].iter().any(|word| {
-        item.strip_prefix(word)
-            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
-    })
+    if let Some(n) = item.strip_prefix("Echo ") {
+        return !n.is_empty() && (n == "X" || n.bytes().all(|b| b.is_ascii_digit()));
+    }
+    item.strip_prefix("Tribute ")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// `/\.["”]?$/`.
@@ -1682,6 +1683,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
     fn the_line_patterns() {
         assert!(is_tribute_or_echo_count("Tribute 2"));
         assert!(!is_tribute_or_echo_count("Tribute X"));
+        assert!(is_tribute_or_echo_count("Echo X"));
         assert!(ends_with_a_full_stop("He said \"go.\""));
         assert!(ends_with_a_full_stop("He said \u{201c}go.\u{201d}"));
         assert!(!ends_with_a_full_stop("Draw 1"));

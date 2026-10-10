@@ -388,6 +388,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return capitalised(`${name.card(event.instanceId, event.defId)} flickered`);
     case "drawLimited":
       return `${name.seat(event.player)} could not draw more this turn`;
+    case "discardPrevented":
+      return `${name.seat(event.player)} could not be made to discard`;
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "glitched":

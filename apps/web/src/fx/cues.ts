@@ -791,8 +791,9 @@ const lunge: Recipe = (event, p) => {
 };
 
 const fizzle: Recipe = (event, p) => {
-  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck.
-  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited") return [];
+  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck;
+  // R800: a discard a discard guard stopped fizzles over the hand.
+  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited" && event.type !== "discardPrevented") return [];
   if (event.type === "countered") return counteredCues(p);
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
 };

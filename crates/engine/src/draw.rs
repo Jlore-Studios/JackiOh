@@ -289,10 +289,15 @@ fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 }
 
 fn limit_binds(limit: &DrawLimit, controller: PlayerId, player: PlayerId) -> bool {
-    if limit.player == DrawLimitPlayer::Both {
+    player_binds(limit.player, controller, player)
+}
+
+/// Whether `who`, read relative to a card's controller, names `player`.
+fn player_binds(who: DrawLimitPlayer, controller: PlayerId, player: PlayerId) -> bool {
+    if who == DrawLimitPlayer::Both {
         return true;
     }
-    if limit.player == DrawLimitPlayer::SelfSide {
+    if who == DrawLimitPlayer::SelfSide {
         player == controller
     } else {
         player == opponent_of(controller)
@@ -327,6 +332,30 @@ pub fn draw_limit_of(state: &GameState, player: PlayerId) -> Option<i32> {
         }
     }
     lowest
+}
+
+/// R800: whether an effect's discard from `player`'s hand is stopped now — while it is not their turn,
+/// a card acting on the field guards them (`Script.discard_guard`, Meditative #1). Several guards do no
+/// more than one. A discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never
+/// asks (`effects::move_`).
+pub fn discard_guarded(state: &GameState, player: PlayerId) -> bool {
+    if state.active == player {
+        return false;
+    }
+    PLAYER_IDS.into_iter().any(|side| {
+        text_on_field(state, side).into_iter().any(|card| {
+            let script = crate::scripts::script_of(state, card);
+            script.discard_guard.as_ref().is_some_and(|hook| {
+                hook(HookArgs {
+                    state,
+                    self_: card,
+                    radiant: card.radiant,
+                })
+                .into_iter()
+                .any(|who| player_binds(who, card.controller, player))
+            })
+        })
+    })
 }
 
 /// B5 E3, R457: whether `player`'s next draw may not happen — they have made as many draws this turn

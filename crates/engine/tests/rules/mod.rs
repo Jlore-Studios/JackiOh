@@ -39,6 +39,7 @@ pub mod damage_pipeline;
 pub mod death_pause;
 pub mod delayed_kinds;
 pub mod destroyed_face;
+pub mod discard_guard;
 pub mod draw;
 pub mod draw_complete;
 pub mod draw_limit;
