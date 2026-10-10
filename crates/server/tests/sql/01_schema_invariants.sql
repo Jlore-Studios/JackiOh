@@ -868,7 +868,7 @@ begin
     array_length(expected, 1);
 end $$;
 
-\echo '=== CHECK 18 (R278, R1411): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed and Wincon included, and refuses any other ==='
+\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed and Wincon included, and refuses any other ==='
 \echo '### R1411: cards_tags_check admits Wincon and a Meditative row as seed-catalog writes it ###'
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
 -- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), 0020 with the
