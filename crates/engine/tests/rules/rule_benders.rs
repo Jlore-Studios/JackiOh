@@ -337,6 +337,7 @@ mod r943 {
     #[test]
     fn r943_minted_cards_and_the_coin_are_created_and_dealt_cards_are_not() {
         jackioh_cards::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut cursor: u32 = 1;
         let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
         assert_eq!(minted.created, Some(true), "a minted instance is Created");
@@ -364,9 +365,32 @@ mod r943 {
         );
     }
 
+    /// D14: until the Meditative set ships, nothing is marked, so a shipped game's state (The Coin
+    /// included) hashes as it did before the set.
+    #[test]
+    fn r943_nothing_is_created_while_the_meditative_set_is_closed() {
+        jackioh_cards::register_all();
+        let mut cursor: u32 = 1;
+        let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
+        assert_eq!(minted.created, None, "no mark while the set is closed");
+        let mut s = scenario(json!({
+            "seed": "benders-created-closed",
+            "p1": { "hand": [FILLER], "library": [{ "def": VANILLA }, FILLER] },
+            "p2": { "hand": [FILLER], "library": library() },
+        }));
+        let mut sink = Sink::for_state(s.state());
+        let coin = {
+            let state = s.state_mut();
+            let mut engine = sink.on(state);
+            create_in_hand(&mut engine, P1, "core-t-coin")
+        };
+        assert_eq!(coin.created, None, "The Coin of a shipped game is unmarked");
+    }
+
     #[test]
     fn r943_the_flag_survives_a_reset_a_move_and_a_json_round_trip() {
         jackioh_cards::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "benders-keep",
             "p1": {
@@ -404,6 +428,7 @@ mod r943 {
     #[test]
     fn r943_views_show_it_only_where_the_viewer_reads_the_card_and_the_library_list_marks_it() {
         jackioh_cards::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "seed": "benders-views",
             "p1": {

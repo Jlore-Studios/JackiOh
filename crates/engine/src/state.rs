@@ -22,7 +22,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
     PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
-    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    Selection, SetName, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1773,7 +1773,9 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
-        created: Some(true),
+        // R943: Created only while the Meditative set is open, so a shipped game's state never
+        // carries the mark (D14) — the same gate as R982's last element.
+        created: crate::catalog::set_is_open(SetName::Meditative).then_some(true),
         set_as: None,
         granted_tags: None,
         grants: None,
@@ -1783,7 +1785,8 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
 }
 
 /// MD-B6, R943: the dealt deck cards — `build_game`'s deck loop and a Glitch reset's new deal —
-/// are never Created. Every other `new_instance` call mints a Created card.
+/// are never Created. Every other `new_instance` call mints a Created card while the Meditative set
+/// is open (D14).
 pub fn new_dealt_instance(
     state: &mut impl NextId,
     def_id: &str,
@@ -2102,7 +2105,7 @@ mod tests {
                 "id": "c7", "defId": "core-001", "owner": "p2", "controller": "p2", "radiant": false,
                 "zone": { "z": "hand", "player": "p2" }, "damage": 0, "buffs": { "attack": 0, "health": 0 },
                 "grantedKeywords": [], "vanilla": false, "costMod": 0, "counters": {}, "memory": {},
-                "exertion": { "attacked": false, "switched": false }, "created": true
+                "exertion": { "attacked": false, "switched": false }
             })
         );
         assert_eq!(serde_json::from_value::<CardInstance>(json).unwrap(), card);
