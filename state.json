@@ -4560,6 +4560,14 @@
       "started_at": "2026-10-03T09:24:23Z",
       "stop_requested": false
     },
+    "630": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-10T05:48:02Z",
+      "issue": 620,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "68": {
       "action": "build",
       "died": 0,
