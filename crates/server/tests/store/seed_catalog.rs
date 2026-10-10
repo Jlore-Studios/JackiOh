@@ -11,16 +11,22 @@
 //! `DATABASE_URL` is set): `seed_catalog` writes the real catalog into `public.cards`, where every
 //! migration's constraints apply. Before migration 0010, `cards_tags_check` (0002) did not admit
 //! 'Jlockeed', the tag R278 puts on #13 and #14, before 0015 it did not admit patch v0.2.0's Book,
-//! Pancake and AI (B2.4), before 0020 it did not admit the mechanics patch's Plague, and before 0026
-//! it did not admit patch v0.2.Y's Catalyst, Prime and Acclaimed. The seed runs in one transaction,
-//! so one such row failed the whole catalog. The first half compares the tags with the migrations'
-//! text; the second checks that the database really accepts them.
+//! Pancake and AI (B2.4), before 0020 it did not admit the mechanics patch's Plague, before 0026
+//! it did not admit patch v0.2.Y's Catalyst, Prime and Acclaimed, and before 0028 it did not admit
+//! the Meditative set's Wincon (R1411). The seed runs in one transaction, so one such row failed the
+//! whole catalog. The first half compares the tags with the migrations' text; the second checks that
+//! the database really accepts them.
+//!
+//! Both halves hold before and after the patch that ships the Meditative set (R1420): what they
+//! count is the catalog of the sets that ship, read off `SHIPPED_SETS`, so the patch that lists the
+//! set changes no line here.
 
 use std::path::{Path, PathBuf};
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use jackioh_engine::{SHIPPED_SETS, SetName, Tag, set_ships};
 use jackioh_server::cli::seed_catalog::read_catalog;
 
 const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalog.json");
@@ -107,8 +113,8 @@ fn quoted_strings(body: &str) -> Vec<String> {
 
 /// The tags `public.cards.cards_tags_check` admits once every migration has run: the array in the
 /// last migration, in apply order, that adds the check. 0002 defines it, 0010 re-adds it with
-/// Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, and 0026 with Catalyst, Prime and
-/// Acclaimed.
+/// Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, 0026 with Catalyst, Prime and
+/// Acclaimed, and 0028 with Wincon (R1411).
 fn admitted_tags() -> (String, Vec<String>) {
     let mut files: Vec<String> = std::fs::read_dir(MIGRATIONS)
         .expect("the migrations directory")
@@ -169,7 +175,7 @@ mod read_catalog_ {
     use super::*;
 
     #[tokio::test]
-    async fn reads_the_real_catalog_json_every_entry_cards_and_tokens_in_three_sets() {
+    async fn reads_the_real_catalog_json_every_entry_cards_and_tokens_of_every_set_that_ships() {
         let mut raw: IndexMap<String, Value> =
             serde_json::from_str(&std::fs::read_to_string(REAL_CATALOG).expect("the real catalog reads"))
                 .expect("the real catalog is a record");
@@ -193,7 +199,15 @@ mod read_catalog_ {
             .collect::<IndexSet<_>>()
             .into_iter()
             .collect();
-        assert_eq!(sets, vec!["Core", "Classic", "Classic+"]);
+        // R1420: the sets that ship, in catalog order: Core, Classic and Classic+, and Meditative
+        // from the patch that ships it.
+        assert_eq!(
+            sets,
+            SHIPPED_SETS
+                .iter()
+                .map(|set| set.as_str().to_owned())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[tokio::test]
@@ -266,8 +280,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0026_catalyst_prime_acclaimed_tags.sql",
-            "0026 re-adds the check with Catalyst, Prime and Acclaimed"
+            file, "0028_meditative_set.sql",
+            "0028 re-adds the check with Wincon (R1411)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -293,10 +307,61 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         }
         let refused: Vec<&String> = carried.iter().filter(|tag| !tags.contains(tag)).collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
-        // No stale name either: every tag the check admits is one some catalog entry carries.
-        let mut admitted = tags.clone();
-        admitted.sort();
-        assert_eq!(admitted, carried);
+        // No stale name either: every tag the check admits is one the engine's `Tag` union names
+        // (the r1411 test below holds the two lists equal).
+        assert!(
+            tags.iter()
+                .all(|tag| Tag::ALL.iter().any(|each| each.as_str() == tag)),
+            "{tags:?}"
+        );
+    }
+
+    /// R1411: the migration that ships the Meditative set. The check admits exactly the tags the
+    /// engine names, in its order, Wincon among them, so every entry of every set the catalog holds
+    /// seeds the day its set ships, the Meditative set's included.
+    #[tokio::test]
+    async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
+     {
+        let (file, tags) = admitted_tags();
+        assert_eq!(file, "0028_meditative_set.sql");
+        assert!(tags.iter().any(|tag| tag == "Wincon"), "{tags:?}");
+        assert_eq!(
+            tags,
+            Tag::ALL
+                .iter()
+                .map(|tag| tag.as_str().to_owned())
+                .collect::<Vec<_>>(),
+            "the check lists the engine's `Tag` union, in its order"
+        );
+        // Every set's entries, shipped or not (R1420): the catalog file read whole, unfiltered.
+        let raw: IndexMap<String, Value> =
+            serde_json::from_str(&std::fs::read_to_string(REAL_CATALOG).expect("the real catalog reads"))
+                .expect("the real catalog is a record");
+        let refused: Vec<String> = raw
+            .values()
+            .flat_map(|entry| entry["tags"].as_array().cloned().unwrap_or_default())
+            .filter_map(|tag| tag.as_str().map(str::to_owned))
+            .filter(|tag| !tags.contains(tag))
+            .collect::<IndexSet<_>>()
+            .into_iter()
+            .collect();
+        assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
+        // The set's other columns: its types and rarities are ones 0002's checks admit, and no check
+        // names a set.
+        for entry in raw.values().filter(|entry| entry["set"] == json!("Meditative")) {
+            assert!(
+                ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"]
+                    .contains(&entry["type"].as_str().unwrap_or_default()),
+                "{}",
+                entry["id"]
+            );
+            assert!(
+                ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"]
+                    .contains(&entry["rarity"].as_str().unwrap_or_default()),
+                "{}",
+                entry["id"]
+            );
+        }
     }
 }
 
@@ -308,6 +373,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
 
     /// The store contract's fixture catalog version (TS `test/db/harness.ts`).
     const CATALOG_VERSION: &str = "core-1";
+
+    /// R1420: `n` once the Meditative set ships, and nothing before, since its entries are not
+    /// seeded until then. The counts are its census (docs/meditative-set.md M2).
+    fn meditative(n: usize) -> usize {
+        if set_ships(SetName::Meditative) { n } else { 0 }
+    }
 
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
     const TRUNCATE: &str = "truncate
@@ -363,7 +434,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         seed_cards(admin).await;
     }
 
-    async fn r278_seeds_every_entry_of_core_classic_and_classic_plus_with_the_six_jlockeed_cards_tagged_and_no_other_row(
+    async fn r278_seeds_every_entry_of_the_shipped_sets_with_the_jlockeed_cards_tagged_and_no_other_row(
         url: &str,
         admin: &PgPool,
     ) {
@@ -390,17 +461,20 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             .filter(|(_, tags, _)| tags.iter().any(|tag| tag == "Jlockeed"))
             .map(|(id, _, _)| id.as_str())
             .collect();
-        assert_eq!(
-            jlockeed,
-            vec![
-                "classic-004",
-                "classicplus-048",
-                "classicplus-051",
-                "classicplus-052",
-                "core-013",
-                "core-014"
-            ]
-        );
+        let mut expected = vec![
+            "classic-004",
+            "classicplus-048",
+            "classicplus-051",
+            "classicplus-052",
+            "core-013",
+            "core-014",
+        ];
+        // R1420: the Meditative set's three, #87 Tatches the Totem, #97 Jlockheed's Evil
+        // Blueprints and its token #97.9 Jlockheed's Headquarters, once it ships.
+        if set_ships(SetName::Meditative) {
+            expected.extend(["meditative-087", "meditative-097", "meditative-097-9"]);
+        }
+        assert_eq!(jlockeed, expected);
         let tagged = |tag: &str| {
             entries
                 .iter()
@@ -415,11 +489,14 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         for tag in ["Book", "Pancake", "AI", "Plague"] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
-        assert_eq!(tagged("Plague"), 17);
-        for tag in ["Catalyst", "Prime", "Acclaimed"] {
+        assert_eq!(tagged("Plague"), 17 + meditative(2));
+        for (tag, theirs) in [("Catalyst", 2), ("Prime", 2), ("Acclaimed", 4)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), 2, "{tag}");
+            assert_eq!(tagged(tag), 2 + meditative(theirs), "{tag}");
         }
+        // R1411: Wincon, the tag 0028 admits, is on the Meditative set's #8 and #20 alone.
+        assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
+        assert_eq!(tagged("Wincon"), meditative(2));
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
         let by_id: IndexMap<&str, &Vec<String>> = entries
             .iter()
@@ -477,7 +554,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             .await
             .expect("the tables are emptied");
 
-        r278_seeds_every_entry_of_core_classic_and_classic_plus_with_the_six_jlockeed_cards_tagged_and_no_other_row(
+        r278_seeds_every_entry_of_the_shipped_sets_with_the_jlockeed_cards_tagged_and_no_other_row(
             &url, &admin,
         )
         .await;

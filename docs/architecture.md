@@ -612,7 +612,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` — and records them in `app.migrations`. Expected
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_meditative_set.sql` — and records them in
+   `app.migrations`. Expected
    result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -637,7 +638,9 @@ step that is not yet implemented says which BUILD task delivers it.
    project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
    Catalyst, Prime and Acclaimed, as 0020 did with Plague. 0027 adds `tickets.lean_newest` and
    `matches.room_lean_newest`, where All Random's "More cards from the newest set" waits for the deal
-   (R1372); both default to false, so nothing is backfilled.
+   (R1372); both default to false, so nothing is backfilled. 0028 comes with the patch that ships the
+   Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -731,7 +734,7 @@ The migrations are not taken on faith. `sh crates/server/tests/sql/run.sh` needs
 it starts a throwaway Postgres, applies `crates/server/tests/sql/00_supabase_stub.sql` (stand-ins for the
 Supabase-managed pieces the migrations reference — the `anon`, `authenticated` and `service_role`
 roles, `auth.users` and `auth.uid()`; a real project supplies all of it), applies 0001–0006, saves a
-loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0018 over it, and then asserts:
+loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0028 over it, and then asserts:
 
 | File | What it proves |
 | --- | --- |
@@ -763,6 +766,7 @@ mention in prose is not.** The database-provable rows:
 | R263 | `04` | A series is a server-only row, written by compare-and-set, found by its next match and by any game. |
 | R264 | `04` | A room keeps its mode, and exactly a Best-of-3 room keeps a trio. |
 | R278 | `01` CHECK 18 | `cards_tags_check` admits every catalog tag, Jlockeed included, and refuses an unknown one, so `seed-catalog` can write #13 and #14. |
+| R1411 | `01` CHECK 18 | `cards_tags_check` admits Wincon, and a Meditative card and token as `seed-catalog` writes them, so the release seeds the set. |
 | R320 | `02`, `05` | A client reads only its own `tutorial_progress` row and writes none of it; `app.merge_tutorial_progress` only grows a row: the union of the lessons, the strictly newer choice, and the cap. |
 | R376 | `08` | One record per game, its filter columns always equal to the record's own. |
 
@@ -813,7 +817,7 @@ crates/server/
     0016_catalog_growth_grants.sql  a new catalog version grants its new cards (R481)
     0017_last_boards.sql            last_boards, matches.p1_last_board / p2_last_board (R417, R565)
     0018_player_settings.sql        player_settings, app.merge_player_settings (R633, R634)
-    …                               through 0027, each listed in §10 step 4
+    …                               through 0028, each listed in §10 step 4
   src/
     main.rs                        the binary: serve (default), release, migrate, seed-catalog, mint-code,
                                    seed-accounts, season-start, stats-cards, stats-import
