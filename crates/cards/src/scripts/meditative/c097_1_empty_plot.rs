@@ -117,7 +117,7 @@ mod tests {
             // Play VANILLA specifically onto lane 1 where Plot is.
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            let pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(pile.len(), 2);
             assert_eq!(pile[0].def_id, VANILLA);
             assert_eq!(pile[1].def_id, ID);
@@ -140,7 +140,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
             }));
 
-            jackioh_engine::zones::lock_zone(s.state_mut(), &slot(P1, 1));
+            jackioh_engine::zones::lock_zone(s.state_mut(), slot(P1, 1));
 
             s.expect_refused(|s| s.play(VANILLA, json!({ "zone": 1 })));
         }
@@ -164,11 +164,11 @@ mod tests {
             s.play(FELINORS, json!({ "zone": 3 }));
 
             // The summoned copy lands in the leftmost free zone (lane 2), never stacking in lane 1!
-            let lane1_pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let lane1_pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(lane1_pile.len(), 1);
             assert_eq!(lane1_pile[0].def_id, ID);
 
-            let lane2_pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 2)).unwrap();
+            let lane2_pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 2)).unwrap();
             assert_eq!(lane2_pile.len(), 1);
             assert_eq!(lane2_pile[0].def_id, FELINORS);
         }
@@ -207,13 +207,13 @@ mod tests {
             }));
 
             s.play(VANILLA, json!({ "zone": 1 }));
-            let top_id = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap()[0].id.clone();
+            let top_id = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap()[0].id.clone();
 
             // Destroy top unit with Hit Job.
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": top_id }] }));
 
             // The top unit died, now Empty Plot resumes on top of lane 1!
-            let pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(pile.len(), 1);
             assert_eq!(pile[0].def_id, ID);
             assert!(!jackioh_engine::zones::is_buried(s.state(), &pile[0]));
@@ -254,7 +254,7 @@ mod tests {
                 "Upgrade occurred before Cry's summon (§10.5 step 4 before step 5)"
             );
 
-            let pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(pile.len(), 2);
             assert_eq!(pile[0].def_id, FELINORS);
             let orig = s.unit(P1, 1).unwrap();

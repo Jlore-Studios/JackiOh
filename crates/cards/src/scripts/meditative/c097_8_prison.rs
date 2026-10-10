@@ -180,7 +180,7 @@ mod tests {
             s.play(VANILLA, json!({ "zone": 2 }));
 
             // VANILLA resolved and was captured beneath Prison in P1 lane 1!
-            let pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(pile.len(), 2);
             assert_eq!(pile[0].def_id, ID);
             assert_eq!(pile[1].def_id, VANILLA);
@@ -282,7 +282,7 @@ mod tests {
             s.play(FIENDER, json!({ "zone": 1 }));
 
             // Fiender is captured beneath Prison in P1 lane 1!
-            let p1_pile = jackioh_engine::zones::pile_at(s.state(), &slot(P1, 1)).unwrap();
+            let p1_pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(p1_pile.len(), 2);
             assert_eq!(p1_pile[1].def_id, FIENDER);
 

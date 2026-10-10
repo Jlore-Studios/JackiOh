@@ -72,7 +72,6 @@ mod tests {
     use super::{BUILDINGS, ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
-    use std::collections::HashSet;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -140,7 +139,7 @@ mod tests {
             let options = option_ids(s.state());
             assert_eq!(options.len(), 3);
 
-            let unique: HashSet<_> = options.iter().collect();
+            let unique: IndexSet<_> = options.iter().collect();
             assert_eq!(unique.len(), 3, "options are 3 distinct buildings");
 
             for opt in &options {
@@ -154,7 +153,7 @@ mod tests {
         #[test]
         fn r1280_across_seed_sweep_every_building_is_offered_and_nothing_else_ever_is() {
             crate::register_all();
-            let mut seen = HashSet::new();
+            let mut seen = IndexSet::new();
 
             for n in 0..SEEDS {
                 let mut s = setup(&format!("bp-sweep-{n}"), false);
