@@ -52,7 +52,7 @@ fn integer_function(lua: &Lua, name: &'static str, f: fn(i32, i32) -> Option<i32
 }
 
 /// A hook's walked return as its effect calls: a list of `{ verb, args }`, or nothing (`nil` or an
-/// empty table).
+/// empty table). An error names what was wrong by its kind and place, never by the value itself.
 pub fn effect_calls(value: &Json, site: Site) -> Result<Vec<EffectCall>, LuauError> {
     let refused = |message: String| LuauError::Hook { site, message };
     match value {
@@ -60,7 +60,8 @@ pub fn effect_calls(value: &Json, site: Site) -> Result<Vec<EffectCall>, LuauErr
         Json::Object(record) if record.is_empty() => Ok(vec![]),
         Json::Array(items) => items
             .iter()
-            .map(|item| {
+            .enumerate()
+            .map(|(index, item)| {
                 let call = item
                     .as_object()
                     .filter(|record| record.keys().all(|key| key == "verb" || key == "args"));
@@ -69,11 +70,30 @@ pub fn effect_calls(value: &Json, site: Site) -> Result<Vec<EffectCall>, LuauErr
                         verb: verb.clone(),
                         args: item.get("args").cloned().unwrap_or(Json::Null),
                     }),
-                    _ => Err(refused(format!("{item} is not an effect"))),
+                    _ => Err(refused(format!(
+                        "effect {} is {}, not a {{ verb, args }} record",
+                        index + 1,
+                        kind(item)
+                    ))),
                 }
             })
             .collect(),
-        other => Err(refused(format!("a hook returns a list of effects, not {other}"))),
+        other => Err(refused(format!(
+            "a hook returns a list of effects, not {}",
+            kind(other)
+        ))),
+    }
+}
+
+/// What a walked value is, for an error.
+fn kind(value: &Json) -> &'static str {
+    match value {
+        Json::Null => "nil",
+        Json::Bool(_) => "a boolean",
+        Json::Number(_) => "a number",
+        Json::String(_) => "a string",
+        Json::Array(_) => "a list",
+        Json::Object(_) => "a record",
     }
 }
 

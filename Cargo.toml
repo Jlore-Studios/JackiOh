@@ -47,6 +47,13 @@ rayon = { version = "1.12.0" }
 # The Luau host (`crates/luau`, #442 L3): Luau alone, with serde, and no `send`, `async`, `luau-jit`
 # or `module`. Pinned exactly, since the Luau its `luau0-src` builds is the one `luau-analyze` matches.
 mlua = { version = "=0.12.2", default-features = false, features = ["luau", "serde"] }
+# The server's username checks (SPEC §9.4, R1432–R1434): NFKC and NFD, full case folding,
+# grapheme clusters, scripts and general categories.
+caseless = { version = "0.2.2" }
+unicode-normalization = { version = "0.1.25" }
+unicode-properties = { version = "0.1.4" }
+unicode-script = { version = "0.5.8" }
+unicode-segmentation = { version = "1.13.3" }
 
 # `cargo test` optimises the rules and the cards (and the JSON they hash), keeping debug assertions
 # and overflow checks: the golden traces (SURFACE §13, V4) replay 240 games through `reduce`,

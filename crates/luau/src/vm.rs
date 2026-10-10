@@ -2,8 +2,8 @@
 //! keeps it, with each card's compiled chunk cached by card id. A hook call runs its card's chunk
 //! afresh, so the module, and every module-level local in it, starts new on every call, then calls
 //! `module[face][hook]` with `ctx`, a userdata that lives for that call only. A hook may call a reader
-//! that runs another card's hook: the thread's VM, `Lua::scope` and the interrupt's budget stack all
-//! take a nested call.
+//! that runs another card's hook: the thread's VM and `Lua::scope` both take a nested call, which
+//! draws on the budget of the call it is nested in (L5).
 
 use jackioh_engine::EffectContext;
 use mlua::chunk::ChunkMode;
@@ -11,7 +11,7 @@ use mlua::{Function, Lua, Table, Value};
 
 use crate::api::{self, EffectCall};
 use crate::numbers;
-use crate::sandbox::{Budget, Sandbox, new_sandbox};
+use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped};
 use crate::{Face, LuauError, Site};
 
 /// The hooks a face may declare: the effect-list hooks `Script::hook_named` answers, in its order.
@@ -71,30 +71,43 @@ impl Vm {
     }
 }
 
-/// A hook call's budget on the interrupt's stack, popped when the call ends, a panic included.
+/// A hook call in flight on the interrupt's budget, left when the call ends, a panic included.
 struct BudgetGuard<'l>(&'l Lua);
 
 impl<'l> BudgetGuard<'l> {
-    fn push(lua: &'l Lua, site: Site) -> BudgetGuard<'l> {
-        if let Some(mut budgets) = lua.app_data_mut::<Vec<Budget>>() {
-            budgets.push(Budget::new(site));
+    fn enter(lua: &'l Lua, site: Site) -> BudgetGuard<'l> {
+        if let Some(mut budget) = lua.app_data_mut::<Budget>() {
+            budget.enter(site);
         }
         BudgetGuard(lua)
+    }
+
+    /// `result`, unless the budget ran out during the call: a hook that caught its stop with
+    /// `pcall` and returned is stopped all the same.
+    fn check<T>(&self, site: Site, result: mlua::Result<T>) -> mlua::Result<T> {
+        let spent = self
+            .0
+            .app_data_ref::<Budget>()
+            .is_some_and(|budget| budget.spent());
+        if spent && result.is_ok() {
+            return Err(mlua::Error::runtime(stopped(site)));
+        }
+        result
     }
 }
 
 impl Drop for BudgetGuard<'_> {
     fn drop(&mut self) {
-        if let Some(mut budgets) = self.0.app_data_mut::<Vec<Budget>>() {
-            budgets.pop();
+        if let Some(mut budget) = self.0.app_data_mut::<Budget>() {
+            budget.leave();
         }
     }
 }
 
 /// The hooks a card's module declares, by face and then in `HOOKS` order. The module is a table with
 /// a `base` table, a `radiant` table or both (the same table for a card whose faces act alike), each
-/// mapping hook names to functions; anything else is refused. Running the module counts against a
-/// budget named for a `load` hook on the base face.
+/// mapping hook names to functions; anything else is refused. Running the module spends a budget
+/// named for a `load` hook on the base face.
 pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, &'static str)>, LuauError> {
     let refused = |message: String| LuauError::Load {
         card: card.to_string(),
@@ -102,15 +115,14 @@ pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, 
     };
     VM.with(|vm| {
         let module = {
-            let _budget = BudgetGuard::push(
-                &vm.sandbox.lua,
-                Site {
-                    card,
-                    face: Face::Base,
-                    hook: "load",
-                },
-            );
-            vm.module(card, bytecode)
+            let site = Site {
+                card,
+                face: Face::Base,
+                hook: "load",
+            };
+            let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+            budget
+                .check(site, vm.module(card, bytecode))
                 .map_err(|error| refused(error.to_string()))?
         };
         let mut hooks = Vec::new();
@@ -158,8 +170,8 @@ pub fn call_hook(
 ) -> Result<Vec<EffectCall>, LuauError> {
     VM.with(|vm| {
         let returned = {
-            let _budget = BudgetGuard::push(&vm.sandbox.lua, site);
-            run(vm, site, bytecode, ctx)
+            let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+            budget.check(site, run(vm, site, bytecode, ctx))
         };
         let returned = returned.map_err(|error| LuauError::Hook {
             site,

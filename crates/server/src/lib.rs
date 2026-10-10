@@ -11,6 +11,7 @@
 //! - `api`: the routes (parts 18 and 19). `actor`: the match lifecycle (part 19).
 //! - `ranked`: the ladder's pure rules (part 18). `db`: the store and migrations (part 20).
 //! - `cli`: the command-line tools `main.rs` dispatches to (part 20).
+//! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
 
 pub mod actor;
 pub mod api;
@@ -21,3 +22,4 @@ pub mod config;
 pub mod db;
 pub mod env;
 pub mod ranked;
+pub mod username;

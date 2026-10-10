@@ -9,9 +9,12 @@ use jackioh_engine::testkit::{
     CardDef, CardDefs, EffectContext, EngineSink, IndexMap, PlayerId, Rng, catalog_override, json_as,
     register_catalog, register_scripts, scenario,
 };
-use jackioh_luau::config::LUAU_HOOK_INTERRUPTS;
+use jackioh_luau::config::{LUAU_HOOK_INTERRUPTS, LUAU_VALUE_NODES};
+use jackioh_luau::lint::MATH_ALLOWED;
 use jackioh_luau::numbers::{div, number_to_i32, rem, to_json};
-use jackioh_luau::sandbox::{ABSENT_LIBRARIES, REMOVED_GLOBALS, REMOVED_MATH, new_sandbox};
+use jackioh_luau::sandbox::{
+    ABSENT_LIBRARIES, REMOVED_GLOBALS, REMOVED_ITERATORS, REMOVED_MATH, REMOVED_TABLE, new_sandbox,
+};
 use jackioh_luau::vm::{call_hook, declared_hooks};
 use jackioh_luau::{EffectCall, Face, Finding, LuauError, Rule, Site, compile, lint, load_card};
 use mlua::{Table, Value};
@@ -99,20 +102,50 @@ fn every_removed_global_is_nil() {
     let absent = REMOVED_GLOBALS
         .iter()
         .chain(&ABSENT_LIBRARIES)
+        .chain(&REMOVED_ITERATORS)
         .chain(&["buffer", "vector", "integer"]);
     for name in absent {
         assert!(sandbox.env.raw_get::<Value>(*name).unwrap().is_nil(), "{name}");
+    }
+    let table: Table = sandbox.env.raw_get("table").unwrap();
+    for name in REMOVED_TABLE {
+        assert!(table.raw_get::<Value>(name).unwrap().is_nil(), "table.{name}");
     }
     let math: Table = sandbox.env.raw_get("math").unwrap();
     for name in REMOVED_MATH {
         assert!(math.raw_get::<Value>(name).unwrap().is_nil(), "math.{name}");
     }
+    let mut members: Vec<String> = math
+        .pairs::<String, Value>()
+        .map(|pair| pair.unwrap().0)
+        .collect();
+    members.sort();
+    let mut allowed = MATH_ALLOWED.map(String::from);
+    allowed.sort();
+    assert_eq!(members, allowed);
     for library in ["string", "table", "math", "bit32", "utf8"] {
         assert!(
             sandbox.env.raw_get::<Value>(library).unwrap().is_table(),
             "{library}"
         );
     }
+}
+
+#[test]
+fn what_the_lint_refuses_by_name_is_absent_at_run_time() {
+    // Keys the lint cannot read reach nothing: each absent name counts one.
+    let code = bytecode(
+        "computed_keys.luau",
+        "local J = require(\"@jackioh\")\n\
+         local function absent(holder, key) return if holder[key] == nil then 1 else 0 end\n\
+         return { base = { cry = function(ctx)\n\
+         \tlocal amount = absent(_G, \"pairs\") + absent(_G, \"next\") + absent(table, \"sort\")\n\
+         \t\t+ absent(table, \"foreach\") + absent(_G[\"math\"], \"sqrt\") + absent(_G[\"math\"], \"pi\")\n\
+         \treturn { J.damage({ to = { of = \"enemyHero\" }, amount = amount }) }\n\
+         end } }\n",
+    );
+    let calls = with_ctx(|ctx| call_hook(site("fixture-computed-keys", Face::Base, "cry"), code, ctx));
+    assert_eq!(calls, Ok(vec![hit(6)]));
 }
 
 #[test]
@@ -159,6 +192,16 @@ fn a_loop_that_never_ends_stops_at_the_cap_naming_the_card() {
     let expected =
         format!("fixture-endless-caught base cry: stopped after {LUAU_HOOK_INTERRUPTS} interrupts");
     assert!(text.contains(&expected), "{text}");
+
+    let caught_at_load = bytecode(
+        "endless_load_caught.luau",
+        "pcall(function() while true do end end)\nreturn {}\n",
+    );
+    let text = error_text(load_card("fixture-endless-load-caught", caught_at_load));
+    assert!(
+        text.contains("fixture-endless-load-caught base load: stopped after"),
+        "{text}"
+    );
 
     let at_load = bytecode("endless_load.luau", "while true do\nend\nreturn {}\n");
     let text = error_text(load_card("fixture-endless-load", at_load));
@@ -245,6 +288,7 @@ fn the_walk_turns_lists_and_records_into_json() {
         r#"[1,{"a":"x","b":true},{}]"#
     );
 
+    let too_many = format!("more than {LUAU_VALUE_NODES} values and keys");
     let refused = [
         ("return { 1, a = 2 }", "neither 1..n nor all strings"),
         ("return { 1, nil, 3 }", "neither 1..n nor all strings"),
@@ -253,6 +297,15 @@ fn the_walk_turns_lists_and_records_into_json() {
             "a value of type function cannot cross into Rust (L6)",
         ),
         ("local t = {}\nt.t = t\nreturn t", "nested deeper than 32 tables"),
+        // Twenty tables, each holding the last twice: shallow, but 2^20 values walked.
+        (
+            "local t = {}\nfor i = 1, 20 do t = { t, t } end\nreturn t",
+            too_many.as_str(),
+        ),
+        (
+            "local t = {}\nfor i = 1, 20000 do t[`k{i}`] = i end\nreturn t",
+            too_many.as_str(),
+        ),
     ];
     for (source, reason) in refused {
         match to_json(&eval(source), at) {
@@ -279,6 +332,28 @@ fn j_div_and_j_rem_truncate_as_rust_does() {
     assert!(text.contains("J.div(1, 0) has no i32 answer"), "{text}");
     assert_eq!(div(i32::MIN, -1), None);
     assert_eq!(rem(i32::MIN, -1), None);
+}
+
+#[test]
+fn a_return_that_is_not_a_list_of_effects_is_named_by_its_kind() {
+    let code = bytecode(
+        "not_effects.luau",
+        "return { base = { cry = function(ctx) return \"damage\" end, death = function(ctx) return { 1 } end } }\n",
+    );
+    let cry = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-not-effects", Face::Base, "cry"), code, ctx)
+    }));
+    assert_eq!(
+        cry,
+        "fixture-not-effects base cry: a hook returns a list of effects, not a string"
+    );
+    let death = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-not-effects", Face::Base, "death"), code, ctx)
+    }));
+    assert_eq!(
+        death,
+        "fixture-not-effects base death: effect 1 is a number, not a { verb, args } record"
+    );
 }
 
 // ---- one VM per thread (L8) ----------------------------------------------------------------------
@@ -308,6 +383,53 @@ fn a_hook_runs_another_scripts_hook_from_a_reader() {
     let cry = outer.base.cry.expect("the base face declares cry");
     let kinds: Vec<&str> = with_ctx(|ctx| cry(ctx).iter().map(|effect| effect.kind).collect());
     assert_eq!(kinds, ["damage"]);
+}
+
+/// A card whose cry runs a loop of two thirds of L5's cap: under the cap alone, over it twice.
+fn spend_two_thirds() -> &'static [u8] {
+    let source = format!(
+        "return {{ base = {{ cry = function(ctx)\n\tfor i = 1, {} do\n\tend\n\treturn nil\nend }} }}\n",
+        LUAU_HOOK_INTERRUPTS / 3 * 2
+    );
+    bytecode("spend.luau", &source)
+}
+
+#[test]
+#[should_panic(expected = "fixture-spend base cry: stopped after")]
+fn a_nested_hook_draws_on_the_budget_of_the_hook_it_is_nested_in() {
+    let spend = spend_two_thirds();
+    let alone = with_ctx(|ctx| call_hook(site("fixture-spend", Face::Base, "cry"), spend, ctx));
+    assert_eq!(alone, Ok(vec![]), "one run is under the cap");
+    let Ok(scripts) = load_card("fixture-spend", spend) else {
+        panic!("the spending fixture loads");
+    };
+    register_scripts(IndexMap::from([("fixture-spend".to_string(), scripts)]));
+    let twice = bytecode(
+        "spend_twice.luau",
+        "return { base = { cry = function(ctx)\n\
+         \tctx:effects_of(\"fixture-spend\", \"base\", \"cry\")\n\
+         \tctx:effects_of(\"fixture-spend\", \"base\", \"cry\")\n\
+         \treturn nil\nend } }\n",
+    );
+    // The second nested run finds the outer call's budget a third full and is stopped, which panics
+    // through the outer call.
+    let _ = with_ctx(|ctx| call_hook(site("fixture-spend-twice", Face::Base, "cry"), twice, ctx));
+}
+
+#[test]
+#[should_panic(expected = "fixture-bad-numbers base cry: 1.5 is not an integer")]
+fn pcall_does_not_catch_a_nested_hooks_failure() {
+    let Ok(scripts) = load_card("fixture-bad-numbers", fixture!("bad_numbers")) else {
+        panic!("the fixture loads");
+    };
+    register_scripts(IndexMap::from([("fixture-bad-numbers".to_string(), scripts)]));
+    let catching = bytecode(
+        "catching.luau",
+        "return { base = { cry = function(ctx)\n\
+         \tpcall(function() return ctx:effects_of(\"fixture-bad-numbers\", \"base\", \"cry\") end)\n\
+         \treturn {}\nend } }\n",
+    );
+    let _ = with_ctx(|ctx| call_hook(site("fixture-catching", Face::Base, "cry"), catching, ctx));
 }
 
 /// `board`'s base cry as calls, and its radiant cry, loaded, as effect kinds.
@@ -393,6 +515,10 @@ fn the_lint_refuses_each_rules_example() {
         ("local f = pairs", Rule::Pairs),
         ("local holder = { next = 1 }", Rule::Next),
         ("table.sort(list)", Rule::TableSort),
+        ("table.foreach(t, n)", Rule::TableForeach),
+        ("local each = ipairs", Rule::Ipairs),
+        ("local function ipairs(x) return x end", Rule::Ipairs),
+        ("local holder = { ipairs = 1 }", Rule::Ipairs),
         ("for _, x in list do end", Rule::GenericFor),
         ("for k, v in t:entries() do end", Rule::GenericFor),
         ("for _, x in ipairs(list), n do end", Rule::GenericFor),

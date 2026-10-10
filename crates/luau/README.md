@@ -38,16 +38,26 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   `load`, `collectgarbage`, `gcinfo` and `newproxy` removed (`REMOVED_GLOBALS`,
   `ABSENT_LIBRARIES`), along with `math.random`, `math.randomseed` and `math.noise`
   (`REMOVED_MATH`);
+- what the lint refuses by name taken away as well, so a key the lint cannot read (`_G["pairs"]`,
+  `math["sqrt"]`) finds nothing: `pairs` and `next` (`REMOVED_ITERATORS`), `table.sort` and
+  `table.foreach` (`REMOVED_TABLE`), and every `math` member but `lint::MATH_ALLOWED`;
 - a `require` that answers only `"@jackioh"` (the module `J`, below) and fails on anything else;
 - `Lua::sandbox(true)`: every library and the globals are read-only. Each chunk runs with the
   globals table itself as its environment (`Sandbox::env`), not the writable proxy the sandbox
   gives the main thread, so writing a global fails ("attempt to modify a readonly table");
 - an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts (`config.rs`), with an
   error naming the card, face and hook: `"<card> <face> <hook>: stopped after 1000000 interrupts
-  (L5)"`. Luau interrupts about once per loop iteration and three times per call. A spent budget
-  stays spent, so a hook that catches the error with `pcall` fails at its next interrupt. Each hook
-  call in flight has its own budget on a stack, so a nested call spends its own. Running a module to
-  read its declarations counts against a budget named for a `load` hook on the base face.
+  (L5)"`. Luau interrupts on every loop iteration, call and return. The outermost hook call starts
+  the budget (`sandbox::Budget`), and a hook it runs from a reader draws on the same one, so the cap
+  bounds everything one engine hook call does, nested calls included; the error names the innermost
+  call. A spent budget stays spent: a hook that catches its stop with `pcall` is stopped again at
+  its next interrupt, and a call that ends with its budget spent fails all the same. Running a
+  module to read its declarations spends a budget named for a `load` hook on the base face;
+- Rust panics that `pcall` and `xpcall` cannot catch (`LuaOptions::catch_rust_panics(false)`): a
+  nested hook that fails panics (below), and the panic goes on through the hook that called it.
+  This holds while Luau's fast `pcall` is off (its `LuauFastpcall` and `LuauCompileFastpcall`
+  flags, off in 0.740), since that path calls Luau's own `pcall` rather than the global mlua puts
+  in its place; `pcall_does_not_catch_a_nested_hooks_failure` fails on a Luau that turns it on.
 
 The bytecode a VM loads is the crate's own `compile`'s, built from the repository's sources:
 Luau does not verify bytecode, so nothing else may be handed to `load_card`.
@@ -65,7 +75,9 @@ or a `ctx` reader reads (`numbers::arg`).
 - A table whose keys are exactly `1..=n` is a list, in index order. A table whose keys are all
   strings is a record, its keys sorted. An empty table is `{}`. Mixed keys, a list with holes, a
   function, a userdata, a thread, a buffer or a vector are refused, and so is a table nested
-  deeper than `LUAU_VALUE_DEPTH` (32) tables, which is how a table that holds itself ends.
+  deeper than `LUAU_VALUE_DEPTH` (32) tables, which is how a table that holds itself ends, and a
+  value of more than `LUAU_VALUE_NODES` (10,000) values and keys, all told, which is how a shallow
+  table that holds another twice over at every level ends.
 - `J.div(a, b)` and `J.rem(a, b)` are Rust's `/` and `%`: they truncate toward zero, and the
   remainder takes the dividend's sign (`J.div(-7, 2)` is `-3`, `J.rem(-7, 2)` is `-1`). A zero
   divisor, or `i32::MIN` by `-1`, is an error (`"J.div(1, 0) has no i32 answer"`). Luau's own `//`
@@ -76,9 +88,19 @@ or a `ctx` reader reads (`numbers::arg`).
 ## Order (L7)
 
 Nothing a script hands over may hang on Luau's hash order. Records cross with their keys sorted
-and the declared hooks are read in `vm::HOOKS` order; in the source, the lint refuses what would
-iterate a hash (`pairs`, `next`, a generic `for` over anything but `ipairs(…)`) and `table.sort`.
-No randomness reaches a script: every random draw is the engine's (CLAUDE.md rule 4).
+and the declared hooks are read in `vm::HOOKS` order. In the source, the lint refuses what would
+iterate a hash (`pairs`, `next`, `table.foreach`, a generic `for` over anything but `ipairs(…)`,
+and `ipairs` anywhere but right after `in`, since a name bound over it could hand the `for` a table,
+which Luau iterates in the hash's order) and `table.sort`; the sandbox removes the library
+functions among them. No randomness reaches a script: every random draw is the engine's (CLAUDE.md
+rule 4).
+
+Two ways a script's answer could still differ from run to run are not closed here, and are left to
+part 6's bindings and part 8's `luau-analyze`: `tostring` of a table, a function or a userdata (and
+so string interpolation of one) gives its address, and a weak table (`__mode`) loses its entries
+whenever the collector runs, which hangs on everything the thread's VM did before. Nor does any
+memory cap stop a script that builds one huge string or table without looping (`string.rep`): L5's
+cap counts interrupts, not bytes.
 
 ## Statelessness (L8)
 
@@ -89,7 +111,7 @@ fresh: a counter a hook increments reads the same on every call. Re-running the 
 price: in a release build, a hook called through `load_card`'s closure (the chunk run, the hook
 called, its return walked and its effects built) took about 10 µs for a hook with one effect and no
 reader, and 15 µs for one with two readers and two effects (measured for #558 on a 4-core runner).
-Building a sandbox, once per thread, took about 0.2 ms.
+Building a sandbox, once per thread, took under half a millisecond.
 
 ## How a hook is called
 
@@ -123,11 +145,12 @@ return {
   effect with the engine's own verb from `jackioh_engine::effects` (CLAUDE.md rule 5).
 - A reader is a method of `ctx`: `ctx:controller()`, `ctx:hero_of(player)`. Its arguments are
   walked like anything else that crosses.
-- A hook may call a reader that runs another card's hook: the thread's VM, `Lua::scope` and the
-  budget stack all take a nested call (`ctx:effects_of(card, face, hook)` tests it).
+- A hook may call a reader that runs another card's hook: the thread's VM and `Lua::scope` both
+  take a nested call, which spends the outer call's budget (`ctx:effects_of(card, face, hook)` tests
+  it).
 - A hook that fails panics with its error, which names its card, face and hook: an engine `Hook`
-  has no error to return. A panic in a nested hook unwinds through the outer one, so the outer call
-  panics too.
+  has no error to return. A panic in a nested hook unwinds through the outer one, which `pcall`
+  cannot stop, so the outer call panics too.
 
 ## Compiling
 
@@ -140,8 +163,9 @@ The lint (`lint.rs`, L6, L7) is a pure function over the source: a lexer that kn
 comments, strings (interpolated ones included) and operators, then a pass over the tokens. A name
 after `.`, `:` or `::` is a field, a method or a type and is never refused. It refuses:
 
-- `pairs`, `next` (a table key spelled `next = …` included; write `["next"]`), `table.sort`, and a
-  generic `for … in` over anything but `ipairs(…)`;
+- `pairs`, `next` (a table key spelled `next = …` included; write `["next"]`), `table.sort`,
+  `table.foreach`, a generic `for … in` over anything but `ipairs(…)`, and `ipairs` anywhere but
+  right after `in` (`local each = ipairs`, a parameter or a key named `ipairs`);
 - the `/` and `^` operators (and `/=`, `^=`), and every `math.` member except `floor`, `ceil`,
   `max`, `min`, `abs`, `clamp` and `sign` (`math.pi` and `math.huge` included), and `math` used
   bare;
@@ -158,5 +182,5 @@ rest.
 ## Tests
 
 `tests/host.rs`, over the card-shaped modules in `tests/fixtures/*.luau` (none is a real card):
-the sandbox, the interrupt's cap, the walk, `J.div` and `J.rem`, statelessness, nesting, two
-threads, the loader and the lint. `cargo test -p jackioh-luau`.
+the sandbox, the interrupt's cap (nested calls included), the walk, `J.div` and `J.rem`,
+statelessness, nesting, two threads, the loader and the lint. `cargo test -p jackioh-luau`.

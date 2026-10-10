@@ -14,7 +14,7 @@ use mlua::{Error, Table, Value};
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value as Json};
 
-use crate::config::LUAU_VALUE_DEPTH;
+use crate::config::{LUAU_VALUE_DEPTH, LUAU_VALUE_NODES};
 use crate::{LuauError, Site};
 
 /// Why a value could not cross: a number that is not an `i32`, or a value of another kind no Rust
@@ -52,13 +52,15 @@ pub fn number_to_i32(value: &Value) -> Result<i32, String> {
     }
 }
 
-/// The walk: a value from Luau as JSON, or why it cannot cross.
-fn walk(value: &Value, depth: usize) -> Result<Json, Refusal> {
+/// The walk: a value from Luau as JSON, or why it cannot cross. `nodes` counts the values and keys
+/// walked so far, against `LUAU_VALUE_NODES`.
+fn walk(value: &Value, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     if depth > LUAU_VALUE_DEPTH {
         return Err(Refusal::Value(format!(
             "a value nested deeper than {LUAU_VALUE_DEPTH} tables cannot cross into Rust (L6)"
         )));
     }
+    count(nodes)?;
     match value {
         Value::Nil => Ok(Json::Null),
         Value::Boolean(b) => Ok(Json::Bool(*b)),
@@ -69,7 +71,7 @@ fn walk(value: &Value, depth: usize) -> Result<Json, Refusal> {
                 "a string that is not UTF-8 cannot cross into Rust (L6)".into(),
             )),
         },
-        Value::Table(table) => walk_table(table, depth),
+        Value::Table(table) => walk_table(table, depth, nodes),
         other => Err(Refusal::Value(format!(
             "a value of type {} cannot cross into Rust (L6)",
             other.type_name()
@@ -77,12 +79,24 @@ fn walk(value: &Value, depth: usize) -> Result<Json, Refusal> {
     }
 }
 
+/// One more value or key walked, or the refusal of a value that holds too many.
+fn count(nodes: &mut usize) -> Result<(), Refusal> {
+    *nodes += 1;
+    if *nodes > LUAU_VALUE_NODES {
+        return Err(Refusal::Value(format!(
+            "a value of more than {LUAU_VALUE_NODES} values and keys cannot cross into Rust (L6)"
+        )));
+    }
+    Ok(())
+}
+
 /// A table as a list, a record or, empty, `{}`.
-fn walk_table(table: &Table, depth: usize) -> Result<Json, Refusal> {
+fn walk_table(table: &Table, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     let refused = |error: Error| Refusal::Value(error.to_string());
     let mut keys = Vec::new();
     for pair in table.pairs::<Value, Value>() {
         let (key, _) = pair.map_err(refused)?;
+        count(nodes)?;
         keys.push(key);
     }
     if keys.is_empty() {
@@ -97,7 +111,7 @@ fn walk_table(table: &Table, depth: usize) -> Result<Json, Refusal> {
         let mut items = Vec::with_capacity(len);
         for index in 1..=len {
             let item: Value = table.raw_get(index).map_err(refused)?;
-            items.push(walk(&item, depth + 1)?);
+            items.push(walk(&item, depth + 1, nodes)?);
         }
         return Ok(Json::Array(items));
     }
@@ -121,14 +135,14 @@ fn walk_table(table: &Table, depth: usize) -> Result<Json, Refusal> {
     let mut record = Map::new();
     for name in names {
         let item: Value = table.raw_get(name.as_str()).map_err(refused)?;
-        record.insert(name, walk(&item, depth + 1)?);
+        record.insert(name, walk(&item, depth + 1, nodes)?);
     }
     Ok(Json::Object(record))
 }
 
 /// A hook's value as JSON, or the error that names its hook (and, for a number, the number).
 pub fn to_json(value: &Value, site: Site) -> Result<Json, LuauError> {
-    walk(value, 0).map_err(|refusal| match refusal {
+    walk(value, 0, &mut 0).map_err(|refusal| match refusal {
         Refusal::Number(value) => LuauError::Number { site, value },
         Refusal::Value(message) => LuauError::Hook { site, message },
     })
@@ -137,7 +151,7 @@ pub fn to_json(value: &Value, site: Site) -> Result<Json, LuauError> {
 /// A host function's argument, walked and then read as `T`. Every reader and `J` function reads its
 /// arguments through this, so they cross by the same rules as a hook's return.
 pub fn arg<T: DeserializeOwned>(value: Value) -> mlua::Result<T> {
-    let json = walk(&value, 0).map_err(Error::runtime)?;
+    let json = walk(&value, 0, &mut 0).map_err(Error::runtime)?;
     serde_json::from_value(json).map_err(Error::runtime)
 }
 

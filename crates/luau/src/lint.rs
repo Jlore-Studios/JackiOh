@@ -1,9 +1,11 @@
 //! The lint (#442 L6, L7): what a script may not write, refused before it compiles. The sandbox
 //! takes some things away (L5), and the walk refuses a fraction when a hook hands one over (L6); the
 //! lint refuses, in the source, what would make a script's answer hang on something else: an order
-//! that is the hash's (`pairs`, `next`, a generic `for` over anything but `ipairs(…)`, L7), sorting
-//! (`table.sort`, L7), the operators and `math` functions that make fractions (L6), and the names
-//! the sandbox removed (L5).
+//! that is the hash's (`pairs`, `next`, `table.foreach`, a generic `for` over anything but
+//! `ipairs(…)`, and `ipairs` anywhere else, so no name bound over it can hand a `for` a table, L7),
+//! sorting (`table.sort`, L7), the operators and `math` functions that make fractions (L6), and the
+//! names the sandbox removed (L5). The sandbox removes the library functions among them too, so a key
+//! the lint cannot read finds nothing.
 //!
 //! A pure function over the source: a small lexer that knows Luau's comments, strings (interpolated
 //! ones included) and operators, then a pass over the tokens. A name after `.`, `:` or `::` is a
@@ -22,7 +24,10 @@ pub enum Rule {
     Pairs,
     Next,
     TableSort,
+    TableForeach,
     GenericFor,
+    /// `ipairs` anywhere but right after a generic `for`'s `in`.
+    Ipairs,
     Slash,
     Caret,
     /// A `math` function outside `MATH_ALLOWED`, or `""` for `math` itself used bare.
@@ -36,9 +41,15 @@ impl fmt::Display for Rule {
             Rule::Pairs => f.write_str("`pairs` is refused: its order is the hash's (L7); use `ipairs`"),
             Rule::Next => f.write_str("`next` is refused: its order is the hash's (L7)"),
             Rule::TableSort => f.write_str("`table.sort` is refused: it is not a stable sort (L7)"),
+            Rule::TableForeach => {
+                f.write_str("`table.foreach` is refused: its order is the hash's (L7); use `ipairs`")
+            }
             Rule::GenericFor => {
                 f.write_str("a generic `for` is refused unless it runs over `ipairs(…)` (L7)")
             }
+            Rule::Ipairs => f.write_str(
+                "`ipairs` is refused but as `for … in ipairs(…)`: a name bound over it could hand the `for` a table, whose order is the hash's (L7)",
+            ),
             Rule::Slash => f.write_str("`/` is refused: it makes fractions (L6); use `J.div`"),
             Rule::Caret => f.write_str("`^` is refused: it makes fractions (L6)"),
             Rule::Math(name) if name.is_empty() => f.write_str(
@@ -75,7 +86,9 @@ pub fn lint(file: &str, source: &str) -> Vec<Finding> {
         let rule = match token {
             Token::Op("/" | "/=") => Some(Rule::Slash),
             Token::Op("^" | "^=") => Some(Rule::Caret),
-            Token::Name(name) if !follows_access(&tokens, at) => name_rule(name, &tokens[at + 1..]),
+            Token::Name(name) if !follows_access(&tokens, at) => {
+                name_rule(name, at.checked_sub(1).map(|k| tokens[k].0), &tokens[at + 1..])
+            }
             _ => None,
         };
         if let Some(rule) = rule {
@@ -94,14 +107,19 @@ fn follows_access(tokens: &[(Token<'_>, u32)], at: usize) -> bool {
     at > 0 && matches!(tokens[at - 1].0, Token::Op("." | ":" | "::"))
 }
 
-/// The rule a free name breaks, if any; `rest` is every token after it.
-fn name_rule(name: &str, rest: &[(Token<'_>, u32)]) -> Option<Rule> {
+/// The rule a free name breaks, if any; `before` is the token before it and `rest` every token
+/// after it.
+fn name_rule(name: &str, before: Option<Token<'_>>, rest: &[(Token<'_>, u32)]) -> Option<Rule> {
     let next = |k: usize| rest.get(k).map(|(token, _)| *token);
     match name {
         "pairs" => Some(Rule::Pairs),
         "next" => Some(Rule::Next),
+        "ipairs" if before != Some(Token::Name("in")) => Some(Rule::Ipairs),
         "table" if next(0) == Some(Token::Op(".")) && next(1) == Some(Token::Name("sort")) => {
             Some(Rule::TableSort)
+        }
+        "table" if next(0) == Some(Token::Op(".")) && next(1) == Some(Token::Name("foreach")) => {
+            Some(Rule::TableForeach)
         }
         "math" => match (next(0), next(1)) {
             (Some(Token::Op(".")), Some(Token::Name(member))) if MATH_ALLOWED.contains(&member) => None,

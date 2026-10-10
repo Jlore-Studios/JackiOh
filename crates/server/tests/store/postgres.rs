@@ -1292,3 +1292,75 @@ async fn app_live_matches_backs_matches_live_and_an_open_room_is_not_one() {
     assert_eq!(ids, vec![json!(match_id)]);
     ctx.finish().await;
 }
+
+// ---------------------------------------------------------------------------
+// R1435: the usernames `seed-accounts` gives its accounts
+// ---------------------------------------------------------------------------
+
+mod r1435_seed_accounts {
+    use super::*;
+    use jackioh_server::cli::seed_accounts::name_seeded_account;
+
+    /// One profile's username columns as the database holds them: base, key, tag, whether the
+    /// prompt is answered, and whether no change has started a cooldown.
+    async fn username_row(admin: &PgPool, profile_id: &str) -> (String, String, Option<i32>, bool, bool) {
+        let row = sqlx::query(
+            "select username_base, username_key, username_tag, username_prompted,
+                    username_changed_at is null as no_cooldown
+               from public.profiles where id = $1",
+        )
+        .bind(uid(profile_id))
+        .fetch_one(admin)
+        .await
+        .expect("the profile's username");
+        (
+            row.try_get("username_base").expect("username_base"),
+            row.try_get("username_key").expect("username_key"),
+            row.try_get("username_tag").expect("username_tag"),
+            row.try_get("username_prompted").expect("username_prompted"),
+            row.try_get("no_cooldown").expect("no_cooldown"),
+        )
+    }
+
+    #[tokio::test]
+    async fn r1435_seed_accounts_names_its_accounts_bare_and_prompted() {
+        let Some(ctx) = setup().await else { return };
+        let first = ctx.active_profile().await;
+        let second = ctx.active_profile().await;
+        // Each starts as its sign-up's default, owing the prompt (R1434).
+        assert_eq!(
+            username_row(&ctx.admin, &first).await,
+            ("Player".to_string(), "player".to_string(), Some(1), false, true)
+        );
+
+        let mut conn = ctx.admin.acquire().await.expect("a connection");
+        name_seeded_account(&mut conn, &first, 1)
+            .await
+            .expect("the first account named");
+        name_seeded_account(&mut conn, &second, 2)
+            .await
+            .expect("the second account named");
+        // A second run writes the same name over itself.
+        name_seeded_account(&mut conn, &first, 1)
+            .await
+            .expect("the first account named again");
+        drop(conn);
+
+        assert_eq!(
+            username_row(&ctx.admin, &first).await,
+            ("Fixture1".to_string(), "fixture1".to_string(), None, true, true)
+        );
+        assert_eq!(
+            username_row(&ctx.admin, &second).await,
+            ("Fixture2".to_string(), "fixture2".to_string(), None, true, true)
+        );
+        // And the store reads it as `/api/auth/me` does: no prompt owed, a change allowed at once.
+        let profile = once!(ctx.db, Some(first.as_str()), |tx| tx.profiles_get_by_id(&first))
+            .expect("profiles.getById");
+        let profile = must(profile, "the seeded profile");
+        assert_eq!(profile.username(), "Fixture1");
+        assert!(profile.username_prompted);
+        assert_eq!(profile.username_changed_at, None);
+        ctx.finish().await;
+    }
+}
