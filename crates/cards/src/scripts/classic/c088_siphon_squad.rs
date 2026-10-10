@@ -86,8 +86,9 @@ pub fn script() -> CardScripts {
 }
 
 // SPEC §8.6 (R403): aura works while face-down, revealed at start of turn (R686). Enemy units have
-// −X Attack floored at 0, hidden until revealed (R33); preview shows X (§10.8, R280). Multiplier
-// is tuned via param() (R386). Radiant sets attack to 0 after all other layers (§10.4, R63).
+// −X Attack floored at 0; the opponent's view shows the drop and never names the card (R33); preview
+// shows X (§10.8, R280). Multiplier is tuned via param() (R386). Radiant sets attack to 0 after all
+// other layers (§10.4, R63).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

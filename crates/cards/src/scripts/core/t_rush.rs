@@ -9,8 +9,9 @@
 //!                  CARD (#75 Infinite Reserves, a copy per R34/R57) leaving a hand or library other than
 //!                  by being drawn or played, burning included: the engine's `moveToZone`, for every token.
 //! Radiant form: §7 prints 6/6, Rush, Cleave (R275), catalog data on `def.radiant`, so the radiant
-//! Script is the base Script itself. Cleave is §4.4 step 10's. The "stat overrides" bullet lives in
-//! #58, #75 and #95, not here: a `statsOverride` is instance data (§10.1) that layer 1 reads first.
+//! Script is the base Script itself. Cleave is §4.4 step 10's. The "stat overrides" bullet is not
+//! here: #95 summons this token's Radiant face, #58's aura and #75's flag are theirs, and a
+//! `statsOverride` is instance data (§10.1) that layer 1 reads first.
 
 use jackioh_engine::prelude::*;
 

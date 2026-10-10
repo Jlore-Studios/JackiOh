@@ -7,8 +7,8 @@
 //! card still costs exactly X); on Radiant a PLAYER-scoped `comboDraw` rider read once per card played
 //! (§10.5 step 5); and a delayed effect at the controller's end phase that exiles the hand, after the
 //! end-of-turn trap window (R68 order) and before cleanup, so the modifiers are still live (R62). Its
-//! `resume` step is the one registration (R126); `radiant` persists in every zone (R78), so the Radiant
-//! step runs even with no instance left (R127). R662: the Radiant rider lights every hand card once a
+//! `resume` step is the one registration (R126); the stored `Resume` names the script and the face
+//! (`radiant` persists in every zone, R78) and re-enters even with no instance left (R127). R662: the Radiant rider lights every hand card once a
 //! card was played this turn; the base face grants a discount, not a condition (cost is on the faces, R280).
 
 use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};

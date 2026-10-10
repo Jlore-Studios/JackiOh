@@ -67,8 +67,8 @@ pub fn script() -> CardScripts {
 }
 
 // C #6 Cloaked Toe Cracker — SPEC §8.6 row 6, BUILD M9 Classic row C 6: your Traps and Field Traps in hand
-// cost (0) while it is on the field (R65) and return to their cost when it leaves; the opponent's hand costs
-// show −1 (R177); radiant 6/8: after you play a Trap (a cast included, R70) gain 1 mana this turn, never
+// cost (0) while it is on the field (R65) and return to their cost when it leaves; the opponent's view of your
+// changed hand costs shows −1 (R177); radiant 6/8: after you play a Trap or Field Trap (a cast included, R70) gain 1 mana this turn, never
 // naming the face-down trap (R33, R97); its tuned number (radiant mana) reads via `param()` (R386).
 //
 // The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.

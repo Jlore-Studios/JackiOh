@@ -1,8 +1,8 @@
 //! The Glitch Easter egg (SPEC §7, R673–R679).
 //!
 //!   - `count_system_play` (R673): a play of a "… in the System" card (`SYSTEM_CARD_DEF_IDS`), by either
-//!     player, adds one to `state.system_plays`; `catalog::pick_generated` then makes each generated
-//!     card Glitch with odds n/10000.
+//!     player, adds one to `state.system_plays`; `catalog::pick_generated` then makes each card
+//!     generated into a hand or a deck Glitch with odds n/10000.
 //!   - `glitch` (R676): one draw of the match rng picks one of `GLITCH_OUTCOMES`; a `glitched` event names it.
 //!     reset  — the match starts again from `create_game`'s decks (`reset_match`, run by `reduce` once
 //!     the action has settled, so nothing of the old game is still resolving);
