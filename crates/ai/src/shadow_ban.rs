@@ -59,6 +59,22 @@
 /// and both passes — its generation-0 `neverPlayed` row measured 4 affordable turns, far under the
 /// flag's bar — and pass 2 watched the AI cast it 145 times at easy for +2.2 mean eval delta. Two
 /// mana for three cards is exactly the card advantage the mirror's tempo race runs on.
+///
+/// Generation 3 removed `core-094` (Genn's Greed): the sweep of record cleared it — its
+/// `neverPlayed` row measured a card whose draw-and-exile read as pure loss to the eval that
+/// priced it, not a misplay. The eval already counts what the cast moves: the drawn two-costs land
+/// in hand (`hand_card`), the exiled odd-costs leave library and hand (`library_card`,
+/// `hand_card`), so a determinized world shows the whole trade and the beam casts it only when the
+/// dealt deck's two-cost density makes it pay.
+///
+/// Generation 4 removed `core-099` (Craft a Card): the sweep of record cleared it at both tiers,
+/// and its `neverPlayed` flag names a structural blind spot rather than a misplay — the two
+/// Discover answers sit between the cast and the fused card, so the beam's open-prompt states read
+/// as a spent spell with no payoff and prune the line before the 0-cost fused unit lands (a sweep
+/// on this build still shows 0 plays in 16 affordable turns). It is not in `UNBANNED_PREFER`: dealt
+/// at stock weight it shows up in a few decks, the mulligan returns it like any other 4-cost, and
+/// the never-played slot costs a fraction of a draw — the ban it came off measured a deal the
+/// beam's shape makes dead, not a card the AI mishandles.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-042",
@@ -75,14 +91,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-078",
         "neverPlayed: easy: affordable in hand on 31 turns, never played",
-    ),
-    (
-        "core-094",
-        "neverPlayed: hard: affordable in hand on 13 turns, never played",
-    ),
-    (
-        "core-099",
-        "neverPlayed: easy: affordable in hand on 21 turns, never played; hard: affordable in hand on 13 turns, never played",
     ),
 ];
 
@@ -382,8 +390,12 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// the records show the AI losing the games it casts Fauci in, so it deals at
 /// its measured weight like any other card. `core-057` joins them in
 /// generation 2 on the sweep's numbers (played 145 times at easy, +2.2 mean
-/// eval delta) — card advantage is what the tempo mirror rewards.
-pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093"];
+/// eval delta) — card advantage is what the tempo mirror rewards. `core-094`
+/// joins them in generation 3: the sweep cleared it, and the AI meets the card
+/// the table now teaches. `core-099` is not preferred either: the beam prunes
+/// its Discover chain before the fused payoff lands (the generation-4 note
+/// above the ban table), so preferring it would only deal a dead card more.
+pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093", "core-094"];
 pub const UNBANNED_PREFER_BY: f64 = 3.0;
 
 /// `DEALT_Q` is measured against this: the candidate's share of the records the
