@@ -123,6 +123,7 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     /// A good play and a bad one at the same price: a 4/4 for (1) and a 1/1 for (1), so the judge's
