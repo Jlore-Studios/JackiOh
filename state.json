@@ -4499,9 +4499,12 @@
         "sha": "9d225969ab04c94271bb4ff2942c0d18a1078a67"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-10T05:36:31Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 621,
       "kind": "review",
       "pending_request": false,
