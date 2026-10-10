@@ -8340,9 +8340,9 @@
   "suggest": {
     "asks": [],
     "last_run": "2026-10-10T20:43:38Z",
-    "provider": "agy",
+    "provider": null,
     "requested": false,
-    "run_id": "38084771566",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
