@@ -378,8 +378,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // The thirteen numbers patch v0.3.3 marked (issue #556), and the Meditative set's own, which
         // §8.8 tunes "on the base face only": M #76's marks.
-        let (meditative, shipped): (Vec<String>, Vec<String>) =
-            base_only.into_iter().partition(|entry| entry.starts_with("meditative-"));
+        let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
+            .into_iter()
+            .partition(|entry| entry.starts_with("meditative-"));
         assert_eq!(shipped.len(), 13, "{shipped:#?}");
         assert_eq!(meditative, vec!["meditative-076 marks".to_string()]);
     }

@@ -272,7 +272,9 @@ fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_an
     let cards = embiggen_cards();
     // The case the ruling is about: A below (4) and B at (4)+, so the discount reaches B alone.
     assert!(
-        cards.iter().any(|(_, base, embiggen)| *base < 4 && *embiggen >= 4),
+        cards
+            .iter()
+            .any(|(_, base, embiggen)| *base < 4 && *embiggen >= 4),
         "the catalog holds an embiggen card with A below (4) and B at (4)+"
     );
     // Every embiggen card is driven: each price is reached exactly when it is (4)+, so M #81

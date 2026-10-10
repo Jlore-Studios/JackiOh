@@ -5191,12 +5191,18 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             match MEDITATIVE_PRINTED.iter().find(|(row, _)| row == index) {
                 None => wrong.push(format!("Meditative token {index} has no row")),
                 Some((_, rarity)) if printed.as_deref() != Some(*rarity) => {
-                    wrong.push(format!("Meditative token {index} prints {printed:?}, not {rarity}"));
+                    wrong.push(format!(
+                        "Meditative token {index} prints {printed:?}, not {rarity}"
+                    ));
                 }
                 Some(_) => {}
             }
         }
-        assert_eq!(wrong, Vec::<String>::new(), "every present token prints its row's rarity");
+        assert_eq!(
+            wrong,
+            Vec::<String>::new(),
+            "every present token prints its row's rarity"
+        );
         // No Meditative card prints one: a printed rarity is a token's.
         let cards: Vec<String> = entries()
             .into_iter()
