@@ -51,13 +51,15 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP};
+use crate::config::{
+    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
+};
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod,
-    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun, WouldCounterHook, attack_mod_hook,
-    aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
+    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, WouldCounterHook,
+    attack_mod_hook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1132,6 +1134,8 @@ fn combine_objects(records: &[Script]) -> Script {
         tribute_when: None,
         would_counter: None,
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
+        turn_hook_extra: None,
+        cry_death_extra: None,
     }
 }
 
@@ -1199,6 +1203,8 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
         plague_multiplier: None,
         echo_x: None,
         would_counter: None,
+        turn_hook_extra: None,
+        cry_death_extra: None,
         triggers: namespaced(&script.triggers),
         hand_triggers: namespaced(&script.hand_triggers),
         deck_triggers: namespaced(&script.deck_triggers),
@@ -1364,6 +1370,35 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
                             self_: &card,
                             radiant: args.radiant,
                         })
+                }
+            })
+    }))
+}
+
+/// R820: a trigger multiplier (Meditative #9, #10). Multipliers never stack, so a fused card carrying
+/// two such texts gives the higher of its ingredients' extras, not their sum, as two cards on the field
+/// do. Each hook is asked about the fused card at its own ingredient's price (`as_ingredient`, R102).
+fn fused_highest_extra(
+    scripts: &[&Script],
+    read: fn(&Script) -> Option<TriggerExtraHook>,
+) -> Option<TriggerExtraHook> {
+    let hooks: Vec<Option<TriggerExtraHook>> = scripts.iter().map(|script| read(script)).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(read_hook(move |args| {
+        hooks
+            .iter()
+            .enumerate()
+            .fold(TRIGGER_EXTRA_NONE, |highest, (index, extra)| match extra {
+                None => highest,
+                Some(extra) => {
+                    let card = crate::scripts::as_ingredient(args.self_, index);
+                    highest.max(extra(HookArgs {
+                        state: args.state,
+                        self_: &card,
+                        radiant: args.radiant,
+                    }))
                 }
             })
     }))
@@ -1576,6 +1611,8 @@ fn fused_script(
     combined.cry = fused_cry(&faces);
     combined.plague_multiplier = fused_plague_multiplier(&scripts);
     combined.echo_x = fused_echo_x(&scripts);
+    combined.turn_hook_extra = fused_highest_extra(&scripts, |script| script.turn_hook_extra.clone());
+    combined.cry_death_extra = fused_highest_extra(&scripts, |script| script.cry_death_extra.clone());
     combined
 }
 

@@ -11090,6 +11090,185 @@
       "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     }
   },
+  "meditative-009": {
+    "id": "meditative-009",
+    "index": "9",
+    "name": "Joint Filing",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "extra",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+    }
+  },
+  "meditative-010": {
+    "id": "meditative-010",
+    "index": "10",
+    "name": "Double Counting",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "extra",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+    }
+  },
+  "meditative-011": {
+    "id": "meditative-011",
+    "index": "11",
+    "name": "Double Header",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 53,
+    "base": {
+      "keywords": [],
+      "text": "The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+    }
+  },
+  "meditative-012": {
+    "id": "meditative-012",
+    "index": "12",
+    "name": "Fear Mongerer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 15,
+    "base": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Trigger your End of turn effects."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Trigger your End of turn effects {times|time|times}."
+    }
+  },
+  "meditative-013": {
+    "id": "meditative-013",
+    "index": "13",
+    "name": "Gatling Pea",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "growth",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 2
+        }
+      ],
+      "text": "Armor 2\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 4
+        }
+      ],
+      "text": "Armor 4\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
+    }
+  },
   "meditative-014": {
     "id": "meditative-014",
     "index": "14",

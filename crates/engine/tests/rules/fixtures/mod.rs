@@ -34,6 +34,7 @@ pub mod prompts;
 pub mod quests;
 pub mod rng_child;
 pub mod scripts;
+pub mod trigger_multipliers;
 pub mod turn;
 pub mod twice_forward;
 pub mod validator_loadouts;

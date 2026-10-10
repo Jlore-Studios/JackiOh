@@ -71,6 +71,7 @@ pub mod transform;
 pub mod translate;
 pub mod tune;
 pub mod turn_end;
+pub mod turn_hooks;
 
 pub use add_to_hand::*;
 pub use after_check::*;
@@ -136,6 +137,7 @@ pub use transform::*;
 pub use translate::*;
 pub use tune::*;
 pub use turn_end::*;
+pub use turn_hooks::*;
 
 // C+ #29's two numbers, which TS's `effects/lastBoard.ts` stated and this barrel exported; they live
 // in `crate::config` now (CLAUDE.md rule 9, SURFACE §6.4).

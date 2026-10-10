@@ -1275,6 +1275,23 @@
     "meditative-007": { // Introspection
       cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
     },
+    "meditative-009": { // Joint Filing
+      cast: { voice: "sapi-bureaucrat", text: "Filed twice, just to be sure." },
+    },
+    "meditative-010": { // Double Counting
+      cast: { voice: "sapi-bureaucrat", text: "One, two, and one, two again." },
+    },
+    "meditative-011": { // Double Header
+      cast: { voice: "announcer", text: "Two games, one ticket!" },
+    },
+    "meditative-012": { // Fear Mongerer
+      play: { voice: "hustler", text: "Be afraid. The end is near." },
+      death: { voice: "hustler", text: "Nothing to fear after all." },
+    },
+    "meditative-013": { // Gatling Pea
+      play: { voice: "kid", text: "Pea shooter, locked and loaded!" },
+      death: { voice: "kid", text: "Out of peas..." },
+    },
     "meditative-014": { // Prime Time
       cast: { voice: "prof", text: "Two, three, five, seven. Indivisible." },
     },
