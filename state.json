@@ -4736,8 +4736,13 @@
     "what": "build #602 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-10T00:36:12Z",
-    "notes": [],
+    "at": "2026-10-10T00:46:59Z",
+    "notes": [
+      "#623: typed it Task",
+      "#622: typed it Task",
+      "#621: typed it Bug",
+      "#620: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
