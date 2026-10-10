@@ -4442,7 +4442,9 @@
     },
     "642": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6099092550"
+      ],
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -4475,9 +4477,7 @@
       "source": "request",
       "started_at": "2026-10-10T17:12:38Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6099092550"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "gemini"
