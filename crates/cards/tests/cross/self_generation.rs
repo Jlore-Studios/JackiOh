@@ -44,6 +44,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "classicplus-073",
         "Call to Chaos (Classic+ Edition) names the Call to Chaos pool (R28, rule 3)",
     ),
+    (
+        "meditative-081",
+        "Deadman's Hand shuffles \"a copy of each card in your hand, and of this\" into your deck (rule 4)",
+    ),
 ];
 
 /// The seeds each card is played under.
