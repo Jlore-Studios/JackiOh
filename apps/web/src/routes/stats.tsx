@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
+import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
@@ -696,7 +697,7 @@ export default function StatsRoute(): ReactElement {
               <input
                 type="search"
                 className="stats-search-input"
-                placeholder="Search player by display name…"
+                placeholder="Search player by username…"
                 value={playerSearch}
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
@@ -731,13 +732,15 @@ export default function StatsRoute(): ReactElement {
                   </thead>
                   <tbody>
                     {playersList.map((p) => {
-                      const name = p.displayName ?? `Player ${p.profileId.slice(0, 8)}`;
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
                       const favCardName = topCard ? (CATALOG[topCard.id]?.name ?? topCard.id) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">
-                          <td className="stats-td stats-td--player-name">{name}</td>
+                          {/* R1436: the username, never the profile id the row is keyed by. */}
+                          <td className="stats-td stats-td--player-name">
+                            <Username name={p.username} />
+                          </td>
                           <td className="stats-td">{p.games}</td>
                           <td className="stats-td">{rate}</td>
                           <td className="stats-td">{favCardName}</td>

@@ -76,11 +76,13 @@ use crate::db::store::{
     PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
     SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice,
-    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
 use crate::ranked::season::{ResetChange, ResetPlayer};
+use crate::username::{render_username, username_key};
 
 /// The open transaction every method here runs in: what `Tx::Pg` holds.
 pub type PgTx<'a> = Transaction<'a, Postgres>;
@@ -457,7 +459,11 @@ struct ProfileRow {
     current_match_id: Option<String>,
     created_at: OffsetDateTime,
     email: Option<String>,
-    display_name: Option<String>,
+    username_base: String,
+    username_key: String,
+    username_tag: Option<i32>,
+    username_changed_at: Option<OffsetDateTime>,
+    username_prompted: bool,
 }
 
 impl ProfileRow {
@@ -471,7 +477,11 @@ impl ProfileRow {
             current_match_id: uuid_text_or_null(row, "current_match_id")?,
             created_at: get(row, "created_at")?,
             email: get(row, "email")?,
-            display_name: get(row, "display_name")?,
+            username_base: get(row, "username_base")?,
+            username_key: get(row, "username_key")?,
+            username_tag: get(row, "username_tag")?,
+            username_changed_at: get(row, "username_changed_at")?,
+            username_prompted: get(row, "username_prompted")?,
         })
     }
 }
@@ -480,7 +490,8 @@ impl ProfileRow {
 macro_rules! profile_columns {
     () => {
         "p.id, p.status, p.rating, p.rating_deviation, p.rating_volatility,
-  p.current_match_id, p.created_at, u.email, p.display_name"
+  p.current_match_id, p.created_at, u.email, p.username_base, p.username_key, p.username_tag,
+  p.username_changed_at, p.username_prompted"
     };
 }
 
@@ -510,7 +521,11 @@ fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
         user_id: row.id.clone(),
         id: row.id,
         email: row.email.unwrap_or_default(),
-        display_name: Some(row.display_name),
+        username_base: row.username_base,
+        username_key: row.username_key,
+        username_tag: row.username_tag.map(i64::from),
+        username_changed_at: row.username_changed_at.map(ms_of),
+        username_prompted: row.username_prompted,
         status,
         rating: row.rating,
         // R603's Glicko triple, carried on the row since migration 0022.
@@ -1818,19 +1833,19 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
 pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Result<Profile, StoreError> {
     let user_id = input.user_id.as_str();
     let (rating, at) = (input.rating, input.at);
-    // TS `displayName ?? null`: absent and null both write NULL.
-    let display_name = input.display_name.as_ref().and_then(Option::as_deref);
     run_as(t, Some(user_id)).await?;
+    // R1434: no username is written here. Migration 0028's `profiles_assign_default_username`
+    // trigger names every new row the lowest free `Player#n`, under the same lock a claim of
+    // `Player` takes, for this insert and for `app.handle_new_user`'s alike.
     sqlx::query(concat!(
-        "insert into public.profiles (id, status, rating, created_at, display_name)
+        "insert into public.profiles (id, status, rating, created_at)
            values ($1::uuid, 'pending', $2::double precision, ",
         ts!("$3"),
-        ", $4::text)"
+        ")"
     ))
     .bind(user_id)
     .bind(rating)
     .bind(at)
-    .bind(display_name)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -1876,15 +1891,106 @@ pub async fn profiles_set_status(
     Ok(())
 }
 
-pub async fn profiles_set_display_name(
+/// R1434: one lock per username key, transaction-scoped like `ranked_lock_seasons`, so two claims
+/// of one key run one after the other and the second reads a table that holds the first. Migration
+/// 0028's `app.assign_default_username` takes the same lock on `player` before it names a new
+/// account, so a claim of `Player` and a sign-up never hand out one tag twice, and `seed-accounts`
+/// takes it before it names its accounts (`cli/seed_accounts.rs`).
+pub const USERNAME_LOCK_SQL: &str =
+    "select pg_advisory_xact_lock(hashtextextended('jackioh.username:' || $1::text, 0))";
+
+/// R1434's tag for a claim of key `$2` by profile `$1`: null while no other profile holds the bare
+/// name, else 1 when no other profile holds `#1`, else the lowest held tag whose successor nobody
+/// else holds, plus one: the lowest free tag. Every lookup is on the unique index's own expression,
+/// `(username_key, coalesce(username_tag, 0))`.
+const USERNAME_TAG_FOR_SQL: &str = "select case
+  when not exists (select 1 from public.profiles
+                    where username_key = $2::text and coalesce(username_tag, 0) = 0 and id <> $1::uuid)
+    then null
+  when not exists (select 1 from public.profiles
+                    where username_key = $2::text and coalesce(username_tag, 0) = 1 and id <> $1::uuid)
+    then 1::bigint
+  else (select min(held.username_tag)::bigint + 1 from public.profiles held
+         where held.username_key = $2::text and coalesce(held.username_tag, 0) >= 1 and held.id <> $1::uuid
+           and not exists (select 1 from public.profiles after_held
+                            where after_held.username_key = $2::text
+                              and coalesce(after_held.username_tag, 0) = held.username_tag + 1
+                              and after_held.id <> $1::uuid))
+end as tag";
+
+pub async fn profiles_username_tag_for(
     t: &mut PgTx<'_>,
     profile_id: &str,
-    display_name: Option<&str>,
-) -> Result<(), StoreError> {
+    key: &str,
+) -> Result<Option<i64>, StoreError> {
     run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set display_name = $2::text where id = $1::uuid")
+    let row = sqlx::query(USERNAME_TAG_FOR_SQL)
         .bind(profile_id)
-        .bind(display_name)
+        .bind(key)
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get(&row, "tag")
+}
+
+pub async fn profiles_claim_username(
+    t: &mut PgTx<'_>,
+    claim: &UsernameClaim,
+) -> Result<UsernameClaimOutcome, StoreError> {
+    let profile_id = claim.profile_id.as_str();
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(USERNAME_LOCK_SQL)
+        .bind(&claim.key)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    let row = sqlx::query("select username_changed_at from public.profiles where id = $1::uuid for update")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    let Some(row) = row else {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    };
+    let changed_at: Option<OffsetDateTime> = get(&row, "username_changed_at")?;
+    if let Some(changed_at) = changed_at.map(ms_of) {
+        let next_change_at = changed_at + claim.cooldown_ms;
+        if next_change_at > claim.at {
+            return Ok(UsernameClaimOutcome::Cooldown { next_change_at });
+        }
+    }
+    let tag = profiles_username_tag_for(t, profile_id, &claim.key).await?;
+    if tag != claim.expected_tag {
+        return Ok(UsernameClaimOutcome::Changed { tag });
+    }
+    let tag_column = tag.map(i32::try_from).transpose().map_err(|error| {
+        StoreError::from(format!(
+            "username tag {tag:?} does not fit profiles.username_tag: {error}"
+        ))
+    })?;
+    sqlx::query(concat!(
+        "update public.profiles
+            set username_base = $2::text, username_key = $3::text, username_tag = $4::int,
+                username_changed_at = ",
+        ts!("$5"),
+        ", username_prompted = true
+          where id = $1::uuid"
+    ))
+    .bind(profile_id)
+    .bind(&claim.base)
+    .bind(&claim.key)
+    .bind(tag_column)
+    .bind(claim.at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(UsernameClaimOutcome::Claimed { tag })
+}
+
+pub async fn profiles_answer_username_prompt(t: &mut PgTx<'_>, profile_id: &str) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    let done = sqlx::query("update public.profiles set username_prompted = true where id = $1::uuid")
+        .bind(profile_id)
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
@@ -4216,13 +4322,17 @@ pub async fn player_stats_list_public(
     // The SQL keeps TS's `$2::int`/`$3::int`, so the binds are `int4`.
     let limit = i32::try_from(options.limit).unwrap_or(i32::MAX);
     let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);
+    // R1436: the search matches the username by the key it clashes on (R1434), the NFKC case fold
+    // computed here in Rust, so no Postgres collation decides; `Max#3` finds `max#3`.
+    let term = term.map(username_key);
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select ps.profile_id, p.display_name, ps.stats, ps.updated_at
+        "select ps.profile_id, p.username_base, p.username_tag, ps.stats, ps.updated_at
          from public.player_stats ps
          join public.profiles p on p.id = ps.profile_id
          where ps.is_private = false
-           and ($1::text is null or (p.display_name is not null and position(lower($1::text) in lower(p.display_name)) > 0))
+           and ($1::text is null
+                or position($1::text in (p.username_key || coalesce('#' || p.username_tag::text, ''))) > 0)
          order by
            case when (ps.stats->>'games') ~ '^[0-9]+$' then (ps.stats->>'games')::bigint else 0 end desc,
            ps.updated_at desc,
@@ -4239,7 +4349,10 @@ pub async fn player_stats_list_public(
         .map(|row| -> Result<PublicPlayerSummary, StoreError> {
             Ok(to_public_player_summary(
                 &uuid_text(row, "profile_id")?,
-                get::<Option<String>>(row, "display_name")?.as_deref(),
+                &render_username(
+                    &get::<String>(row, "username_base")?,
+                    get::<Option<i32>>(row, "username_tag")?.map(i64::from),
+                ),
                 &stats_col(row, "stats"),
                 ms_of(get(row, "updated_at")?),
             ))

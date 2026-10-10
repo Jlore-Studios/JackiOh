@@ -412,6 +412,25 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::stats::get_players),
     ),
+    // api/username.rs (R1435)
+    (
+        "GET",
+        "/api/username/preview",
+        AuthLevel::Active,
+        h!(api::username::get_preview),
+    ),
+    (
+        "PUT",
+        "/api/username",
+        AuthLevel::Active,
+        h!(api::username::put_username),
+    ),
+    (
+        "POST",
+        "/api/username/skip",
+        AuthLevel::Active,
+        h!(api::username::post_skip),
+    ),
 ];
 
 /// TS `allRoutes()`.

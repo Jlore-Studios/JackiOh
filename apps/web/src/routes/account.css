@@ -32,3 +32,22 @@
 .tavern.app-shell .account-actions > button.account-delete__confirm:disabled {
   opacity: 0.55;
 }
+
+/* R1435: the username, set in the same brass-edged box as who is signed in, and the field (or the
+   cooldown's sentence) under it. */
+
+.tavern.app-shell .account-username {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(201, 149, 63, 0.3);
+  border-radius: 10px;
+  background: rgba(239, 224, 191, 0.05);
+}
+
+.tavern.app-shell .account-username__name {
+  color: var(--tavern-gold-pale);
+  font-family: var(--tavern-serif);
+  font-size: 19px;
+}
