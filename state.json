@@ -4504,6 +4504,11 @@
       "taken_asks": []
     },
     "646": {
+      "cleared": {
+        "at": "2026-10-10T16:56:07Z",
+        "by": "`claude` (strong)",
+        "sha": "cb28a0fe158fe6ffc152111515e2e5cb15ab6e8f"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-10T15:55:00Z",
