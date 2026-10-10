@@ -1,17 +1,5 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviour B53: the HUD mute toggle as a real browser lays
-// it out, inside the `.app-shell` every Game screen renders in (routes/dev/hotseat.tsx,
-// routes/match.tsx).
-//
-//   B53  Inside `.app-shell`, the toggle computes to a 44 px circle (border-radius 50%, padding 0)
-//        with its 22 x 22 icon, at desktop and phone widths.
-//
-// index.css's `.app-shell button` rule (0,1,1) once beat a bare `.audio-toggle` (0,1,0) and turned
-// the toggle into a padded, rounded square around a squashed 10 px icon; jsdom has no cascade, so
-// only a browser can see it. The support file imports index.css, as main.tsx does.
-//
-// Run it with:
-//   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
-//     --spec cypress/component/audio-toggle.cy.tsx
+// B53: browser layout of the HUD mute toggle inside the `.app-shell` every Game screen uses.
+// CSS specificity against `index.css` cannot be verified in jsdom.
 
 import AudioToggle from "../../../apps/web/src/audio/AudioToggle.tsx";
 

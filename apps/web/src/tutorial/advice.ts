@@ -1,15 +1,6 @@
-// The coach's advice when a lesson has nothing scripted for the moment: the next sensible move,
-// read off the human's view and legal actions (SPEC §9.10, R292, R293).
-//
-// A lesson's scripted steps cover the moments it teaches; between and after them the player still
-// has turns to play, and a new player left with a silent coach does nothing, loses, and learns
-// nothing. So a lesson's quiet stretches end in `yourMove`, which always names one move: the enemy
-// hero when the attacks on offer can finish it this turn; else the dearest legal card, never aimed at
-// your own side; else a trade that destroys an enemy unit and leaves yours standing; else the enemy
-// hero; else an attack that clears a Taunt out of the way, even at the attacker's cost; else the best
-// dent in that Taunt; else End turn. It is advice, never a rule (CLAUDE.md rule 7): every
-// move it names is one the engine already offered in `legalActions`, and it reads what the view
-// shows of each unit — attack, health, Armor, keywords — the way a player reads the board.
+// Coach advice for unscripted tutorial moments (SPEC §9.10, R292, R293). It recommends one legal
+// action from the human view—lethal, play, trade, hero, Taunt, then End turn—never a rule
+// (CLAUDE.md rule 7).
 
 import type { ActionBody, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -53,7 +44,6 @@ export function blow(from: UnitView, to: UnitView): number {
   return Math.max(0, from.attack - to.armor);
 }
 
-/** Every legal attack on an enemy unit, with what the view says it would do. */
 export function trades(ctx: CoachCtx): Trade[] {
   const out: Trade[] = [];
   for (const action of legalAttacksOf(ctx)) {
@@ -72,14 +62,13 @@ export function trades(ctx: CoachCtx): Trade[] {
 
 const size = (unit: UnitView): number => unit.attack + unit.health;
 
-/** A trade that destroys the enemy unit and leaves the attacker standing: the biggest target, the smallest attacker. */
+/** Favor the biggest destroyed target, then the smallest surviving attacker. */
 export function goodTrade(ctx: CoachCtx): Trade | undefined {
   const good = trades(ctx).filter((trade) => trade.kills && trade.survives);
   good.sort((a, b) => size(b.target) - size(a.target) || size(a.attacker) - size(b.attacker));
   return good[0];
 }
 
-/** The strongest legal attack on the enemy hero. */
 export function heroAttack(ctx: CoachCtx): { action: Attack; attacker: UnitView } | undefined {
   const hero = heroTargetId(ctx.view, "opponent");
   const options = legalAttacksOf(ctx)
@@ -90,20 +79,15 @@ export function heroAttack(ctx: CoachCtx): { action: Attack; attacker: UnitView 
   return options[0];
 }
 
-/**
- * When a Taunt keeps the hero out of reach and no attack on it destroys it, the hit that wears it
- * down most while the attacker survives: damage stays, so the next hit finishes it.
- */
+/** Against an uncleared Taunt, preserve an attacker while making the best lasting dent. */
 export function chip(ctx: CoachCtx): Trade | undefined {
   if (heroAttack(ctx) !== undefined) return undefined;
-  // A Divine Shield takes a whole hit and breaks: breaking it with the smallest unit that survives
-  // is the dent that lets the next hit land.
+  // Spend the smallest surviving attacker to pop Divine Shield for the next hit.
   const options = trades(ctx).filter((trade) => trade.survives && (trade.dealt > 0 || trade.pops));
   options.sort((a, b) => b.dealt - a.dealt || a.taken - b.taken || size(a.attacker) - size(b.attacker));
   return options[0];
 }
 
-/** When a Taunt keeps the hero out of reach: an attack that destroys it, even if the attacker falls too. */
 export function clearTaunt(ctx: CoachCtx): Trade | undefined {
   if (heroAttack(ctx) !== undefined) return undefined;
   const options = trades(ctx).filter((trade) => trade.kills && hasKeyword(trade.target, "Taunt"));
@@ -111,11 +95,7 @@ export function clearTaunt(ctx: CoachCtx): Trade | undefined {
   return options[0];
 }
 
-/**
- * The attacks on the enemy hero add up to its health this turn, reading what the view shows (the
- * attackers' attack less the hero's Armor, each hit its own). A plan, not a promise: a trap may
- * still answer (lesson 3 says so), which is the game.
- */
+/** Sum distinct attackers' view-visible damage after Armor; traps can still answer the plan. */
 export function lethalOnBoard(ctx: CoachCtx): boolean {
   const hero = heroTargetId(ctx.view, "opponent");
   const armor = ctx.view.opponent.hero.armor;
@@ -131,7 +111,6 @@ export function lethalOnBoard(ctx: CoachCtx): boolean {
   return attackers.size > 0 && damage >= ctx.view.opponent.hero.health;
 }
 
-/** A play aimed at one of the human's own cards or at their own hero. */
 export function aimsAtOwnSide(ctx: CoachCtx, play: Play): boolean {
   const own = new Set<string>(unitsOf(ctx.view, "you").map((unit) => unit.instanceId));
   for (const card of ctx.view.you.backrow) if (card !== null && !card.faceDown) own.add(card.instanceId);
@@ -143,7 +122,6 @@ export function aimsAtOwnSide(ctx: CoachCtx, play: Play): boolean {
   );
 }
 
-/** The dearest card the human can play now, aimed away from their own side. */
 export function bestPlay(ctx: CoachCtx): Play | undefined {
   const hand = Array.isArray(ctx.view.you.hand) ? ctx.view.you.hand : [];
   const costOf = (instanceId: string): number => hand.find((card) => card.instanceId === instanceId)?.cost ?? 0;
@@ -152,7 +130,6 @@ export function bestPlay(ctx: CoachCtx): Play | undefined {
   return plays[0];
 }
 
-/** The move the coach suggests next. */
 export type Move =
   | { kind: "play"; action: Play; defId: string }
   | { kind: "trade"; action: Attack; trade: Trade }
@@ -184,19 +161,17 @@ export function nextMove(ctx: CoachCtx): Move | undefined {
   return end === undefined ? undefined : { kind: "end", action: end };
 }
 
-/** Two actions are the same move. */
 export function sameMove(a: ActionBody, b: ActionBody | undefined): boolean {
   return b !== undefined && JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** A unit's zone as an anchor: a side may hold two units of one card, and the zone names the one meant. */
+/** A zone anchor distinguishes duplicate units of the same card. */
 export function zoneOf(ctx: CoachCtx, side: "you" | "opponent", instanceId: string): CoachAnchor | null {
   const units = side === "you" ? ctx.view.you.units : ctx.view.opponent.units;
   const index = units.findIndex((unit) => unit?.instanceId === instanceId);
   return index < 0 ? null : { kind: "zone", side, row: "units", lane: index + 1 };
 }
 
-/** What the coach points at for a move: the card to play, the unit to hit, the hero, or End turn. */
 export function moveAnchor(ctx: CoachCtx, move: Move | undefined): CoachAnchor | null {
   if (move === undefined) return null;
   switch (move.kind) {
@@ -213,12 +188,11 @@ export function moveAnchor(ctx: CoachCtx, move: Move | undefined): CoachAnchor |
   }
 }
 
-/** A card's name for the coach's words; the definition's id when the page has no catalog. */
+/** Fall back to the definition id when the page has no catalog. */
 export function cardName(ctx: CoachCtx, defId: string): string {
   return ctx.nameOf?.(defId) ?? defId;
 }
 
-/** The coach's line for a move, in a beginner's words. */
 export function moveText(ctx: CoachCtx, move: Move | undefined): string {
   if (move === undefined) return "Watch the board: nothing to do right now.";
   switch (move.kind) {
@@ -243,11 +217,7 @@ export function moveText(ctx: CoachCtx, move: Move | undefined): string {
   }
 }
 
-/**
- * "Your move": the coach names the next sensible move (`nextMove`) and points at it, one move at a
- * time. `final` makes it the lesson's last step, done when the game ends; otherwise it covers the
- * rest of the turn it shows on and is done once that turn has passed (or when `until` holds).
- */
+/** `final` waits for game end; other moves end when their turn passes or `until` holds. */
 export function yourMove(options: {
   id: string;
   title: string;

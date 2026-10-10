@@ -1,17 +1,6 @@
-// The practice setup screen: a difficulty and a deck, then Start (SPEC §9.9).
-//
-// The three tiers differ only in the AI seat's resources, so each tier card lists exactly what that
-// tier gives the AI, read from the engine's own `AI_DIFFICULTY` table rather than restated here
-// (CLAUDE.md rule 9), and marks every line where the AI gets more than you do. `@jackioh/engine/config`
-// imports nothing, so this pulls no rules into the page's bundle.
-//
-// Each tier is still a real `<input type="radio">` (the testids name it), drawn as a small gem in
-// the card's corner rather than hidden, so keyboard, screen reader and a plain click all work on
-// the input itself.
-//
-// R1373: the Random deck carries "More cards from the newest set" (`game/LeanNewest.tsx`). It is the
-// human's own random deck only (the AI deals its deck as ever), the worker deals it, and the switch
-// is remembered with the rest of the setup whichever deck is picked.
+// Practice setup maps difficulty and deck selection to Start (SPEC §9.9).
+// AI resource tiers derive from `AI_DIFFICULTY` (CLAUDE.md rule 9).
+// R1373: only the player's Random deck can lean toward the newest set; retain its switch selection.
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -41,10 +30,7 @@ import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, DIFFICULTY_TAGLINE, TierCrest } from "./Tier.tsx";
 import "./practice.css";
 
-/**
- * What Start chose. `leanNewest` is the R1373 switch as the player left it, for the setup to
- * remember; the deck carries it only when it is the Random deck.
- */
+/** Selection passed to Start, including R1373's random-deck preference. */
 export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanNewest?: boolean };
 
 /**
@@ -74,7 +60,6 @@ type PracticeSetupProps = {
   onStart(choice: PracticeSetupChoice): void;
 };
 
-/** The line under the picker when no saved deck is offered; null when some are. */
 function savedHint(saved: SavedDecks): ReactElement | null {
   switch (saved.kind) {
     case "ready":
@@ -96,7 +81,6 @@ function savedHint(saved: SavedDecks): ReactElement | null {
   }
 }
 
-/** The preview's title, identity line and cards for a picker value. */
 function previewFor(
   choice: PracticeDeckChoice,
   saved: readonly PracticeSavedDeck[] | null,
@@ -125,7 +109,6 @@ function plural(count: number, one: string, many: string): string {
 
 type TierStat = { key: string; label: string; value: string; ahead: boolean };
 
-/** What a tier gives the AI, line by line, each marked when it beats a human's own resources. */
 function tierStats(handicap: Handicap): TierStat[] {
   const human = HUMAN_HANDICAP;
   return [

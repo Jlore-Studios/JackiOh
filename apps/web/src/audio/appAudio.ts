@@ -2,14 +2,12 @@
 // ticks, installed once on the document for as long as anything holds them, and the main menu
 // theme on every screen without a board (R631, musicScene.ts).
 //
-// Two holders exist. `main.tsx` takes one for the page's lifetime, so the landing page, the deck
-// builder and the lobby tick like the board does, and the first tap anywhere unlocks the context
-// before a game has even started. Every mounted `Game` takes one too (`useGameAudio`), so a Game
-// rendered on its own (a unit test, the component harness) still unlocks and ticks. However many
-// hold it, there is one set of listeners, so a click never ticks twice.
+// `main.tsx` holds it for the page's lifetime, so every screen ticks and the first tap unlocks the
+// context before a game starts; every mounted `Game` holds it too (`useGameAudio`), so a Game
+// rendered on its own still does. However many hold it, there is one set of listeners.
 //
-// The listeners find the engine through `getAudioEngine()` on every event rather than capturing
-// one, so a test that swaps the singleton (`setAudioEngineForTests`) is heard.
+// The listeners call `getAudioEngine()` on every event, so a test that swaps the singleton
+// (`setAudioEngineForTests`) is heard.
 
 import { getAudioEngine } from "./engine.ts";
 import { holdMenuMusic } from "./musicScene.ts";

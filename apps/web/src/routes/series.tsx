@@ -1,21 +1,6 @@
-// `/series/<id>` — a Conquest series between its games (SPEC §9.5, R330–R338, R262).
-//
-// It renders the server's projection for this player (`GET /api/series/:id`, a `SeriesView`) and
-// nothing else (CLAUDE.md rule 7). Which decks may be picked, when the clock runs out, who goes
-// first and when the series ends are all the server's: the picker (`SeriesPicker.tsx`, R338) offers
-// the decks the view says have not won, and a refusal is shown as the server wrote it. The hidden
-// picks hold here by construction (R331, R336): the view carries only whether the opponent has
-// picked and which of their decks have won, never a name, a card or a pick, so there is nothing to
-// leak. Both sides' won decks — each locked for the rest of the series (R330) — are on screen.
-//
-// THE CLOCK (R333). `pickDeadline` is the server's epoch ms, and this device's clock may be minutes
-// off. The view also carries the server's `now`, so the deadline is re-based onto this device's
-// clock at the moment the view arrived (`receivedAt + pickDeadline - now`) and counted down from
-// there, on the clock rather than in timer ticks (`auth/cooldown.ts`).
-//
-// THE GAME. While a game is on, the screen offers "Open game n". A player who is on this screen
-// when a game starts is taken to the board once, by itself; one who came back here from the board
-// on purpose is not sent away again.
+// `/series/<id>` renders only this player's server `SeriesView` (SPEC §9.5; CLAUDE.md rule 7).
+// Won decks lock (R330); hidden picks stay hidden (R331, R336), and the server decides valid picks (R338).
+// Rebase `pickDeadline` from server `now` at view arrival (R333); open each newly running game once.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -32,38 +17,25 @@ import "./lobby.css";
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/** Chrome this screen invented; `e2e/support/testids.ts` mirrors the strings. */
+/** Screen IDs; `e2e/support/testids.ts` mirrors their strings (R330, R331, R333, R336, R338). */
 export const seriesTestid = {
   screen: "series-screen",
   loading: "series-loading",
-  /** A refusal or a failed read, in the server's words. */
   error: "series-error",
-  /** `data-you`, `data-opponent`: the game wins so far. */
   score: "series-score",
-  /** One of your three decks in the standings: `data-won` (locked, R330), `data-picked`. */
   deck: (slot: number): string => `series-deck-${String(slot)}`,
-  /** The deck-selection panel and its parts (R338): `SeriesPicker.tsx`. */
   picker: seriesPickerTestid.picker,
-  /** A deck in the picker: selects it; disabled once it has won. */
   pick: seriesPickerTestid.choice,
-  /** Seals the selected deck as the pick (R331). */
   lockIn: seriesPickerTestid.lockIn,
-  /** One of the opponent's decks: `data-won` and nothing else (R336). */
   opponentDeck: (slot: number): string => `series-opponent-deck-${String(slot)}`,
-  /** The pick clock's whole seconds left (`data-seconds`), R333. */
   clock: seriesPickerTestid.clock,
-  /** "Opponent is choosing…" or "Opponent has picked" (`data-picked`). */
   opponentStatus: seriesPickerTestid.opponentStatus,
-  /** The running game's board, while a game is on. */
   openMatch: "series-open-match",
   forfeit: "series-forfeit",
   forfeitConfirm: "series-forfeit-confirm",
   forfeitCancel: "series-forfeit-cancel",
-  /** Once over: `data-outcome` win | loss | draw | abandoned. */
   result: "series-result",
-  /** One game of the history: `data-result` win | loss | draw | pending. */
   game: (gameNo: number): string => `series-game-${String(gameNo)}`,
-  /** The way back to the lobby from a finished series. */
   backToPlay: "series-back-to-play",
 } as const;
 
@@ -75,11 +47,7 @@ const GAME_RESULT_WORD: Readonly<Record<"win" | "loss" | "draw", string>> = {
   draw: "Draw",
 };
 
-/**
- * Why the series ended, from this player's side (R330, R333, R334). `wins` are the two sides' game
- * wins: a series R259 decided before Conquest shipped ended at fewer than `winsNeeded` (R337), and
- * says so rather than claiming a win with every deck.
- */
+/** R259, R330, R333, R334, R337: preserve a pre-Conquest result below `winsNeeded`. */
 export function endReasonWords(
   result: SeriesResult,
   winsNeeded: number,
@@ -106,11 +74,7 @@ export function endReasonWords(
   }
 }
 
-/**
- * Whether the series moved the viewer's rank (R262, R604): a ranked series counts as one rated
- * game. The hidden rating never reaches the client (R612), so there are no numbers here — the
- * rank it left is `GET /api/ranked`'s.
- */
+/** R262, R604, R612: the server decides the ranked result; no rating value reaches this view. */
 export function ratingWords(result: SeriesResult): string {
   if (result.outcome === "abandoned" || !result.ranked) {
     return "Unrated: no rating changed.";
@@ -123,25 +87,19 @@ function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-/** A call that may throw synchronously (or return nothing, in a test), as a promise. */
+/** Normalize synchronous test stubs as promises. */
 function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
 
-/** A view and when this device received it: the base the pick clock is counted from. */
 type Received = { view: SeriesView; receivedAt: number };
 
-/**
- * The pick deadline on this device's clock: the server's deadline less the server's `now`, added
- * to the moment the view arrived. Null outside the pick phase.
- */
 export function localDeadline(received: Received): number | null {
   const { view, receivedAt } = received;
   if (view.status !== "picking" || view.pickDeadline === null) return null;
   return receivedAt + (view.pickDeadline - view.now);
 }
 
-/** The screen's hero, as /play wears it: the brand, the mode, and what it asks of a player. */
 function SeriesHero(): ReactElement {
   return (
     <header className="play-hero">
@@ -163,11 +121,9 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  // Every request is numbered, and an answer older than one already shown is dropped: a poll sent
-  // just before a pick must not put the old pick back on screen when it lands after it.
+  // Request order keeps a stale poll from undoing a pick.
   const sent = useRef(0);
   const shown = useRef(0);
-  /** A pick or a forfeit is on its way: polls wait for its answer. */
   const inFlight = useRef(false);
   const accept = useCallback((view: SeriesView, request: number) => {
     if (request < shown.current) return;
@@ -180,8 +136,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
     if (over) return;
     let cancelled = false;
     const read = (): void => {
-      // A poll sent while a pick or a forfeit is on its way could be served before that write lands
-      // and then drop the write's own answer as older; the action's answer is the fresher one.
+      // Let an action's fresher response win over a poll sent before its write.
       if (inFlight.current) return;
       sent.current += 1;
       const request = sent.current;
@@ -192,7 +147,6 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
           setLoadError(null);
         },
         (cause: unknown) => {
-          // Kept for a first read only: a blip while a view is on screen is retried next tick.
           if (!cancelled) setLoadError(messageOf(cause));
         },
       );
@@ -205,8 +159,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
     };
   }, [token, seriesId, over, accept]);
 
-  // A game that starts while the player is on this screen opens once, by itself. The first view is
-  // only noted: a player who came back here from the board chose to.
+  // The first view may be an intentional return from the board; only open new games.
   const lastRunning = useRef<string | null | undefined>(undefined);
   const opened = useRef(new Set<string>());
   const view = received?.view ?? null;
@@ -245,7 +198,6 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
       });
   }
 
-  /** R331: seals `slot` as this player's pick for the game the screen is picking for. */
   function onPick(slot: number, gameNo: number): void {
     act(() => pickSeriesDeck(token, seriesId, slot, gameNo));
   }

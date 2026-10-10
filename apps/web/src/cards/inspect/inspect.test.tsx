@@ -1,11 +1,5 @@
-// Polish 6, slice C: inspecting a card (docs/polish/6-cards.md, B22–B26).
-//
-// Hover opens a preview after HOVER_DELAY_MS, a touch long-press opens a sheet after LONG_PRESS_MS,
-// and every overlay is a portal into document.body that swallows the events inside it. These tests
-// drive both a bare `useInspectTrigger` and the real `Board`, with fake timers, and they query the
-// overlays through `screen` because a portal is not inside the render container.
-//
-// Written from the design doc's Behaviors and Surface. Nothing here reads the implementation.
+// Inspecting a card (docs/polish/6-cards.md, B22–B26): hover opens a preview after HOVER_DELAY_MS, a
+// touch long-press a sheet after LONG_PRESS_MS. Overlays are portals, so they are queried through `screen`.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState, type ReactElement, type ReactNode } from "react";
@@ -38,20 +32,16 @@ import {
   INSPECT_SHEET,
 } from "./testids.ts";
 
-// ---------------------------------------------------------------------------------------------
 // Harness
-// ---------------------------------------------------------------------------------------------
 
 type PointerKind = "mouse" | "pen" | "touch";
 
-/** Where a press starts; moves are measured from here. */
 const START_X = 100;
 const START_Y = 100;
 
 /**
- * jsdom 30 ships `PointerEvent`, but if the window a node lives in ever lacks it, testing-library
- * falls back to a plain `Event` and drops `pointerType`, which would make every touch look like a
- * mouse. This installs a `MouseEvent` subclass that keeps it, only when the probe shows it is lost.
+ * If a window lacks `PointerEvent`, testing-library drops `pointerType` and every touch looks like a
+ * mouse: install a `MouseEvent` subclass that keeps it, only when the probe shows it lost.
  */
 function ensurePointerEvent(): void {
   const win = document.defaultView;
@@ -100,10 +90,7 @@ function lift(element: Element, pointerType: PointerKind, x: number = START_X, y
   fireEvent.pointerUp(element, pointerInit(pointerType, x, y));
 }
 
-/**
- * A `contextmenu` as Chrome sends it: a PointerEvent carrying the pointer that asked for it.
- * Returns false when something called `preventDefault` (the native menu is suppressed).
- */
+/** A `contextmenu` as Chrome sends it, a PointerEvent; false when `preventDefault` was called. */
 function contextMenu(element: Element, pointerType: PointerKind): boolean {
   const win = document.defaultView;
   if (win === null) throw new Error("jsdom has a window");
@@ -124,20 +111,17 @@ function advance(ms: number): void {
   });
 }
 
-/** A touch held long enough to fire, then lifted where it started. */
 function longPress(element: Element): void {
   press(element, "touch");
   advance(LONG_PRESS_MS);
   lift(element, "touch");
 }
 
-/** A mouse resting long enough to open the preview. */
 function hover(element: Element): void {
   enter(element, "mouse");
   advance(HOVER_DELAY_MS);
 }
 
-/** A real mouse click: every event a browser fires for one, in order. */
 function realClick(element: Element): void {
   fireEvent.pointerDown(element, pointerInit("mouse"));
   fireEvent.mouseDown(element);
@@ -163,7 +147,6 @@ function subjectOf(key: string, id: string): InspectSubject {
   return { key, face: faceOf(id) };
 }
 
-/** Which inspect overlays are in the document right now, one entry per element. */
 function openOverlays(): string[] {
   return [INSPECT_HOVER, INSPECT_SHEET, INSPECT_DETAIL].flatMap((id) => screen.queryAllByTestId(id).map(() => id));
 }
@@ -188,7 +171,6 @@ type TriggerProps = {
   onClick?: () => void;
 };
 
-/** The bare trigger: exactly what a card does with the hook, and nothing else. */
 function Trigger({ id, subject, options, onClick }: TriggerProps): ReactElement {
   const inspect = useInspectTrigger(subject, options);
   return (
@@ -202,7 +184,6 @@ function Trigger({ id, subject, options, onClick }: TriggerProps): ReactElement 
   );
 }
 
-/** A page to put triggers on: a scrollable region and a focusable control outside the card. */
 function Scene({ children }: { children: ReactNode }): ReactElement {
   return (
     <div data-testid="scroller">
@@ -232,10 +213,7 @@ function fenceSpies(): FenceSpies {
   };
 }
 
-/**
- * An ancestor with a handler for every event B25 lists. React bubbles a portal's events through
- * the React tree, so an overlay rendered inside this reaches these handlers unless it stops them.
- */
+/** An ancestor with a handler for every event B25 lists: a portal's events bubble through the React tree to it. */
 function Fence({ spies, children }: { spies: FenceSpies; children: ReactNode }): ReactElement {
   return (
     <div
@@ -312,9 +290,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B22: hover
-// ---------------------------------------------------------------------------------------------
 
 describe("hover preview (B22)", () => {
   it("B22 a mouse resting HOVER_DELAY_MS opens inspect-hover in document.body, and not a moment sooner", () => {
@@ -491,9 +467,7 @@ describe("hover preview (B22)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B23: what closes the preview, and one overlay at a time
-// ---------------------------------------------------------------------------------------------
 
 describe("closing the preview, and one overlay at a time (B23)", () => {
   function openPreview(key: string): HTMLElement {
@@ -638,7 +612,6 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     expect(screen.getByTestId("b-open")).toHaveTextContent("sheet");
   });
 
-  /** A caller that owns its CardDetail the way the deck builder does: open until onClose. */
   function DetailHost({ id, onClose }: { id: string; onClose: () => void }): ReactElement | null {
     const [open, setOpen] = useState(true);
     if (!open) return null;
@@ -713,9 +686,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B24: long-press
-// ---------------------------------------------------------------------------------------------
 
 describe("long-press (B24)", () => {
   it("B24 a touch held LONG_PRESS_MS opens inspect-sheet as a modal dialog named for the card, focused on inspect-close", () => {
@@ -864,7 +835,6 @@ describe("long-press (B24)", () => {
     render(<Trigger id="a" subject={subjectOf("b24-rearm", "core-043")} options={{ onLongPress: () => undefined }} onClick={onClick} />);
     const trigger = screen.getByTestId("a");
     longPress(trigger);
-    // A fresh tap: down and straight back up, well inside CLICK_SUPPRESS_MS.
     press(trigger, "touch");
     lift(trigger, "touch");
     fireEvent.click(trigger);
@@ -896,10 +866,7 @@ describe("long-press (B24)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// #165: a touch hold as the mouse-over — touchHold: "preview" holds the hover preview open only
-// while the finger is down, and the board asks for it on the opponent's turn.
-// ---------------------------------------------------------------------------------------------
+// A touch hold as the mouse-over: touchHold "preview" keeps the hover preview open while the finger is down
 
 describe("a touch hold as the mouse-over (#165)", () => {
   it("#165 a held touch opens the preview, not the sheet, and lifting closes it", () => {
@@ -1027,9 +994,7 @@ describe("a touch hold as the mouse-over (#165)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B25: closing the sheet and the detail, focus, and events that must not escape an overlay
-// ---------------------------------------------------------------------------------------------
 
 describe("closing the sheet and the detail (B25)", () => {
   function openSheet(key: string): HTMLElement {
@@ -1075,8 +1040,7 @@ describe("closing the sheet and the detail (B25)", () => {
       if (path === "inspect-close") realClick(screen.getByTestId(INSPECT_CLOSE));
       if (path === "inspect-scrim") realClick(screen.getByTestId(INSPECT_SCRIM));
       if (path === "Escape") fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-      // The caller owns the open state, so the detail stays mounted here; how many of a real
-      // click's events it answers is not specified, only that it asks to close.
+      // The caller owns the open state, so the detail stays mounted: it only has to ask to close.
       expect(onClose).toHaveBeenCalled();
     });
   }
@@ -1138,7 +1102,6 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     expect(first).toHaveFocus();
     expect(screen.getByTestId(INSPECT_DETAIL).contains(document.activeElement)).toBe(true);
 
-    // Shift+Tab from the first control wraps to the last.
     expect(tabFrom(first, true)).toBe(false);
     expect(close).toHaveFocus();
 
@@ -1261,15 +1224,10 @@ describe("events inside an overlay stay inside it (B25)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B26: the glossary
-// ---------------------------------------------------------------------------------------------
 
 describe("the glossary (B26)", () => {
-  /**
-   * A face built to make the order visible. Its text: Death, then Cry, then Lifesteal and Cry again
-   * (already listed). Keywords: Taunt (new), Lifesteal (already listed), Rush (new).
-   */
+  /** Text terms Death, Cry, Lifesteal, Cry (repeat); keywords Taunt, Lifesteal (repeat), Rush. */
   const ORDERED_FACE: FaceModel = {
     defId: "glossary-order-probe",
     known: true,

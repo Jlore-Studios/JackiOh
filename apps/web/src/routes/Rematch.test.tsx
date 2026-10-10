@@ -1,13 +1,6 @@
-// `routes/Rematch.tsx`: the death screen's rematch offers (SPEC §9.5, R672).
-//
-// The buttons show only while both sockets are open — ours (`connection`) and theirs
-// (`opponentHere`) — and each one sends its stakes. Matching an incoming offer navigates to the
-// game the server made; double-or-nothing stays disabled outside ranked matches.
-//
-// #477: in the result panel the block is part of the panel's row of ways on, its buttons sized and
-// coloured as the panel's (Rematch its gold primary), an offer on its way says so on its button,
-// and the wait names the offer. e2e/cypress/component/rematch-buttons.cy.tsx measures the layout in
-// a real browser; jsdom has none, so the stylesheet rules it rests on are read as text here.
+// Rematch offers after an online match (SPEC §9.5, R672).
+// Buttons require both sockets; matching an offer navigates to the server-made game.
+// Browser component specs read stylesheets as text because jsdom has no layout.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -125,7 +118,6 @@ describe("RematchButtons", () => {
         expect(vi.mocked(rematchOffer)).toHaveBeenLastCalledWith(TOKEN, MATCH_ID, 1, true);
       });
 
-      // Off, the offer carries no lean, and the device remembers the change for the lobby too.
       fireEvent.click(screen.getByTestId(rematchTestid.leanNewest));
       expect(window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY)).toBe("false");
       fireEvent.click(screen.getByTestId(rematchTestid.double));
@@ -158,17 +150,14 @@ describe("RematchButtons", () => {
     const double = await screen.findByTestId(rematchTestid.double);
     expect(double).toBeDisabled();
     expect(screen.getByText(/needs a ranked match/i)).toBeInTheDocument();
-    // The normal offer still works there.
     expect(screen.getByTestId(rematchTestid.offer)).not.toBeDisabled();
   });
 });
 
-/** A stylesheet of `game/` as one line, so a rule reads the same however it is wrapped. */
 function gameCss(file: string): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "game", file), "utf8").replace(/\s+/g, " ");
 }
 
-/** The match route's result panel (routes/match.tsx `resultActions`): the offers, then Back to lobby. */
 function renderPanel(ranked = true) {
   return render(
     <GameResult
@@ -198,11 +187,9 @@ describe("RematchButtons in the result panel (#477)", () => {
     expect(block).toHaveClass("rematch");
     expect(block?.querySelector(":scope > .rematch-buttons > :first-child")).toBe(offer);
     expect(double.parentElement).toBe(offer.parentElement);
-    // Before #477 Rematch wore the shell's `button-primary`: the lobby's blue call to action, beside
-    // the panel's gold one. Neither offer carries a class; the panel's rules draw them.
+    // Result-panel rules style unclassed rematch buttons.
     expect(offer.className).toBe("");
     expect(double.className).toBe("");
-    // The route's other ways on follow the block, and the panel's own View the board comes last.
     expect(screen.getByTestId("result-back").previousElementSibling).toBe(block);
     expect(actions?.lastElementChild).toBe(screen.getByTestId("result-view-board"));
   });
@@ -224,17 +211,12 @@ describe("RematchButtons in the result panel (#477)", () => {
     const animations = gameCss("animations.css");
     const reveal = gameCss("reveal.css");
 
-    // The panel's primary rule skips the block, which used to be painted gold whole, and lands on
-    // its first button instead.
     expect(animations).toContain(
       ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child { border-color: var(--primary-edge",
     );
-    // The offers are the panel's buttons: 44 px targets like Back to lobby and View the board.
     expect(animations).toMatch(
       /\.result-overlay__actions > \.rematch button, \.result-overlay__reopen \{ min-height: 44px; padding: 8px 18px; border-radius: 10px; font-weight: 700; \}/,
     );
-    // The block draws no box: its buttons join the row, so nothing beside it is stretched to its
-    // height, and its lines take rows of their own without widening the panel.
     expect(reveal).toContain(
       ".result-overlay__actions > .rematch, .result-overlay__actions > .rematch > .rematch-buttons { display: contents; }",
     );
