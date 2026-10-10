@@ -1006,16 +1006,21 @@ mod the_two_pass_sweep_r390 {
     #[test]
     fn r390_a_real_pass_2_game_named_seed_boosted_at_risk_filler_the_ban_lifted_for_judgement_bans_and_kept_for_bugs_timeouts_charged_to_the_forced_card_and_listed_against_the_filler()
      {
-        // Every card on today's ban is at risk and lifted; ten more at-risk cards are kept out as if a
-        // pass 1 had flagged them `error`. A fake clock makes every AI decision 2.5 s long.
+        // Today's ban is empty, so the fixture names its own: `lifted` plays the judgement bans —
+        // at risk, lifted, dealt as filler — and `keep_out` the bug bans, never dealt. A fake clock
+        // makes every AI decision 2.5 s long.
         jackioh_cards::register_all();
-        let banned = banned_ids();
+        let lifted: Vec<String> = ai_pool()
+            .into_iter()
+            .filter(|id| id != "classic-013")
+            .take(8)
+            .collect();
         let keep_out: Vec<String> = ai_pool()
             .into_iter()
-            .filter(|id| !banned.contains(id) && id != "classic-013")
+            .filter(|id| !lifted.contains(id) && id != "classic-013")
             .take(10)
             .collect();
-        let mut at_risk: Vec<String> = banned
+        let mut at_risk: Vec<String> = lifted
             .iter()
             .cloned()
             .chain(keep_out.iter().cloned())
@@ -1052,7 +1057,7 @@ mod the_two_pass_sweep_r390 {
             assert!(!ids.contains(id), "{id}");
         }
         assert!(
-            ids.iter().any(|id| banned.contains(id)),
+            ids.iter().any(|id| lifted.contains(id)),
             "dealt: {}",
             ids.join(", ")
         );
@@ -1390,16 +1395,12 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// The unban lane's generation-7 table: removals only from TypeScript's eleven — every retained
-    /// entry is verbatim in it, and the ten it dropped are exactly the ones the sweep of record
-    /// cleared or the eval now sees (`SHADOW_BAN`'s own doc comment).
-    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[(
-        "core-076",
-        "neverPlayed: hard: affordable in hand on 15 turns, never played",
-    )];
+    /// The unban lane's generation-8 table: empty — removals only from TypeScript's eleven, and it
+    /// has dropped all of them, each for the reason `SHADOW_BAN`'s own doc comment names.
+    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[];
 
     #[test]
-    fn v12_the_unban_lanes_table_is_the_one_entry_it_left_of_typescripts_eleven() {
+    fn v12_the_unban_lanes_table_is_empty_it_removed_all_of_typescripts_eleven() {
         assert_eq!(SHADOW_BAN, UNBAN_LANE_SHADOW_BAN);
         for entry in SHADOW_BAN {
             assert!(

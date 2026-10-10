@@ -651,11 +651,15 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .unwrap_or_default();
     let boost_by = options.boost.as_ref().map_or(1.0, |boost| boost.by);
     // The unban lane's deck shaping (shadow_ban.rs): exactly the seat an arena or a promotion deals
-    // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS, no `include` or `boost` — gets its
-    // weights multiplied by the dealt-quality the lane's records measured. A seat under any other
-    // ban list (the parent's eleven, a human's none, a test's or the sweep's own) deals as before.
+    // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS under a handicap's `mana_cap`, no
+    // `include` or `boost` — gets its weights multiplied by the dealt-quality the lane's records
+    // measured. A seat under any other options (the parent's own list, a human's none, a test's or
+    // the sweep's own) deals as before. The mana cap is what keeps "a human's none" honest once the
+    // ban list is empty: a player's random deck passes `banned: []` with no cap, which an empty
+    // SHADOW_BAN_IDS would otherwise set-match like this AI's own.
     let shape = options.include.is_none()
         && options.boost.is_none()
+        && options.mana_cap.is_some()
         && options.banned.as_ref().is_some_and(|listed| {
             listed.len() == SHADOW_BAN_IDS.len()
                 && SHADOW_BAN_IDS
