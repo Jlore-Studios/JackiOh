@@ -3,13 +3,16 @@
 //! loader and the lint. Each fixture has a card id of its own, since a thread's VM caches one chunk
 //! per id.
 
+use std::panic::AssertUnwindSafe;
+
+use jackioh_engine::CardScripts;
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::query::hero_of;
 use jackioh_engine::testkit::{
     CardDef, CardDefs, EffectContext, EngineSink, IndexMap, PlayerId, Rng, catalog_override, json_as,
     register_catalog, register_scripts, scenario,
 };
-use jackioh_luau::config::{LUAU_HOOK_INTERRUPTS, LUAU_VALUE_NODES};
+use jackioh_luau::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_VALUE_NODES};
 use jackioh_luau::lint::MATH_ALLOWED;
 use jackioh_luau::numbers::{div, number_to_i32, rem, to_json};
 use jackioh_luau::sandbox::{
@@ -129,6 +132,45 @@ fn every_removed_global_is_nil() {
             "{library}"
         );
     }
+}
+
+#[test]
+fn the_sandbox_holds_exactly_its_globals() {
+    // Every name the sandbox leaves, so a global a later mlua adds cannot slip in unseen.
+    let sandbox = new_sandbox().unwrap();
+    let mut globals: Vec<String> = sandbox
+        .env
+        .pairs::<String, Value>()
+        .map(|pair| pair.unwrap().0)
+        .collect();
+    globals.sort();
+    let expected = [
+        "_G",
+        "_VERSION",
+        "assert",
+        "bit32",
+        "error",
+        "getmetatable",
+        "ipairs",
+        "math",
+        "pcall",
+        "rawequal",
+        "rawget",
+        "rawlen",
+        "rawset",
+        "require",
+        "select",
+        "setmetatable",
+        "string",
+        "table",
+        "tonumber",
+        "tostring",
+        "type",
+        "typeof",
+        "unpack",
+        "utf8",
+    ];
+    assert_eq!(globals, expected);
 }
 
 #[test]
@@ -417,6 +459,31 @@ fn a_nested_hook_draws_on_the_budget_of_the_hook_it_is_nested_in() {
 }
 
 #[test]
+fn a_hook_that_runs_itself_stops_at_the_depth_cap_naming_the_card() {
+    // Each call spends a few interrupts, so without `LUAU_HOOK_DEPTH` this would nest until the
+    // thread's stack overflowed, which aborts the process, long before the budget ran out.
+    let code = bytecode(
+        "itself.luau",
+        "return { base = { cry = function(ctx)\n\
+         \tctx:effects_of(\"fixture-itself\", \"base\", \"cry\")\n\
+         \treturn nil\nend } }\n",
+    );
+    let Ok(scripts) = load_card("fixture-itself", code) else {
+        panic!("the fixture loads");
+    };
+    register_scripts(IndexMap::from([("fixture-itself".to_string(), scripts)]));
+    let stopped = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        with_ctx(|ctx| call_hook(site("fixture-itself", Face::Base, "cry"), code, ctx))
+    }));
+    let Err(panic) = stopped else {
+        panic!("the innermost call panics through the outer ones");
+    };
+    let text = panic.downcast_ref::<String>().cloned().unwrap_or_default();
+    let expected = format!("fixture-itself base cry: hook calls nested deeper than {LUAU_HOOK_DEPTH} (L5)");
+    assert!(text.contains(&expected), "{text}");
+}
+
+#[test]
 #[should_panic(expected = "fixture-bad-numbers base cry: 1.5 is not an integer")]
 fn pcall_does_not_catch_a_nested_hooks_failure() {
     let Ok(scripts) = load_card("fixture-bad-numbers", fixture!("bad_numbers")) else {
@@ -458,32 +525,39 @@ fn xpcall_is_absent_so_no_handler_can_drop_a_nested_hooks_failure() {
     );
 }
 
-/// `board`'s base cry as calls, and its radiant cry, loaded, as effect kinds.
-fn board() -> (Vec<EffectCall>, Vec<&'static str>, i32) {
-    let code = fixture!("board");
-    let Ok(scripts) = load_card("fixture-board", code) else {
-        panic!("the board fixture loads");
-    };
-    let cry = scripts.radiant.cry.expect("the radiant face declares cry");
+/// On this thread: `board`'s radiant cry, from `scripts`, as effect kinds (called first, so on a new
+/// thread its closure is what loads the chunk), its base cry as calls, and the hero's health.
+fn board(scripts: &CardScripts) -> (Vec<&'static str>, Vec<EffectCall>, i32) {
+    let cry = scripts
+        .radiant
+        .cry
+        .as_ref()
+        .expect("the radiant face declares cry");
     with_ctx(|ctx| {
-        let calls = call_hook(site("fixture-board", Face::Base, "cry"), code, ctx).unwrap();
         let kinds = cry(ctx).iter().map(|effect| effect.kind).collect();
-        (calls, kinds, hero_of(ctx.state, PlayerId::P1).health)
+        let code = fixture!("board");
+        let calls = call_hook(site("fixture-board", Face::Base, "cry"), code, ctx).unwrap();
+        (kinds, calls, hero_of(ctx.state, PlayerId::P1).health)
     })
 }
 
 #[test]
 fn the_same_effects_come_out_on_two_threads() {
-    let here = board();
+    // The card loads on this thread; its hooks run here and on two others, whose VMs each load its
+    // chunk the first time one of its hooks runs there.
+    let Ok(scripts) = load_card("fixture-board", fixture!("board")) else {
+        panic!("the board fixture loads");
+    };
+    let here = board(&scripts);
     let destroy_chosen = EffectCall {
         verb: "destroy".into(),
         args: json!({ "target": { "of": "chosen" } }),
     };
-    assert_eq!(here.0, [hit(here.2 / 7), destroy_chosen]);
-    assert_eq!(here.1, ["damage", "destroy"]);
+    assert_eq!(here.0, ["damage", "destroy"]);
+    assert_eq!(here.1, [hit(here.2 / 7), destroy_chosen]);
     let there = std::thread::scope(|scope| {
-        let first = scope.spawn(board);
-        let second = scope.spawn(board);
+        let first = scope.spawn(|| board(&scripts));
+        let second = scope.spawn(|| board(&scripts));
         [first.join().unwrap(), second.join().unwrap()]
     });
     assert_eq!(there, [here.clone(), here]);
@@ -626,9 +700,9 @@ fn the_lint_reads_strings_and_numbers_as_luau_does() {
 
 #[test]
 fn compiling_turns_off_the_builtins_the_sandbox_took_away() {
-    // Luau calls `vector.magnitude` and folds `math.sqrt` without reading the global, so a chunk
-    // compiled without `compiler()`'s disabled builtins gets a square root from a sandbox that has
-    // none. The lint refuses both names; behind it, `compiler()` makes each call read the global,
+    // Luau calls `vector.magnitude` and `math.sqrt` straight from the bytecode (a fastcall) without
+    // reading the global, so a chunk compiled without `compiler()`'s disabled builtins gets a square
+    // root from a sandbox that has none. The lint refuses both names; behind it, `compiler()` makes each call read the global,
     // which is gone.
     let source = |amount: &str| {
         format!(
@@ -665,6 +739,21 @@ fn compiling_turns_off_the_builtins_the_sandbox_took_away() {
             "{card}: {refused:?}"
         );
     }
+
+    // At optimization level 2 Luau folds `math.pi` into the bytecode, whatever the sandbox holds;
+    // `compiler()` stays at level 1 (`LUAU_OPTIMIZATION_LEVEL`), where it reads the global, which is
+    // gone.
+    let pi = source("math.floor(math.pi * 1000)");
+    let level_2 = mlua::chunk::Compiler::new().set_optimization_level(2);
+    let folded: &'static [u8] = Vec::leak(level_2.compile(&pi).unwrap());
+    let called = with_ctx(|ctx| call_hook(site("fixture-pi-folded", Face::Base, "cry"), folded, ctx));
+    assert_eq!(called, Ok(vec![hit(3141)]), "math.pi folded at level 2");
+    let read: &'static [u8] = Vec::leak(compiler().compile(&pi).unwrap());
+    let refused = with_ctx(|ctx| call_hook(site("fixture-pi", Face::Base, "cry"), read, ctx));
+    assert!(
+        matches!(&refused, Err(LuauError::Hook { message, .. }) if message.contains("nil")),
+        "math.pi: {refused:?}"
+    );
 }
 
 #[test]

@@ -102,8 +102,11 @@ pub fn compile(file: &str, source: &str) -> Result<Vec<u8>, LuauError> {
 
 /// The compiler `compile` uses, which builds no fastcall to a builtin the sandbox took away
 /// (`sandbox::DISABLED_BUILTINS`), so such a call reads the global, which is gone, behind the lint.
+/// It compiles at `LUAU_OPTIMIZATION_LEVEL`.
 pub fn compiler() -> Compiler {
-    Compiler::new().set_disabled_builtins(sandbox::DISABLED_BUILTINS)
+    Compiler::new()
+        .set_optimization_level(config::LUAU_OPTIMIZATION_LEVEL)
+        .set_disabled_builtins(sandbox::DISABLED_BUILTINS)
 }
 
 /// A card's scripts from its compiled module. The module runs once here to read which hooks each face

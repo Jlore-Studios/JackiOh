@@ -3,15 +3,16 @@
 //! afresh, so the module, and every module-level local in it, starts new on every call, then calls
 //! `module[face][hook]` with `ctx`, a userdata that lives for that call only. A hook may call a reader
 //! that runs another card's hook: the thread's VM and `Lua::scope` both take a nested call, which
-//! draws on the budget of the call it is nested in (L5).
+//! draws on the budget of the call it is nested in, up to `LUAU_HOOK_DEPTH` calls deep (L5).
 
 use jackioh_engine::EffectContext;
 use mlua::chunk::ChunkMode;
 use mlua::{Function, Lua, Table, Value};
 
 use crate::api::{self, EffectCall};
+use crate::config::LUAU_HOOK_DEPTH;
 use crate::numbers;
-use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped};
+use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped, too_deep};
 use crate::{Face, LuauError, Site};
 
 /// The hooks a face may declare: the effect-list hooks `Script::hook_named` answers, in its order.
@@ -82,9 +83,18 @@ impl<'l> BudgetGuard<'l> {
         BudgetGuard(lua)
     }
 
-    /// `result`, unless the budget ran out during the call: a hook that caught its stop with
-    /// `pcall` and returned is stopped all the same.
-    fn check<T>(&self, site: Site, result: mlua::Result<T>) -> mlua::Result<T> {
+    /// What `call` returns, unless the call is nested deeper than `LUAU_HOOK_DEPTH`, which it is
+    /// never made, or the budget ran out during it: a hook that caught its stop with `pcall` and
+    /// returned is stopped all the same.
+    fn run<T>(&self, site: Site, call: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
+        let depth = self
+            .0
+            .app_data_ref::<Budget>()
+            .map_or(0, |budget| budget.calls.len());
+        if depth > LUAU_HOOK_DEPTH {
+            return Err(mlua::Error::runtime(too_deep(site)));
+        }
+        let result = call();
         let spent = self
             .0
             .app_data_ref::<Budget>()
@@ -122,7 +132,7 @@ pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, 
             };
             let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
             budget
-                .check(site, vm.module(card, bytecode))
+                .run(site, || vm.module(card, bytecode))
                 .map_err(|error| refused(error.to_string()))?
         };
         let mut hooks = Vec::new();
@@ -171,7 +181,7 @@ pub fn call_hook(
     VM.with(|vm| {
         let returned = {
             let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
-            budget.check(site, run(vm, site, bytecode, ctx))
+            budget.run(site, || run(vm, site, bytecode, ctx))
         };
         let returned = returned.map_err(|error| LuauError::Hook {
             site,

@@ -46,7 +46,10 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   `compile` uses `compiler()`, which turns off every `vector` and `buffer` builtin and every `math`
   one outside `lint::MATH_ALLOWED` (`sandbox::DISABLED_BUILTINS`, from Luau 0.740's
   `Builtins.cpp`), so such a call reads the global and finds nothing; the lint refuses the names
-  `vector`, `buffer` and `integer` first (`ABSENT_LIBRARIES`);
+  `vector`, `buffer` and `integer` first (`ABSENT_LIBRARIES`). `compiler()` also holds Luau's
+  optimization level at 1 (`LUAU_OPTIMIZATION_LEVEL`, mlua's default), since level 2 folds
+  `math.pi`, `math.huge` and `math`'s other constants into the bytecode without reading the global,
+  which no disabled builtin prevents;
 - what the lint refuses by name taken away as well, so a key the lint cannot read (`_G["pairs"]`,
   `math["sqrt"]`) finds nothing: `pairs` and `next` (`REMOVED_ITERATORS`), `table.sort` and
   `table.foreach` (`REMOVED_TABLE`), and every `math` member but `lint::MATH_ALLOWED`;
@@ -61,13 +64,22 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   bounds everything one engine hook call does, nested calls included; the error names the innermost
   call. A spent budget stays spent: a hook that catches its stop with `pcall` is stopped again at
   its next interrupt, and a call that ends with its budget spent fails all the same. Running a
-  module to read its declarations spends a budget named for a `load` hook on the base face;
+  module to read its declarations spends a budget named for a `load` hook on the base face.
+  Hook calls nest at most `LUAU_HOOK_DEPTH` (16) deep: the call past that fails before it runs,
+  naming its card, face and hook (`"<card> <face> <hook>: hook calls nested deeper than 16 (L5)"`),
+  since a hook that runs itself from a reader spends only a few interrupts a level and would
+  otherwise nest until the thread's stack overflowed, which aborts the process;
 - Rust panics that `pcall` cannot catch (`LuaOptions::catch_rust_panics(false)`): a nested hook
   that fails panics (below), and the panic goes on through the hook that called it, since mlua's
   `pcall` raises it again and runs no handler that could replace it.
   This holds while Luau's fast `pcall` is off (its `LuauFastpcall` and `LuauCompileFastpcall`
   flags, off in 0.740), since that path calls Luau's own `pcall` rather than the global mlua puts
   in its place; `pcall_does_not_catch_a_nested_hooks_failure` fails on a Luau that turns it on.
+
+What is left is exactly these globals, which `the_sandbox_holds_exactly_its_globals` checks: the
+five libraries, `_G`, `_VERSION`, `assert`, `error`, `getmetatable`, `ipairs`, `pcall`,
+`rawequal`, `rawget`, `rawlen`, `rawset`, `require`, `select`, `setmetatable`, `tonumber`,
+`tostring`, `type`, `typeof` and `unpack`. A later `mlua` that adds a global fails that test.
 
 The bytecode a VM loads is the crate's own `compile`'s, built from the repository's sources:
 Luau does not verify bytecode, so nothing else may be handed to `load_card`.
@@ -156,8 +168,8 @@ return {
 - A reader is a method of `ctx`: `ctx:controller()`, `ctx:hero_of(player)`. Its arguments are
   walked like anything else that crosses.
 - A hook may call a reader that runs another card's hook: the thread's VM and `Lua::scope` both
-  take a nested call, which spends the outer call's budget (`ctx:effects_of(card, face, hook)` tests
-  it).
+  take a nested call, which spends the outer call's budget, up to `LUAU_HOOK_DEPTH` calls deep
+  (`ctx:effects_of(card, face, hook)` tests it).
 - A hook that fails panics with its error, which names its card, face and hook: an engine `Hook`
   has no error to return. A panic in a nested hook unwinds through the outer one, which `pcall`
   cannot stop, so the outer call panics too.
@@ -165,7 +177,8 @@ return {
 ## Compiling
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
-`load_card` takes, with `compiler()`. `crates/cards/build.rs` will call it in part 4; until then
+`load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
+`crates/cards/build.rs` will call it in part 4; until then
 only the tests do.
 Its errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error
 as `"<file>:<line>: <Luau's message>"`.
@@ -200,5 +213,5 @@ rest.
 ## Tests
 
 `tests/host.rs`, over the card-shaped modules in `tests/fixtures/*.luau` (none is a real card):
-the sandbox, the interrupt's cap (nested calls included), the walk, `J.div` and `J.rem`,
-statelessness, nesting, two threads, the loader and the lint. `cargo test -p jackioh-luau`.
+the sandbox, the interrupt's cap (nested calls included), the depth cap, the walk, `J.div` and
+`J.rem`, statelessness, nesting, two threads, the loader and the lint. `cargo test -p jackioh-luau`.

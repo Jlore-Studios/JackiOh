@@ -9,7 +9,7 @@ use mlua::{Error, Lua, LuaOptions, StdLib, Table, Value, VmState};
 
 use crate::Site;
 use crate::api;
-use crate::config::LUAU_HOOK_INTERRUPTS;
+use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS};
 use crate::lint::MATH_ALLOWED;
 
 /// The base library's globals a script never sees: output, environments, loading code at run time,
@@ -168,6 +168,12 @@ impl Budget {
 /// The error a hook stopped at L5's cap fails with, naming its card, face and hook.
 pub fn stopped(site: Site) -> String {
     format!("{site}: stopped after {LUAU_HOOK_INTERRUPTS} interrupts (L5)")
+}
+
+/// The error a hook call nested deeper than `LUAU_HOOK_DEPTH` fails with, naming its card, face and
+/// hook.
+pub fn too_deep(site: Site) -> String {
+    format!("{site}: hook calls nested deeper than {LUAU_HOOK_DEPTH} (L5)")
 }
 
 /// A Luau with the sandbox above, the host's module behind `require`, and the interrupt. Rust panics
