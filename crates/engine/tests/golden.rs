@@ -1,33 +1,16 @@
-//! Golden traces (docs/v0.3.0/SURFACE.md §13) and the recorded hotseat game: the oracle the Rust
-//! engine is held to (README V4), recorded from the TypeScript engine before any Rust ran (part 23),
-//! and the port of `packages/cards/test/hotseat-replay.test.ts`.
+//! Golden traces (§13) and the recorded hotseat game: the oracle the engine is held to (README V4).
 //!
-//! THE GOLDEN TRACES. `golden/games.jsonl` holds 240 games, one per line, written by
-//! `scripts/golden/record.ts` from the TypeScript engine: seeds 1–200 dealt, seeded and played as
-//! `packages/cards/test/fuzz.test.ts` plays them, seeds 201–240 as `fuzz-handicap.test.ts` plays its
-//! own (one seat on Medium or Hard, R180–R184). For each line this file does what §13.3 says:
-//! `create_game(args)`, `begin_game`, check `begin`; then for each step check `l` (the actor's legal
-//! actions before the step, as a set) for the actor `a.playerId`, apply `a` with `reduce`, and check
-//! `s` (`hash_state`, §5.2), `v` (both seats' `view_for`) and `e` (the step's events), every hash
-//! FNV-1a 32 over the UTF-16 code units of the value's canonical JSON. Last, the game's ending and
-//! its length must be the line's `end`.
+//! `golden/games.jsonl` holds 240 games, one per line: seeds 1–200 plain, 201–240 with one seat on
+//! Medium or Hard (R180–R184). Each is replayed as §13.3 says: `create_game(args)`, `begin_game`, check
+//! `begin`; then per step check `l` (the actor's legal actions, as a set), apply `a` with `reduce`, and
+//! check `s` (`hash_state`, §5.2), `v` (both seats' `view_for`) and `e` (the events), each an FNV-1a 32
+//! of the canonical JSON over its UTF-16 code units; last, the ending and length must be `end`.
 //!
-//! On a game's first mismatch the test names the seed, the step, which hash and the action, writes
-//! the Rust side's canonical text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the
-//! command that writes TS's side next to it (`pnpm exec tsx scripts/golden/record.ts --seed <k>
-//! --dump-step <n>`, `.ts.json`, run in a checkout of 05f5cfd, the last commit that has the
-//! TypeScript): diff the two. Every game is replayed, so the report lists every
-//! game that diverges with its first divergent step; fix the earliest seed and step first, since one
-//! root cause often explains dozens. The games are split over GOLDEN_SHARDS tests so that the test
-//! harness replays them on as many threads (the engine's `clippy.toml` bans spawning one here).
-//!
-//! Never edit a trace by hand. After an intended rules change (there is none in v0.3.0),
-//! `cargo jackioh golden bless` rewrites the file from the Rust engine.
-//!
-//! The engine's `clippy.toml` (SURFACE §3) applies to this test too: data comes in with
-//! `include_str!`, and the two places that touch the file system at run time (the diff written on a
-//! divergence, and the optional comparison with a local Cypress recording that TS's test made) say
-//! why they are allowed to.
+//! A game's first mismatch names the seed, step, hash and action, writes the Rust side's canonical text
+//! to `target/golden-diff/<seed>-<step>-<which>.json` and prints the command that writes the recorded
+//! side's. Every game is replayed, so fix the earliest divergent seed and step first. The games are
+//! split over GOLDEN_SHARDS tests to run on many threads (the engine's `clippy.toml` bans spawning one).
+//! Never edit a trace by hand; `cargo jackioh golden bless` rewrites the file from the Rust engine.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -42,11 +25,9 @@ use jackioh_engine::{
     PlayerId, Winner, begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
 };
 
-// =============================================================================================
-// The golden traces (SURFACE §13)
-// =============================================================================================
+// The golden traces (§13)
 
-/// §13.3: the traces, recorded by `scripts/golden/record.ts`.
+/// §13.3: the recorded traces.
 const GAMES: &str = include_str!("golden/games.jsonl");
 
 /// §13.1: 200 games on this spec's resources and 40 with one seat handicapped.
@@ -110,8 +91,7 @@ fn seed_number(seed: &str) -> Option<u32> {
     seed.rsplit('-').next().and_then(|tail| tail.parse::<u32>().ok())
 }
 
-/// §13.3: write the Rust side's canonical text where `record.ts --dump-step` writes TS's, and say
-/// where it went.
+/// §13.3: write the Rust side's canonical text next to the recorded side's, and say where it went.
 #[allow(clippy::disallowed_methods)] // SURFACE §13.3: the diff file is this harness's output; clippy.toml's I/O ban guards the rules, which never reach this.
 fn write_diff(seed: &str, step: &str, which: &str, text: &str) -> String {
     let dir = PathBuf::from(DIFF_DIR);
@@ -391,47 +371,12 @@ golden_shards!(
     shard_11 = 11,
 );
 
-// =============================================================================================
-// The recorded hotseat game (port of packages/cards/test/hotseat-replay.test.ts)
-// =============================================================================================
-//
-// The vitest half of BUILD M5-T3's acceptance: "the same seed and actions reproduce the same final
-// state hash in the browser and in vitest".
-//
-// The browser half already exists. `e2e/cypress/e2e/01-hotseat-full-game.cy.ts` plays a whole game
-// through `/dev/hotseat`, then `cy.task("replayHash")` folds the recorded `(seed, decks, log)` in a
-// Node child process and asserts the browser's own `hashState` equals that fold. What did not exist
-// was a fold inside `vitest` — `apps/web/src/game/hotseat.test.ts` runs two sessions against a
-// SCRIPTED engine whose `reduce` increments a turn counter, so it would pass against an engine with
-// no determinism at all. This file is the missing fold: the real `reduce`, the real catalog, the
-// real card scripts, and a hash written down.
-//
-// WHY IT LIVES IN the engine's golden tests. The log names real cards (`core-003`, `core-045`, …) and
-// folding it without their scripts registered would fizzle every Cry (`script_of` falls back to the
-// empty script) and reach a different state. Only `jackioh-cards` owns the catalog and the scripts,
-// and `jackioh-engine` must not depend on it — the dependency runs the other way — so the engine
-// takes it as a dev-dependency (SURFACE §2), which integration tests may, next to the golden traces,
-// which fold the same way.
-//
-// WHY THE LOG IS COMMITTED HERE. `e2e/artifacts/` is gitignored (`e2e/.gitignore`), and CI's
-// test job runs on a fresh checkout where no browser has ever run — so a test that read the artifact
-// directly would find nothing there. Skipping when the file is absent would make this another check
-// that measures nothing, and failing when it is absent would make `cargo test` depend on having run
-// Cypress first. The recording is therefore checked in, byte-identical, as
-// `tests/golden/01-hotseat-full-game.json` (copied from `packages/cards/test/fixtures/`), and:
-//
-//   - the fold below ALWAYS runs, against the committed copy, and never skips;
-//   - the last test compares the committed copy with `e2e/artifacts/…` WHEN a local Cypress run has
-//     left one there, so a recording that drifts is reported instead of silently diverging. Its
-//     absence is the normal state (gitignored, never in CI) and is not evidence of drift, so it is
-//     the one thing here that is conditional — and it is conditional on a file that only exists
-//     when there is something to compare.
-//
-// WHY A LITERAL HASH. Comparing a fold with a fold in the same process proves nothing: both would
-// move together. `EXPECTED_HASH` is written down, so a change in shuffling, in turn order, in any
-// card's script, or a lost `register_all()` moves it and fails here. It is not a magic number: spec
-// 01 asserts the browser's own hash equals a fold of this same log, so this value is the browser's
-// hash for as long as that spec is green.
+// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, and
+// this file folds it with the real `reduce`, catalog and card scripts. It lives in the engine's tests,
+// which take `jackioh-cards` as a dev-dependency (§2), because a fold without the scripts registered
+// fizzles every Cry. The log is committed (`e2e/artifacts/` is gitignored, CI never runs Cypress), so
+// the fold always runs; the last test compares it with a local Cypress recording when there is one.
+// `EXPECTED_HASH` is a literal: a fold compared with a fold would move together and prove nothing.
 
 /// The recording, as `e2e/support/tasks/replay.ts` writes it: `{ seed, decks, log }`.
 #[derive(Deserialize)]
@@ -441,8 +386,7 @@ struct Recording {
     log: Vec<Action>,
 }
 
-/// The committed recording (TS's `COMMITTED`), compiled in (SURFACE §3: data reaches a pure crate's
-/// tests with `include_str!`).
+/// The committed recording, compiled in (§3: data reaches a pure crate's tests with `include_str!`).
 const COMMITTED: &str = include_str!("golden/01-hotseat-full-game.json");
 const COMMITTED_PATH: &str = "crates/engine/tests/golden/01-hotseat-full-game.json";
 
@@ -459,60 +403,10 @@ const RECORDED: &str = concat!(
 /// browser against a fold of it), copy that file over the fixture here, and paste the hash this test
 /// reports. Editing the number on its own turns the check into a rubber stamp.
 ///
-/// The one exception is a change to what the state RECORDS about the same game, which leaves the log
-/// as it is. The polish-4 hunt made three: the other player's turn log is emptied at each turn start
-/// (§6.2's "this turn"), and `lastDamagedBy` names only the hit that took a unit to 0 (R42). A fold of
-/// this log before and after the second differs in that field on three instances and nowhere else.
-/// The third: the turn log records what each play paid (`costsPaid`, R213), and a hand card's queued
-/// trigger no longer takes a number from `nextSeq` (R177). A fold before and after it differs in p1's
-/// `costsPaid` and in `nextSeq` and the two frontier ids it numbers, 4 lower, and nowhere else.
-///
-/// Round 6 of the hunt moved it twice more, and moved the log's ids with it. `createGame` now numbers
-/// each deck's cards in an order of the seed's own (R223), so the log's 40 deck-card ids were relabeled
-/// through that mapping and nothing else in the log changed; and the state counts the field's
-/// departures (`fieldExits`, R174). A fold of the old log under the old numbering and a fold of the
-/// relabeled log, relabeled back, differ in `fieldExits` alone — the same game, action for action.
-///
-/// The Coin (R244) re-recorded it, by the procedure above: p2 is dealt The Coin after the mulligan,
-/// so spec 01, which plays whatever the client offers, plays it on p2's first turn (nonce n6), and
-/// every instance created after setup takes an id one higher. A new game, not a relabeled one: 51
-/// actions where there were 50, still won by p1 by hero death.
-///
-/// The concurrent mulligan (R265) moved it once more, under the exception above: the log is the same
-/// 51 actions and folds without a refusal. Both mulligan prompts now open in `beginGame`, which does
-/// not run the resolution loop, where p2's used to open inside p1's answer and be dispatched there, so
-/// one event fewer takes a number: a fold before and after differs in `nextSeq` and the two frontier
-/// ids it numbers, 1 lower, and nowhere else.
-///
-/// The Radiant pass (R275, R276) re-recorded it the same way: its decks hold cards whose Radiant faces
-/// were raised (#8, #25, #73, #81, the Rush and Felinor Tokens), and a Radiant Saintess's Death now
-/// reaches the hand, so the same seed plays a different game. 38 actions, still won by p1 by hero death.
-/// Spec 01 records the same log under the concurrent mulligan, which folds to the hash below.
-///
-/// R311 moved the hash and not the game: every library card now records what its owner was shown of
-/// it going in (`knownAs`). The same fold with that field stripped from every instance hashes to
-/// "cc583237", the value before it.
-///
-/// Patch v0.1.1 (R360–R366) re-recorded it by the procedure above: its decks hold #1, #8, #20, #25,
-/// #56, #77, #81 and #92, whose stats, keywords or rules the patch changed, so the same seed plays a
-/// different game. 37 actions, still won by p1 by hero death.
-///
-/// Patch v0.2.0 moved it three times more and not the game. Its draw count (B5 E4, R457): each player's
-/// state counts the draws they made on the turn running (`draws`). Its announce (R448) and play records
-/// (R451), under the exception above: every play now emits `cardAnnounced` before it moves, which the
-/// frontier numbers from `nextSeq`, so every id numbered after a play is one higher per play; and the
-/// state records each player's plays by type this turn (`turnLog.playedByType`), by tag this game and
-/// their last face-up play (`gameLog`), and the last Spell played (`lastSpell`). Its Core patch to #32
-/// Prem Panther (R426) made the Panther's text its attack's own hook rather than a trigger on every
-/// death, so the deaths it watched queue no entries numbered from `nextSeq`. The same 37 actions fold
-/// with no refusal to the same end, won by p1 by hero death.
-///
-/// C+ #35 Rollback's history (R419) moved it once more and not the game: every turn's start now records
-/// the field in `state.boardHistory`. The same fold with that field deleted hashes to "2d6aab2a", the
-/// value before it.
-///
-/// v0.3.0 (SURFACE §5.2): the Rust engine must fold this same log to this same hash, which practice
-/// saves on players' devices and e2e specs 01, 13 and 22 rely on. Nothing about the game changed.
+/// The exception is a change to what the state RECORDS about the same game, which leaves the log as it
+/// is and moves the hash alone: R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and
+/// R457 (§6.2; B5 E4). A change to the game itself re-records the log (R244, R275, R276, R360–R366).
+/// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
 const EXPECTED_HASH: &str = "a798906b";
 
 /// What the recorded game ends in — a second anchor, so the hash is not the only witness.

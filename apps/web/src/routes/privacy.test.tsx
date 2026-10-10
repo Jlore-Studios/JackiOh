@@ -9,6 +9,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
 import LandingRoute from "./landing.tsx";
@@ -106,7 +107,7 @@ describe("the legal pages", () => {
   });
 
   it("are in the sitemap", () => {
-    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/terms</loc>`);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/accessibility</loc>`);
   });

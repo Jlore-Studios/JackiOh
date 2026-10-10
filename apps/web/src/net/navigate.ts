@@ -62,9 +62,10 @@ export function usePathname(): string {
 }
 
 /**
- * The deployed site's address. The runtime canonical link (main.tsx) is built from it; index.html,
- * public/robots.txt, public/sitemap.xml and public/.well-known/security.txt spell it too, since
- * static files cannot import it.
+ * The deployed site's address. The runtime canonical link (main.tsx) and the build's pages and
+ * sitemap.xml (static-pages.ts, through net/head.ts) are built from it; index.html (`og:image`, the
+ * JSON-LD `url`, and the source's `og:url`), public/robots.txt and public/.well-known/security.txt
+ * spell it too, since static files cannot import it.
  */
 export const SITE_ORIGIN = "https://jackioh.vercel.app";
 

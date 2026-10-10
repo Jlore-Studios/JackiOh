@@ -8,13 +8,10 @@
 //!  - B9: R109's API-wide limiter says how long until its oldest counted request leaves the window.
 //!  - B13: a request body larger than `API_MAX_BODY_BYTES` is refused before it is parsed.
 //!
-//! Ported from `apps/server/test/api/redeem-feedback.test.ts` (part 18). TS ran redemption on the
-//! real clock with `testLimits()`' 20 ms floor and the API limiter on `createManualTimers`; here
-//! both run on tokio's paused clock (SURFACE §11.2), where the production 250 ms floor's sleep costs
-//! nothing and `tokio::time::advance` drives the limiter. TS's `ApiLimits` port is gone: the limits
-//! are `config.rs`'s own numbers, so where TS shrank one (`breakerFailureThreshold: 1`) the test
-//! fills the window up to the real threshold instead. TS's `alphabetIds()` is not needed: the
-//! server's own ids mint codes inside R104's alphabet.
+//! Redemption and the API limiter both run on tokio's paused clock, so the production 250 ms floor
+//! costs nothing and `tokio::time::advance` drives the limiter. The limits are `config.rs`'s own
+//! numbers. Minted codes come from the server's own ids, inside R104's alphabet.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,9 +38,7 @@ use jackioh_server::db::store::{CodeAttempt, Db};
 
 use crate::support::deps::{add_user, test_app};
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 const MS_PER_SECOND: i64 = 1000;
 
@@ -53,10 +48,10 @@ const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 /// A well-formed code inside R104's alphabet that is never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKMN-PQRT";
 
-/// `jsonRequest`'s default `x-forwarded-for`.
+/// The default `x-forwarded-for`.
 const DEFAULT_IP: &str = "203.0.113.7";
 
-/// The stand-ins for TS's own `/api/mine` (user) and `/api/open` (none) routes.
+/// The `/api/mine` (user) and `/api/open` (none) stand-in routes.
 const MINE: &str = "/api/auth/me";
 const OPEN: &str = "/api/stats/players";
 
@@ -65,22 +60,22 @@ fn identical_body() -> String {
     json!({ "error": { "code": "invalid_code", "message": REDEMPTION_IDENTICAL_ERROR } }).to_string()
 }
 
-/// §9.4 step 2's allowance (TS `deps.limits.redeemPerProfilePerHour`).
+/// §9.4 step 2's allowance.
 fn per_profile() -> i64 {
     CODE_ATTEMPTS_PER_PROFILE_PER_HOUR
 }
 
-/// §9.4 step 3's allowance (TS `deps.limits.redeemPerIpPerHour`).
+/// §9.4 step 3's allowance.
 fn per_ip() -> i64 {
     CODE_ATTEMPTS_PER_IP_PER_HOUR
 }
 
-/// The attempt window (TS `deps.limits.redeemWindowMs`).
+/// The attempt window.
 fn window_ms() -> i64 {
     CODE_ATTEMPT_WINDOW_SECONDS * MS_PER_SECOND
 }
 
-/// The breaker's cooldown (TS `deps.limits.breakerCooldownMs`, `defaultLimits()`'s value).
+/// The breaker's cooldown.
 fn breaker_cooldown_ms() -> i64 {
     REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND
 }
@@ -89,9 +84,7 @@ fn retry_after_header_for(ms: i64) -> String {
     ((ms + MS_PER_SECOND - 1) / MS_PER_SECOND).to_string()
 }
 
-// ---------------------------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------------------------
 
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
@@ -167,7 +160,7 @@ async fn read_response(response: axum::response::Response) -> Reply {
     }
 }
 
-/// The fake store behind the test app (TS `deps.store`).
+/// The fake store behind the test app.
 async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -175,8 +168,8 @@ async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     }
 }
 
-/// §9.4's address hash as the server takes it (TS `createHashes(...).ip`, peppered as `index.ts`
-/// peppers it, `${CODE_PEPPER}:ip`): HMAC-SHA256 of the trimmed, lower-cased address, in hex.
+/// §9.4's address hash as the server takes it, peppered as `index.ts` peppers it
+/// (`${CODE_PEPPER}:ip`): HMAC-SHA256 of the trimmed, lower-cased address, in hex.
 struct Hashes {
     pepper: String,
 }
@@ -200,7 +193,7 @@ fn hashes(app: &App) -> Hashes {
     }
 }
 
-/// TS `mintInviteCode(deps, { maxUses, expiresAt })`: the new code's id and its formatted text.
+/// Mints an invite code: the new code's id and its formatted text.
 async fn mint(app: &App, max_uses: Option<i32>, expires_at: Option<i64>) -> (String, String) {
     let minted = mint_invite_code(
         MintDeps {
@@ -214,7 +207,7 @@ async fn mint(app: &App, max_uses: Option<i32>, expires_at: Option<i64>) -> (Str
     (minted.id, minted.formatted)
 }
 
-/// TS `codeDeps()`: the test app, whose redemption limits are `config.rs`'s.
+/// The test app, whose redemption limits are `config.rs`'s.
 async fn code_app() -> Arc<App> {
     test_app().await
 }
@@ -259,7 +252,7 @@ fn remaining(status: &Value) -> i64 {
     status["attemptsRemaining"].as_i64().expect("attemptsRemaining")
 }
 
-/// TS `logAttempts`: `count` rejected attempts, as §9.4 step 4 writes them.
+/// `count` rejected attempts, as §9.4 step 4 writes them.
 async fn log_attempts(app: &App, count: i64, profile_id: Option<&str>, ip_hash: &str, at: i64) {
     let attempt: CodeAttempt = from(
         json!({ "profileId": profile_id, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }),
@@ -275,9 +268,7 @@ async fn attempts_logged(app: &App) -> usize {
     fake(app).await.tables.attempts.len()
 }
 
-// ---------------------------------------------------------------------------------------------
 // B7: tries left
-// ---------------------------------------------------------------------------------------------
 
 mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
     use super::*;
@@ -450,9 +441,7 @@ mod r192_b7_get_api_codes_status_reports_the_tries_left_in_the_window {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B8: a rate limit is reported as a rate limit; R145's identical error stays identical
-// ---------------------------------------------------------------------------------------------
 
 mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     use super::*;
@@ -611,9 +600,8 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
 
     #[tokio::test(start_paused = true)]
     async fn r192_b8_gives_the_breaker_s_503_no_retry_after_only_rate_limited_carries_one() {
-        // TS lowered `breakerFailureThreshold` to 1. The threshold is `config.rs`'s here, so the
-        // window is filled to one short of it with other accounts' failures from another address,
-        // and the caller's own miss is the one that crosses it.
+        // The threshold is `config.rs`'s, so the window is filled to one short of it with other
+        // accounts' failures from another address, and the caller's own miss crosses it.
         let app = code_app().await;
         let caller = seed_caller(&app, "trips-breaker").await;
         flood_address(
@@ -706,8 +694,8 @@ mod r192_b8_rate_limited_and_error_response {
 
     #[test]
     fn r192_b8_adds_no_retry_after_for_a_negative_or_non_finite_wait() {
-        // TS also tried NaN and Infinity; the wait is an `i64` here (`ApiError::retry_after_ms`), so
-        // a negative one is the only wait without a header that the type can hold.
+        // The wait is an `i64` (`ApiError::retry_after_ms`), so a negative one is the only wait
+        // without a header that the type can hold.
         {
             let ms = -1_i64;
             let response = error_response(&rate_limited("wait", ms));
@@ -717,9 +705,7 @@ mod r192_b8_rate_limited_and_error_response {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B9: the API-wide limiter says how long to wait
-// ---------------------------------------------------------------------------------------------
 
 mod r192_b9_the_limiter_s_wait {
     use super::*;
@@ -843,9 +829,7 @@ mod r192_b9_the_api_limiter_s_429_r109 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B13: the body cap
-// ---------------------------------------------------------------------------------------------
 
 mod b13_a_request_body_larger_than_api_max_body_bytes {
     use super::*;

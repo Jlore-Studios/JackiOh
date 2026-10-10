@@ -11,7 +11,7 @@
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, cannot_attack, find_def, has_keyword,
@@ -88,7 +88,9 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
     if view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Taunt) {
         value -= (1.0 - w.position_grants) * (weights.taunt + w.armor_point);
     }
-    value * brittle_share(unit, w)
+    // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's
+    // Plague Counters are mana it already banked, not part of the body that crumbles.
+    value * brittle_share(unit, w) + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
 }
 
 /// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
@@ -141,6 +143,18 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share).
                 if w.animated_share != 0.0 && animated_kind_of(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
+                }
+                // §10.1, R27/R62: a grade counter's banked steps are worth their own — a Combo-Index
+                // at B is not the fresh one its def prints. On the controller's own turn a rise this
+                // turn's plays already arm counts as banked: the beam can prefer the lines that
+                // spend enough to set it off, as the glow does (`grade_rises`, which reads the same
+                // per-turn log it will fire on).
+                if card.counters.grade.is_some() {
+                    let grade = subsystems::grade_of(card);
+                    if !subsystems::is_terminal_grade(grade) {
+                        let armed = card.controller == state.active && subsystems::grade_rises(state, card);
+                        value += w.grade_counter * f64::from(grade - FIRST_GRADE + i32::from(armed));
+                    }
                 }
             }
             _ => value += w.enemy_face_down,

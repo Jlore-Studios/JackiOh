@@ -1,19 +1,14 @@
-//! SPEC §9.8's second flood limit: "Per-match rate limit in the actor, **per-account rate limit at
-//! the API**", with R109's number — 300 requests per minute per account.
+//! SPEC §9.8's second flood limit: "per-account rate limit at the API", with R109's number: 300
+//! requests per minute per account.
 //!
-//! The per-match half lives in `crates/server/src/actor/match_actor.rs` and is covered by
-//! `tests/actor/match_actor.rs`; this is the API half, enforced in the router for every route at
-//! once rather than at the top of each handler, so a new endpoint cannot forget it.
+//! The per-match half is covered by `tests/actor/match_actor.rs`; this is the API half, enforced in
+//! the router for every route at once so a new endpoint cannot forget it. The number under test is
+//! the real `API_REQUESTS_PER_MINUTE`, read from `config.rs`.
 //!
-//! The number under test is the real `API_REQUESTS_PER_MINUTE`, read from `config.rs` rather than
-//! restated here, so this suite is what makes that constant enforced rather than merely declared.
-//!
-//! Ported from `apps/server/test/api/rate-limit.test.ts` (part 18). TS built routers of its own
-//! (`createRouter([route("GET", "/api/open", "none", …)])`); the Rust server has one route table
-//! (`app::ROUTES`), so each TS stand-in route is a real route of the same auth level:
-//! `/api/open` (none) is `GET /api/stats/players`, `/api/mine` (user) is `GET /api/auth/me` and
-//! `/api/gated` (active) is `GET /api/tutorial`. The limiter lives in `App` (SURFACE §11.2), so
-//! TS's "per router" is "per App" here. Time is tokio's paused clock (SURFACE §11.2).
+//! Stand-in routes, one per auth level: `/api/open` (none) is `GET /api/stats/players`, `/api/mine`
+//! (user) is `GET /api/auth/me`, `/api/gated` (active) is `GET /api/tutorial`. The limiter lives in
+//! `App`, so "per router" is "per App". Time is tokio's paused clock.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -43,17 +38,15 @@ use crate::support::deps::{add_user, test_app};
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 const MINUTE_MS: u64 = 60_000;
 
-/// `jsonRequest`'s default `x-forwarded-for`, the entry one proxy hop writes (`render.yaml`).
+/// The default `x-forwarded-for`, the entry one proxy hop writes (`render.yaml`).
 const DEFAULT_IP: &str = "203.0.113.7";
 
-/// The stand-ins for TS's own routes: one of each auth level.
+/// The stand-ins: one route of each auth level.
 const OPEN: &str = "/api/stats/players";
 const MINE: &str = "/api/auth/me";
 const GATED: &str = "/api/tutorial";
 
-// ---------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
 
 /// One response, read whole.
 struct Reply {
@@ -69,9 +62,8 @@ impl Reply {
     }
 }
 
-/// TS `router(jsonRequest(method, path, body, { token, ip }))`: one request through the real
-/// router, with the `x-forwarded-for` entry the deployed proxy writes (the test app trusts one hop,
-/// as TS's `createTestDeps` did).
+/// One request through the real router, with the `x-forwarded-for` entry the deployed proxy writes
+/// (the test app trusts one hop).
 async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip: Option<&str>) -> Reply {
     let mut request = Request::builder()
         .method(method)
@@ -97,7 +89,7 @@ async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip:
     }
 }
 
-/// The fake store behind the test app (TS `deps.store`).
+/// The fake store behind the test app.
 async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -112,9 +104,8 @@ async fn app_with_auth(auth: Auth) -> Arc<App> {
     Arc::new(App { auth, ..app })
 }
 
-/// Every log line the server writes while the guard lives (TS's `createRecordingLogger`): each
-/// event's fields by name, read off `tracing` (SURFACE §11.3: `Logger` → `tracing`, same `event`
-/// names).
+/// Every log line the server writes while the guard lives: each event's fields by name, read off
+/// `tracing` (SURFACE §11.3).
 #[derive(Clone, Default)]
 struct Logged(Arc<std::sync::Mutex<Vec<IndexMap<String, String>>>>);
 
@@ -143,8 +134,7 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Logged {
     fn on_event(&self, event: &tracing::Event<'_>, _context: tracing_subscriber::layer::Context<'_, S>) {
         let mut fields = Fields::default();
         event.record(&mut fields);
-        // `api::http::log_warn(event, data)` writes TS's data object as one `data` field of JSON
-        // text; its keys are the line's fields, as TS's logger kept them.
+        // `api::http::log_warn(event, data)` writes its data object as one `data` field of JSON text.
         let mut line = fields.0;
         if let Some(Ok(Value::Object(data))) =
             line.get("data").map(|text| serde_json::from_str::<Value>(text))
@@ -171,7 +161,7 @@ impl tracing::field::Visit for Fields {
     }
 }
 
-/// TS `signIn`: an active account whose token verifies.
+/// An active account whose token verifies.
 async fn sign_in(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
@@ -194,9 +184,7 @@ fn count(statuses: &[u16], status: u16) -> usize {
     statuses.iter().filter(|&&candidate| candidate == status).count()
 }
 
-// ---------------------------------------------------------------------------
 // §9.8: the per-account API rate limit (R109)
-// ---------------------------------------------------------------------------
 
 mod the_per_account_api_rate_limit_r109 {
     use super::*;
@@ -291,8 +279,7 @@ mod the_per_account_api_rate_limit_r109 {
 
     #[tokio::test(start_paused = true)]
     async fn is_per_app_not_module_state_a_second_app_starts_with_an_empty_window() {
-        // TS: "is per router, not module state: a second router starts with an empty window". The
-        // limiter is `App::limiter` here, so a second App is what a second TS router was.
+        // The limiter is `App::limiter`, so a second App starts with an empty window.
         let app = test_app().await;
         let token = sign_in(&app, "twice").await;
         burst(&app, LIMIT, MINE, Some(&token), None).await;
@@ -304,9 +291,7 @@ mod the_per_account_api_rate_limit_r109 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The sliding window itself
-// ---------------------------------------------------------------------------
 
 mod the_sliding_window_itself {
     use super::*;
@@ -337,9 +322,7 @@ mod the_sliding_window_itself {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A flood of bad tokens costs the auth provider nothing past the address budget
-// ---------------------------------------------------------------------------
 
 mod a_flood_of_bad_tokens_costs_the_auth_provider_nothing_past_the_address_budget {
     use super::*;
@@ -390,8 +373,7 @@ mod a_flood_of_bad_tokens_costs_the_auth_provider_nothing_past_the_address_budge
         (app_with_auth(Auth::Supabase(auth)).await, calls)
     }
 
-    /// A legacy HS256 token for `sub`, signed with a secret this server was never given (TS:
-    /// jose's `SignJWT`, here by hand over `hmac` + `sha2`).
+    /// A legacy HS256 token for `sub`, signed with a secret this server was never given.
     fn hs256_token(sub: &str, secret: &[u8]) -> String {
         let header = URL_SAFE_NO_PAD.encode(json!({ "alg": "HS256" }).to_string());
         let claims = URL_SAFE_NO_PAD.encode(json!({ "sub": sub }).to_string());

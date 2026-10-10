@@ -172,6 +172,12 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// Per Plague Counter on a unit (§10.1, R454: Fed Fauci's stored mana engine, a Corpse
+    /// Plantation's unspent price), on top of the body's worth and outside its Brittle share.
+    pub plague_counter: f64,
+    /// Per grade step a readable backrow card's counter has climbed past E (§10.1, R27/R62:
+    /// Combo-Index's cascade), plus one for a rise this turn's plays already arm.
+    pub grade_counter: f64,
     /// B3.4, R65: taken off an own hand card per crystal its `costMod` (a Degrade's +1, an Upgrade's −1)
     /// moves its cost; a cheaper card gains it.
     pub hand_cost_delta: f64,
@@ -244,6 +250,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    plague_counter: 0.5,
+    grade_counter: 1.5,
     hand_cost_delta: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
@@ -304,6 +312,10 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
+    // as it did.
+    plague_counter: 0.0,
+    grade_counter: 0.0,
     hand_cost_delta: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,

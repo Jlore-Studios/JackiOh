@@ -2,8 +2,9 @@
 //! (SPEC §9.9, R188; docs/polish/3-ai.md B16, B20, B21).
 //!
 //! B16: one candidate is played without searching (no node, no draw from the AI's rng), and a seat
-//! that owes nothing gets null. B20: the mulligan returns exactly the cards costing more than
-//! AI_MULLIGAN.keepMaxCost. B21 and R188: the AI answers an unanswered draw offer at once with a
+//! that owes nothing gets null. B20: the mulligan returns the cards costing more than
+//! AI_MULLIGAN.keepMaxCost, keeping at most the one proven four-drop the shaped keep allows.
+//! B21 and R188: the AI answers an unanswered draw offer at once with a
 //! decline, and never concedes, offers a draw or accepts one.
 //!
 //! Port of `packages/ai/test/decide.test.ts`. TS's per-test timeouts have no `cargo test` twin and
@@ -11,7 +12,7 @@
 
 use jackioh_ai::{
     AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, Decision, DecisionReason, MatchHooks, Matchup,
-    SeatController, ai_to_act, decide, game_config, mulligan_keep, play_match, unanswered_draw_offer,
+    SeatController, ai_to_act, decide, game_config, mulligan_keep_shaped, play_match, unanswered_draw_offer,
 };
 use jackioh_engine::testkit::{
     Action, ActionBody, ActionType, GameEvent, GameState, PerPlayer, PlayerId, PromptKind, create_rng,
@@ -292,14 +293,29 @@ mod the_mulligan_b20 {
                 assert_eq!(prompt.as_ref().map(|p| p.player_id), Some(seat), "{seed} {seat}");
 
                 let hand = state.players[seat].hand.clone();
-                let keep = sorted(
-                    hand.iter()
-                        .filter(|card| {
-                            query_cost(def_of(Some(&state), &card.def_id)) <= AI_MULLIGAN.keep_max_cost
-                        })
-                        .map(|card| card.id.clone())
-                        .collect(),
-                );
+                let plain: Vec<String> = hand
+                    .iter()
+                    .filter(|card| {
+                        query_cost(def_of(Some(&state), &card.def_id)) <= AI_MULLIGAN.keep_max_cost
+                    })
+                    .map(|card| card.id.clone())
+                    .collect();
+                // The shaped keep (mulligan.rs): the plain rule plus, at most, the one best card
+                // costing keep_max_cost + 1 whose shaped weight reaches DEAL_MULLIGAN_KEEP.
+                let keep = sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost));
+                for id in &plain {
+                    assert!(keep.contains(id), "{seed} {seat} {id}");
+                }
+                let extras: Vec<&String> = keep.iter().filter(|id| !plain.contains(id)).collect();
+                assert!(extras.len() <= 1, "{seed} {seat} {extras:?}");
+                for id in &extras {
+                    let card = hand.iter().find(|card| &card.id == *id).expect("in hand");
+                    assert_eq!(
+                        query_cost(def_of(Some(&state), &card.def_id)),
+                        AI_MULLIGAN.keep_max_cost + 1,
+                        "{seed} {seat} {id}"
+                    );
+                }
                 let returned: Vec<String> = hand
                     .iter()
                     .map(|card| card.id.clone())
@@ -322,7 +338,7 @@ mod the_mulligan_b20 {
                 };
                 assert_eq!(chosen, Some(keep.clone()), "{seed} {seat}");
                 assert_eq!(
-                    sorted(mulligan_keep(&state, seat, AI_MULLIGAN.keep_max_cost)),
+                    sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost)),
                     keep,
                     "{seed} {seat}"
                 );
@@ -395,9 +411,11 @@ mod the_mulligan_at_its_bounds_b20 {
     #[test]
     fn b20_a_hand_of_cards_costing_more_than_keep_max_cost_is_returned_whole() {
         register_cards();
-        let four = "core-025"; // 4-mana 7/7
-        assert!(query_cost(def_of(None, four)) > AI_MULLIGAN.keep_max_cost);
-        let state = mulligan_with("decide-mulligan-return-all", &[four]);
+        // Six mana: beyond the shaped keep's reach (it looks only at keep_max_cost + 1), so the
+        // whole hand still goes back.
+        let six = "core-029";
+        assert!(query_cost(def_of(None, six)) > AI_MULLIGAN.keep_max_cost + 1);
+        let state = mulligan_with("decide-mulligan-return-all", &[six]);
         let decision = must_decide(&state, PlayerId::P1, "decide-mulligan-return-all");
         assert_eq!(decision.reason, DecisionReason::Mulligan);
         assert_eq!(decision.action, ActionBody::Mulligan { keep: vec![] });
@@ -416,6 +434,31 @@ mod the_mulligan_at_its_bounds_b20 {
         assert_eq!(resolved.error, None);
         let shuffled = ids_where(&resolved.events, PlayerId::P1, true);
         assert_eq!(sorted(shuffled), sorted(hand_ids(&state, PlayerId::P1)));
+    }
+
+    /// The shaped keep's exception: a cost-4 whose dealt quality the lane's records vouch for stays;
+    /// one they do not goes back with the rest.
+    #[test]
+    fn b20_the_shaped_keep_holds_the_one_best_proven_four_drop_and_returns_the_rest() {
+        register_cards();
+        let proven = "core-054"; // 4-cost, shaped weight far above DEAL_MULLIGAN_KEEP
+        let unproven = "classicplus-035"; // 4-cost, shaped weight below it
+        assert_eq!(query_cost(def_of(None, proven)), AI_MULLIGAN.keep_max_cost + 1);
+        assert_eq!(query_cost(def_of(None, unproven)), AI_MULLIGAN.keep_max_cost + 1);
+        let state = mulligan_with("decide-mulligan-shaped", &[unproven, proven, unproven]);
+        let decision = must_decide(&state, PlayerId::P1, "decide-mulligan-shaped");
+        let kept = match &decision.action {
+            ActionBody::Mulligan { keep } => sorted(keep.clone()),
+            _ => vec![],
+        };
+        // Exactly one card is kept: a copy of the proven four-drop.
+        assert_eq!(kept.len(), 1);
+        let kept_card = state.players[PlayerId::P1]
+            .hand
+            .iter()
+            .find(|card| card.id == kept[0])
+            .expect("kept id is a hand card");
+        assert_eq!(kept_card.def_id, proven);
     }
 }
 

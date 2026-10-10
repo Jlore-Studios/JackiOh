@@ -1,5 +1,4 @@
-//! Seasons (SPEC §9.12, R609): which season a build plays in, and the soft reset that opens one
-//! (← `apps/server/src/ranked/season.ts`).
+//! Seasons (SPEC §9.12, R609): which season a build plays in, and the soft reset that opens one.
 //!
 //! A season is named by the minor version of the game: every patch of v0.2 (v0.2.0, v0.2.6,
 //! v0.2.6-r1) plays in season `v0.2`, and the first patch of v0.3 opens the next. The version is the
@@ -20,8 +19,7 @@ use serde::{Deserialize, Serialize};
 use super::glicko2::Glicko;
 use crate::config::{RATING_DEVIATION_START, SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
 
-/// TS `MINOR_VERSION = /^v(\d+)\.(\d+)(?:[.-]|$)/`: the leading `v<major>.<minor>` of a patch
-/// version, read by hand (the server carries no regex crate). Each number is its ASCII digits.
+/// The leading `v<major>.<minor>` of a patch version, read by hand (no regex crate).
 fn minor_version(patch_version: &str) -> Option<(&str, &str)> {
     let rest = patch_version.strip_prefix('v')?;
     let major_end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
@@ -41,7 +39,7 @@ fn minor_version(patch_version: &str) -> Option<(&str, &str)> {
     }
 }
 
-/// TS `String(Number(digits))` for a run of ASCII digits: the number without its leading zeros.
+/// A run of ASCII digits without its leading zeros.
 fn number_text(digits: &str) -> String {
     let trimmed = digits.trim_start_matches('0');
     if trimmed.is_empty() {
@@ -51,9 +49,8 @@ fn number_text(digits: &str) -> String {
     }
 }
 
-/// R609: the season a patch version plays in, `v<major>.<minor>`. Panics (TS throws) on a version
-/// it cannot read: the version is compiled in from `patches.json`, so an unreadable one is a broken
-/// build, not a request to refuse.
+/// R609: the season a patch version plays in, `v<major>.<minor>`. Panics on a version it cannot
+/// read: it is compiled in from `patches.json`, so an unreadable one is a broken build.
 pub fn season_id_of(patch_version: &str) -> String {
     match minor_version(patch_version) {
         Some((major, minor)) => format!("v{}.{}", number_text(major), number_text(minor)),
@@ -98,7 +95,6 @@ pub struct ResetReport {
     pub highest_after: f64,
 }
 
-/// `soft_reset`'s answer (TS `{ changes: ResetChange[]; report: ResetReport }`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SoftReset {
     pub changes: Vec<ResetChange>,
@@ -121,17 +117,14 @@ fn spread(values: &[f64], centre: f64) -> f64 {
     mean(&squares).sqrt()
 }
 
-/// TS `Math.min(...values)` over a non-empty list.
 fn lowest(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::INFINITY, f64::min)
 }
 
-/// TS `Math.max(...values)` over a non-empty list.
 fn highest(values: &[f64]) -> f64 {
     values.iter().copied().fold(f64::NEG_INFINITY, f64::max)
 }
 
-/// The reset of one rating, toward `centre`.
 pub fn reset_glicko(glicko: &Glicko, centre: f64) -> Glicko {
     Glicko {
         rating: centre + (glicko.rating - centre) * (1.0 - SEASON_RESET_STRENGTH),
@@ -148,7 +141,7 @@ pub fn reset_glicko(glicko: &Glicko, centre: f64) -> Glicko {
 /// to the same ratings.
 pub fn soft_reset(players: &[ResetPlayer]) -> SoftReset {
     let mut ordered: Vec<ResetPlayer> = players.to_vec();
-    // Stable, as `Array.prototype.sort` is (SURFACE §4.4.1); ids are ASCII, so `str::cmp` is TS's `<`.
+    // Stable sort (SURFACE §4.4.1).
     ordered.sort_by(|a, b| a.profile_id.cmp(&b.profile_id));
     let before: Vec<f64> = ordered.iter().map(|player| player.glicko.rating).collect();
     let centre = mean(&before);

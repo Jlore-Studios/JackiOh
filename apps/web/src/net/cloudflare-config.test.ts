@@ -9,12 +9,27 @@
 //     the path, so every rewrite targets `/` instead;
 //   - `/login/` is not matched by a `/login` rule, so each path is listed with and without the slash;
 //   - unmatched paths get public/404.html with a 404 status (`not_found_handling: "404-page"`).
+//
+// A page the build writes (static-pages.ts) is a real file, `almanac/index.html`. Measured the same
+// way (wrangler 4.147, `wrangler dev` on the built dist), with that file in place:
+//   - `/almanac / 200` and `/almanac/ / 200` answer both paths with the landing HTML, status 200: a
+//     rule wins over the file;
+//   - with no almanac rule, `/almanac` is a 307 to `/almanac/` (and `/almanac?x=1` to `/almanac/?x=1`),
+//     `/almanac/` is the almanac file, and `/almanac/index.html` is a 307 to `/almanac/`;
+//   - `/almanac /almanac/ 200` alone serves the almanac file at `/almanac`, `/almanac/` and
+//     `/almanac?x=1`, each with status 200, and `/almanac/extra` is a 404;
+// so each page the build writes has that one rule to its own folder. vercel.json keeps its rewrites
+// unchanged: Vercel serves a file before it applies a rewrite (not measured here), so they only
+// answer a path that has no file.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { PUBLIC_PAGES } from "../../static-pages.ts";
+import { paths } from "./navigate.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
@@ -27,7 +42,10 @@ type VercelConfig = {
 
 const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as VercelConfig;
 
-/** The paths Vercel rewrites, spelled the way _redirects must spell them. */
+/** The pages the build writes a file for (static-pages.ts). */
+const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
+
+/** The paths Vercel rewrites, as the rules _redirects must hold: a page with a file goes to its folder. */
 function expectedRules(): string[] {
   const rules: string[] = [];
   for (const { source } of vercel.rewrites) {
@@ -37,7 +55,8 @@ function expectedRules(): string[] {
     if (names === undefined) throw new Error(`cloudflare-config.test.ts cannot read this source: ${source}`);
     for (const name of names) {
       const path = byId === null ? `/${name}` : `/${name}/:id`;
-      rules.push(path, `${path}/`);
+      if (EMITTED.has(path)) rules.push(`${path} ${path}/ 200`);
+      else rules.push(`${path} / 200`, `${path}/ / 200`);
     }
   }
   return rules;
@@ -52,12 +71,33 @@ const lines = (text: string): string[] =>
 describe("public/_redirects", () => {
   const rules = lines(readFileSync(join(PUBLIC, "_redirects"), "utf8")).map((line) => line.split(/\s+/u));
 
-  it("rewrites exactly the paths vercel.json rewrites, with and without a trailing slash", () => {
-    expect(rules.map(([from]) => from).sort()).toEqual(expectedRules().sort());
+  it("rewrites exactly the paths vercel.json rewrites, each page the build writes to its own folder", () => {
+    expect(rules.map((rule) => rule.join(" ")).sort()).toEqual(expectedRules().sort());
   });
 
-  it("rewrites (200) to `/`, never to `/index.html`, which Cloudflare answers with a redirect", () => {
-    for (const rule of rules) expect(rule.slice(1), rule[0]).toEqual(["/", "200"]);
+  it("rewrites (200), never to an `index.html`, which Cloudflare answers with a redirect", () => {
+    for (const [from, to, status] of rules) {
+      expect(status, from).toBe("200");
+      expect(to, from).not.toMatch(/index\.html$/u);
+    }
+  });
+
+  /** Whether a request for `path` is answered: `/`, a rule's own path, or a folder's slashed path. */
+  function served(path: string): boolean {
+    if (path === "/" || rules.some(([from]) => from === path)) return true;
+    return path.endsWith("/") && EMITTED.has(path.slice(0, -1));
+  }
+
+  it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
+    const fixed = Object.entries(paths)
+      // Production serves NotFound at /dev/hotseat (main.tsx), so a real 404 there is right.
+      .filter(([name]) => name !== "hotseat")
+      .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
+    for (const path of fixed) {
+      expect(served(path), path).toBe(true);
+      if (path !== paths.landing) expect(served(`${path}/`), `${path}/`).toBe(true);
+    }
+    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat"]) expect(served(path), path).toBe(false);
   });
 });
 

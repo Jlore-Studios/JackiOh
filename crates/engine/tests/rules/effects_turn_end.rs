@@ -1,16 +1,11 @@
-//! Ending a turn from an effect (docs/classic-sets.md B5 E10, R456): `endTurn` and `endTurnAfterActions`
-//! (`src/effects/turnEnd.ts`), the "your turn ends" rider they leave (`modifiers.cutTurnShort`), and the
-//! reducer ending the turn once it is due (`reduce.endDueTurns`).
+//! Ending a turn from an effect (docs/classic-sets.md B5 E10, R456): `endTurn` and `endTurnAfterActions`,
+//! the "your turn ends" rider they leave (`modifiers.cutTurnShort`), and the reducer ending the turn
+//! once it is due (`reduce.endDueTurns`).
 //!
 //! What is pinned: the rest of the effect list and of the action resolve first, then the turn ends as
 //! if End turn were pressed, every end-of-turn step included, after `turnCutShort`; a prompt the action
 //! opened is answered first; Classic+ #26 drawn at the start of its controller's turn ends that turn
-//! before its main phase; "one more action" counts main-phase actions only and not the one that set
-//! it; ending the turn yourself uses it; on the other player's turn nothing happens; the AI card Rate
-//! Limit ends the opponent's turn after the play that set it off. And the pauses survive JSON and
-//! replay.
-//!
-//! Port of `packages/engine/test/effects-turnEnd.test.ts`.
+//! before its main phase; "one more action" counts main-phase actions only and not the one that set it.
 
 use std::cell::Cell;
 
@@ -36,9 +31,8 @@ fn game(seed: &str) -> GameState {
 }
 
 thread_local! {
-    /// TS's module-level `let nonce = 0`: every action `act` sends takes the next one. Each Rust test
-    /// runs on its own thread, so the count starts at 0 per test; a nonce only has to be unique
-    /// within its game (§9.3's dedupe).
+    /// Every action `act` sends takes the next nonce. Each test runs on its own thread, so the count
+    /// starts at 0 per test; a nonce only has to be unique within its game (§9.3's dedupe).
     static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
@@ -50,14 +44,13 @@ fn next_nonce() -> u32 {
     })
 }
 
-/// TS `actResult(state, body)`: the action literal with its nonce, through `reduce`.
+/// The action literal with its nonce, through `reduce`.
 fn act_result(state: &GameState, body: Value) -> ReduceResult {
     let mut action = body;
     action["nonce"] = json!(format!("te{}", next_nonce()));
     reduce(state, &json_as::<Action>(action))
 }
 
-/// TS `act`'s `{ state, events }`.
 struct Acted {
     state: GameState,
     events: Vec<GameEvent>,
@@ -101,14 +94,13 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// TS `play`'s `{ state, events, card }`.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
     card: CardInstance,
 }
 
-/// TS put the card in `state`'s hand (the object the caller holds) and played it from there.
+/// Put the card in `state`'s hand (the object the caller holds) and play it from there.
 fn play(state: &mut GameState, player: PlayerId, def_id: &str) -> Played {
     let card = in_hand(state, def_id, player, 1).remove(0);
     let Acted { state: after, events } = act(
@@ -130,7 +122,6 @@ fn answer(state: &GameState) -> Acted {
     )
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn round_trip(state: &GameState) -> GameState {
     serde_json::from_value(serde_json::to_value(state).expect("serialises")).expect("parses back")
 }
@@ -139,7 +130,7 @@ fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
 
-/// TS `list.indexOf(x)`: the first position, or -1.
+/// The first position, or -1.
 fn index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
     types
         .iter()
@@ -147,7 +138,7 @@ fn index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// TS `list.lastIndexOf(x)`: the last position, or -1.
+/// The last position, or -1.
 fn last_index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
     types
         .iter()
@@ -155,7 +146,6 @@ fn last_index_of(types: &[GameEventType], type_: GameEventType) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// `state.players[player].mods.filter((mod) => mod.kind === "turnEnds")`.
 fn turn_ends_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
     state.players[player]
         .mods
@@ -171,8 +161,7 @@ fn turn_ends_json(state: &GameState, player: PlayerId) -> Value {
     to_json(turn_ends_of(state, player))
 }
 
-/// TS `makeContext(sinkFor(state), self, { controller })`: the context borrows the state, so the
-/// test's effects run inside `f`.
+/// The context borrows the state, so the test's effects run inside `f`.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -194,19 +183,16 @@ fn with_ctx<R>(
     f(&mut ctx)
 }
 
-/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// TS held the live instance; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// TS wrote through the live instance; Rust writes through the card found by id.
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
@@ -223,8 +209,8 @@ fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// TS `toMatchObject`: every key `expected` names is in `actual` with a matching value (objects
-/// recursively, arrays element by element); `actual` may carry more.
+/// Every key `expected` names is in `actual` with a matching value (objects recursively, arrays
+/// element by element); `actual` may carry more.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -262,7 +248,6 @@ mod b5_e10_end_your_turn_r456 {
             json!([{ "type": "turnCutShort", "player": "p1", "byInstanceId": card.id }])
         );
         let types = types_of(&events);
-        // The play resolved whole, then the cut, then every end-of-turn step, then the next turn.
         assert!(
             index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TurnCutShort)
         );
@@ -270,7 +255,6 @@ mod b5_e10_end_your_turn_r456 {
         assert!(
             index_of(&types, GameEventType::TurnEnded) < last_index_of(&types, GameEventType::TurnStarted)
         );
-        // Cleanup ran: the turn log was closed and the rider went with the turn.
         assert_eq!(
             after.players.p1.turn_log.unspent_at_end,
             Some(state.players.p1.mana.current)
@@ -330,7 +314,7 @@ mod b5_e10_end_your_turn_r456 {
         }))
         .state;
         let mut log: Vec<Action> = Vec::new();
-        /// TS's `step`: one action, logged under the nonce `rp<log length>`, applied to the state.
+        /// One action, logged under the nonce `rp<log length>`, applied to the state.
         fn step(state: &mut GameState, log: &mut Vec<Action>, body: Value) -> Vec<GameEvent> {
             let mut action = body;
             action["nonce"] = json!(format!("rp{}", log.len()));
@@ -424,7 +408,6 @@ mod b5_e10_end_your_turn_r456 {
         let drawn = state.players.p2.library.first().cloned();
         let Acted { state: after, events } = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
 
-        // p2's turn began, cast the unit it drew, and ended there: it is p1's turn again.
         assert_eq!(after.turn, state.turn + 2);
         assert_eq!(after.active, PlayerId::P1);
         let drawn_id = drawn.as_ref().map(|card| card.id.clone());
@@ -572,7 +555,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         let first = put(&mut state, "fx-3", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let second = put(&mut state, "fx-4", slot(PlayerId::P1, Row::Units, 2), json!({}));
         let (first, second) = (live(&state, &first.id), live(&state, &second.id));
-        // One sink for all three contexts, as TS's `const sink = sinkFor(state)`.
+        // One sink for all three contexts.
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {

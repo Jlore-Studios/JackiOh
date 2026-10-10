@@ -1,5 +1,3 @@
-//! Port of `apps/server/test/api/codes.test.ts`.
-//!
 //! BUILD M6-T1: "integration tests for each rejection step" of SPEC §9.4's six-step redemption
 //! transaction, plus the identical-error requirement and the global circuit breaker. Each test
 //! names the step it covers.
@@ -7,16 +5,11 @@
 //! Every test drives real HTTP through `app::router`, so the route's auth declaration, the §9.4
 //! gate, the constant-time padding and the handler all take part.
 //!
-//! What the Rust server has that TS's `ServerDeps` did not, and so how this file differs:
-//!   * no `Timers` port: every test runs on tokio's paused clock (`start_paused`), where §9.4's
-//!     production floor (`REDEMPTION_RESPONSE_FLOOR_MS`) costs nothing to sit through, so TS's 20 ms
-//!     test floor is gone;
-//!   * no `ApiLimits` to shrink: a test that wants the breaker near its threshold logs the failures
-//!     that bring it there (`near_threshold`), against the production
-//!     `REDEMPTION_CIRCUIT_FAILURE_THRESHOLD`;
-//!   * no `Ids` port: `mint_invite_code` draws its codes from the OS (TS's `alphabetIds` fake, which
-//!     made `systemIds.code`'s alphabet deterministic, has nothing to stand in for), so a test finds
-//!     a minted code by the id or the formatted text it answered.
+//! Every test runs on tokio's paused clock (`start_paused`), where §9.4's production floor
+//! (`REDEMPTION_RESPONSE_FLOOR_MS`) costs nothing to sit through. A test that wants the breaker near
+//! its threshold logs the failures that bring it there (`near_threshold`), against the production
+//! `REDEMPTION_CIRCUIT_FAILURE_THRESHOLD`. `mint_invite_code` draws its codes from the OS, so a test
+//! finds a minted code by the id or the formatted text it answered.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -44,26 +37,22 @@ use jackioh_server::db::store::{Db, StoreError};
 
 use crate::support::deps;
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
-/// A well-formed code (16 symbols, all inside the alphabet) that was never minted:
-/// `formatCode("ABCDEFGHJKLMNPQR")`.
+/// A well-formed code (16 symbols, all inside the alphabet) that was never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKLM-NPQR";
 
 const DEFAULT_IP: &str = "203.0.113.7"; // `jsonRequest`'s default `x-forwarded-for`.
 
-/// `CODE_PEPPER` for every server here. `index.ts` keys the two hashes `${CODE_PEPPER}:code` and
+/// `CODE_PEPPER` for every server here. The two hashes are keyed `${CODE_PEPPER}:code` and
 /// `${CODE_PEPPER}:ip`, and a test that compares a stored hash computes the same one.
 const PEPPER: &str = "codes-test-pepper-of-at-least-thirty-two-characters";
 
 /// §9.4's attempt window, in the milliseconds `code_attempts.at` is stamped in.
 const WINDOW_MS: i64 = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 
-/// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth), the
-/// compiled-in catalog version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind
-/// Render's edge, whose entry `json_request` writes.
+/// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
+/// version (SURFACE §11.3) and one trusted proxy hop, whose entry `json_request` writes.
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [
@@ -81,7 +70,7 @@ fn test_env() -> IndexMap<String, String> {
     source
 }
 
-/// One App and its router: TS's `deps` and `createRouter(createCodesRoutes(), deps)`.
+/// One App and its router.
 struct Server {
     app: Arc<App>,
     router: axum::Router,
@@ -139,7 +128,7 @@ impl Server {
 
 /// §9.4's response padding sleeps on tokio's clock, which `start_paused` jumps forward, so this
 /// suite runs on the production floor and pays nothing for it. R144's fixtures are wiped, so every
-/// row a test reads is one it wrote (TS's empty memory store).
+/// row a test reads is one it wrote.
 async fn code_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
@@ -150,7 +139,7 @@ async fn code_server() -> Server {
     }
 }
 
-/// A second App over `store`: TS's second `createRouter(createCodesRoutes(), deps)` on the same deps.
+/// A second App over `store`: a second router on the same deps.
 async fn server_sharing(store: Arc<Mutex<FakeData>>) -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let built = Arc::try_unwrap(app::build(env).await.expect("the test app builds"))
@@ -195,7 +184,6 @@ async fn profiles(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.profiles)
 }
 
-/// `tables.profiles.find((row) => row.id === id)?.status`.
 async fn status_of(server: &Server, id: &str) -> Value {
     profiles(server)
         .await
@@ -205,8 +193,8 @@ async fn status_of(server: &Server, id: &str) -> Value {
         .unwrap_or(Value::Null)
 }
 
-/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
-/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
+/// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on, not the
+/// wall clock, which tokio's test clock does not move.
 fn now_ms() -> i64 {
     jackioh_server::app::now_ms()
 }
@@ -237,13 +225,13 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
         .collect()
 }
 
-/// `deps.hashes.ip(raw)`: `crypto.ts`'s `createHashes`, keyed as `index.ts` keys it.
+/// The IP hash of `raw`, keyed as the server keys it.
 fn ip_hash(raw: &str) -> String {
     hmac_sha256_hex(&format!("{PEPPER}:ip"), &raw.trim().to_lowercase())
 }
 
-/// `deps.hashes.code(formatted)` for a code typed in the canonical alphabet: upper case already, so
-/// R191's reading only drops the separators.
+/// The code hash for a code typed in the canonical alphabet: upper case already, so R191's reading
+/// only drops the separators.
 fn code_hash(formatted: &str) -> String {
     hmac_sha256_hex(&format!("{PEPPER}:code"), &formatted.replace('-', ""))
 }
@@ -253,7 +241,6 @@ struct Minted {
     formatted: String,
 }
 
-/// `mintInviteCode(deps, { maxUses, expiresAt })`.
 async fn mint(server: &Server, max_uses: Option<i64>, expires_at: Option<i64>) -> Minted {
     let max_uses = max_uses.map(|uses| i32::try_from(uses).expect("a use count"));
     let minted = mint_invite_code(
@@ -271,7 +258,6 @@ async fn mint(server: &Server, max_uses: Option<i64>, expires_at: Option<i64>) -
     }
 }
 
-/// `deps.store.codes.logAttempt(attempt)`.
 async fn log_attempt(server: &Server, attempt: Value) {
     let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
     tx.codes_log_attempt(&from_json(attempt))
@@ -285,7 +271,7 @@ struct Seeded {
     profile_id: String,
 }
 
-/// An auth user (`deps.auth.addUser`) and a profile row for them (`deps.store.seedProfile`).
+/// An auth user and a profile row for them.
 async fn seed_caller(server: &Server, id: &str, status: &str, email_verified: bool) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(
@@ -309,7 +295,6 @@ async fn pending_caller(server: &Server, id: &str) -> Seeded {
     seed_caller(server, id, "pending", true).await
 }
 
-/// `jsonRequest(method, path, body, { token, ip })`.
 fn json_request(
     method: &str,
     path: &str,
@@ -343,7 +328,7 @@ async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
     server.send(redeem_request(token, code, ip)).await
 }
 
-/// One logged event, as TS's recording logger kept it: `alert` is `tracing`'s ERROR.
+/// One logged event; `alert` is `tracing`'s ERROR.
 #[derive(Clone, Debug)]
 struct Entry {
     level: tracing::Level,
@@ -401,7 +386,7 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
     }
 }
 
-/// `deps.log`: every event this thread logs until the guard drops.
+/// Every event this thread logs, until the guard drops.
 fn record() -> (Recording, tracing::subscriber::DefaultGuard) {
     let recording = Recording::default();
     let guard = crate::support::deps::set_log_default(tracing_subscriber::registry().with(recording.clone()));
@@ -427,15 +412,13 @@ async fn neighbours_failed(server: &Server, count: usize) {
     }
 }
 
-/// TS ran these with `breakerFailureThreshold` 1, 2 or 3. The threshold is the production one here,
-/// so the system-wide failures that §9.4's breaker counts are brought to `short_by` below it first.
+/// Brings the system-wide failures that §9.4's breaker counts to `short_by` below the production
+/// threshold.
 async fn near_threshold(server: &Server, short_by: usize) {
     neighbours_failed(server, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as usize - short_by).await;
 }
 
-// ---------------------------------------------------------------------------
 // Step 1 — "reject unless the account is pending with a verified email"
-// ---------------------------------------------------------------------------
 
 // R145: everything here depends on the caller's own account rather than on the code, so each one
 // is reported distinctly — it leaks nothing about the code space.
@@ -486,17 +469,11 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         assert_eq!(attempts(&server).await.len(), 0);
     }
 
-    /// R170. `resolve_caller` (http.rs) reads the caller's profile before the handler runs, and
-    /// `Tx::redeem` reads it again inside the transaction; the row can go between the two. The
-    /// store cannot say which of §9.4 step 1's refusals it hit — `app.redeem_invite_code` answers
-    /// `not_pending` for a missing row, a banned one and an active one alike — so the server reports
-    /// the conflict, not a second 401 after authorization has already passed.
-    ///
-    /// TS removed the row from `onCall`, on the way into `Store.redeem`. The Rust fake runs each
-    /// transaction under one FIFO-fair `tokio::sync::Mutex`, so the test takes its place in that
-    /// queue instead: it holds the store while the request queues for `resolve_caller`'s
-    /// transaction, queues itself right behind it, and removes the row in the gap before the
-    /// redemption's own transaction — exactly the gap R170 is about.
+    /// R170. The row can go between `resolve_caller`'s read of the profile and `Tx::redeem`'s. The
+    /// store cannot say which of §9.4 step 1's refusals it hit (`app.redeem_invite_code` answers
+    /// `not_pending` for a missing row, a banned one and an active one alike), so the server reports
+    /// the conflict. The test queues behind `resolve_caller`'s transaction on the fake's FIFO mutex
+    /// and removes the row in the gap before the redemption's own.
     #[tokio::test(start_paused = true)]
     async fn r170_answers_a_profile_that_vanishes_mid_redemption_with_a_conflict_not_a_401() {
         let server = code_server().await;
@@ -528,10 +505,9 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         )
         .await;
 
-        // 409, not the 401 the six-step version answered here: the token verified and the caller was
-        // resolved, so nothing about their authorization failed — the state the request was about
-        // changed underneath it. "No such identity" is still a 401, but it belongs to
-        // `Auth::verify`, one layer earlier, and never to this handler.
+        // 409: the token verified and the caller was resolved, so nothing about their authorization
+        // failed; the state changed underneath the request. "No such identity" is a 401 from
+        // `Auth::verify`, one layer earlier, never from this handler.
         assert_eq!(response.status, 409);
         assert_eq!(response.error_code(), "conflict");
         // R145: a refusal about the caller's own account never borrows the code's identical error.
@@ -545,9 +521,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Steps 2 and 3 — the per-profile and per-IP windows
-// ---------------------------------------------------------------------------
 
 mod section_9_4_steps_2_and_3_attempt_limits {
     use super::*;
@@ -641,9 +615,7 @@ mod section_9_4_steps_2_and_3_attempt_limits {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Step 4 — "log the attempt either way"
-// ---------------------------------------------------------------------------
 
 mod section_9_4_step_4_the_attempt_log {
     use super::*;
@@ -701,9 +673,7 @@ mod section_9_4_step_4_the_attempt_log {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Step 5 — "look up by hash and reject if revoked, expired or exhausted"
-// ---------------------------------------------------------------------------
 
 mod section_9_4_step_5_the_lookup {
     use super::*;
@@ -815,9 +785,7 @@ mod section_9_4_step_5_the_lookup {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Step 6 — "increment uses and set the account active, atomically"
-// ---------------------------------------------------------------------------
 
 mod section_9_4_step_6_claiming_the_code {
     use super::*;
@@ -867,7 +835,6 @@ mod section_9_4_step_6_claiming_the_code {
         assert!(!stored.contains(&minted.formatted));
         assert!(!stored.contains(&minted.formatted.replace('-', "")));
         assert_eq!(rows[0]["codeHash"], json!(code_hash(&minted.formatted)));
-        // /^[0-9A-Z]{4}(-[0-9A-Z]{4}){3}$/u
         let groups: Vec<&str> = minted.formatted.split('-').collect();
         assert_eq!(groups.len(), 4, "{}", minted.formatted);
         for group in &groups {
@@ -884,9 +851,7 @@ mod section_9_4_step_6_claiming_the_code {
     }
 }
 
-// ---------------------------------------------------------------------------
 // "Missing, expired and exhausted codes return an identical error"
-// ---------------------------------------------------------------------------
 
 mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
     use super::*;
@@ -930,10 +895,8 @@ mod r145_the_identical_error_for_every_code_dependent_refusal_section_9_4 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // BUILD M6-T1: "timing test shows the three failure responses within 5 ms of each other over 50
 // samples" — §9.4's "identical time", delivered by R107's floor.
-// ---------------------------------------------------------------------------
 
 /// BUILD M6-T1's acceptance bound, as it writes it.
 const TIMING_SAMPLES: usize = 50;
@@ -942,19 +905,14 @@ const TIMING_SPREAD_MS: u64 = 5;
 /// The cost model this test *injects*, so the padding has something real to hide.
 ///
 /// `STORE_CALL_MS` is a round trip to Postgres and `ROW_FETCH_MS` the extra cost of a lookup that
-/// found its row — an index miss answers from the index alone, a hit goes on to the heap. That is
-/// the asymmetry §9.4 is about: a missing code does strictly less work than an expired or exhausted
-/// one, and without a floor the difference is readable from outside. The numbers are the test's own,
-/// not the server's; what is asserted below is that they stop being observable, whatever they are.
+/// found its row. A missing code does strictly less work than an expired or exhausted one, and
+/// without a floor the difference is readable from outside (§9.4). The numbers are the test's own.
 const STORE_CALL_MS: u64 = 3;
 const ROW_FETCH_MS: u64 = 11;
 
-/// `code_server()` with every store call counted (`FakeData::on_call`, TS's `onCall`).
-///
-/// TS charged each call to its virtual clock, which `padTo` read. The Rust fake's hook is synchronous
-/// and cannot move tokio's clock, so the cost model is tallied rather than slept: the elapsed times
-/// below are tokio's paused clock, exact on a loaded CI box and on an idle laptop alike, and the
-/// tally is what proves the work behind them was lopsided.
+/// `code_server()` with every store call counted (`FakeData::on_call`). The fake's hook is
+/// synchronous and cannot move tokio's clock, so the cost model is tallied rather than slept: the
+/// elapsed times below are tokio's paused clock, and the tally proves the work was lopsided.
 struct Timed {
     server: Server,
     calls: Arc<AtomicU64>,
@@ -974,7 +932,7 @@ async fn timing_server() -> Timed {
 
 impl Timed {
     /// The work charged since the last call: every store call, and the row fetch of a lookup that
-    /// found `code`'s row (TS's wrapped `findByHash`).
+    /// found `code`'s row.
     async fn work_since_last(&self, looked_up: Option<&str>) -> u64 {
         let calls = self.calls.swap(0, Ordering::SeqCst);
         let found = match looked_up {
@@ -1033,10 +991,9 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
                 // All three really are the refusal under test, not some other rejection.
                 assert_eq!(response.status, 400, "{name} sample {sample}");
 
-                // TS raised `breakerFailureThreshold` past these 150 deliberate failures, which would
-                // otherwise trip §9.4's breaker part-way through and turn the remaining samples into
-                // 503s, a different branch than the three under test. The production threshold stays,
-                // so each failure leaves the breaker's window as soon as it is measured.
+                // The production threshold stays, so each failure leaves the breaker's window as soon
+                // as it is measured; otherwise §9.4's breaker would trip part-way through and turn the
+                // remaining samples into 503s, a different branch than the three under test.
                 store_of(&server.app).lock().await.tables.attempts.clear();
             }
         }
@@ -1061,9 +1018,7 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // "A global circuit breaker disables redemption and alerts"
-// ---------------------------------------------------------------------------
 
 mod section_9_4_the_global_circuit_breaker {
     use super::*;
@@ -1159,8 +1114,8 @@ mod section_9_4_the_global_circuit_breaker {
         );
     }
 
-    /// TS: "is per-router, not module state: fresh routes start closed". The breaker belongs to the
-    /// App here, so the fresh one is a second App over the same store.
+    /// The breaker belongs to the App, so fresh routes start closed: the fresh one is a second App
+    /// over the same store.
     #[tokio::test(start_paused = true)]
     async fn is_per_router_not_module_state_fresh_routes_start_closed() {
         let first = code_server().await;
@@ -1189,9 +1144,7 @@ mod section_9_4_the_global_circuit_breaker {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R161 — "How many accounts one invite code activates: one, unless its mint says otherwise"
-// ---------------------------------------------------------------------------
 
 /// Every other test in this file passes `max_uses` explicitly, which is exactly what R161's default
 /// cannot be proved from: a code that was *told* to allow one use says nothing about what a code
@@ -1275,7 +1228,6 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
         // The other half of "one unless the mint says otherwise": a row written straight into
         // `invite_codes` gets the same default the API applies.
         let migration = include_str!("../../migrations/0001_profiles_and_invites.sql");
-        // /max_uses\s+int not null default <DEFAULT_INVITE_CODE_MAX_USES>\b/, by hand.
         let wanted = format!("int not null default {DEFAULT_INVITE_CODE_MAX_USES}");
         let found = migration.match_indices("max_uses").any(|(at, name)| {
             let rest = &migration[at + name.len()..];
@@ -1291,9 +1243,7 @@ mod r161_how_many_accounts_one_invite_code_activates_section_9_4_section_9_8 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // BUILD M6-T1: "a pending account cannot call collection, loadout or queue endpoints (403)"
-// ---------------------------------------------------------------------------
 
 mod section_9_4_the_gate_around_everything_else {
     use super::*;

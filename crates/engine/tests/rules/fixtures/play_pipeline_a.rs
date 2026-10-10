@@ -1,12 +1,7 @@
-//! Port of `packages/engine/test/fixtures/playPipelineA.ts`.
-//!
 //! Fixture cards for play pipeline A (docs/classic-sets.md B5 E1, E2, E4, E5, E9; Classic #4, #10, #17,
 //! #23, #33, #72, #87, #89; Classic+ #37, #64, #68; AI Refusal, Autocomplete, Scaling Law). The engine
-//! never imports `packages/cards` (CLAUDE.md), so each system is proved on a card of its shape here.
-//! Ids are `pa-*`, indices from 5000, registered on top of the shared fixture catalog by `withPlayA`.
-//!
-//! TS numbered the definitions from a module counter (one step per `def`, in `PA`'s key order); each
-//! index is written out here.
+//! never depends on `crates/cards` (CLAUDE.md), so each system is proved on a card of its shape here.
+//! Ids are `pa-*`, indices from 5000, registered on top of the shared fixture catalog by `with_play_a`.
 
 use std::sync::LazyLock;
 
@@ -64,7 +59,7 @@ fn any_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))]
 }
 
-/// TS's `PA` object: one definition per key.
+/// One definition per card.
 pub struct Pa {
     /// A Spell that deals 2 to a declared target (unit or hero); Radiant deals 4.
     pub bolt: CardDef,
@@ -103,7 +98,7 @@ pub struct Pa {
     pub chooser: CardDef,
     /// A Spell with Echo 1 that deals 1 to a declared unit target: its repeat asks the pipeline's own prompt.
     pub echo_bolt: CardDef,
-    /// Declarations with the v0.2.0 filter fields.
+    /// Declarations with the filter fields.
     pub grave_raiser: CardDef,
     pub cheap_hunter: CardDef,
     pub medic: CardDef,
@@ -185,7 +180,7 @@ pub static PA: LazyLock<Pa> = LazyLock::new(|| Pa {
     q_palantir: def(5036, "q-palantir", "Field Spell", json!({})),
 });
 
-/// `Object.values(PA)`, in `PA`'s key order.
+/// The definitions, in `Pa`'s field order.
 pub static PA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     let pa = &*PA;
     vec![
@@ -240,7 +235,7 @@ fn announced_by_the_opponent(ctx: &EffectContext<'_>, event: &GameEvent) -> bool
     matches!(event, GameEvent::CardAnnounced { player, .. } if *player != ctx.controller)
 }
 
-/// JS `String(value)` for a data bag entry: a string as itself, `undefined` for a missing key.
+/// A data bag entry as text: a string as itself, "undefined" for a missing key.
 fn js_string(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -789,7 +784,7 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id (the brief's `catalog()`).
+/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     PA_DEFS
         .iter()
@@ -797,7 +792,7 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     scripts_table()
 }
@@ -812,7 +807,7 @@ pub fn register_play_a() {
     register_scripts(all_scripts);
 }
 
-/// `registerPlayA` for a game `newGame` has just made (its catalog is registered by then).
+/// `register_play_a` for a game just made (its catalog is registered by then).
 pub fn with_play_a(state: GameState) -> GameState {
     register_play_a();
     state

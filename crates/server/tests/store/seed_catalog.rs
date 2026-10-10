@@ -1,20 +1,15 @@
 //! `cli/seed_catalog.rs` (`seed-catalog`), in two halves.
 //!
-//! The first (← `apps/server/test/db/seed-catalog.test.ts`, every `cargo test`): `read_catalog`
-//! against the file it actually has to read. The catalog (`crates/cards/catalog.json`, copied from
-//! `packages/cards/catalog.json`) is a record keyed by card id — the `CardDefs` shape the API parses
-//! — and the seeder used to accept only an array, so step 6 of docs/architecture.md's bring-up
-//! checklist failed on the real catalog with "expected an array of cards". Nothing caught it because
-//! no test read the real file. This one does.
+//! The first (every `cargo test`): `read_catalog` against the file it actually has to read. The
+//! catalog (`crates/cards/catalog.json`) is a record keyed by card id — the `CardDefs` shape the API
+//! parses.
 //!
-//! The second (← `apps/server/test/db/seed-catalog.spec.ts`, `test:db` only: it runs when
-//! `DATABASE_URL` is set): `seed_catalog` writes the real catalog into `public.cards`, where every
-//! migration's constraints apply. Before migration 0010, `cards_tags_check` (0002) did not admit
-//! 'Jlockeed', the tag R278 puts on #13 and #14, before 0015 it did not admit patch v0.2.0's Book,
-//! Pancake and AI (B2.4), before 0020 it did not admit the mechanics patch's Plague, and before 0026
-//! it did not admit patch v0.2.Y's Catalyst, Prime and Acclaimed. The seed runs in one transaction,
-//! so one such row failed the whole catalog. The first half compares the tags with the migrations'
-//! text; the second checks that the database really accepts them.
+//! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
+//! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
+//! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
+//! from 0020 and Catalyst, Prime and Acclaimed from 0026. The seed runs in one transaction, so one
+//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
+//! second checks that the database really accepts them.
 
 use std::path::{Path, PathBuf};
 
@@ -35,7 +30,7 @@ fn skip_space(bytes: &[u8], at: &mut usize) -> usize {
     *at - start
 }
 
-/// One match of TS's `/constraint\s+cards_tags_check\s+check\s*\(([\s\S]*?)\]::text\[\]/i` starting
+/// One match of `/constraint\s+cards_tags_check\s+check\s*\(([\s\S]*?)\]::text\[\]/i` starting
 /// at `start` in the lower-cased text: the captured body's range and the match's end.
 fn tag_check_at(lower: &str, start: usize) -> Option<(usize, usize, usize)> {
     let bytes = lower.as_bytes();
@@ -57,7 +52,7 @@ fn tag_check_at(lower: &str, start: usize) -> Option<(usize, usize, usize)> {
     Some((at, at + close, at + close + "]::text[]".len()))
 }
 
-/// Every `cards_tags_check` body one migration holds, in order (TS's `sql.matchAll(…)`, `gi`).
+/// Every `cards_tags_check` body one migration holds, in order.
 fn tag_check_bodies(sql: &str) -> Vec<String> {
     // ASCII lower-casing keeps every byte offset, so a range found in `lower` cuts `sql` too.
     let lower = sql.to_ascii_lowercase();
@@ -76,7 +71,7 @@ fn tag_check_bodies(sql: &str) -> Vec<String> {
     bodies
 }
 
-/// TS's `body.replace(/--[^\n]*/g, "")`: every SQL line comment dropped.
+/// `body` with every SQL line comment dropped.
 fn without_line_comments(body: &str) -> String {
     let mut out = String::new();
     let mut rest = body;
@@ -92,7 +87,7 @@ fn without_line_comments(body: &str) -> String {
     out
 }
 
-/// TS's `[...body.matchAll(/'([^']*)'/g)].map((tag) => tag[1])`: every single-quoted string.
+/// Every single-quoted string in `body`.
 fn quoted_strings(body: &str) -> Vec<String> {
     let mut strings = Vec::new();
     let mut rest = body;
@@ -106,9 +101,7 @@ fn quoted_strings(body: &str) -> Vec<String> {
 }
 
 /// The tags `public.cards.cards_tags_check` admits once every migration has run: the array in the
-/// last migration, in apply order, that adds the check. 0002 defines it, 0010 re-adds it with
-/// Jlockeed, 0015 with Book, Pancake and AI, 0020 with Plague, and 0026 with Catalyst, Prime and
-/// Acclaimed.
+/// last migration, in apply order, that adds the check.
 fn admitted_tags() -> (String, Vec<String>) {
     let mut files: Vec<String> = std::fs::read_dir(MIGRATIONS)
         .expect("the migrations directory")
@@ -251,10 +244,9 @@ mod read_catalog_ {
 }
 
 /// The seed writes the whole catalog in one transaction, so one tag the schema refuses fails every
-/// row. 0002's check had no 'Jlockeed', and #13 and #14 broke `seed-catalog` against a real
-/// database, which only Docker could see. This reads the migrations instead, so `cargo test`
-/// catches a tag that reaches the catalog before the schema. `test:sql` CHECK 18 and `test:db`
-/// (the second half of this file) prove the same against Postgres.
+/// row. This reads the migrations instead of a database, so `cargo test` catches a tag that reaches
+/// the catalog before the schema. `test:sql` CHECK 18 and `test:db` (the second half of this file)
+/// prove the same against Postgres.
 mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     use super::*;
 
@@ -300,13 +292,13 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     }
 }
 
-/// `test:db` only: the real catalog into a real Postgres (TS `seed-catalog.spec.ts`).
+/// `test:db` only: the real catalog into a real Postgres.
 mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague_catalyst_prime_and_acclaimed_tags_included {
     use super::*;
     use jackioh_server::cli::seed_catalog::seed_catalog;
     use sqlx::PgPool;
 
-    /// The store contract's fixture catalog version (TS `test/db/harness.ts`).
+    /// The store contract's fixture catalog version.
     const CATALOG_VERSION: &str = "core-1";
 
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
@@ -318,7 +310,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
   public.code_attempts, public.invite_codes, public.profiles, auth.users
   restart identity cascade";
 
-    /// The harness's fixture catalog (TS `PLAYABLE_IDS`, `TOKEN_IDS`): 64 playable ids and two tokens.
+    /// The harness's fixture catalog: 64 playable ids and two tokens.
     fn playable_ids() -> Vec<String> {
         (1..=64).map(|i| format!("core-{i:03}")).collect()
     }
@@ -327,7 +319,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         vec!["core-001.1".to_owned(), "core-002.1".to_owned()]
     }
 
-    /// TS `seedCards`: the fixture rows the rest of the database suite runs against.
+    /// The fixture rows the rest of the database suite runs against.
     async fn seed_cards(admin: &PgPool) {
         sqlx::query(
             "insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)

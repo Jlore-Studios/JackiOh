@@ -1,22 +1,13 @@
-//! Port of `packages/engine/test/playChoices.test.ts`.
-//!
 //! The refusals a play's choices go through, and the channel they travel in (SPEC §10.5 step 1,
 //! §10.6, R81, R90).
 //!
 //! This file owns the refusals the M3 BLOCKER was about: a card dormant under a Stack, the
-//! opponent's hand, and the counts a declaration asks for. Its sibling
-//! `playChoices-filters.test.ts` drives the rest of the module — several declarations reading the
-//! flat `targets` list, the `type`, `tags` and `notTags` filters, the backrow, hero and zone kinds,
-//! `excludeSelf`, an ally-only side and two mode declarations at once — so nothing here repeats
-//! those.
+//! opponent's hand, and the counts a declaration asks for.
 //!
-//! It also holds R81's core, which is a statement about *where* a choice lives: "Zone, X, embiggen,
-//! Tribute and the targets and modes a card's script declares travel in the `play` action, which
-//! `legalActions` enumerates … and never pause resolution. Every choice made during resolution
-//! (Discover, chained steps, Echo repeats, casts, triggers, mulligan) opens a `PendingChoice`."
-//! That sentence is the line between this module and `prompts.ts`, and it has its own test below.
-//!
-//! Tribute is the one play choice this file leaves alone: `tribute.test.ts` owns it.
+//! It also holds R81's core, a statement about *where* a choice lives: Zone, X, embiggen, Tribute and
+//! the targets and modes a card's script declares travel in the `play` action, which `legalActions`
+//! enumerates, and never pause resolution. Every choice made during resolution (Discover, chained
+//! steps, Echo repeats, casts, triggers, mulligan) opens a `PendingChoice`. Tribute has its own tests.
 //!
 //! Fixtures are prefixed `pc-` and indexed above 1450 so they cannot collide (BUILD §0).
 
@@ -28,14 +19,8 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// Fixtures.
-// ---------------------------------------------------------------------------
+// Fixtures
 
-// TS's `nextIndex` started at 1450 and every `def` took the next number, in declaration order; each
-// def below is written with the index it took.
-
-/// TS `{ ...object, ...extra }`: a shallow merge of `extra`'s keys over `object`'s.
 fn spread(object: &mut Value, extra: Value) {
     if let (Some(object), Value::Object(extra)) = (object.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -132,7 +117,6 @@ fn record_choices() -> Effect {
             })
             .collect();
         let got_modes = json!(ctx.modes.clone());
-        // TS wrote through the live `ctx.self`; here through the card under that id.
         if let Some(card) = find_instance_mut(ctx.state, &self_id) {
             card.memory
                 .insert("gotTargets".to_string(), Value::Array(got_targets));
@@ -148,7 +132,6 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// A script's `targets`, written as TS's literal.
 fn decls(list: Value) -> Vec<TargetDecl> {
     json_as(list)
 }
@@ -240,15 +223,12 @@ fn scripts() -> IndexMap<String, CardScripts> {
     out
 }
 
-// ---------------------------------------------------------------------------
-// Harness.
-// ---------------------------------------------------------------------------
+// Harness
 
-/// TS's module `let nonce`: unique across the tests, which run on parallel threads.
+/// Unique across the tests, which run on parallel threads.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// TS `actResult`: `body` is the TS `ActionInput` literal (its `playerId` included); a fresh nonce is
-/// added.
+/// `body` is the action literal (its `playerId` included); a fresh nonce is added.
 fn act_result(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
@@ -326,12 +306,11 @@ fn first_decl(state: &GameState, card: &CardInstance) -> TargetDecl {
     only(play_choices::declared_targets(state, card))
 }
 
-/// `result.error` as text, empty when the action went through (TS `toMatch` on `undefined` fails).
+/// `result.error` as text, empty when the action went through.
 fn error_of(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
 
-/// TS `whyChoicesRefused`'s `string | null`.
 fn refusal(answer: Result<(), EngineError>) -> Option<String> {
     answer.err().map(|error| error.message)
 }
@@ -340,7 +319,6 @@ fn refused_with(answer: Result<(), EngineError>, text: &str) -> bool {
     refusal(answer).is_some_and(|message| message.contains(text))
 }
 
-/// `{ type: "play", instanceId, targets?, modes? }` as the `PlayAction` `whyChoicesRefused` takes.
 fn play_action(instance_id: &str, targets: Option<&[Selection]>, modes: Option<&[String]>) -> PlayAction {
     let mut body = json!({ "type": "play", "instanceId": instance_id });
     if let Some(targets) = targets {
@@ -352,7 +330,6 @@ fn play_action(instance_id: &str, targets: Option<&[Selection]>, modes: Option<&
     json_as(body)
 }
 
-/// `{ type: "play", instanceId, ...combo }`.
 fn combo_action(instance_id: &str, combo: &PlayChoices) -> PlayAction {
     play_action(instance_id, combo.targets.as_deref(), combo.modes.as_deref())
 }
@@ -366,7 +343,6 @@ fn targeting(instance_id: &str, targets: Vec<Selection>) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": "p1", "targets": targets })
 }
 
-/// `state.players[player].units[lane]?.[0]`.
 fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstance> {
     state.players[player]
         .units
@@ -375,8 +351,6 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstan
         .and_then(|pile| pile.first())
         .cloned()
 }
-
-// ---------------------------------------------------------------------------
 
 mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     use super::*;
@@ -878,7 +852,7 @@ mod r703_a_pick_the_play_needs {
     fn r703_r70_a_cast_is_never_refused_cast_with_no_unit_on_the_board_the_needed_pick_fizzles() {
         let mut state = playing("r657-cast");
         let card = hand_card(&mut state, &needed_pick().id, PlayerId::P1);
-        // TS `sinkFor(state)`: the rng from the state's cursor; nothing writes the cursor back.
+        // The rng from the state's cursor; nothing writes the cursor back.
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
