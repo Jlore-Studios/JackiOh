@@ -27,10 +27,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38 Solarius (SPEC §8.7): Spell Damage +2 on field adds to each Spell hit (§4.4 step 0);
+// C+ #38 Solarius (SPEC §8.7): Spell Damage +2 on field adds to each hit of a Spell you play or cast
+// (§4.4 step 0), never a Field Spell's, a Trap's, a Unit's or an activation's, never the opponent's;
 // Death shuffles Solarius Prime (C+ #38.1) into deck up to cap (R80).
 // Numbered keyword (§6.1), so B3.4 X change tunes it rather than a param (R482).
-// Trap damage is covered in C+ #22 Blood Moon's test.
+// A Trap's hit, which Spell Damage never raises, is proved in C+ #22 Blood Moon's test.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;

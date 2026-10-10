@@ -4,9 +4,10 @@
 //!            opponent's deck." (1)
 //!
 //! Each draw is B5 E16's `drawFromOpponent`: one draw of the controller's out of the bottom of the other
-//! player's library (§6.3 Steal, §3.2), the owner changing as it leaves (R12; a `stolen` event hidden per
-//! zone, R97), then §2.4's draw finishing it as the drawer's own: draw counters, `drawn` and draw limit,
-//! cast on draw (R58), hand cap (a burn goes to the drawer's graveyard, R317), per-turn count (§10.1).
+//! player's library (§6.3 Steal, §3.2). The drawer's draw limit (§2.4) stops it before any card moves
+//! (R457); otherwise the owner changes as it leaves (R12; a `stolen` event hidden per zone, R97), then
+//! §2.4's draw finishes it as the drawer's own: draw counters and `drawn`, cast on draw (R58), hand cap
+//! (a burn goes to the drawer's graveyard, R317), per-turn count (§10.1).
 //! An empty enemy deck gives nothing, and fatigue for no one. "Draw N" is N draws (§2.4), so the declared
 //! count (`param`, R386) is that many effects, and a cast on draw that asks pauses the list (R113). The
 //! hooks are §6.2's start- and end-of-turn triggers: their controller's turn only, while the card acts on

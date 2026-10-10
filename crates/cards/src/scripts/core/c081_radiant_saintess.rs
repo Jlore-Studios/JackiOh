@@ -77,7 +77,7 @@ pub fn script() -> CardScripts {
 
 // BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn, so she
 // dies once; radiant also every card in your hand, hidden from the opponent (R177)". Her Cry is cut
-// (§8's row) and neither face has Reborn, so R8, R64 and R83 never apply.
+// (§8's row) and neither face has Reborn, so she dies once (R8's second Death never comes); R64 and R83 are the engine's, not this file's.
 //
 // Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
 // swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. A Saintess

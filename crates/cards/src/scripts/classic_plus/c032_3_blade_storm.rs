@@ -6,7 +6,8 @@
 //! inside themselves, beside R283's) so killed Units die and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
 //! (Reborn counts), after its round cap, or when no Unit is left. Cap is declared `rounds` (R386),
 //! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces. Base face casts Whirlwind (C+ #21)
-//! as a real Spell cast (R70, §4.4), so Divine Shield, Armor, Spell Damage apply round by round.
+//! as a real Spell cast (R70, §4.4), so Divine Shield, Armor (Pierce goes through it, R652) and Spell
+//! Damage apply round by round.
 //! Radiant face hits enemy Units only; a death on either side still stops it (refs Whirlwind, R279).
 
 use jackioh_engine::effects::{cast_rounds_until_death, damage_rounds_until_death};
@@ -43,7 +44,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #32.3 Blade Storm (SPEC §8.7, R59, R70, R283, R652): base face casts Whirlwind round after
-// round until a Unit dies, no Unit is left, or round cap is reached. Radiant hits enemy Units only.
+// round (C+ #21, Pierce, so Armor does not stop it) until a Unit dies, no Unit is left, or round cap is reached. Radiant hits enemy Units only.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

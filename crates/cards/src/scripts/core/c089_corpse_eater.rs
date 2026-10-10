@@ -7,8 +7,8 @@
 //! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's
 //! doing (§10.3, R68). It reads the event, not the instance: R78 resets an instance leaving the
 //! field, and R89's `destroyed` event carries the attack and max health the layers computed at death
-//! (R38's "current" numbers). A death is a unit leaving the field (§4.5 step 1, §6.2); a discard or
-//! burn emits another event. Units only, tokens excluded (R11); `def_of` is the layers' own catalog
+//! (R38's "current" numbers). A death is a unit going from the field to a graveyard (§4.5 step 1, §6.2);
+//! a discard, burn or bounce emits another event. Units only, tokens excluded (R11); `def_of` is the layers' own catalog
 //! read, a transient Fuse def included (R77). The gain is a layer-4 `buff`, kept on entering the field.
 
 use jackioh_engine::prelude::*;

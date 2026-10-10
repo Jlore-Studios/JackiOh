@@ -7,7 +7,8 @@
 //!
 //! The target is declared (R81): one hero, either side. `setHealth` emits `healthSet` and runs no §4.4
 //! step, so Armor, hit caps, Lifesteal and every "takes damage" or "is healed" trigger never see it.
-//! 13 is the card's own number, so the entry declares no `params` for it.
+//! The entry declares no `params`: a Degrade has nothing to move, as 13 is good or bad depending on
+//! whose hero it is.
 //! The Radiant Book of Flame is C #16's base face (R57's radiant flag off), added through §2.4's
 //! pipeline: a full hand burns it (R4, R317); in hand it follows R97.
 

@@ -52,8 +52,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74 (R386: Brittle, the
-// every-2 step (never below 2) and Brittle gained read through `param()`). The first activation reveals it
+// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74 (the every-2 step (never
+// below 2) and Brittle gained read through `param()`; Brittle itself is R386's numbered keyword). The first activation reveals it
 // and starts its Brittle, even when there was no card left to fuse; with no fuse it never crumbles.
 // p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays.
 #[cfg(test)]
