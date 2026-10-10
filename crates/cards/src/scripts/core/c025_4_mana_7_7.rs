@@ -1,8 +1,7 @@
 //! #25 4-mana 7/7 (SPEC §8.2): a 7/7 → 14/14 Unit, base "Armor 7", radiant "Indestructible" (R275:
 //! the Radiant body doubles, and the keyword is the stronger one). The Engine cell is "Keywords
-//! only", so there is no script: the stats and both keywords are printed on the catalog faces
-//! (`base.keywords = [Armor 7]`, `radiant.keywords = [Indestructible]`) and §10.4 layer 1 reads them
-//! from the def, so granting them here would double the Armor (§10.4: "Armor sums across sources").
+//! only", so there is no script: both keywords are printed on the catalog faces and §10.4 layer 1
+//! reads them from the def; granting them here would double the Armor, which sums across sources.
 //!
 //! Where the behaviour lives instead:
 //!   Armor 7        — §4.4 step 2 subtracts the unit's total Armor from every incoming hit, so a
@@ -24,14 +23,10 @@ pub fn script() -> CardScripts {
 }
 
 // #25 4-mana 7/7 — SPEC §8.2, BUILD M4-T4 row 25: "Armor 7 zeroes a 7 hit; radiant 14/14 Armor 7,
-// Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good"
-// (patch v0.1.1: the Radiant face used to be Indestructible).
-//
-// The §8.2 Engine cell is "Keywords only", so both scripts are empty and these fixtures prove the
-// keywords printed on the catalog faces do the work through §4.4 and §4.5. The removals need a
-// source: the Tribute is #22 Carnivorous Cube, whose Cry tributes one of your other Units (§6.3
-// Tribute, R428), and the exile is #34 Collateral Damage, the Core card that exiles a target
-// permanent — so those two fixtures depend on those cards' scripts as well as on these keywords.
+// Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good".
+// Both scripts are empty, so these fixtures prove the catalog faces' keywords do the work (§4.4, §4.5).
+// The Tribute is #22 Carnivorous Cube (§6.3 Tribute, R428), the exile #34 Collateral Damage (both
+// fixtures depend on those scripts too).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -51,8 +46,7 @@ mod tests {
         side.units.get(lane - 1).cloned().flatten()
     }
 
-    /// TS `expect(script).toEqual({})`: a script with no hook, no declaration and no flag — every field
-    /// of `Script` absent or empty.
+    /// A script with no hook, no declaration and no flag: every field of `Script` absent or empty.
     fn is_empty_script(script: &Script) -> bool {
         script.cost.is_none()
             && script.cry.is_none()

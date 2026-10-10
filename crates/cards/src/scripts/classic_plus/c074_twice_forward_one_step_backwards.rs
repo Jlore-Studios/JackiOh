@@ -3,25 +3,14 @@
 //!            resolves, and this gains +{brittleGain} Brittle." (Brittle 2, balance patch 1)
 //!   Radiant: "Every {plays|card|cards} your opponent plays, a Radiant copy of the last one is fused
 //!            into this, and this gains +{brittleGain} Brittle." (Brittle 4)
-//!   Engine:  "A Field Trap (R425): a Trap is consumed when it fires, which would leave nothing to gain
-//!            Brittle. No Brittle while it is unrevealed: its printed Brittle never starts face-down
-//!            (R687); it reveals the first time it activates, and the count starts then. It counts the
-//!            opponent's plays since it was set (`memory.plays`; casts count, R70; a countered card was
-//!            never played). On each even count, once that card has resolved (§10.5 step 7), the card, if
-//!            it still exists (a Unit on the field, a Spell in the graveyard, a trap in the backrow), is
-//!            fused into this (Fuse, §6.3, R77, R102): this is the kept instance and stays a Field Trap,
-//!            and the opponent's card ceases to exist. The Radiant fuses in a Radiant copy of the card's
-//!            definition instead and leaves the card where it is. Either way this then gains +1 Brittle,
-//!            on every even count. The texts fused in work for you where they can … a fused Cry never
-//!            runs, since this is already on the field. It turns face-up, public, the first time it
-//!            activates (R33, R687); until then its play count is read by its controller only, and a card
-//!            destroyed while unrevealed reads public in its graveyard (R97). Tunes: Brittle 2 ↑ (its
-//!            X); every 2 ↓ (never below 2); Brittle gained 1 ↑."
+//!   Engine:  A Field Trap (R425), so it is not consumed when it fires. No Brittle while unrevealed
+//!            (R687); it turns face-up at its first activation (R33), its play count read by its
+//!            controller alone until then (a card destroyed unrevealed reads public, R97). It counts the
+//!            opponent's plays since it was set (casts count, R70; a countered card never played). On
+//!            each even count, once that card resolves (§10.5 step 7), it is fused into this (Fuse, §6.3,
+//!            R77, R102): this is the kept instance, a fused Cry never runs, and this gains +1 Brittle.
 //!
-//! The whole card is its subsystem's trap trigger (`subsystems/twice_forward.rs`): the count on the
-//! instance, the fuse after the play resolves, the reveal with the first activation and the Brittle
-//! from then on. The printed Brittle is the catalog face's keyword (no start while face-down, R687;
-//! B3.4's X change tunes it), and "every N" and the Brittle gained are its declared `params`.
+//! All of it is `subsystems/twice_forward.rs`' trap trigger; Brittle tunes through B3.4's X change.
 
 use jackioh_engine::prelude::*;
 
@@ -60,23 +49,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74: "A Field Trap
-// (R425) set face-down with printed Brittle 2 and no count while unrevealed (R687); it counts the
-// opponent's plays from then on (`memory.plays`; a cast counts, R70; a countered play doesn't) and on
-// every second one, after that card resolves, the card, if it still exists (a Unit on the field, a Spell
-// in the graveyard, a trap in the backrow), is fused into this (R77, R102): this is the kept instance and
-// stays a Field Trap, the opponent's card ceases to exist; the first activation reveals it and starts
-// its Brittle, then this gains +1 Brittle, even when there was no card left to fuse (revealing first);
-// fused texts act for you where they can (an end-of-turn line or an aura on your side) and a fused Cry
-// never runs; it turns face-up at its first activation (R33, R687), and until then the opponent's view
-// shows neither the card nor its play count, while a card destroyed unrevealed reads public in its
-// graveyard (R97); with no fuse it holds no Brittle and never crumbles; its memory and fused definition
-// survive JSON and replay; Brittle, the every-2 step (never below 2) and Brittle gained read through
-// `param()`; radiant Brittle 4, and a Radiant copy of the card is fused in, the original staying where
-// it is".
-//
-// p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays. The machinery is proved
-// through fixtures in `packages/engine/test/twiceForward.test.ts`.
+// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74 (R386: Brittle, the
+// every-2 step (never below 2) and Brittle gained read through `param()`). The first activation reveals it
+// and starts its Brittle, even when there was no card left to fuse; with no fuse it never crumbles.
+// p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -106,7 +82,6 @@ mod tests {
         (0..n).map(|_| json!(card)).collect()
     }
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
     fn spread(base: Value, extra: &Value) -> Value {
         let mut out = base;
         if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {

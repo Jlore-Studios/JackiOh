@@ -6,53 +6,21 @@
 //!            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
 //!            the direction choice and the rotation itself are kept.
 //!
-//! THE DIRECTION IS A PLAY-TIME CHOICE, NOT A PROMPT. R81 names this card: "a declared `direction`
-//! pick [travels] in `modes`, so … Silly Silas's direction [is] chosen with the play and never
-//! pause[s] resolution", and §10.6 adds that no Core card ever opens a `direction` prompt. So the
-//! script DECLARES `modes: [{ kind: "direction", options: ["left", "right"] }]`, `legal_actions`
-//! enumerates both, and the answer arrives in `ctx.modes` — which is the second half of
-//! `chosen_options(ctx)` (engine/src/effects/choose.rs), the one reader for a declared mode and a
-//! prompt-mode answer alike.
-//!
-//! THE ROTATION IS THE SUBSYSTEM'S, NOT THIS FILE'S. `subsystems/rotation.rs` implements R14 in full
-//! and is deliberately not in the effects barrel, so the card cannot call it and stay pure
-//! (CLAUDE.md rule 5: `rotate_rings` takes an `EngineSink` and mutates the board). What it already
-//! does, so that nothing here needs re-reading or re-deciding:
-//!   * two rings, `ring_order`/`ring_neighbor` (§3.1): the rotating player's lanes 1→5, then the
-//!     opponent's 5→1, and back; "right" is one step forward along that order, "left" one back;
-//!     the unit ring and the backrow ring turn together, and "left"/"right" are read from the
-//!     rotating player's seat, which is why the wrapper must pass `perspective: ctx.controller`;
-//!   * the whole board is read before anything is placed, so one rotation is atomic and a full ring
-//!     keeps every card;
-//!   * a Stack pile travels whole and keeps its top card on top (§3.2, R13);
-//!   * Silas is already on the field when his Cry resolves (§10.5 step 4 precedes step 5), so he is
-//!     in the snapshot and rotates with everything else — the Engine cell's "Silas rotates too";
-//!   * a card never leaves the field, so R78's reset never runs: damage, buffs, granted keywords,
-//!     counters and position all travel with it (R14), and so do exertion and `summoned_turn` for a
-//!     card that moves along its own side;
-//!   * a card that crosses the centre line has entered its new controller's side (R171): it takes
-//!     this turn as its `summoned_turn`, so it is summoning sick there, and a fresh exertion;
-//!   * `controller` changes only when the destination is on the other side of the centre line, and
-//!     `owner` changes only when a bounce takes the card to its controller's hand as theirs
-//!     (R747) and never on a crossing (R12), so a crossed card still leaves to its owner's other
-//!     piles later; a face-down trap that crosses is read by its new controller alone, which follows from
-//!     `controller` and is why `face_up` is untouched (R33);
-//!   * a Locked or Reborn-reserved destination bounces the card to its controller's hand instead
-//!     (R14, R88, R747), where the hand cap applies (R4) and a unit token ceases to exist on the way (R11);
-//!   * `radiant: true` replaces an OUTBOUND crossing — a card leaving this player's side for the
-//!     opponent's, "cards that would move to the opponent" — with that same bounce at
-//!     `cost_override: 0`. The opponent's cards crossing onto this side are not moving "to the
-//!     opponent", so the base clause holds for them and they cross and change control (R14, R65,
-//!     R171): the radiant face loses nothing and still takes what the rotation brings over.
-//!
-//! BASE AND RADIANT SHARE ONE HOOK. The only difference between the faces is `ctx.radiant`, which
-//! `rotate_rings` already honours through its own `radiant` argument — so the wrapper passes
-//! `radiant: ctx.radiant` and there is exactly one rotation implementation in the game.
-//!
-//! THE WRAPPER IS `rotate` (engine/src/effects/rotate.rs), the effects barrel's Rotate verb. Its
-//! `apply(ctx)` is one call to `rotate_rings` — an `EffectContext` already satisfies `EngineSink`
-//! (`state`, `events`, `rng`) — and its defaults are the controller's perspective and the running
-//! face's `radiant`, so `rotate({ direction })` is the whole call and no rotation logic moves.
+//! The direction is a play-time choice, not a prompt: R81 names this card ("a declared `direction`
+//! pick [travels] in `modes`"), and §10.6 says no Core card opens a `direction` prompt. So the script
+//! declares `modes`, `legal_actions` enumerates both, and the answer arrives in `ctx.modes`, which
+//! `chosen_options(ctx)` reads like a prompt-mode answer.
+//! The rotation is `subsystems/rotation.rs`'s (R14), which the effects barrel keeps out so a card stays
+//! pure (CLAUDE.md rule 5); the `rotate` verb calls it with the controller's perspective and the
+//! running face's `radiant`, so both faces share one hook. What it already does:
+//!   * both rings turn together, read whole before anything is placed (§3.1); a Stack travels whole
+//!     (§3.2, R13); a card never leaves the field, so R78's reset never runs and damage travels (R14);
+//!   * a crossing card enters its new side summoning sick (R171); `controller` changes, `owner` never
+//!     (R12), and a face-down trap is read by its new controller (R33);
+//!   * a Locked or Reborn-reserved destination bounces the card to its controller's hand (R14, R88,
+//!     R747): the hand cap applies (R4) and a unit token ceases to exist (R11);
+//!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65); cards crossing
+//!     onto this side still cross and change control (R14, R171).
 
 use jackioh_engine::prelude::*;
 
@@ -105,17 +73,9 @@ pub fn script() -> CardScripts {
 }
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-// R14, R33, R78, R81, R88).
-// BUILD M4-T4 row 52: "Rotate both rings either direction, control changes on crossing, damage
-// travels, Silas moves too; Locked destination bounces; radiant bounces crossing cards to their
-// owner's hand at cost 0 (R14)".
-//
-// The ring, from p1's seat (§3.1): p1 lanes 1→5, then p2 lanes 5→1, and back to p1 lane 1. So
-// "right" is one step forward along that order — p1 lane 5 becomes p2 lane 5 and p2 lane 1 becomes
-// p1 lane 1 — and "left" is one step back.
-//
-// The zone is locked with the engine's own `lock_zone`, the very function the §6.3 Lock effect calls
-// (`effects/counters.rs`), because `SideSetup` has no `locks` option — reported as a harness gap.
+// R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes
+// on crossing, damage travels, Silas moves too; Locked destination bounces; radiant bounces crossing
+// cards to their owner's hand at cost 0 (R14)". "Right" is one step forward on p1's ring (§3.1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -143,7 +103,7 @@ mod tests {
         }
     }
 
-    /// TS `lockZone(s.state, { player, row: "units", lane })`.
+    /// Locks a unit zone with the engine's own `lock_zone`: `SideSetup` has no `locks` option.
     fn lock_unit_zone(s: &mut Scenario, player: PlayerId, lane: i32) {
         lock_zone(
             s.state_mut(),

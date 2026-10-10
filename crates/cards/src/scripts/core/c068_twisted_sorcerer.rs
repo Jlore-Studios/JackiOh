@@ -1,36 +1,16 @@
 //! #68 Twisted Sorcerer (SPEC §8.3, §4.4, §10.9, R75, R81, R90).
 //!
-//! Base cell: "Cry: deal 4 damage to a target, 8 if your hero is below 10". Radiant: "Cry: deal 8
-//! damage to a target, 16 if your hero is below 10" — the §8 cell "8, or 16", which R275 doubled from
-//! "6, or 12" to meet the standard. A cell that changes only numbers changes only those numbers (§8
-//! Conventions), so the target, the threshold and "your hero" are all kept and only the two amounts
-//! move.
-//!
-//! R75 and §5.3: the source list prints this card as "Spell, Unit"; it is a Unit, which is why the
-//! script hangs off `cry` as a unit's Cry rather than as a spell's on-resolve hook.
-//!
-//! §8's Conventions: "'target' means the player picks at play time from all legal units and heroes on
-//! either side unless narrowed", and "'Your' means the controller". A bare `target` declaration means
-//! a unit only (`pick_kinds_for` in `play_choices.rs`, R90), so the heroes are named explicitly.
-//! R81: the pick travels in the `play` action and never pauses resolution, so the hook reads it back
-//! as `{ of: "chosen" }` (`ctx.targets[0]`) and this card opens no prompt.
-//!
-//! "Threshold read at resolution" (the Engine cell): the hero's health is read when the Cry runs, not
-//! when the card is played, which is what makes a hook the right place for the arithmetic. §10.9
-//! allows a hook to READ state to compute an effect's argument; it never writes.
-//!
-//! §4.4: the damage is one instance through the pipeline, so Armor, Divine Shield, the anti-oneshot
-//! cap and Indestructible all apply to it — `damage` is the only verb involved.
-//!
-//! Fizzle: §8's Conventions say a Cry with an empty target set fizzles and the unit still enters, and
-//! R90 says a declaration the board cannot satisfy does not refuse the play. With the heroes in the
-//! filter that set is never actually empty (a hero is always there), so the fizzle branch is
-//! unreachable for this card; `damage` still resolves `{ of: "chosen" }` to null and does nothing if
-//! it ever is.
-//!
-//! R195, the yellow glow: in hand the card glows exactly when its Cry would deal the high number.
-//! `hero_is_low` is the one predicate both the Cry and `condition_met` read, so they cannot drift. The
-//! condition is about the play, so a Sorcerer on the field never glows.
+//! Base: "Cry: deal 4 damage to a target, 8 if your hero is below 10". Radiant: "8, or 16" (R275
+//! doubled it from "6, or 12"). A cell that changes only numbers changes only those (§8
+//! Conventions): the target, the threshold and "your hero" are kept.
+//! R75 and §5.3: the source prints "Spell, Unit"; it is a Unit, so the script hangs off `cry`.
+//! §8 Conventions: "target" is any legal unit or hero on either side; a bare `target` is a unit only
+//! (`pick_kinds_for`, R90), so the heroes are named. R81: the pick travels in the `play` action, the
+//! hook reads it as `{ of: "chosen" }` and this card opens no prompt. The hero's health is read when
+//! the Cry runs (§10.9: a hook reads state, never writes). §4.4: the damage is one pipeline instance.
+//! Fizzle: the heroes are in the filter, so the target set is never empty.
+//! R195, the yellow glow: in hand the card glows exactly when its Cry would deal the high number;
+//! `hero_is_low` is the one predicate the Cry and `condition_met` both read.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -50,14 +30,10 @@ fn hero_is_low(state: &GameState, controller: PlayerId, threshold: i32) -> bool 
     hero_of(state, controller).health < threshold
 }
 
-/// §10.9: a hook may read state to compute an effect's arguments; it never writes. The read goes
-/// through `hero_of` (engine/src/query.rs), the engine's read-only hero block — BUILD M3-T1 wants no
-/// card file spelling out the shape of `PlayerState`, so this file names the fact it needs and not
-/// the field it lives in.
+/// The read goes through `hero_of`, so no card file spells out `PlayerState` (BUILD M3-T1).
 ///
 /// The declared number `damage` is dealt normally, `lowDamage` when the controller's hero is below the
-/// threshold at resolution (R386): base "deal 4 damage …, 8 if your hero is below 10", Radiant "8 …,
-/// 16" (R275), read off the face that is running.
+/// threshold at resolution (R386): base "4 …, 8 if …", Radiant "8 …, 16" (R275), read off the running face.
 fn sorcerer() -> Script {
     Script {
         targets: targets(),
@@ -81,18 +57,9 @@ pub fn script() -> CardScripts {
 }
 
 // #68 Twisted Sorcerer — SPEC §8.3, BUILD M4-T4: "4 damage, 8 when hero < 10 at resolution;
-// radiant 8 / 16" (R275 doubled the radiant numbers from 6 / 12).
-//
-// §8.3's row: "Cry: deal 4 damage to a target, 8 if your hero is below 10" → "8, or 16", Engine
-// cell "Threshold read at resolution". R75 and §5.3: the source's "Spell, Unit" is read as a Unit,
-// so this is a Cry and the body stays on the board.
-//
-// §8's Conventions: "target" is any legal unit or hero on either side, "your" is the controller, and
-// a Cry whose target set is empty fizzles while the unit still enters. R81: the pick travels in the
-// `play` action.
-//
-// R195's yellow glow (`conditionMet`): both answers of this card's hook, checked against the branch
-// its resolution then takes, are in condition-active.test.ts with the other hooked cards (README §5).
+// radiant 8 / 16" (R275 doubled the radiant numbers from 6 / 12). R75 and §5.3: "Spell, Unit" is
+// read as a Unit, so this is a Cry. R195's yellow glow: both answers of the hook are in
+// `tests/cross/condition_active.rs` (README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -103,16 +70,13 @@ mod tests {
     const SOURCERER: &str = "core-068"; // Unit 5/5 → 10/10, cost 2.
     const SPONGE: &str = "core-019"; // Midrange Menace, 9/9 → 18/18, no Armor: a target that survives.
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends by
-    /// itself, and `reduce` runs that check after EVERY action — so a play that empties the hand and
-    /// leaves no unit hands the turn over: the opponent draws (taking fatigue on an empty library),
-    /// start-of-turn triggers fire, and the numbers under test move underneath the assertion. Every
-    /// scenario below therefore keeps one free 0-cost Spell in p1's hand. It is never played; it only
-    /// keeps one legal action on the turn. (Reported as a harness gap: `scenario` could hold the turn
-    /// open by itself.)
+    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
+    /// `reduce` checks that after EVERY action, so a play that leaves no unit would hand the turn over
+    /// under the assertion. Each scenario keeps one free 0-cost Spell in p1's hand, never played, so
+    /// one legal action always remains.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
-    /// TS `toThrow(/target/i)`, as a hand check (no regex crate): the refusal's word is lower-case.
+    /// The refusal's word, checked by hand (no regex crate): it is lower-case.
     const TARGET_TEXT: &str = "target";
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
@@ -142,9 +106,7 @@ mod tests {
     mod twisted_sorcerer {
         use super::*;
 
-        // -------------------------------------------------------------------------------------------
         // The declaration (§8 Conventions, R81, R90)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_conventions_declares_one_target_over_all_units_and_heroes_on_either_side_r90() {
@@ -157,9 +119,7 @@ mod tests {
             assert!(scripts.base.modes.is_empty());
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: 4, or 8 below 10 (§4.4, §8.3)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_3_deals_4_to_a_chosen_enemy_unit_with_the_hero_at_full_health() {
@@ -226,9 +186,7 @@ mod tests {
             s.expect_refused_with(|s| s.play(SOURCERER, json!({})), TARGET_TEXT);
         }
 
-        // -------------------------------------------------------------------------------------------
         // Radiant: "8, or 16" (§8 Conventions — only the numbers move; R275)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn r275_the_radiant_face_is_10_10_and_deals_8_with_the_hero_at_full_health() {

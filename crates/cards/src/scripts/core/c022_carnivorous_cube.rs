@@ -1,23 +1,16 @@
 //! #22 Carnivorous Cube (SPEC §8.2, R41, R57, R64, R81, R428).
 //!
 //! Base: "Cry: Tribute one of your other Units and remember it. Death: Summon 2 copies of it."
-//! Radiant: "Cry: Tribute one of your other Units and remember it. Death: Fill your board with copies
-//! of it." The Radiant face changes the Death clause only, so the Cry — the tribute and the
-//! remembering — is the same on both (§8 Conventions).
+//! Radiant: the same Cry, "Death: Fill your board with copies of it" (§8 Conventions).
 //!
-//! R428 (patch v0.2.0, rewrites R41's "any other permanent, backrow included"): the Cry eats one of
-//! your other UNITS only — a Unit acting in a unit zone, never a backrow card. §6.3 Tribute: "a card
-//! whose own text tributes (Carnivorous Cube) sacrifices what that text names instead … A tribute
-//! written into a card's script is an ordinary Sacrifice of the permanent that script names, where the
-//! Sheep Token's 2 never applies." So the meal is picked with the play (R81, a `tribute` target the
-//! play action carries, never a prompt) and eaten with `sacrifice`, which bypasses Indestructible and
-//! counts as a death.
+//! R428: the Cry eats one of your other UNITS only, never a backrow card. §6.3 Tribute: a tribute
+//! written into a card's script is an ordinary Sacrifice of what it names, where the Sheep Token's 2
+//! never applies. So the meal is picked with the play (R81, a `tribute` target, never a prompt) and
+//! eaten with `sacrifice`, which bypasses Indestructible and counts as a death.
 //!
-//! What is remembered is `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1):
-//! R41 keeps the eaten card's radiant flag and `statsOverride` (with §7's `armorOverride` beside it)
-//! on every copy. R41's two fizzles are one condition each: nothing to tribute → the Cry does nothing
-//! and remembers nothing; nothing eaten → Death does nothing. It can never eat itself: the declared
-//! target excludes it and the hook re-checks.
+//! `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1) gives every copy the
+//! meal's radiant flag and §7 stats (R41). Nothing to tribute: the Cry fizzles; nothing eaten: Death
+//! does nothing.
 
 use jackioh_engine::prelude::*;
 
@@ -54,16 +47,12 @@ const EATEN: &str = "eaten";
 /// R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one. R428: one
 /// of your other Units — the unit row only.
 ///
-/// `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a declaration the board
-/// cannot satisfy "does not refuse the play — the play is legal with the answers that exist and the
-/// effect fizzles on resolution", which is exactly R41's "nothing to tribute → Cry fizzles".
+/// `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a board that cannot satisfy
+/// it does not refuse the play, the effect fizzles ("nothing to tribute → Cry fizzles").
 ///
-/// Deliberately no `amount`: `playChoices.tributeCostOf` reads a `tribute` declaration's `amount` as
-/// §6.3's Tribute *cost*, which is paid with the play action's `tributes` list, counts Sheep Tokens
-/// as 2 and refuses the play when the board cannot pay it (#66). §6.3 says the opposite for this card
-/// — "a card whose own text tributes (Carnivorous Cube) sacrifices what that text names instead …
-/// where the Sheep Token's 2 never applies" — so the meal is a declared target the script sacrifices
-/// itself, and the play carries no Tribute cost.
+/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, paid
+/// from the play's `tributes` list, with Sheep Tokens as 2, refusing a play the board cannot pay. This
+/// card's meal is a declared target its script sacrifices itself, so the play carries no Tribute cost.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::tribute(
         1,
@@ -74,9 +63,8 @@ fn targets() -> Vec<TargetDecl> {
 
 /// Read the named permanent off the play's selection; null when there was nothing legal to eat. The
 /// pick is read as the engine aims every chosen target (`instanceOf`): on the stay the play chose it
-/// on (R174) and acting on the field (§3.2, R13). A crafted Cube + Cube whose two parts name the same
-/// Reborn unit eats it once — the second part finds the Reborn body, a new arrival, and remembers
-/// nothing — and a meal a Stack play buried under the crafted card is no meal (R41).
+/// on (R174) and acting on the field (§3.2, R13). A crafted Cube + Cube naming one Reborn unit eats it
+/// once, and a meal a Stack play buried under the crafted card is no meal (R41).
 fn meal_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
     let selection = ctx.targets.first()?;
     if !matches!(selection, Selection::Instance { .. }) {
@@ -189,17 +177,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22, as patch v0.2.0 rewrites it (R428): "The
-// Tribute choice travels in the play action (R81), one of your other Units only, excluding itself;
-// chosen Unit sacrificed and remembered; Death → 2 copies (radiant fills board), copies keep
-// `statsOverride` (R41); nothing eaten → Death does nothing (R41)". A backrow permanent is no meal.
-//
-// The base Cube is 4/6, so one 7-attack hit kills it. The radiant Cube is 8/12, so it takes a 7 and
-// a 6 in the same turn; Bigot (6/1) dies to the strike-back, which is not what any assertion reads.
-//
-// HARNESS GAP: `FieldSetup` has no `statsOverride`, so §7 stats cannot be seeded. The one fixture
-// that needs an eaten card with them sets the field instance's `statsOverride` itself, the way
-// `015-me-and-mr-token.test.ts` sets a radiant flag it cannot seed.
+// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it: the Tribute choice travels
+// in the play action (R81), one of your other Units only, never itself; the chosen Unit is sacrificed
+// and remembered; Death → 2 copies (radiant fills the board) keeping `statsOverride` (R41); nothing
+// eaten → Death does nothing (R41). Base Cube 4/6, radiant 8/12.
+// HARNESS GAP: `FieldSetup` has no `statsOverride`, so the one fixture that needs it sets it itself.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -234,7 +216,7 @@ mod tests {
             .collect()
     }
 
-    /// A row as the TS tests write it: a def id per lane, or null.
+    /// A row: a def id per lane, or null.
     fn lanes(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }

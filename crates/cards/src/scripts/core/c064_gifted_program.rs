@@ -3,28 +3,18 @@
 //! Base: "The first card costing 1 or less you play each turn becomes Radiant as it is played".
 //! Radiant: "2 or less" — §8's Conventions make that a change to the threshold only.
 //!
-//! §8.3's Engine cell puts it before resolution with "cost = cost paid", and §10.5 step 3 is that
-//! moment in the play sequence: after the cost is paid (step 2) and before the card is moved or
-//! resolved (steps 4 and 5). The card is a static flag carrying its threshold, which the
-//! engine reads at step 3 (`play_steps::gifted_program_step`, through `play_choices::gifted_makes_radiant`),
-//! the way #38 Quickstriker's flag is read at step 5. Three things decide it, all the engine's:
-//!   - "you play": only the permanents on the playing player's side count, since the card's text is
-//!     its controller's (§8 Conventions) — a stolen Gifted Program works for its thief;
-//!   - R56: the cost compared is the one ACTUALLY PAID after every modifier — a 2-cost card
-//!     discounted to 1 qualifies under the base face, and a cast pays 0 and so always qualifies (R70);
-//!   - "the first ... each turn": R213 counts the player's plays this turn off the turn log, not a
-//!     flag on this instance, so a Gifted Program that changes hands, or leaves and comes back, can
-//!     neither use up another player's first cheap card nor hand its own player a second one.
+//! §8.3's Engine cell puts it before resolution with "cost = cost paid": §10.5 step 3, after the
+//! cost is paid and before the card moves or resolves. The card is a static flag carrying its
+//! threshold, read by `play_steps::gifted_program_step` through `play_choices::gifted_makes_radiant`.
+//!   - "you play": only the playing player's permanents count (§8 Conventions), so a stolen Gifted
+//!     Program works for its thief;
+//!   - R56: the cost compared is the one ACTUALLY PAID after every modifier; a cast pays 0 (R70);
+//!   - "the first ... each turn": R213 counts plays off the turn log, not a flag on this instance.
 //!
-//! A flag rather than a hook because step 1 must know the face a play will resolve with before it
-//! reads the play's targets and modes (R214): a hook only runs at step 3, while a flag can be read
-//! by `legal_actions` and by the refusal alike. Gifted Program cannot catch its own play: step 3 runs
-//! before step 4 puts it on the board (R119).
-//!
-//! THE GLOW (R662). The condition this card prints is its grant's, so the cards that glow are the
-//! ones in its controller's hand that it would make Radiant if played now: `condition.rs` asks
-//! `query::gifted_would_make_radiant`, which is `gifted_makes_radiant` at the cost a play pays now (R56,
-//! R213), so the glow and step 3 cannot disagree. The card itself declares no `condition_met`.
+//! A flag, not a hook, because step 1 must know the face before it reads targets and modes (R214).
+//! It cannot catch its own play: step 3 runs before step 4 puts it on the board (R119).
+//! THE GLOW (R662): `condition.rs` asks `query::gifted_would_make_radiant`, which is
+//! `gifted_makes_radiant` at the cost a play pays now (R56, R213), so glow and step 3 agree.
 
 use jackioh_engine::prelude::*;
 
@@ -58,13 +48,8 @@ pub fn script() -> CardScripts {
 // Must-pass: "First ≤1-cost card each turn is radiant before it resolves (its Cry uses radiant
 // text); second is not; radiant threshold 2 (R56)."
 //
-// The whole card is its `giftedProgram` static flag, which `play_steps.rs` reads as §10.5 step 3:
-// "the Gifted Program hook may set `radiant` now" (R213, R214). Nothing else on the card exists,
-// which is what the first test pins down, and `backrow: [GIFTED]` is enough to arm it — the flag
-// needs the card on the field, not a Cry.
-//
-// R662's yellow glow: the condition is the grant's, so the hand cards it would make Radiant if played
-// now glow (`condition.rs`), both faces, at the end of this file.
+// The card is its `giftedProgram` flag, read as §10.5 step 3 (R213, R214); `backrow: [GIFTED]` arms
+// it. R662's yellow glow is tested at the end of this file.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -91,7 +76,7 @@ mod tests {
         json!({ "pick": "instance", "instanceId": card.id })
     }
 
-    /// `handGlows(s, id)`: TS's default viewer is p1.
+    /// Whether `card` glows in p1's hand.
     fn glows_in_hand(s: &Scenario, card: &str) -> bool {
         let id = s.card(card).id.clone();
         hand_glows(s, &id, P1)

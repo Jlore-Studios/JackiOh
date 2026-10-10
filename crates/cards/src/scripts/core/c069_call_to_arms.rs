@@ -1,29 +1,16 @@
 //! #69 Call to Arms (SPEC §8.3, §6.3 Recruit, R1, R64, R65).
 //!
-//! Base cell: "Recruit 3 Units costing 1 or less". Radiant cell: "2 or less" — a cell that changes
-//! only a number changes only that number (§8 Conventions), so the count stays 3 and only the cost
-//! ceiling moves. Engine cell: "Three top-down scans; stops when the board is full".
+//! Base: "Recruit 3 Units costing 1 or less"; Radiant: "2 or less". A cell that changes only a number
+//! changes only that number (§8 Conventions), so the count stays 3 and only the cost ceiling moves.
+//! A Spell's script hangs off `cry`, the on-resolve hook of a Spell and the Cry of a permanent (§10.9).
 //!
-//! A Spell's script hangs off `cry`, which is the on-resolve hook for a Spell as well as the Cry of a
-//! permanent (§10.9).
-//!
-//! §6.3 Recruit: "Summon from library, scanning top down … first permanent card that matches the
-//! filter, summoned into its row per R64 … then the library keeps its order". The engine's `recruit`
-//! effect is exactly one scan, so "Recruit 3" is three of them in order, and because each one
-//! removes the card it found, the next scan finds the next match further down. A card a scan cannot
-//! place is never removed from the library (`summon_existing` looks for the zone before it takes the
-//! card out), which is both halves of the must-pass row: the board filling up stops the recruiting,
-//! and the library's order is otherwise untouched.
-//!
-//! R64: a summon with no named zone takes the leftmost empty, unlocked, unreserved zone of its row,
-//! so the three units line up left to right and a zone reserved for a dying Reborn unit is skipped.
-//! R1: Recruit never fires a Cry — `summon` does not run the hook at all, which is the whole reason
-//! #12 Duplicating Felinors cannot fill a board for 2 mana.
-//! R65: the filter reads each def's cost out of play, so an X-cost card counts as 0 and an embiggen
-//! card as its base price — `matches_filter` routes through `query_cost` for exactly that.
-//!
-//! "Units costing 1 or less" is `type: "Unit"` plus `costRange: { max }`. The type filter matters as
-//! well as the cost: `recruit` will otherwise take any permanent (Field Spell, Trap, Field Trap).
+//! §6.3: the engine's `recruit` is one top-down scan, so "Recruit 3" is three in order. A card a scan
+//! cannot place is never removed from the library (`summon_existing` looks for the zone first), so a
+//! full board stops the recruiting and the library's order is otherwise untouched.
+//! R64: no named zone takes the leftmost empty, unlocked, unreserved zone of its row.
+//! R1: Recruit never fires a Cry, which is why #12 Duplicating Felinors cannot fill a board for 2 mana.
+//! R65: the filter reads each def's cost out of play (`matches_filter` via `query_cost`).
+//! The `type: "Unit"` filter matters as well as the cost: `recruit` would take any permanent.
 
 use jackioh_engine::effects::{RecruitFilter, recruit};
 use jackioh_engine::prelude::*;
@@ -37,11 +24,10 @@ fn units_costing(max: i32) -> RecruitFilter {
     json_as(json!({ "type": "Unit", "costRange": { "max": max } }))
 }
 
-/// The cost limit is the whole of the radiant text: "2 or less" in place of "1 or less" — the
-/// declared number `costLimit` (R386), read off the face that is running.
+/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
+/// the face that is running.
 fn call_to_arms() -> Script {
     Script {
-        // Three independent top-down scans, applied in order by `apply_effects`.
         cry: Some(hook(|ctx| {
             let filter = units_costing(param(&*ctx, "costLimit"));
             (0..RECRUITS)
@@ -60,14 +46,6 @@ pub fn script() -> CardScripts {
 
 // #69 Call to Arms — SPEC §8.3, BUILD M4-T4: "Three top-down recruits of cost ≤1, library order
 // otherwise kept, stops when the board fills; radiant ≤2".
-//
-// §8.3's row: "Recruit 3 Units costing 1 or less" → "2 or less", Engine cell "Three top-down scans;
-// stops when the board is full".
-//
-// §6.3 Recruit: "Summon from library, scanning top down … first permanent card that matches the
-// filter, summoned into its row per R64 … then the library keeps its order". R1: Recruit never
-// fires a Cry. R64: no named zone means the leftmost empty, unlocked zone, left to right.
-// R65: the filter reads a def's cost out of play.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -87,13 +65,10 @@ mod tests {
     const SPELL: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — never a Recruit candidate (§6.3).
     const RUSH_TOKEN: &str = "core-t-rush"; // Unit token, cost 1 — a card that leaves a library only by a draw (R11).
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends by
-    /// itself, and `reduce` runs that check after EVERY action — so a play that empties the hand and
-    /// leaves no unit hands the turn over: the opponent draws (taking fatigue on an empty library),
-    /// start-of-turn triggers fire, and the numbers under test move underneath the assertion. Every
-    /// scenario below therefore keeps one free 0-cost Spell in p1's hand. It is never played; it only
-    /// keeps one legal action on the turn. (Reported as a harness gap: `scenario` could hold the turn
-    /// open by itself.)
+    /// R82: a turn left with only end, concede and offer-draw auto-ends, and `reduce` checks that after
+    /// EVERY action, so a play that empties the hand hands the turn over and the numbers under test move.
+    /// Every scenario below therefore keeps one free 0-cost Spell in p1's hand: never played, it only
+    /// keeps one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
@@ -116,7 +91,6 @@ mod tests {
         s.pile(P1, "library").into_iter().map(|card| card.def_id).collect()
     }
 
-    /// `unitIds`' expected row, written with TS's `null`s.
     fn row(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }
@@ -149,9 +123,7 @@ mod tests {
             assert!(scripts.base.cry.is_some());
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: three top-down scans of cost ≤ 1 (§6.3, R64, R65)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_3_recruits_three_cost_1_units_top_down_into_lanes_1_3_s6_3_r64() {
@@ -251,9 +223,7 @@ mod tests {
                 .expect_events(json!(["cardPlayed", "enteredGraveyard"]));
         }
 
-        // -------------------------------------------------------------------------------------------
         // Radiant: "2 or less" (§8 Conventions — only the number moves)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_3_the_radiant_face_recruits_cost_2_units_as_well_still_three_of_them_still_top_down() {

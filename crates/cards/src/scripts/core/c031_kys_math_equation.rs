@@ -1,38 +1,15 @@
-//! #31 KY's Math Equation (SPEC §8.2 row 31), patch v0.2.0 (R429): "Deal Fib(times played + 1) damage
-//! to a target. End of turn: Return this to your hand. It costs (1) more, to a maximum of (4).",
-//! radiant "Deal Fib(times played + 3) damage to a target. …" (R275 raised the offset).
+//! #31 KY's Math Equation (SPEC §8.2 row 31, R429): "Deal Fib(times played + 1) damage to a target.
+//! End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Radiant: + 3 (R275).
 //!
-//! Four rulings drive the whole card:
-//!   R429 the Fib index is the times this card has been played, THIS play included, + 1 (radiant + 3).
-//!        The engine counts the plays on the instance at §10.5 step 4 (`StaticFlags.countsPlays`,
-//!        `timesPlayedOf`), casts included (R70) and countered plays never, and the count rides the
-//!        card through every zone like `radiant` (R78). So the 1st play deals Fib(2) = 1, the 2nd
-//!        Fib(3) = 2, the 3rd 3, the 4th 5, the 5th 8 (radiant 3, 5, 8, 13, 21).
-//!   R67  its cost plays no part in the damage any more: `costMod`, player discounts and the cost
-//!        paid change its price, never what it deals.
-//!   R25  Fib = 0,1,1,2,3,5,8,13,21,34,55,89 and the index clamps at 11, which is what `fib` in
-//!        engine/src/config.ts already does — nothing here re-derives Fibonacci.
-//!   R280 the damage it would deal now is the card's `preview`, labelled with the running face's
-//!        formula as its catalog text prints it, off the same `damageFor` its Cry deals. In hand that
-//!        is the play it would be (one more than it has had); it reads the card's own count and
-//!        nothing else, so it shows wherever the card may be read (§10.8).
-//!
-//! The return is an `endOfTurn` hook on a Spell that is sitting in its owner's graveyard: §5.1's
-//! "add this back to your hand" spells are found there by `triggerHoldersWithHook` (triggers.ts,
-//! R68), which unlike `turn.ts`'s `triggerOrder` reaches the hand and the graveyard. The hook is
-//! one-shot by reading the turn log: the return happens on the turn the card was played, not at
-//! every end of turn for the rest of the game. R429: the return raises the card's own cost (R65:
-//! `costOverride` or printed, plus `costMod`) by 1, but never above (4) — at (4) it adds nothing.
-//!
-//! R429, R766 (issues #557, #572): the climb survives the graveyard, and only the climb. R766 takes every
-//! card's price off as it reaches a graveyard, this one's included, so the card lying there costs its
-//! printed (1); but its own return gives back the climb its earlier returns gave it, which it carries
-//! into its play and §10.5 step 7 notes for it as it lands (`StaticFlags.returnKeepsPrice`, read by
-//! `return_price_of`), plus the return's (1), capped at (4). So it comes back at (2), then (3), then
-//! (4), and stays at (4). Any other change to its price — a discount or a surcharge it was played at,
-//! a Degrade's cost step, its `costOverride` (a "(0)" given in a hand) — is no part of that and stays
-//! gone, and a #31 that reaches its graveyard any other way (discarded, burned, countered) was never
-//! flagged for a return, so nothing is noted for it.
+//! R429 the Fib index is the plays this card has had, THIS one included, + 1: counted on the instance
+//!      at §10.5 step 4, casts too (R70), countered plays never, riding every zone (R78).
+//! R67  its cost never changes what it deals. R25 the index clamps at 11. R280 the preview is the
+//!      damage it would deal now, off the same `damage_for` as the Cry (§10.8).
+//! The return is an `end_of_turn` hook on a Spell in the graveyard (§5.1, R68), one-shot by the turn
+//! log; it raises the card's own cost (R65) by 1, never above (4).
+//! R429, R766: only the climb survives the graveyard (R766 takes every price off a card reaching it):
+//! the return gives back the climb earlier returns gave (`return_price_of`) plus (1), capped at (4).
+//! Any other price change stays gone, and a #31 that reaches its graveyard otherwise gets no return.
 
 use jackioh_engine::prelude::*;
 
@@ -59,8 +36,6 @@ struct Formula {
     radiant: String,
 }
 
-/// TS `const FORMULA = { base: formulaIn(def.base.text), radiant: formulaIn(def.radiant.text) }`,
-/// read once per build of the script.
 fn formula() -> Formula {
     let def = crate::card_def(ID);
     Formula {
@@ -69,8 +44,7 @@ fn formula() -> Formula {
     }
 }
 
-/// TS `/Fib\([^)]*\)/.exec(text)[0]`, by hand (no regex crate in a pure crate, SURFACE §3): the first
-/// "Fib(" that a ")" closes, up to and including that ")".
+/// By hand, as a pure crate has no regex crate (SURFACE §3): the first "Fib(" that a ")" closes, through that ")".
 fn formula_in(text: &str) -> String {
     let mut from = 0;
     while let Some(at) = text[from..].find("Fib(") {
@@ -103,7 +77,7 @@ fn damage_for(self_: &CardInstance, radiant: bool) -> i32 {
 }
 
 fn blast(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    // TS read the live `ctx.self`: the card as it stands now, its play already counted.
+    // The card as it stands now, its play already counted.
     let amount = match ctx.live_self() {
         None => fib(0),
         Some(self_) => damage_for(self_, ctx.radiant),
@@ -131,17 +105,17 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R429, R766 (issue #572): the climb its earlier returns gave it, which the graveyard took off it and
-    // its return gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
+    // R429, R766: the climb its earlier returns gave it, which the graveyard took off it and its return
+    // gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
     // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
     let carried = return_price_of(&self_);
     let raise = RETURN_COST_STEP
         .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
         .max(0);
     // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
-    // is the price of the return, so it lands only on a card that reached the hand: a full hand burns
-    // the card back to the graveyard (§2.4, R4), which is no return at all. `returnPrice` notes it as the
-    // climb beside the `costMod`, so the next return gives back this and nothing else (issue #572).
+    // lands only on a card that reached the hand: a full hand burns the card back to the graveyard
+    // (§2.4, R4), which is no return. `returnPrice` notes it as the climb beside the `costMod`, so the
+    // next return gives back this and nothing else.
     let price = carried + raise;
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
     if price != 0 {
@@ -172,7 +146,7 @@ fn preview(formula: Formula) -> PreviewHook {
 }
 
 /// R429: §10.5 step 4 counts this card's plays on its instance, and step 7 notes the price it was
-/// played at for its own return (R766, issue #557).
+/// played at for its own return (R766).
 fn static_flags() -> Option<StaticFlags> {
     Some(StaticFlags {
         counts_plays: Some(true),
@@ -206,18 +180,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #31 KY's Math Equation — SPEC §8.2 row 31, patch v0.2.0 (R429): "Deal Fib(times played + 1) damage
-// to a target. End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)."; radiant
-// Fib(times played + 3) (R275).
-//
 // BUILD M4-T4 must-pass row 31, as R429 rewrites it: "1st play → 1 damage, 2nd → 2, 3rd → 3, 4th → 5,
 // 5th → 8; clamps at 89 (R25); its cost — costMod, discounts, the cost paid — changes its price and
-// never its damage (R67); the return costs (1) more, never above (4)". Times played counts this card's
-// plays, the current one included, on the instance (`timesPlayed`), in every zone. The damage it
-// would deal now, its R280 `preview`, is proved in test/preview.test.ts.
+// never its damage (R67); the return costs (1) more, never above (4)".
 //
-// Every side gets a unit on the board so §2.5's auto-end-turn does not run the turn on by itself
-// (see the harness header): a unit with an unspent exertion is always a meaningful action.
+// Every side gets a unit on the board so §2.5's auto-end-turn does not run the turn on by itself:
+// a unit with an unspent exertion is always a meaningful action.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -261,7 +229,6 @@ mod tests {
             },
             "p2": p2,
         }));
-        // The plays it has had before this fixture's own (R429): what the harness cannot seed.
         if let Some(times) = options.times_played {
             set_times_played(&mut s, "31", times);
         }
@@ -292,7 +259,6 @@ mod tests {
         (paid, cost)
     }
 
-    /// TS `/^p[12]\b/.test(label)`: the label starts with a seat id as a whole word.
     fn starts_with_seat(label: &str) -> bool {
         let Some(rest) = label.strip_prefix("p1").or_else(|| label.strip_prefix("p2")) else {
             return false;
@@ -425,7 +391,7 @@ mod tests {
         #[test]
         fn r429_r766_a_discount_or_a_surcharge_it_was_played_at_stays_behind_it_returns_at_printed_plus_its_climb() {
             crate::register_all();
-            // R766, issue #572: its return gives back only the climb its own returns gave it. A price put
+            // R766: its return gives back only the climb its own returns gave it. A price put
             // on it any other way (here a `costMod` it starts in hand with: a discount, a cost step, a
             // surcharge) stays behind in the graveyard, so a first return is (1) + (1) whatever it cost.
             for raised in [-1, 2, 4] {
@@ -494,7 +460,7 @@ mod tests {
 
             s.expect_in_zone(&equation, "hand");
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 3);
-            // Back in hand it carries its climb, now (2), into its next play (issue #572).
+            // Back in hand it carries its climb, now (2), into its next play.
             assert_eq!(return_price_of(s.card(&equation)), 2);
         }
 

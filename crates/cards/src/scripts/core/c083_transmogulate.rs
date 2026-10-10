@@ -4,54 +4,12 @@
 //!   Radiant: "... with a random Radiant Legendary." — the same five zones with `radiant: true` on
 //!            every replacement (§8 Conventions).
 //!
-//! FIVE ZONES. Patch v0.1.1 added the hand to the library, board, GY and exile that R35 named; the
-//! hand is an "other zone" of R35's like the rest (any card from the pool, same count), R365.
-//!
-//! R35 IS THE WHOLE CARD:
-//!   "Board cards: same-type replacement in place, Field Trap counts as Trap, Immutable cards stay
-//!    (R23). Other zones: any card from the pool, same counts. Replaced cards cease to exist.
-//!    Pool: the §8 Legendary-rarity cards except #83, which is #52, #85, #87, #92, #93, #95".
-//! Clause by clause:
-//!   - "the pool" is `catalog.pool("83", { rarity: "Legendary" })` — §5.1's one query function with
-//!     this card's own index excluded, which `test/query.test.ts` pins to exactly those six. This
-//!     file never lists the six by hand: two sources of one pool is the bug that file prevents.
-//!   - "same-type replacement in place" is one `transform` per board card, narrowed to the
-//!     Legendaries of that card's type: a Unit becomes #52 or #92, a Field Spell becomes #93, and a
-//!     Trap becomes #85. "Field Trap counts as Trap" is `TRAP_TYPES` (both types in one query), so a
-//!     Field Trap also becomes #85 Unlicensed Experimentation — BUILD M4-T4's own example. The pool
-//!     holds no Legendary Field Trap, which is why the type match has to be read this way rather
-//!     than as an exact `type` equality.
-//!   - "in place" and "replaced cards cease to exist" are `effects/transform.ts`: `replaceOnField`
-//!     keeps the zone, the position and the Stack pile beneath, `replaceOffField` keeps the pile
-//!     index (so a library keeps its order), and both leave the old card in no pile at all. That is
-//!     also why the counts per zone are preserved without this card counting anything: every
-//!     replacement is one card for one card.
-//!   - "Immutable cards stay (R23), since this is a Transform" needs no check here either:
-//!     `transform` refuses an Immutable target and does nothing, so that card keeps its place and
-//!     the zone count still holds.
-//!
-//! R13 "Stack dormancy": cards under a Stack are not on the field, so "your board" is the top of
-//! each unit pile plus the backrow, which is what `cardAt` returns per zone (§3.2). Transforming a
-//! dormant card would also be wrong mechanically — `placeOnField(…, { stack: true })` puts the
-//! replacement on TOP of the pile, which would promote it past the card that is actually acting.
-//!
-//! R11: a unit token cannot sit in a graveyard or an exile pile. The pool holds no tokens, so no
-//! replacement can vanish on arrival and thin a zone (`replaceOffField` guards it anyway).
-//!
-//! RANDOMNESS (CLAUDE.md rule 4, §9.3). Every pick is `ctx.rng`, never `Math.random`, and the picks
-//! happen while the effect list is being built — the pool is a definition list, and `transform` takes
-//! one `defId`, so there is no "transform into a random X" effect to defer them into. That is
-//! deterministic here because this hook runs exactly once: the card opens no prompt, so nothing can
-//! re-enter it and `applyResumable` never replays part of the list (`prompts.ts`).
-//!
-//! THE OFF-FIELD READ. `zones.ts` exposes `slotsOf`/`cardAt` for the field but owns no reader for
-//! the off-field piles, so enumerating "every card in your library, GY and exile" used to mean
-//! naming the fields of `PlayerState` — which BUILD M3-T1's acceptance greps for, and which made
-//! this card one of fifteen files that would have to be edited if that shape ever changed. The
-//! engine's read-only board surface now answers it:
-//!     zoneCards(state, player, zone): readonly CardInstance[]     // engine/src/query.ts
-//! one pile as a copy, which is also what this card needs mechanically — see `pileCards` below.
-//! Reading is not mutation either way (CLAUDE.md rule 5 bans writing, and nothing here writes).
+//! R35 is the whole card; the hand is an "other zone" like the rest (R365). The pool is §5.1's one
+//! query with this card's index excluded, never listed by hand. A board card takes a same-type
+//! Legendary in place (Field Trap counts as Trap, so it becomes #85); Immutable cards stay (R23).
+//! Cards under a Stack are dormant, so "your board" is each pile's top (R13, §3.2). The pool holds no
+//! tokens, which cannot sit in a graveyard or exile (R11). Picks draw from `ctx.rng` while the list
+//! is built (CLAUDE.md rule 4, §9.3): deterministic, since the hook runs once and opens no prompt.
 
 use jackioh_engine::prelude::*;
 
@@ -65,10 +23,8 @@ const OFF_FIELD_ZONES: [OffFieldZone; 4] = [
     OffFieldZone::Exile,
 ];
 
-/// R35's pool: every non-token Legendary but this card (R387), of every set (R380) — in Core #52, #85,
-/// #87, #92, #93, #95, proved by `test/query.test.ts`, not listed here.
-///
-/// `type_` is TS's `CardType | CardType[]`, as the JSON the query takes.
+/// R35's pool: every non-token Legendary but this card (R387), of every set (R380); in Core #52, #85,
+/// #87, #92, #93, #95, never listed here.
 fn legendaries(type_: Option<Value>) -> Vec<&'static CardDef> {
     let mut args = json!({ "rarity": "Legendary" });
     if let Some(type_) = type_ {
@@ -109,9 +65,9 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
         .collect()
 }
 
-/// One off-field pile of the controller's. `zoneCards` hands back a copy, which matters here: the
-/// `transform`s this card builds replace every card in the pile being walked, so iterating the live
-/// array would be iterating a list the effects are rewriting.
+/// One off-field pile of the controller's, read only (CLAUDE.md rule 5). `zone_cards` hands back a
+/// copy, which matters: the `transform`s built replace every card in the pile being walked, so
+/// iterating the live array would be iterating a list the effects are rewriting.
 fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> {
     let cards: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, zone).to_vec();
     // R223: each replacement takes a new id, and walked top down the library's would be one run of
@@ -149,8 +105,8 @@ fn transmogulate(radiant_result: bool) -> Script {
                 let pool = same_type_legendaries(type_);
                 effects.extend(replace(ctx, &card, &pool, radiant_result));
             }
-            // Then hand (R365), library (in `pileCards` order, R223), graveyard and exile: "any card from
-            // the pool, same counts".
+            // Then hand (R365), library (in `pile_cards` order, R223), graveyard and exile: "any card
+            // from the pool, same counts".
             for zone in OFF_FIELD_ZONES {
                 for card in pile_cards(ctx, zone) {
                     let pool = legendaries(None);
@@ -170,21 +126,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365).
-//
-// BUILD M4-T4's must-pass row: "Zone counts preserved; board cards replaced by same-type
-// Legendaries in place; pool is exactly #52, #85, #87, #92, #93, #95, and a Field Trap becomes
-// Unlicensed Experimentation (R35); the hand is replaced too (R365); radiant gives radiant cards" —
-// and since patch v0.2.0 (R380) the pool is every set's non-token Legendaries but #83.
-//
-// The board fixture covers every permanent type at once: a Unit, an Immutable Unit (R23), a Field
-// Spell, a Trap and a Field Trap. The pool is read from the catalog and checked to hold the six ids
-// R35 names, so if `query`, the rarities or the exclusion of #83 ever drift, these tests say so.
-//
-// One count to keep in mind: Transmogulate is a Spell, so it reaches its owner's graveyard AFTER
-// its own script has run (§10.5). The graveyard therefore ends one card larger than it started —
-// the replacement for what was there, plus Transmogulate itself, which was in `resolving` while the
-// replacements happened and so was never replaced by one of them.
+// #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365, R380). BUILD M4-T4's row: zone counts kept,
+// same-type Legendaries in place, a Field Trap becoming Unlicensed Experimentation (R35), the hand
+// replaced too (R365), radiant giving radiant cards; the pool is every set's non-token Legendaries
+// but #83 (R380). A Spell reaches the graveyard after its script (§10.5), so that zone ends one larger.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,7 +142,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `catalog.pool(TRANSMOGULATE, args).map((def) => def.id)`.
     fn pool_of(args: Value) -> Vec<String> {
         crate::query::pool(TRANSMOGULATE, &json_as(args))
             .into_iter()
@@ -205,29 +149,27 @@ mod tests {
             .collect()
     }
 
-    /// R35's pool: "every non-token Legendary except #83" — of every set since patch v0.2.0 (R380). In
-    /// Core that is the six R35 names, #52, #85, #87, #92, #93, #95. (TS `POOL`.)
+    /// R35's pool: every non-token Legendary except #83, of every set (R380); in Core the six R35
+    /// names, #52, #85, #87, #92, #93, #95.
     fn pool_ids() -> Vec<String> {
         pool_of(json!({ "rarity": "Legendary" }))
     }
 
     const CORE_SIX: [&str; 6] = ["core-052", "core-085", "core-087", "core-092", "core-093", "core-095"];
 
-    /// The Legendary Units in the pool, every set's (Core #52 Silly Silas and #92 Felinor Fiender among
-    /// them). (TS `LEGENDARY_UNITS`.)
+    /// The Legendary Units in the pool, every set's (Core #52 Silly Silas and #92 Felinor Fiender among them).
     fn legendary_units() -> Vec<String> {
         pool_of(json!({ "rarity": "Legendary", "type": "Unit" }))
     }
 
-    /// The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, Classic+ #78. (TS
-    /// `LEGENDARY_FIELD_SPELLS`.)
+    /// The Legendary Field Spells: Core #93 Combo-Index, Classic #4, #7, Classic+ #78.
     fn legendary_field_spells() -> Vec<String> {
         pool_of(json!({ "rarity": "Legendary", "type": "Field Spell" }))
     }
 
-    /// The Legendary Trap this seed draws: #85 Unlicensed Experimentation — and "Field Trap counts as
-    /// Trap". Since patch v0.2.9 (issue #44) there are two Legendary Traps of any set (#85 and Classic
-    /// #9 Income Tax); the "transmogulate-1" seed draws #85 for both trap slots.
+    /// The Legendary Trap this seed draws: #85 Unlicensed Experimentation, since a Field Trap counts as a
+    /// Trap. There are two Legendary Traps of any set (#85 and Classic #9 Income Tax); the
+    /// "transmogulate-1" seed draws #85 for both trap slots.
     const LEGENDARY_TRAP: &str = "core-085";
 
     /// Board fixtures: #11 Tempo Timmy (Unit), a Radiant #19 Midrange Menace (Immutable Unit), #73
@@ -236,8 +178,8 @@ mod tests {
 
     fn board(radiant_face: bool) -> Scenario {
         let mut s = scenario(json!({
-            // Pinned after patch v0.2.9 added Classic #9 to the Legendary Trap pool: this seed draws #85
-            // for both trap slots and no replacement casts (a Spell Tyrant draw cascades under other seeds).
+            // Pinned: this seed draws #85 for both trap slots and no replacement casts (a Spell Tyrant
+            // draw cascades under other seeds).
             "seed": "transmogulate-1",
             "p1": {
                 "hand": [TRANSMOGULATE, "core-056"],
@@ -261,7 +203,7 @@ mod tests {
         s
     }
 
-    /// The def id of the unit acting in a lane, or "" for an empty lane (TS `s.unit(p, lane)?.defId`).
+    /// The def id of the unit acting in a lane, or "" for an empty lane.
     fn unit_def(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.def_id.clone()).unwrap_or_default()
     }

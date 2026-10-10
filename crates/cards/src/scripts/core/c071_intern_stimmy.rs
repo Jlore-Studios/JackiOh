@@ -1,60 +1,32 @@
 //! #71 Intern Stimmy (SPEC §8.3): "At the end of any turn, if your library has more cards than the
-//! opponent's: Recruit a Unit costing 1 or less", radiant "2 or less" — a Radiant cell that changes
-//! only a number changes only that number (§8 Conventions), so the trigger, the condition and the
-//! Recruit are all kept and only the cost ceiling moves.
+//! opponent's: Recruit a Unit costing 1 or less", radiant "2 or less". A Radiant cell that changes
+//! only a number changes only that number (§8 Conventions), so only the cost ceiling moves.
 //!
-//! Three things this card is NOT responsible for, all of them engine:
-//!
-//!  1. WHEN it fires. R62 puts the end-of-turn trap window after the end-of-turn triggers and before
-//!     the end-of-turn delayed effects, on BOTH players' turns, which is why the trigger watches the
-//!     plain `turnEnded` event and reads nothing off it. `traps.rs` withholds `turnEnded` from the
-//!     immediate dispatch (`TRAP_WINDOW_EVENTS`) precisely so this fires once, in the window.
-//!  2. "NEVER consumed". §5.1 and §3.2 make that the card TYPE's doing: `traps.rs consume_trap` and
-//!     `triggers.rs consume_trap` both return early for a Field Trap, so it stays in the backrow and
-//!     can fire again next turn. R33's "a Field Trap that has fired is face-up to both" is theirs
-//!     too (both set `face_up` when the trap fires).
-//!  3. WHOSE library, and whose Recruit. R62 and R52 (#18 Bread and Butter's beneficiary) settle it:
-//!     "your" is the TRAP'S CONTROLLER, not the player who ended the turn. Both firing paths build
-//!     the context with `controller: trap.controller`, so `ctx.controller` is already that player and
-//!     `recruit`'s default `player: "self"` is already the right side. The trigger never looks at
-//!     `event.player`.
-//!
-//! The condition is a `when` predicate, which is what `traps.rs` reads. That module is the ONLY one
-//! that can fire this card: `triggers.rs` passes `turnEnded` over for traps (`offer_to_traps` returns
-//! null for a `TRAP_WINDOW_EVENTS` event) and skips trap holders in the ordinary queue, exactly so
-//! R62's window fires them once, at its scheduled point. `when` matters because R61 makes `run`
-//! returning `[]` mean "the trap fired and achieved nothing", which would flip this Field Trap
-//! face-up (R33) on every turn end it does not answer; a predicate leaves it armed and face-down.
-//! `run` repeats the check as belt and braces, so the card is still correct under the
-//! `effects.length === 0` convention `triggers.rs run_queued_trigger` uses for non-window triggers.
-//!
-//! `script.ts`'s `TriggerDef` did not declare `when` (traps.ts read it structurally and said M3-T2
-//! must add it), so the TS trigger was typed as `TrapTrigger`. In Rust `TriggerDef` carries `when`
-//! itself (part 1's `script.rs`), so it is a plain `TriggerDef` with `with_when`.
-//!
-//! R195, the yellow glow: the card glows in its controller's hand and in their backrow exactly when
-//! `library_is_larger` holds, the same function the trap's `when` and `run` read, so the glow says
-//! "this would recruit if the turn ended now". It asks nothing the controller cannot see (§9.1: both
-//! library sizes are public counts), and the opponent never sees the glow on a face-down trap
-//! because `view_for` never asks about a card the viewer does not control.
+//! The engine's, not the card's: WHEN it fires (R62's end-of-turn trap window on BOTH turns, so the
+//! trigger watches the plain `turnEnded`, which `traps.rs` withholds from immediate dispatch),
+//! "NEVER consumed" (the Field Trap type, §5, §5.1, §3.2; face-up once fired, R33) and WHOSE
+//! library and Recruit ("your" is the TRAP'S CONTROLLER, R62, R52; `ctx.controller` is that player).
+//! The condition is a `when` predicate, the one thing `traps.rs` reads. R61: `run` returning `[]`
+//! would flip this Field Trap face-up (R33) on every turn end it does not answer; a predicate
+//! leaves it armed. R195, the yellow glow: in hand and backrow exactly when `library_is_larger`
+//! holds, the same function the trap's `when` and `run` read (public counts, §9.1).
 
 use jackioh_engine::effects::recruit;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-071";
 
-/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This is the whole
-/// of that read for this card — the two library sizes through the engine's read-only `zone_count`
-/// (engine/src/query.rs, BUILD M3-T1), "yours" being the trap's controller (R62, R52) — and "more
-/// cards than" is strictly greater, so an equal count does nothing.
+/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. The two library
+/// sizes come through the read-only `zone_count` (BUILD M3-T1), "yours" being the trap's controller
+/// (R62, R52); "more cards than" is strictly greater, so an equal count does nothing.
 fn library_is_larger(state: &GameState, controller: PlayerId) -> bool {
     let mine = zone_count(state, controller, OffFieldZone::Library);
     let theirs = zone_count(state, opponent_of(controller), OffFieldZone::Library);
     mine > theirs
 }
 
-/// The cost limit is the whole of the radiant text: 1 or less on the base face, 2 or less on it — the
-/// declared number `costLimit` (R386), read off the face that is up.
+/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
+/// the face that is up.
 fn intern_stimmy() -> Script {
     let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], |ctx, _event| {
         if library_is_larger(ctx.state, ctx.controller) {
@@ -85,17 +57,9 @@ pub fn script() -> CardScripts {
 // #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4: "Trap window at the end of any turn with library >
 // opponent's → recruit ≤1 (R62); fires again next qualifying turn; radiant ≤2".
 //
-// Library fillers are deliberately Spells (core-005 Stockpile, core-035 Lunar Eclipse): Recruit
-// takes permanents only (§6.3), so a Spell in the library can pad a count without ever being the
-// card recruited. The Units used are core-001 Big D-fender (cost 2), core-003 Right-house defender
-// (cost 1) and core-004 Gary the Gambler (cost 1) — none of them has a turn trigger, and Recruit
-// fires no Cry (R1), so nothing they do can be mistaken for the trap's work.
-//
-// Every test gives BOTH sides a playable card in hand, because §2.5/R82 auto-ends a turn with
-// nothing meaningful left on it and would otherwise cascade several turns past the one under test.
-//
-// R195's yellow glow (`conditionMet`): both answers of this card's hook, checked against the branch
-// its resolution then takes, are in condition-active.test.ts with the other hooked cards (README §5).
+// Library fillers are Spells (core-005, core-035), which Recruit never takes (§6.3); the Units are
+// core-001 (cost 2), core-003 and core-004 (cost 1), none with a turn trigger, and Recruit fires no
+// Cry (R1). Both sides keep a playable card in hand, since §2.5/R82 auto-ends a turn with none.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -103,7 +67,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)

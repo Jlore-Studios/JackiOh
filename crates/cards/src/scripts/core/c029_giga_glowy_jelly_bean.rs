@@ -1,34 +1,23 @@
 //! #29 GIGA Glowy Jelly Bean (SPEC §8.2): "Every card in your hand becomes Radiant", radiant "Hand
 //! and all your permanents". The radiant cell restates the whole scope, so it replaces the base
-//! clause and adds the permanents to it (§8 Conventions: a clause the cell restates replaces the
-//! base version).
+//! clause and adds the permanents (§8 Conventions).
 //!
-//! "Every card", not "N random cards", so this is not `setRadiantRandom`: that verb would burn rng
-//! draws to reach a foregone conclusion and would shift the cursor for every later roll in the game
-//! (§9.3). The hook instead READS `ctx.state` to name the cards — which is not mutation — and
-//! returns one `setRadiant({ instanceId })` per card. `setRadiant` is a no-op on a card that is
-//! already Radiant (§6.3 Make Radiant), so the count of effects is the zone size, not the work.
+//! Not `setRadiantRandom`: "every card" would burn rng draws on a foregone result and shift the
+//! cursor for every later roll (§9.3). The hook READS `ctx.state` to name the cards and returns one
+//! `setRadiant` per card, a no-op on a card already Radiant (§6.3 Make Radiant).
 //!
-//! "All your permanents" is §6.3's permanents: your units and your backrow, Field Spells and face-
-//! down Traps included. `activeUnitsOf` gives the top of each unit pile and only the top, because
-//! cards under a Stack are not on the field (R13, §3.2). Control, not ownership, decides what is
-//! yours on the field (R12), and both engine accessors are keyed on the controller.
+//! "All your permanents" is §6.3's: units and backrow. `activeUnitsOf` gives only the top of each
+//! pile, since cards under a Stack are not on the field (R13, §3.2); control, not ownership, decides
+//! what is yours (R12). A permanent converts in place, the Cry not re-firing (§5.2, R22).
 //!
-//! A permanent converts in place (§5.2, R22): the base-stat layer swaps at once, damage taken and
-//! buffs stay, newly gained keywords apply immediately, and the Cry does not re-fire.
-//!
-//! Cost 6 is catalog data and is not this card's code. MAX_MANA is 4 (engine/src/config.ts), so the
-//! card is uncastable on a refresh alone and needs temporary mana from #6 Mana Well, #94 Genn's
-//! Greed or #95 Call to Chaos; §2.3 lets current mana exceed max, and the affordability check is
-//! `mana.canAfford` on the play.
+//! Cost 6 is catalog data. MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95): §2.3.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-029";
 
-/// Your hand, through the engine's read-only `zoneCards` (engine/src/query.ts), which hands back a
-/// copy. The GIGA Glowy Jelly Bean itself sits in the `resolving` zone while its script runs
-/// (§10.5), so it is not in this list and does not flag itself on the way to the graveyard.
+/// Your hand, through the read-only `zoneCards`, which hands back a copy. The card itself sits in
+/// the `resolving` zone while its script runs (§10.5), so it does not flag itself.
 fn hand_of(ctx: &EffectContext<'_>) -> Vec<String> {
     zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
         .iter()
@@ -50,7 +39,7 @@ fn permanents_of(ctx: &EffectContext<'_>) -> Vec<String> {
     ids
 }
 
-/// One `setRadiant({ instanceId })` per card the hook named (by id: the hook reads, never writes).
+/// One `setRadiant` per card the hook named by id: the hook reads, never writes.
 fn make_radiant(cards: &[String]) -> Vec<Effect> {
     cards
         .iter()

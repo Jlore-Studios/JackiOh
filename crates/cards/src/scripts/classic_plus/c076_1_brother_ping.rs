@@ -5,14 +5,11 @@
 //!            is on the field; once per turn (Radiant twice), counted in `memory.activations` and reset
 //!            when it leaves the field (R78); summoning sickness and exertion don't apply, and it is not a
 //!            play. The target, any unit or hero, is declared with the activation (`activate { instanceId,
-//!            targets }`, §10.2). The hit's source is Brother Ping, so its Pierce applies (R346).
-//!            Tunes: Activate 1 ↑ (its X); damage 1 ↑."
+//!            targets }`, §10.2). Tunes: Activate 1 ↑ (its X); damage 1 ↑."
 //!
-//! One ability on each face, its uses the printed Activate N (1, Radiant 2): the engine's activate
-//! subsystem counts them per turn on the instance, refuses a use past them (and lists none), and reads the
-//! count through B3.4's X change, so an Upgrade makes it Activate 2 and a Degrade never takes it below 1.
-//! The hit is one §4.4 instance whose source is this Unit, so its Pierce skips Armor (R346); it is not a
-//! Spell's hit, so Spell Damage never raises it.
+//! The activate subsystem counts the uses per turn on the instance and reads the count through B3.4's X
+//! change: an Upgrade makes it Activate 2, a Degrade never takes it below 1. The hit is one §4.4 instance
+//! sourced by this Unit, so its Pierce skips Armor (R346); no Spell's hit, so Spell Damage never raises it.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -57,18 +54,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1: "Pierce; Activate (R384):
-// its controller, in their main phase with no prompt open, deals 1 damage to a target declared in the
-// `activate` action, once per turn; sickness and exertion don't apply, so it activates the turn it
-// arrives; the hit has Pierce (R346) and no Spell Damage; activating is no play (Combo, Quickstriker,
-// Ceaseless Void ignore it); a second use that turn and any use on the opponent's turn are refused by the
-// same check `legalActions` lists; its count resets on leaving the field (R78); `activated` is public; an
-// Upgrade makes it Activate 2 and a Degrade never takes it below 1 (R386); Activate count and damage read
-// through `param()`; radiant 8/8 and Activate 2: two uses a turn, a third refused".
-//
-// "Its count resets on leaving the field": Brother Ping is a unit token, so leaving the field it ceases
-// to exist (R11) and no instance comes back with a count; the reset itself (R78's `memory`) is the
-// activate subsystem's, proved in packages/engine/test/activate.test.ts.
+// C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1 (R384, R346, R386): activating is
+// no play (Combo, Quickstriker, Ceaseless Void ignore it); `activated` is public.
+// "Its count resets on leaving the field" (R78): Brother Ping is a unit token, so leaving the field it
+// ceases to exist (R11) and no instance comes back with a count; the reset itself is the activate subsystem's.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

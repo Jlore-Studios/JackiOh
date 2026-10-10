@@ -1,24 +1,15 @@
 //! #7 Jewelosco Scarab (SPEC §8.1): a 1-cost 1/1 → 2/2 Unit, "Cry: Discover a 2-cost card", radiant
-//! "Cry: Discover a 3-cost card; it costs 1 less". The radiant cell restates the Discover with a new
-//! number and ADDS a clause (§8 Conventions: "a cell that changes only a number changes only that
-//! number", and "Also"/"Then" add effects), so the two faces differ in the cost bracket and in the
-//! permanent discount the radiant face puts on what it finds.
+//! "Cry: Discover a 3-cost card; it costs 1 less". The radiant cell changes the number and ADDS a
+//! clause (§8 Conventions), so the faces differ in the cost bracket and in the permanent discount.
 //!
 //! §8.1's Engine cell is `catalog.query({cost, notTags:["Token"], excludeIndex:7})`:
-//!   - the cost bracket is read per R65, which `catalog::query_cost` already owns: outside play an
-//!     embiggen card counts at its base price and an X-cost card as 0, so this file passes a plain
-//!     number and nothing here reads a cost;
-//!   - `notTags: ["Token"]` is stated because §8 states it, even though §5.1 already keeps tokens
-//!     out of every pool that does not name them (`catalog::asks_for_tokens`);
-//!   - the exclusion of #7 itself is NOT passed here on purpose: `discover_from_catalog` adds the
-//!     running card's own id (`excludeDefId`, R387) to every query it builds (§5.1, "a random pool
-//!     never offers the card that generated it"), so repeating it would be duplicated rules, not
-//!     safety. The pool reaches every set (R380).
+//!   - the cost bracket is read per R65 by `catalog::query_cost`, so this file passes a plain number;
+//!   - `notTags: ["Token"]` is stated because §8 states it, though §5.1 already keeps tokens out;
+//!   - #7's own exclusion is not passed: `discover_from_catalog` adds the running card's id (R387,
+//!     §5.1). The pool reaches every set (R380).
 //!
-//! The prompt and the continuation (§10.6, R81): the Cry opens a `discover` prompt whose answer is a
-//! `mode` selection carrying the chosen DEF ID, and the answer re-enters `resume.chosen` with that
-//! selection in `ctx.targets`, which is what `chosen_options` reads. An empty pool never opens a
-//! prompt (the effect fizzles, the unit still enters, §8 Conventions), and then no step runs at all.
+//! The Cry opens a `discover` prompt (§10.6, R81); the answer re-enters `resume.chosen` with the
+//! pick in `ctx.targets`. An empty pool opens no prompt: the effect fizzles (§8 Conventions).
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
 use jackioh_engine::prelude::*;
@@ -64,9 +55,8 @@ pub fn script() -> CardScripts {
                 let Some(def_id) = picked(ctx) else {
                     return vec![];
                 };
-                // §8.1 asks for a permanent `costMod`, not a `costOverride`: R65 starts from the override
-                // in place of the printed cost, which would also erase any other discount the card
-                // carries.
+                // A permanent `costMod`, not a `costOverride` (§8.1): R65 starts from the override in
+                // place of the printed cost, which would erase any other discount the card carries.
                 vec![add_to_hand(json_as(json!({ "defId": def_id, "costMod": -param(&*ctx, "discount") })))]
             }),
         )]),
@@ -78,10 +68,8 @@ pub fn script() -> CardScripts {
 // #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass: "Discover offers 3 distinct 2-cost
 // non-token cards, never #7; radiant 3-cost pick costs 2".
 //
-// This is the one prompting card in #1-20, so every test here answers the prompt and asserts what
-// follows: the pick lands in hand, the prompt closes, and the game carries on (§10.6's re-entrant
-// reducer, R81). The offered options are read out of `view_for` rather than out of `state.pending`,
-// because §10.8 is what a player actually sees and only the chooser sees the options.
+// The one prompting card in #1-20: each test answers the prompt (§10.6, R81). Options are read out of
+// `view_for`, not `state.pending`, because only the chooser sees them (§10.8).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -141,14 +129,11 @@ mod tests {
             assert_eq!(ids.iter().collect::<IndexSet<_>>().len(), 3);
             for id in &ids {
                 let def = crate::card_def(id);
-                // R65: an embiggen card's cost outside play is its base price, so "a 2-cost card"
-                // includes one.
+                // R65: an embiggen card's cost outside play is its base price.
                 assert_eq!(crate::query::query_cost(&def), 2);
                 assert!(!def.token);
                 assert!(!def.tags.contains(&Tag::Token));
-                // §5.1: a random pool never offers the card that generated it. `discover_from_catalog`
-                // adds that exclusion itself from the running instance, so the card file does not
-                // repeat it.
+                // §5.1: a random pool never offers the card that generated it; the engine adds that.
                 assert_ne!(def.index, "7");
                 assert_ne!(def.id, "core-007");
             }
@@ -212,8 +197,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-radiant",
-                // #26 Glowy Jelly Bean makes a chosen hand card Radiant, which is the only way to hold a
-                // Radiant card in hand: `SideSetup.hand` takes def ids only (see the report's harness gap).
+                // #26 Glowy Jelly Bean makes a chosen hand card Radiant.
                 "p1": { "hand": ["core-026", "core-007"], "mana": 8, "library": ["core-020"] },
                 "p2": { "field": ["core-020"] }
             }));

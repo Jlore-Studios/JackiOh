@@ -1,38 +1,15 @@
 //! #33 Unstable Clone Machine (SPEC §8.2 row 33): Field Spell, "After you play a card, shuffle 3
-//! copies of it into your library", radiant "After you play a card, shuffle 3 Radiant copies of it
-//! into your library" (R275: the rider went from one Radiant copy in three to all three).
+//! copies of it into your library"; radiant "3 Radiant copies" (R275), which restates only which copies
+//! are Radiant, so the rest is kept (§8 Conventions).
 //!
-//! The radiant cell restates only which copies are Radiant, so the count, the trigger and the
-//! library are kept (§8 Conventions): the base face's three copies carry the played card's own flag,
-//! and the radiant face's three are Radiant whatever the played card was.
-//!
-//! Rulings:
-//!   R34  token cards are copied too, spell tokens and unit-token cards alike, so there is no token
-//!        filter here. R11 lets a unit-token card sit in a library, which is where these go.
-//!   R57  a copy shuffled into a library is a fresh instance carrying only the radiant flag and
-//!        `statsOverride`. `shuffleInto` makes fresh instances and carries the flag; it cannot carry
-//!        `statsOverride` — see the ENGINE GAP note below.
-//!   R80  a library holds at most `LIBRARY_CAP` (60) cards and a copy that would overflow it is
-//!        never created. `shuffleIntoLibrary` (engine/src/draw.ts) already drops it, so a 60-card
-//!        library simply gains nothing and this file needs no cap check.
-//!   R316 the copy a full library refuses is reported by `libraryOverflow`, and `copyOf` names the
-//!        played card so a view judges the refusal by it: a Trap set face-down stays unnamed.
-//!   R70  a cast is a play and runs the same §10.5 steps, so Hinder and Call to Chaos casts reach
-//!        step 7 and are copied like any other play with no extra case here.
-//!   R17  "Unstable Clone Machine … fire[s] after the card resolves" (§10.5 step 7), so this answers
-//!        `cardResolved`, never step 4's `cardPlayed`: watching the play put the copies into the
-//!        library before the played card's own text ran, and a Stockpile could draw its own copies.
-//!        The event carries the face that resolved (`radiant`), because by step 7 the card may have
-//!        ceased to exist — #41 Sheepish transforms a played Unit at step 4 — and "copies of it" are
-//!        still copies of the Radiant card that was played (R34, R57).
-//!
-//! ENGINE GAP (reported): `shuffleInto({ defId, count, player, radiant })` has no `statsOverride`
-//! argument, so a played card whose stats were overridden (a Fused or Crafted body, #22's meal)
-//! copies at its printed stats instead of its overridden ones, which R57 says it should keep.
-//!
-//! R119: a permanent is on the field long before its own `cardResolved` event is emitted (the play
-//! places it at step 4), so the Clone Machine would otherwise answer its own play and shuffle 3
-//! copies of itself. A card that reacts to "a card played" starts counting from the next play.
+//! R34 token cards are copied too (no token filter); R11 lets a unit-token card sit in a library.
+//! R57 a copy is a fresh instance carrying only the radiant flag (and `statsOverride`, see ENGINE GAP).
+//! R80 a library never takes a copy past `LIBRARY_CAP` (60), so no cap check here; R316 reports the
+//!     refusal as `libraryOverflow`, `copyOf` naming the played card, so a face-down Trap stays unnamed.
+//! R70 a cast is a play too. R17 it answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a
+//!     Stockpile could draw its own copies; the event carries the resolved face (R34, R57), since #41
+//!     Sheepish transforms a played Unit at step 4. R119: a permanent starts counting from the next play.
+//! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats (R57).
 
 use jackioh_engine::effects::shuffle_into;
 use jackioh_engine::prelude::*;
@@ -40,8 +17,6 @@ use jackioh_engine::state::find_instance;
 
 pub const ID: &str = "core-033";
 
-/// TS `type ResolvedEvent = Extract<GameEvent, { type: "cardResolved" }>`: the fields of a
-/// `cardResolved` this card reads, borrowed from the event.
 struct ResolvedEvent<'e> {
     player: PlayerId,
     instance_id: &'e str,
@@ -49,7 +24,6 @@ struct ResolvedEvent<'e> {
     radiant: Option<bool>,
 }
 
-/// The `cardResolved` half of the union, or `None` for any other event (TS's `event.type` check).
 fn resolved_of(event: &GameEvent) -> Option<ResolvedEvent<'_>> {
     match event {
         GameEvent::CardResolved {
@@ -133,16 +107,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33:
-// "After each play, library +3 fresh copies with the radiant flag preserved; token spells copied
-//  (R34); nothing is added to a 60-card library (R80)". Radiant (R275): "shuffle 3 Radiant copies",
-// so all three are Radiant whatever the played card was, and R80 still caps the library.
-//
-// R57: a copy shuffled into a library is a fresh instance carrying only the radiant flag (and
-// `statsOverride`, which `shuffleInto` cannot carry yet — reported as an engine gap).
-// R80: `LIBRARY_CAP` is 60 and a copy that would overflow is never created.
-// R119 (hunt round 8): a Clone Machine a play's own resolution put onto the field (#98's Recruit)
-// starts counting from the next play, as the played Clone Machine itself does.
+// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33: "After each play,
+// library +3 fresh copies with the radiant flag preserved; token spells copied (R34); nothing is
+// added to a 60-card library (R80)". Radiant (R275): all three are Radiant whatever the played card
+// was, and R80 still caps the library.
+// R119: a Clone Machine a play's own resolution put onto the field (#98's Recruit) starts counting
+// from the next play, as the played Clone Machine itself does.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -158,7 +128,6 @@ mod tests {
         cards.iter().filter(|card| card.def_id == def_id).cloned().collect()
     }
 
-    /// TS `const FULL_LIBRARY = Array.from({ length: 60 }, () => "15")`.
     fn full_library() -> Vec<&'static str> {
         vec!["15"; 60]
     }

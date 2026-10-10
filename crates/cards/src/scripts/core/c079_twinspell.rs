@@ -1,22 +1,14 @@
 //! #79 Twinspell (SPEC §8.3, R30, R70, §2.2, §3.2, §6.2 Echo, §10.5 step 6).
 //!
-//! Base: "The next Spell you play gains Echo +1"; the radiant cell is "Echo +2", a cell that changes
-//! only a number (§8 Conventions). The text has no "Cry:" (compare #73's "… Cry: draw 1"), and R169
-//! says #79 installs its modifier "without a Cry": it is the Field Spell's lasting effect (§5.1,
-//! R209), which the permanent has for as long as it stands on the field, however it got there — a
-//! summon fires no Cry (§6.2), yet a Twinspell #22's Death summons still grants its Echo, and #85
-//! fusing Twinspell onto another Field Spell hands the text to that permanent's controller.
+//! Base: "The next Spell you play gains Echo +1"; radiant "Echo +2" (§8 Conventions). No "Cry:": R169
+//! says #79 installs its modifier "without a Cry". It is the Field Spell's lasting effect (§5.1, R209),
+//! held while it stands on the field however it got there (a summon fires no Cry, §6.2).
 //!
-//! So the card is one static flag, `echoGrant`, and the engine does the rest
-//! (`modifiers.installLastingModifiers`): an `echoNextSpell` rider on the player whose side the card
-//! stands on, owned by the card (`sourceId`), moved with it when control changes and ended when it
-//! leaves (R209); §10.5 step 4 has the next Spell take it and sends this card to its owner's
-//! graveyard (R30, R178). It is not turn-scoped: §2.2 says so in as many words ("Twinspell's pending
-//! Echo is not turn-scoped and survives cleanup"), so the rider is `{ until: "used" }`.
-//!
-//! §6.2's Echo row: "Play resolves, then the same instance re-resolves X times with fresh mode/target
-//! prompts; Twinspell grants Echo +1 to the next spell." §10.5 step 6 is where that happens, and R70
-//! adds that a CAST spell uses Twinspell's Echo even though it never uses a cost discount.
+//! So the card is one static flag, `echoGrant`; the engine installs an `echoNextSpell` rider owned by
+//! the card, moved with it when control changes and ended when it leaves (R209). §10.5 step 4 has the
+//! next Spell take it and sends this card to its owner's graveyard (R30, R178). §2.2: the rider is not
+//! turn-scoped, so it is `{ until: "used" }`. R70: a CAST spell uses Twinspell's Echo though it never
+//! uses a cost discount.
 
 use jackioh_engine::prelude::*;
 
@@ -24,9 +16,8 @@ pub const ID: &str = "core-079";
 
 /// The two faces differ only in how many extra resolutions the next spell gets. The engine reads the
 /// amount off the face the card wears when a Spell takes it, so a Twinspell made Radiant on the field
-/// (#49 radiant) grants "Echo +2" from then on (§5.2, R209). The card declares the grant as `echoGain`
-/// (R386), and the engine reads the flag through `params::declared_or`, so a Degrade or an Upgrade
-/// moves it.
+/// (#49 radiant) grants "Echo +2" from then on (§5.2, R209). It is declared as `echoGain` (R386), read
+/// through `params::declared_or`, so a Degrade or an Upgrade moves it.
 fn twinspell(amount: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -44,17 +35,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #79 Twinspell — SPEC §8.3, R30, §2.2, §6.2 Echo, §10.5 step 6.
-//
 // BUILD M4-T4: "Next spell echoes once (radiant twice); consumed to GY on use (R30); survives
 // cleanup".
 //
 // The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes each resolution
-// a number: one extra resolution is +2 instead of +1, two extra is +3. (It was read through #78
-// /fullsend's "gain 4 mana" until patch v0.1.1 made that a Refresh, which stops at max.)
+// a number: one extra resolution is +2 instead of +1, two extra is +3.
 // The "fresh prompts per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every
-// resolution opens a Discover (§10.6). It was read through #80 Zao Gao's chosen discard until patch
-// v0.1.1 made that discard random (R354), leaving it no prompt to reopen.
+// resolution opens a Discover (§10.6); #80 Zao Gao's discard is random (R354), so it opens no prompt.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,7 +72,7 @@ mod tests {
             .collect()
     }
 
-    /// The first `echoNextSpell` rider, as TS's `mods.find(...)` reads it.
+    /// The first `echoNextSpell` rider.
     fn first_echo_rider(s: &Scenario) -> Value {
         echo_riders(s).into_iter().next().expect("an echoNextSpell modifier")
     }
@@ -121,7 +108,6 @@ mod tests {
         option.label
     }
 
-    /// `s.state.pending?.kind`.
     fn pending_kind(s: &Scenario) -> Option<PromptKind> {
         s.state().pending.as_ref().map(|pending| pending.kind)
     }
@@ -155,7 +141,6 @@ mod tests {
 
             s.play(TWINSPELL, json!({}));
 
-            // A Field Spell with a Cry is ordinary (#73): it enters the backrow and the Cry fires there.
             s.expect_in_zone(&twin, "field");
             assert_eq!(echo_riders(&s).len(), 1);
             let rider = first_echo_rider(&s);

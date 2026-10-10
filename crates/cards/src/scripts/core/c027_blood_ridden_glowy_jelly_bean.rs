@@ -2,23 +2,14 @@
 //! Radiant; you lose 5 health", radiant "2 random cards".
 //!
 //! The radiant cell restates only the number of random cards, so every clause it does not restate is
-//! kept (§8 Conventions): the cast-on-draw trigger and the 5 health both stay. `staticFlags` are read
-//! through `scriptOf`, which returns the radiant script once the instance is Radiant, so the radiant
-//! face has to carry `castOnDraw` too or a Radiant copy would go to hand uncast.
+//! kept (§8 Conventions). `staticFlags` are read through `scriptOf`, which returns the radiant script
+//! once the instance is Radiant, so the radiant face carries `castOnDraw` too or a Radiant copy would
+//! go to hand uncast. `drawOne` casts the card the moment it is drawn, even with a full hand, and
+//! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and feeds Combo (R40, R70).
 //!
-//! Nothing here casts the card or repeats the draw: `staticFlags.castOnDraw` is the whole of that.
-//! `drawOne` (engine/src/draw.ts) casts the card the moment it is drawn — even with a full hand,
-//! since it never enters the hand — repeats the draw, and stops the chain at CAST_ON_DRAW_CHAIN_CAP
-//! (R58); `castCard` makes the cast free and counts it as a card played, which is what feeds Combo
-//! (R40, R70).
-//!
-//! "A random card in your hand" is R60's pick: `setRadiantRandom` pools only the non-Radiant cards,
-//! takes `count` different ones, takes all of them when fewer exist, and does nothing when the hand
-//! holds none. The card being cast is in the `resolving` zone while its script runs, so it can never
-//! pick itself.
-//!
-//! "You lose 5 health" is R18's verb, not damage: `loseHealth` bypasses Armor, the Anti-oneshot cap
-//! (#73 Going Long) and Fed Fauci's tokens, and it can take the hero to 0.
+//! R60's pick: `setRadiantRandom` pools only non-Radiant cards, takes `count` different ones (all when
+//! fewer exist, none when none do); the resolving card never picks itself. "You lose 5 health" is
+//! R18's `loseHealth`, not damage: it bypasses Armor, #73 Going Long's cap and Fed Fauci's tokens.
 
 use jackioh_engine::prelude::*;
 

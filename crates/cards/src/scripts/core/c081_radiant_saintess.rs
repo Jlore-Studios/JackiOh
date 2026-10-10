@@ -1,41 +1,15 @@
 //! #81 Radiant Saintess (SPEC §8.4 row 81; R22, R78, R177, R275, R276): Unit, Human, cost 1, Epic,
 //! 2/2 → 4/4.
-//!   Base:    "Reborn; Death: all your other units become Radiant"
-//!   Radiant: "Reborn; Death: all your other units and every card in your hand become Radiant"
+//!   Base:    "Death: Make your other Units Radiant."
+//!   Radiant: "Death: Make your other Units and every card in your hand Radiant."
 //!
-//! THE RADIANT FACE WIDENS THE SCOPE (R275: "a broader scope"): her Death radiates your hand as well
-//! as your board, the way #29 GIGA Glowy Jelly Bean radiates a hand — one `setRadiant` per card,
-//! named by id, never a random pick. A hand is its owner's alone (§9.1), so whether each of those
-//! cards was base-face is hidden from the opponent, and R177 is what keeps the cue from telling:
-//! `setRadiant` reports a `radiantSet` for a named hidden card whether or not the flag changed, so
-//! the opponent's stream holds one redacted cue per hand card either way.
-//!
-//! Reborn is PRINTED on both faces (`catalog.json` core-081 `keywords`), which `layers.faceOf`
-//! reads off the instance's radiant flag, so no line of script grants it. Nothing here restates a
-//! stat, a cost or a keyword (the `def` above is the only source of those).
-//!
-//! R22 "Radiant on the field": "Base layer swaps, damage and buffs stay, Cry does not re-fire;
-//! Saintess includes itself". `setRadiant` is exactly that — it sets the instance's `radiant` flag
-//! and nothing else (`effects/radiant.ts`), so §10.4's printed-stat layer swaps on the next read
-//! while layer 4's buffs and the instance's damage are untouched, and no card re-enters the field,
-//! so no Cry fires again. R22's "Saintess includes itself" was about her old Cry, which is gone; her
-//! Death never includes her (below). "Her Reborn body fires Death again" (§8's Engine cell) is R8
-//! ("Death fires on both deaths") plus §4.5 step 4, both the state check's, not this file's.
-//!
-//! R78 is why Death does NOT name `self`. Leaving the field resets an instance and "effects that
-//! react to a card leaving read its last-known state from just before it left": `stateCheck` moves
-//! the dying unit to the graveyard at step 1 and runs the Death hook at step 3 off a SNAPSHOT of the
-//! instance, so `ctx.self` is a detached copy of a card that is no longer a unit on the field and
-//! `ctx.controller` is the controller it had as it died. "All your units" is therefore the units
-//! still standing, which is what `activeUnitsOf(state, ctx.controller)` returns. The radiant flag
-//! persists in every zone (R78), so a Reborn body comes back already Radiant and needs no help.
-//!
-//! R13 "Stack dormancy": cards under a Stack are not on the field, so they are not "your units".
-//! `activeUnitsOf` reads the top of each pile only, which is the same rule (§3.2), and R23 leaves
-//! Make Radiant legal on an Immutable unit, so no keyword filter belongs here either.
-//!
-//! R64 (a Reborn unit reserves its zone) and R83 (the Reborn body takes the current turn as its
-//! `summonedTurn`, so it is summoning sick) are both the engine's; this card only sets flags.
+//! The Radiant face widens the scope (R275): her Death also radiates your hand, one `setRadiant` per
+//! card named by id, as #29 does. A hand is its owner's alone (§9.1), so R177 has `setRadiant` report
+//! a `radiantSet` for a named hidden card whether or not the flag changed, and the cue tells nothing.
+//! R22: `setRadiant` sets the `radiant` flag and nothing else, so §10.4's printed-stat layer swaps on
+//! the next read while buffs and damage stay, and no Cry re-fires. R78: Death runs off a snapshot of
+//! her after she left the field, so it never names `self`; "all your units" is `activeUnitsOf` (top of
+//! each pile only, R13, §3.2; R23 keeps Immutable units legal).
 
 use indexmap::IndexSet;
 use jackioh_engine::effects::set_radiant;
@@ -62,14 +36,10 @@ fn radiate_your_units(ctx: &EffectContext<'_>, include_self: bool) -> Vec<Effect
         .collect()
 }
 
-/// R78: by the time Death runs she is in the graveyard, so "your OTHER units" — which is what
-/// the card now says — is simply everyone left standing. The `false` below is that word.
-///
-/// THERE IS NO CRY. She had "Cry and Death" and the Cry was cut for burst: playing her turned the
-/// board Radiant the instant she landed, including herself (she arrived 4/4 with Reborn for one
-/// mana). On Death alone the same effect has to be paid for with her body, which is the cost the
-/// card was missing. `includeSelf` stays a parameter because Death is the only caller and passing
-/// `false` at the one call site is what R78 is about.
+/// R78: by the time Death runs she is in the graveyard, so "your OTHER units" is simply everyone left
+/// standing, and the `false` below is that word. She has no Cry: on Death alone the same effect is
+/// paid for with her body. `includeSelf` stays a parameter, and passing `false` at the one call site
+/// is what R78 is about.
 fn death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     radiate_your_units(ctx, false)
 }
@@ -105,25 +75,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #81 Radiant Saintess (SPEC §8.4 row 81; R13, R22, R78, R177, R275).
-//
 // BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn, so she
-// dies once; radiant also every card in your hand, hidden from the opponent (R177)".
-//   Base:    "Death: Make your other Units Radiant."
-//   Radiant: "Death: Make your other Units and every card in your hand Radiant."
-// (R275's broader scope). Her old Cry, which radiated the board as she landed, is cut (§8's row),
-// and patch v0.1.1 took Reborn off both faces.
+// dies once; radiant also every card in your hand, hidden from the opponent (R177)". Her Cry is cut
+// (§8's row) and neither face has Reborn, so R8, R64 and R83 never apply.
 //
-// Two fixtures do all the work:
-//   - #11 Tempo Timmy (3/3 → 6/6, Rush + First Strike, cost 1) has an EMPTY script, so a stat
-//     change on it can only be the radiant face swapping in — it is the observable for "became
-//     Radiant" throughout.
-//   - #44 True Strike ("deal 4 damage to a target, ignoring Armor") is how a Saintess is killed
-//     mid-test without waiting for combat: 4 damage kills a 4/4 body and the 1-health Reborn body.
-//
-// A Saintess placed by the setup with damage equal to her health dies inside the setup's own state
-// check, which is the cheapest way to fire a Death hook: the harness records no events for setup,
-// so those cases assert the resulting state rather than the log.
+// Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
+// swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. A Saintess
+// set up with damage equal to her health dies in the setup's own state check and fires her Death;
+// the harness records no events for setup, so those cases assert state, not the log.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,8 +105,7 @@ mod tests {
     /// #92 Felinor Fiender, the Stack unit: on top of a pile, the card under it lies dormant (§3.2).
     const FIENDER: &str = "core-092";
 
-    /// TS `s.expectStats(card ?? fallback, stats)`: the card when there is one, else the reference by
-    /// catalog id.
+    /// The card when there is one, else the reference by catalog id.
     fn expect_stats_or(s: &mut Scenario, card: Option<CardInstance>, fallback: &str, stats: Value) {
         match card {
             Some(card) => {
@@ -218,8 +176,7 @@ mod tests {
             }));
             s.play(SAINTESS, json!({ "zone": 2 }));
 
-            // She used to arrive 4/4 with Reborn and turn the board up on the spot for one mana. She now
-            // lands as the 2/2 she is printed as, and nothing else moves until she dies.
+            // She lands as the 2/2 she is printed as, and nothing else moves until she dies.
             assert!(!s.card(SAINTESS).radiant);
             s.expect_stats(SAINTESS, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
             assert_eq!(s.unit(P1, 1).map(|unit| unit.radiant), Some(false));

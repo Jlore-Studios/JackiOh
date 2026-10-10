@@ -1,22 +1,14 @@
 //! Brittle X (docs/classic-sets.md B3.3, R385): the count on a card instance, its start-of-turn tick
 //! and its crumbling. `turn.rs` runs `brittle_tick` as a stage of the start of a turn, right after the
-//! mana refresh (§2.2, R62), and settles after it like its other stages: the tick itself only moves
-//! counts, marks and cards, and opens no prompt, so everything it causes — a Death hook of a unit it
-//! destroyed, a trap answering a crumble — resolves in that settle and parks on `state.work` there.
+//! mana refresh (§2.2, R62), and settles after it: the tick only moves counts, marks and cards and
+//! opens no prompt, so everything it causes resolves in that settle and parks on `state.work` there.
 //!
-//! The count's readers and its writes that need no sink are `brittle_count.rs`'s, so `zones.rs` and
-//! `layers.rs` can read them without importing the destroy this module needs.
-//!
-//! A count ticks on the field only (R638): a card in a hand or a deck keeps the count it has and holds
-//! it, so nothing crumbles there, and the count starts its turn cycle when the card enters the field
+//! A count ticks on the field only (R638); it starts its turn cycle when the card enters the field
 //! (`brittle_count::start_brittle_on_field`).
 //!
 //! Hidden information (R440): a count that ticks on a card the other player may not read — a face-down
-//! trap — ticks silently, since a `counterChanged` there, redacted or not, would tell the other player
-//! that a hidden card is Brittle. Its owner reads the count on the card (`CardView.brittle`). A crumble
-//! is never silent: the card is destroyed and goes to a graveyard, which is public.
-//!
-//! Port of `packages/engine/src/brittle.ts`.
+//! trap — ticks silently, since a `counterChanged` there would tell them it is Brittle. Its owner reads
+//! the count on the card (`CardView.brittle`). A crumble is never silent: the card goes to a graveyard.
 
 use serde_json::json;
 
@@ -33,10 +25,8 @@ pub use crate::brittle_count::{
 
 /// B3.3 rule 2, R638: every card whose count this player's start of turn ticks, in R68's order — the
 /// cards they control on the field, units by lane (the top of each pile only, since a card dormant
-/// under a Stack is not on the field, R13), then the backrow by lane. A card in a hand or a deck is
-/// not on the field, so its count waits there.
-///
-/// Read once, as copies (TS listed the live cards before any count moved; the tick writes through ids).
+/// under a Stack is not on the field, R13), then the backrow by lane. Read once, as copies; the tick
+/// writes through ids.
 fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut cards: Vec<CardInstance> = Vec::new();
@@ -96,9 +86,8 @@ fn crumble(sink: &mut EngineSink<'_>, card: &CardInstance) {
 }
 
 /// B3.3 rule 2, R638: at the start of `player`'s turn, every Brittle count of theirs on the field that
-/// has had a full turn cycle drops by 1, and a count that reaches 0 crumbles its card (rule 3). The cards are read
-/// once, before any count moves, so a card the tick moves (a crumble into a graveyard) is not met
-/// twice. Opens no prompt; the stage that calls it settles what it caused (`turn.rs`).
+/// has had a full turn cycle drops by 1, and a count that reaches 0 crumbles its card (rule 3). The
+/// cards are read once, before any count moves, so a card the tick moves is not met twice.
 pub fn brittle_tick(sink: &mut EngineSink<'_>, player: PlayerId) {
     for listed in ticked_cards(sink.state, player) {
         // The card as it stands now: an earlier card's tick may have moved things since the list was read.

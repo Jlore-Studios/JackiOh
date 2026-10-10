@@ -2,25 +2,19 @@
 //!   Base:    "Activates when your opponent plays their 3rd card in a turn: After it resolves, their
 //!            turn ends."
 //!   Radiant: "… their 2nd card …"
-//!   Engine:  "Counts the opponent's plays that turn (`turnLog.cardsPlayed`, casts included, R70; a
-//!            countered card is never played) and fires as the 3rd (Radiant 2nd) is played
-//!            (`cardPlayed`, §10.5 step 4), and on that play only, going to the graveyard as it fires
-//!            (§3.2). The play that set it off resolves first (§10.5 step 7); then End the turn (§6.3,
-//!            `turnCutShort`): the rest of that effect list resolves and the turn ends as if they had
-//!            pressed End turn, every end-of-turn step running. Tunes: none."
+//!   Engine:  "Counts the opponent's plays that turn (casts included, R70; a countered card is never
+//!            played) and fires as the 3rd (Radiant 2nd) is played (`cardPlayed`, §10.5 step 4), on that
+//!            play only, to the graveyard (§3.2). It resolves first (§10.5 step 7); then End the turn (§6.3)."
 //!
-//! The condition is `when` (R99): any other play leaves it armed and face-down. §10.5 step 4 counts the
-//! play before it emits `cardPlayed`, so `cards_played_this_turn` already counts the one that woke it, and
-//! "that play only" is the count being exactly N — on their own turn, the only turn of theirs there is to
-//! end (casts they make on yours leave it set). E10's `end_turn` on the opponent puts R456's rider on
-//! their turn, which ends once everything their action set off has resolved, the play's Cry included.
+//! The condition is `when` (R99). §10.5 step 4 counts the play before it emits `cardPlayed`, so "that play
+//! only" is the count being exactly N, on their own turn (casts they make on yours leave it set). E10's
+//! `end_turn` puts R456's rider on their turn: it ends once everything their action set off has resolved.
 
 use jackioh_engine::effects::end_turn;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-08";
 
-/// TS's `{ base, radiant } as const`: one number per face.
 #[derive(Clone, Copy)]
 struct ByFacePlay {
     base: i32,
@@ -30,7 +24,7 @@ struct ByFacePlay {
 /// §8.7: "their 3rd card", Radiant "their 2nd". An AI card declares no params (B8).
 const NTH_PLAY: ByFacePlay = ByFacePlay { base: 3, radiant: 2 };
 
-/// TS `TrapTrigger`: part 1's `TriggerDef`, which carries the `when` (R99).
+/// The trap's `TriggerDef`: its `when` is the condition (R99).
 fn rate_limit(nth: i32) -> TriggerDef {
     TriggerDef::new("rate-limit", &[GameEventType::CardPlayed], |_ctx, _event| {
         vec![end_turn(json_as(json!({ "player": "enemy" })))]
@@ -58,11 +52,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: "Face-down Trap: on the
-// opponent's turn it fires as their 3rd play of the turn is played (`cardPlayed`; casts count, R70; a
-// countered play is never played), going to your graveyard, and once that play has resolved their turn
-// ends as if they had pressed End turn, every end-of-turn step running (`endTurnAfter`, §6.3); the
-// opponent learns nothing of it until it fires (R33, R97); radiant after their 2nd play".
+// T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: their 3rd play (casts count, R70)
+// fires it and their turn then ends (`endTurnAfter`, §6.3); hidden until it fires (R33, R97); radiant 2nd.
 //
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
 #[cfg(test)]
@@ -84,7 +75,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
     fn spread(base: Value, extra: &Value) -> Value {
         let mut out = base;
         if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
@@ -209,8 +199,7 @@ mod tests {
             fn r158_r456_a_3rd_play_that_asks_pauses_the_end_answered_after_a_json_round_trip_the_play_finishes_and_then_the_turn_ends()
              {
                 // The 3rd play is Scarab, whose Cry Discovers: the question pauses the turn the trap already
-                // ended. (Base Hinder used to be the asker here; since R682 its discard is random, so a draw
-                // that casts it asks nothing.)
+                // ended. (Base Hinder's discard is random, R682, so a draw that casts it asks nothing.)
                 let mut s = setup(json!({}), json!({ "hand": [VANILLA, REPLENISH, SCARAB, VANILLA] }), false);
                 s.play(VANILLA, json!({ "zone": 1 })).play(REPLENISH, json!({})).play(SCARAB, json!({ "zone": 2 }));
                 assert_eq!(s.state().pending.as_ref().map(|pending| js(&pending.kind)), Some(json!("discover")));
@@ -218,8 +207,8 @@ mod tests {
                 let thawed: GameState =
                     serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
                 assert_eq!(hash_state(&thawed), hash_state(s.state()));
-                // The offered def ids read out of the view (§10.8), like #7's own test does: the raw state
-                // options carry only the key and the selection to send back.
+                // The offered def ids come from the view (§10.8): the raw state options carry only the key
+                // and the selection to send back.
                 let seen = js(&s.view(P2))["pending"].clone();
                 if seen.is_null() || seen["forYou"] != true {
                     panic!("no Discover open for p2");
