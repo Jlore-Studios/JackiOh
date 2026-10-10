@@ -4609,12 +4609,12 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-10-10T07:17:33Z",
-      "run_id": "38033886293",
+      "run_id": "38034038037",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-10T07:17:53Z",
+      "started_at": "2026-10-10T07:20:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -4711,9 +4711,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-10T07:17:53Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38033886293",
-    "what": "revise #632 on claude-3"
+    "at": "2026-10-10T07:20:13Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38034038037",
+    "what": "revise #632 on agy"
   },
   "last_sweep": {
     "at": "2026-10-10T07:09:18Z",
