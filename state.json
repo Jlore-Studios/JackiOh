@@ -4420,9 +4420,12 @@
         "sha": "f247dfb180e251164a72bf861fec9a08a2769df8"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-10T04:41:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 601,
       "kind": "review",
       "pending_request": false,
