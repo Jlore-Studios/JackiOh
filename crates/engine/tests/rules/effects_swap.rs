@@ -2,8 +2,6 @@
 //! the board lane by lane, and the libraries — with R12's ownership rule and its one exception,
 //! R33's face-down trap and §3.2's Stack pile. The fixture Trap this file needs is registered here,
 //! so no shared fixture has to grow for it (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-swap.test.ts`.
 
 use jackioh_engine::effects::{swap, swap_board, swap_health, swap_library};
 use jackioh_engine::testkit::*;
@@ -24,7 +22,6 @@ fn trap() -> CardDef {
 /// The shared fixture unit token (R11).
 const TOKEN_ID: &str = "fx-token-rush";
 
-/// TS `game(seed = "swap-test")`: every test here uses the default.
 fn game() -> GameState {
     let mut state = new_game("swap-test", None);
     let mut catalog = registered_catalog().clone();
@@ -36,9 +33,8 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted. TS's
-/// `sinkFor(state)` is the sink built here: its rng starts at the state's cursor, as reduce does.
-/// TS's `{ controller: "p1", ...options }`: the options' controller, else p1.
+/// Apply one effect and hand back the events it emitted. The sink's rng starts at the state's
+/// cursor, as reduce does; the controller is the options', else p1.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -76,19 +72,16 @@ fn where_is(state: &GameState, card: &CardInstance) -> String {
     }
 }
 
-/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// TS wrote through the live instance; Rust writes through the card found by id.
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
@@ -97,8 +90,8 @@ fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// TS `toMatchObject`: every key `expected` names is in `actual` with a matching value (objects
-/// recursively, arrays element by element); `actual` may carry more.
+/// Every key `expected` names is in `actual` with a matching value (objects recursively, arrays
+/// element by element); `actual` may carry more.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -341,7 +334,6 @@ mod swap_s6_3_r73_m3_t1 {
                 .iter()
                 .all(|card| live(&state, &card.id).controller == PlayerId::P2)
         );
-        // Nothing came back the other way, and nothing was bounced or lost.
         assert_eq!(events_of_type(&events, GameEventType::ControlChanged).len(), 4);
         assert!(events_of_type(&events, GameEventType::Bounced).is_empty());
         assert!(state.players.p1.hand.is_empty());
@@ -376,9 +368,8 @@ mod swap_s6_3_r73_m3_t1 {
 
     #[test]
     fn r88_a_card_whose_destination_is_locked_bounces_to_its_owners_hand_as_r14_does_for_a_rotation() {
-        // R88: R73 does not say what happens to a card swapped into a Locked
-        // zone; §3.2's "accepts no summons" plus R14's answer for the other whole-board move is the
-        // reading implemented here.
+        // R88: R73 is silent on a card swapped into a Locked zone; §3.2's "accepts no summons" plus
+        // R14's answer for the other whole-board move is the reading implemented here.
         let mut state = game();
         let blocked = put(
             &mut state,
@@ -413,7 +404,6 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(blocked_now.damage, 0);
         assert_eq!(blocked_now.buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(blocked_now.controller, PlayerId::P1);
-        // The rest of the board still swapped, and the bounced card changed no control.
         assert_eq!(where_is(&state, &other), "p2 units 2");
         assert_eq!(control_changed_ids(&events), vec![other.id.clone()]);
     }
@@ -623,7 +613,6 @@ mod swap_s6_3_r73_m3_t1 {
         );
         assert_eq!(state.players.p1.hero.health, 10);
 
-        // No answer, or one naming something else, fizzles: nothing swaps and nothing is emitted.
         assert!(run(&mut state, swap(json_as(json!({}))), HookOptions::default()).is_empty());
         assert!(
             run(

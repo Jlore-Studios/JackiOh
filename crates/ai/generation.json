@@ -1,10 +1,11 @@
 {
-  "generation": 0,
-  "lane": "port",
-  "parent": null,
-  "vsRandom": "94/100",
-  "vsParent": null,
-  "shadowBan": 11,
-  "date": "2026-10-07",
-  "source": "packages/ai at 91cc43c (94/100, 35/50, 47/50 in TS)"
+  "generation": 2,
+  "lane": "unban",
+  "parent": "4b6373bd0f7a85a52d1ed21a1b67d8e1445b9b0c",
+  "tree": "8d7f0a40b6b6b0dd97575efee80c6d9d72fc81e5",
+  "vsRandom": "99/100",
+  "vsParent": "83/100",
+  "shadowBan": 6,
+  "parentShadowBan": 7,
+  "date": "2026-10-09"
 }

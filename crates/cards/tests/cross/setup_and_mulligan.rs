@@ -1,32 +1,15 @@
 //! Setup and the mulligan when a question is asked during it (SPEC §2.1, §2.4, §9.3, §10.1, §10.6, R9,
-//! R151, R158, R224, R635). Found by the polish-4 edge-case hunt, round 7 (docs/polish/4-edge-cases.md,
-//! lenses L7, "legality-agreement" and "engine invariants"); every case here failed before its fix.
+//! R151, R158, R224, R635). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md).
+//!  - R224: setup owes the rest of itself behind a question, and the answer finishes it (R113, R122).
+//!    What asks is a start-of-game clause run as its card arrives in a hand (R151, R635).
+//!  - §10.6: the mulligan's `promptAnswered` names the prompt, not the word "mulligan".
+//!  - R225: a Quickdraw card is the last opening draw it replaces, counted as a draw, so #100's price,
+//!    the deal's events and the counts while setup waits do not tell whether the opening hand holds one.
+//!  - Setup is turn 0, no player's turn (§2.1): a Spell a replacement draw casts keeps no return flag
+//!    (R155) and arms no end-of-turn clause (R241).
 //!
-//!  - R224: setup used to open the next mulligan over a question a draw's cast had asked, which
-//!    replaced it and left the cast half-played in its caster's resolving zone for good. A cast-on-draw
-//!    card is no longer dealt by setup (R635), so what asks during it now is a start-of-game clause run
-//!    as its card arrives in a hand (R151), the one thing a card setup draws can still do. The rule is
-//!    the same: setup owes the rest of itself behind the question and the answer finishes it (R113,
-//!    R122).
-//!  - §10.6: the mulligan's `promptAnswered` named the word "mulligan", not the prompt.
-//!  - Round 8 (lens L10). R225: a Quickdraw card is the last of the opening draws it replaces,
-//!    reported and counted as a draw, so #100's price, the deal's events and the counts while setup
-//!    waits (R224) do not tell the other seat whether the opening hand holds one.
-//!  - Round 10 (lens L8, and L7 for the clause that asks). Setup is turn 0, no player's turn (§2.1):
-//!    a Spell a mulligan's replacement draw cast kept its return flag into its caster's first turn
-//!    end (R155), and p1's cast armed an end-of-turn clause for turn 1 that p2's did not (R241). A
-//!    start-of-game clause that asks at §2.1 step 4 now holds the rest of setup, and turn 1, until
-//!    it is answered (R151, R113). Those two cases keep their casts: R635 sets a cast-on-draw card
-//!    aside, so the Spell is cast by a start-of-game clause as it arrives in the hand a replacement
-//!    draw fills, which is the same cast on turn 0.
-//!
-//! No Core card has a start-of-game clause that asks, so the asking card is a fixture (a transient def
-//! and a registered script, the way paused-sequences.test.ts builds its asking cards).
-//!
-//! Port of `packages/cards/test/setup-and-mulligan.test.ts` (SURFACE §4.1, §8). Importing the TS
-//! harness registered the real catalog and every card script (`registerAll()`); here each case calls
-//! `jackioh_cards::register_all()` first. These cases build their games through `create_game`, since
-//! a `scenario()` starts past the mulligan.
+//! No Core card asks at start of game, so the asking card is a fixture; `scenario()` starts past the
+//! mulligan (SURFACE §4.1, §8).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -62,7 +45,6 @@ fn fixture_def(id: &str, type_: CardType) -> CardDef {
     }))
 }
 
-/// `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
 fn register_fixture_script(id: &str, script: Script) {
     let mut scripts = registered_scripts().clone();
     scripts.insert(
@@ -108,7 +90,6 @@ fn asking_on_arrival(prompt: &str) -> Script {
 }
 
 /// A start-of-game clause that casts its card as it arrives in a hand, which only setup does (turn 0).
-/// (TS `CAST_ON_SETUP_ARRIVAL: Pick<Script, "startOfGame">`.)
 fn cast_on_setup_arrival() -> Script {
     Script {
         start_of_game: Some(hook(|ctx| {
@@ -147,12 +128,10 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
     result
 }
 
-/// `Array.from({ length: 20 }, (_, at) => \`core-${String(at + 1).padStart(3, "0")}\`)`.
 fn p1_deck() -> Vec<String> {
     (0..20).map(|at| format!("core-{:03}", at + 1)).collect()
 }
 
-/// `Array.from({ length: 20 }, (_, at) => \`core-${String(at + 30).padStart(3, "0")}\`)`.
 fn p2_deck() -> Vec<String> {
     (0..20).map(|at| format!("core-{:03}", at + 30)).collect()
 }
@@ -370,8 +349,7 @@ mod r224_setup_waits_for_a_question {
             GameEvent::PromptAnswered { choice_id, .. } => Some(choice_id.clone()),
             _ => None,
         });
-        // Every other prompt's answer names its PendingChoice id (`prompts.ts`); the mulligan's named
-        // the word "mulligan", which no prompt ever had.
+        // Every prompt's answer names its PendingChoice id.
         assert_eq!(closed, opened_id);
     }
 }
@@ -385,9 +363,7 @@ fn same_view(a: &PlayerView, b: &PlayerView) {
     assert_eq!(b, a);
 }
 
-// ---------------------------------------------------------------------------
 // Quickdraw and the game's draw counter (#100 Ceaseless Void, R55)
-// ---------------------------------------------------------------------------
 
 const QD_P1_DECK: [&str; 20] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
@@ -405,14 +381,12 @@ fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// `[...QD_P2_SHARED, twentieth]`.
 fn p2_qd_deck(twentieth: &str) -> Vec<String> {
     let mut deck = owned(&QD_P2_SHARED);
     deck.push(twentieth.to_string());
     deck
 }
 
-/// `act(state, { ...body, playerId: player }).state`.
 fn act_as(state: &GameState, player: PlayerId, body: Value) -> GameState {
     let mut body = body;
     body["playerId"] = json!(player);
@@ -482,9 +456,7 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Quickdraw and setup resumed after a clause's question (R224)
-// ---------------------------------------------------------------------------
 
 const ASKING: &str = "r8-l10-asks";
 
@@ -530,7 +502,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         panic!("no seed deals the asking card to p1");
     }
 
-    /// `answered(p2Twentieth)`: the paused deal with p1's question answered.
+    /// The paused deal with p1's question answered.
     fn answered(seed: &str, p2_twentieth: &str) -> GameState {
         let state = paused_deal(seed, p2_twentieth);
         let pending = must(state.pending.clone(), "p1's cast question");
@@ -542,7 +514,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         )
     }
 
-    /// `typesOf(state)`: p1's view of the events, each as its type and, where it has one, its player.
+    /// p1's view of the events, each as its type and, where it has one, its player.
     fn types_of(state: &GameState) -> Vec<String> {
         view_for(state, PlayerId::P1)
             .events
@@ -682,9 +654,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 10: setup is no player's turn (§2.1, §2.2, R155, R241), and a clause that asks (R151)
-// ---------------------------------------------------------------------------
+// Setup is no player's turn (§2.1, §2.2, R155, R241), and a clause that asks (R151)
 
 /// `player` returns its first opening card, so R9's replacement draw takes the top card (§2.1).
 fn mulligan_one(state: &GameState, player: PlayerId) -> GameState {
@@ -744,7 +714,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
     // No Core card casts in setup or carries an end-of-turn clause of a Spell it casts, so the card that
     // makes each case observable is a fixture; the rest of each game is real Core cards. Setup does not
     // draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts it in the
-    // hand (`CAST_ON_SETUP_ARRIVAL`).
+    // hand (`cast_on_setup_arrival`).
     #[test]
     fn r155_a_return_spell_cast_by_a_mulligan_s_replacement_draw_stays_in_the_graveyard_at_its_caster_s_first_turn_end_a_turn_it_was_not_played_on()
      {
@@ -785,9 +755,8 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
 
             // R155: the return belongs to the turn the Spell was played on, and a Spell played outside its
             // controller's turn "stays in the graveyard rather than coming back at the end of a later turn
-            // it was not played on". Setup is turn 0 and nobody's turn (§2.1, §2.2): the turn-scoped
-            // riders a setup cast makes are already dead on turn 1 (`thisTurn` of turn 0), and its return
-            // is over too.
+            // it was not played on". Setup is turn 0 and nobody's turn (§2.1, §2.2): a setup cast's
+            // turn-scoped riders are already dead on turn 1, and its return is over too.
             let in_hand = state.players[seat]
                 .hand
                 .iter()

@@ -1,20 +1,15 @@
-//! In-memory `Socket`s (← `apps/server/test/fakes/socket.ts`, SURFACE §11.2: "a fake socket over an
-//! mpsc channel").
+//! In-memory `Socket`s over mpsc channels. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 //!
-//! `create_fake_socket` is one end the actor talks to and the test reads; `create_socket_pair` makes
-//! two of them so a test can drive two "clients" that look exactly like WebSocket peers without
-//! opening a port. The server half (`FakeSocket::socket`) is the same `Socket` the real `/ws/match`
-//! upgrade hands to `Registry::attach` — two channels, one for the frames the server sends and one
-//! for the text frames the client sends — so what the actor does here is what it does on the wire.
+//! `create_socket_pair` makes two fake clients. The server half (`FakeSocket::socket`) is the same
+//! `Socket` the real `/ws/match` upgrade hands to `Registry::attach`, so the actor behaves as on
+//! the wire.
 //!
-//! TS's fake was synchronous: a frame the actor sent was in `sent` before `send` returned. Here the
-//! actor is a task, so every read below first drains what has arrived on the channel; a test that
-//! waits for the actor awaits `next_frame`/`next_of_type` (or `settle`), and a test that asserts that
-//! nothing happened reads `sent` after `settle`, never by waiting for a frame that never comes (with
-//! tokio's paused clock, an idle wait would let the clock auto-advance and fire the match's timers).
+//! The actor is a task, so every read first drains what has arrived on the channel. A test that
+//! waits awaits `next_frame`/`next_of_type` (or `settle`); one that asserts nothing happened reads
+//! `sent` after `settle`, never by waiting (tokio's paused clock would auto-advance and fire the
+//! match's timers).
 //!
-//! Every method takes `&self`, as every test holds its sockets (part 31: the support file is shaped
-//! as its callers call it); the state sits behind locks.
+//! Every method takes `&self`, as every test holds its sockets (part 31); the state sits behind locks.
 
 #![allow(dead_code)]
 
@@ -28,8 +23,7 @@ use tokio::sync::mpsc;
 /// actor's reducer and the outgoing channel, on the current-thread runtime `#[tokio::test]` uses.
 const SETTLE_YIELDS: usize = 64;
 
-/// The close code the transport reports when the connection drops without a close frame
-/// (TS's `drop()`, RFC 6455's 1006).
+/// The close code the transport reports when the connection drops without a close frame (1006).
 const ABNORMAL_CLOSE: u16 = 1006;
 
 /// Let the actor and every other task on this runtime run until they are idle.
@@ -67,8 +61,7 @@ impl State {
             SocketFrame::Close { code, reason } => {
                 self.close_code = Some(code);
                 self.close_reason = Some(reason);
-                // TS `close()` called the attached handlers' `close`: the transport is gone for the
-                // actor too, which the end of the client's stream tells it.
+                // The transport is gone for the actor too: the end of the client's stream tells it.
                 self.incoming = None;
             }
         }
@@ -80,17 +73,15 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl FakeSocket {
-    /// The server half of this connection, for `Registry::attach`. Taken once: one WebSocket is one
-    /// socket, and a reconnect is a new `FakeSocket`.
+    /// The server half, for `Registry::attach`. Taken once; a reconnect is a new `FakeSocket`.
     pub fn socket(&self) -> Socket {
         lock(&self.socket)
             .take()
             .expect("this fake socket's server half was already attached")
     }
 
-    /// Moves every frame the server has sent so far into `sent`, and notes its close. A frame sent
-    /// after the close is not delivered, as on a real connection. A `next_frame` in flight holds the
-    /// receiver and records what it reads itself.
+    /// Moves every frame the server has sent into `sent`, and notes its close. A frame sent after
+    /// the close is dropped. A `next_frame` in flight holds the receiver and records for itself.
     fn drain(&self) -> MutexGuard<'_, State> {
         let mut state = lock(&self.state);
         if let Ok(mut outgoing) = self.outgoing.try_lock() {
@@ -105,8 +96,7 @@ impl FakeSocket {
         self.drain().close_code.is_none()
     }
 
-    /// The code the connection closed with: the server's close, `1006` after `drop()`, or `None`
-    /// while it is open.
+    /// The close code: the server's, `1006` after `drop()`, or `None` while open.
     pub fn close_code(&self) -> Option<u16> {
         self.drain().close_code
     }
@@ -145,8 +135,7 @@ impl FakeSocket {
         let Some(incoming) = &state.incoming else {
             panic!("receive on a closed socket");
         };
-        // The server half dropping its receiver is the actor letting the socket go; a frame sent
-        // after that is lost, as on a real connection the server stopped reading.
+        // A frame sent after the actor dropped its receiver is lost, as on a real connection.
         let _ = incoming.send(text.to_string());
     }
 
@@ -171,8 +160,7 @@ impl FakeSocket {
         self.drain().sent.clear();
     }
 
-    /// Waits for the next text frame the server sends and answers it parsed, or `None` once the
-    /// server has closed (or dropped) its half. The frame is also kept in `sent`.
+    /// The next text frame the server sends, parsed, or `None` once it has closed. Also kept in `sent`.
     pub async fn next_frame(&self) -> Option<Value> {
         let mut outgoing = self.outgoing.lock().await;
         loop {
@@ -220,13 +208,12 @@ pub fn create_fake_socket() -> FakeSocket {
     }
 }
 
-/// Two fake sockets, one per seat, for a two-client test.
+/// Two fake sockets, one per seat.
 pub struct SocketPair {
     pub p1: FakeSocket,
     pub p2: FakeSocket,
 }
 
-/// Two fake sockets, one per seat, for a two-client test.
 pub fn create_socket_pair() -> SocketPair {
     SocketPair {
         p1: create_fake_socket(),

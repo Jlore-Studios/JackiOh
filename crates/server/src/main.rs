@@ -1,11 +1,7 @@
-//! `jackioh-server`: the server binary and its command-line tools (SURFACE §11.1), replacing
-//! `apps/server/package.json`'s scripts. `serve` is the default; `release` is what the Docker
-//! image runs on Render (migrate, seed the catalog, serve). Every other subcommand is one of the
-//! TS `main()`s under `apps/server/src/db/`, handed the arguments after its name, so each keeps
-//! its own argument parser (`parseMintArgs`, `parseCardStatsArgs`, …) exactly as TS has it.
-//!
-//! A failure prints its message on stderr and exits 1, as every TS `main().catch` did; bad usage
-//! exits 2 (clap).
+//! `jackioh-server`: the server binary and its command-line tools (Surface contract:
+//! docs/v0.3.0/SURFACE.md §11.1). `serve` is the default; `release` is what the Docker image runs on
+//! Render (migrate, seed the catalog, serve). Every other subcommand hands its tool the arguments
+//! after its name. A failure prints on stderr and exits 1; bad usage exits 2 (clap).
 
 use std::process::ExitCode;
 
@@ -78,15 +74,14 @@ async fn main() -> ExitCode {
     }
 }
 
-/// TS `start(loadServerEnv())`: the environment as `index.ts` reads it (E2E placeholders applied
-/// when `E2E` asks), then boot.
+/// Boot from the process environment (E2E placeholders applied when `E2E` asks).
 async fn serve() -> anyhow::Result<()> {
     let source: indexmap::IndexMap<String, String> = std::env::vars().collect();
     let env = app::load_server_env(&source)?;
     app::serve(env).await
 }
 
-/// Render's release: every migration, the catalog, then the server (SURFACE §11.3).
+/// Render's release: every migration, the catalog, then the server (Surface contract: docs/v0.3.0/SURFACE.md §11.3).
 async fn release() -> anyhow::Result<()> {
     db::migrate::run(Vec::new()).await?;
     cli::seed_catalog::run(Vec::new()).await?;

@@ -1,10 +1,6 @@
-//! The effects that ask the controller something (BUILD M3-T1 "every effect has its own test file";
-//! SPEC §6.3, §10.6, §5.1, R50, R81). `prompts.test.ts` covers the prompt machinery — one at a
-//! time, the serializable resume, chaining. This file covers the six factories in
-//! `effects/choose.ts` and the two scope readers beside them: what each declares, what it puts in
-//! `state.pending`, what it emits, and what it does when there is nothing to offer.
-//!
-//! Port of `packages/engine/test/effects-choose.test.ts`.
+//! The effects that ask the controller something (BUILD M3-T1; SPEC §6.3, §10.6, §5.1, R50, R81):
+//! the six choose factories and the two scope readers beside them: what each declares, what it puts
+//! in `state.pending`, what it emits, and what it does when there is nothing to offer.
 
 use std::collections::BTreeSet;
 
@@ -17,7 +13,6 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{plain, stacker, taunter};
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-/// TS `nextIndex = 1300`, bumped once per `def` call in declaration order (caller 1301 … fruit-c 1306).
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut def = json!({
         "id": format!("ec-pick-{name}"),
@@ -107,9 +102,8 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `ctxFor(state, self, extra)`: a context for p1 over a fresh sink (an rng at the state's cursor,
-/// never written back), `extra`'s fields laid over it, handed to `f`. `self_` is read back from the
-/// state as it stands now (TS held the live object).
+/// A context for p1 over a fresh sink (an rng at the state's cursor, never written back), `extra`
+/// laid over it, handed to `f`; `self_` is read back from the state as it stands now.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -136,7 +130,7 @@ fn with_ctx<R>(
     f(&mut ctx)
 }
 
-/// TS `run(ctxFor(state, self, extra), effects)`: each effect applied in turn; the context's events.
+/// Each effect applied in turn; returns the context's events.
 fn run_with(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -206,7 +200,7 @@ fn option_labels(state: &GameState) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The `mode` options' picks (TS `option.selection.pick === "mode" ? [option.selection.option] : []`).
+/// The `mode` options' picks.
 fn mode_options(state: &GameState) -> Vec<String> {
     option_selections(state)
         .into_iter()
@@ -226,8 +220,8 @@ fn scope(value: Value) -> TargetScope {
     json_as(value)
 }
 
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` with a matching value (objects
-/// recursively, arrays element by element and of the same length, anything else equal).
+/// Every key `expected` names is in `actual` with a matching value (objects recursively, arrays
+/// element by element and of the same length, anything else equal).
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -361,8 +355,7 @@ mod target_scopes_s10_6_r13 {
                     ids(&targets_in_scope(ctx, Some(&scope(json!({ "of": ["backrow"] }))))),
                     vec![my_backrow.id.clone(), their_backrow.id.clone()]
                 );
-                // Within one side the kinds come in the order the scope lists them in the module: units,
-                // backrow, then the hero.
+                // Within one side the kinds come units, backrow, then the hero.
                 assert_eq!(
                     targets_in_scope(
                         ctx,
@@ -851,8 +844,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             }),
         );
         let offered = mode_options(&state);
-        // The Fruit pool is four cards and one of them is the generator, so it is exactly the other
-        // three — no repeats, and never itself.
+        // Four Fruit, one of them the generator: exactly the other three.
         assert_eq!(
             sorted(offered.clone()),
             sorted(vec![fruit_a().id, fruit_b().id, fruit_c().id])
