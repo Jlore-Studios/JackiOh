@@ -46,6 +46,7 @@ mod tests {
     #[test]
     fn r1062_at_your_next_start_of_turn_it_attacks_the_hero() {
         crate::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": WARAXE }, FILLER], "health": 27 },
             "p2": { "hand": [FILLER], "health": 27 },

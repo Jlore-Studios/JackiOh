@@ -853,6 +853,9 @@ impl InvariantMonitor {
     /// R1062: an "Animated on your turn" card whose latest entry was on an earlier turn enters nothing as it
     /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
     fn on_its_side_before_this_turn(&self, id: &str, state: &GameState) -> bool {
+        if !crate::animated::r1062_is_live() {
+            return false;
+        }
         let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {
             return false;
         };

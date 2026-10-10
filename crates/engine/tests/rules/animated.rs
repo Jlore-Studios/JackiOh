@@ -520,6 +520,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_r1062_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again_not_summoning_sick()
      {
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("animated-spatula-cycle");
         let card = put(
             &mut state,
@@ -818,6 +819,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
     #[test]
     fn r1062_animated_at_its_start_of_turn_after_an_earlier_entry_it_is_not_summoning_sick_and_its_rush_reaches_the_hero()
      {
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut state = playing("r1062-not-sick");
         let card = put(
             &mut state,
@@ -834,6 +836,26 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
         assert!(!is_sick(sink.state, &now));
         assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
+    }
+
+    /// D14: until the Meditative set opens, R383 stands — the start-of-turn animation is an entry.
+    #[test]
+    fn r1062_waits_for_the_meditative_set_until_then_the_start_of_turn_animation_is_an_entry() {
+        let mut state = playing("r1062-closed");
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let turn = state.turn;
+        by_id_mut(&mut state, &card.id).summoned_turn = Some(turn);
+        state.turn += 2;
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        let now = live(sink.state, &card.id);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        assert!(is_sick(sink.state, &now));
     }
 
     #[test]

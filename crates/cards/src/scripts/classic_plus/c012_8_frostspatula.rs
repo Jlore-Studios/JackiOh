@@ -107,7 +107,8 @@ pub fn script() -> CardScripts {
 // C+ #12.8 Frostspatula — SPEC §8.7 row 12.8, R383, R409, BUILD M9 Classic+ row C+ 12.8: "Animated on
 // your turn (R383): played on your turn it animates at once into its own lane's unit zone, else the
 // leftmost open, unlocked, unreserved one, summoning sick the turn it enters, so its Rush reaches units
-// only; from your next start of turn it is not (R1062); it returns to its backrow zone at the end of your cleanup, after your end-of-turn
+// only; from your next start of turn it is not once the Meditative set opens (R1062; until then it is
+// sick on every animation, D14); it returns to its backrow zone at the end of your cleanup, after your end-of-turn
 // steps, and animates again after your next mana refresh and Brittle tick; on the opponent's turn it
 // can't be attacked, "all Units" effects skip it and backrow effects reach it; while animated its
 // backrow zone is reserved; both moves keep damage, buffs and memory (R78 does not apply); with no open
@@ -318,9 +319,23 @@ mod tests {
             );
         }
 
+        /// R83 R383 summoning sick on every animation while the Meditative set is closed (R1062 waits for
+        /// it, D14): animated again a turn later, its Rush still never reaches the hero
+        #[test]
+        fn r83_r383_summoning_sick_on_every_animation_animated_again_a_turn_later_its_rush_still_never_reaches_the_hero() {
+            let mut s = played(false, 1, json!({}), json!({}));
+            s.end_turn().end_turn();
+            assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(spatula_id(&s)));
+            s.expect_refused(|s| s.attack(SPATULA, "hero"));
+            s.expect_health(P2, HERO_HEALTH);
+            s.attack(SPATULA, TOKENS);
+            s.expect_in_zone(TOKENS, "graveyard");
+        }
+
         /// R1062 R383 animated again at your next start of turn it is not summoning sick and its Rush reaches the hero
         #[test]
         fn r1062_r383_animated_again_at_your_next_start_of_turn_it_is_not_summoning_sick_and_its_rush_reaches_the_hero() {
+            let _open = preview_sets(&[SetName::Meditative]);
             let mut s = played(false, 1, json!({}), json!({}));
             s.end_turn().end_turn();
             assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(spatula_id(&s)));
