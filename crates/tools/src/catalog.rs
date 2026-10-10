@@ -5,12 +5,12 @@
 //! validation of `crates/cards/catalog.json` against SPEC §5, §6.1, §7 and §8, and patch v0.2.0's
 //! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
 //!
-//! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+): that
-//! it holds every card and every token exactly once, that every enum value is in the union the
-//! engine's wire types declare, that stats sit on Units (and Animated backrow cards, B3.1) and
-//! nowhere else, that the rarity distribution each set prints is the one the file carries, and that
-//! the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and `xStats`) are well
-//! formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
+//! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
+//! Meditative): that it holds every card and every token exactly once, that every enum value is in
+//! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
+//! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
+//! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and
+//! `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
 //! an independent transcription. The pending-fragment proof is its own command, `patches check`
 //! (TS's `pnpm validate:catalog` ran both).
 //!
@@ -203,27 +203,38 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included — a census, so a tag
 /// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
 /// Classic+ Jlockheed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
+/// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
+/// (docs/meditative-set.md M2's census of its 132 entries), which count once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
-        Tag::Human => 38,
-        Tag::Felinor => 11,
-        Tag::Ky => 9,
-        Tag::Cn => 7,
-        Tag::Fruit => 15,
-        Tag::CallToChaos => 2,
-        Tag::Quickdraw => 5,
-        Tag::Jlockeed => 6,
+        Tag::Human => 38 + meditative(12),
+        Tag::Felinor => 11 + meditative(11),
+        Tag::Ky => 9 + meditative(6),
+        Tag::Cn => 7 + meditative(33),
+        // Meditative #55 Dragon Fruit.
+        Tag::Fruit => 15 + meditative(1),
+        // Meditative #95 Call to Chaos (Meditative Edition).
+        Tag::CallToChaos => 2 + meditative(1),
+        Tag::Quickdraw => 5 + meditative(5),
+        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9.
+        Tag::Jlockeed => 6 + meditative(3),
         Tag::Book => 14,
         Tag::Pancake => 10,
         Tag::Ai => 10,
-        Tag::Plague => 17,
-        Tag::Catalyst => 2,
-        Tag::Prime => 2,
-        Tag::Acclaimed => 2,
-        // The Meditative set's (R1420): counted once it ships.
-        Tag::Wincon => 0,
-        Tag::Token => 50,
+        Tag::Plague => 17 + meditative(2),
+        Tag::Catalyst => 2 + meditative(2),
+        Tag::Prime => 2 + meditative(2),
+        Tag::Acclaimed => 2 + meditative(4),
+        // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
+        Tag::Wincon => meditative(2),
+        Tag::Token => 50 + meditative(30),
     }
+}
+
+/// R1420: a Meditative entry counts toward the totals and the tag census only once its set ships,
+/// so the census holds on either side of the patch that lists it in `SHIPPED_SETS`.
+fn meditative(count: usize) -> usize {
+    if set_ships(SetName::Meditative) { count } else { 0 }
 }
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
@@ -1206,7 +1217,8 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         }
     }
 
-    // 1, 2. The totals: B2.1's 268 cards and, with Glitch (issue #170), 50 tokens, 318 entries.
+    // 1, 2. The totals: B2.1's 268 cards and, with Glitch (issue #170), 50 tokens, 318 entries, and
+    // from the patch that ships it the Meditative set's 102 and 30 (R1420): 370, 80 and 450.
     if entries != expected_total {
         fail(
             &mut failures,
@@ -1707,9 +1719,11 @@ mod tests {
     fn the_shipped_catalog_passes_every_check() {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
+        // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
+        // set's 102 and 30: 370 cards and 80 tokens.
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
-            (318, 268, 50)
+            (318 + meditative(132), 268 + meditative(102), 50 + meditative(30))
         );
     }
 
@@ -1730,6 +1744,25 @@ mod tests {
 
     #[test]
     fn r1420_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
+        // Once the Meditative set ships it counts toward every total like the others, and no set
+        // the catalog orders is being built; the shape checks below still hold it.
+        if !set_ships(SetName::Meditative) {
+            r1420_a_set_being_built_counts_toward_no_total();
+        }
+
+        // An index the brief does not list, or an id that does not follow it, still fails.
+        let mut wrong = shipped_catalog();
+        wrong.insert(
+            "meditative-150".to_string(),
+            meditative_entry("150", "meditative-150"),
+        );
+        wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
+        let failures = check_catalog(&wrong).failures.join("\n");
+        assert!(failures.contains("unexpected index \"150\""), "{failures}");
+        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
+    }
+
+    fn r1420_a_set_being_built_counts_toward_no_total() {
         // The real catalog with the Meditative entries the card parts have added so far taken out,
         // so this test counts its own fixture alone.
         let mut catalog = shipped_catalog();
@@ -1755,17 +1788,6 @@ mod tests {
             ),
             (318, 268, 50, 1)
         );
-
-        // An index the brief does not list, or an id that does not follow it, still fails.
-        let mut wrong = shipped_catalog();
-        wrong.insert(
-            "meditative-150".to_string(),
-            meditative_entry("150", "meditative-150"),
-        );
-        wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
-        let failures = check_catalog(&wrong).failures.join("\n");
-        assert!(failures.contains("unexpected index \"150\""), "{failures}");
-        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
     }
 
     #[test]
