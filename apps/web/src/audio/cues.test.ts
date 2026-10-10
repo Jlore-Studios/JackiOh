@@ -544,6 +544,47 @@ describe("R204: which moments speak", () => {
     }
   });
 
+  it("R1088 the Skull's summon speaks one trigger line by the injected rng", () => {
+    const SKULL = "core-099";
+    const lines: CardAudioTable = {
+      ...LINES,
+      cards: {
+        ...LINES.cards,
+        [SKULL]: {
+          kind: "spell",
+          cast: { voice: "crone", text: "Come closer." },
+          trigger: { voice: "crone", lines: ["First.", "Second.", "Third."] },
+        },
+      },
+    };
+    const view = baseView();
+    view.you.units[0] = unit("p1", { instanceId: "s1", defId: SKULL });
+    const summoned: GameEvent = {
+      type: "summoned",
+      player: "p1",
+      instanceId: "c1",
+      defId: UNIT,
+      row: "units",
+      lane: 2,
+      sourceId: "s1",
+    };
+    // The injected rng picks the line: 0 the first, near-1 the last — and the summoned unit's own
+    // line is replaced, not added.
+    const first = { ...ctx({ lines, random: () => 0 }), view };
+    expect(ranked(summoned, first)).toEqual([`${SKULL}/trigger1!${String(VOICE_PRIORITY.play)}`]);
+    expect(shape(summoned, first)).toEqual([sfx("summon"), voice(SKULL, "trigger1", VOICE_DELAY_MS)].sort());
+    const last = { ...ctx({ lines, random: () => 0.99 }), view };
+    expect(ranked(summoned, last)).toEqual([`${SKULL}/trigger3!${String(VOICE_PRIORITY.play)}`]);
+    // The sentinel names nothing, and a source with no trigger changes nothing: the unit speaks
+    // its own line.
+    expect(ranked({ ...summoned, sourceId: HIDDEN_DEF_ID }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
+    expect(ranked({ ...summoned, sourceId: "c9" }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
+  });
+
   it("R204 (B56) every line carries its priority: play and cast lines on a play, death and trap lines react", () => {
     expect(ranked(played(UNIT))).toEqual([`${UNIT}/play!${String(VOICE_PRIORITY.play)}`]);
     expect(ranked(played(SPELL))).toEqual([`${SPELL}/cast!${String(VOICE_PRIORITY.play)}`]);

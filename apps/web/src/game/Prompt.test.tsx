@@ -422,6 +422,31 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R1086 the picker sends the choice", () => {
+    const onAction = vi.fn();
+    const view = viewWith();
+    const interaction = playing([
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+    ]);
+
+    render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("mode");
+    expect(optionTestids()).toEqual(["prompt-option-true", "prompt-option-false"]);
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Magnetic");
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Stack");
+
+    fireEvent.click(screen.getByTestId("prompt-option-true"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: true,
+    });
+  });
+
   it("a declared target pick builds the play's targets, not an answer", () => {
     const onAction = vi.fn();
     const interaction = playing([

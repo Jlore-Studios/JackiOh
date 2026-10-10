@@ -119,6 +119,7 @@ fn summon_first_free(def_id: String) -> Effect {
             row: zone.row,
             lane: zone.lane,
             former_id: None,
+            source_id: None,
             arrived_during: None,
             exits_from: None,
         });

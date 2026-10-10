@@ -58,7 +58,7 @@ use crate::modifiers::remove_modifier;
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, in_declared_order, interceptor_fits_decl, legal_selections_for,
-    play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
+    magnetic_host_at, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
     targeting_discards_required, targets_follow_modes, why_choices_refused,
 };
 use crate::play_counts::record_play;
@@ -80,6 +80,7 @@ use crate::state::{
 use crate::state_check::{sacrifice_together, state_check};
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::{copied_text_of, copies_text, fix_copied_text, text_face_of};
+use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::subsystems::glitch::count_system_play;
 use crate::targeting::target_aim;
 use crate::targeting_point::{
@@ -451,6 +452,10 @@ pub struct PlayRun {
     /// cast has resolved, and its held `drawn` is released then (`draw_complete.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawn_as: Option<String>,
+    /// R1086: the host a Magnetic play fuses into at step 7 (ME-MAGNETIC), read at step 1. Absent for
+    /// every other play (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub magnetic_host: Option<String>,
     // ---- B5 E14 (Classic #57 Echo; R399, R546) ----
     /// The Spell text a copier's play resolves, fixed at step 1 as its choices are checked against it
     /// (null: nothing had been played), and written on the card as the announce moves it into the
@@ -510,6 +515,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         copied: None,
+        magnetic_host: None,
     }
 }
 
@@ -737,6 +743,11 @@ pub fn validate_play(
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.cost_paid = cost;
     run.zone = zone;
+    // R1086: a Magnetic play names its host at step 1, off the same function the listing and the
+    // refusal read.
+    if action.magnetic == Some(true) {
+        run.magnetic_host = zone.and_then(|slot| magnetic_host_at(state, player, &slot, &tributes));
+    }
     // B5 E5, R450, R682: read against the picks as checked, before the step-1 interception moves
     // any of them — a cost the targeting owes whatever answers it.
     run.targeting_owed = targeting_discards_required(state, player, &face, &targets, &modes, None);
@@ -1368,6 +1379,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
             row: zone.row,
             lane: zone.lane,
             former_id,
+            source_id: None,
             arrived_during: arrivals,
             exits_from: Some(exits_from),
         });
@@ -1568,7 +1580,8 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 
     let placed = match run.zone {
         Some(zone) => {
-            let stack = plays_on_stack(sink.state, &card) || base.is_some();
+            // R1086: a Magnetic play lands on top of its host, as a Stack card lands on its pile.
+            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.magnetic_host.is_some();
             place_on_field(
                 sink.state,
                 &mut card,
@@ -2510,6 +2523,51 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     }
     flag_return_to_hand_at_end_of_turn(sink.state, &run.instance_id);
     note_return_price(sink.state, &run.instance_id, played_at);
+    // R1086: a Magnetic play's card fuses into its host once the play has resolved (`cardResolved`
+    // above), not as a trigger.
+    fuse_magnetic(sink, run);
+}
+
+/// R1086 (ME-MAGNETIC): fuse the Magnetic card on top into its host, which the fusion keeps (zone,
+/// damage, exertion, the turn it arrived). The Magnetic card ceases to exist with no Death. When the
+/// host or the top card left the field first, nothing fuses, and the top card, if still there, stays
+/// the pile's top.
+fn fuse_magnetic(sink: &mut EngineSink<'_>, run: &PlayRun) {
+    let Some(host_id) = run.magnetic_host.clone() else {
+        return;
+    };
+    let top_id = run.instance_id.clone();
+    // R174: each card is judged from the stay the play put it on — the host from step 1's, the top
+    // card from the stay step 4 placed it on.
+    if run
+        .exits_from
+        .is_some_and(|from| left_field_after(sink.state, from, &host_id))
+    {
+        return;
+    }
+    if run
+        .placed_from
+        .is_some_and(|from| left_field_after(sink.state, from, &top_id))
+    {
+        return;
+    }
+    let (Some(host), Some(top)) = (
+        find_instance(sink.state, &host_id).cloned(),
+        find_instance(sink.state, &top_id).cloned(),
+    ) else {
+        return;
+    };
+    if !matches!(host.zone, Zone::Field { .. }) || !matches!(top.zone, Zone::Field { .. }) {
+        return;
+    }
+    fuse(
+        sink,
+        FuseArgs {
+            ingredients: vec![top],
+            target: Some(host),
+            ..FuseArgs::default()
+        },
+    );
 }
 
 /// E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to hand"): a Spell

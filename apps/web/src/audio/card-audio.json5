@@ -22,6 +22,9 @@
 //   attack   a Unit of yours picked up to attack (dragged, or clicked to choose its target)
 //   death    a Unit destroyed
 //   cast     a Spell or Field Spell cast, a Trap or Field Trap firing
+//   trigger  a card whose effect summons (R1088): one of its lines plays when the runner starts the
+//            `summoned` entry the card caused, picked by the client's own rng, replacing the
+//            summoned card's own line for that entry
 // A hook gives a voice line, { voice: "<a voice>", text: "<the line>" }, an effect,
 // { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
 //
@@ -1386,6 +1389,10 @@
     "meditative-049-3": { // AI Girlfriend
       cast: { voice: "diva", text: "Fight for my amusement, darlings." },
     },
+    "meditative-051": { // Devin Bot
+      play: { voice: "robot", text: "Meditation subroutine engaged." },
+      death: { voice: "robot", text: "Rebooting. Somewhere else." },
+    },
     "meditative-052": { // Economic Anxiety
       cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
     },
@@ -1395,6 +1402,13 @@
     "meditative-056": { // House Party
       cast: { voice: "announcer", text: "Everybody in! The house is open!" },
     },
+    "meditative-057": { // Clip-Farming Critikal
+      play: { voice: "hustler", text: "Did you get that on camera?" },
+      death: { voice: "hustler", text: "Cut. Print it anyway." },
+    },
+    "meditative-060": { // Eschews
+      cast: { voice: "snob", text: "Nope. Not dealing with that." },
+    },
     "meditative-061": { // Joon Jorker
       play: { voice: "hustler", text: "Let me hype up my neighbor!" },
       death: { voice: "hustler", text: "Who hypes you now?" },
@@ -1402,11 +1416,23 @@
     "meditative-062": { // Small Time Recruits
       cast: { voice: "guard", text: "Small fry, report for duty!" },
     },
+    "meditative-063": { // Skull of J'Nari
+      cast: { voice: "elder", text: "Come closer. I don't bite. Much." },
+      trigger: { voice: "elder", lines: ["This one will prove very useful! ...Probably.", "There IS a method to my madness!", "Good units are hard to find."] },
+    },
     "meditative-064": { // Traitorous Blood
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
     },
+    "meditative-065": { // Keymaster Keenus
+      play: { voice: "guard", text: "Every lock needs a key. I have all of them." },
+      death: { voice: "guard", text: "You'll have to find your own way in." },
+    },
     "meditative-066": { // Fiery Waraxe
       cast: { voice: "hero", text: "Burn bright, swing hard!" },
+    },
+    "meditative-067": { // Sentient Cat Ears
+      play: { voice: "cat", text: "Purr-fectly attached." },
+      death: { voice: "cat", text: "Nine lives, one pair of ears." },
     },
     "meditative-068": { // Catnip
       cast: { voice: "cat", text: "Mrrrow! Who left the nip out?" },
@@ -1436,6 +1462,9 @@
     "meditative-074": { // Montaña Giant
       play: { voice: "storyteller", text: "The mountain wakes." },
       death: { voice: "storyteller", text: "The mountain sleeps." },
+    },
+    "meditative-075": { // Ever Growing Tree
+      cast: { voice: "digger", text: "Growing. Always growing." },
     },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },

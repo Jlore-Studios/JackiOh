@@ -1504,6 +1504,12 @@ fn redact_event(
                 shown.remove("formerId");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
+            // R1088: `sourceId` names a card as well, and the card whose effect summoned this one may
+            // since have gone somewhere this viewer cannot read — so it is hidden the way `killerId`
+            // is on `destroyed`, never removed.
+            if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
+                hide(&mut shown, &["sourceId"]);
+            }
             rebuild(shown)
         }
 

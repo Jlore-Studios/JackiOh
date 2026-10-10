@@ -14,6 +14,7 @@ fn summoned(id: &str) -> GameEvent {
         row: Row::Units,
         lane: 1,
         former_id: None,
+        source_id: None,
         arrived_during: None,
         exits_from: None,
     }

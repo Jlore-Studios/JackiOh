@@ -241,6 +241,13 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-deft-dart", when: "always" },
     numbered: false,
   },
+  Magnetic: {
+    layer: "glyph",
+    priority: 26,
+    shape: "a horseshoe magnet, its poles pulling in",
+    motion: { keyframes: "kw-magnet-pull", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

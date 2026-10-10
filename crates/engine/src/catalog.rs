@@ -29,8 +29,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient,
-    KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
+    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
@@ -217,6 +217,9 @@ pub struct CatalogQueryArgs {
     /// R1437: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck_based: Option<bool>,
+    /// R1080: the printed base attack and health a pool asks for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats: Option<AttackHealth>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
@@ -246,6 +249,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             not_tags: query.not_tags,
             any_tags: query.any_tags,
             luck_based: None,
+            stats: query.stats,
             rarity: query.rarity,
             set: query.set,
             exclude_def_id: query.exclude_def_id,
@@ -373,6 +377,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
     if args.luck_based == Some(true) && !is_luck_based(def) {
+        return false;
+    }
+    // R1080: `stats` reads the printed base face; a face that prints none never matches.
+    if let Some(wanted) = args.stats
+        && (def.base.attack != Some(wanted.attack) || def.base.health != Some(wanted.health))
+    {
         return false;
     }
 

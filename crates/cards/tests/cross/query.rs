@@ -790,3 +790,58 @@ mod r1437_the_luck_based_pool_meditative_101_gachaholic {
         assert!(!expected.contains(&"meditative-101".to_string()));
     }
 }
+
+mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r1080 {
+    use super::*;
+    use jackioh_engine::testkit::preview_sets;
+
+    // THE ARGUMENTS A CARD SCRIPT PASSES:
+    //     catalog::query(&q(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })))
+    // `stats` reads the printed base face (R1080): a face that prints none never matches, so Spells
+    // and stat-less backrow cards are out whatever else they are. Tokens join through `withTokens`.
+    // A pool that names no set reaches every set that ships (R380, R1420), in catalog order.
+    const ONE_ONE_POOL: &[&str] = &[
+        "core-003",
+        "core-004",
+        "core-007",
+        "core-015",
+        "core-050",
+        "core-086",
+        "classic-027",
+        "classic-033",
+        "classic-082",
+        "classicplus-006",
+        "classicplus-076",
+        "core-t-felinor",
+        "core-t-sheep",
+    ];
+
+    #[test]
+    fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
+        register();
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            strings(ONE_ONE_POOL)
+        );
+    }
+
+    #[test]
+    fn r1080_r1420_previewing_meditative_adds_051_065_and_067() {
+        register();
+        let _guard = preview_sets(&[SetName::Meditative]);
+        let mut expected = strings(ONE_ONE_POOL);
+        expected.extend(strings(&["meditative-051", "meditative-065", "meditative-067"]));
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            expected
+        );
+    }
+}

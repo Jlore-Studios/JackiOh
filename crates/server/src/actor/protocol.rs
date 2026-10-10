@@ -459,6 +459,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 };
                 embiggen = Some(parsed);
             }
+            // R1086: a Magnetic play onto one of the player's Units.
+            let mut magnetic = None;
+            if let Some(value) = raw.get("magnetic") {
+                let Some(parsed) = is_bool(Some(value)) else {
+                    return Err(malformed(r#""play.magnetic" must be a boolean"#));
+                };
+                magnetic = Some(parsed);
+            }
             let mut tributes = None;
             if let Some(value) = raw.get("tributes") {
                 let Some(parsed) = is_string_list(Some(value)) else {
@@ -494,6 +502,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,

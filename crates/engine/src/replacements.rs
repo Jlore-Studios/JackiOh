@@ -753,6 +753,7 @@ pub fn answer_targeting(
             row: slot.row,
             lane: slot.lane,
             former_id: None,
+            source_id: None,
             arrived_during: None,
             exits_from: None,
         });

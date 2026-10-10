@@ -1070,6 +1070,9 @@
   "meditative-049-3": {
     "flavour": "She only wants a sparring partner."
   },
+  "meditative-051": {
+    "flavour": "It meditates by filling the room with tiny copies of itself."
+  },
   "meditative-052": {
     "flavour": "The market demands sacrifice."
   },
@@ -1079,17 +1082,32 @@
   "meditative-056": {
     "flavour": "Nobody gets past the Right-house, and nobody leaves its parties early."
   },
+  "meditative-057": {
+    "flavour": "Do it for the clip. Then do it again, but Radiant."
+  },
+  "meditative-060": {
+    "flavour": "It avoids everything. Especially responsibility."
+  },
   "meditative-061": {
     "flavour": "He never tells a joke about himself. His neighbour is always the punchline."
   },
   "meditative-062": {
     "flavour": "Every army starts with somebody who works for snacks."
   },
+  "meditative-063": {
+    "flavour": "Every skull has a story. This one keeps interrupting."
+  },
   "meditative-064": {
     "flavour": "Blood is thicker than orders."
   },
+  "meditative-065": {
+    "flavour": "He keeps every key. He has never locked anything."
+  },
   "meditative-066": {
     "flavour": "Forged in a campfire, sharpened on a grudge."
+  },
+  "meditative-067": {
+    "flavour": "The ears chose the cat. The cat has opinions."
   },
   "meditative-068": {
     "flavour": "One sniff and the whole yard goes feral."
@@ -1114,6 +1132,9 @@
   },
   "meditative-074": {
     "flavour": "Its shadow grows with every letter you never answer."
+  },
+  "meditative-075": {
+    "flavour": "It grows the way arguments do: by absorbing everything nearby."
   },
   "meditative-076": {
     "flavour": "Use it or lose it."

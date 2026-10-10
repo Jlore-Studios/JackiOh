@@ -95,6 +95,8 @@ export type PlayBuild = {
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
+  /** R1086: a Magnetic play onto the zone's host Unit. */
+  magnetic?: boolean;
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
@@ -135,6 +137,7 @@ export type PlayNeed =
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
   | { kind: "embiggen"; min: number; max: number; values: boolean[] }
+  | { kind: "magnetic"; min: number; max: number; values: boolean[] }
   | { kind: "plague"; min: number; max: number; options: PlagueChoice[] }
   | { kind: "tribute"; min: number; max: number; instanceIds: string[] }
   | { kind: "target"; min: number; max: number; selections: Selection[] }
@@ -336,6 +339,7 @@ type BuildFields = {
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
+  magnetic?: boolean;
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
@@ -370,6 +374,9 @@ function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   if (picked.embiggen !== undefined && fixed.embiggen !== undefined && fixed.embiggen !== picked.embiggen) {
     return false;
   }
+  // R1086: a picked Magnetic answer keeps only the plays that fuse, and a plain answer only those
+  // that do not. A play with `magnetic: false` is a plain play.
+  if (picked.magnetic !== undefined && (fixed.magnetic === true) !== picked.magnetic) return false;
   if (picked.tributes !== undefined && fixed.tributes !== undefined) {
     if (!containsAll(fixed.tributes, picked.tributes)) return false;
   }
@@ -408,9 +415,11 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
       const zone = candidate.zone;
       const x = candidate.x ?? picked.x;
       const embiggen = candidate.embiggen ?? picked.embiggen;
+      const magnetic = candidate.magnetic ?? picked.magnetic;
       if (zone !== undefined) body.zone = zone;
       if (x !== undefined) body.x = x;
       if (embiggen !== undefined) body.embiggen = embiggen;
+      if (magnetic !== undefined) body.magnetic = magnetic;
       if (tributes !== undefined) body.tributes = tributes;
       if (targets !== undefined) body.targets = targets;
       if (modes !== undefined) body.modes = modes;
@@ -556,6 +565,15 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
     zoneKey,
   );
   if (zones.length > 1) return { kind: "zone", min: 1, max: 1, zones };
+
+  // R1086: one zone with both a plain and a Magnetic play asks which — Magnetic first.
+  if (interaction.picked.magnetic === undefined) {
+    const values = [...new Set(fields.map((c) => c.magnetic === true))];
+    if (values.length > 1) {
+      values.sort((a, b) => Number(b) - Number(a));
+      return { kind: "magnetic", min: 1, max: 1, values };
+    }
+  }
 
   return null;
 }

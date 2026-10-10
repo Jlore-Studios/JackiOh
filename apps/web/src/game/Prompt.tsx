@@ -490,6 +490,18 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
+    case "magnetic":
+      // R1086: one zone with both a plain and a Magnetic play asks which.
+      return {
+        ...common,
+        chrome: "mode",
+        title: "Magnetic or Stack?",
+        items: need.values.map((value) => ({
+          key: String(value),
+          label: value ? "Magnetic" : "Stack",
+        })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
+      };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand

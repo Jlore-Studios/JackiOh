@@ -63,6 +63,8 @@ pub struct PlayAction {
     pub zone: Option<ZoneChoice>,
     pub x: Option<i32>,
     pub embiggen: Option<bool>,
+    /// R1086: play this Magnetic card onto the zone's host Unit (ME-MAGNETIC).
+    pub magnetic: Option<bool>,
     /// Units sacrificed to pay a Tribute cost (§6.3).
     pub tributes: Option<Vec<String>>,
     pub targets: Option<Vec<Selection>>,
@@ -92,6 +94,7 @@ impl From<PlayAction> for ActionBody {
             zone: action.zone,
             x: action.x,
             embiggen: action.embiggen,
+            magnetic: action.magnetic,
             tributes: action.tributes,
             targets: action.targets,
             modes: action.modes,
@@ -111,6 +114,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,
@@ -121,6 +125,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,
@@ -384,6 +389,68 @@ fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slo
     card.set_as.is_none()
         && row_for_card(state, card) == Row::Units
         && crate::zones::stack_base_at(state, player, slot)
+}
+
+/// R1086 (ME-MAGNETIC): whether this card may be played as Magnetic — a Unit with the Magnetic
+/// keyword that needs a zone. Read off the card's keywords as they stand where it is (§10.4), as
+/// `plays_on_stack` is.
+pub fn plays_magnetic(state: &GameState, card: &CardInstance) -> bool {
+    if !needs_zone(state, card) {
+        return false;
+    }
+    if row_for_card(state, card) != Row::Units {
+        return false;
+    }
+    crate::layers::unit_has(state, card, KeywordKind::Magnetic)
+}
+
+/// R1086: the host a Magnetic play onto `slot` fuses into — the top card of the zone when it is a
+/// Unit its controller acts with that is not Immutable (R23), and not one this same play tributes.
+/// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
+pub fn magnetic_host_at(
+    state: &GameState,
+    player: PlayerId,
+    slot: &ZoneSlot,
+    tributes: &[String],
+) -> Option<String> {
+    if !crate::zones::accepts_stack_card(state, slot, Default::default()) {
+        return None;
+    }
+    let top = crate::zones::card_at(state, slot)?;
+    if crate::faces::card_type_of(state, top) != CardType::Unit {
+        return None;
+    }
+    if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+        return None;
+    }
+    if top.controller != player {
+        return None;
+    }
+    if tributes.contains(&top.id) {
+        return None;
+    }
+    Some(top.id.clone())
+}
+
+/// R1086: the unit-row zones that hold a host for a Magnetic play, in lane order. Empty unless the
+/// card plays Magnetic at all.
+pub fn legal_magnetic_zones_for(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    tributes: &[String],
+) -> Vec<ZoneChoice> {
+    if !plays_magnetic(state, card) {
+        return Vec::new();
+    }
+    crate::zones::slots_of(player, Row::Units)
+        .iter()
+        .filter(|slot| magnetic_host_at(state, player, slot, tributes).is_some())
+        .map(|slot| ZoneChoice {
+            row: slot.row,
+            lane: slot.lane,
+        })
+        .collect()
 }
 
 /// §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
@@ -1649,6 +1716,7 @@ fn face_down_play_actions(
                             zone: Some(zone),
                             x: price.x,
                             embiggen: price.embiggen,
+                            magnetic: None,
                             tributes: if tributes.is_empty() {
                                 None
                             } else {
@@ -1879,15 +1947,24 @@ pub fn priced_play_actions(
         let face = resolving_face(state, player, card, cost);
         let bound = declares_bound_tribute(state, &face);
         for tributes in &tribute_sets {
-            let zones: Vec<Option<ZoneChoice>> = if needs_zone(state, card) {
-                legal_zones_for(state, player, card, tributes)
-                    .into_iter()
-                    .map(Some)
-                    .collect()
+            // R1086: the plain zones first, then the Magnetic host zones after them (D14: a game that
+            // never plays Magnetic lists what it listed before).
+            let zones: Vec<(Option<ZoneChoice>, Option<bool>)> = if needs_zone(state, card) {
+                let mut paired: Vec<(Option<ZoneChoice>, Option<bool>)> =
+                    legal_zones_for(state, player, card, tributes)
+                        .into_iter()
+                        .map(|zone| (Some(zone), None))
+                        .collect();
+                paired.extend(
+                    legal_magnetic_zones_for(state, player, card, tributes)
+                        .into_iter()
+                        .map(|zone| (Some(zone), Some(true))),
+                );
+                paired
             } else {
-                vec![None]
+                vec![(None, None)]
             };
-            for zone in &zones {
+            for (zone, magnetic) in &zones {
                 for choices in play_choice_combinations(state, player, &face, None) {
                     let targets: &[Selection] = choices.targets.as_deref().unwrap_or(&[]);
                     let modes: &[String] = choices.modes.as_deref().unwrap_or(&[]);
@@ -1914,6 +1991,7 @@ pub fn priced_play_actions(
                             zone: *zone,
                             x,
                             embiggen,
+                            magnetic: *magnetic,
                             tributes: if tributes.is_empty() {
                                 None
                             } else {
@@ -1963,6 +2041,40 @@ fn plural(count: i32, one: &str) -> String {
 
 fn refuse(message: String) -> Result<(), EngineError> {
     Err(EngineError::new(message))
+}
+
+/// R1086: the refusal for a Magnetic play. A play with `magnetic: false` is a plain play. The
+/// card must play Magnetic at all, the zone must name a unit-row lane in range, and that zone must
+/// hold a host — read off `magnetic_host_at`, the same function the listing uses.
+fn refuse_magnetic(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    zone: Option<&ZoneChoice>,
+    tributes: &[String],
+) -> Result<(), EngineError> {
+    let name = name_of(state, &card.def_id);
+    if !plays_magnetic(state, card) {
+        return refuse(format!("{name} is not Magnetic"));
+    }
+    let Some(zone) = zone else {
+        return refuse(format!("{name} played as Magnetic takes a zone"));
+    };
+    if zone.row != Row::Units {
+        return refuse(format!("{name} played as Magnetic goes in the units row"));
+    }
+    if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
+        return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
+    }
+    let slot = crate::zones::ZoneSlot {
+        player,
+        row: zone.row,
+        lane: zone.lane,
+    };
+    if magnetic_host_at(state, player, &slot, tributes).is_none() {
+        return refuse(format!("that units zone holds no Unit for {name}"));
+    }
+    Ok(())
 }
 
 fn refuse_zone(
@@ -2294,6 +2406,13 @@ fn why_face_down_refused(
             name_of(state, &card.def_id)
         ));
     }
+    // R1086 beside R1044: a face-down play goes into an open backrow zone, never onto a host.
+    if action.magnetic == Some(true) {
+        return refuse(format!(
+            "{} is not played Magnetic face-down",
+            name_of(state, &card.def_id)
+        ));
+    }
     refuse_x(state, player, card, action.x)?;
     refuse_embiggen(state, card, action.embiggen)?;
     refuse_tributes(state, player, card, action.tributes.as_deref())?;
@@ -2323,7 +2442,11 @@ pub fn why_choices_refused(
         return why_face_down_refused(state, player, card, action);
     }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
-    refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+    if action.magnetic == Some(true) {
+        refuse_magnetic(state, player, card, action.zone.as_ref(), tributes)?;
+    } else {
+        refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+    }
     refuse_x(state, player, card, action.x)?;
     refuse_embiggen(state, card, action.embiggen)?;
     refuse_tributes(state, player, card, action.tributes.as_deref())?;
