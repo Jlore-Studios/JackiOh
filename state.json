@@ -4503,6 +4503,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "646": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-10T15:55:00Z",
+      "issue": 637,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "68": {
       "action": "build",
       "died": 0,
