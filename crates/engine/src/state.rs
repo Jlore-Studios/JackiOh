@@ -20,9 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice, Selection, Tag,
-    Tuning, Zone, ZoneRef,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
+    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
+    Selection, Tag, Tuning, Zone, ZoneRef,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1405,6 +1405,11 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
+    /// R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written only
+    /// while the Meditative set is open, so a shipped game never carries it (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub last_element: Option<CardElement>,
 }
 
 fn empty_row<T: Clone>(size: i32) -> Vec<Option<T>> {

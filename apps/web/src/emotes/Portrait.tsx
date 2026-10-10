@@ -2,6 +2,7 @@
 // health badged on its lower right and armor on its lower left, the way Hearthstone mounts them.
 // The oval is `PortraitArt` (R1332): the card's art under the portrait's own vivid layers. When the
 // hero's inspect view opens, the oval answers with a squash and a glint (R1331), `reacting`.
+// R987: Luck rides above the health badge when the side has any.
 // The portrait is presentation only — it lives inside the existing `hero-<side>` element, which
 // keeps the testid, the ClickTarget and every glow/highlight/damage-shake it always had, so a
 // click or a drag attack lands exactly as before and no e2e spec changes.
@@ -39,6 +40,7 @@ export function HeroPortrait({
   health,
   armor,
   reacting,
+  luck,
   children,
 }: {
   portrait: PortraitId;
@@ -47,6 +49,8 @@ export function HeroPortrait({
   armor: number;
   /** The inspect view has just opened: the oval squashes and a glint crosses it (R1331). */
   reacting?: boolean;
+  /** R987: the side's Luck (`SideView.luck`); the badge draws only above 0. */
+  luck?: number;
   /** The emote bubble/sticker and the portrait's open button mount here, hung off the oval. */
   children?: ReactNode;
 }): ReactElement {
@@ -68,6 +72,16 @@ export function HeroPortrait({
       {armor > 0 && (
         <span className="hero-armor" data-armor={armor} title="Hero armor">
           {armor}
+        </span>
+      )}
+      {luck !== undefined && luck > 0 && (
+        <span
+          className="hero-luck"
+          data-testid="hero-luck"
+          data-luck={luck}
+          title={`Luck ${luck}: every roll your cards make that keeps a best rolls ${luck} more times`}
+        >
+          {luck}
         </span>
       )}
       {children}

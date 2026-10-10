@@ -403,6 +403,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
+    case "fengShui":
+      // R983: whose play was judged, and how.
+      return capitalised(`${name.whose(event.player)} play was ${FENG_SHUI_LINE[event.outcome]}`);
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
@@ -444,6 +447,12 @@ const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched"
   swap: "the players swap seats",
   boards: "other games' boards appear",
   void: "the match never happened",
+};
+
+/** R983: each Feng Shui outcome, as its log line ends. */
+const FENG_SHUI_LINE: Readonly<Record<Extract<GameEvent, { type: "fengShui" }>["outcome"], string>> = {
+  positive: "auspicious (吉)",
+  negative: "inauspicious (凶)",
 };
 
 /** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */

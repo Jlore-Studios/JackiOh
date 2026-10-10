@@ -214,6 +214,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   // Patch v0.3.X (MN05).
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
@@ -294,6 +295,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   turnCutShort: "notify",
   marked: "brand",
   glitched: "whoosh",
+  fengShui: "radiant",
   translated: null,
   // Patch v0.3.X (MN05).
   damageAbsorbed: "armorRing",

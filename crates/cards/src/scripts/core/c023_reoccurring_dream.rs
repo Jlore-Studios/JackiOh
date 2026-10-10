@@ -76,13 +76,14 @@ fn end_of_turn() -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            let lucky = lucky(ctx);
-            if any_to_make_radiant(ctx) && ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b)
-            {
-                make_one_radiant()
-            } else {
-                vec![]
+            if !any_to_make_radiant(ctx) {
+                return vec![];
             }
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438;
+            // `lucky(0)` draws once, as before).
+            let lucky = lucky(ctx) + luck_of(&*ctx.state, ctx.controller);
+            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b);
+            if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
         ..Script::default()
@@ -94,7 +95,8 @@ pub fn script() -> CardScripts {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
-            let lucky = lucky(ctx);
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438).
+            let lucky = lucky(ctx) + luck_of(&*ctx.state, ctx.controller);
             let hit = ctx
                 .rng
                 .lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
@@ -158,6 +160,44 @@ mod tests {
 
     mod n23_reoccurring_dream {
         use super::*;
+
+        /// Plays the Dream with(out) a Feng Shui in the caster's backrow and counts the Radiant
+        /// cards left in the hand.
+        fn radiants_with(seed: &str, is_radiant: bool, judge: bool) -> usize {
+            let mut hand = vec![json!({ "def": DREAM, "radiant": is_radiant })];
+            hand.extend(OTHERS.iter().map(|def| json!(def)));
+            let mut p1 = json!({ "hand": hand });
+            if judge {
+                p1["backrow"] = json!(["meditative-040"]);
+            }
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": p1,
+                "p2": { "hand": ["core-005"] },
+            }));
+            s.play(DREAM, json!({}));
+            s.hand(P1).iter().filter(|card| card.radiant).count()
+        }
+
+        #[test]
+        fn r987_feng_shui_s_luck_adds_a_roll() {
+            crate::register_all();
+            let _open = preview_sets(&[SetName::Meditative]);
+            for radiant in [false, true] {
+                let bare: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_with(seed, radiant, false))
+                    .collect();
+                let judged: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_with(seed, radiant, true))
+                    .collect();
+                // One more roll per seed keeps the success: every bare hit is a judged hit, and at
+                // least one bare miss becomes a hit.
+                assert!(bare.iter().zip(&judged).all(|(hit, judged)| judged >= hit));
+                assert!(judged.iter().sum::<usize>() > bare.iter().sum::<usize>());
+            }
+        }
 
         mod base {
             use super::*;

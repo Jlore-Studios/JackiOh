@@ -733,6 +733,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R983: a Feng Shui judged a play; the turn banner shows 吉 or 凶, the view after it the rewarded
+  // or punished card.
+  fengShui: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
   // ME-CN, R1301: the card pulses as its words turn Chinese; the view after it draws them so. Only
   // the language changed, so no effect decorates it.
   translated: {

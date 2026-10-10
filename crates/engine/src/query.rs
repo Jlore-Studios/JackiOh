@@ -446,6 +446,23 @@ pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInsta
         .collect()
 }
 
+/// R987, Meditative #40 Feng Shui: the player's Luck — the sum of the "You have Luck X" auras
+/// acting on their side (§3.2), each read through the card's declared number `luck` where it
+/// declares one (R386's shape, as `damage::hero_armor_of` reads `armor`). 0 with no Feng Shui, so
+/// every roll draws as before (D14).
+pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
+    let mut sum = 0;
+    for card in crate::damage::acting_texts_of(state, player) {
+        for text in crate::scripts::texts_of(state, &card) {
+            let Some(printed) = text.flags.luck else {
+                continue;
+            };
+            sum += crate::params::declared_or(state, &card, "luck", printed);
+        }
+    }
+    sum
+}
+
 /// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
 /// permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
 /// (R23). The types are the trap's to match when a permanent is played.

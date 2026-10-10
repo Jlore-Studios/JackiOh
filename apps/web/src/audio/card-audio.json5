@@ -1357,6 +1357,9 @@
       play: { voice: "diva", text: "Gaze upon me, little stones." },
       death: { voice: "diva", text: "Back into the mountain." },
     },
+    "meditative-040": { // Feng Shui
+      cast: { voice: "crone", text: "Water feeds wood, wood feeds fire. Mind it." },
+    },
     "meditative-041": { // CN Smuggler
       play: { voice: "hustler", text: "Nothing to declare. Wink." },
       death: { voice: "hustler", text: "You saw nothing." },

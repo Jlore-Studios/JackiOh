@@ -44,8 +44,10 @@ use crate::wire::Keyword;
 /// R1438, R1440: the Lucky of the card flipping (the card running the script), which every one of its
 /// flips takes; 0 when no card is running it.
 fn flipper_lucky(ctx: &EffectContext<'_>) -> i32 {
+    // R987: the controller's Luck flips extra times beside the card's own Lucky.
     ctx.live_self()
         .map_or(0, |card| crate::query::lucky_on(&*ctx.sink.state, card))
+        + crate::query::luck_of(&*ctx.sink.state, ctx.controller)
 }
 
 /// TS `key: "attack" | "health"`: which stat `total_for` sums.

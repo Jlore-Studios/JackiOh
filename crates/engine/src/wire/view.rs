@@ -11,7 +11,9 @@ use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::wire::actions::RevealAt;
-use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
+use crate::wire::catalog_types::{
+    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
+};
 use crate::wire::craft::CraftRecipe;
 use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice};
 use crate::wire::string_union;
@@ -109,6 +111,11 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    /// R980: the card's element (Meditative #40 Feng Shui), where the viewer may read the card and a
+    /// Feng Shui acts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     /// B3.4, R386: the card's declared numbers as they stand now (its face's `params`, moved by
     /// Degrade, Upgrade and KY's Constant), by key, which the client fills into the face's `{key}`s.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -405,6 +412,9 @@ pub struct UnitView {
     pub brittle: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -543,6 +553,9 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,
@@ -916,6 +929,12 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub secrets: Option<Vec<SecretView>>,
+    /// R987, Meditative #40 Feng Shui: the side's Luck for best-of rolls, read through
+    /// `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
+    /// game with no Feng Shui looks as it did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub luck: Option<i32>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.

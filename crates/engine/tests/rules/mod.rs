@@ -103,6 +103,7 @@ pub mod endgame;
 pub mod enters_hand;
 pub mod exile_on_damage;
 pub mod faces;
+pub mod feng_shui;
 pub mod fixtures;
 pub mod fuse;
 pub mod fuse_registry;

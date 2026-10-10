@@ -179,6 +179,7 @@ export const GAME_EVENT_TYPES = [
   "turnCutShort",
   "marked",
   "glitched",
+  "fengShui",
   "translated",
   "damageAbsorbed",
   "jadeChanged",

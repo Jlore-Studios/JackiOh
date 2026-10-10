@@ -140,7 +140,13 @@ export default function Hero(props: HeroProps): ReactElement {
     >
       {/* Issue §1: the portrait is the hero's art, with health and armor badged on it. The badges
           are the same `hero-health`/`hero-armor` elements, moved inside the oval. */}
-      <HeroPortrait portrait={portrait} health={hero.health} armor={hero.armor} reacting={reacting}>
+      <HeroPortrait
+        portrait={portrait}
+        health={hero.health}
+        armor={hero.armor}
+        luck={seat.luck}
+        reacting={reacting}
+      >
         {emotes !== undefined && (
           <button
             type="button"

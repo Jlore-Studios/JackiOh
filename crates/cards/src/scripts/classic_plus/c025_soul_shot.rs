@@ -34,10 +34,11 @@ fn pick(ctx: &mut EffectContext<'_>) -> Vec<String> {
     if pool.is_empty() {
         return Vec::new();
     }
+    // R987: the controller's Luck rolls extra times beside the card's own Lucky.
     let lucky = match ctx.live_self() {
         None => 0,
         Some(me) => numbered_sum(&card_keywords(&*ctx.state, me), KeywordKind::Lucky).unwrap_or(0),
-    };
+    } + luck_of(&*ctx.state, ctx.controller);
     // The state and the rng are two fields of the sink: the comparator reads the one while the rolls draw
     // from the other.
     let sink = &mut ctx.sink;
@@ -185,6 +186,33 @@ mod tests {
                 s.play(SHOT, json!({}));
                 assert_eq!(destroyed_ids(&s), Vec::<String>::new());
                 assert_eq!(s.state().rng_cursor, cursor);
+            }
+
+            #[test]
+            fn r987_feng_shui_s_luck_adds_a_roll() {
+                crate::register_all();
+                let _open = preview_sets(&[SetName::Meditative]);
+                let draws = |judge: bool| -> u32 {
+                    let mut p1 = json!({
+                        "hand": [{ "def": SHOT }, FILLER],
+                        "field": [{ "def": BIG, "lane": 3 }],
+                    });
+                    if judge {
+                        p1["backrow"] = json!(["meditative-040"]);
+                    }
+                    let mut s = scenario(json!({
+                        "seed": "soul-shot-luck",
+                        "p1": p1,
+                        "p2": {
+                            "hand": [FILLER],
+                            "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }],
+                        },
+                    }));
+                    let cursor = s.state().rng_cursor;
+                    s.play(SHOT, json!({}));
+                    s.state().rng_cursor - cursor
+                };
+                assert_eq!(draws(true), draws(false) + 1);
             }
 
             #[test]

@@ -603,6 +603,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
+  // R983: a Feng Shui judgement sings auspicious or stings inauspicious.
+  fengShui: { sfx: "radiant", cues: (event) => [sfx(event.outcome === "positive" ? "radiant" : "sting")] },
   translated: silent("a translation changes only the language a card is shown in (R1301)"),
 
   // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----

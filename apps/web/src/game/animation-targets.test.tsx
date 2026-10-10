@@ -147,6 +147,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     turnCutShort: { type: "turnCutShort", player: "p1", byInstanceId: null },
     marked: { type: "marked", instanceId: enemy, mark: "steal", color: "purple", added: true },
     glitched: { type: "glitched", player: "p1", outcome: "swap" },
+    fengShui: { type: "fengShui", instanceId: unit, sourceId: "gone", player: "p1", outcome: "positive" },
     translated: { type: "translated", instanceId: enemy },
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
     jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },

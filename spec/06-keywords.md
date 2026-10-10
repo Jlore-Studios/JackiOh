@@ -29,6 +29,7 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Stack | May be played onto an occupied zone | Zone becomes a pile; only the top is active (section 3.2) | #92 |
 | Lucky X | Repeat a luck-based roll X extra times, keep the best; a coin flip is luck-based, heads its better side unless the card says otherwise ([[R1440]]); given Lucky adds ([[R1438]]) | RNG helper `lucky(x, roll, better)` with a per-effect comparator; a coin flip is `lucky_coin(x)`, exactly one draw with no Lucky ([[R1440]]); X is the instance's printed Lucky plus any given to it (`lucky_on`, [[R1438]]) | #23r, #42r, M #101, M #102 |
 | Luck-based | Has a roll Lucky improves | A non-token card printing Lucky on either face or whose text says "Flip a coin", read off the definition, so given Lucky never makes a card Luck-based; the query's `luckBased` ([[R1437]]) | M #101 |
+| Luck X | Every roll your cards make that keeps a best rolls X more times, a coin flip included ([[R1440]]) | `query::luck_of` ([[R987]]) | M #40 |
 | Can't attack | Cannot declare attacks | Attack validator flag | #86 |
 | Cannot be in Defense Position | Never switches to Defense | Position validator flag, as Spikey Pillow's ([[§4.1]]) | #65.1, C+ #19.1, C+ #48, C+ #51, M #93–#93.3 |
 | Can't be attacked | No attack may target it | [[§4.2]] step 2, forced attacks included; still targeted by effects and hit by "all" effects | C+ #51 |

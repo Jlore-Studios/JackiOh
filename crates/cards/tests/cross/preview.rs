@@ -86,6 +86,9 @@ const FROZEN_WASTES: &str = "classicplus-012-6"; // C+ #12.6's exiles: test/clas
 const BOOK_WORM: &str = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
 const CLASSIC_PLUS_C_PREVIEWED: [&str; 3] = [SNAKE, FROZEN_WASTES, BOOK_WORM];
 
+/// Meditative #40 Feng Shui's last-element lines, proved in its own script file (R280, R982).
+const MEDITATIVE_PREVIEWED: [&str; 1] = ["meditative-040"];
+
 const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY: &str = "core-011"; // 1-cost Unit
 const BIG_D_FENDER: &str = "core-001"; // 2-cost Unit
@@ -305,6 +308,7 @@ mod r280_the_core_cards_that_declare_preview {
             .chain([COMBO_INDEX].iter())
             .chain(CLASSIC_PREVIEWED.iter())
             .chain(CLASSIC_PLUS_C_PREVIEWED.iter())
+            .chain(MEDITATIVE_PREVIEWED.iter())
             .chain(NEW_SET_PREVIEWED.iter())
             .chain(AUDITS.iter())
             .map(|id| (*id).to_string())

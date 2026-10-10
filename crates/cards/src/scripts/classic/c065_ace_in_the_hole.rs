@@ -37,7 +37,8 @@ fn fire() -> TriggerDef {
 
 fn flip(on_tails: bool) -> Hook {
     hook(move |ctx| {
-        let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
+        // R987: the controller's Luck flips extra times beside the card's own Lucky.
+        let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller);
         if ctx.rng.lucky_coin(lucky) {
             return vec![remember(json_as(
                 json!({ "key": HEADS, "value": ctx.state.turn }),

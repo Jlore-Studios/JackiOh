@@ -292,6 +292,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         preview: None,
         type_: None,
         brittle: None,
+        element: None,
         params: None,
         tuning: None,
         enchantments: None,
@@ -320,6 +321,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     // MD-B15, R923: a granted tag is part of the card, so a view of it says so.
     view.tags = data.tags;
     view.brittle = data.brittle;
+    // R980: the card's element, where the viewer may read the card and a Feng Shui acts.
+    view.element = crate::subsystems::feng_shui::shown_element(state, card);
     view.params = data.params;
     view.tuning = data.tuning;
     view.enchantments = data.enchantments;
@@ -481,6 +484,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         type_: card.type_,
         tags: card.tags,
         brittle: card.brittle,
+        element: card.element,
         params: card.params,
         tuning: card.tuning,
         enchantments: card.enchantments,
@@ -609,6 +613,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         countered_on_play: view.countered_on_play,
         preview: view.preview,
         brittle: view.brittle,
+        element: view.element,
         params: view.params,
         tuning: view.tuning,
         enchantments: view.enchantments,
@@ -922,6 +927,11 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             armor: hero_armor_of(state, player),
             power: powers.first().cloned(),
             powers,
+        },
+        // R987: the side's Luck, read as the hero's armor is above — absent at 0 (D14).
+        luck: match crate::query::luck_of(state, player) {
+            0 => None,
+            luck => Some(luck),
         },
         // R169: the badge list beside the hero, public on both seats.
         modifiers: modifier_views(state, player),
@@ -1916,6 +1926,22 @@ fn redact_event(
                 return event.clone();
             }
             hide(&mut shown, &["instanceId", "defId"]);
+            rebuild(shown)
+        }
+
+        // R983: only a face-up play is judged (R982), so the played card is public once it has been
+        // announced; it is judged by where it sits now, like the cards above, and so is its judge.
+        GameEventType::FengShui => {
+            let source_hidden = nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source));
+            if !hidden(&instance) && !source_hidden {
+                return event.clone();
+            }
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId"]);
+            }
+            if source_hidden {
+                hide(&mut shown, &["sourceId"]);
+            }
             rebuild(shown)
         }
 

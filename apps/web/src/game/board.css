@@ -168,7 +168,8 @@
 
 .hero-health,
 .hero-armor,
-.hero-jade {
+.hero-jade,
+.hero-luck {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1995,7 +1996,8 @@
   }
 
   .seat .hero-health,
-  .seat .hero-armor {
+  .seat .hero-armor,
+  .seat .hero-luck {
     min-width: 32px;
     height: 32px;
     font-size: 1.2em;
@@ -2151,7 +2153,8 @@
   }
 
   .hero-health,
-  .hero-armor {
+  .hero-armor,
+  .hero-luck {
     min-width: 26px;
     height: 26px;
   }

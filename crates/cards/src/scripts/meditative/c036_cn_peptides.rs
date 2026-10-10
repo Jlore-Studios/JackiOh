@@ -19,9 +19,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-036";
 
 /// The card's Lucky X, printed plus given (R1438): the face's as Nerf and Buff have moved it, and any
-/// Lucky given to it (`effects/fruit.rs`'s `lucky_of` shape).
+/// Lucky given to it (`effects/fruit.rs`'s `lucky_of` shape), plus its controller's Luck (R987).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own))
+    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own)) + luck_of(ctx.sink.state, ctx.controller)
 }
 
 fn peptides() -> Script {

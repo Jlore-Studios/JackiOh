@@ -11947,6 +11947,38 @@
       "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
     }
   },
+  "meditative-040": {
+    "id": "meditative-040",
+    "index": "40",
+    "name": "Feng Shui",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "luck",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 35,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Every card has an element: 水, 木, 火, 金 or 土.\nAuspicious behavior will be rewarded and inauspicious behavior will be punished.\nYour last element and your opponent's last element are shown here.\nAura: You have Luck {luck}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Every card has an element: 水, 木, 火, 金 or 土.\nAuspicious behavior will be rewarded for you, and inauspicious behavior will be punished heavily for your opponent.\nYour last element and your opponent's last element are shown here.\nAura: You have Luck {luck}."
+    }
+  },
   "meditative-041": {
     "id": "meditative-041",
     "index": "41",

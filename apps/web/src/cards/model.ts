@@ -182,6 +182,8 @@ export type FaceModel = {
    * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
    */
   brittle?: number | null;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`); null otherwise. */
+  element?: string | null;
   /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
   tuning?: FaceTuning | null;
   /** B5 E39: in play, the enchantments riding the card (`CardView.enchantments`). */
@@ -232,6 +234,8 @@ export type InPlay = {
   params?: Readonly<Record<string, number>>;
   /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
   brittle?: number;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`). */
+  element?: string;
   /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
   tuning?: Tuning;
   /** B5 E39: the enchantments riding the card (`CardView.enchantments`). */
@@ -345,6 +349,7 @@ export function faceModel(source: FaceSource): FaceModel {
         : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
+    element: inPlay?.element ?? null,
     tuning,
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,

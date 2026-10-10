@@ -1044,6 +1044,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
                 no_natural_mana: flags(|f| f.no_natural_mana),
+                feng_shui: flags(|f| f.feng_shui),
+                luck: summed_number(defined.iter().map(|f| f.luck)),
             })
         }
     }
