@@ -1390,22 +1390,16 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// The unban lane's generation-6 table: removals only from TypeScript's eleven — every retained
-    /// entry is verbatim in it, and the nine it dropped are exactly the ones the sweep of record
+    /// The unban lane's generation-7 table: removals only from TypeScript's eleven — every retained
+    /// entry is verbatim in it, and the ten it dropped are exactly the ones the sweep of record
     /// cleared or the eval now sees (`SHADOW_BAN`'s own doc comment).
-    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[
-        (
-            "core-042",
-            "neverPlayed: hard: affordable in hand on 21 turns, never played",
-        ),
-        (
-            "core-076",
-            "neverPlayed: hard: affordable in hand on 15 turns, never played",
-        ),
-    ];
+    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[(
+        "core-076",
+        "neverPlayed: hard: affordable in hand on 15 turns, never played",
+    )];
 
     #[test]
-    fn v12_the_unban_lanes_table_is_the_two_entries_it_left_of_typescripts_eleven() {
+    fn v12_the_unban_lanes_table_is_the_one_entry_it_left_of_typescripts_eleven() {
         assert_eq!(SHADOW_BAN, UNBAN_LANE_SHADOW_BAN);
         for entry in SHADOW_BAN {
             assert!(

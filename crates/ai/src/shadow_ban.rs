@@ -96,16 +96,21 @@
 /// line is scored with its turn ended — a /fullsend that fails to cash its hand costs itself by
 /// the same eval that would have to pick it. Dealt at stock weight and not in `UNBANNED_PREFER`,
 /// the never-played slot costs a fraction of a draw where it lands at all.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "core-042",
-        "neverPlayed: hard: affordable in hand on 21 turns, never played",
-    ),
-    (
-        "core-076",
-        "neverPlayed: hard: affordable in hand on 15 turns, never played",
-    ),
-];
+///
+/// Generation 7 removed `core-042` (Eugenics): the Rust sweep of record cleared it at both
+/// tiers and both passes — pass 2 watched the AI cast it 34 times at easy for -2.3 mean
+/// evaluate change and 30 at hard for -0.4, so the generation-0 `neverPlayed` row measured a
+/// deal an older AI's beam never made worth casting, not a card this one mishandles. The casts
+/// it does choose are honest on the terms the eval sees: the exiled seven leave the library
+/// `library_card` counts, and the line is picked only where the cast outbids the tempo play
+/// beside it; the Radiant flags themselves are the part no weight prices, the same blind spot
+/// generation 4 and 6 named, so most deals still end with it unplayed. Not in
+/// `UNBANNED_PREFER`, dealt at stock weight (`DEALT_Q` has no row for it, so it keeps
+/// `DEALT_Q_PRIOR`): preferring it would deal a mostly-dead slot three times as often.
+pub const SHADOW_BAN: &[(&str, &str)] = &[(
+    "core-076",
+    "neverPlayed: hard: affordable in hand on 15 turns, never played",
+)];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -414,7 +419,9 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// not preferred on the generation-4 precedent: its refresh, discount and
 /// hand-exile pay only across a whole dumped hand (the generation-6 note above
 /// the ban table), so preferring it would deal the dead slot three times as
-/// often.
+/// often. `core-042` is not preferred on the same precedent (the generation-7
+/// note): the sweep watched the casts it makes land near neutral, so the extra
+/// deals would buy nothing.
 pub const UNBANNED_PREFER: &[&str] = &[
     "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
 ];
