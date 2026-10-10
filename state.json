@@ -7512,7 +7512,7 @@
       ]
     },
     "gpt": {
-      "refused_until": "2026-10-09T23:47:06Z",
+      "refused_until": "2026-10-16T23:52:51Z",
       "spent": [
         {
           "at": "2026-10-02T21:05:44Z",
@@ -7565,13 +7565,17 @@
         {
           "at": "2026-10-03T23:46:58Z",
           "minutes": 0.1
+        },
+        {
+          "at": "2026-10-10T03:32:41Z",
+          "minutes": 210.0
         }
       ],
       "usage": {
-        "observed_at": "2026-10-03T09:32:25Z",
+        "observed_at": "2026-10-10T03:32:41Z",
         "seven_day": {
-          "resets_at": "2026-10-09T23:47:06Z",
-          "utilization": 0.89
+          "resets_at": "2026-10-16T23:52:51Z",
+          "utilization": 0.95
         },
         "status": "allowed"
       }
