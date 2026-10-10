@@ -1834,8 +1834,9 @@ impl Tx<'_> {
     // playTelemetry (R1442: how each seat played a match, migration 0029)
 
     /// Writes one match's telemetry. A row whose key is already held is left as it stands, so a
-    /// repeated write changes nothing. Refused, with nothing written, when a row names a match the
-    /// store does not hold (the foreign key on `matches`).
+    /// repeated write changes nothing, and a row of a seat whose account has been deleted is left
+    /// out, so no write after the deletion puts back what it removed. Refused, with nothing written,
+    /// when a row names a match the store does not hold (the foreign key on `matches`).
     pub async fn play_telemetry_insert(&mut self, telemetry: &PlayTelemetry) -> StoreResult<()> {
         dispatch!(self, play_telemetry_insert(telemetry))
     }
@@ -1861,8 +1862,9 @@ impl Tx<'_> {
         dispatch!(self, play_telemetry_timings())
     }
 
-    /// The finished matches whose action log is still held and that have no action timing yet, by
-    /// when they ended and then by id: what `timing-backfill` folds.
+    /// The finished matches whose action log is still held, that have no action timing yet and
+    /// whose accounts are not both deleted, by when they ended and then by id: what
+    /// `timing-backfill` folds.
     pub async fn play_telemetry_unfolded(&mut self) -> StoreResult<Vec<String>> {
         dispatch!(self, play_telemetry_unfolded())
     }

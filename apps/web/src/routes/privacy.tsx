@@ -88,8 +88,9 @@ export default function PrivacyRoute(): ReactElement {
             </li>
             <li>
               A record of how you play each online match: how long each of your moves took and how much of
-              your clock was left, the emotes you send and when, and whether you conceded, offered or accepted
-              a draw, or offered a rematch. It is kept by match and seat, and names no account.
+              your clock was left, the emotes you send and when, how often your clock ran out, and whether you
+              conceded, offered or accepted a draw, or offered a rematch. It is kept by match and seat and names
+              no account itself; the match it belongs to links it to you until it is deleted.
             </li>
             <li>
               Our hosts receive your IP address, your browser type and the pages you ask for with each

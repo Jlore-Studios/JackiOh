@@ -938,18 +938,19 @@ impl MatchActor {
         {
             let mut guard = self.lock();
             let core = &mut *guard;
-            // R1442: the move as it arrived, on the state it was made in.
+            let before = std::mem::replace(&mut core.state, result.state);
+            core.next_seq = seq + 1;
+            core.acks.insert(nonce, ack.clone());
+            // R1442: the move as it arrived, on the state it was made in, once the state has moved on
+            // with the log, so nothing the telemetry does can leave the two apart.
             core.telemetry.on_action(
-                &core.state,
+                &before,
                 &row.action,
                 seq,
                 row.at,
                 self.shared.clock.remaining_for(player),
                 result.events.last().map(GameEvent::event_type),
             );
-            core.state = result.state;
-            core.next_seq = seq + 1;
-            core.acks.insert(nonce, ack.clone());
         }
 
         self.after_change().await;

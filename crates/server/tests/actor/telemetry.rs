@@ -456,4 +456,38 @@ mod r1442_play_telemetry_through_the_actor {
             BackfillOutcome::default()
         );
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1442_the_backfill_never_puts_back_the_moves_of_a_deleted_account() {
+        let app = world().await;
+        play(&app, "m-tel-5").await;
+        let live = telemetry_of(&app, "m-tel-5").await;
+        fake(&app).lock().await.tables.action_timings.clear();
+        assert!(store!(app, t => t.profiles_remove(P1).await.expect("profiles.remove")));
+
+        let outcome = backfill(&app.db).await.expect("the backfill runs");
+        let folded = telemetry_of(&app, "m-tel-5").await.action_timings;
+        let theirs: Vec<Value> = live
+            .action_timings
+            .iter()
+            .filter(|row| row.seat == PlayerId::P2)
+            .map(|row| {
+                let mut row = to_json(row);
+                let fields = row.as_object_mut().expect("a row is an object");
+                fields.remove("clockLeftMs");
+                fields.remove("rankBucket");
+                row
+            })
+            .collect();
+        assert_eq!(theirs.len(), 2, "p2's mulligan and one move of the turn");
+        assert_eq!(to_json(&folded), json!(theirs));
+        assert_eq!(
+            outcome,
+            BackfillOutcome {
+                matches: 1,
+                rows: 2,
+                skipped: 0
+            }
+        );
+    }
 }

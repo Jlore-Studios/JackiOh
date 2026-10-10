@@ -87,10 +87,10 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 use tokio::sync::{Mutex, MutexGuard};
 
-use jackioh_engine::wire::PlayerId;
 use jackioh_engine::wire::stats::{
     CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, PilotFilter, record_matches,
 };
+use jackioh_engine::wire::{PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::{
@@ -2015,8 +2015,25 @@ pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<
 // Play telemetry (SPEC §9.11, R1442; migration 0029)
 // ---------------------------------------------------------------------------
 
+/// R1442: whether the account that began `match_id` in `seat` is still held. Postgres empties a
+/// deleted account's seat on its matches; here the id stays (`remove_profile_rows`), so the profile
+/// itself is looked up.
+fn telemetry_seat_held(tables: &FakeTables, match_id: &str, seat: PlayerId) -> bool {
+    tables.matches.iter().any(|row| {
+        row.id == match_id && {
+            let profile_id = if seat == PlayerId::P1 {
+                &row.players.0
+            } else {
+                &row.players.1
+            };
+            tables.profiles.iter().any(|profile| &profile.id == profile_id)
+        }
+    })
+}
+
 /// R1442: refused, with nothing written, when a row names a match the store does not hold (the
-/// foreign key on `matches`); otherwise every row whose key is not held yet goes in.
+/// foreign key on `matches`); otherwise every row whose key is not held yet goes in, except a row of
+/// a seat whose account has been deleted, so no write after a deletion puts back what it removed.
 pub fn play_telemetry_insert(f: &mut FakeTx<'_>, telemetry: &PlayTelemetry) -> Result<(), StoreError> {
     call(f, "playTelemetry.insert")?;
     let tables = f.tables();
@@ -2034,28 +2051,31 @@ pub fn play_telemetry_insert(f: &mut FakeTx<'_>, telemetry: &PlayTelemetry) -> R
         }
     }
     for row in &telemetry.action_timings {
-        if !tables
-            .action_timings
-            .iter()
-            .any(|held| held.match_id == row.match_id && held.seq == row.seq)
+        if telemetry_seat_held(tables, &row.match_id, row.seat)
+            && !tables
+                .action_timings
+                .iter()
+                .any(|held| held.match_id == row.match_id && held.seq == row.seq)
         {
             tables.action_timings.push(row.clone());
         }
     }
     for row in &telemetry.emote_events {
-        if !tables
-            .emote_events
-            .iter()
-            .any(|held| held.match_id == row.match_id && held.ordinal == row.ordinal)
+        if telemetry_seat_held(tables, &row.match_id, row.seat)
+            && !tables
+                .emote_events
+                .iter()
+                .any(|held| held.match_id == row.match_id && held.ordinal == row.ordinal)
         {
             tables.emote_events.push(row.clone());
         }
     }
     for row in &telemetry.match_signals {
-        if !tables
-            .match_signals
-            .iter()
-            .any(|held| held.match_id == row.match_id && held.seat == row.seat)
+        if telemetry_seat_held(tables, &row.match_id, row.seat)
+            && !tables
+                .match_signals
+                .iter()
+                .any(|held| held.match_id == row.match_id && held.seat == row.seat)
         {
             tables.match_signals.push(row.clone());
         }
@@ -2121,8 +2141,8 @@ pub fn play_telemetry_timings(f: &mut FakeTx<'_>) -> Result<Vec<ActionTimingRow>
     Ok(rows)
 }
 
-/// Finished matches with a log and no timing, by when they ended (a missing end last, as
-/// Postgres sorts a null) and then by id.
+/// Finished matches with a log, no timing and an account still held, by when they ended (a missing
+/// end last, as Postgres sorts a null) and then by id.
 pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreError> {
     call(f, "playTelemetry.unfolded")?;
     let tables = f.tables();
@@ -2131,6 +2151,9 @@ pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreE
         .iter()
         .filter(|row| {
             row.status == MatchStatus::Finished
+                && PLAYER_IDS
+                    .iter()
+                    .any(|seat| telemetry_seat_held(tables, &row.id, *seat))
                 && tables
                     .match_actions
                     .iter()

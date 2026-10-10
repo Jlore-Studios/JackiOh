@@ -125,6 +125,9 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `series` | **none** | no policy | none — holds both frozen trios and the hidden picks (R259) |
 | `tutorial_progress` | own row | `profile_id = auth.uid()` | none — the server merges a device's progress into it, never removing a lesson (R320) |
 | `game_records` | **none** | no policy | none — holds both hands and both decklists of every recorded game (R376) |
+| `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
+| `emote_events` | **none** | no policy | none (R1442) |
+| `match_signals` | **none** | no policy | none (R1442) |
 
 Three Supabase-specific traps this schema avoids on purpose:
 
@@ -648,7 +651,8 @@ step that is not yet implemented says which BUILD task delivers it.
    of R1442, `action_timings`, `emote_events` and `match_signals`, which no client role may read or
    write: the retention purge gains a third cutoff that deletes a match's telemetry once
    `PLAY_TELEMETRY_RETENTION_DAYS` days have passed since it ended, and deleting an account deletes
-   the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server a deploy replaces.
+   the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server
+   a deploy replaces.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

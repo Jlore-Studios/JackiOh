@@ -187,12 +187,14 @@ begin
   end if;
 
   -- A match that ended 366 days ago, one that ended 364 days ago, and a live one, each with both seats'
-  -- rows: two timings, one emote and one signal a seat.
+  -- rows: two timings, one emote and one signal a seat. The live match carries an old ended_at too, so
+  -- only its status keeps its rows.
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               catalog_version, ceiling_at, started_at, ended_at)
   values (old_m, 'over', 's-1442-old', p1, p2, '[]', '[]', 'core-1', now(), now(), now() - interval '366 days'),
          (new_m, 'over', 's-1442-new', p1, p2, '[]', '[]', 'core-1', now(), now(), now() - interval '364 days'),
-         (live_m, 'live', 's-1442-live', p1, p2, '[]', '[]', 'core-1', now() + interval '1 hour', now(), null);
+         (live_m, 'live', 's-1442-live', p1, p2, '[]', '[]', 'core-1', now() + interval '1 hour', now(),
+          now() - interval '366 days');
   insert into public.action_timings (match_id, seq, seat, action_kind, legal_count, turn, think_ms,
                                      first_in_turn, pilot)
   select m_id, s.seq, s.seat, 'endTurn', 1, 1, 500, s.seq <= 2, 'human'

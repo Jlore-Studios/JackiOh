@@ -3896,8 +3896,9 @@ pub async fn game_records_list(
 // ---------------------------------------------------------------------------
 
 /// R1442: one `jsonb_to_recordset` insert per table that has rows, each skipping a key already
-/// held, in the one transaction. A row naming a match the store does not hold fails the insert on
-/// the foreign key, and the transaction with it.
+/// held and a seat whose account is deleted (0012 empties its profile column on the match, and
+/// 0029's trigger has already deleted its rows), in the one transaction. A row naming a match the
+/// store does not hold fails the insert on the foreign key, and the transaction with it.
 pub async fn play_telemetry_insert(t: &mut PgTx<'_>, telemetry: &PlayTelemetry) -> Result<(), StoreError> {
     run_as(t, None).await?;
     if !telemetry.action_timings.is_empty() {
@@ -3930,6 +3931,10 @@ pub async fn play_telemetry_insert(t: &mut PgTx<'_>, telemetry: &PlayTelemetry) 
                  as r(match_id text, seq bigint, seat text, action_kind text, legal_count int, turn int,
                       think_ms bigint, clock_left_ms bigint, first_in_turn boolean, rank_bucket text,
                       pilot text)
+             where not exists (
+               select 1 from public.matches m
+                where m.id = r.match_id::uuid
+                  and (case r.seat when 'p1' then m.p1_profile_id else m.p2_profile_id end) is null)
              on conflict do nothing",
         )
         .bind(json(&rows)?)
@@ -3964,6 +3969,10 @@ pub async fn play_telemetry_insert(t: &mut PgTx<'_>, telemetry: &PlayTelemetry) 
                from jsonb_to_recordset($1::jsonb)
                  as r(match_id text, ordinal int, seat text, emote_id text, turn int, trigger_event text,
                       ms_since_trigger bigint, reply_to_opponent_ms bigint, pilot text)
+             where not exists (
+               select 1 from public.matches m
+                where m.id = r.match_id::uuid
+                  and (case r.seat when 'p1' then m.p1_profile_id else m.p2_profile_id end) is null)
              on conflict do nothing",
         )
         .bind(json(&rows)?)
@@ -4000,6 +4009,10 @@ pub async fn play_telemetry_insert(t: &mut PgTx<'_>, telemetry: &PlayTelemetry) 
                  as r(match_id text, seat text, conceded_turn int, concede_eval_deficit double precision,
                       draw_offers int, draw_accepted boolean, rematch_offered boolean,
                       rematch_accepted boolean, timeouts int, pilot text)
+             where not exists (
+               select 1 from public.matches m
+                where m.id = r.match_id::uuid
+                  and (case r.seat when 'p1' then m.p1_profile_id else m.p2_profile_id end) is null)
              on conflict do nothing",
         )
         .bind(json(&rows)?)
@@ -4017,6 +4030,10 @@ pub async fn play_telemetry_note_rematch(
     seat: PlayerId,
     made: bool,
 ) -> Result<(), StoreError> {
+    // A non-uuid id names no match, as the fake finds none.
+    if !is_uuid(match_id) {
+        return Ok(());
+    }
     run_as(t, None).await?;
     sqlx::query(
         "update public.match_signals
@@ -4060,6 +4077,9 @@ fn action_timing_of(row: &PgRow) -> Result<ActionTimingRow, StoreError> {
 
 /// Three selects, one per table, in the orders the port names.
 pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(PlayTelemetry::default());
+    }
     run_as(t, None).await?;
     let timings = sqlx::query(concat!(
         "select ",
@@ -4142,12 +4162,13 @@ pub async fn play_telemetry_timings(t: &mut PgTx<'_>) -> Result<Vec<ActionTiming
     rows.iter().map(action_timing_of).collect()
 }
 
-/// The finished matches (`over`) with a log and no timing, oldest ending first.
+/// The finished matches (`over`) with a log, no timing and an account still held, oldest ending first.
 pub async fn play_telemetry_unfolded(t: &mut PgTx<'_>) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select m.id from public.matches m
           where m.status = 'over'
+            and (m.p1_profile_id is not null or m.p2_profile_id is not null)
             and exists (select 1 from public.match_actions a where a.match_id = m.id)
             and not exists (select 1 from public.action_timings s where s.match_id = m.id)
           order by m.ended_at, m.id",

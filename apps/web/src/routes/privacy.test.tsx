@@ -75,10 +75,18 @@ describe("the privacy policy", () => {
     const section = (name: RegExp): string =>
       within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
     const collected = section(/what we collect/i);
-    for (const fact of [/how long each of your moves took/, /clock/, /emotes/, /conceded/, /draw/, /rematch/]) {
+    for (const fact of [
+      /how long each of your moves took/,
+      /clock was left/,
+      /emotes/,
+      /clock ran out/,
+      /conceded/,
+      /draw/,
+      /rematch/,
+    ]) {
       expect(collected).toMatch(fact);
     }
-    expect(collected).toMatch(/kept by match and seat, and names no account/);
+    expect(collected).toMatch(/kept by match and seat and names\s+no account itself/);
     expect(section(/why we collect it/i)).toMatch(/computer opponents play at a human pace/);
     expect(section(/what we don.t do/i)).toMatch(/no third-party analytics/);
     expect(section(/how long we keep it/i)).toContain(

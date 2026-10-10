@@ -4392,6 +4392,38 @@ mod r1442_play_telemetry {
         );
     }
 
+    async fn no_write_after_an_account_is_deleted_puts_its_seats_rows_back(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let also_gone = active_profile(harness, None).await;
+        let now = harness.now();
+        // Both finished with a log and no telemetry yet, as a match from before 0029 is, or one whose
+        // telemetry write failed.
+        let kept = a_match(harness, &gone.id, &other.id, Some(now - DAY)).await;
+        let orphaned = a_match(harness, &gone.id, &also_gone.id, Some(now - DAY)).await;
+        for match_id in [&kept, &orphaned] {
+            q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", now)]));
+        }
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert!(q!(harness, t => t.profiles_remove(&also_gone.id)));
+
+        // A match with no account left is not folded at all; the other is.
+        assert_eq!(q!(harness, t => t.play_telemetry_unfolded()), vec![kept.clone()]);
+
+        // The backfill's write: the deleted account's seat is left out, the opponent's goes in.
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&kept, 1_500)));
+        assert_eq!(
+            seats_of(harness, &kept).await,
+            json!({ "timings": ["p2"], "emotes": ["p2"], "signals": ["p2"] })
+        );
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&orphaned, 1_500)));
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&orphaned))),
+            j(&PlayTelemetry::default())
+        );
+        assert!(q!(harness, t => t.play_telemetry_unfolded()).is_empty());
+    }
+
     async fn the_purge_deletes_telemetry_past_its_cutoff(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4459,6 +4491,7 @@ mod r1442_play_telemetry {
         a_rematch_note_marks_only_its_seat,
         rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands,
         deleting_an_account_deletes_its_seats_rows_only,
+        no_write_after_an_account_is_deleted_puts_its_seats_rows_back,
         the_purge_deletes_telemetry_past_its_cutoff,
         unfolded_lists_finished_matches_with_a_log_and_no_timings,
     );

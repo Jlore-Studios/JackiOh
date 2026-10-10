@@ -10,10 +10,12 @@
 //! `actor::telemetry::replay`, the fold a rebuilt actor makes, and its rows are written as the live
 //! path writes them, one transaction per match. The log's `at` stamps stand in for the pushes, so a
 //! think time runs from one logged action to the next, and the rows carry no clock and no rank
-//! bucket, which the log does not hold. Nothing else is backfilled: emotes and a match's signals
+//! bucket, which the log does not hold. The store leaves out the moves of an account deleted since
+//! (R1442: a deletion is never undone), and lists no match with neither account left. Nothing else is backfilled: emotes and a match's signals
 //! never reached the log. A match today's engine no longer folds whole (a logged action it refuses,
 //! or a deck it no longer builds) is skipped, since its rows would describe another game; a second
-//! run folds it again and skips it again.
+//! run folds it again and skips it again. So is a match in which no person made a move (every action
+//! the clock's): it leaves no row, and the next run folds it again.
 
 use std::panic::AssertUnwindSafe;
 
@@ -32,9 +34,9 @@ const USAGE: &str = "Usage: jackioh-server timing-backfill
 /// What one run folded.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BackfillOutcome {
-    /// Matches whose timings were written.
+    /// Matches folded and written (one no person made a move in writes no row).
     pub matches: usize,
-    /// The action timings written.
+    /// The action timings written (none for the seat of an account since deleted).
     pub rows: usize,
     /// Matches today's engine no longer folds whole.
     pub skipped: usize,
@@ -75,9 +77,11 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
             ..PlayTelemetry::default()
         };
         tx.play_telemetry_insert(&telemetry).await?;
+        // What the store kept: it leaves out the seat of an account since deleted.
+        let written = tx.play_telemetry_of(&match_id).await?.action_timings.len();
         tx.commit().await?;
         outcome.matches += 1;
-        outcome.rows += telemetry.action_timings.len();
+        outcome.rows += written;
     }
     Ok(outcome)
 }
