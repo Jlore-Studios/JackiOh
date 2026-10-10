@@ -6021,16 +6021,19 @@
         {
           "at": "2026-10-10T10:13:23Z",
           "minutes": 21.0
+        },
+        {
+          "at": "2026-10-10T14:57:51Z",
+          "minutes": 7.4
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T14:30:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-10T19:30:00Z",
+          "utilization": 0.41
         },
-        "observed_at": "2026-10-10T10:13:23Z",
-        "rejected_resets_at": "2026-10-10T14:30:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-10T14:57:51Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
