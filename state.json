@@ -5261,14 +5261,18 @@
         {
           "at": "2026-10-10T00:33:35Z",
           "minutes": 23.5
+        },
+        {
+          "at": "2026-10-10T04:26:01Z",
+          "minutes": 16.7
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T03:54:19Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-10T08:54:19Z",
+          "utilization": 0.06
         },
-        "observed_at": "2026-10-10T00:33:35Z",
+        "observed_at": "2026-10-10T04:26:01Z",
         "seven_day": {
           "resets_at": "2026-10-16T17:47:52Z",
           "utilization": 0.34
