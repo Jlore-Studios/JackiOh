@@ -4380,6 +4380,7 @@
     "623": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T04:15:31Z",
         "difficulty": "medium",
