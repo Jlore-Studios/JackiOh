@@ -929,6 +929,16 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
+    // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
+    if crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm {
+        let (tags, not_tags) = match decl.filter.as_ref() {
+            Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+            None => (None, None),
+        };
+        if crate::restrictions::tribal_hate_cannot_reach(state, candidate, tags, not_tags) {
+            return false;
+        }
+    }
     decl.kind != PromptKind::Target
         || crate::targeting::can_pay_to_target(state, player, candidate, Some(card.id.as_str()))
 }
@@ -1144,6 +1154,15 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
+        // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
+        && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
+            && {
+                let (tags, not_tags) = match decl.filter.as_ref() {
+                    Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+                    None => (None, None),
+                };
+                crate::restrictions::tribal_hate_cannot_reach(state, &probe, tags, not_tags)
+            })
 }
 
 // ---------------------------------------------------------------------------

@@ -26,11 +26,12 @@ use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, discard_hand};
 use crate::effects::steal::{StealOtherwise, StealTarget, steal};
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, cards_in_scope, instance_of, player_of, stands_since_script_began,
+    BoardScope, PlayerSpec, TargetSpec, cards_in_scope_aimed, instance_of, player_of,
+    stands_since_script_began,
 };
 use crate::marks::{mark_delayed, sync_marks};
-use crate::modifiers::{add_start_of_turn_effect, schedule_delayed};
-use crate::prompts::{SELF_KEY, resume_self};
+use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delayed};
+use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
@@ -508,7 +509,8 @@ pub fn refresh_scope_marks(sink: &mut EngineSink<'_>) {
                     ..HookOptions::default()
                 },
             );
-            cards_in_scope(&ctx, &scope)
+            // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+            cards_in_scope_aimed(&ctx, &scope, crate::wire::TargetAim::Harm)
                 .iter()
                 .map(|card| card.id.clone())
                 .collect()
@@ -594,5 +596,38 @@ pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
         resume.instance_id = None;
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_start_of_turn_effect(ctx, player, resume, &args.label);
+    })
+}
+
+/// `watchLaneThisTurn`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchLaneArgs {
+    pub lane: i32,
+    pub step: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<IndexMap<String, Value>>,
+}
+
+/// MD-B22, R946 (Meditative #98, Radiant face): "after you put a card into that lane, …" — a
+/// `thisTurn` watcher on the controller that re-enters the card's `step` (under `hook`,
+/// `RESUME_HOOK` unless the card names another) after one of their cards enters one of their zones
+/// in `lane`, by a resolved play or a summon. It is the player's effect now, not the card's: it
+/// resolves with no `self` whatever became of the card (R127), under the face it was made with,
+/// carrying `data`. `label` is its badge (R169), in the card's own words.
+pub fn watch_lane_this_turn(args: WatchLaneArgs) -> Effect {
+    Effect::new("watchLaneThisTurn", move |ctx| {
+        let mut resume = delayed_resume(
+            ctx,
+            &args.step,
+            args.data.clone().unwrap_or_default(),
+            args.hook.as_deref().unwrap_or(RESUME_HOOK),
+        );
+        resume.instance_id = None;
+        let player = ctx.controller;
+        add_lane_watch(ctx, player, args.lane, resume, &args.label);
     })
 }

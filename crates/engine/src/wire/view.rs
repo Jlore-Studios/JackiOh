@@ -45,6 +45,11 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
     /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
@@ -461,6 +466,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub condition_targets: Option<Vec<String>>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -506,6 +516,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -737,6 +752,11 @@ pub struct LibraryEntryView {
     pub def_id: String,
     pub radiant: bool,
     pub count: i32,
+    /// MD-B6, R943: the entry's cards are Created (`CardInstance.created`, read off the live card
+    /// the owner's `known_as` record names). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
 }
 
 /// R310–R312: the viewer's own library as a list without order. `cards` holds what the viewer was
@@ -1013,6 +1033,11 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
 }
 
 /// R265, R266: the concurrent mulligan as one seat may see it.

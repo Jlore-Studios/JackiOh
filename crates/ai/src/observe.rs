@@ -258,6 +258,8 @@ fn to_placeholder(card: &mut CardInstance) {
     card.granted_tags = None;
     // ME-ALTPLAY, R1046: a placeholder names no face-down form.
     card.set_as = None;
+    // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
+    card.created = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -305,6 +307,8 @@ fn to_placeholder_json(card: &mut Value) {
         "grantedTags",
         // ME-ALTPLAY, R1046: a placeholder names no face-down form.
         "setAs",
+        // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
+        "created",
     ] {
         object.remove(key);
     }

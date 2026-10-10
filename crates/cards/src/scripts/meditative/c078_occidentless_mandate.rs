@@ -34,7 +34,8 @@ fn mandate(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             let scope = non_cn_permanents();
             // R1142: counted before the exile, by the controller as it stands now.
-            let yours = cards_in_scope(&*ctx, &scope)
+            // MD-B1, R940: the exile is harmful — an immune card is in neither the count nor the exile.
+            let yours = cards_in_scope_aimed(&*ctx, &scope, TargetAim::Harm)
                 .iter()
                 .filter(|card| card.controller == ctx.controller)
                 .count() as i32;

@@ -14,13 +14,14 @@ use crate::announce::{innermost_live_announce, is_announce_live, mark_countered}
 use crate::draw::add_to_hand;
 use crate::echo::exile_on_landing;
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, adjacent_to, cards_in_scope, instance_of, player_of,
+    BoardScope, PlayerSpec, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of, player_of,
 };
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
 use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
+use crate::wire::TargetAim;
 use crate::wire::{CounteredTo, GameEvent, Zone, ZoneName};
 use crate::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone, report_graveyard_landing};
 
@@ -116,7 +117,10 @@ pub fn exile(args: ExileArgs) -> Effect {
 /// the running card standing; without it the Void would exile itself mid-Cry.
 pub fn exile_all(args: BoardScope) -> Effect {
     Effect::new("exileAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let cards: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -139,7 +143,9 @@ pub struct ExileAdjacentToArgs {
 /// unit has units. The card pairs this with a plain `exile` on the target itself.
 pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     Effect::new("exileAdjacentTo", move |ctx| {
-        let cards: Vec<CardInstance> = adjacent_to(ctx, &args.target, &args.scope).into_iter().collect();
+        let cards: Vec<CardInstance> = adjacent_to_aimed(ctx, &args.target, &args.scope, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -286,7 +292,10 @@ pub fn bounce(args: BounceArgs) -> Effect {
 /// unit tokens because they cease to exist rather than reaching a hand (R11).
 pub fn bounce_all(args: BoardScope) -> Effect {
     Effect::new("bounceAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let cards: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             bounce_card(ctx, card);
         }

@@ -10,7 +10,7 @@ use crate::script::CostArgs;
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
-use crate::wire::{CardCost, GameEvent, PlayerId, Zone};
+use crate::wire::{CardCost, GameEvent, PLAYER_IDS, PlayerId, Row, Zone};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -35,10 +35,45 @@ pub const NEXT_REFRESH_MODIFIER_ID: &str = "nextTurnMana";
 /// "adds to current mana and can exceed 4", exactly as #6 Mana Well's gain does, and #21 Hinder
 /// "subtracts from the opponent's next refresh". Current mana never goes below 0 (§2.3).
 pub fn refresh_mana(side: &mut PlayerState) {
+    refresh_mana_with(side, true);
+}
+
+/// `refresh_mana` with the natural generation named: under MD-B2's aura (`natural: false`) the
+/// refresh sets max mana as usual but current mana to the next-turn rider only. A lost refresh
+/// still gives 0 first (MB04's `refresh_is_lost` reads here once it lands).
+pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
     let max = max_mana_for(side);
     side.mana.max = max;
-    side.mana.current = (max + side.mana.next_turn_mod).max(0);
+    side.mana.current = refreshed_mana(side, max, natural);
     side.mana.next_turn_mod = 0;
+}
+
+/// What a refresh sets current mana to: max plus the rider, or the rider alone without natural
+/// generation (MD-B2, R941). Never below 0.
+pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
+    if natural {
+        (max + side.mana.next_turn_mod).max(0)
+    } else {
+        side.mana.next_turn_mod.max(0)
+    }
+}
+
+/// MD-B2, R941: whether any player generates mana naturally now — false while a card holding
+/// `no_natural_mana` acts on the field (face-up, top of its pile), on either side and in either row.
+pub fn natural_mana_on(state: &GameState) -> bool {
+    for player in PLAYER_IDS {
+        for row in [Row::Units, Row::Backrow] {
+            for slot in crate::zones::slots_of(player, row) {
+                if let Some(card) = crate::zones::card_at(state, slot)
+                    && !crate::preview::is_face_down(state, card)
+                    && crate::scripts::flags_of(state, card).no_natural_mana == Some(true)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    true
 }
 
 /// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh

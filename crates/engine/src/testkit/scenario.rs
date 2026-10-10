@@ -338,6 +338,10 @@ pub struct PileEntry {
     pub cost: CostSetup,
     #[serde(default)]
     pub radiant: Option<bool>,
+    /// MD-B6, R943: opt a setup card into Created (`new_instance` mints Created; the setup
+    /// defaults to dealt, so only `created: true` keeps the mark).
+    #[serde(default)]
+    pub created: Option<bool>,
 }
 
 /// TS `PileSetup = string | (DefRef & CostSetup & { radiant? })`.
@@ -384,6 +388,9 @@ pub struct FieldEntry {
     /// §10.4 layer 1 / R41: a token summoned X/X.
     #[serde(default)]
     pub stats_override: Option<AttackHealth>,
+    /// MD-B6, R943: opt a setup card into Created (as on `PileEntry`).
+    #[serde(default)]
+    pub created: Option<bool>,
 }
 
 /// TS `FieldSetup = string | FieldEntry`.
@@ -852,6 +859,8 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     if entry.entry.radiant == Some(true) {
         card.radiant = true;
     }
+    // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+    card.created = entry.entry.created.filter(|created| *created);
     if let Some(stats) = entry.entry.stats_override {
         card.stats_override = Some(stats);
     }
@@ -910,9 +919,13 @@ fn place_pile(
     for (at, entry) in refs.iter().enumerate() {
         let at_ = format!("{label}[{at}]");
         let def_id = setup_def_id(sink.state, &ref_of(pile_ref(entry), &at_)?, &at_)?;
-        let (radiant, cost) = match entry {
-            PileSetup::Name(_) => (false, None),
-            PileSetup::Entry(fields) => (fields.radiant == Some(true), Some(&fields.cost)),
+        let (radiant, cost, created) = match entry {
+            PileSetup::Name(_) => (false, None, None),
+            PileSetup::Entry(fields) => (
+                fields.radiant == Some(true),
+                Some(&fields.cost),
+                fields.created.filter(|created| *created),
+            ),
         };
 
         if zone == OffFieldZone::Hand {
@@ -922,6 +935,8 @@ fn place_pile(
                 if radiant {
                     card.radiant = true;
                 }
+                // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+                card.created = created;
                 apply_cost_setup(card, cost);
             }
             continue;
@@ -931,6 +946,8 @@ fn place_pile(
         if radiant {
             card.radiant = true;
         }
+        // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+        card.created = created;
         apply_cost_setup(&mut card, cost);
         let id = card.id.clone();
         // `position: "bottom"` keeps list order, so `library[0]` is the next card drawn (draw.rs).

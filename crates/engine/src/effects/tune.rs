@@ -651,17 +651,28 @@ pub struct ReachedCard {
 /// applied in the scope's order (R242), never in the order they were drawn. A pick of at least as many
 /// cards as there are takes them all and draws nothing (R129). (TS took `{ target?, instanceId?,
 /// scope?, random? }`; `times` is not read.)
-pub fn reached_cards(ctx: &mut EffectContext<'_>, args: &TuneArgs) -> Vec<ReachedCard> {
+pub fn reached_cards(
+    ctx: &mut EffectContext<'_>,
+    args: &TuneArgs,
+    direction: TuneDirection,
+) -> Vec<ReachedCard> {
     let Some(scope) = &args.scope else {
         return named_card(ctx, args.target.as_ref(), args.instance_id.as_deref())
             .map(|card| vec![ReachedCard { card, matches: true }])
             .unwrap_or_default();
+    };
+    // MD-B1, R940: a Degrade is harmful — an immune card in a tribal scope is passed by. An
+    // Upgrade (Buff) is helpful and still reaches it.
+    let aim = match direction {
+        TuneDirection::Degrade => Some(crate::wire::TargetAim::Harm),
+        TuneDirection::Upgrade => None,
     };
     let pool: Vec<ReachedCard> = cards_in_card_scope(
         ctx,
         scope,
         Some(&CardScopeOptions {
             whole_hidden_piles: Some(true),
+            aim,
         }),
     )
     .into_iter()
@@ -693,7 +704,7 @@ fn tune_effect(kind: &'static str, direction: TuneDirection, args: TuneArgs) -> 
         if times == 0 {
             return;
         }
-        for reached in reached_cards(ctx, &args) {
+        for reached in reached_cards(ctx, &args, direction) {
             for _ in 0..times {
                 tune_once(ctx, &reached.card, direction, reached.matches);
             }

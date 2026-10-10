@@ -279,6 +279,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         def_id,
         radiant,
         chinese: None,
+        created: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -326,6 +327,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.quest = quest;
     // ME-CN, R1301: public as the card is, so every view built for a card the viewer may read carries it.
     view.chinese = card.chinese;
+    // MD-B6, R943: Created is public the same way.
+    view.created = card.created;
     view
 }
 
@@ -508,6 +511,8 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         },
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
+        // MD-B6, R943: Created is public the same way.
+        created: card.created,
     })
 }
 
@@ -594,6 +599,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         def_id: view.def_id,
         radiant: view.radiant,
         chinese: view.chinese,
+        created: view.created,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -785,6 +791,8 @@ fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> St
                 if *radiant { "a Radiant " } else { "a " }
             )
         }
+        // MD-B22, R946: the watcher's own words.
+        ModifierKind::LaneWatch { label, .. } => label.clone(),
     }
 }
 
@@ -990,6 +998,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
         radiant: None,
         chinese: None,
         recipe: None,
+        created: None,
     }
 }
 
@@ -1031,6 +1040,10 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
                 // ME-CN, R1301: the chooser reads this card, so its language travels with it.
                 if card.chinese == Some(true) {
                     base.chinese = Some(true);
+                }
+                // MD-B6, R943: Created travels the same way.
+                if card.created == Some(true) {
+                    base.created = Some(true);
                 }
             }
             base

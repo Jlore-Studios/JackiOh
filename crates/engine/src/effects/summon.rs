@@ -19,7 +19,9 @@ use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
 use crate::damage::DamageTarget;
 use crate::effects::buff::grant_random_keywords;
-use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, resolve_target};
+use crate::effects::targets::{
+    PlayerSpec, ScopeSide, TargetSpec, instance_of, player_of, resolve_target, sides_of,
+};
 use crate::faces::card_type_of;
 use crate::mana::{effective_cost, is_x_cost};
 use crate::prelude::json_as;
@@ -32,8 +34,8 @@ use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
+    PlaceOnFieldOptions, ZoneSlot, first_entry_zone, fresh_face_down_id, is_empty, is_reserved,
+    is_unit_token, lands_face_down, open_zones, place_on_field, remove_from_any_zone, row_size,
 };
 
 /// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
@@ -846,27 +848,46 @@ pub struct FillBoardArgs {
     /// §7: the Bread Token's "Armor X", carried beside `stats_override` (#22 radiant's copies).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub armor_override: Option<i32>,
+    /// MD-B3, R942: the row to fill. Default units; backrow fills the backrow (Meditative #26).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub row: Option<Row>,
+    /// MD-B3, R942: the sides to fill. Default the one `player`; `any` fills both sides, the
+    /// active player's side first (R68), each zone for the player whose zone it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side: Option<ScopeSide>,
+    /// MD-B3, R942: the side whose summons are Radiant (Meditative #26's Radiant face).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant_for: Option<PlayerSpec>,
 }
 
 /// §7 and R64: "fill your board" summons the named token into every empty, unlocked unit zone,
-/// left to right.
+/// left to right. With `row: backrow` and `side: any` it fills each side's empty, unlocked backrow
+/// zones for that side's player (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
     Effect::new("fillBoard", move |ctx| {
-        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let probe = face_probe(&args.def_id, player, args.radiant == Some(true));
-        if row_of(card_type_of(ctx.state, &probe)) != Some(Row::Units) {
-            return;
-        }
-
-        for slot in fill_board_zones(ctx.state, player) {
-            let at = SummonPlacement {
-                lane: Some(slot.lane),
-                radiant: args.radiant,
-                stats_override: args.stats_override,
-                armor_override: args.armor_override,
-                ..SummonPlacement::default()
-            };
-            summon_fresh(ctx, &args.def_id, player, &at);
+        let row = args.row.unwrap_or(Row::Units);
+        let players: Vec<PlayerId> = match args.side {
+            Some(side) => sides_of(ctx, Some(side)),
+            None => vec![player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide))],
+        };
+        for player in players {
+            let probe = face_probe(&args.def_id, player, args.radiant == Some(true));
+            // Skip a player unless the probe's row equals `row`.
+            if row_of(card_type_of(ctx.state, &probe)) != Some(row) {
+                continue;
+            }
+            let radiant = args.radiant == Some(true)
+                || args.radiant_for.map(|spec| player_of(ctx, spec)) == Some(player);
+            for slot in open_zones(ctx.state, player, row) {
+                let at = SummonPlacement {
+                    lane: Some(slot.lane),
+                    radiant: if radiant { Some(true) } else { None },
+                    stats_override: args.stats_override,
+                    armor_override: args.armor_override,
+                    ..SummonPlacement::default()
+                };
+                summon_fresh(ctx, &args.def_id, player, &at);
+            }
         }
     })
 }

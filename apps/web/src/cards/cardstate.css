@@ -93,6 +93,21 @@
   color: var(--cf-state-tuned);
 }
 
+/* MD-B6, R943: the Created mark, a pill like a quest's. */
+.cf .cf-state[data-state="created"] {
+  width: auto;
+  min-width: var(--cf-state-size);
+  padding: 0 0.3em;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) var(--radiant, #7fb6dd),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+.cf .cf-state[data-state="created"] .cf-state-text {
+  font-size: calc(var(--cf-state-size) * 0.48);
+}
+
 /* R404: a quest's progress, "1/2", a gold-ringed pill so a count like "12/12" fits. */
 .cf .cf-state[data-state="quest"] {
   width: auto;

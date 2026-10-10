@@ -1043,6 +1043,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 stack_base_buffs: numbers(|f| f.stack_base_buffs),
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
+                no_natural_mana: flags(|f| f.no_natural_mana),
             })
         }
     }

@@ -319,6 +319,22 @@ pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
     crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Lucky).unwrap_or(0)
 }
 
+/// MD-B6, R943: whether the card is Created — minted after the decks were built.
+pub fn is_created(card: &CardInstance) -> bool {
+    card.created == Some(true)
+}
+
+/// MD-B6, R943: the ids of the Created cards in the player's library, in order (index 0 is the
+/// top, the next card drawn).
+pub fn created_in_library(state: &GameState, player: PlayerId) -> Vec<String> {
+    state.players[player]
+        .library
+        .iter()
+        .filter(|card| is_created(card))
+        .map(|card| card.id.clone())
+        .collect()
+}
+
 /// B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
 /// countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
 pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) -> i32 {

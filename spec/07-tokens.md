@@ -91,7 +91,7 @@ Token rules:
 - Bread Token has no name in the source ("a X/X Token"). **Ruling:** name it Bread Token, no keywords, cost 0, and it counts as a Token for every filter.
 - Spell tokens (Notebook, CN-Virus, Combo-Fodder, The Coin) live in hand and library like real cards and go to the graveyard after resolving; they are still excluded from random pools and from Discover unless named. **Ruling:** Reminisce can Discover a spell token from the graveyard because it discovers "a card in your GY", not from a pool.
 - CN-Virus damage is a normal damage instance to your own hero (Armor and Anti-oneshot Armor apply). Its "shuffle copies" makes an opponent's deck grow without bound; the cast-on-draw chain cap ([[R58]]) keeps each draw finite and the turn cap keeps the game finite.
-- "Fill your board" summons into every empty, unlocked unit zone left to right ([[R64]]).
+- "Fill your board" summons into every empty, unlocked unit zone left to right ([[R64]]); with `row: backrow, side: any` it fills each side's empty, unlocked backrow zones for that side's player, the active side first ([[R942]]).
 - Zao Gao's Rush Tokens each roll 2 distinct keywords from the random-keyword pool (section 6.1), and its Radiant face's Radiant Rush Tokens each roll 3 ([[R354]]).
 - The Ghoul Token is its own card, not #74's ([[R353]]): named, with a T- index, because the designer listed it as a new card rather than as Adaptive UI's token. It costs 0 like the other X/X token, and prints no Radiant form, so [[R349]]'s fallback is its Radiant face.
 - The Coin's mana is [[§2.3]]'s temporary mana: it can exceed the cap and is gone at the next refresh. Playing it is a play like any other card's ([[R245]]).

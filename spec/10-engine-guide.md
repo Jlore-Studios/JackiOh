@@ -44,7 +44,7 @@ type PlayerState = {
   units: (Pile | null)[5]; backrow: (CardInstance | null)[5];  // Pile = CardInstance[] top-first
   resolving: CardInstance[];    // cards mid-resolution: a Spell between its play and its GY (10.5 step 4)
   locks: { units: boolean[5]; backrow: boolean[5] };
-  mods: PlayerModifier[];       // next-spell discount, this-turn discounts, Curvature, Twinspell echo, /fullsend's Combo draw; since v0.2.0 also price rules (`costRule`, R455), `enchantNextSpell` (C+ #14), `replacePlays` (C #23, R449), `turnEnds` (R456), `startOfTurnEffect` (a rest-of-game effect, R458) and `healToDamage` (C+ #22)
+  mods: PlayerModifier[];       // next-spell discount, this-turn discounts, Curvature, Twinspell echo, /fullsend's Combo draw; since v0.2.0 also price rules (`costRule`, R455), `enchantNextSpell` (C+ #14), `replacePlays` (C #23, R449), `turnEnds` (R456), `startOfTurnEffect` (a rest-of-game effect, R458), `healToDamage` (C+ #22) and `laneWatch` (M #98's turn watcher, R946)
   turnLog: { playedIds: string[]; cardsPlayed: number; unspentAtEnd?: number; costsPaid?: number[]; playedByType?: Partial<Record<CardType, number>> };  // costsPaid: what each play paid, beside playedIds (R213); plays by type counted on both players' turns (C+ #37, R451)
   draws?: { turn: number; count: number };  // this player's draws on the running turn, whoever's it is (C #9, R457)
   jade?: number;  // this player's Jade Counter, absent until it first rises (R961, R962)
@@ -76,6 +76,7 @@ type CardInstance = {
   brittle?: { count: number; since: number; printed?: true };  // Brittle X (R385, R441, R638); kept in every zone but ticking on the field only, never copied
   berserk?: true;               // C+ #19.5's status, lost on leaving the field (R412)
   chinese?: true;               // shown in Chinese, kept everywhere (R1300)
+  created?: true;               // minted after the decks were built, kept everywhere (R943)
   grantedTags?: Tag[];          // granted by an effect (R923)
   timesPlayed?: number;         // plays of this instance, the current one included (#31, R429); kept in every zone
   enchantments?: ({ kind: 'returnAfterResolve'; floor: number } | { kind: 'castOnDraw' } | { kind: 'targetEnemies' })[];  // riders kept in every zone (C+ #14, C+ #40, R443)
@@ -165,6 +166,7 @@ Patch v0.2.0's cards add to the view, each under the same rules of who may read 
 - **Each seat's Jade Counter** shows beside its hero on both seats once it has risen above 0, and the view carries no key before that ([[R961]]).
 - **A Chinese card** carries `chinese: true` on every view of it the viewer may read — a hand card, a unit, a backrow card, a pile's card and a prompt's option — and on no view they may not read ([[R1301]]). `translated` reports a translation only where both players read the card; a change in a hand, a deck or on a face-down trap is silent ([[R440]]).
 - **A card with a granted tag** carries `tags` on every view of it the viewer may read, where they differ from its definition's — and on no view they may not read ([[R923]]).
+- **A Created card** carries `created: true` on every view of it the viewer may read — a hand card, a unit, a backrow card, a pile's card and a prompt's option — and on no view they may not read; the owner's library list marks the entries the owner knows ([[R943]]).
 - **A set hand size** is public on both seats as `handCap`: Meditative #79's rest-of-game setting, absent until one is set ([[R1143]]).
 - **A marked hand** shows its owner each mark on its card and the other player only the count, `handMarked`, never which ([[R1141]]).
 - **Secrets.** Each side's view carries the secrets it holds as `secrets: { id; choice? }[]`, the choice only for its owner or once revealed ([[R860]], [[R864]]), absent while none are held. The opponent's entries list the id alone, and no event or log line of theirs carries the choice before it is revealed.

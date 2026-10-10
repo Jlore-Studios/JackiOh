@@ -14,7 +14,7 @@ use crate::restrictions::unaffected_by;
 use crate::script::EffectContext;
 use crate::state::{CardInstance, find_instance};
 use crate::stays::{exit_mark, left_field_after};
-use crate::wire::{CardType, PlayerId, Row, Selection, Tag, ZoneName, opponent_of};
+use crate::wire::{CardType, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
 use crate::zones::{ZoneSlot, adjacent, card_at, carried_units_of, is_buried, row_size, slot_of, slots_of};
 
 /// Which card or hero an effect names (TS `TargetSpec`, discriminated on `of`).
@@ -267,6 +267,24 @@ pub fn sides_of(ctx: &EffectContext<'_>, side: Option<ScopeSide>) -> Vec<PlayerI
     }
 }
 
+/// MD-B1, R940: whether one card passes a scope's filters under an aim. A harmful walk whose
+/// scope names a tribal tag passes an immune card by; a helpful (or aim-less) walk reaches it.
+pub fn matches_scope_aimed(
+    ctx: &EffectContext<'_>,
+    card: &CardInstance,
+    scope: &BoardScope,
+    aim: TargetAim,
+) -> bool {
+    matches_scope(ctx, card, scope)
+        && !(aim == TargetAim::Harm
+            && crate::restrictions::tribal_hate_cannot_reach(
+                ctx.state,
+                card,
+                scope.tags.as_deref(),
+                scope.not_tags.as_deref(),
+            ))
+}
+
 /// Whether one card passes a scope's filters. Zone membership is the caller's business. (TS's
 /// default `scope = {}` is `&BoardScope::default()`.)
 pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &BoardScope) -> bool {
@@ -317,10 +335,24 @@ fn slots_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<ZoneSlot> 
 /// opponent's; within a side the named rows lane 1 upward). Only the top card of a Stack pile is on
 /// the field, so a dormant card underneath is never matched (§3.2, R13).
 pub fn cards_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<CardInstance> {
+    cards_in_scope_with(ctx, scope, TargetAim::Help)
+}
+
+/// MD-B1, R940: `cards_in_scope` under an aim. Harmful verbs pass `TargetAim::Harm` so an immune
+/// card is passed by; helpful and neutral walks keep the default.
+pub fn cards_in_scope_aimed(
+    ctx: &EffectContext<'_>,
+    scope: &BoardScope,
+    aim: TargetAim,
+) -> Vec<CardInstance> {
+    cards_in_scope_with(ctx, scope, aim)
+}
+
+fn cards_in_scope_with(ctx: &EffectContext<'_>, scope: &BoardScope, aim: TargetAim) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for slot in slots_in_scope(ctx, scope) {
         if let Some(card) = card_at(ctx.state, slot)
-            && matches_scope(ctx, card, scope)
+            && matches_scope_aimed(ctx, card, scope, aim)
         {
             out.push(card.clone());
         }
@@ -328,7 +360,7 @@ pub fn cards_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<CardIn
         // lanes; a backrow scope finds the carrier beneath it and never the Unit.
         if slot.row == Row::Units && slot.lane == row_size(Row::Units) {
             for unit in carried_units_of(ctx.state, slot.player) {
-                if matches_scope(ctx, unit, scope) {
+                if matches_scope_aimed(ctx, unit, scope, aim) {
                     out.push(unit.clone());
                 }
             }
@@ -337,10 +369,29 @@ pub fn cards_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<CardIn
     out
 }
 
+/// MD-B1, R940: `adjacent_to` under an aim. Harmful verbs pass `TargetAim::Harm`.
+pub fn adjacent_to_aimed(
+    ctx: &EffectContext<'_>,
+    spec: &TargetSpec,
+    scope: &BoardScope,
+    aim: TargetAim,
+) -> Vec<CardInstance> {
+    adjacent_to_with(ctx, spec, scope, aim)
+}
+
 /// §3.1 Adjacent: lanes N-1 and N+1 on the target's own side and row, never across sides and never
 /// the target itself. An empty or dormant neighbour contributes nothing (§3.2, R13). The target may
 /// be anywhere the spec can name it; off the field it has no neighbours.
 pub fn adjacent_to(ctx: &EffectContext<'_>, spec: &TargetSpec, scope: &BoardScope) -> Vec<CardInstance> {
+    adjacent_to_with(ctx, spec, scope, TargetAim::Help)
+}
+
+fn adjacent_to_with(
+    ctx: &EffectContext<'_>,
+    spec: &TargetSpec,
+    scope: &BoardScope,
+    aim: TargetAim,
+) -> Vec<CardInstance> {
     let Some(card) = instance_of(ctx, spec) else {
         return Vec::new();
     };
@@ -359,7 +410,7 @@ pub fn adjacent_to(ctx: &EffectContext<'_>, spec: &TargetSpec, scope: &BoardScop
         if found.id == card.id {
             continue;
         }
-        if !matches_scope(ctx, found, scope) {
+        if !matches_scope_aimed(ctx, found, scope, aim) {
             continue;
         }
         out.push(found.clone());

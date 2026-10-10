@@ -604,6 +604,11 @@ pub struct StaticFlags {
     /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane_multiplier: Option<i32>,
+    /// MD-B2, R941: while this card acts on the field — face-up, top of its pile — no player generates
+    /// mana naturally: each start-of-turn refresh sets max mana as usual but current mana to the
+    /// next-turn rider only (Meditative #26).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_natural_mana: Option<bool>,
 }
 
 string_union! {

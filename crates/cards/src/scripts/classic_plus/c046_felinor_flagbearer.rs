@@ -265,6 +265,7 @@ mod tests {
                 def_id: PRIME.to_string(),
                 radiant: false,
                 count: 1,
+                created: None,
             }));
             let id = prime.first().map(|card| card.id.clone()).unwrap_or_else(|| "?".to_string());
             assert!(!serde_json::to_string(&s.view(P2)).expect("serialises").contains(&id));

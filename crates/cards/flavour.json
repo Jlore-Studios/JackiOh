@@ -980,6 +980,12 @@
   "meditative-024": {
     "flavour": "The oldest trick in the book, and the book is now a sheep."
   },
+  "meditative-025": {
+    "flavour": "It has heard every insult about its kind. None of them stick."
+  },
+  "meditative-026": {
+    "flavour": "The wells run dry for everyone. Then the wells appear."
+  },
   "meditative-027": {
     "flavour": "Billable hours, payable in zones."
   },
@@ -997,6 +1003,9 @@
   },
   "meditative-030-1": {
     "flavour": "A hug with a fuse, signed with a kiss."
+  },
+  "meditative-031": {
+    "flavour": "All aboard, everyone who was never on the original list."
   },
   "meditative-032": {
     "flavour": "Immersion learning, whether you signed up or not."
@@ -1144,6 +1153,9 @@
   },
   "meditative-097-9": {
     "flavour": "Every office has a corner, and every corner has a contractor."
+  },
+  "meditative-098": {
+    "flavour": "High noon. One lane. Nobody else gets in."
   },
   "meditative-099": {
     "flavour": "Everyone is planning something. Probably."
