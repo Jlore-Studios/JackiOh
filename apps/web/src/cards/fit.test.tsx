@@ -1,13 +1,9 @@
-// The rules box's reading floor (fit.ts), against a modelled layout.
-//
-// jsdom has no layout, so `useFitText` is a no-op there (CardFace.test.tsx B15). This file gives a
-// rules box a small model of one instead: a box of a known height, a font that is the base size
-// times the length tier's scale times `--cf-fit` (or the base size times `--cf-fit` in the long
-// layout, as cards.css has it), and text that needs `need × font²` pixels of height. That is enough
-// to drive every branch of the floor: fits as it is, fits once the tier's head start is dropped,
-// fits in the long layout, clamps at the floor, and a face too small for the floor at all. The
-// component specs (card-faces B15, deckbuilder-layout) prove the same thing on real layout. The last
-// describe is the scheduler: fits queued together are read together, round by round.
+// The rules box's reading floor (fit.ts), against a modelled layout. jsdom has no layout, so
+// `useFitText` is a no-op there (CardFace.test.tsx B15); a rules box gets a small model instead: a
+// known box height, a font of base size × tier scale × `--cf-fit` (no tier scale in the long
+// layout, as cards.css has it) and text that needs `need × font²` px of height. The component specs
+// (card-faces B15, deckbuilder-layout) prove the same on real layout. The last describe is the
+// scheduler: fits queued together are read together, round by round.
 
 import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
@@ -351,8 +347,7 @@ describe("a face the browser skips waits for it (#263)", () => {
 
   /**
    * A skippable item holding one text box. `state.skipped` is what `content-visibility: auto` would
-   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it, as for a box that
-   * is hidden some other way.
+   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it.
    */
   function skippable(state: { skipped: boolean }, holder = true): { item: HTMLElement; text: HTMLElement } {
     const item = document.createElement("div");

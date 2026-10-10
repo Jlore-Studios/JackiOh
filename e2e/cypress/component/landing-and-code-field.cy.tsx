@@ -1,29 +1,6 @@
-// docs/polish/5-sign-in.md B39 (and B15, B37 visually): at 360, 390, 768 and 1280 px wide, neither
-// the landing page nor the invite code field overflows horizontally, and every landing CTA and the
-// code input are on screen.
-//
-// jsdom has no layout engine, so this is the one place the claim can be measured. The mounts:
-//
-//   - `LandingRoute` on its own. It is the whole page at `/` (main.tsx renders nothing around it),
-//     and with no session in storage its account slot settles on `landing-sign-in` without a
-//     request, so no server is involved.
-//   - `CodeField` inside `.app-shell.tavern > .panel--auth`, the container the invite screen gives
-//     it, with a stateful wrapper so typing really fills it. `auth.css` and `tavern.css` are imported
-//     for that container's rules (the tavern skin widens the gaps between groups, which is what
-//     would overflow first); each component brings its own stylesheet, as Board.tsx does in
-//     board-layout.cy.tsx.
-//
-// What is asserted at each viewport:
-//
-//   documentElement.scrollWidth <= innerWidth  and  body.scrollWidth <= innerWidth
-//       `body { overflow-x: hidden }` in index.css hides the scrollbar but not this number
-//       (board-layout.cy.tsx measured that).
-//   every CTA and the input: `be.visible`, and a border box inside [0, innerWidth]
-//       Because overflow-x is hidden, a CTA pushed past the right edge would still be "visible" to
-//       Cypress while being cut off on a phone. The box check catches that.
-//
-// Measurements retry with `should`, because a viewport change relays out asynchronously and the
-// fan deals in with an animation.
+// B15, B37, B39: browser layout checks for landing and invite-code controls at four viewport widths.
+// jsdom cannot measure layout; assertions check horizontal overflow and complete visible border boxes.
+// `should` retries after asynchronous relayout and fan animation.
 
 import { useState, type ReactElement } from "react";
 
@@ -168,7 +145,6 @@ describe("B39 the invite code field fits 360, 390, 768 and 1280 px", () => {
       cy.viewport(viewport.width, viewport.height);
       cy.mount(<CodeFieldHarness />);
 
-      // Empty.
       expectOnScreen(inviteTestid.input, viewport);
       cy.get(byTestid(codeFieldTestid.root)).should("have.attr", "data-complete", "false");
       expectNoHorizontalOverflow(viewport);
@@ -212,9 +188,7 @@ describe("B39 the invite code field fits 360, 390, 768 and 1280 px", () => {
   });
 });
 
-// iOS Safari zooms the whole page into a focused text field whose font is smaller than 16px, and
-// the player has to pinch back out. The shell's text is 15px and `.form-card input` inherits it, so
-// every sign-in, sign-up and reset field needs its own 16px (the code field already has it).
+// iOS Safari zooms focused inputs below 16px, so every auth field needs this floor.
 const IOS_NO_ZOOM_FONT_PX = 16;
 
 function expectNoFocusZoom(testid: string): void {
@@ -255,9 +229,7 @@ describe("the auth fields do not make iOS zoom the page", () => {
   });
 });
 
-// A phone held sideways has 390 px of height, and the keyboard takes most of it once a field is
-// tapped. The auth boards set their title beside the form there (auth/tavern.css, "a phone on its
-// side"), so the button that sends the form is on the first screen, without a scroll.
+// Landscape phones leave little room above the keyboard, so auth submits must be above the fold.
 
 const LANDSCAPE_PHONE = { label: "phone on its side", width: 844, height: 390 } as const;
 

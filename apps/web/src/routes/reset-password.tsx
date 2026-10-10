@@ -1,34 +1,6 @@
-// `/reset-password` — choose a new password after following a recovery link (B31, R193).
-//
-// `/login` reads the recovery link, scrubs it from the address bar, and hands its session to
-// `auth/redirect.ts`, which holds it FOR THIS TAB ONLY (memory, mirrored to `sessionStorage` so a
-// reload or a discarded tab does not spend the reset). This screen is the one place that session is
-// used: `PUT /auth/v1/user` with its access token sets the new password, and only then does the
-// session become the stored one (`adoptSession`, which revokes any session it replaces) and the
-// player go on, signed in, to the main menu, where every sign-in lands (issue #479). Until a
-// password is saved nothing reaches `localStorage`.
-//
-// LEAVING LETS IT GO. The held session is abandoned as soon as the screen is left without saving, so
-// the next person at this computer cannot press Back and find a working "choose a new password"
-// form for someone else's account. Abandoning also revokes it at the provider, because its tokens
-// came in a URL, and the browser's history keeps the URL a page loaded with:
-//   - the screen's own exits (back, "Back to sign in") ASK FIRST, because the link works only once
-//     and a stray tap (the back control sits where a phone's back gesture does) would otherwise
-//     spend it; once the player confirms, the session is abandoned;
-//   - leaving any other way within the app (the screen unmounts) abandons it, just after the
-//     unmount, so React's StrictMode rehearsal (unmount, then mount again) does not;
-//   - leaving the page for another site abandons it (`pagehide` into the back/forward cache), and a
-//     page the browser's Back or Forward button loads afresh finds it abandoned.
-// A reload keeps it: that is the case the tab's own storage is for.
-//
-// A SESSION THAT RUNS OUT WHILE THE FORM IS OPEN is renewed with its refresh token before the new
-// password is sent, and once more if the provider refuses the access token (R194), so a player who
-// took their time is not told the link was spent.
-//
-// NOT GATED. A player here is by definition not signed in yet. Without a held recovery session
-// (a bookmark, a link opened in another tab, a reset already left) the screen says so and offers
-// the two ways forward: ask for a new link (`/login?mode=forgot`) or go back to sign in. No dead
-// ends.
+// `/reset-password` keeps its recovery session tab-only until save (B31, R193); adoption revokes
+// the replaced session. Leaving unsaved abandons and revokes it so another person cannot reuse its URL.
+// Renew near-expiry recovery sessions before saving and retry once on an expired access token (R194).
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -72,7 +44,7 @@ function backToSignIn(): void {
   navigate(paths.login);
 }
 
-/** Whether the browser's Back or Forward button loaded this document (not a restore from its cache). */
+/** Whether Back or Forward freshly loaded this document rather than restoring its cache. */
 function loadedFromHistory(): boolean {
   try {
     const [entry] = performance.getEntriesByType("navigation");
@@ -82,11 +54,7 @@ function loadedFromHistory(): boolean {
   }
 }
 
-/**
- * The session this screen may use. A document the Back or Forward button loaded afresh can only
- * have reached this screen by coming back to it after leaving the page, so a session still in the
- * tab's storage then was abandoned, not reloaded.
- */
+/** A fresh history load can revive tab storage after leave, so treat its recovery session as abandoned. */
 function heldForThisScreen(): HeldRecovery | null {
   if (loadedFromHistory()) {
     abandonRecoverySession();
@@ -96,19 +64,17 @@ function heldForThisScreen(): HeldRecovery | null {
 }
 
 export default function ResetPasswordRoute(): ReactElement {
-  // Taken once, into the screen's own state: nothing re-opens it once the screen lets it go.
   const [held, setHeld] = useState(heldForThisScreen);
   /** The session to send with: the link's, or its renewal once it has been renewed (R194). */
   const sessionRef = useRef<Session | null>(held?.session ?? null);
 
   useEffect(() => {
     if (held === null) return;
-    // Held while mounted, and abandoned the moment the screen is left unsaved. StrictMode's
-    // rehearsal unmount schedules the abandonment and this mount calls it off.
+    // Defer abandonment so StrictMode's rehearsal unmount can be cancelled by its remount.
     keepRecoverySession();
     holdRecoverySession(sessionRef.current ?? held.session, held.email);
     const onPageHide = (event: PageTransitionEvent): void => {
-      // Into the back/forward cache: the page was left for another. A reload is not persisted.
+      // A back/forward-cache entry left the page; a reload is not persisted.
       if (event.persisted) abandonRecoverySession();
     };
     const onPageShow = (event: PageTransitionEvent): void => {
@@ -122,7 +88,6 @@ export default function ResetPasswordRoute(): ReactElement {
     return () => {
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
-      // After a save the session is already the stored one and nothing is held: this is a no-op.
       abandonRecoverySessionSoon();
     };
   }, [held]);
@@ -136,7 +101,6 @@ export default function ResetPasswordRoute(): ReactElement {
   const [linkSpent, setLinkSpent] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  /** The address this browser is signed in as now, when it is not the one being reset. */
   const [replaced] = useState(() => {
     const current = readSession();
     const currentEmail = current === null ? null : emailFromToken(current.accessToken);
@@ -190,11 +154,7 @@ export default function ResetPasswordRoute(): ReactElement {
 
   const recovery = held;
 
-  /**
-   * One renewal of the held session with its own refresh token (R194), kept as the held session so
-   * a reload or a second try uses the new one: the provider rotates refresh tokens and treats a
-   * reused one as stolen. A renewal the provider refuses means the link's session is over.
-   */
+  /** R194: rotated refresh tokens cannot be reused; a refused renewal ends the recovery link. */
   async function renewed(session: Session): Promise<Session | null> {
     const refreshToken = typeof session.refreshToken === "string" && session.refreshToken.length > 0 ? session.refreshToken : null;
     if (refreshToken === null) return null;
@@ -210,11 +170,6 @@ export default function ResetPasswordRoute(): ReactElement {
     return next;
   }
 
-  /**
-   * Sends the new password with the held session, renewed first when it is about to run out, and
-   * renewed and sent once more when the provider refuses its access token. Resolves with the
-   * session that set it.
-   */
   async function save(newPassword: string): Promise<Session> {
     let session = sessionRef.current ?? recovery.session;
     let renewedOnce = false;
@@ -246,7 +201,6 @@ export default function ResetPasswordRoute(): ReactElement {
     setPasswordError(nextPasswordError);
     setConfirmError(nextConfirmError);
     if (nextPasswordError !== null || nextConfirmError !== null) {
-      // The first field to fix, for a keyboard or a screen reader.
       document.getElementById(nextPasswordError !== null ? "reset-password" : "reset-confirm")?.focus();
       return;
     }
@@ -256,8 +210,6 @@ export default function ResetPasswordRoute(): ReactElement {
     setLeaving(null);
     save(password)
       .then((session) => {
-        // Only now does the recovery session become the stored one (R193), and the session it
-        // replaces is revoked, as the screen said it would be (R194).
         adoptSession(session);
         releaseRecoverySession();
         forgetPendingAddresses();
@@ -272,10 +224,6 @@ export default function ResetPasswordRoute(): ReactElement {
       });
   }
 
-  /**
-   * An exit from the form. While the link still works, leaving spends it, so the screen asks first;
-   * a link the provider has already refused has nothing left to lose.
-   */
   function exitTo(target: string): void {
     if (linkSpent) {
       abandonRecoverySession();

@@ -1,19 +1,5 @@
-// Lesson "basics"'s coach script (SPEC §9.10): the steps the coach walks the player through, and the
-// tips it shows when something new happens. Written against this lesson's fixed seed and decks
-// (lessons.ts), so it may name the cards the seed deals.
-//
-// The line it is written for (lessons/basics.ts has the deal): turn 1 Mr. Vanilla, then what mana
-// is; turn 2 Mr. Vanilla hits the enemy hero and Duplicating Felinors arrives; turn 3 Jlockeed
-// Shredder-10; turn 4 a trade, then the rule of thumb, and from there the coach names every next
-// move (`yourMove`) until the enemy hero falls. Every step reads only the view and the legal
-// actions (CLAUDE.md rule 7), so a player who strays from the line — plays another card, attacks
-// elsewhere, ends the turn early — is met where they are: a step whose moment has passed retires,
-// and the attack steps pick attacker and target from the board as it is.
-//
-// The coach never asks for more than two "Got it"s in a row (the lesson's test holds it to that):
-// the AI's second turn brings an attack that costs the player a unit and a switch to Defense
-// Position, so the attack and the loss are one tip, and a Prejudiced Postdoc's copy, when one comes,
-// is explained on the player's own turn, once they have made a move.
+// Fixed "basics" coach script (SPEC §9.10): view-only steps use legal actions (CLAUDE.md rule 7)
+// and retire when players deviate from the scripted line.
 
 import type { PlayerView, UnitView } from "@jackioh/shared";
 import { MAX_MANA } from "@jackioh/engine/config";
@@ -48,7 +34,6 @@ const COIN = "core-t-coin";
 /** The enemy hero's health at or under which the coach says it is nearly beaten. */
 const ENEMY_LOW_HEALTH = 8;
 
-/** The human declared an attack of their own on this view, at the hero or at a unit. */
 function attacked(ctx: CoachCtx, at: "hero" | "unit"): boolean {
   const hero = heroTargetId(ctx.view, "opponent");
   const own = (instanceId: string): boolean =>
@@ -58,10 +43,6 @@ function attacked(ctx: CoachCtx, at: "hero" | "unit"): boolean {
   );
 }
 
-/**
- * The human has already played a card or declared an attack this turn, as far as the view's recent
- * events reach back (`PlayerView.events`, after the turn's `turnStarted`).
- */
 function movedThisTurn(view: PlayerView): boolean {
   for (let index = view.events.length - 1; index >= 0; index -= 1) {
     const event = view.events[index];
@@ -72,15 +53,11 @@ function movedThisTurn(view: PlayerView): boolean {
   return false;
 }
 
-/**
- * A unit on the enemy's side with no text of its own (`vanilla`): in this lesson, only the copy
- * Prejudiced Postdoc's Cry makes (the AI deck's one card that does, lessons/basics.ts).
- */
 function plainCopy(view: PlayerView): UnitView | undefined {
   return unitsOf(view, "opponent").find((unit) => unit.vanilla === true);
 }
 
-/** "End your turn" on the human's own turn `n`: retired unasked once that turn is behind them. */
+/** Retires an end-turn prompt once its turn is past. */
 function endTurnOn(n: number, options: { id: string; title: string; text: string; when?: (ctx: CoachCtx) => boolean }): CoachStep {
   const { when, ...rest } = options;
   return {
@@ -94,7 +71,7 @@ function endTurnOn(n: number, options: { id: string; title: string; text: string
   };
 }
 
-/** "Play this card", retired unasked once the card is on the field some other way or turn `byTurn` is past. */
+/** Retires a play prompt after its deadline or when the card has left hand. */
 function playBy(byTurn: number, options: Parameters<typeof playCard>[0]): CoachStep {
   const step = playCard(options);
   return {
@@ -118,8 +95,7 @@ const attackHero: CoachStep = {
   anchor: { kind: "hero", side: "opponent" },
   when: (ctx) => myMain(ctx) && myTurnNumber(ctx.view) >= 2 && heroAttack(ctx) !== undefined,
   done: (ctx, since) => since !== ctx.view && attacked(ctx, "hero"),
-  // Gone unasked once its turn has passed, or while a Taunt unit keeps every ready unit off the hero
-  // (the "defense" tip says why; the last step asks for the hero again once the way is clear).
+  // Retire while Taunt blocks the hero; the final step resumes when it is clear.
   moot: (ctx, since) => {
     if (since !== null) return ctx.view.turn !== since.turn;
     const blocked = myMain(ctx) && heroAttack(ctx) === undefined && legalAttacksOf(ctx).length > 0;
@@ -187,8 +163,7 @@ export const script: LessonScript = {
       text: "Mr. Vanilla costs (1): the blue number at its top left. Drag it into any of your five unit zones, or click it and then a zone. Each column is a lane.",
       defId: VANILLA,
     }),
-    // After the first play rather than before it, so the turn's first "Got it"s stop at two, and the
-    // crystals it points at show what the play spent.
+    // Follow the first play so this turn has at most two "Got it"s.
     info({
       id: "mana",
       title: "Mana",
@@ -249,7 +224,6 @@ export const script: LessonScript = {
       title: "How trades work",
       text: "Both units took their damage at once. A unit at 0 health is destroyed and goes to the graveyard; one that lives keeps its damage.",
       anchor: { kind: "graveyard", side: "opponent" },
-      // Right after the trade, on the view that shows it: gone unshown if the trade never came.
       when: (ctx) => myMain(ctx),
       moot: (ctx, since) => since === null && !attacked(ctx, "unit"),
     }),
@@ -260,7 +234,6 @@ export const script: LessonScript = {
       anchor: { kind: "units", side: "opponent" },
       when: (ctx) => myMain(ctx) && myTurnNumber(ctx.view) >= 4,
     }),
-    // From here to the end the coach names one move at a time and points at it.
     yourMove({ id: "win", title: "Win the game", final: true }),
   ],
   tips: [
@@ -283,8 +256,7 @@ export const script: LessonScript = {
     tip({
       id: "enemy-attacks",
       title: "The enemy attacks",
-      // One tip for the attack and what it cost: the AI's attacks resolve in the same step as they
-      // are declared, so a unit it destroys is gone on the same view.
+      // AI attacks resolve with their losses, so one tip covers both.
       text: (ctx) => {
         const lost = freshOf(ctx, "destroyed").find((event) => event.owner === ctx.view.viewer);
         const what =
@@ -328,8 +300,7 @@ export const script: LessonScript = {
         const copy = plainCopy(ctx.view);
         return (copy === undefined ? null : zoneOf(ctx, "opponent", copy.instanceId)) ?? { kind: "units", side: "opponent" };
       },
-      // On the player's own turn, after their first move: the AI's turn that makes the copy already
-      // brings the attack and Defense Position tips.
+      // Wait for the player's move; the AI turn already has two tips.
       when: (ctx) => myMain(ctx) && movedThisTurn(ctx.view) && plainCopy(ctx.view) !== undefined,
     }),
     tip({
@@ -379,7 +350,7 @@ export const script: LessonScript = {
       title: "Almost there",
       text: (ctx) => `The enemy hero is down to ${String(ctx.view.opponent.hero.health)} health. Look for units that can reach it this turn.`,
       anchor: { kind: "hero", side: "opponent" },
-      // Only while the player still has an attack to make, so "this turn" is true.
+      // Only show while the player can still attack this turn.
       when: (ctx) => myMain(ctx) && ctx.view.opponent.hero.health <= ENEMY_LOW_HEALTH && legalAttacksOf(ctx).length > 0,
     }),
     tip({

@@ -1,44 +1,17 @@
-// The match clock (BUILD M7-T1: `web/src/game/Clock.tsx`).
+// The match clock (BUILD M7-T1). It decides nothing: R79 fixes the behaviour and the server's match
+// actor runs it, so a paused turn clock is a `turnDeadline` of `null` in the frame the server pushed,
+// not an inference drawn here (CLAUDE.md rule 7).
 //
-// IT DECIDES NOTHING. R79 fixes the behaviour and `crates/server/src/actor/match_actor.rs` runs it: "the
-// turn clock belongs to the active player ... a prompt held by the non-active player runs its own
-// `PROMPT_CLOCK_SECONDS` and pauses the turn clock". This component renders that — a paused turn
-// clock is a `turnDeadline` of `null` in the frame the server pushed, not an inference drawn here
-// (CLAUDE.md rule 7).
+// The mulligan is both seats' at once (R265) on one clock (R268): while `mulligan` is set both sides show
+// the frame's one `promptDeadline` over `MULLIGAN_CLOCK_MS`, and there is no turn clock (§2.1).
 //
-// THE MULLIGAN IS BOTH SEATS' AT ONCE (R265), and R268 gives it one clock: the server arms one
-// deadline when the window opens, never moves it when a seat answers, and reports it as the frame's
-// `promptDeadline` and as each seat's `clockMs`. So while `mulligan` is set — the route sets it for
-// exactly the window the view carries `view.mulligan` — both sides show that one countdown, the seat
-// that has already answered included (it is waiting on it), over `MULLIGAN_CLOCK_MS`, and there is
-// no turn clock: setup is nobody's turn (§2.1). A question a card asks during setup outside the
-// window is an ordinary prompt and keeps R79's clocks.
+// Every length comes from the server's config (`TICK_MS` below is only a repaint cadence). Time is
+// monotonic: each frame is anchored to `performance.now()` on arrival and every repaint adds the delta
+// to the server's `now`, as `protocol.rs`'s `clock` message says, never `Date.now()`.
 //
-// THE NUMBERS COME FROM CONFIG. `TURN_CLOCK_MS`, `PROMPT_CLOCK_MS`, `MULLIGAN_CLOCK_MS`,
-// `DISCONNECT_GRACE_MS` and `MATCH_CEILING_MS` are `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS`,
-// `MULLIGAN_CLOCK_SECONDS`, `DISCONNECT_GRACE_SECONDS` and `MATCH_CEILING_MINUTES` in milliseconds,
-// declared in `crates/server/src/config.rs` alongside them. They are the full length of each bar; no
-// duration or threshold is spelled in this file.
-// (`TICK_MS` below is a repaint cadence, not a rule value: nothing in SPEC or BUILD depends on it.)
-//
-// TIME IS MEASURED MONOTONICALLY. `crates/server/src/actor/protocol.rs` on the `clock` message:
-// "`now` is the server's clock at send time, so the client computes remaining time as
-// `deadline - now` against its own monotonic delta instead of trusting its wall clock." So each
-// frame is anchored to a `performance.now()` reading when it arrives, and every repaint adds the
-// monotonic delta to the server's `now` rather than reading `Date.now()`.
-//
-// THE LAST 30 SECONDS OF A TURN (R439). When the turn clock runs into its final stretch
-// (`TURN_CLOCK_FINAL_MS`, `clockConstants.ts`) the root says so as `data-clock-urgency`
-// ("none" | "final" | "last10") and `data-clock-side` (whose turn clock: "you" | "opponent" | ""),
-// and the running side's line turns urgent: a red pill with an hourglass inside a gauge that empties
-// with the stretch, the words "Your turn" or "Their turn", and digits that pop each second, sharper
-// in the last 10 (`TURN_CLOCK_LAST_MS`). On the viewer's own turn an ember fuse also burns round the
-// screen's edge (`TurnFuse`, fixed, blind to the pointer, in the page's margin so it never covers a
-// card), and clock.css beats a heartbeat under the viewer's hand. The opponent's final stretch is the
-// quieter readout alone. Only the turn clock has a final stretch: a paused turn clock (a null
-// deadline), a prompt's clock and the mulligan's are never urgent (`clockUrgency.ts` says why).
-// Reduced motion — the media query or the settings panel's switch — stops everything that moves and
-// keeps the static urgent readout (`data-motion="reduced"`, no fuse). None of it decides anything.
+// The last 30 seconds of a turn (R439): the running side's line turns urgent (`data-clock-urgency`,
+// `data-clock-side`) and the viewer's own turn adds an ember fuse (`TurnFuse`). Only a running turn clock
+// has a final stretch (`clockUrgency.ts`); reduced motion keeps the static readout, no fuse.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -95,9 +68,8 @@ export type ClockProps = {
   /** Per-player disconnect grace remaining (§9.5), or null when nobody is away. */
   graceMs?: { you: number | null; opponent: number | null };
   /**
-   * The last `clock` frame. WIDENING, not a replacement: `youMs`/`opponentMs` still answer when no
-   * frame has arrived (a hotseat game runs no clock at all), and the frame's absolute deadlines are
-   * what let the readout tick down between pushes.
+   * The last `clock` frame: its absolute deadlines let the readout tick between pushes. Without one
+   * (a hotseat game runs no clock) `youMs`/`opponentMs` answer.
    */
   frame?: ClockFrame | null;
   /** The viewer's seat, to map the frame's `p1`/`p2` grace onto `you`/`opponent`. */
@@ -294,13 +266,9 @@ function attributes(line: ClockLine): Record<string, string> {
   };
 }
 
-/** A side's line: what the readout calls it when nothing is urgent. */
 const SIDE_LABEL: Readonly<Record<ClockSide, string>> = { you: "You", opponent: "Opponent" };
 
-/**
- * The gauge round the hourglass (R439): a ring that empties with the final stretch. Decoration: the
- * line's accessible name says the same in words.
- */
+/** The gauge round the hourglass (R439): a ring that empties with the final stretch. Decoration. */
 function UrgencyGauge({ fraction }: { fraction: number }): ReactElement {
   return (
     <svg className="clock-gauge" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -320,9 +288,8 @@ function UrgencyGauge({ fraction }: { fraction: number }): ReactElement {
 }
 
 /**
- * One side's line: `clock-you` or `clock-opponent`. Its text is the side's name and the seconds;
- * while it is the turn clock in its final stretch (R439) it is the urgent readout instead: the
- * gauge, "Your turn" / "Their turn", and digits keyed on the second so each one pops in.
+ * One side's line: the side's name and the seconds, or in the turn clock's final stretch (R439) the
+ * urgent readout, its digits keyed on the second so each one pops in.
  */
 function SideLine({
   side,
@@ -364,9 +331,7 @@ function SideLine({
 
 /**
  * R439: the ember fuse, on the viewer's own turn clock only and never under reduced motion. It burns
- * round the screen's edge, clockwise from the top-left corner, and is gone at the deadline; each
- * repaint moves it on, and clock.css eases it between repaints. Fixed, in the page's margin, and blind
- * to the pointer: it never covers a card and never takes a click.
+ * clockwise from the top-left corner and is gone at the deadline. Fixed, blind to the pointer.
  */
 function TurnFuse({ remainingMs, level }: { remainingMs: number; level: TurnClockUrgencyLevel }): ReactElement {
   const { edges, spark } = fuseGeometry(finalFraction(remainingMs));
@@ -385,13 +350,10 @@ function TurnFuse({ remainingMs, level }: { remainingMs: number; level: TurnCloc
 }
 
 /**
- * The latest `clock` frame, or null while it belongs to an earlier turn than the view beside it.
- *
- * After every change the server pushes the views and then the clocks (`actor.ts` `afterChange`), so
- * for a moment the route can hold the new turn's view beside the old turn's frame; read together
- * they would count the last seconds of one turn down on the next (and sound R439's alarm for it). So
- * a frame is paired with the turn (`turnKey`) the view named when it arrived, and handed on only
- * while the view still names that turn. The server's next frame follows the view at once.
+ * The latest `clock` frame, or null while it belongs to an earlier turn than the view beside it. The
+ * server pushes views then clocks, so for a moment the old turn's frame sits beside the new turn's view
+ * and would count down on it (and sound R439's alarm). A frame is handed on only while the view still
+ * names the turn (`turnKey`) it arrived in.
  */
 export function useFrameFor<F>(frame: F | null, turnKey: string | null): F | null {
   const paired = useRef<{ frame: F; turnKey: string | null } | null>(null);
@@ -417,8 +379,7 @@ export default function Clock(props: ClockProps) {
   const frame = props.frame ?? null;
   const reduced = useReducedMotion();
 
-  // The anchor is set during render so the first paint is already correct; it is a ref, so this
-  // does not schedule anything.
+  // Anchored during render so the first paint is right; a ref, so it schedules nothing.
   const anchor = useRef<{ frame: ClockFrame; at: number } | null>(null);
   if (frame === null) anchor.current = null;
   else if (anchor.current === null || anchor.current.frame !== frame) {

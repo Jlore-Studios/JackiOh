@@ -1,16 +1,7 @@
-// The invite code's words: what the code screen says about a code while it is being typed.
-//
-// THE READING IS NOT THIS FILE'S. R191: client and server read a typed or pasted code through one
-// shared function, `readCodeInput` in `@jackioh/shared`, so the field can never accept a code the
-// server would call malformed, or refuse one it would redeem. This module only turns a reading
-// into sentences. The shape of a code (alphabet, length, groups, separator) is config, imported
-// from `crates/server/src/config.rs` the way the screen has always imported `CODE_ALPHABET`
-// (CLAUDE.md rule 9); no number or character of the format is spelled here.
-//
-// R191 is also why the excluded-character sentence exists at all. R104's alphabet leaves out both
-// halves of each look-alike pair (0 and O, 1 and I), so a typed `0` cannot be mapped to anything.
-// The field refuses it and says which character it was, rather than dropping it and quietly
-// turning a typo into a different code.
+// The invite code's words while a code is typed. R191: client and server read a code through one
+// shared `readCodeInput` (`@jackioh/shared`), so the field and the server never disagree about a
+// code; this file only turns a reading into sentences. The format is config (CLAUDE.md rule 9).
+// R104 leaves out both halves of each look-alike pair (0 and O, 1 and I): a typed `0` is refused by name.
 
 import { excludedCharacters, type CodeFormat, type CodeInputProblem, type CodeInputReading } from "@jackioh/shared";
 

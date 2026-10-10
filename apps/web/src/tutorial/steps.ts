@@ -1,51 +1,30 @@
-// The vocabulary lesson scripts are written in: reads of the human's view, and step factories for
-// the things a coach asks for over and over (play this card, attack with that unit, end the turn,
-// keep your hand).
-//
-// Every read here is a read of the `PlayerView` or of `legalActions`, never of the rules
-// (CLAUDE.md rule 7): "can Mr. Vanilla attack the hero?" is answered by looking for that attack
-// among the legal actions the engine handed the page, never by checking summoning sickness here.
+// Tutorial primitives read the view and legal actions, never game rules (CLAUDE.md rule 7).
 
 import type { ActionBody, CardView, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
 import { sideView, type Side } from "../game/contract.ts";
 import type { CoachAnchor, CoachCtx, CoachStep, CoachTip } from "./coach.ts";
 
-// ---------------------------------------------------------------------------------------------
-// reads of the view
-// ---------------------------------------------------------------------------------------------
-
-/** It is the human's turn. */
 export function isMyTurn(view: PlayerView): boolean {
   return view.active === view.viewer;
 }
 
-/**
- * The human may act freely: their own main phase, no prompt open, the game not over, and the AI
- * owes nothing (a trap of the AI's resolving mid-turn owes the AI an answer first).
- */
 export function myMain(ctx: CoachCtx): boolean {
   const { view } = ctx;
   return view.result === null && isMyTurn(view) && view.phase === "main" && view.pending === null && !ctx.aiToAct;
 }
 
-/** The AI's own turn, while the game is on. */
 export function aiTurn(view: PlayerView): boolean {
   return view.result === null && !isMyTurn(view) && view.phase !== "mulligan" && view.phase !== "setup";
 }
 
-/**
- * The human still owes their mulligan (§2.1 step 3). Both seats mulligan at once (R265): the view's
- * `mulligan` says whether the human is ready, and the human's own prompt is their picker. The one
- * place the tutorial asks, so a change to how the mulligan is offered is one change here.
- */
+/** The human's mulligan picker; both seats decide together (§2.1 step 3, R265). */
 export function mulliganOpen(view: PlayerView): boolean {
   const prompt = view.pending !== null && view.pending.forYou && view.pending.kind === "mulligan";
   if (view.mulligan === undefined) return prompt;
   return !view.mulligan.youReady && prompt;
 }
 
-/** A prompt of this kind (any kind when omitted) is open for the human. */
 export function promptOpen(view: PlayerView, kind?: string): boolean {
   return view.pending !== null && view.pending.forYou && (kind === undefined || view.pending.kind === kind);
 }
@@ -62,32 +41,24 @@ export function unitsOf(view: PlayerView, side: Side): UnitView[] {
   return sideView(view, side).units.filter((unit): unit is UnitView => unit !== null);
 }
 
-/** The unit of this definition on that side of the field (a deck holds each card once, §2.6). */
+/** A deck holds each card once (§2.6). */
 export function unitOf(view: PlayerView, side: Side, defId: string): UnitView | undefined {
   return unitsOf(view, side).find((unit) => unit.defId === defId);
 }
 
-/** The human's own turn number: 1 on their first turn, 2 on their second, and so on. */
 export function myTurnNumber(view: PlayerView): number {
-  // p1 takes the odd player-turns and p2 the even ones (§2.1 step 5, §2.5's count).
+  // p1 takes odd player-turns and p2 even ones (§2.1 step 5, §2.5).
   return view.viewer === "p1" ? Math.ceil(view.turn / 2) : Math.floor(view.turn / 2);
 }
 
-/** The attack `targetId` that names a hero (the engine's own spelling, reduce.ts). */
 export function heroTargetId(view: PlayerView, side: Side): string {
   return `hero-${sideView(view, side).player}`;
 }
 
-/** The events on this view of one type. */
 export function freshOf<T extends GameEvent["type"]>(ctx: CoachCtx, type: T): Extract<GameEvent, { type: T }>[] {
   return ctx.fresh.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
 }
 
-// ---------------------------------------------------------------------------------------------
-// reads of legalActions
-// ---------------------------------------------------------------------------------------------
-
-/** The human's legal plays of the hand card of this definition. */
 export function legalPlays(ctx: CoachCtx, defId: string): Extract<ActionBody, { type: "play" }>[] {
   const card = inHand(ctx.view, defId);
   if (card === undefined) return [];
@@ -96,7 +67,6 @@ export function legalPlays(ctx: CoachCtx, defId: string): Extract<ActionBody, { 
   );
 }
 
-/** The human's legal attacks by the unit of this definition, at `target` when given. */
 export function legalAttacks(
   ctx: CoachCtx,
   attacker: string,
@@ -113,7 +83,6 @@ export function legalAttacks(
   );
 }
 
-/** What a coach may ask a unit to attack: the enemy hero, or the enemy unit of a definition. */
 export type AttackTarget = "hero" | { defId: string };
 
 export function attackTargetId(view: PlayerView, target: AttackTarget): string | undefined {
@@ -121,37 +90,26 @@ export function attackTargetId(view: PlayerView, target: AttackTarget): string |
   return unitOf(view, "opponent", target.defId)?.instanceId;
 }
 
-// ---------------------------------------------------------------------------------------------
-// step factories
-// ---------------------------------------------------------------------------------------------
-
 type StepText = CoachStep["text"];
 
 type Common = {
   id: string;
   title: string;
   text: StepText;
-  /** Extra condition on top of the factory's own `when`. */
   when?: (ctx: CoachCtx) => boolean;
   anchor?: CoachStep["anchor"];
   holdAi?: boolean;
 };
 
-/** An `info` step: "Got it" moves on. */
 export function info(options: Common & { done?: CoachStep["done"]; moot?: CoachStep["moot"]; final?: boolean }): CoachStep {
   return { kind: "info", ...options };
 }
 
-/** A reactive tip: shown once, the first time `when` holds. */
 export function tip(options: CoachTip): CoachTip {
   return options;
 }
 
-/**
- * "Play this card." Shows on the human's main phase while the card is in hand and the engine
- * offers a play of it (so it waits for the mana); done once the card has left the hand; moot if it
- * is gone before the step ever showed. `lane` narrows what the tests play (a 1-based lane).
- */
+/** Wait for an offered play; a card gone before display is moot. */
 export function playCard(options: Common & { defId: string; lane?: number }): CoachStep {
   const { defId, lane, when, ...rest } = options;
   return {
@@ -169,11 +127,7 @@ export function playCard(options: Common & { defId: string; lane?: number }): Co
   };
 }
 
-/**
- * "Attack with this unit." Shows on the human's main phase while the engine offers that attack
- * (so it waits out summoning sickness and Taunt); done once the unit has declared an attack or has
- * left the field; moot if the turn it showed on ends without one, or if the unit is nowhere.
- */
+/** Wait for an offered attack; retire it when the shown turn ends. */
 export function attackWith(options: Common & { attacker: string; target?: AttackTarget }): CoachStep {
   const { attacker, target, when, ...rest } = options;
   const defaultAnchor = (): CoachAnchor | null => {
@@ -185,8 +139,7 @@ export function attackWith(options: Common & { attacker: string; target?: Attack
     anchor: defaultAnchor,
     ...rest,
     when: (ctx) => myMain(ctx) && legalAttacks(ctx, attacker, target).length > 0 && (when === undefined || when(ctx)),
-    // The attacker is the instance the step showed on (two tokens share a definition): done once it
-    // has declared an attack or is no longer on the field.
+    // Track the shown instance because tokens can share a definition.
     done: (ctx, since) => {
       const unit = unitOf(since, "you", attacker) ?? unitOf(ctx.view, "you", attacker);
       if (unit === undefined) return true;
@@ -203,10 +156,6 @@ export function attackWith(options: Common & { attacker: string; target?: Attack
   };
 }
 
-/**
- * "End your turn." Shows on the human's main phase; done once the turn has passed; retired if the
- * turn it was about ended by itself before it showed (`turnBound`).
- */
 export function endTurn(options: Common): CoachStep {
   const { when, ...rest } = options;
   return {
@@ -215,13 +164,12 @@ export function endTurn(options: Common): CoachStep {
     ...rest,
     when: (ctx) => myMain(ctx) && (when === undefined || when(ctx)),
     done: (ctx, since) => ctx.view.turn !== since.turn,
-    // A turn that ended by itself (R82) before this showed must not have the next one ended for it.
+    // An automatic end before display (R82) must not end the next turn.
     turnBound: true,
     expect: (action) => action.type === "endTurn",
   };
 }
 
-/** "Keep your hand": the mulligan kept whole. Done once the mulligan is answered. */
 export function keepHand(options: Common): CoachStep {
   const { when, ...rest } = options;
   return {
@@ -239,10 +187,6 @@ export function keepHand(options: Common): CoachStep {
   };
 }
 
-/**
- * "Send these cards back": the mulligan with the named cards returned and the rest kept. Done
- * once the mulligan is answered, whatever the player chose.
- */
 export function mulliganAway(options: Common & { defIds: readonly string[] }): CoachStep {
   const { defIds, when, ...rest } = options;
   return {
@@ -262,7 +206,6 @@ export function mulliganAway(options: Common & { defIds: readonly string[] }): C
   };
 }
 
-/** "Switch this unit's position." Done once it has switched (or left the field). */
 export function switchPosition(options: Common & { defId: string; to: "ATK" | "DEF" }): CoachStep {
   const { defId, to, when, ...rest } = options;
   const legalSwitch = (ctx: CoachCtx): boolean => {

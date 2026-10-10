@@ -1,37 +1,7 @@
-// The web client's copy of the AI's persona suite (v0.3.0, docs/v0.3.0/PORT-MAP.md part 21), run
-// against `./personas.ts`.
-//
-// R645 (SPEC §9.9, issue #75 §6): the AI's emote personas — Balanced 40%, Polite 25%, BM 20%,
-// Silent 15% — and the cosmetic chatter each produces, all of it out of the game: nothing here
-// reaches `reduce`, the action log, a replay hash or a play decision.
-//
-// What is proved, table-first so a config change is the only edit a tuning touch should need:
-//
-//   - pickPersona's weighted intervals, walked at every boundary.
-//   - The trigger and reply tables verbatim: for every persona × every EMOTE_TRIGGERS row and
-//     every persona × every EMOTE_REPLY_KEYS row, a dash rolls nothing (and never even draws),
-//     a hit sends a pool member inside AI_EMOTE's 0.8–2.5 s window, and a draw at exactly the
-//     row's chance misses. Silent has no rows anywhere.
-//   - replyKeyOf's grouping of the pool's emotes onto the four reply rows (a yawn earns none), and
-//     the issue's extra demand on Polite: none of its pools may hold a taunt emote.
-//   - R1344: each pool is §6's own first, widened by MN03's emoji, and every roll draws only from
-//     what the AI seat's dealt hand holds — a row the hand holds none of sends nothing.
-//   - The session machine: trigger detection across view/event deltas (mulligan end, a turn
-//     started ahead, big hits both ways, top-unit kills both ways, the big play, game over),
-//     the per-turn and per-match caps with the greeting and end emotes exempt, replies firing
-//     at most once per rule per match, and the shared R643 `emoteGate` judging each intent at
-//     the instant it would fire (`now + delayMs`) — a blocked emote is dropped, never queued.
-//   - The import isolation R645 requires holds by construction since v0.3.0: the engine and the
-//     move search are Rust (crates/engine, crates/ai) and this module is the web's TypeScript, so
-//     nothing that plays the game can read it.
-//
-// Every roll's draws are scripted: `low` (0 forever) passes any chance, picks a pool's first
-// entry and waits `delayMinMs`; `seq` feeds one draw per roll in the order personas.ts makes
-// them (chance, then pool, then delay); `exact` throws on a draw that was not scripted, which
-// pins how many draws a row spends — a dash spends none. Views are the smallest `PlayerView`s
-// a watching client could show: the persona reads nothing else. The AI is SEAT, the human FOE;
-// the view is the human's own, exactly as the practice driver hands it over (`you` is the
-// human, `opponent` the AI).
+// R645 (SPEC §9.9, §6): cosmetic persona chatter cannot affect game state, replays, or decisions.
+// Table-driven tests cover configuration boundaries, session rules, and redacted human views.
+// R1344 starts pools with §6 emotes, adds MN03 emoji, and limits rolls to the dealt hand.
+// R643's `emoteGate` judges send time; blocked emotes are dropped, never queued.
 
 import { describe, expect, it } from "vitest";
 
@@ -54,23 +24,15 @@ import {
   type PersonaName,
 } from "./personas.ts";
 
-// ---------------------------------------------------------------------------------------------
-// scripted draws
-// ---------------------------------------------------------------------------------------------
+// Scripted draws
 
-/** Every roll hits its chance, picks a pool's first entry and waits `delayMinMs`. */
 const low: () => number = () => 0;
 
-/**
- * One draw per call, in order; past the end it keeps returning the last draw, so a session
- * test scripts only the draws that matter.
- */
 function seq(...draws: number[]): () => number {
   let i = 0;
   return () => draws[Math.min(i++, draws.length - 1)] ?? 0;
 }
 
-/** One draw per call, in order; a draw past the end throws, so a roll's draw count is pinned. */
 function exact(...draws: number[]): () => number {
   let i = 0;
   return () => {
@@ -80,9 +42,7 @@ function exact(...draws: number[]): () => number {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// the smallest views a watching client could show
-// ---------------------------------------------------------------------------------------------
+// Minimal watching-client views
 
 const SEAT: PlayerId = "p1"; // the AI
 const FOE: PlayerId = opponentOf(SEAT); // the human — the view's own seat
@@ -177,13 +137,11 @@ const healthLost = (player: PlayerId, amount: number): GameEvent => ({ type: "he
 const fatigue = (player: PlayerId, amount: number): GameEvent => ({ type: "fatigue", player, count: 1, amount });
 const gameOver = (winner: PlayerId | "draw"): GameEvent => ({ type: "gameOver", winner, reason: "concede" });
 
-/** `onEvents`' intent list as plain {emote, delayMs} — a reply's `key` rides along but is not the wire. */
 const asIntents = (out: readonly AiEmote[]): { emote: EmoteId; delayMs: number }[] =>
   out.map(({ emote, delayMs }) => ({ emote, delayMs }));
 
 const PERSONAS = ["balanced", "polite", "bm", "silent"] as const satisfies readonly PersonaName[];
 
-/** One emote per reply row, for the persona × key table; replyKeyOf itself is pinned on the whole pool. */
 const EMOTE_FOR_KEY: Record<EmoteReplyKey, EmoteId> = {
   greetings: "greetings",
   compliment: "wellPlayed",
@@ -197,9 +155,7 @@ function session(persona: PersonaName, rng: () => number): EmotePersona {
 
 const MIN_DELAY = { emote: "greetings", delayMs: AI_EMOTE.delayMinMs } as const;
 
-// ---------------------------------------------------------------------------------------------
-// the deal
-// ---------------------------------------------------------------------------------------------
+// The deal
 
 describe("R645 pickPersona", () => {
   it("R645 deals balanced below 0.4, polite below 0.65, bm below 0.85 and silent for the rest", () => {
@@ -210,11 +166,8 @@ describe("R645 pickPersona", () => {
       [0.6499, "polite"],
       [0.65, "bm"],
       [0.8499, "bm"],
-      // A draw of exactly 0.85 is Silent: the boundaries are exact in per-mille, so the float sum
-      // 0.4 + 0.25 + 0.2 landing one ulp past 0.85 cannot leak the seam into BM.
       [0.85, "silent"],
       [0.999, "silent"],
-      // A hostile rng returning exactly 1 cannot pick nothing: the last interval is closed.
       [1, "silent"],
     ];
     for (const [draw, expected] of deals) {
@@ -228,9 +181,7 @@ describe("R645 pickPersona", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the trigger table, every persona × every trigger
-// ---------------------------------------------------------------------------------------------
+// Trigger table
 
 describe("R645 the trigger table", () => {
   for (const persona of PERSONAS) {
@@ -277,9 +228,7 @@ describe("R645 the trigger table", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the reply table
-// ---------------------------------------------------------------------------------------------
+// Reply table
 
 describe("R645 the reply table", () => {
   it("R645 R1344 each emote of the pool lands on its reply row — a yawn, a shrug, a thinking face and a gasp on none", () => {
@@ -354,9 +303,7 @@ describe("R645 the reply table", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the issue's extra rule for Polite
-// ---------------------------------------------------------------------------------------------
+// Polite pools
 
 describe("R645 polite's pools", () => {
   it("R645 R1344 polite never picks a taunt emote — no threaten, laugh, wahWah, yawn, angry, fire, skull, cool or party anywhere it may draw", () => {
@@ -373,9 +320,7 @@ describe("R645 polite's pools", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the session machine: trigger detection
-// ---------------------------------------------------------------------------------------------
+// Session trigger detection
 
 describe("R645 the session's trigger detection", () => {
   it("R645 the mulligan's end sends the greeting — balanced takes it every time", () => {
@@ -390,7 +335,6 @@ describe("R645 the session's trigger detection", () => {
     const open = view({ phase: "mulligan", mulligan: { youReady: false, opponentReady: true } });
     expect(s.onEvents([], null, open, 1_000)).toEqual([]);
     expect(s.onEvents([], null, view({ active: FOE, turn: 1 }), 2_000)).toEqual([]);
-    // and once it has closed, a view without it is not a new ending
     const prev = view({ phase: "mulligan", mulligan: { youReady: true, opponentReady: true } });
     const next = view({ active: FOE, turn: 1 });
     expect(s.onEvents([], prev, next, 3_000)).toEqual([MIN_DELAY]);
@@ -399,12 +343,10 @@ describe("R645 the session's trigger detection", () => {
 
   it("R645 the AI's turnStarted while ahead rolls turnStartAhead — on health or on units", () => {
     const s = session("balanced", low);
-    // health lead of exactly leadHealth counts (its hero − yours ≥ 10)
     const healthAhead = view({ active: SEAT, turn: 5, ...heroSides(30, 30 - AI_EMOTE.leadHealth) });
     expect(s.onEvents([turnStarted(SEAT, 5)], null, healthAhead, 1_000)).toEqual([
       { emote: "threaten", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // a unit lead of leadUnits counts the same way (three more units, 3–0)
     const unitAhead = view({
       active: SEAT,
       turn: 7,
@@ -419,14 +361,12 @@ describe("R645 the session's trigger detection", () => {
     const s = session("balanced", low);
     const even = view({ active: SEAT, turn: 5 });
     expect(s.onEvents([turnStarted(SEAT, 5)], null, even, 1_000)).toEqual([]);
-    // one short on each axis stays quiet
     const justShort = view({
       active: SEAT,
       turn: 6,
       ...heroSides(30, 30 - AI_EMOTE.leadHealth + 1),
     });
     expect(s.onEvents([turnStarted(SEAT, 6)], null, justShort, 11_000)).toEqual([]);
-    // the human's turn starts the same window and never rolls, even with the AI ahead
     const humanTurnAhead = view({ active: FOE, turn: 7, ...heroSides(30, 1) });
     expect(s.onEvents([turnStarted(FOE, 7)], null, humanTurnAhead, 21_000)).toEqual([]);
   });
@@ -451,12 +391,9 @@ describe("R645 the session's trigger detection", () => {
 
   it("R645 a big hit on the AI's hero rolls tookBigHit — and playerBigPlay off the same hit where the row exists", () => {
     const v = view({ active: FOE, turn: 5 });
-    // Balanced has no playerBigPlay row: the same hit produces only the tookBigHit roll (oops).
     expect(session("balanced", low).onEvents([heroHit(SEAT)], null, v, 1_000)).toEqual([
       { emote: "oops", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // Polite has both rows. With the tookBigHit roll scripted to miss (0.35 ≥ 0.3), the
-    // wellPlayed that comes out can only be the playerBigPlay roll's — the one hit rolls both.
     const polite = session("polite", seq(0.35, 0, 0, 0));
     expect(polite.onEvents([heroHit(SEAT)], null, v, 1_000)).toEqual([
       { emote: "wellPlayed", delayMs: AI_EMOTE.delayMinMs },
@@ -476,7 +413,6 @@ describe("R645 the session's trigger detection", () => {
         1_000,
       ),
     ).toEqual([]);
-    // and below bigHit none of them counts
     expect(
       session("balanced", low).onEvents(
         [healthLost(SEAT, AI_EMOTE.bigHit - 1), fatigue(SEAT, AI_EMOTE.bigHit - 1)],
@@ -493,60 +429,46 @@ describe("R645 the session's trigger detection", () => {
       opponent: side(SEAT, { units: [unit(SEAT, 6), null, null, null, null] }),
     });
     const v = view({ active: SEAT, turn: 5 });
-    // the human's 8-attack top dies to the AI's blow → killedTopUnit (laugh/wahWah)
     expect(session("balanced", low).onEvents([unitDied(FOE, 8)], prev, v, 1_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // a lesser unit's death is not the top
     expect(session("balanced", low).onEvents([unitDied(FOE, 7)], prev, v, 1_000)).toEqual([]);
-    // the AI's own top dying rolls lostTopUnit instead (sob/angry/oops)
     expect(session("balanced", low).onEvents([unitDied(SEAT, 6)], prev, v, 1_000)).toEqual([
       { emote: "sob", delayMs: AI_EMOTE.delayMinMs },
     ]);
     expect(session("balanced", low).onEvents([unitDied(SEAT, 5)], prev, v, 1_000)).toEqual([]);
-    // with no previous view the dying unit is its own top — it always qualifies
     expect(session("balanced", low).onEvents([unitDied(FOE, 1)], null, v, 1_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // a unit that left without a killer (killerId null) is nobody's trigger
     expect(session("balanced", low).onEvents([unitDied(FOE, 8, null)], prev, v, 1_000)).toEqual([]);
   });
 
   it("R645 two of the AI's units dying on the human's turn roll playerBigPlay — once, at the second", () => {
     const s = session("polite", low);
     const humanTurn = view({ active: FOE, turn: 7 });
-    // The AI holds a 9-attack unit, so its 4-attack deaths are no lostTopUnit — the count alone.
     const prev = view({ opponent: side(SEAT, { units: [unit(SEAT, 9), null, null, null, null] }) });
 
-    // the first kill only counts — polite has no lostTopUnit-relevant death here
     expect(s.onEvents([unitDied(SEAT, 4)], prev, humanTurn, 1_000)).toEqual([]);
-    // the second reaches killsForBigPlay and rolls playerBigPlay (wellPlayed)
     expect(s.onEvents([unitDied(SEAT, 4)], prev, humanTurn, 11_000)).toEqual([
       { emote: "wellPlayed", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // a third and a fourth that turn roll nothing: the roll was spent at two
     expect(s.onEvents([unitDied(SEAT, 4), unitDied(SEAT, 4)], prev, humanTurn, 21_000)).toEqual([]);
-    // the AI's units dying on the AI's own turn never build the count
     expect(s.onEvents([unitDied(SEAT, 4), unitDied(SEAT, 4)], prev, view({ active: SEAT, turn: 8 }), 31_000)).toEqual([]);
-    // the next human turn counts fresh and fires again
     const nextTurn = view({ active: FOE, turn: 9 });
     expect(s.onEvents([turnStarted(FOE, 9)], prev, nextTurn, 41_000)).toEqual([]);
     expect(s.onEvents([unitDied(SEAT, 4), unitDied(SEAT, 4)], prev, nextTurn, 51_000)).toEqual([
       { emote: "wellPlayed", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // and the human's OWN units dying on the human's turn count nothing
     const otherTurn = view({ active: FOE, turn: 10 });
     expect(s.onEvents([turnStarted(FOE, 10)], prev, otherTurn, 61_000)).toEqual([]);
     expect(s.onEvents([unitDied(FOE, 4), unitDied(FOE, 4)], prev, otherTurn, 71_000)).toEqual([]);
   });
 
   it("R645 the second-kill roll is spent whether it hits or misses", () => {
-    // Polite's playerBigPlay chance is 0.4; the scripted 0.9 misses it at the second kill.
     const s = session("polite", seq(0.9));
     const humanTurn = view({ active: FOE, turn: 7 });
     const prev = view({ opponent: side(SEAT, { units: [unit(SEAT, 9), null, null, null, null] }) });
     expect(s.onEvents([unitDied(SEAT, 4), unitDied(SEAT, 4)], prev, humanTurn, 1_000)).toEqual([]);
-    // more kills that turn do not re-roll
     expect(s.onEvents([unitDied(SEAT, 4), unitDied(SEAT, 4)], prev, humanTurn, 11_000)).toEqual([]);
   });
 
@@ -586,19 +508,14 @@ describe("R645 the session's trigger detection", () => {
     const yawn = [{ emote: "yawn" as const, delayMs: AI_EMOTE.delayMinMs }];
     const humanTurn = (turn: number): PlayerView => view({ active: FOE, turn });
     expect(s.onPlayerTurnLong(humanTurn(7), 1_000)).toEqual(yawn);
-    // a second arm of the same turn fires nothing (the driver may call more than once)
     expect(s.onPlayerTurnLong(humanTurn(7), 2_000)).toEqual([]);
-    // the AI's own turn is never the player's long turn — and does not spend turn 8's roll
     expect(s.onPlayerTurnLong(view({ active: SEAT, turn: 8 }), 3_000)).toEqual([]);
-    // the next player turn rolls again (its turnStarted opened a fresh bucket, as the driver feeds)
     s.onEvents([turnStarted(FOE, 9)], null, humanTurn(9), 4_000);
     expect(s.onPlayerTurnLong(humanTurn(9), 5_000)).toEqual(yawn);
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the session machine: replies
-// ---------------------------------------------------------------------------------------------
+// Session replies
 
 describe("R645 the session's replies", () => {
   it("R645 a player's emote can earn a reply, each reply rule at most once a match", () => {
@@ -606,41 +523,32 @@ describe("R645 the session's replies", () => {
     const humanTurn = (turn: number): PlayerView => view({ active: FOE, turn });
     s.onEvents([turnStarted(FOE, 3)], null, humanTurn(3), 1_000);
     expect(asIntents(s.onPlayerEmote("greetings", 11_000))).toEqual([MIN_DELAY]);
-    // the greetings rule is spent: even a hitting roll is dropped (rng stays at 0)
     expect(s.onPlayerEmote("greetings", 21_000)).toEqual([]);
-    // a different rule still fires — wellPlayed lands on the compliment row, answered "thanks"
     s.onEvents([turnStarted(FOE, 4)], null, humanTurn(4), 31_000);
     expect(asIntents(s.onPlayerEmote("wellPlayed", 41_000))).toEqual([
       { emote: "thanks", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // and the compliment row is spent — a "thanks" emote lands on the same row and earns nothing
     s.onEvents([turnStarted(FOE, 5)], null, humanTurn(5), 51_000);
     expect(s.onPlayerEmote("thanks", 61_000)).toEqual([]);
-    // the taunt row is its own rule (balanced's pool leads with laugh)
     s.onEvents([turnStarted(FOE, 6)], null, humanTurn(6), 71_000);
     expect(asIntents(s.onPlayerEmote("threaten", 81_000))).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // balanced has no apology row, and a yawn has no row at all: both fall silent
     s.onEvents([turnStarted(FOE, 7)], null, humanTurn(7), 91_000);
     expect(s.onPlayerEmote("oops", 101_000)).toEqual([]);
     expect(s.onPlayerEmote("yawn", 102_000)).toEqual([]);
   });
 
   it("R645 a missed roll does not spend the rule — the same emote can still earn the reply later", () => {
-    // balanced's greetings reply is chance 0.7: the scripted 0.7 misses, then the rule hits.
     const s = session("balanced", seq(0.7, 0, 0, 0));
     s.onEvents([turnStarted(FOE, 3)], null, view({ active: FOE, turn: 3 }), 1_000);
     expect(s.onPlayerEmote("greetings", 11_000)).toEqual([]);
     expect(asIntents(s.onPlayerEmote("greetings", 21_000))).toEqual([MIN_DELAY]);
-    // now it is spent for good
     expect(s.onPlayerEmote("greetings", 31_000)).toEqual([]);
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the session machine: caps and the shared rate limit
-// ---------------------------------------------------------------------------------------------
+// Session caps and rate limit
 
 describe("R645 caps and the shared gate", () => {
   it("R645 the caps live in config: balanced 1/1/8, polite 1/1/6, bm 2/2/20, silent 0/0/0", () => {
@@ -653,17 +561,14 @@ describe("R645 caps and the shared gate", () => {
   it("R645 balanced's turn caps are one emote on each side's turn, refilled as the turns move", () => {
     const s = session("balanced", low);
     const aiTurn = view({ active: SEAT, turn: 5 });
-    // two triggers, two calls, plenty of clock between them: only the cap can drop the second
     expect(s.onEvents([turnStarted(SEAT, 5), heroHit(FOE)], null, aiTurn, 1_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
     expect(s.onEvents([heroHit(FOE)], aiTurn, aiTurn, 11_000)).toEqual([]);
-    // the next AI turn opens the bucket again
     const aiTurn6 = view({ active: SEAT, turn: 6 });
     expect(s.onEvents([turnStarted(SEAT, 6), heroHit(FOE)], aiTurn, aiTurn6, 21_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // and the human's turn has its own bucket: a big hit taken there still emotes
     const humanTurn7 = view({ active: FOE, turn: 7 });
     expect(s.onEvents([turnStarted(FOE, 7), heroHit(SEAT)], aiTurn6, humanTurn7, 31_000)).toEqual([
       { emote: "oops", delayMs: AI_EMOTE.delayMinMs },
@@ -689,9 +594,7 @@ describe("R645 caps and the shared gate", () => {
     const step = (): number => (now += 10_000);
     const mulligan = view({ phase: "mulligan", mulligan: { youReady: true, opponentReady: true } });
 
-    // the greeting is exempt from the match cap: it fires but does not spend one of the eight
     expect(s.onEvents([], mulligan, view({ active: FOE, turn: 1 }), step())).toEqual([MIN_DELAY]);
-    // eight ordinary emotes fill the cap, alternating sides so a turn cap never blocks first
     const seats: PlayerId[] = [SEAT, FOE, SEAT, FOE, SEAT, FOE, SEAT, FOE];
     seats.forEach((player, i) => {
       const v = view({ active: player, turn: i + 2 });
@@ -699,11 +602,8 @@ describe("R645 caps and the shared gate", () => {
         { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
       ]);
     });
-    // the ninth ordinary trigger has nowhere left to go
     const turn10 = view({ active: SEAT, turn: 10 });
     expect(s.onEvents([turnStarted(SEAT, 10), heroHit(FOE)], null, turn10, step())).toEqual([]);
-    // the exempt rows still fire: a mulligan-end transition (manufactured here so the flag itself
-    // is what the view tests) and both end-of-match emotes, at the cap and past it
     expect(
       s.onEvents([], mulligan, view({ active: SEAT, turn: 10 }), step()),
     ).toEqual([MIN_DELAY]);
@@ -721,8 +621,6 @@ describe("R645 caps and the shared gate", () => {
       const v = view({ active: player, turn: i + 2 });
       expect(s.onEvents([turnStarted(player, i + 2), heroHit(FOE)], null, v, step())).toHaveLength(1);
     });
-    // cap full. A gameOver event with the match still at phase "main" — artificial, but it
-    // isolates matchExempt: the bucket is fresh, the cap is full, and the emote still lands.
     const turn11 = view({ active: FOE, turn: 11 });
     expect(s.onEvents([turnStarted(FOE, 11)], null, turn11, step())).toEqual([]);
     expect(s.onEvents([gameOver(FOE)], turn11, turn11, step())).toEqual([
@@ -732,19 +630,13 @@ describe("R645 caps and the shared gate", () => {
 
   it("R645 the shared rate limit judges the send instant (now + delayMs): a fast follow-up is dropped, a delayed one lands", () => {
     const aiTurn = view({ active: SEAT, turn: 5 });
-    // Two dealtBigHit rolls in one batch at the minimum delay: the second's send time sits
-    // inside the first's 1.5 s cooldown, and it is dropped — not queued. (bm's turn cap of 2
-    // leaves the drop to the gate alone.)
     const fast = session("bm", low);
     expect(fast.onEvents([heroHit(FOE), heroHit(FOE)], null, aiTurn, 1_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // dropped means dropped: the next batch much later starts clean, nothing was held back
     expect(fast.onEvents([heroHit(FOE)], aiTurn, aiTurn, 31_000)).toEqual([
       { emote: "laugh", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // and a second roll whose own delay lands past the cooldown is admitted in the same batch:
-    // 0.99 draws a 2483 ms delay against the first's 800 — 1683 ms apart, outside the cooldown.
     const spaced = session("bm", seq(0, 0, 0, 0, 0, 0.99));
     const out = spaced.onEvents([heroHit(FOE), heroHit(FOE)], null, aiTurn, 1_000);
     expect(out).toHaveLength(2);
@@ -753,11 +645,8 @@ describe("R645 caps and the shared gate", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R1344: the persona chooses within the AI seat's dealt hand
-// ---------------------------------------------------------------------------------------------
+// R1344: dealt-hand choices
 
-/** §6's pools as the issue's table gave them, before MN03 widened each with its emoji (R1344). */
 const SECTION_6_POOLS: Record<Exclude<PersonaName, "silent">, Partial<Record<EmoteTrigger | EmoteReplyKey, readonly EmoteId[]>>> = {
   balanced: {
     mulliganEnd: ["greetings"],
@@ -822,17 +711,14 @@ describe("R1344 the persona chooses within its seat's dealt hand", () => {
   });
 
   it("R1344 a trigger roll picks only from what the hand holds, in the pool's order", () => {
-    // balanced's mulliganEnd is greetings, wave, salute: a hand without greetings greets with a wave.
     const noGreeting: readonly EmoteId[] = ["oops", "thanks", "threaten", "sob", "wave", "heart", "salute", "party"];
     expect(rollForTrigger("balanced", "mulliganEnd", low, noGreeting)).toEqual({ emote: "wave", delayMs: AI_EMOTE.delayMinMs });
-    // The far end of the in-hand part: salute.
     expect(rollForTrigger("balanced", "mulliganEnd", seq(0, 0.999, 0), noGreeting)?.emote).toBe("salute");
   });
 
   it("R1344 a hit on a row the hand holds none of sends nothing", () => {
     const quiet: readonly EmoteId[] = ["wellPlayed", "oops", "thanks", "sob", "yawn", "laugh", "angry", "wahWah"];
     expect(rollForTrigger("balanced", "mulliganEnd", low, quiet)).toBeNull();
-    // …and the reply table the same: polite's greeting answer is greetings or wave.
     expect(rollForReply("polite", "greetings", low, quiet)).toBeNull();
     expect(rollForReply("polite", "greetings", low, ["wave", ...quiet.slice(1)])).toMatchObject({ emote: "wave", key: "greetings" });
   });
@@ -844,11 +730,8 @@ describe("R1344 the persona chooses within its seat's dealt hand", () => {
     expect(asIntents(s.onEvents([], mulligan, view({ active: FOE, turn: 1 }), 1_000))).toEqual([
       { emote: "salute", delayMs: AI_EMOTE.delayMinMs },
     ]);
-    // A compliment earns balanced's thanks, which the hand holds (a fresh session, so the greeting's
-    // turn cap does not stand in the way).
     const replies = createEmotePersona({ persona: "balanced", seat: SEAT, rng: low, hand });
     expect(replies.onPlayerEmote("wellPlayed", 60_000).map((intent) => intent.emote)).toEqual(["thanks"]);
-    // …and a taunt earns nothing: none of balanced's taunt answers is in this hand.
     expect(replies.onPlayerEmote("laugh", 90_000)).toEqual([]);
   });
 

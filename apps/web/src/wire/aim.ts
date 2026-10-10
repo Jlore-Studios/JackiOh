@@ -1,20 +1,13 @@
-// The web client's own copy of the shared wire helper (docs/v0.3.0/SURFACE.md §10.4), kept as
-// TypeScript and unchanged but for its import paths; the server's port is crates/engine/src/wire/aim.rs.
+// Wire aim contract (docs/v0.3.0/SURFACE.md §10.4).
 //
-// The opponent's aim (SPEC §9.5, R738): what a player is aiming a play, an Activate or an attack
-// at, as the opponent's board draws it — Hearthstone's targeting arrow, shown to both players.
+// The opponent's aim (SPEC §9.5, R738) is a public targeting arrow shown to both players.
 //
-// Cosmetic, like an emote (R643): an aim is never an `ActionBody`, never reaches `reduce`, the
-// action log, the replay hash or a game record, is never part of `PlayerView`, and no rule is ever
-// decided from it (CLAUDE.md rule 7). This module holds only the shape both ends of the wire agree
-// on, and its shape check, because `apps/web` and `crates/server` may not import each other.
+// Cosmetic only (R643; CLAUDE.md rule 7): aim never reaches actions, logs, replays, records, or
+// `PlayerView`, and decides no rule. Its shared shape is checked locally because `apps/web` and
+// `crates/server` cannot import each other.
 //
-// Every end is a public handle, so nothing hidden can ride on it (R97, R177):
-//  - a hero, by its seat;
-//  - a zone of the field, by seat, row and lane — a face-down backrow card is named only by the
-//    zone it lies in, and a card on the field is never named by its instance id;
-//  - a card in a hand, by its position in that hand, which the opponent's view draws as the card
-//    back at that position — never its instance id, its definition or anything on its face.
+// Every end is public (R97, R177): seat, zone, or hand position, never an instance id, definition,
+// or face.
 
 import type { PlayerId, Row } from "./catalog.ts";
 
@@ -23,10 +16,7 @@ export type AimEnd =
   | { at: "zone"; player: PlayerId; row: Row; lane: number }
   | { at: "hand"; player: PlayerId; index: number };
 
-/**
- * One aim: where it starts and what it is over now. `target` is null while the aim is over
- * nothing it may land on, so the opponent sees what is being aimed with and not yet at what.
- */
+/** An in-progress aim; `target` is null off a valid landing spot. */
 export type Aim = { source: AimEnd; target: AimEnd | null };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -39,10 +29,7 @@ const isRow = (value: unknown): value is Row => value === "units" || value === "
 const isIndex = (value: unknown, least: number): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= least;
 
-/**
- * One end, rebuilt field by field so nothing else on the wire survives (an instance id, a def id),
- * or null when it is not one of the three handles. Lanes count from 1, as the board's do.
- */
+/** Rebuild only public fields; zone lanes start at 1. */
 export function parseAimEnd(value: unknown): AimEnd | null {
   if (!isRecord(value) || !isPlayerId(value.player)) return null;
   switch (value.at) {
@@ -59,11 +46,7 @@ export function parseAimEnd(value: unknown): AimEnd | null {
   }
 }
 
-/**
- * An aim, `null` (the aim has ended), or `undefined` when the value is neither — the shape check
- * the server parses a client's frame with and the client parses a relay with. A hand is never a
- * target: no play, Activate or attack aims at a hand card through the arrow.
- */
+/** A finished aim is null; invalid input is undefined. A hand is never an aim target. */
 export function parseAim(value: unknown): Aim | null | undefined {
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
@@ -75,7 +58,7 @@ export function parseAim(value: unknown): Aim | null | undefined {
   return { source, target };
 }
 
-/** A stable key for an aim, so two equal aims compare equal (the sender sends only changes). */
+/** Stable key: send only changed aims. */
 export function aimKey(aim: Aim | null): string {
   if (aim === null) return "none";
   return `${endKey(aim.source)}>${aim.target === null ? "none" : endKey(aim.target)}`;

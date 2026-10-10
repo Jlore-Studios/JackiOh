@@ -1,33 +1,7 @@
-// The game's music director (SPEC §10.11 "Music", R631): follows one mounted board and tells the
-// music what the viewer's situation calls for (musicPlan.ts holds the priority stack).
-//
-// Everything comes from what the viewer's own screen shows (R203). Each player's music is their own:
-// their station, their hero's health, their turn.
-//
-// - The newest view is held, and applied when the animation runner goes idle (`settle`), so the
-//   urgency track and the opponent's-turn mix follow the board as it is drawn, not ahead of it.
-// - Events arrive as the sound director resolves them, in step with their animations: a cast of a
-//   card in music-cards.json (at the moment its cast line would speak, R204, and only when the
-//   viewer can read it) starts its Mythic theme or switches its caster's station; a hit on the
-//   viewer's hero ends a Mythic theme.
-// - A Mythic theme holds until the viewer's hero is next hit, another Mythic replaces it, or the game
-//   ends. Away from low health it also ends once it has played MUSIC_MYTHIC_PLAYS times; at low
-//   health it holds until that hit, then the urgency track comes back.
-// - A match starts on its station's sting into the in-game track this match's rotation picks, unless
-//   the first view is already past the first turn (a reconnect). The urgency track and the result
-//   stings are fetched ahead, between animation bursts. A card's station switch lasts the match:
-//   the next match starts on the setting again.
-// - A Field Trap fires again and again (Classic+ #74 on every fuse); its theme starts at its first
-//   firing only, as a cast would.
-// - A hotseat hand-over is a new viewer: the arriving seat hears its own station and situation, and
-//   no theme carries over.
-// - R1350: a Legendary or Mythic card the viewer can read opens its play with its own intro
-//   (music-cards.json's `intro`), at the moment R204 gives its play or cast line: a played card's
-//   `cardPlayed` (never a Trap's, which is its set), a Unit an effect puts on the field without
-//   playing it on its `summoned`, and a Trap at its first firing. Only with dynamic music on, and
-//   before the theme the same card may start, so the intro is on top when the theme comes in.
-//   R1351: the result, a hand-over, dynamic music turned off and the board leaving each cut it short.
-//   The intros of the cards in the viewer's own hand are fetched ahead, between animation bursts.
+// The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
+// screen (R203). It applies after the board settles and starts themes at readable cards' R204 moments.
+// A Mythic theme holds until hit, replacement or game end; Classic+ #74 starts on its first firing.
+// R1350's readable-card intro precedes its theme; R1351 stops it on result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";

@@ -1,19 +1,6 @@
-// The death screen's way to play again: rematch offers after an online match (SPEC §9.5, R672).
-//
-// After a non-series match ends, either seat may offer a rematch — a normal one or, in a ranked
-// match, a double-or-nothing — and matching offers start one new game with the finished decks.
-// The buttons show only while the opponent is still on the match: this component renders nothing
-// unless our own socket is open AND the status says theirs is (`opponentHere`), so leaving,
-// logging out or closing the tab takes them away on both sides.
-//
-// IT ENFORCES NOTHING (CLAUDE.md rule 7). It sends offer intent, polls the status the server
-// computes, and navigates to the game the server made. The only numbers it reads are the server's
-// (`youOffered`, `opponentOffer`, `opponentHere`, `matchId`).
-//
-// R1372: beside an All Random rematch (the status's `mode`) it offers "More cards from the newest
-// set" for this player's own fresh deck, the lobby's pick on this device to begin with, and sends it
-// with the offer (`leanNewest`); the server deals the deck. A Best-of-1 rematch replays its decks, so
-// it shows no switch.
+// Rematch offers after an online match (SPEC §9.5, R672).
+// UI sends server intent and renders server status only (CLAUDE.md rule 7).
+// R1372: All Random offers may carry the player's `leanNewest`; Best-of-1 offers do not.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -28,49 +15,34 @@ import {
   type RematchStakes,
 } from "../net/api.ts";
 
-/** Chrome this component invented, mirroring `matchTestid`'s pattern in `routes/match.tsx`. */
 export const rematchTestid = {
-  /** The "Rematch" button (a normal game). */
   offer: "rematch-offer",
-  /** The "Double or nothing" button (ranked matches only). */
   double: "rematch-double",
-  /** The prompt that the opponent already offered, asking to meet it. */
   incoming: "rematch-incoming",
-  /** What this component is doing: waiting, or why an offer failed. */
   status: "rematch-status",
-  /** R1372: an All Random rematch's "More cards from the newest set" checkbox. */
   leanNewest: "rematch-lean-newest",
 } as const;
 
 export type RematchButtonsProps = {
   token: string;
   matchId: string;
-  /** Our own socket's state; anything but open hides every button. */
   connection: ConnectionState;
-  /** Whether the finished match was ranked: only ranked games go double-or-nothing (R672). */
   ranked: boolean;
 };
 
 const MS_PER_SECOND = 1000;
 
-/** The incoming offer in the opponent's words. */
 function incomingWords(stakes: RematchStakes): string {
   return stakes === 2 ? "Your opponent wants double-or-nothing." : "Your opponent wants a rematch.";
 }
 
-/** Our own offer while it waits, so the line says which of the two buttons was pressed. */
 function waitingWords(stakes: RematchStakes): string {
   return `${stakes === 2 ? "You offered double-or-nothing." : "You offered a rematch."} Waiting for your opponent…`;
 }
 
-/** A button's label while its offer is on its way (the `aria-busy` pattern of the app's other sends). */
 const OFFERING_LABEL = "Offering…";
 
-/**
- * The status, now and every `SERIES_POLL_SECONDS`: the opponent's offer, their presence, and
- * the game equal offers made. A created game takes both seats there at once. One
- * implementation for the buttons and the watcher below, so the two never drift apart.
- */
+/** One status poller serves buttons and watcher so their navigation cannot drift apart. */
 function useRematchStatus(token: string, matchId: string, onStatus: (answer: RematchStatusResponse) => void): void {
   const latest = useRef(onStatus);
   latest.current = onStatus;
@@ -93,16 +65,7 @@ function useRematchStatus(token: string, matchId: string, onStatus: (answer: Rem
   }, [token, matchId]);
 }
 
-/**
- * The half of a rematch that must outlive the result panel. The buttons live in the panel's
- * `actions` (`Result.tsx` renders those only while the panel is open), so a seat that offers
- * and then presses "View the board" unmounts their poller — and is never taken to the game
- * the opponent's matching offer creates, while already sitting in that ranked game. The
- * match route mounts this alongside the board once the game is over, so the navigation
- * survives the fold. It renders nothing and only ever navigates; offering still needs the
- * panel open. Two pollers while the panel is open are harmless: both navigate idempotently
- * to the same game.
- */
+/** Outlives the result panel so matching offers still navigate a player viewing the board. */
 export function RematchWatcher({ token, matchId }: { token: string; matchId: string }): ReactElement | null {
   useRematchStatus(token, matchId, (answer) => {
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
@@ -114,7 +77,6 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** R1372: this seat's lean for an All Random rematch, the lobby's pick on this device to begin with. */
   const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
 
   useRematchStatus(token, matchId, (answer) => {
@@ -122,11 +84,9 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
 
-  // Nothing until the status says the opponent is here — and never on a dead socket. A missing
-  // first read reads the same as gone: no buttons on an unknown presence.
+  // Hide offers until the server confirms an open opponent socket.
   if (connection !== "open" || status === null || !status.opponentHere) return null;
 
-  /** Only an All Random rematch deals fresh decks, so only its offer carries a lean (R1372). */
   const random = status.mode === "random";
 
   async function meet(stakes: RematchStakes): Promise<void> {
@@ -155,11 +115,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   const incoming = status.opponentOffer !== null && status.opponentOffer !== status.youOffered;
   const waiting = status.youOffered !== null && status.matchId === null;
 
-  // The markup is the result panel's (Result.tsx `actions`): the two offers are its buttons, the
-  // incoming offer a line above them and the wait or the refusal a line below. reveal.css lays the
-  // block into the panel's own row of ways on, so the buttons carry no class of their own: the
-  // panel sizes them like its others and makes Rematch its primary (animations.css). The shell's
-  // `button-primary` is the lobby's blue call to action, not the board's gold one.
+  // Result-panel styles determine the unclassed offers' layout and primary treatment.
   return (
     <div className="rematch">
       {incoming ? (

@@ -1,27 +1,8 @@
-// Polish task 7, B40 (docs/polish/7-mobile-ux.md): drag to play in a seeded hotseat game.
-//
-//   - dragging a glowing hand card onto a glowing zone plays it;
-//   - dragging a unit onto the enemy hero attacks;
-//   - releasing outside the board cancels;
-//   - after drag to play is turned off in the settings panel (still off after a reload),
-//     click-click plays a card.
-//
-// The gesture is `support/ux.ts`'s: a real `PointerEvent` pointerdown on the source, pointermoves
-// on `body` carrying `clientX`/`clientY` and `pointerId` 1, and a pointerup whose COORDINATES the
-// client hit-tests. Every new testid and attribute comes from `support/ux.ts`, every existing one
-// from `support/testids.ts`.
-//
-// The game is spec 04's: `04-combat-a` / `04-combat-b` with seed `04-combat-1604`, which that spec
-// chose so #11 Tempo Timmy is in player 1's opening hand. Timmy costs 1, so it is playable on
-// player-turn 1, and nothing in either deck acts on the board by itself (04-combat-a.json's
-// description), so the numbers below come from SPEC and not from the screen:
-//
-//   §8 #11 Tempo Timmy is a 3/3 (Rush, First Strike). Played on player-turn 1, it may attack the
-//   hero on player-turn 3 (Rush only lets it hit units on the turn it arrives, §6.1). Player 2's
-//   hero starts at HERO_HEALTH (30, §2) and nothing has touched it, so one hit leaves it at 27.
-//
-// Setup that is not the behaviour under test (Timmy's play in the attack test) is done by
-// click-click, which B39 says keeps working with drag to play on.
+// B40 drag-to-play on a seeded hotseat game (docs/polish/7-mobile-ux.md).
+// `support/ux.ts` supplies pointer gestures and new attributes; support/testids.ts supplies the rest.
+// The seed puts #11 Tempo Timmy in player 1's opening hand; the decks make no autonomous board changes.
+// §8 #11 Tempo Timmy (3/3, Rush, First Strike) attacks heroes on player-turn 3 (§6.1). From
+// HERO_HEALTH (30, §2), one hit leaves 27. B39 preserves click-click with dragging enabled.
 
 import { constants, seedFor } from "../../support/config.ts";
 import { BOARD, attackIs, cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
@@ -55,17 +36,16 @@ const SEED = seedFor("04-combat-1604");
 const DECK_A = "04-combat-a";
 const DECK_B = "04-combat-b";
 
-/** §8 #11: in player 1's opening hand under this seed (see spec 04's header). */
+/** §8 #11 is in player 1's opening hand under this seed. */
 const TIMMY = "Tempo Timmy";
 const TIMMY_ATTACK = 3;
 
-/** An empty zone Timmy may be played into on player-turn 1: the whole units row is empty. */
 const LANE_1 = zoneId("you", "units", 1);
 const LANE_1_REF = { side: "you", row: "units", lane: 1 } as const;
 
 const OPPONENT_HERO = heroId("opponent");
 
-/** BUILD M5-T3: a hotseat device is handed over, so put it on the seat that has to act. */
+/** BUILD M5-T3: hand the device to the acting seat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
@@ -80,7 +60,6 @@ function startGame(): void {
   ensureSeat("p1");
 }
 
-/** No overlay and no `data-dragging`: nothing is being dragged. */
 function expectNoDrag(): void {
   cy.get(ts(DRAG_LAYER)).should("not.exist");
   cy.get(ROOT).should("not.have.attr", DRAGGING_ATTR);
@@ -162,7 +141,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
       cy.settled();
 
       expectNoDrag();
-      // Nothing was sent: Timmy is still in hand, unselected, and the units row is still empty.
       cy.get(source).should("exist").and("not.have.attr", "data-selected");
       cy.get(ts(LANE_1)).should("not.have.attr", GLOW_ATTR);
       cy.unitIds("p1").should("have.length", 0);
@@ -173,7 +151,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     startGame();
     cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "on");
 
-    // Turn it off in the panel.
     cy.get(ts(SETTINGS_OPEN_GAME)).click();
     cy.get(ts(SETTINGS_PANEL)).should("be.visible");
     cy.get(ts(settingId("dragToPlay"))).should("be.checked").uncheck({ force: true });
@@ -182,7 +159,7 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.get(ts(SETTINGS_PANEL)).should("not.exist");
     cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "off");
 
-    // A reload restarts the hotseat game from the same seed and decks, and keeps the setting.
+    // Reload restores the same seed, decks, and setting.
     cy.reload();
     cy.jackioh().should((handle) => {
       expect(handle.seed, "the same seed after the reload").to.eq(SEED);
@@ -200,7 +177,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.handCardByName(TIMMY).then((timmy) => {
       const source = ts(handCardId(timmy));
 
-      // With the setting off a drag starts nothing, and releasing on a zone sends nothing.
       pressAndLift(source);
       expectNoDrag();
       hoverOver(ts(LANE_1));
@@ -214,7 +190,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
       cy.get(source).should("exist");
       cy.unitIds("p1").should("have.length", 0);
 
-      // Click-click still plays it.
       cy.playCard(timmy, { zone: LANE_1_REF });
       cy.get(source).should("not.exist");
       cy.get(ts(LANE_1)).should("contain.text", TIMMY);

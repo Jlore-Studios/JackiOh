@@ -1,12 +1,6 @@
-// The account page's email change (R663): a signed-in player asks the auth provider to move the
-// account to another address, straight from the client (`net/auth.ts` `requestEmailChange`, SPEC
-// §9.2's arrow to the auth provider). The provider mails a confirmation link, and the account's
-// address changes only once it is opened; the link comes back to `/login`, which says so
-// (`routes/login.tsx`, `AUTH_NOTICES.emailChanged`).
-//
-// Nothing here decides anything about the account: the provider checks the address, and its
-// refusals arrive as our own sentences (`AuthError`). A token the provider no longer takes is
-// renewed once and the request sent again (R194), as the gate does for the API.
+// Email changes are confirmed by the auth provider (R663; SPEC §9.2); the address changes only
+// when its link returns to `/login` (`AUTH_NOTICES.emailChanged`). Provider failures surface as
+// `AuthError`; a rejected expired token is renewed once (R194).
 
 import { useState, type FormEvent, type ReactElement } from "react";
 
@@ -31,11 +25,7 @@ export const changeEmailTestid = {
   error: "settings-email-error",
 } as const;
 
-/**
- * The address the session's access token was issued for (its `email` claim), for the line that
- * says who is signed in and to spare a request for the same address. Display only: the token is
- * not verified here, and nothing is decided on it. Null when the token has no readable claim.
- */
+/** Reads the unverified `email` claim for display only; null if unreadable. */
 export function tokenEmail(token: string): string | null {
   const payload = token.split(".")[1];
   if (payload === undefined) return null;
@@ -72,7 +62,6 @@ export default function ChangeEmail(): ReactElement | null {
   const [value, setValue] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
-  // Only a signed-in player on a build with an auth provider has an address to change.
   const session = readSession();
   if (session === null || authConfig() === null) return null;
   const currentEmail = tokenEmail(session.accessToken);

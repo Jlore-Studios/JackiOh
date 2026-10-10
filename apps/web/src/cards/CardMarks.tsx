@@ -1,16 +1,12 @@
 // R437: a card's marks, drawn on the card while the view lists them (#50 K-Pop Fanatic's pending
 // steal on its target, on both seats).
 //
-// A corruption aura in the mark's colours sits over the card: a slow shimmering vignette, a crackling
-// edge and motes that drift up through it. It takes no pointer event, so every click still reaches the
-// card. Beside it, one badge per mark carries the mark by shape as well as colour: a sparkle, a
-// tooltip, and hidden text a screen reader reads, all from the mark → words table (marks.ts). The
-// colours come from the colour key → palette table, an unknown key falling back to the default, so
-// another card's mark in another colour needs one row there and nothing here.
+// A corruption aura in the mark's colours sits over the card and takes no pointer event, so every
+// click still reaches the card. Beside it, one badge per mark carries the mark by shape as well as
+// colour, its words from marks.ts; an unknown colour key falls back to the default palette.
 //
-// It moves only under full motion: the media query and the settings panel's "Reduce motion"
-// (`<html data-reduce-motion="true">`) hold every part still, the aura and badge still drawn
-// (marks.css). It reads the marks it is given and nothing else (CLAUDE.md rule 7).
+// It moves only under full motion: the media query and "Reduce motion" hold every part still, the
+// aura and badge still drawn (marks.css). It reads the marks it is given only (CLAUDE.md rule 7).
 
 import type { CSSProperties, ReactElement } from "react";
 

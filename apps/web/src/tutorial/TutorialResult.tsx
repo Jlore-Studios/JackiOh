@@ -1,17 +1,5 @@
-// The end of a lesson (SPEC §9.10): what it means for the path, and what to do next. It replaces
-// practice's result dialog for a lesson game and keeps its pattern: a modal over a scrim, focus on
-// the first way on, Escape or "View the board" to read the final board, the HUD's outcome chip to
-// open it again.
-//
-//  - A win completes the lesson on this device (progress.ts, R294). The route records it the
-//    moment the view says so, whether or not this dialog is ever seen; the dialog records it too,
-//    which is a no-op by then. It names what the win opened and offers the next lesson, or, after
-//    the last one, a practice game, with a few lines on what is left to find: the practice tiers,
-//    building decks, and how a game can end in a draw.
-//  - A loss or a draw is "Not quite", the lesson's own tip, and Retry: the same lesson, the same
-//    seed, the same hands.
-//
-// It reads only the human's `PlayerView` result (CLAUDE.md rule 7).
+// Lesson-result modal (SPEC §9.10): wins persist on this device (progress.ts, R294), while loss
+// and draw retry the same lesson. It reads only the human's `PlayerView` (CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -76,10 +64,7 @@ function tierList(): string {
   return labels.length === 0 ? (last ?? "") : `${labels.join(", ")} or ${last ?? ""}`;
 }
 
-/**
- * After the last lesson: what the lessons did not cover, in a line each, so the last lesson need
- * not end on a string of notes. The tiers are the engine's handicaps, never the AI's play (R180).
- */
+/** Last-lesson options; tiers are engine handicaps, never AI play (R180). */
 function WhatsNext(): ReactElement {
   const headingId = useId();
   return (
@@ -99,7 +84,6 @@ function WhatsNext(): ReactElement {
   );
 }
 
-/** Why a lesson was not won, from the player's side of the table. */
 function notQuiteLine(outcome: "loss" | "draw" | "win", reason: Result["reason"]): string {
   if (outcome === "draw") return reason === "turn-cap" ? "The turn limit was reached: a draw." : "The lesson ended in a draw.";
   switch (reason) {

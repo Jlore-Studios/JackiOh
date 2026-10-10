@@ -1,24 +1,6 @@
-// Tutorial progress kept on the account as well as on the device (SPEC §9.10, R320, R321).
-//
-// The device's copy (`progress.ts`, R294) is the one the page renders, and it stays authoritative
-// for the session: nothing here ever waits on the network before the path, a lesson or its result
-// can show, and no failure reaches the UI. For an ACTIVE account (a pending one has only the code
-// screen, §9.4, and the routes answer it 403), this module keeps the account's copy level with it:
-//
-//   1. On load, it reads the account's copy (`GET /api/tutorial`) and merges it into the device
-//      (`adoptTutorialProgress`): the union of completed lessons, and the newer Hide/Show choice.
-//      If the device then holds something the account lacks — lessons won while signed out, a
-//      newer choice — it sends its progress up (`PUT /api/tutorial`), which the server merges too.
-//   2. After that, every change on the device (a lesson won, Hide or Show, another tab's change)
-//      is sent up if the account lacks it, and the server's answer is merged back in.
-//
-// Both merges are unions, so neither side ever steps backwards (R321): a completed lesson never
-// becomes uncompleted, and an older choice never undoes a newer one. A request that fails, or
-// never answers, is dropped: the device keeps what it has, and the next load catches the account
-// up. At most one request is in flight; changes made meanwhile are sent together once it answers.
-//
-// Signed out, there is no account to sync, so nothing is sent at all (R294 still holds for every
-// visitor without an active account).
+// Account tutorial progress (SPEC §9.10, R320, R321) merges by union: the device remains
+// authoritative during a session, and failed requests leave it intact for a later retry. Active
+// accounts (§9.4) sync one request at a time; signed-out visitors do not sync (R294).
 
 import { useEffect, useRef } from "react";
 
@@ -54,10 +36,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * The server's answer, read as untrusted input: a list of strings and a well-formed choice, or it
- * is not an answer at all (thrown, and dropped like a network failure).
- */
+/** Reject malformed server progress as a failed request. */
 function accountCopy(raw: unknown): TutorialProgressLike {
   if (!isRecord(raw) || !Array.isArray(raw.completed)) throw new Error("not a tutorial progress answer");
   const completed = (raw.completed as unknown[]).filter((id): id is string => typeof id === "string");
@@ -69,16 +48,12 @@ function accountCopy(raw: unknown): TutorialProgressLike {
   return { completed, hiddenChoice: { hidden: choice.hidden, at: choice.at } };
 }
 
-/**
- * Starts syncing this device's tutorial progress with the account `token()` names. `token` is read
- * at each request, so a renewed session's token is the one used.
- */
+/** Sync device progress with `token()`'s account, reading renewed tokens for each request. */
 export function startTutorialAccountSync(options: {
   token: () => string;
   api: TutorialAccountApi;
 }): TutorialAccountSync {
   let stopped = false;
-  /** The account's copy as last read or answered; null until the first answer. */
   let known: TutorialProgressLike | null = null;
   let running: Promise<void> | null = null;
   let owed = false;
@@ -104,21 +79,20 @@ export function startTutorialAccountSync(options: {
     );
   };
 
-  /** Runs `first`, then sends again for as long as a change arrived meanwhile. Never rejects. */
+  /** Run again after any change that arrived while a request was in flight. */
   const run = (first: () => Promise<void>): void => {
     running = (async () => {
       try {
         await first();
       } catch {
-        // R321: offline, a server error or an answer that is not one. The device keeps what it
-        // has, and the account catches up on the next load.
+          // R321: keep device progress; a later load retries.
       }
       while (owed && !stopped) {
         owed = false;
         try {
           await sendIfLacking();
         } catch {
-          // As above.
+          // Keep device progress; a later load retries.
         }
       }
     })().finally(() => {
@@ -137,7 +111,6 @@ export function startTutorialAccountSync(options: {
 
   const unsubscribe = subscribeTutorialProgress(onDeviceChange);
 
-  // The first load: read, merge in, and send up what the account lacks.
   run(async () => {
     take(await options.api.load(options.token()));
     if (!stopped) await sendIfLacking();
@@ -155,11 +128,7 @@ export function startTutorialAccountSync(options: {
   };
 }
 
-/**
- * R321 for a page: syncs while `account` is an active signed-in account, and does nothing (sends
- * nothing) otherwise. Restarts when the account changes to another profile; a renewed token for the
- * same profile is simply used for the next request.
- */
+/** R321: sync only active accounts; restart for a different profile and reuse renewed tokens. */
 export function useTutorialAccountSync(account: Account, api: TutorialAccountApi = tutorialAccountApi): void {
   const active = account.kind === "ready" && account.me.profile.status === "active";
   const profileId = active ? account.me.profile.id : null;

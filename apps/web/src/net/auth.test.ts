@@ -1,12 +1,4 @@
-/**
- * `net/auth.ts` — the browser's arrow to the auth provider (SPEC §9.2).
- *
- * The load-bearing assertion here is R160: every refusal that depends on whether an account
- * exists has to come back as ONE message per endpoint. GoTrue itself distinguishes
- * `invalid_grant` from `email_not_confirmed`, and relaying that second one would tell an
- * unauthenticated caller that any address they typed is registered — exactly the enumeration
- * oracle §9.8 asks the invite gate to resist.
- */
+/** R160: one refusal per endpoint prevents account enumeration (SPEC §9.2, §9.8). */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,12 +65,10 @@ describe("signIn", () => {
 
     expect(result.session.accessToken).toBe("jwt-abc");
     expect(result.session.refreshToken).toBe("refresh-abc");
-    // GoTrue reports seconds; the rest of the client uses epoch ms.
     expect(result.session.expiresAt).toBe(1_700_000_000_000);
     expect(result.emailVerified).toBe(true);
   });
 
-  /** R160: one message per endpoint, whatever the provider actually said. */
   it("answers identically for a wrong password and an address with no account", async () => {
     mockFetch(400, { error: "invalid_grant", error_description: "Invalid login credentials" });
     await expect(signIn("a@example.com", "wrong-password")).rejects.toThrow(
@@ -91,7 +81,6 @@ describe("signIn", () => {
     );
   });
 
-  /** The oracle this module exists to close: `email_not_confirmed` names an existing account. */
   it("does not relay email_not_confirmed, which would confirm the address is registered", async () => {
     mockFetch(400, { error_code: "email_not_confirmed", msg: "Email not confirmed" });
     const caught = await signIn("real@example.com", "correct-password").catch(
@@ -122,20 +111,14 @@ describe("signUp", () => {
     expect(url).to.contain(`${URL_}/auth/v1/signup`);
     expect(result.needsEmailConfirmation).toBe(true);
 
-    // The confirmation link must come back to THIS deployment. GoTrue builds it from the
-    // project's Site URL otherwise, which on this project is still the default localhost — so a
-    // confirmation email sent from the deployed site pointed at the reader's own machine.
+    // The confirmation link must return to this deployment, not the provider's default localhost.
     const redirect = new URL(url).searchParams.get("redirect_to");
     expect(redirect, "signup asks for a redirect back to this origin").to.contain(
       window.location.origin,
     );
   });
 
-  /**
-   * With confirmations on, GoTrue answers an already-registered address the same way it answers a
-   * new one, so this is the provider satisfying R160 rather than this module flattening anything.
-   * The test pins the consequence: the caller cannot tell the two apart.
-   */
+  /** R160: confirmed and new addresses are indistinguishable. */
   it("reports the same thing for an address that is already registered", async () => {
     mockFetch(200, { id: "00000000-0000-0000-0000-000000000000", identities: [] });
     await expect(signUp("taken@example.com", "hunter22222")).resolves.toEqual({

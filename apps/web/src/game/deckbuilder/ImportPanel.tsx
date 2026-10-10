@@ -1,15 +1,8 @@
 // The import panel: paste a deck code, see what it holds, and make it a new deck (SPEC §9.4,
-// R255).
+// R255). An import always makes a NEW deck, so it never overwrites work.
 //
-// An import always makes a NEW deck (R255), so it never overwrites work. The preview is live and
-// says everything the code's decoder did: the name (or the fallback when the code's own name is
-// unusable), the count, each card it had to leave out and why (a number this catalog does not
-// know, a Token, a copy past `MAX_COPIES`, a card past `DECK_SIZE`), and the cards the player does
-// not own, which are KEPT and only flagged — they are judged when the deck is queued (R253). A code
-// that cannot be read is refused with the decoder's sentence, and nothing is made.
-//
-// At the deck cap the import is off, with the reason beside it; the pasted code stays in the box,
-// so deleting a deck in the rail and coming back finishes the job.
+// Cards the player does not own are KEPT and only flagged: they are judged when the deck is queued
+// (R253). At the deck cap the import is off, with the reason beside it; the pasted code stays.
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 

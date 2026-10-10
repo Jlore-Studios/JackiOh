@@ -1,25 +1,6 @@
-// Lesson "advanced"'s coach script (SPEC §9.10): the steps the coach walks the player through, and the
-// tips it shows when something new happens. Written against this lesson's fixed seed and decks
-// (lessons.ts), so it may name the cards the seed deals.
-//
-// The line it walks, on the lesson's seed: send the 4-mana 7/7 back in the mulligan (§2.1 step 3);
-// play The Coin (R244, R245) and Felinor Fiender with it on the first turn; fill the board with
-// Felinor Tokens on the second, which Fiender counts (§7, #62, #92); make The Rock Radiant with Glowy
-// Jelly Bean on the third (§5.2, #26); play The Rock on the fourth with a Felinor Token as its
-// Tribute (§6.3, #66); and on the fifth play Reno, which glows yellow because the hero is hurt
-// (R195). Radiant numbers are never stated: the coach says "stronger" and points at the card, so the
-// text holds whatever the Radiant faces become.
-//
-// Every turn of the player's ends in `yourMove` (advice.ts), which names the next sensible move
-// once the turn's lesson is through, so the coach is never silent on the player's own turn; the last
-// one lasts until the game is won. A turn's lesson that cannot happen when the player's turn comes
-// (a card it needs is missing, or the mana, or a free zone), or no longer can because the player
-// spent the mana on something else, is dropped rather than waited for (`outOfReach`): the coach goes
-// straight on to the turn's `yourMove` instead of pointing at a play the engine will not take.
-//
-// Every read is of the view or of `legalActions` (CLAUDE.md rule 7): "can The Rock be played with a
-// token as its Tribute?" is answered by finding that play among the legal ones, never by counting
-// zones here.
+// Advanced lesson script (SPEC §9.10): fixed seed and decks permit named cards.
+// Covers mulligan (§2.1 step 3), Coin (R244, R245), tokens (§7, #62, #92), Radiant (§5.2, #26),
+// Tribute (§6.3, #66), and yellow glow (R195); only legal views/actions are read (CLAUDE.md rule 7).
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
@@ -53,12 +34,10 @@ const RENO = "core-053";
 
 type Play = Extract<ActionBody, { type: "play" }>;
 
-/** The mulligan is behind us: both players have answered it (§2.1 step 3). */
 function pastMulligan(view: PlayerView): boolean {
   return view.phase !== "mulligan" && view.phase !== "setup";
 }
 
-/** The human's Felinor Tokens on the field. */
 function myTokens(view: PlayerView): string[] {
   return unitsOf(view, "you")
     .filter((unit) => unit.defId === FELINOR_TOKEN)
@@ -69,7 +48,6 @@ function fienderOnField(ctx: CoachCtx): boolean {
   return unitOf(ctx.view, "you", FELINOR_FIENDER) !== undefined;
 }
 
-/** The Rock is Radiant, in hand or on the field. */
 function rockRadiant(view: PlayerView): boolean {
   return inHand(view, THE_ROCK)?.radiant === true || unitOf(view, "you", THE_ROCK)?.radiant === true;
 }
@@ -78,7 +56,6 @@ function sameAction(a: ActionBody, b: ActionBody): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** The plays of Glowy Jelly Bean that pick The Rock. */
 function beanOnRock(ctx: CoachCtx): Play[] {
   const rock = inHand(ctx.view, THE_ROCK);
   if (rock === undefined) return [];
@@ -87,10 +64,7 @@ function beanOnRock(ctx: CoachCtx): Play[] {
   );
 }
 
-/**
- * The plays of The Rock the coach asks for: a Felinor Token as the Tribute when there is one, or
- * else the unit worth least (its attack plus health), so the text's advice is what the play does.
- */
+/** Prefer a token tribute; otherwise preserve the most valuable unit. */
 function rockPlays(ctx: CoachCtx): Play[] {
   const plays = legalPlays(ctx, THE_ROCK);
   const tokens = new Set(myTokens(ctx.view));
@@ -105,26 +79,19 @@ function rockPlays(ctx: CoachCtx): Play[] {
   return plays.filter((play) => cost(play) === cheapest);
 }
 
-/** Reno glows yellow in hand (its condition is met, R195) and the engine offers a play of it. */
 function renoReady(ctx: CoachCtx): boolean {
   return inHand(ctx.view, RENO)?.conditionActive === true && legalPlays(ctx, RENO).length > 0;
 }
 
-/**
- * It is the player's main phase and what a step is about cannot happen: the step is dropped, shown
- * or not, so the coach moves on to the turn's `yourMove` rather than wait for it or point at a play
- * the engine does not offer.
- */
+/** Drop unreachable steps so the coach never waits for an illegal play. */
 function outOfReach(ctx: CoachCtx, possible: (ctx: CoachCtx) => boolean): boolean {
   return myMain(ctx) && !possible(ctx);
 }
 
-/** The rest of the player's turn: `yourMove` names each next move and is done once the turn has passed. */
 function restOfTurn(id: string): CoachStep {
   return yourMove({ id, title: "Your move" });
 }
 
-/** A step asking for a play of this card: dropped once the card is gone or the play is out of reach. */
 function playStep(options: Parameters<typeof playCard>[0] & { possible?: (ctx: CoachCtx) => boolean }): CoachStep {
   const { possible, ...rest } = options;
   const reachable = possible ?? ((ctx: CoachCtx): boolean => legalPlays(ctx, rest.defId).length > 0);
@@ -165,7 +132,7 @@ const playRock: CoachStep = {
 export const script: LessonScript = {
   lessonId: "advanced",
   steps: [
-    // --- before the first turn: the mulligan -------------------------------------------------
+    // Before the first turn: mulligan.
     info({
       id: "welcome",
       title: "Tricks of the trade",
@@ -189,7 +156,7 @@ export const script: LessonScript = {
       defIds: [SEVEN_SEVEN],
     }),
 
-    // --- your first turn: The Coin -------------------------------------------------------------
+    // First turn: The Coin.
     info({
       id: "coin",
       title: "The Coin",
@@ -228,7 +195,7 @@ export const script: LessonScript = {
       },
     },
 
-    // --- your second turn: tribes and tokens ---------------------------------------------------
+    // Second turn: tribes and tokens.
     {
       ...info({
         id: "tribes",
@@ -255,7 +222,7 @@ export const script: LessonScript = {
     }),
     restOfTurn("move-2"),
 
-    // --- your third turn: Radiant ----------------------------------------------------------------
+    // Third turn: Radiant.
     info({
       id: "radiant",
       title: "Radiant cards",
@@ -275,7 +242,7 @@ export const script: LessonScript = {
     }),
     restOfTurn("move-3"),
 
-    // --- your fourth turn: Tribute ---------------------------------------------------------------
+    // Fourth turn: Tribute.
     info({
       id: "tribute",
       title: "Tribute",
@@ -295,9 +262,7 @@ export const script: LessonScript = {
     }),
     restOfTurn("move-4"),
 
-    // --- your fifth turn: the yellow glow ------------------------------------------------------
-    // Taught on the card that glows, when it can be played: Reno glows from the turn the hero is
-    // first hurt, but the coach names it only once the mana is there for it.
+    // Fifth turn: yellow glow, taught only once Reno can be played.
     playStep({
       id: "play-reno",
       title: "Glowing yellow",
@@ -306,7 +271,7 @@ export const script: LessonScript = {
       possible: renoReady,
     }),
 
-    // --- the rest of the game: the coach names each move until it is won -------------------------
+    // The rest of the game.
     yourMove({ id: "win", title: "Win the game", final: true }),
   ],
   tips: [
@@ -318,7 +283,6 @@ export const script: LessonScript = {
       when: (ctx) =>
         fienderOnField(ctx) && freshOf(ctx, "destroyed").some((event) => event.defId === FELINOR_TOKEN && event.owner === ctx.view.viewer),
     }),
-    // Another card's glow (Reno's is the `play-reno` step), shown when that card can be played.
     tip({
       id: "yellow-glow",
       title: "Glowing yellow",
@@ -348,7 +312,7 @@ export const script: LessonScript = {
       when: (ctx) =>
         myMain(ctx) &&
         unitsOf(ctx.view, "you").length === ctx.view.you.units.length &&
-        // A hand card with stats is a Unit (CardView's `attack`, R243); one the mana would cover.
+        // Cards with stats are Units (CardView.attack, R243); require enough mana.
         myHand(ctx.view).some(
           (card) => card.attack !== undefined && card.cost <= ctx.view.you.mana.current && legalPlays(ctx, card.defId).length === 0,
         ),

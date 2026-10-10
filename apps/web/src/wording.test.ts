@@ -1,26 +1,8 @@
-// R373: the rules' "library" is shown to players as the Deck, and "sacrifice" as Tribute (v0.1.1).
-// Nothing in the client a player reads may say the old words: a label, an aria-label, a tooltip, a
-// log line, a prompt, a coach line or a setting.
-//
-// R432 (v0.2.0): a specific cost is written the way card text writes it, "(N) Cost" as the noun ("a
-// (1) Cost or less card", "Face-down trap, (2) Cost") and "costs (N)" as the verb ("costs (1) less").
-// So no client string says the old noun "Cost (N)", the old participle "costing (N)", nor a bare
-// number after "cost" ("costs 3"), nor "a 2-cost card".
-//
-// The guard reads every source file under src/ (tests aside) and parses it, so comments — which
-// name the rules' library freely, as SPEC does — are not text. Of what is left, a machine word is
-// never read by a player (a zone kind, "library"; a testid, `library-you`; a data value,
-// "libraryFull"), and none of those has a space in it. So the guard flags a string, a template's
-// words or JSX text that holds one of the old words and a space: words a player could read.
-//
-// One file is read another way: cards/glossary.ts keeps SPEC's rule text verbatim and puts it into
-// players' words as it builds the table (`inPlayerWords`), and rules.test.ts proves the table.
-//
-// R1320 (patch v0.3.4, issue #543): Degrade is read as Nerf and Upgrade as Buff. Nothing a player
-// reads says either old word in any form: no client string, no card's text or name, no flavour line
-// and no voice line. The engine's names stay as machine words (the events `degraded` and `upgraded`,
-// the sounds `degrade` and `upgrade`, the tuned verdict `data-tuned="upgraded"`), each lower-case with
-// no space; so here a string is flagged when it says an old word and has a space or a capital in it.
+// R373: player-facing client text says Deck and Tribute, never library or sacrifice.
+// R432: a cost is "(N) Cost" as a noun and "costs (N)" as a verb.
+// R1320: player-facing text says Nerf and Buff, not Degrade or Upgrade.
+// The source guards parse strings, templates and JSX, excluding comments and lower-case machine words.
+// `cards/glossary.ts` retains SPEC text and converts it through `inPlayerWords`.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -38,7 +20,6 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 
 const OLD_WORDS = /\b(librar(y|ies)|sacrific\w*)\b/i;
 
-/** SPEC's words, converted where they are read (see the header). */
 const CONVERTED = new Set(["cards/glossary.ts"]);
 
 function sources(dir: string): string[] {
@@ -49,13 +30,11 @@ function sources(dir: string): string[] {
   });
 }
 
-/** The words of every string, template part and JSX text in one file, with where each stands. */
 function wordsIn(path: string): { at: string; text: string }[] {
   const text = readFileSync(path, "utf8");
   const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
-    // A module path is no text.
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
     if (
       ts.isStringLiteral(node) ||
@@ -90,7 +69,7 @@ describe("R373 players read Deck and Tribute", () => {
     expect(flagged("Your library")).toBe(true);
     expect(flagged("Library full")).toBe(true);
     expect(flagged("That unit is sacrificed to pay for it.")).toBe(true);
-    // Machine words stay: a zone kind, a testid, a data value.
+    // Lower-case machine words are not player-facing text.
     expect(flagged("library")).toBe(false);
     expect(flagged("library-you")).toBe(false);
     expect(flagged("libraryFull")).toBe(false);
@@ -98,7 +77,7 @@ describe("R373 players read Deck and Tribute", () => {
   });
 });
 
-/** R432: the old noun ("Cost (2)"), the old participle ("costing (2)"), a bare number after the word cost ("costs 3"), and "2-cost". */
+/** R432: player-visible legacy cost phrasings. */
 const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcosting \(/i, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
 
 function oldCostWords(text: string): boolean {
@@ -123,7 +102,7 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
     expect(oldCostWords("a 2-cost unit")).toBe(true);
     expect(oldCostWords("a card costing 1 or less")).toBe(true);
     expect(oldCostWords("Add 3 random cards costing (0)")).toBe(true);
-    // A template that writes the number bare after "costs" ("costs ${n}") ends its text there.
+    // The template text ends before its interpolated number.
     expect(oldCostWords(", costs ")).toBe(true);
     expect(oldCostWords("Face-down trap, (2) Cost")).toBe(false);
     expect(oldCostWords("Discover 2 (2) Cost or less Units")).toBe(false);
@@ -137,7 +116,7 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
   });
 });
 
-/** Vocabulary table (patch v0.2.1, issue #45): retired words and variants. */
+/** Retired words and variants. */
 const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "bounce", pattern: /\bbounce(s|d)?\b/i },
   { name: "backrow zone", pattern: /\bbackrow zone\b/i },
@@ -191,16 +170,16 @@ describe("patch v0.2.1 vocabulary table (SPEC §11 R366)", () => {
 });
 
 
-/** R1320: Degrade and Upgrade in any form ("Degraded", "upgrades"), but not a grade ("go up a grade"). */
+/** R1320: tuning-word forms, but not "grade". */
 const OLD_TUNING_WORDS = /\b(degrad|upgrad)\w*/i;
 
-/** R1320: an old word a player could read: the words with a space, or with a capital (a label, "Upgraded"). */
+/** R1320: player-visible old tuning words have a space or capital. */
 function saysOldTuningWord(text: string): boolean {
   const trimmed = text.trim();
   return OLD_TUNING_WORDS.test(trimmed) && /[\sA-Z]/.test(trimmed);
 }
 
-/** The voice lines' words (`text: "…"`), read off `card-audio.json5` as the file is written. */
+/** Voice text as written in `card-audio.json5`. */
 function voiceLineTexts(): string[] {
   const file = readFileSync(join(SRC, "audio/card-audio.json5"), "utf8");
   return [...file.matchAll(/\btext:\s*"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1] ?? "");
@@ -250,11 +229,11 @@ describe("R1320 players read Nerf and Buff", () => {
     expect(saysOldTuningWord("Degrade")).toBe(true);
     expect(saysOldTuningWord("Book of Nerf was degraded")).toBe(true);
     expect(saysOldTuningWord("Upgrade hand and Deck twice")).toBe(true);
-    // Machine words stay: an event type, a sound id, a verdict.
+    // Lower-case machine words stay.
     expect(saysOldTuningWord("degraded")).toBe(false);
     expect(saysOldTuningWord("upgrade")).toBe(false);
     expect(saysOldTuningWord("upgraded")).toBe(false);
-    // The new words, and a grade that is no tuning word.
+    // New wording and non-tuning "grade" stay.
     expect(saysOldTuningWord("Book of Buff was buffed")).toBe(false);
     expect(saysOldTuningWord("Nerfed")).toBe(false);
     expect(OLD_TUNING_WORDS.test("go up a grade and trigger every step")).toBe(false);

@@ -1,18 +1,5 @@
-// QA for patch v0.2.0's client items (issue #40, phase 1): one place where each cosmetic item the
-// issue asked for is rendered once, from fixture views, and its visible essentials are asserted, so
-// a regression of any of them fails here by item number as well as in the item's own suite.
-//
-//    1  a dealt deck's unknown cards are backs (R433)            7  the turn clock's last 30 s (R439, R506)
-//    2  the short Cry and Tribute reminders (R500)               8  "(N) Cost" / "costs (N)" (R432)
-//    3  the effects speed slider, 0.25x to 3x (R435)             9  no queue count in Find a match (R505)
-//    4  keyword visuals on board units (R438)                   10  Hinder and Blood Ridden, cast on draw (R502)
-//    5  the opponent's hand revealed at the end (R434)          11  the coloured corruption mark (R437)
-//    6  an empty hand keeps its place (R504)                    12  Call to Chaos names its roll (R436)
-//
-// Every surface rendered here is also read the way a player reads it (`expectReadable`): no raw
-// `{key}` placeholder (B3.4 rule 5), no old cost words (R432), no "library" or "sacrifice" (R373), in
-// its text, its aria-labels, its titles or its value texts. The items' own suites hold the detail;
-// this file only proves each item is there.
+// Cosmetic QA: R433, R500, R435, R438, R434, R504, R439, R506, R432, R505, R502, R437 and R436.
+// Rendered text must have no raw placeholders (B3.4 rule 5) or retired cost and zone terms (R432, R373).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -111,20 +98,14 @@ function renderGame(view: PlayerView): void {
   render(withCatalog(<Game view={view} legal={[]} onAction={vi.fn()} />));
 }
 
-// ---------------------------------------------------------------------------------------------
-// what a player reads
-// ---------------------------------------------------------------------------------------------
+// What a player reads.
 
-/** A placeholder the catalog writes ("{amount}", "{cards|card|cards}") that was never filled in. */
 const PLACEHOLDER = /\{[A-Za-z][\w|]*\}/;
 
-/** R432's old ways, as wording.test.ts lists them, and a mana amount used as a card's cost noun. */
 const OLD_COST: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\b\d+ mana (Unit|Spell|Trap|Field|card)/i];
 
-/** R373's old words. */
 const OLD_WORDS = /\b(librar(y|ies)|sacrific\w*)\b/i;
 
-/** Everything a player reads on the page: its text, and every name, title and value text. */
 function readableTexts(root: ParentNode): string[] {
   const texts = [root instanceof HTMLElement ? root.innerText || (root.textContent ?? "") : ""];
   if (root instanceof Node) texts.push(root.textContent ?? "");
@@ -179,9 +160,7 @@ afterEach(() => {
   }
 });
 
-// ---------------------------------------------------------------------------------------------
-// 1-12
-// ---------------------------------------------------------------------------------------------
+// QA items.
 
 describe("QA v0.2.0, Global Cosmetic", () => {
   it("item 1: a dealt deck lists the cards its owner has seen and one back for the rest, which names and opens nothing (R433)", () => {
@@ -242,11 +221,10 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(shielded?.querySelector('.shield-icon[data-keyword-fx="Divine Shield"]')).not.toBeNull();
     const trample = at(view.opponent.units[4]);
     expect(trample?.querySelector('[data-keyword-fx="Trample"]')).not.toBeNull();
-    // A unit with every keyword draws a treatment per layer, capped, and its chips still name them all.
+    // Motion treats only two keywords; chips name the rest.
     const everything = at(view.you.units[1]);
     expect(everything?.querySelectorAll("[data-keyword-fx]").length).toBeGreaterThan(5);
     expect(everything?.querySelectorAll("[data-kw-motion='on']").length).toBeLessThanOrEqual(2);
-    // A unit with no keyword draws none.
     expect(at(view.you.units[2])?.querySelector("[data-keyword-fx]")).toBeNull();
   });
 
@@ -330,7 +308,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(beats).toEqual([]);
     cleanup();
 
-    // Reduced motion keeps the urgent readout and drops the fuse.
+    // Reduced motion preserves urgency without the fuse.
     writeSettings({ reduceMotion: true });
     at.ms = 0;
     render(clock("p1"));
@@ -389,7 +367,6 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     });
     expect(screen.getByTestId(playModeTestid("bo1")).closest("label")).toHaveTextContent("41 waiting");
     const box = screen.getByRole("region", { name: "Find a match" });
-    /** No count of any queue (the mode labels carry digits of their own, "Best of 1"), and no "waiting". */
     const COUNTS = /waiting|\b(41|23|33|97|98)\b/;
     expect(box).not.toHaveTextContent(COUNTS);
     fireEvent.click(within(box).getByTestId(playTestid.queue));
@@ -400,7 +377,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(box).not.toHaveTextContent(COUNTS);
     vi.mocked(getMe).mockReset();
 
-    // The searching beacon's rings hold still, and stay drawn, under either reduced motion.
+    // Reduced motion leaves the search beacon visible but still.
     const lobbyCss = readFileSync(join(HERE, "../routes/lobby.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     const still = /\{\s*animation: none;\s*opacity: 0\.6;\s*\}/;
     expect(lobbyCss).toMatch(new RegExp(`@media \\(prefers-reduced-motion: reduce\\) \\{\\s*\\.tavern\\.play-screen \\.play-search__ring \\s*${still.source}`));
@@ -413,7 +390,6 @@ describe("QA v0.2.0, Card Cosmetic", () => {
   const drawn = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "drawn", player, instanceId, defId });
   const cast = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 0 });
 
-  /** Mounts the showcase on a first view, then hands it `events` after TURN. */
   function showcase(events: GameEvent[], view: PlayerView = baseView()): void {
     const utils = render(withCatalog(<CardShowcase view={withEvents(view, [TURN])} />));
     utils.rerender(withCatalog(<CardShowcase view={withEvents(view, [TURN, ...events])} />));
@@ -434,7 +410,6 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       expect(screen.getByTestId(showcaseTestid.live)).toHaveTextContent(`${CAST_ON_DRAW_TEXT.opponent} ${nameOf(defId)}: ${CAST_ON_DRAW_TEXT.said}`);
       cleanup();
     }
-    // Each has its own signature recipe over its resolution.
     expect(CARD_FX[HINDER]).toBe("manaCrack");
     expect(CARD_FX[BLOOD]).toBe("bloodDrain");
 
@@ -453,7 +428,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     expect(screen.getByTestId("mana-you")).toHaveAttribute(HINDERED_ATTR, "1");
     expect(document.querySelectorAll(`[data-testid="mana-opponent"] .mana-crystal[${HINDERED_ATTR}]`)).toHaveLength(0);
     cleanup();
-    // The caster's view: the victim is the opponent.
+    // The caster sees its opponent's affected mana.
     renderGame(baseView({ opponent: emptySide("p2", { hand: { count: 3 }, mana, modifiers: [rider(2)] }) }));
     expect(document.querySelectorAll(`[data-testid="mana-opponent"] .mana-crystal[${HINDERED_ATTR}]`)).toHaveLength(2);
   });
@@ -483,7 +458,7 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     expect(green?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.green.rim);
     cleanup();
 
-    // The log names the mark as its badge does, never by the engine's key; a card it cannot read is "a card".
+    // Logs use visible marks and redact unseen cards.
     const events: GameEvent[] = [
       { type: "marked", instanceId: theirs.instanceId, mark: "steal", color: "purple", added: true },
       { type: "marked", instanceId: "facedown-elsewhere", mark: "doom", color: "ultraviolet", added: true },
@@ -505,11 +480,11 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       const rolled: GameEvent = { type: "chaosRolled", player, instanceId: "c95", defId: CHAOS_CORE, effects };
       showcase([rolled]);
       expect(screen.getByTestId(showcaseTestid.chaosLive)).toHaveTextContent(`${CHAOS_TEXT.said}: ${names.join(", ")}`);
-      // The effects layer draws the reveal under full motion, so no still banner.
+      // Full motion uses the effects layer instead of the static banner.
       expect(screen.queryByTestId(showcaseTestid.chaos)).toBeNull();
       cleanup();
     }
-    // The log says the same words: the card's name, or Call to Chaos for one the viewer cannot read.
+    // Logs name visible cards and use Call to Chaos for hidden ones.
     const logged: GameEvent[] = [
       { type: "chaosRolled", player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects },
       { type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects: ["Heal your hero 30"] },

@@ -1,24 +1,8 @@
 /// <reference types="vite/client" />
-// The build writes a real HTML file for each public page, and `sitemap.xml`, so a crawler or a link
-// preview that reads a page without running its script sees that page's title, description and text,
-// and not the landing hero every route used to share. Nothing the browser runs changes: each file is
-// the built `index.html` with its head swapped for the page's and `#root` filled with plain markup,
-// which `createRoot` replaces the way it replaces the landing hero. There is no hydration.
-//
-// NOTHING IS TYPED TWICE. A title and a canonical link are `net/head.ts`'s, the almanac's cards are
-// `almanacShelf`'s (the page's own shelf rule: R674, R1420, so a card of a set that has not shipped is
-// never published) with `fillParams`'s text, and the patches are `patches.json`'s, newest first. The
-// nine descriptions below are the only text written here. A page's prose (the privacy policy) is not
-// copied: a second copy is a second thing to keep accurate.
-//
-// ALIAS-FREE. Vite loads this file through `vite.config.ts`, which `vitest.config.ts` and
-// `e2e/cypress.config.ts` import too, and none of them resolve the client's `@jackioh/*` aliases
-// there. It may reach only modules whose imports are relative, which is why the shelf rule lives in
-// `shelf.ts` and not `filters.ts`.
-//
-// THE HEAD RULE. A visitor whose script runs sees no static text flash: a `<style>` hides it, and a
-// `<noscript>` style shows it again to a visitor without script. The CSP allows inline style and no
-// inline script. The landing hero is kept on `/`, as it always painted there.
+// Static pages give crawlers page-specific HTML and are replaced at client startup without hydration.
+// Reuse `net/head.ts`, `almanacShelf` (R674, R1420; no unshipped cards), `fillParams`, and `patches.json`.
+// This Vite entry uses relative imports because Vitest and Cypress do not resolve `@jackioh/*` here.
+// `<style>` hides static content until startup; `<noscript>` restores it without script.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -34,7 +18,6 @@ import type { CardCost, CardDefs } from "./src/wire/index.ts";
 
 export type PublicPage = { readonly path: string; readonly description: string };
 
-/** The public pages: one row each, in the sitemap's order. A new public route is a row here. */
 export const PUBLIC_PAGES: readonly PublicPage[] = [
   {
     path: paths.landing,
@@ -93,7 +76,6 @@ function canonicalOf(path: string): string {
   return url;
 }
 
-/** `html` with the one match of `pattern` (its group 1 kept) followed by `value` in place of the rest. */
 function swap(html: string, pattern: RegExp, value: string): string {
   if (!pattern.test(html)) throw new Error(`static-pages.ts: index.html has no match for ${String(pattern)}`);
   return html.replace(pattern, (_whole, lead: string) => lead + value);
@@ -102,7 +84,6 @@ function swap(html: string, pattern: RegExp, value: string): string {
 const costText = (cost: CardCost): string =>
   typeof cost === "object" ? `${String(cost.base)} embiggen ${String(cost.embiggen)}` : String(cost);
 
-/** One entry per card the almanac shows, in catalog order, both faces with their numbers filled in. */
 function almanacList(cards: CardDefs): string {
   const entries: string[] = [];
   for (const id of almanacShelf(cards)) {
@@ -121,7 +102,6 @@ function almanacList(cards: CardDefs): string {
   return entries.join("\n");
 }
 
-/** One entry per patch, newest first (the page's `newestFirst`). */
 function patchList(patches: readonly Patch[]): string {
   return [...patches]
     .reverse()
@@ -162,23 +142,19 @@ function pageHtml(template: string, page: PublicPage, pages: readonly PublicPage
   return html.slice(0, open) + body + html.slice(close);
 }
 
-/** `sitemap.xml`: every page's canonical address, and nothing else. */
 export function sitemapXml(pages: readonly PublicPage[]): string {
   const urls = pages.map((page) => `  <url><loc>${canonicalOf(page.path)}</loc></url>\n`).join("");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}</urlset>\n`;
 }
 
 export type StaticPagesInput = {
-  /** The built `index.html`. */
   template: string;
   pages: readonly PublicPage[];
   cards: CardDefs;
-  /** `patches.json`, oldest first. */
   patches: readonly Patch[];
   outDir: string;
 };
 
-/** Writes `<outDir>/<path>/index.html` for each page (`/` is `<outDir>/index.html`) and `sitemap.xml`. */
 export function writeStaticPages({ template, pages, cards, patches, outDir }: StaticPagesInput): void {
   for (const page of pages) {
     const extra =
@@ -190,7 +166,6 @@ export function writeStaticPages({ template, pages, cards, patches, outDir }: St
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages));
 }
 
-/** The build's hook around `writeStaticPages`: runs once the bundle, and so `index.html`, is written. */
 export function staticPages(): Plugin {
   let root = "";
   let outDir = "";
@@ -202,7 +177,7 @@ export function staticPages(): Plugin {
       outDir = resolve(config.root, config.build.outDir);
     },
     writeBundle() {
-      // Read in the hook, not imported: an import would bundle the catalog into every config load.
+      // Reading here avoids bundling the catalog into each config load.
       const data = (file: string): unknown =>
         JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
       writeStaticPages({

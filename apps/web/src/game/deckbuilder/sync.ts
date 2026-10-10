@@ -1,30 +1,20 @@
 // The deck workshop's store: saved decks and trios as this device holds them, and the autosave
 // that keeps the server in step (SPEC §9.4, R250, R252, R256).
 //
-// WHY THE CLIENT MINTS THE IDS. A deck or trio is named by a `crypto.randomUUID()` minted here, the
-// moment it is made, so every save is `PUT /api/decks/:id` — an idempotent upsert. A save that
-// timed out may have landed or not, and sending it again is always right: it can never make a
-// second deck. That one property is what lets this module retry freely and work offline.
+// The client mints each id (`crypto.randomUUID()`), so every save is `PUT /api/decks/:id`, an
+// idempotent upsert: a save that timed out may be sent again and never makes a second deck.
 //
-// NEVER LOSE WORK. Every edit is written to a `localStorage` mirror (`jackioh.decks.v1.<profile>`)
-// before anything else happens, so a closed tab, a dead battery or a dropped connection costs
-// nothing: the next visit merges the mirror over the server's copy, and what the server never
-// confirmed wins (R256). `localStorage` is untrusted and may be missing — private windows, blocked
-// site data and sandboxed frames make it throw on access, and a hand-edited value can hold
-// anything — so every access sits in try/catch and the store works, unmirrored, without it.
+// Every edit goes to a `localStorage` mirror (`jackioh.decks.v1.<profile>`) first; the next visit
+// merges it over the server's copy, and what the server never confirmed wins (R256). `localStorage`
+// is untrusted and may throw or be missing, so every access sits in try/catch.
 //
-// THE SERVER IS LAW. The deck and trio caps, D1–D4 and T1–T3 are the server's to enforce (rule
-// 7). This store checks the caps only so the UI can say "you have ten decks" before a request is
-// refused, and it cleans a name (`deckNameForSave`) so an empty field saves as "Untitled deck"
-// rather than bouncing off D1. A refusal the server does send is shown in its own words and not
-// retried until the player edits that item again: sending the same refused body twice would only
-// be refused twice.
+// The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce. This store checks the
+// caps only so the UI can say so early, and cleans a name (`deckNameForSave`) so it saves as
+// "Untitled deck" rather than bouncing off D1. A refusal is shown in the server's words and not
+// retried until the player edits that item again.
 //
-// THE ORDER OF A SAVE. Decks, then trios, then deletions. A trio names decks, and the server
-// refuses a trio naming a deck it does not have (409 `details.unknownDeck`), so the decks go
-// first; a trio refused that way while one of its decks is still unsaved waits for that deck and
-// goes again in the same flush. Deletions go last so a deck is never deleted before a trio PUT
-// that still names it has cleared the slot.
+// Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
+// (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
 
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName } from "@jackioh/validator";
 
@@ -45,9 +35,7 @@ import {
   type TrioSlots,
 } from "../../net/api.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The shapes
-// ---------------------------------------------------------------------------------------------
 
 export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; createdAt: number; updatedAt: number };
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
@@ -122,12 +110,10 @@ export type DeckStore = {
   updateTrio(id: string, patch: { name?: string; deckIds?: TrioSlots }): void;
   deleteTrio(id: string): void;
   /**
-   * R340, R341: imports a trio code's decks and the trio, all or nothing, in one request — never
-   * through the autosave, which would leave half an import behind a refusal. What is unsaved goes
-   * first (a deck deleted to make room is then gone at the server too), the caps are checked here
-   * for a sentence without a round trip, and on success the decks and the trio join the list as
-   * saved. The ids are minted once per import and reused when the same import is tried again, so a
-   * retry after a lost answer updates what the first attempt made instead of making it twice.
+   * R340, R341: imports a trio code's decks and the trio, all or nothing, in one request, never
+   * through the autosave (which would leave half an import behind a refusal). What is unsaved goes
+   * first, the caps are checked here, and on success the decks and trio join the list as saved. The
+   * ids are minted once per import and reused on a retry, so a lost answer never makes it twice.
    */
   importTrio(init: TrioImport): Promise<TrioImportResult>;
   /** Saves now (the debounce is skipped); settles once this flush and any re-run it caused have. */
@@ -138,9 +124,7 @@ export type DeckStore = {
   stop(): void;
 };
 
-// ---------------------------------------------------------------------------------------------
 // Names
-// ---------------------------------------------------------------------------------------------
 
 export const UNTITLED_DECK = "Untitled deck";
 export const UNTITLED_TRIO = "Untitled trio";
@@ -173,9 +157,7 @@ export function trioNameForSave(raw: string, nameLength: number): string {
   return refused ? UNTITLED_TRIO : name;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Storage
-// ---------------------------------------------------------------------------------------------
 
 export const DECK_MIRROR_PREFIX = "jackioh.decks.v1.";
 
@@ -296,9 +278,7 @@ function readMirror(storage: StorageLike | null, key: string): Mirror | null {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The clock
-// ---------------------------------------------------------------------------------------------
 
 const MS_PER_SECOND = 1000;
 const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * MS_PER_SECOND;
@@ -317,9 +297,7 @@ function randomId(): string {
   return globalThis.crypto.randomUUID();
 }
 
-// ---------------------------------------------------------------------------------------------
 // Errors
-// ---------------------------------------------------------------------------------------------
 
 /** What the status line says while a failed save waits to go again. */
 export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
@@ -357,9 +335,7 @@ function failureOf(cause: unknown): Failure {
   return { kind: "transient", message: cause instanceof Error ? cause.message : String(cause) };
 }
 
-// ---------------------------------------------------------------------------------------------
 // The store
-// ---------------------------------------------------------------------------------------------
 
 function byAge<T extends { createdAt: number; id: string }>(left: Tracked<T>, right: Tracked<T>): number {
   if (left.item.createdAt !== right.item.createdAt) return left.item.createdAt - right.item.createdAt;
@@ -482,8 +458,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       };
       storage.setItem(key, JSON.stringify(value));
     } catch {
-      // Quota, private mode or blocked storage: the in-memory state stays in force, and the
-      // server copy is the only copy once it lands.
+      // Quota, private mode or blocked storage: the in-memory state stays in force.
     }
   }
 

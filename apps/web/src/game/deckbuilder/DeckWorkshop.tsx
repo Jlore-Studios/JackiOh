@@ -1,29 +1,7 @@
-// `/decks`, the deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one
-// open at a time beside the list of both.
-//
-// THE SHAPE. A header (the way back, the title and the save status, which is always on screen), a
-// rail listing the decks ("Decks n/10": name, count, a status chip) and the trios ("Trios n/5"),
-// and a main column holding whichever is open: the deck editor (DeckEditor.tsx), the trio editor
-// (TrioEditor.tsx), the deck import panel (ImportPanel.tsx) or the trio import panel
-// (TrioImportPanel.tsx, R339–R341). On a phone the two halves take turns
-// (`data-view="list|editor"`): the list first, an item opens the editor, and "← All decks" goes
-// back. Everything stays mounted either way; the CSS decides what shows.
-//
-// THE DATA. This component owns the store (sync.ts) and nothing else of note: the route hands it
-// the server's copy, the catalog, the collection and the four writes, and the store merges its
-// local mirror over them, saves as the player works and keeps what the server has not confirmed
-// on the device (R256). There is no Save button: "Saved", "Saving…", "Offline. Kept on this
-// device." and "Couldn't save" say where things stand.
-//
-// THE LOOK. The root is a tavern screen (`.tavern`, auth/tavern.css) like the landing, `/play` and
-// `/practice`: its page, Back, the gear and the notices are the tavern's. The builder's own
-// controls keep deckbuilder.css's and workshop.css's drawing, sized to the page's pixel budget.
-//
-// NO RULE LIVES HERE (CLAUDE.md rule 7). The caps are the server's; the builder reads them from
-// `GET /api/decks`'s `limits` and turns New deck, New trio and Import off at them, with the reason,
-// so a player is not refused after the fact. Each chip and verdict is the shared validator's
-// (workshop.ts). The component is presentational apart from the store: it does no I/O of its own,
-// which is what lets a test (or a component spec) mount it with a fake api.
+// `/decks` deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one open at
+// a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
+// Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
+// the local store and supplied API (R256).
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -73,13 +51,10 @@ import {
 import TrioEditor from "./TrioEditor.tsx";
 import { deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
 
-/**
- * The narrowest screen that shows the rail and the open item side by side; below it they take
- * turns. workshop.css's `@media (max-width: 1100px)` is the same line, drawn.
- */
+/** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
 
-/** True where the halves take turns, so moving between them should move the focus too. */
+/** Whether changing halves must also move focus. */
 function halvesTakeTurns(): boolean {
   try {
     return window.matchMedia(`(max-width: ${String(WORKSHOP_SPLIT_MIN_WIDTH_PX - 1)}px)`).matches;
@@ -98,23 +73,23 @@ export type WorkshopOpen =
 
 export type DeckWorkshopProps = {
   catalog: CatalogSnapshot;
-  /** Null when `GET /api/collection` could not be read: ownership is then neither claimed nor denied. */
+  /** Null collection leaves ownership unknown. */
   collection: Collection | null;
-  /** `GET /api/decks`: the server's copy, which the store merges its local mirror over (R256). */
+  /** Server decks, overlaid by the local mirror (R256). */
   data: DecksResponse;
-  /** Whose drafts the local mirror holds (`jackioh.decks.v1.<profileId>`). */
+  /** Owner of the local mirror. */
   profileId: string;
-  /** The writes, bound to the session's token by the route. */
+  /** Route-bound deck writes. */
   api: DeckSyncApi;
-  /** What opens first. Default: the first deck (or nothing), with a phone showing the list. */
+  /** Optional initial item; phones otherwise start at the list. */
   initialOpen?: WorkshopOpen;
-  /** Test seams (sync.ts): the mirror's storage, the clock, and the id minting. */
+  /** Test seams for mirror storage, clock, and ID minting. */
   storage?: StorageLike | null;
   clock?: SyncClock;
   newId?: () => string;
 };
 
-/** The save status line's words (R256). An error is the server's own sentence after ours. */
+/** Save-status wording; server errors follow ours (R256). */
 export function syncWords(status: SyncStatus): string {
   switch (status.state) {
     case "saved":
@@ -358,7 +333,6 @@ function TrioRow({ trio, decks, catalog, collection, nameLength, current, unsync
   );
 }
 
-/** The item that follows `id` in `items`, else the one before it, else null. */
 function neighbourOf<T extends { id: string }>(items: readonly T[], id: string): T | null {
   const at = items.findIndex((item) => item.id === id);
   if (at < 0) return null;
@@ -381,7 +355,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   );
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
-  // Saves on leaving (pagehide, a hidden tab) while the screen is open, and once more on unmount.
+  // Start and stop persistence with the screen.
   useEffect(() => {
     store.start();
     return () => {
@@ -394,11 +368,10 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     const first = store.getSnapshot().decks[0];
     return first === undefined ? null : { kind: "deck", id: first.id };
   });
-  // A phone shows one half at a time: the list until something is opened from it.
   const [view, setView] = useState<"list" | "editor">(
     initialOpen === undefined || initialOpen === null ? "list" : "editor",
   );
-  // Filter and sort outlive a switch between decks, and are kept per device (savedBrowse.ts, #263).
+  // Keep filters and sort per device across deck switches.
   const [browseStorage] = useState<StorageLike | null>(() =>
     props.storage === undefined ? browserStorage() : props.storage,
   );
@@ -415,8 +388,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     updateBrowse({ filter, sort: next });
   };
 
-  // On a phone the half that held the focus disappears when the other opens, so the focus follows:
-  // to the editor's way back when an item opens, and to the open item's row on the way back.
+  // On phones, follow a disappearing half's focus to the newly visible half.
   const railRef = useRef<HTMLElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [moveFocus, setMoveFocus] = useState<"editor" | "list" | null>(null);
@@ -439,7 +411,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const openItem = (next: WorkshopOpen): void => {
     setOpen(next);
     setView(next === null ? "list" : "editor");
-    // The import panels take the focus themselves, into the box a code is pasted in.
+    // Import panels focus their paste fields themselves.
     if (next !== null && next.kind !== "import" && next.kind !== "trio-import") setMoveFocus("editor");
   };
 
