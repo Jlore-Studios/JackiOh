@@ -70,6 +70,15 @@ reserved: RowFlags, fatigueCount: number,
  */
 jade?: number, 
 /**
+ * R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
+ * game without one serialises as before.
+ */
+extraTurns?: number, 
+/**
+ * R847 (Meditative #19.1): this player's once-a-game Temporal Rift flag. Only ever `Some(true)`.
+ */
+riftExtraTurn?: true, 
+/**
  * ME-SECRET, R860: the secrets this side holds, the choice only where the viewer may read it.
  * Absent while none are held (D14).
  */

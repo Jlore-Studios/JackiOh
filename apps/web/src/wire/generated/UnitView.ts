@@ -63,4 +63,9 @@ conditionTargets?: Array<string>,
  * MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
  * a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
  */
-created?: true, };
+created?: true, 
+/**
+ * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
+ * (`grants::grant_texts`). Absent when it holds none.
+ */
+grants?: Array<string>, };

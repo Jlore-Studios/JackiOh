@@ -4,6 +4,7 @@ import type { BrittleCounter } from "./BrittleCounter";
 import type { Counters } from "./Counters";
 import type { Enchantment } from "./Enchantment";
 import type { Exertion } from "./Exertion";
+import type { Grant } from "./Grant";
 import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
@@ -132,4 +133,10 @@ setAs?: SetAs,
  * Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
  * unites it, a Transform drops it.
  */
-grantedTags?: Array<Tag>, };
+grantedTags?: Array<Tag>, 
+/**
+ * ME-GRANT (MD-D13): the Death abilities other cards granted this card, in the order granted.
+ * R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
+ * Fuse unites them, a Transform drops them — as `granted_tags` above.
+ */
+grants?: Array<Grant>, };
