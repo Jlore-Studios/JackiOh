@@ -148,7 +148,8 @@ function openTicket(mode: QueueMode): EnqueueResponse {
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
-    tag: "ABC123",
+    profileId: "5d0c7a1e-0b9f-4c55-9a3e-6f2d8b1c4e70",
+    username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
     streak: 2,
     record: { games: 10, wins: 7, losses: 2, draws: 1 },

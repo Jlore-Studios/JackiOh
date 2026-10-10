@@ -10,7 +10,8 @@
 //! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
 //! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
-//! them for the lobby's room links (R767).
+//! them for the lobby's room links (R767), and the four `USERNAME_*` hints for the username field
+//! (R1432, R1435).
 
 use serde_json::{Value, json};
 
@@ -155,6 +156,16 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("TRIO_CODE_VERSION", json!(c::TRIO_CODE_VERSION)),
         ("TURN_CLOCK_MS", json!(c::TURN_CLOCK_MS)),
         ("TURN_CLOCK_SECONDS", json!(c::TURN_CLOCK_SECONDS)),
+        (
+            "USERNAME_CHANGE_COOLDOWN_SECONDS",
+            json!(c::USERNAME_CHANGE_COOLDOWN_SECONDS),
+        ),
+        ("USERNAME_MAX_LENGTH", json!(c::USERNAME_MAX_LENGTH)),
+        ("USERNAME_MIN_LENGTH", json!(c::USERNAME_MIN_LENGTH)),
+        (
+            "USERNAME_PREVIEW_DEBOUNCE_MS",
+            json!(c::USERNAME_PREVIEW_DEBOUNCE_MS),
+        ),
     ]
 }
 
@@ -176,8 +187,9 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 51,
-        "the 50 names the client imported from apps/server/src/config.ts, and ROOM_CODE_FORMAT (R767)"
+        listed, 55,
+        "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767) and the \
+         four USERNAME_* hints (R1432, R1435)"
     );
 }
 

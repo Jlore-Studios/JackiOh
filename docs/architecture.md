@@ -612,7 +612,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` — and records them in `app.migrations`. Expected
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` — and records them in `app.migrations`. Expected
    result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -637,7 +637,13 @@ step that is not yet implemented says which BUILD task delivers it.
    project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
    Catalyst, Prime and Acclaimed, as 0020 did with Plague. 0027 adds `tickets.lean_newest` and
    `matches.room_lean_newest`, where All Random's "More cards from the newest set" waits for the deal
-   (R1372); both default to false, so nothing is backfilled.
+   (R1372); both default to false, so nothing is backfilled. 0028 gives every profile a username
+   (R1432–R1436): it replaces `profiles.display_name` with the base name, its key, its tag, the time
+   of the last change and whether the prompt was answered, names every existing profile `Player#n`
+   in order of sign-up, and names every new one the lowest free `Player#n` by trigger; a client
+   reads its own row's username columns and writes none of them. It only adds: `display_name`,
+   which no server reads from 0028 on, stays for the deploy before it, which reads it until the new
+   one serves, and a later migration drops it.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
