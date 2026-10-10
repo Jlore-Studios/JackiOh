@@ -74,7 +74,7 @@ fn counting_piles(state: &GameState, player: PlayerId, count: usize) -> Vec<Rank
         .enumerate()
         .map(|(order, pile)| (pile.name, zone_count(state, player, pile.zone), order))
         .collect();
-    // Stable (§4.4.1): the larger first, a tie by the text's order.
+    // Stable (SURFACE §4.4.1): the larger first, a tie by the text's order.
     sized.sort_by(|a, b| b.1.cmp(&a.1).then(a.2.cmp(&b.2)));
     sized
         .into_iter()

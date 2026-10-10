@@ -154,7 +154,7 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
         return f64::from(health);
     }
-    // Fused scripts are built from the state on every lookup (§6.6), so no sync is needed here.
+    // Fused scripts are built from the state on every lookup (SURFACE §6.6), so no sync is needed here.
     let mut attacks: Vec<i32> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;

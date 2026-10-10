@@ -49,7 +49,7 @@ fn tax(radiant: bool) -> TriggerDef {
 }
 
 fn discount_of(ctx: &EffectContext<'_>) -> i32 {
-    // Only an integer counts, else 0 (§4.4.10).
+    // Only an integer counts, else 0 (SURFACE §4.4.10).
     match ctx.data.get(DISCOUNT) {
         Some(Value::Number(n)) => n
             .as_i64()

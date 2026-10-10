@@ -6,8 +6,8 @@
 //!
 //! R430: "an empty unit zone" is R64's `open_zones`; with none the trap stays armed, unconsumed. §5.1,
 //! §10.3 and traps.rs own `trapFired`, the state check and consuming it (R17, R61). The condition is a
-//! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): R56's cost actually
-//! paid and R70's cast paying 0 decline a play and leave it armed. R53 is the forced attack (§4.2
+//! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): a play over the
+//! threshold, by R56's cost actually paid, leaves it armed; a cast pays 0 (R70), so it always qualifies. R53 is the forced attack (§4.2
 //! steps 1-3 skipped, `force_attacks_on`). It answers `cardResolved` (§10.5 step 7: R17, R427, R68,
 //! R89), not `cardPlayed`: the unit is on the field with its Cry resolved. R662: the glow, both faces.
 

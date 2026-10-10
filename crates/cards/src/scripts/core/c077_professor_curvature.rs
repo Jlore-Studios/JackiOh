@@ -1,24 +1,18 @@
 //! #77 Professor Curvature (SPEC §8.3, R48, R65, R363, §2.2, §10.1).
 //!
 //! Base: "Cry: (4)+ Cost cards cost (1) less on your next turn."; radiant "... cost (2) less ...".
-//! Patch v0.1.1 widened it from cards whose cost is exactly 4 to cards whose cost is 4 or more
-//! (R363), and cut its body to 3/3 → 6/6; the stats come from the catalog.
 //!
 //! §8's Engine cell: "Delayed player modifier, checked against current cost at play; expires at that
 //! turn's cleanup." That is one `PlayerModifier`, not a delayed effect:
 //!
 //!   R363 "Cost (4)+" → `minCurrentCost: 4`, which `mana::effective_cost` reads AFTER `cost_mod` and the
-//!        flat discounts, exactly where R65 puts it: "add player discounts; apply Professor
-//!        Curvature if the result is then 4 or more; floor at 0". So a card the board has already
-//!        discounted from 5 to 4 is caught, and a printed-4 card another discount has already taken
-//!        to 3 is not.
+//!        flat discounts, where R65 puts it: "add player discounts; apply Professor Curvature if the
+//!        result is then 4 or more; floor at 0".
 //!   R48  "on your NEXT turn" → `{ until: "nextTurnOf", player, fromTurn }`. `mana::modifier_is_live`
-//!        answers false while `state.turn == from_turn`, so the discount does nothing on the turn
-//!        Curvature was played, and `modifiers::expire_modifiers` drops it at the cleanup of that
-//!        player's next turn (§2.2: "Cleanup expires … Professor Curvature's discount on its turn").
+//!        is false while `state.turn == from_turn`, and `modifiers::expire_modifiers` drops it at the
+//!        cleanup of that player's next turn (§2.2: "Cleanup expires … Professor Curvature's discount").
 //!
-//! The modifier sits on the controller's own `mods`, so it is read only when that player's cards are
-//! costed; the opponent's turn in between cannot reach it even while it is live.
+//! The modifier sits on the controller's own `mods`, so the opponent's cards are never costed by it.
 
 use jackioh_engine::effects::add_player_modifier;
 use jackioh_engine::prelude::*;
@@ -58,10 +52,8 @@ pub fn script() -> CardScripts {
 //
 // BUILD M4-T4: "Next turn only: cards whose current cost is 4 or more −1 (radiant −2); not this turn;
 // expires (R48, R363)".
-//
-// The three clauses are read off the hand's own cost, which `view_for` computes with
-// `mana::effective_cost` (§10.8, R65) — the same number the play validator charges — and confirmed by
-// actually paying for the cost-4 card on the turn the discount is live.
+// The clauses are read off the hand's cost from `mana::effective_cost` (§10.8, R65), the number the
+// play validator charges, and confirmed by paying for the cost-4 card on the live turn.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -94,8 +86,8 @@ mod tests {
         card.cost
     }
 
-    /// Harness gap (reported): there is no `mods()` accessor, so the modifier is read off the state in
-    /// the test file. REVIEW B1.7's purity grep covers `src` only, so this is fine here.
+    /// No `mods()` accessor exists, so the modifier is read off the state here (REVIEW B1.7's purity
+    /// grep covers `src` only).
     fn discounts(s: &Scenario) -> Vec<PlayerModifier> {
         s.state()
             .players
@@ -114,8 +106,7 @@ mod tests {
         serde_json::to_value(s.state().players.p1.mods.first()).expect("a modifier serialises")
     }
 
-    /// The scenario every test plays on, with the shipped cards registered first (the TS
-    /// globalSetup's `registerAll()`).
+    /// The scenario every test plays on, with the shipped cards registered first.
     fn board(radiant: bool) -> Scenario {
         crate::register_all();
         let hand: Vec<Value> = std::iter::once(json!({ "def": CURVATURE, "radiant": radiant }))
@@ -231,10 +222,9 @@ mod tests {
         }
     }
 
-    // R169, BUILD M5-T4 ("badge list equals the view's modifiers"). Until R169 the discount existed
-    // only in `state.players[p].mods`, which no view carried and no component drew, so a player had no
-    // way to know Professor Curvature was on them — least of all on the turn it was played, where R48
-    // makes it change no card's cost either. The proof is the view, not the state.
+    // R169, BUILD M5-T4 ("badge list equals the view's modifiers"): a player must be able to see the
+    // discount, even on the turn it was played, where R48 makes it change no cost. The proof is the
+    // view, not the state.
     mod professor_curvature_visible_to_the_player_while_active_r169_s10_8 {
         use super::*;
 

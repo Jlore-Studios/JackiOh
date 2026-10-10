@@ -64,7 +64,7 @@ mod tests {
         }
     }
 
-    /// Per-test counter (no mutable statics in a pure crate, §3): nonces stay distinct for dedupe.
+    /// Per-test counter (no mutable statics in a pure crate, SURFACE §3): nonces stay distinct for dedupe.
     fn send(nonce: &mut u32, state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
         *nonce += 1;
         let mut action = body;

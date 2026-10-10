@@ -6,8 +6,8 @@
 //! - Board: contents change sides lane by lane, in both rows of §3.1. A swapped card never leaves the
 //!   field, so R78's reset never runs and everything on it comes along (R14). `controller` changes,
 //!   which is an entry (R171): every card that lands, a dormant Stack card included, takes this turn
-//!   as its `summonedTurn` and a fresh exertion. `owner` stays (R12, R747); locks stay with their zones
-//!   (R73, §3.2); a face-down trap stays face-down, its `faceUp` untouched (R33).
+//!   as its `summonedTurn` and a fresh exertion. `owner` stays on a swap (R12); a later bounce makes
+//!   the controller its owner (R747). Locks stay with their zones (R73, §3.2); a face-down trap stays face-down, its `faceUp` untouched (R33).
 //! - Library: the piles change places whole, in order, and each card's owner becomes the player
 //!   whose library holds it, R12's one exception (R73). Fatigue is player state (§2.4) and stays.
 

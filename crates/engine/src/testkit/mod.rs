@@ -1,4 +1,4 @@
-//! `jackioh_engine::testkit` (feature `testkit`, §8): `scenario` (the harness), `invariants` (the I1–I4
+//! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the I1–I4
 //! monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`), so a test
 //! names every engine item as `jackioh_engine::testkit::*` gives it.
 //!

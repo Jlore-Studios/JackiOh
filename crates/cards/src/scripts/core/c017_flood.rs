@@ -6,19 +6,17 @@
 //! only as one of the three options (§8 Conventions).
 //!
 //! Neither the vanishing nor the burning is this card's business: §6.3 Bounce goes through
-//! `effects/move_.rs`, where a unit token ceases to exist instead of reaching a hand (R11) and a full
-//! hand burns the card to the graveyard (R4, §2.4).
+//! `effects/move_.rs`, where a unit token ceases to exist (R11) and a full hand burns the card to
+//! the graveyard (R4, §2.4).
 //!
 //! R81: "the targets and modes a card's script declares travel in the `play` action … so Glowy Jelly
 //! Bean's hand card and Silly Silas's direction are chosen with the play and never pause resolution".
-//! Flood's "choose one" is therefore a declared `modes` and NOT a `PendingChoice`: the pick arrives in
-//! `ctx.modes`, which `chosen_options` reads (after any prompt mode pick, so one helper covers both).
+//! So "choose one" is a declared `modes`, not a `PendingChoice`: the pick arrives in `ctx.modes`,
+//! which `chosen_options` reads.
 //!
-//! The sweeps are `bounce_all` (effects/move_.rs) and `destroy_all` (effects/destroy.rs), over a board
-//! scope whose rows default to the units. `bounce_all` sends each card through the same body as
-//! `bounce`, so R11 and R4 hold card by card; `destroy_all` marks every match and stops, exactly like
-//! `destroy`, so Indestructible survives (R46) and everything dies in the one state check that
-//! follows (R59).
+//! `bounce_all` sends each card through the body of `bounce`, so R11 and R4 hold card by card;
+//! `destroy_all` marks every match and stops like `destroy`, so Indestructible survives (R46) and
+//! all deaths land in the one state check that follows (R59).
 
 use jackioh_engine::effects::{bounce_all, chosen_options, destroy_all, draw};
 use jackioh_engine::prelude::*;
@@ -86,14 +84,10 @@ pub fn script() -> CardScripts {
 // #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17.
 //
 // Must-pass (M4-T4): "Bounces both sides, tokens vanish, hand cap burns; radiant three modes each
-// tested plus draw 1".
+// tested plus draw 1". Engine cell: "Tokens vanish on bounce; hand cap burns extras" — R11 and R4.
 //
-// Engine cell: "Tokens vanish on bounce; hand cap burns extras" — R11 and R4.
-//
-// R81 is why no test here calls `answer()`: the radiant "choose one" is a DECLARED mode, so it
-// travels in the play action (`play(..., { modes })`) and never opens a `PendingChoice`. The strings
-// are the same constants the script declares; a drift between the two would fail `refuse_modes`
-// (play_choices.rs) rather than silently pick the first option.
+// R81 is why no test calls `answer()`: the radiant "choose one" is a DECLARED mode that travels in
+// the play action and never opens a `PendingChoice`.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

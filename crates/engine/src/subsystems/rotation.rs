@@ -7,9 +7,10 @@
 //! A rotation never takes a card off the field, so R78's reset never runs: its instance, damage, buffs,
 //! counters and position come along (R14). Only `controller` changes, and only across the centre line;
 //! that crossing is an entry (R171), so the card takes this turn as its `summoned_turn` and a fresh
-//! exertion and is summoning sick on its new side. The owner never changes: a bounce goes to the
-//! controller's hand (R747), a later leave to the owner's library, graveyard or exile (R12). A face-down
-//! trap that crosses is read by its new controller alone, so `face_up` is left untouched (R33).
+//! exertion and is summoning sick on its new side. A card that moves along its own side has entered
+//! nothing and keeps both. The owner never changes on a crossing (R12); a later leave goes to the
+//! owner's library, graveyard or exile, and a bounce to the controller's hand as theirs (R747). A
+//! face-down trap that crosses is read by its new controller alone, so `face_up` is left untouched (R33).
 
 use std::borrow::Borrow;
 

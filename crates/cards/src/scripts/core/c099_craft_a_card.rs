@@ -9,7 +9,7 @@
 //! ride in `data`, the only place a chained effect keeps anything; `resume_self` merges it onward.
 //! FUSE (R77, `subsystems/fuse.rs`): no `target`, `toHand` the caster, both faces fused into
 //! `state.transientDefs`, cost overridden to 0 on the instance (`CRAFTED_CARD_COST`), not the def.
-//! The ingredients are Discovered definitions never on a board, so nothing ceases to exist (R86).
+//! The ingredients are Discovered definitions never on a board, so nothing ceases to exist.
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -69,7 +69,8 @@ fn craft(picks: &[String]) -> Vec<Effect> {
     }
     // No target: R77 takes the ingredients' shared type ("Unit") and "your hand" is the caster's
     // (§8.5). `fuse_cards` wraps `subsystems/fuse.rs`, taking catalog ids (`defIds`) where `fuse`
-    // takes instances and a sink, so no state is mutated here (CLAUDE.md rule 5, R86, R102).
+    // takes instances and a sink, so no state is mutated here (CLAUDE.md rule 5); each pick is an
+    // ingredient in no pile (`{ z: "gone" }`, R86) and R102 composes the result.
     vec![fuse_cards(json_as(json!({ "defIds": picks, "toHand": "self" })))]
 }
 

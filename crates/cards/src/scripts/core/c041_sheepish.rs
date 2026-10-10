@@ -4,13 +4,14 @@
 //!
 //! TIMING (R427; rewrites R17's Sheepish half): it answers §10.5 step 7's `cardResolved`, after the Cry and
 //! every Echo repeat (a cast Unit too, R70). Not `summoned`, which also covers Recruit, copies, tokens and
-//! Reborn, none of them a play (R1, R61). Every condition lives in `when`, so a Spell, a backrow card or the
-//! controller's own Unit leaves the trap armed (R61).
+//! Reborn, none of them a play (R1, R61). A `run` returning [] still consumes the trap, so every
+//! condition lives in `when`: a Spell, a backrow card or the controller's own Unit leaves it armed (R61).
 //! A Unit that left the field in its own resolution still fires it: nothing to Transform (it never reaches
 //! a hand, a graveyard or a Reborn body, R83), the trap consumed, the Lava Golem still added (R120). One an
-//! earlier trap took off the field is no play left to answer: it stays set (R174). Immutable (R17, R23, R33):
-//! `transform` refuses it and `fireTrap` consumes the trap regardless. No glow (R662): the trap waits on an
-//! event, and what a glow would tell, a Unit in the opponent's hand, is hidden (§9.1).
+//! earlier trap took off the field is no play left to answer: it stays set (R174). Immutable (R17, R23):
+//! `transform` refuses it and `fireTrap` consumes the trap regardless. A face-down trap's identity is the
+//! view's (R33). No glow (R662): the trap waits on an event, and what a glow would tell, a Unit in the
+//! opponent's hand, is hidden (§9.1).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{add_to_hand, transform};

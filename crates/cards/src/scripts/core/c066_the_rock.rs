@@ -1,38 +1,17 @@
 //! #66 The Rock (SPEC §8.3, §6.3 Tribute, §3.2, R23, R46, R69, R81, R90).
 //!
-//! Base cell: "Tribute 1, Indestructible". Radiant cell: "Plus Immutable" — §8's Conventions read
-//! "Plus X" as the base keyword list plus X, and both lists are printed on the catalog faces
-//! (`def.base.keywords = [Indestructible]`, `def.radiant.keywords = [Indestructible, Immutable]`),
-//! which §10.4 layer 1 reads straight off the def. So this file grants no keyword: granting
-//! Indestructible here would be a second source of truth and granting Armor-style keywords twice is
-//! what #25's header warns about.
+//! Base "Tribute 1, Indestructible"; radiant "Plus Immutable" (§8 Conventions: the base list plus X).
+//! Both lists are on the catalog faces and §10.4 layer 1 reads them off the def, so this file grants
+//! no keyword. It carries only the Tribute cost (§6.3: "an additional cost of playing a card"), which
+//! `play_choices.rs` validates: `tribute_cost_of` reads `static_flags.tribute`; `tribute_value_of` gives
+//! the Sheep Token 2 and any other unit 1 (§3.2, §6.3); `legal_tribute_units` offers only the chooser's
+//! own units (only #55 Lava Golem sets `tribute_enemies`); `refuse_tributes` refuses an unpayable play.
+//! Chosen units travel in the `play` action's `tributes` (R81, R90), so there is no hook.
 //!
-//! The one thing the script carries is the Tribute cost. §6.3 calls Tribute "an additional cost of
-//! playing a card" and puts it in the play validator, and `play_choices.rs` is that validator:
-//!   * `tribute_cost_of(card)` reads a `tribute` TargetDecl's `amount` first and falls back to
-//!     `static_flags.tribute`, so the flag alone is enough and the card declares no `targets`;
-//!   * `tribute_value_of` gives the Sheep Token 2 and every other unit 1 (§3.2, §6.3), so one Sheep
-//!     pays this cost of 1 on its own and `is_minimal_tribute` still accepts it;
-//!   * `legal_tribute_units` offers only the chooser's own units, because `may_tribute_enemy_units` reads
-//!     a `tribute_enemies` flag that only #55 Lava Golem sets and §6.3 reads Tribute as "sacrifice X
-//!     of *your* units";
-//!   * `refuse_tributes` refuses the play outright when the board cannot pay — the "play refused
-//!     without a tribute" row of BUILD M4-T4.
-//!
-//! The units chosen travel in the `play` action's own `tributes` list rather than in `targets`
-//! (R81, R90), so there is nothing for a hook to read and no hook here at all.
-//!
-//! Where the two keywords' behaviour lives, all of it engine-side:
-//!   Indestructible — §4.4 step 4: takes no damage at all. §4.5 step 1 and R46: a destroy mark is
-//!                    ignored, and the marked unit switches to Attack Position and loses Taunt for
-//!                    that turn (`state_check.rs`'s `resolve_indestructible_marks`, which stamps
-//!                    `taunt_suppressed_turn`). R69: it dies anyway once its max health falls to 0 or
-//!                    less (#46 Suppressive Aura), because no destroy effect is involved. §6.1:
-//!                    Sacrifice and Exile still remove it — a Tribute of a The Rock included.
-//!   Immutable      — R23: blocks Vanilla, Transform (Transmogulate on the board included) and
-//!                    Fuse-onto on this card. Radiant is still allowed, #41 Sheepish still fires and
-//!                    is consumed for nothing (R17), and #61's Vanilla copy of an Immutable unit is
-//!                    legal because the Vanilla lands on the copy.
+//! Engine-side: Indestructible takes no damage (§4.4 step 4); R46 and §4.5 step 1 ignore a destroy
+//! mark, and the unit switches to Attack Position and loses Taunt for the turn; R69 it dies once max
+//! health is 0 or less; §6.1 Sacrifice and Exile still remove it. Immutable (R23) blocks Vanilla,
+//! Transform and Fuse-onto; Radiant is still allowed and #41 Sheepish still fires, consumed for nothing (R17).
 
 use jackioh_engine::prelude::*;
 
@@ -75,21 +54,15 @@ mod tests {
     const RUSH: &str = "core-t-rush"; // Rush Token, 3/3: a second body, so an action can run a state check.
     const AURA: &str = "core-046"; // Suppressive Aura, Field Spell, embiggen price 4 — R69's −10/−10.
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends by
-    /// itself, and `reduce` runs that check after EVERY action — so a play that empties the hand and
-    /// leaves no unit hands the turn over: the opponent draws (taking fatigue on an empty library),
-    /// start-of-turn triggers fire, and the numbers under test move underneath the assertion. Every
-    /// scenario below therefore keeps one free 0-cost Spell in p1's hand. It is never played; it only
-    /// keeps one legal action on the turn. (Reported as a harness gap: `scenario` could hold the turn
-    /// open by itself.)
+    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
+    /// `reduce` checks that after EVERY action, so every scenario keeps one free 0-cost Spell in p1's
+    /// hand. It is never played; it only keeps one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
-    /// TS `toThrow(/[Tt]ribute/)`, as a hand check (no regex crate): the refusal names the Tribute,
-    /// capitalised or not, so the word's common tail is what is matched.
+    /// The refusal names the Tribute, capitalised or not, so the word's common tail is matched.
     const TRIBUTE_TEXT: &str = "ribute";
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand. The shipped cards are registered first (the
-    /// TS globalSetup's `registerAll()`; idempotent).
+    /// `scenario(opts)` with ANCHOR appended to p1's hand. The shipped cards are registered first.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -116,9 +89,7 @@ mod tests {
     mod the_rock {
         use super::*;
 
-        // -------------------------------------------------------------------------------------------
         // The script itself
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_3_the_script_carries_only_the_tribute_cost_both_keywords_are_catalog_data_s10_4_layer_1() {
@@ -151,16 +122,14 @@ mod tests {
         fn s8_conventions_the_radiant_cell_adds_a_keyword_only_so_the_radiant_script_keeps_tribute_1() {
             crate::register_all();
             let scripts = super::super::script();
-            // TS `toBe(base)`: the radiant face is the base script, so every part of it matches.
+            // The radiant face is the base script, so every part of it matches.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert!(scripts.radiant.cry.is_none() && scripts.radiant.aura.is_none());
             assert!(scripts.radiant.targets.is_empty() && scripts.radiant.modes.is_empty());
             assert_eq!(serde_json::to_value(&scripts.radiant.static_flags).unwrap(), json!({ "tribute": 1 }));
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: the Tribute cost (§6.3, §3.2)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn build_row_66_refuses_the_play_with_no_unit_on_the_board_to_tribute_s6_3() {
@@ -209,9 +178,7 @@ mod tests {
             s.expect_in_zone(on_field.as_ref().expect("setup: p1 holds The Rock in lane 1"), "graveyard");
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: Indestructible (§4.4 step 4, R46, R69)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s4_4_step_4_indestructible_takes_no_damage_at_all_and_the_attacker_takes_the_full_10_back() {
@@ -226,11 +193,9 @@ mod tests {
             let mut s = board(json!({
                 "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] }
             }));
-            // §6.3 Destroy "only marks the card"; `effects/destroy.rs` sets exactly this flag and stops, and
-            // §4.5 step 1 collects the mark at the next state check. No harness step and no card whose
-            // script is green applies a destroy to a chosen unit today (#16 Hit Job is blocked on its own
-            // `destroy_adjacent_to`), so the mark is set here directly — reported as a harness gap
-            // (`s.destroy(card)`); reaching into `s.state_mut()` is a test-only liberty.
+            // §6.3 Destroy "only marks the card"; `effects/destroy.rs` sets this flag and §4.5 step 1 collects
+            // it at the next state check. No reachable verb destroys a chosen unit yet, so the mark is set
+            // directly through `s.state_mut()`, a test-only liberty.
             let rock = s.card(ROCK).id.clone();
             find_instance_mut(s.state_mut(), &rock)
                 .expect("setup: The Rock is on the field")
@@ -260,9 +225,7 @@ mod tests {
             s.expect_in_zone(ROCK, "graveyard").expect_events(json!(["destroyed"]));
         }
 
-        // -------------------------------------------------------------------------------------------
         // Radiant: "Plus Immutable" (§8 Conventions, R23)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s5_2_the_radiant_face_is_20_20() {
@@ -274,15 +237,14 @@ mod tests {
         fn r23_the_radiant_face_computes_as_indestructible_plus_immutable_s8_conventions_plus() {
             let s = board(json!({ "p1": { "field": [{ "def": ROCK, "radiant": true }] } }));
             let kinds = keywords_of(&s, PlayerId::P1, 1);
-            // TS `expect.arrayContaining`: both are there, whatever else is.
+            // Both are there, whatever else is.
             assert!(
                 ["Indestructible", "Immutable"].iter().all(|wanted| kinds.iter().any(|kind| kind == wanted)),
                 "keywords {kinds:?}"
             );
-            // R23's blocking itself lives in `effects/transform.rs` (`transform` and `vanilla` both return
-            // early on an Immutable card) and in `traps.rs` for #41 Sheepish. No verb a card test can reach
-            // applies Vanilla or Transform to a chosen unit yet — #83 Transmogulate is Wave 3 and #61's
-            // Postdoc copy is R23's *allowed* case — so the cross-card cases live in #41, #61, #83 and #85.
+            // R23's blocking lives in `effects/transform.rs` (`transform` and `vanilla` return early on an
+            // Immutable card) and in `traps.rs` for #41 Sheepish. No reachable verb applies Vanilla or Transform
+            // to a chosen unit yet, so the cross-card cases live in #41, #61, #83 and #85.
         }
 
         #[test]

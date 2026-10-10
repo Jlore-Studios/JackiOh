@@ -8,8 +8,7 @@
 //!            the state check. Tunes: buff 2 ↑ (Radiant 3); debuff 2 ↑ (Radiant 3)."
 //!
 //! Played from a hand it does the same (§6.2: Cast on draw is a cast, R70, and the card stays playable).
-//! `conditionMet` (R195) is the same `fewer` the Cry branches on, so the glow and the branch agree; its
-//! proofs are in packages/cards/test/condition-active.test.ts.
+//! `conditionMet` (R195) is the same `fewer` the Cry branches on, so the glow and the branch agree.
 
 use jackioh_engine::effects::buff_all_units;
 use jackioh_engine::prelude::*;
@@ -55,20 +54,15 @@ pub fn script() -> CardScripts {
             let amount = param(&*ctx, "buff");
             vec![buff_all_units(json_as(json!({ "side": "self", "attack": amount, "health": amount })))]
         })),
-        // TS `conditionMet: base.conditionMet`: the same hook.
         condition_met: base.condition_met.clone(),
         ..Script::default()
     };
     CardScripts { base, radiant }
 }
 
-// C+ #50 Adaptive Growth — SPEC §8.7 row 50, BUILD M9 Classic+ row C+ 50: "Cast on draw (R70, R58): if
-// you control fewer Units than your opponent, every Unit on both sides gets −2/−2 (max health falls,
-// units at 0 die at the state check, an Indestructible one too, R69), otherwise every Unit gets +2/+2,
-// all permanent; equal counts take the second branch; played from a hand it does the same;
-// `conditionMet` in hand answers whether you control fewer Units now (R195); both numbers read through
-// `param()`; radiant fewer: enemy Units −3/−3; otherwise your Units +3/+3".
-// The `conditionMet` proofs live in packages/cards/test/condition-active.test.ts (README §5).
+// C+ #50, BUILD M9 row C+ 50: equal counts take the second branch; −2/−2 on both sides kills a unit at
+// 0 max health, an Indestructible one too (R69); played from a hand it does the same; `conditionMet` in
+// hand says whether you control fewer Units now (R195; README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -81,7 +75,7 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
+    /// The unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }

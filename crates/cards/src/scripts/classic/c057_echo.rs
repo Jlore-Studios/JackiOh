@@ -1,33 +1,20 @@
 //! C #57 Echo (SPEC §8.6 row 57, BUILD M9 Classic row C 57). (1) Spell, Epic.
 //!   Base:    "This has the text of the last Spell either player played."
 //!   Radiant: "Echo 1 / This has the text of the last Spell either player played."
-//!   Engine:  "The per-game record of the last Spell played by anyone (§10.1), `lastSpell = { defId,
-//!            radiant }`, overwritten by every Spell play and cast (R70) and never cleared; a countered
-//!            Spell was never played and is not recorded. In hand, Echo's view carries that Spell's text
-//!            on the face it was played on, under Echo's name (as R243 carries a fused card's); played,
-//!            Echo declares and resolves that Spell's choices and script. Echo keeps its own name, type
-//!            and (1) Cost. A played Echo records the Spell it copied, never Echo, so it can't copy itself
-//!            into a loop; with no Spell played yet it has no text and does nothing (R399). … Radiant:
-//!            plus Echo 1 (§6.2), which repeats the copied text. Tunes: Radiant Echo 1 ↑, a numbered
-//!            keyword that Degrade and Upgrade move as an X (R386), not a `params` entry."
 //!
-//! The card is a flag and a record; the text it has is the engine's B5 E14 subsystem
-//! (`engine/src/subsystems/copiedText.ts`), with its own engine tests through fixture cards:
-//!   - `copiesLastSpell` makes the running text the last Spell's face (R399): its declared targets,
-//!     modes and X (R545: chosen up to the mana left once Echo's own (1) is paid), its resolution with
-//!     Echo as "this", its prompt continuations and its declared numbers (`param`), its Echo X, its
-//!     Cast on draw, its `preview` and `conditionMet` (R546, R547), and the owner's hand view
-//!     (`CardView.copies`).
-//!   - The copy is fixed as the play begins and kept through the play (R546); in hand and in a deck it
-//!     follows the record live.
-//!   - `recordsPlayAs` (B5 E4) records the Spell Echo copied, on its face, and nothing when it copied
-//!     nothing, so two Echoes never loop (R399).
-//!   - The Radiant face's "Echo 1" is §6.2's Echo X (`staticFlags.echo`), a numbered keyword Degrade and
-//!     Upgrade move (R386), added to any Echo the copied face prints (R546). Its number is a keyword's,
-//!     not a declared `params` entry, so nothing here reads `param`.
-//!
-//! "Echo" is also a rules word: the "Echo 1" printed on other cards is never a reference to this card
-//! (R381, `test/references.test.ts`).
+//! The card is a flag and a record; the text it has is B5 E14's subsystem, with its own engine tests
+//! through fixture cards. `lastSpell` (§10.1) is overwritten by every Spell play and cast (R70) and
+//! never cleared; a countered Spell was never played. In hand the view carries that face under Echo's
+//! name, as R243 does for a fused card.
+//!   - `copiesLastSpell` makes the running text the last Spell's face (R399): targets, modes, X (R545:
+//!     up to the mana left once Echo's own (1) is paid), resolution with Echo as "this", prompts, `preview`
+//!     and `conditionMet` (R546, R547), and the owner's hand view (`CardView.copies`). The copy is fixed
+//!     as the play begins (R546); in hand and in a deck it follows the record live.
+//!   - `recordsPlayAs` (B5 E4) records the Spell Echo copied, nothing when it copied nothing, so two
+//!     Echoes never loop (R399).
+//!   - The Radiant "Echo 1" is §6.2's numbered keyword (`staticFlags.echo`) that Degrade and Upgrade move
+//!     (R386), added to any Echo the copied face prints (R546); it is no `params` entry, so nothing reads `param`.
+//!   - "Echo" is a rules word: "Echo 1" on other cards is no reference to this card (R381).
 
 use jackioh_engine::prelude::*;
 
@@ -55,21 +42,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #57 Echo — SPEC §8.6 row 57, R399, BUILD M9 Classic row C 57: "Reads the game-wide last Spell played
-// by either player (`lastSpell = { defId, radiant }`), casts included, a countered Spell never counted
-// (it was never played) and a Field Spell never a Spell; in its owner's hand its view carries that
-// Spell's face under Echo's name (as R243 carries a fused card's), hidden from the opponent like any hand
-// card; played, it declares and resolves that Spell's choices and script on the face recorded; a played
-// Echo records the Spell it copied, never Echo, so two Echoes never loop (R399); with no Spell played
-// yet it has no text and resolves to nothing; radiant: also Echo 1, one more resolution with fresh
-// prompts (§6.2); its name is a rules word, so "Echo 1" in #51 and #79 is no reference to it (R381); its
-// tuned number (radiant Echo) reads through `param()` (R386)" — a numbered keyword SPEC's row says
-// Degrade and Upgrade move as an X, not a `params` entry, so its R386 proof steps that X.
-//
-// The text is B5 E14 (`engine/src/subsystems/copiedText.ts`, its engine tests in
-// `engine/test/copied-text.test.ts`), with this workstream's rulings R545 (an X-cost text), R546 (the
-// copy fixed as the play begins; "this" is Echo) and R547 (its static text: Cast on draw yes, the
-// end-of-turn return no).
+// C #57 Echo, SPEC §8.6 row 57, R399: the Radiant Echo is a numbered keyword Degrade and Upgrade move
+// as an X (R386), so its R386 proof steps that X. R545 (an X-cost text), R546 (the copy fixed as the
+// play begins; "this" is Echo) and R547 (static text: Cast on draw yes, end-of-turn return no).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -92,14 +67,13 @@ mod tests {
     /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
     const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";
 
-    /// TS `AT_P2: Selection[]`, as the JSON the harness takes.
     fn at_p2() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    /// The state written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serialises");
         serde_json::from_str(&text).expect("the state parses back")
@@ -114,7 +88,7 @@ mod tests {
             .collect()
     }
 
-    /// The legal `play` actions of the Echo in hand, as JSON (TS's `Extract<…, { type: "play" }>`).
+    /// The legal `play` actions of the Echo in hand, as JSON.
     fn echo_plays(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let id = s.card(ECHO).id.clone();
         legal_actions(s.state(), player)
@@ -166,7 +140,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [ECHO, VANILLA] } }));
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
                 assert!(card.get("copies").is_none());
-                // TS `[undefined]`: one play, with no `targets` key (an absent key reads as null).
+                // One play, with no `targets` key (an absent key reads as null).
                 assert_eq!(
                     echo_plays(&s, PlayerId::P1).iter().map(|play| play["targets"].clone()).collect::<Vec<Value>>(),
                     vec![Value::Null],
@@ -364,7 +338,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
                 s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
                 s.state_mut().players.p1.mana.current = 4;
-                // TS `[...new Set(…)]`: the X values, first-seen order, each once.
+                // The X values, first-seen order, each once.
                 let mut xs: Vec<Value> = Vec::new();
                 for play in echo_plays(&s, PlayerId::P1) {
                     if !xs.contains(&play["x"]) {

@@ -8,7 +8,7 @@
 //! cap of 10 (R4) and R58's chain cap — belongs to the draw pipeline, so neither face counts cards.
 //!
 //! Being a token is data (§7): §5.1's one query keeps Token-tagged cards out of every random pool
-//! unless the query names the pool itself (R60); the tests prove it against `crates/cards/src/query.rs`.
+//! unless the card names the pool itself; the tests prove it against `crates/cards/src/query.rs`.
 //! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
 
 use jackioh_engine::prelude::*;

@@ -5,8 +5,8 @@
 //!            harms and at your side when it helps."
 //! E12's random casts (R452, R656): non-token Spells of every set (R380), repeats allowed (R60), every
 //! choice random, each target pick aimed by its declaration — enemies when it harms, friends when it
-//! helps. Its own Spell Damage (the catalog keyword) raises their hits, since it is on the field
-//! during its Cry.
+//! helps; X is the current mana, at least 1 (R348). Its own Spell Damage (the catalog keyword) raises
+//! their hits, since it is on the field during its Cry.
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -38,7 +38,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #38.1 Solarius Prime (SPEC §8.7): Cry casts 5 random non-token Spells of any set (R380),
-// aimed by declaration (R656, R348), each a play (R70) raised by Spell Damage, additions hidden (R97).
+// aimed by declaration (R656), each a play (R70) raised by Spell Damage, additions hidden (R97).
 // Tests read casts off the event stream at depth 1 (until `cardResolved`), handling nested casts.
 #[cfg(test)]
 mod tests {

@@ -3,22 +3,14 @@
 //!   Radiant: "60" — §8 Conventions: "a cell that changes only a number changes only that number",
 //!            so the radiant face is the same clause with 30 replaced by 60, not a second heal.
 //!
-//! The Engine cell is `health = max(health, 30)`, which is §6.3's "Heal up to 30" reading of Heal:
-//! `heal({ target, upTo })`. On a hero that is `heal_hero_up_to` (engine/src/damage.rs), and it is a
-//! floor, never a ceiling — "if (hero.health >= floor) return 0", so a hero at 35 is left at 35 and
-//! no `healed` event is emitted for it. §3 gives a hero no maximum health, so nothing caps the 30
-//! or the 60 either; a hero already above the floor simply has nothing happen (§6.3, R19).
+//! The Engine cell `health = max(health, 30)` is §6.3's "Heal up to 30": `heal_hero_up_to`
+//! (engine/src/damage.rs) is a floor, never a ceiling, so a hero at 35 stays 35 and no `healed`
+//! event is emitted. §3 gives a hero no maximum health, so nothing caps the 30 or the 60 (§6.3, R19).
 //!
-//! R19 is why this is a legal target at all ("a heal may name any unit or hero"), and the target is
-//! named, not chosen: "your hero" is `{ of: "selfHero" }`, the controller's hero (§8 Conventions,
-//! "'Your' means the controller"), so there is no prompt and no play-time declaration here (R81).
-//!
-//! R195, the yellow glow: in hand, Reno glows exactly when its Cry would raise the hero, which is the
-//! clause's own "if your hero is below 30" (60 radiant). `below_floor` is that one predicate, read by
-//! both the Cry and `condition_met`, so the glow and the heal cannot disagree. Gating the Cry on it
-//! changes nothing on the board: `heal_hero_up_to` already leaves a hero at or above the floor alone
-//! and emits no `healed` event for it. The condition is about the play, so a Reno on the field never
-//! glows.
+//! R19 makes the hero a legal heal target ("a heal may name any unit or hero"). "Your hero" is
+//! `{ of: "selfHero" }`, named not chosen (§8 Conventions, "'Your' means the controller"): no prompt (R81).
+//! R195, the yellow glow: in hand, Reno glows exactly when its Cry would raise the hero. `below_floor`
+//! is that one predicate, read by the Cry and `condition_met`, so they cannot disagree.
 
 use jackioh_engine::prelude::*;
 
@@ -140,10 +132,8 @@ mod tests {
         }
     }
 
-    // The radiant cases: TS wrote the flag onto the hand card after setup (`s.card(…).radiant = true`,
-    // a "HARNESS GAP" note from before the harness took `{ def, radiant }` in a hand). The scenario's
-    // hand entry `{ "def": …, "radiant": true }` builds the same state — the harness creates the hand
-    // card and then sets the flag, as the TS line did — without a mutable card reference.
+    // The radiant cases: the scenario's hand entry `{ "def": …, "radiant": true }` builds the radiant
+    // hand card directly.
     mod n53_reno_radiant {
         use super::*;
 

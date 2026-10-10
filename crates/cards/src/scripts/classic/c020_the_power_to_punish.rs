@@ -7,9 +7,10 @@
 //! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`
 //! action (R81), each target bound to its mode (`forModes`, R90). The discard is random (R682), so no
 //! prompt opens. The delayed destroy (§10.1, `destroyAtNextTurnStart`) is keyed to the Unit's stay: it
-//! fizzles if the Unit left, even if it came back (R174). Radiant takes every enemy Unit there when it
-//! resolves, with the start-of-turn effects (R62, R68), as R76 even if this card left; an Indestructible
-//! Unit survives (R46). Units wear the red mark while it waits (R437; Radiant, every enemy Unit, R750).
+//! fizzles if the Unit left, even if it came back (R174). The Radiant face takes every enemy Unit on the
+//! field when it resolves. Either face resolves with the start-of-turn effects (R62, R68) even if this card
+//! left (as R76), and as a destroy it spares an Indestructible Unit (R46). Units wear the red mark while it
+//! waits (R437; Radiant, every enemy Unit, R750).
 
 use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random};
 use jackioh_engine::prelude::*;
