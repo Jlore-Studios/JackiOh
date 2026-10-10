@@ -98,10 +98,14 @@ pub struct MalformedMessage {
 /// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
 /// client" (`wire/actions.rs`). Accepting one from a socket would let a player end their
 /// opponent's turn or the match, so parsing rejects them outright.
+///
+/// MD-D29, R1127: `emote` is the server's own too. The actor mints it from an emote message that
+/// passed R643's rate gate, so a socket can never send it as an action and bypass the gate.
 pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
     ActionType::Timeout,
     ActionType::DisconnectExpired,
     ActionType::CeilingReached,
+    ActionType::Emote,
 ];
 
 /// Everything else in the §10.2 union that a socket may carry: every type `legal_actions` can list
