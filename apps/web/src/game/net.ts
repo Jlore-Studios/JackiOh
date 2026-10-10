@@ -53,6 +53,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ActionBody, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
+import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
@@ -158,6 +159,27 @@ const VOIDED_CLOSE_CODE = 4410;
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
 const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
+/**
+ * R1437: each backoff gains up to this fraction of itself, drawn at random, so every client a
+ * server restart or a network blip dropped at once does not come back on the same beat. It only
+ * adds time, so the first retry never comes before its 250 ms.
+ */
+const RECONNECT_JITTER = 0.25;
+
+/**
+ * R1437: how long a socket may have said nothing before a woken page (the tab turned visible, the
+ * network came back) doubts it: the server's ping interval, since the server pings that often and
+ * the browser answers without telling the page. A socket that is still there but quiet (a long
+ * turn) is no reason to drop it; this is only the point past which it is worth asking.
+ */
+const SILENT_SOCKET_MS = WS_PING_INTERVAL_SECONDS * 1000;
+
+/**
+ * R1437: how long a woken page waits for the answer to its probe (a `hello`, which the actor
+ * answers with a full view) before it replaces the socket.
+ */
+const WAKE_PROBE_MS = 5000;
+
 export type Timers = {
   setTimeout: (handler: () => void, ms: number) => unknown;
   clearTimeout: (handle: unknown) => void;
@@ -169,6 +191,24 @@ const defaultTimers: Timers = {
     clearTimeout(handle as ReturnType<typeof setTimeout>);
   },
 };
+
+/**
+ * R1437: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
+ * network comes back (as `settings/accountSync.ts` listens for). Returns the function that stops
+ * listening.
+ */
+function pageWake(handler: () => void): () => void {
+  if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
+  const onVisibility = (): void => {
+    if (document.visibilityState === "visible") handler();
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("online", handler);
+  return () => {
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("online", handler);
+  };
+}
 
 // ---------------------------------------------------------------------------------------------
 // Frame parsing: total, never throws, keeps only what the protocol declares
@@ -421,6 +461,13 @@ export type MatchClientOptions = {
   timers?: Timers;
   /** Test seam for the monotonic reading stamped on every `clock` frame. */
   monotonic?: () => number;
+  /**
+   * Test seam for what wakes a sleeping page (R1437): takes the handler, returns the function that
+   * stops listening. Defaults to the tab turning visible and the `online` event.
+   */
+  wake?: (handler: () => void) => () => void;
+  /** Test seam for the reconnect jitter (R1437), a draw in [0, 1). Defaults to `Math.random`. */
+  random?: () => number;
 };
 
 const EMPTY_LEGAL: readonly ActionBody[] = [];
@@ -463,6 +510,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   const factory = options.socketFactory ?? browserSocket;
   const timers = options.timers ?? defaultTimers;
   const monotonic = options.monotonic ?? defaultMonotonic;
+  const wake = options.wake ?? pageWake;
+  const random = options.random ?? Math.random;
   const base = options.baseUrl ?? matchSocketUrl();
   /** The latest token handed in (`setToken`): every socket opened from now on carries it. */
   let token = options.token;
@@ -472,6 +521,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let socket: SocketLike | null = null;
   let retry = 0;
   let pendingRetry: unknown = null;
+  /** R1437: the monotonic reading at which the open socket was created or last heard from. */
+  let heardAt = 0;
+  /** R1437: the timer of a wake probe still waiting for its answer. */
+  let probe: unknown = null;
+  /** R1437: stops listening for the page waking; null while it is not. */
+  let unwake: (() => void) | null = null;
   /** Set by `close()`; cleared by `connect()`. Keeps a deliberate close from reconnecting. */
   let stopped = false;
   /** R643: bumps on every relayed emote, so two identical ones in a row still notify. */
@@ -492,9 +547,16 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     pendingRetry = null;
   }
 
+  function cancelProbe(): void {
+    if (probe === null) return;
+    timers.clearTimeout(probe);
+    probe = null;
+  }
+
   function scheduleRetry(): void {
     if (stopped || pendingRetry !== null) return;
-    const delay = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 5000;
+    const step = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 5000;
+    const delay = Math.floor(step * (1 + RECONNECT_JITTER * random()));
     retry += 1;
     pendingRetry = timers.setTimeout(() => {
       pendingRetry = null;
@@ -555,10 +617,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       return;
     }
     socket = created;
+    heardAt = monotonic();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
     created.onopen = () => {
       if (socket !== created) return;
+      heardAt = monotonic();
       retry = 0;
       patch({ connection: "open" });
       // §9.5: the actor reads `hello` as "push me a fresh full view", which is what a reconnected
@@ -572,6 +636,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 
     created.onmessage = (event) => {
       if (socket !== created) return;
+      heardAt = monotonic();
+      cancelProbe();
       if (typeof event.data !== "string") return; // Text frames only (`socketFromWs`).
       const frame = parseServerFrame(event.data);
       if (frame !== null) handleFrame(frame);
@@ -584,6 +650,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
+      cancelProbe();
       // R738: an arrow from before the drop would stand there until the opponent aimed again.
       if (snapshot.aim !== null) patch({ aim: null });
       if (stopped) {
@@ -609,6 +676,55 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     };
   }
 
+  /**
+   * R1437: lets go of `live` without waiting for it (a dead peer never answers a close) and opens
+   * its successor, which sends `hello` as any new socket does. The new socket opens before the old
+   * one is closed, so the server meets the successor first when both reach it.
+   */
+  function replace(live: SocketLike): void {
+    socket = null;
+    live.onopen = null;
+    live.onmessage = null;
+    live.onerror = null;
+    live.onclose = null;
+    cancelProbe();
+    patch({ connection: "reconnecting", ...(snapshot.aim === null ? {} : { aim: null }) });
+    open();
+    try {
+      live.close(1000, "replaced");
+    } catch {
+      // Already gone.
+    }
+  }
+
+  /**
+   * R1437: the page woke (its tab turned visible, the network came back). A phone that changed
+   * networks or a laptop that slept can leave a socket that never reports its own end, and the
+   * browser answers the server's pings without telling the page, so a quiet socket looks the same as
+   * a dead one. A socket heard from lately is left alone. One that is not is asked for a full view
+   * (`hello`, §9.5), and replaced if nothing comes back within `WAKE_PROBE_MS`: a healthy one answers
+   * and is kept, so a tab switch never flashes the opponent's disconnect grace.
+   */
+  function onWake(): void {
+    const live = socket;
+    if (stopped || live === null || probe !== null) return;
+    if (monotonic() - heardAt <= SILENT_SOCKET_MS) return;
+    if (live.readyState !== OPEN) {
+      replace(live);
+      return;
+    }
+    try {
+      live.send(JSON.stringify({ type: "hello", token, matchId: options.matchId }));
+    } catch {
+      replace(live);
+      return;
+    }
+    probe = timers.setTimeout(() => {
+      probe = null;
+      if (socket === live) replace(live);
+    }, WAKE_PROBE_MS);
+  }
+
   return {
     subscribe: (listener) => {
       listeners.add(listener);
@@ -619,6 +735,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     snapshot: () => snapshot,
     connect: () => {
       stopped = false;
+      unwake ??= wake(onWake);
       open();
     },
     send: (body) => {
@@ -663,6 +780,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     close: () => {
       stopped = true;
       cancelRetry();
+      cancelProbe();
+      unwake?.();
+      unwake = null;
       const live = socket;
       socket = null;
       if (live !== null) {

@@ -1,13 +1,14 @@
 // `game/net.ts` driven entirely through a fake WebSocket: every frame
 // `crates/server/src/actor/protocol.rs` defines, the handshake, the reconnect and the dev-handle shim.
 //
-// No real socket, no timer and no server. The seams (`socketFactory`, `timers`, `monotonic`) exist
-// for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
+// No real socket, no timer and no server. The seams (`socketFactory`, `timers`, `monotonic`, `wake`,
+// `random`) exist for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
 // in-memory socket.
 
 import { describe, expect, it } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
+import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { baseView } from "../test/fixtures.ts";
 import {
@@ -75,20 +76,39 @@ type Harness = {
   /** Run every pending backoff callback, in order. */
   runTimers: () => void;
   pending: () => number;
+  /** Every delay a timer was set for, in order. */
+  delays: () => number[];
   now: (value: number) => void;
+  /** R1437: the page wakes (its tab turns visible, the network comes back). */
+  wake: () => void;
 };
 
-function harness(options: { matchId?: string; token?: string } = {}): Harness {
+type HarnessOptions = {
+  matchId?: string;
+  token?: string;
+  /** The reconnect jitter's draw; 0 adds nothing. */
+  random?: () => number;
+  /** Leave the client to listen for the page itself (`visibilitychange`, `online`). */
+  pageEvents?: boolean;
+};
+
+/** How long a socket must have said nothing before a woken page doubts it (R1437). */
+const SILENCE_MS = WS_PING_INTERVAL_SECONDS * 1000;
+
+function harness(options: HarnessOptions = {}): Harness {
   const sockets: FakeSocket[] = [];
   let scheduled: { id: number; run: () => void }[] = [];
+  const delays: number[] = [];
   let nextId = 1;
   let monotonicNow = 0;
+  let onWake: (() => void) | null = null;
 
   const timers: Timers = {
-    setTimeout: (handler) => {
+    setTimeout: (handler, ms) => {
       const id = nextId;
       nextId += 1;
       scheduled.push({ id, run: handler });
+      delays.push(ms);
       return id;
     },
     clearTimeout: (handle) => {
@@ -107,6 +127,17 @@ function harness(options: { matchId?: string; token?: string } = {}): Harness {
     },
     timers,
     monotonic: () => monotonicNow,
+    random: options.random ?? (() => 0),
+    ...(options.pageEvents === true
+      ? {}
+      : {
+          wake: (handler: () => void) => {
+            onWake = handler;
+            return () => {
+              onWake = null;
+            };
+          },
+        }),
   });
 
   return {
@@ -123,13 +154,17 @@ function harness(options: { matchId?: string; token?: string } = {}): Harness {
       for (const entry of due) entry.run();
     },
     pending: () => scheduled.length,
+    delays: () => [...delays],
     now: (value) => {
       monotonicNow = value;
+    },
+    wake: () => {
+      onWake?.();
     },
   };
 }
 
-function connected(options: { matchId?: string; token?: string } = {}): Harness {
+function connected(options: HarnessOptions = {}): Harness {
   const h = harness(options);
   h.client.connect();
   h.socket().open();
@@ -511,6 +546,118 @@ describe("reconnect", () => {
     stop();
     h.socket().deliver({ type: "view", view: baseView({ turn: 5 }) });
     expect(notified).toBe(1);
+  });
+
+  it("R1437 a reconnect waits its backoff plus up to a quarter more", () => {
+    const h = connected({ random: () => 0.5 });
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().drop(1006);
+    // 250 and 500 ms, each with 12.5% (half of the quarter) added and rounded down.
+    expect(h.delays()).toEqual([281, 562]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// a socket that went quiet (R1437)
+// ---------------------------------------------------------------------------------------------
+
+const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
+
+describe("a silent socket", () => {
+  it("R1437 a silent socket is replaced when the tab turns visible, and the new socket sends hello", () => {
+    const h = connected();
+    const old = h.socket();
+    h.now(SILENCE_MS + 1);
+
+    h.wake();
+    // It is asked first: a healthy socket answers with a view, and nothing else changes.
+    expect(old.frames()).toEqual([HELLO, HELLO]);
+    expect(h.sockets).toHaveLength(1);
+
+    // Nothing came back, so it is let go and a new socket takes its place.
+    h.runTimers();
+    expect(old.closedWith).not.toBeNull();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    h.socket().open();
+    expect(h.socket().frames()).toEqual([HELLO]);
+    expect(h.client.snapshot().connection).toBe("open");
+
+    // Whatever the old socket still says is no longer the match's.
+    old.deliver({ type: "view", view: baseView({ turn: 9 }) });
+    expect(h.client.snapshot().view).toBeNull();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
+    expect(h.client.snapshot().view?.turn).toBe(3);
+  });
+
+  it("R1437 a quiet socket that answers the probe is kept", () => {
+    const h = connected();
+    const live = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    live.deliver({ type: "view", view: baseView({ turn: 3 }) });
+
+    // The answer cancelled the probe: nothing is left to run, and the socket stays.
+    expect(h.pending()).toBe(0);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(live.closedWith).toBeNull();
+    expect(h.client.snapshot().connection).toBe("open");
+
+    // It was just heard from, so waking again asks nothing.
+    h.wake();
+    expect(live.frames()).toEqual([HELLO, HELLO]);
+  });
+
+  it("R1437 a socket heard within the ping interval is not probed", () => {
+    const h = connected();
+    h.now(SILENCE_MS);
+    h.wake();
+    expect(h.socket().frames()).toEqual([HELLO]);
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R1437 a socket that never opened is replaced at once when the page wakes", () => {
+    const h = harness();
+    h.client.connect();
+    const stuck = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    expect(stuck.closedWith).not.toBeNull();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R1437 by default the tab turning visible and the network coming back wake it", () => {
+    const h = connected({ pageEvents: true });
+    const live = h.socket();
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      h.now(SILENCE_MS + 1);
+      show("hidden");
+      expect(live.frames()).toEqual([HELLO]);
+      show("visible");
+      expect(live.frames()).toEqual([HELLO, HELLO]);
+
+      live.deliver({ type: "view", view: baseView() });
+      h.now(2 * SILENCE_MS + 2);
+      window.dispatchEvent(new Event("online"));
+      expect(live.frames()).toEqual([HELLO, HELLO, HELLO]);
+    } finally {
+      h.client.close();
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
+
+    // A client that was closed no longer listens.
+    h.now(4 * SILENCE_MS);
+    window.dispatchEvent(new Event("online"));
+    expect(live.frames()).toHaveLength(3);
+    expect(h.sockets).toHaveLength(1);
   });
 });
 

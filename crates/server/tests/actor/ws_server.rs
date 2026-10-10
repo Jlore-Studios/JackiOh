@@ -69,7 +69,7 @@ fn deck_size() -> usize {
 }
 
 /// A token is opaque; it is percent-encoded into the query so any token survives the URL.
-fn encode_query(raw: &str) -> String {
+pub(super) fn encode_query(raw: &str) -> String {
     raw.bytes()
         .map(|byte| match byte {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => (byte as char).to_string(),
@@ -91,9 +91,9 @@ impl Drop for Listening {
 }
 
 /// One active player per seat of `matches` live matches, `profile-<k>` (user `user-<k>`) in
-/// `match-<m>` with `k` = 2m − 1 and 2m, every match started on the real registry. Returns the
-/// listener and each profile's token, in profile order.
-async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+/// `match-<m>` with `k` = 2m − 1 and 2m, every match started on the real registry. Returns the app
+/// and each profile's token, in profile order.
+pub(super) async fn seed_matches(matches: usize) -> (Arc<App>, Vec<String>) {
     let app = test_app().await;
     let pool = playable();
     let size = deck_size();
@@ -132,7 +132,12 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
             .await
             .expect("the registry starts the match");
     }
+    (app, tokens)
+}
 
+/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
+async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+    let (app, tokens) = seed_matches(matches).await;
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
     let port = listener.local_addr().expect("a bound address").port();
     let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<std::net::SocketAddr>();

@@ -23,6 +23,11 @@ use tokio::sync::mpsc;
 /// actor's reducer and the outgoing channel, on the current-thread runtime `#[tokio::test]` uses.
 const SETTLE_YIELDS: usize = 64;
 
+/// How many frames a fake socket's outgoing queue holds. Far past `WS_OUTBOX_MAX_FRAMES`: a test reads
+/// frames when it chooses, so the actor tests never meet the cap; R1437's is proved on
+/// `Socket::channel()` (`actor/heartbeat.rs`).
+const FAKE_OUTBOX_FRAMES: usize = 1 << 16;
+
 /// The close code the transport reports when the connection drops without a close frame (1006).
 const ABNORMAL_CLOSE: u16 = 1006;
 
@@ -38,7 +43,7 @@ pub struct FakeSocket {
     /// The server half, until a test takes it to attach (`socket()`).
     socket: Mutex<Option<Socket>>,
     /// What the server sent: text frames and its close.
-    outgoing: tokio::sync::Mutex<mpsc::UnboundedReceiver<SocketFrame>>,
+    outgoing: tokio::sync::Mutex<mpsc::Receiver<SocketFrame>>,
     state: Mutex<State>,
 }
 
@@ -194,7 +199,7 @@ fn parse(text: &str) -> Value {
 }
 
 pub fn create_fake_socket() -> FakeSocket {
-    let (outgoing_tx, outgoing_rx) = mpsc::unbounded_channel::<SocketFrame>();
+    let (outgoing_tx, outgoing_rx) = mpsc::channel::<SocketFrame>(FAKE_OUTBOX_FRAMES);
     let (incoming_tx, incoming_rx) = mpsc::unbounded_channel::<String>();
     FakeSocket {
         socket: Mutex::new(Some(Socket::new(outgoing_tx, incoming_rx))),
