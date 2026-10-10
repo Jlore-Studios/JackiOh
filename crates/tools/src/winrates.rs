@@ -260,7 +260,7 @@ mod tests {
             };
             serde_json::to_string(&record).unwrap_or_default()
         };
-        let table = table_from_records(&vec![line("m1", GameSource::Live)], "v0.3.3")
+        let table = table_from_records(&[line("m1", GameSource::Live)], "v0.3.3")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -271,7 +271,7 @@ mod tests {
         // Both seats held core-001: p1 won it, p2 lost it.
         assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
         assert!(hit.contains(&("core-003", 0, 1)), "{hit:?}");
-        let table = table_from_records(&vec![line("dev:v0.3.3:s:1", GameSource::Dev)], "v0.3.3")
+        let table = table_from_records(&[line("dev:v0.3.3:s:1", GameSource::Dev)], "v0.3.3")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
     }

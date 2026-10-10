@@ -41,7 +41,7 @@ fn field_count(state: &GameState, player: PlayerId) -> usize {
     side.units.iter().flatten().count() + side.backrow.iter().flatten().count()
 }
 
-mod fuse_random {
+mod r1020_a_random_enemy_permanent_fused_in {
     use super::*;
 
     #[test]

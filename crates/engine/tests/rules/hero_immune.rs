@@ -43,7 +43,7 @@ fn immune_mods(state: &GameState, player: PlayerId) -> usize {
         .count()
 }
 
-mod hero_immune {
+mod r1021_a_hero_immune_to_damage {
     use super::*;
 
     #[test]

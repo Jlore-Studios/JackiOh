@@ -17,7 +17,7 @@ fn by(player: PlayerId) -> HookOptions {
     }
 }
 
-mod deck_bottom {
+mod r80_the_named_end_of_the_library {
     use super::*;
 
     #[test]

@@ -17,15 +17,11 @@ use crate::wire::string_union;
 
 string_union! {
     /// Whether the table's figures are live games or a placeholder until some are counted.
+    #[derive(Default)]
     pub enum WinRateSource {
         Live = "live",
+        #[default]
         Provisional = "provisional",
-    }
-}
-
-impl Default for WinRateSource {
-    fn default() -> Self {
-        WinRateSource::Provisional
     }
 }
 

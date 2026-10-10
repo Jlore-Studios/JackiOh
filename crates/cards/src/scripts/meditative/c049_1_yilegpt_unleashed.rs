@@ -387,10 +387,10 @@ mod tests {
                     2
                 );
                 for lane in 1..=5 {
-                    if let Some(unit) = s.unit(P2, lane) {
-                        if unit.def_id == VIRUS {
-                            assert!(unit.radiant);
-                        }
+                    if let Some(unit) = s.unit(P2, lane)
+                        && unit.def_id == VIRUS
+                    {
+                        assert!(unit.radiant);
                     }
                 }
                 // … and every enemy card Nerfed twice: the hand card alone drew two Degrades.

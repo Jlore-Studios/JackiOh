@@ -12264,7 +12264,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 0,
-    "params": [],
     "loc": 18,
     "base": {
       "keywords": [],
@@ -12285,7 +12284,6 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 2,
-    "params": [],
     "loc": 40,
     "base": {
       "attack": 1,
@@ -12434,7 +12432,6 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [],
     "loc": 60,
     "base": {
       "attack": 5,
@@ -12503,7 +12500,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
-    "params": [],
     "loc": 42,
     "base": {
       "attack": 3,
@@ -12688,7 +12684,6 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
-    "params": [],
     "loc": 50,
     "base": {
       "attack": 1,
@@ -13256,7 +13251,6 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
-    "params": [],
     "loc": 40,
     "base": {
       "keywords": [],
