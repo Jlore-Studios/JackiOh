@@ -1,11 +1,11 @@
 {
-  "generation": 3,
+  "generation": 4,
   "lane": "unban",
-  "parent": "17832125f89da23a74039f9757100510856a43b0",
-  "tree": "8dac64cc7bb7f8de603067b3e8670358d83f625b",
-  "vsRandom": "98/100",
-  "vsParent": "68/100",
-  "shadowBan": 5,
-  "parentShadowBan": 6,
+  "parent": "d48e1bc9acb40371729fcddfd9485d8a14187686",
+  "tree": "19a947095f09e21c8ec9905558ccaf66a2d0f211",
+  "vsRandom": "99/100",
+  "vsParent": "75/100",
+  "shadowBan": 4,
+  "parentShadowBan": 5,
   "date": "2026-10-10"
 }
