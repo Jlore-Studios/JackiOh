@@ -4274,6 +4274,7 @@
     "620": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T04:57:05Z",
         "difficulty": "medium",
@@ -4292,7 +4293,7 @@
         "reason": "`claude-2` stops mid-call: 5-hour usage is 98%, at or over its 90% cap; it resets at 2026-10-10T10:00:00Z",
         "trail": "- said: I'll start with the notes and the journal, then check the diff against them.\n- Bash: {\"command\": \"git status --short && git log --oneline -3 && ls -a | head -40 && grep -n '^## ' .bot-notes.md; sed -n '/^## State/,/^## Log/p' .bot-notes.md | head -60\"}\n- Bash: {\"command\": \"git diff main...HEAD -- crates/server/src/actor/protocol.rs spec/\"}\n- Bash: {\"command\": \"sed -n 60,120p .bot-notes.md; echo ----; tail -c 3000 .bot-journal.md; echo; git diff main...HEAD --stat\"}\n- said: The work is already applied and committed. The notes were cut off, so I'll check the test module against the plan and re-run the checks myself.\n- Bash: {\"command\": \"git diff main...HEAD -- crates/server/tests/actor/match_actor.rs | head -60; git diff main...HEAD -- crates/server/tests/actor/match_actor.rs | tail -40\"}\n- Bash: {\"command\": \"(cargo test -p jackioh-server --test server r454 2>&1 | tail -15)\", \"timeout\": 900000}\n- said: Four pass. Now the rest of the checks.\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo jackioh spec check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -2; cargo jackioh catalog check 2>&1 | tail -2; git status --short\", \"t\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -4; cargo test -p jackioh-server --test server actor:: 2>&1 | grep -E \\\"test result|FAILED|failed\\\"\", \"timeout\": 9\u2026\n- said: Everything is green. I'll also run the new tests against the old parser, so the PR description reports a red result I saw myself.\n- Bash: {\"command\": \"cp crates/server/src/actor/protocol.rs /tmp/protocol.rs.new && git show main:crates/server/src/actor/protocol.rs > crates/server/src/actor/protocol.rs && (cargo test -p jackioh-server --\u2026\n- Bash: {\"command\": \"git diff --stat; git status --short; cargo test -p jackioh-server --test server r454 2>&1 | grep -E \\\"test result\\\"; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Accept Plague-paid graveyard plays over the match socket, and check every legal action against its parser\"} --> The match server's socket parser now keeps a client `play`'s `plague` field. Online, a Plague-paid graveyard play of Classic #74 Corpse Plantation (\u2026"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
