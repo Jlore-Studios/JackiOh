@@ -25,9 +25,9 @@
 //   from the sky), and a figure may wear it on its head;
 // - the Book, Pancake and AI families' TWIST: pages in the air, steam and syrup, circuit traces with
 //   scanlines and a glitch;
-// - a per-set VARIETY SALT: the Classic and Classic+ cards draw their layout, backdrop, sky and
-//   emblem from their own salted streams, chosen (like Core's) so that no two catalog cards of one
-//   theme share all of them, while Core's stays the salt it always was.
+// - a per-set VARIETY SALT: the Classic, Classic+ and Meditative cards draw their layout, backdrop,
+//   sky and emblem from their own salted streams, chosen (like Core's) so that no two catalog cards
+//   of one theme share all of them, while Core's stays the salt it always was.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
@@ -116,13 +116,15 @@ const RADIANT_SALT = 0x9e3779b9;
 const VARIETY_SALT = 0x2545f491;
 /**
  * R503: the variety salt of each set's cards, by the set's id prefix (B2.2: `classic-043`,
- * `classicplus-012-1`). Each was chosen, as Core's was, so that no two catalog cards of one theme
- * share their layout, backdrop, sky, emblem and motif, and the families spread over every layout;
- * an id of any other set (a transient `t-<n>`) uses Core's.
+ * `classicplus-012-1`, `meditative-097-4`). Each was chosen, as Core's was, so that no two catalog
+ * cards of one theme share their layout, backdrop, sky, emblem and motif, and the families spread
+ * over every layout; a set added later takes a salt of its own, so no earlier card's picture moves.
+ * An id of any other set (a transient `t-<n>`) uses Core's.
  */
 const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
   classicplus: 0x5921ab01,
+  meditative: 0xf2aac73a,
 };
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;
