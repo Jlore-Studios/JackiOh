@@ -4512,9 +4512,12 @@
         "sha": "933f508b075a27696677f50fb8582e0655d7e2ef"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-09T23:17:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 559,
       "kind": "review",
       "pending_request": false,
