@@ -178,10 +178,9 @@ return {
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
 `load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
-`crates/cards/build.rs` will call it in part 4; until then
-only the tests do.
-Its errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error
-as `"<file>:<line>: <Luau's message>"`.
+`crates/cards/build.rs` will call it in part 4; until then only the tests do. Its errors name the
+file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
+`"<file>:<line>: <Luau's message>"`.
 
 The lint (`lint.rs`, L6, L7) is a pure function over the source: a lexer that knows Luau's
 comments, strings (interpolated ones included) and operators, then a pass over the tokens. The
@@ -189,14 +188,14 @@ lexer reads the source as Luau 0.740's (`Ast/src/Lexer.cpp`) does wherever that 
 code: a line comment ends at a newline, a carriage return or a NUL byte; a string breaks at an
 unescaped one of them (which Luau refuses, so the code after it is linted); escapes are read as
 Luau reads them (`\z` and a `\` before a newline run a string on); a NUL byte ends the source;
-and a number is read as Luau's `readNumber` reads it. A name
-after `.`, `:` or `::` is a field, a method or a type and is never refused. It refuses:
+and a number is read as Luau's `readNumber` reads it. A name after `.`, `:` or `::` is a field, a
+method or a type and is never refused. It refuses:
 
 - `pairs`, `next` (a table key spelled `next = …` included; write `["next"]`), `table.sort`,
   `table.foreach`, a generic `for … in` over anything but `ipairs(…)` (an `=` or `in` counts only
   outside brackets, so a loop variable's type annotation cannot make a `for` look numeric), and
-  `ipairs` anywhere but
-  right after `in` (`local each = ipairs`, a parameter or a key named `ipairs`);
+  `ipairs` anywhere but right after `in` (`local each = ipairs`, a parameter or a key named
+  `ipairs`);
 - the `/` and `^` operators (and `/=`, `^=`), and every `math.` member except `floor`, `ceil`,
   `max`, `min`, `abs`, `clamp` and `sign` (`math.pi` and `math.huge` included), and `math` used
   bare;
