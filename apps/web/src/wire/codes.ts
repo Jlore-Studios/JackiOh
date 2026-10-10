@@ -1,80 +1,46 @@
-// The web client's own copy of the shared wire helper (docs/v0.3.0/SURFACE.md §10.4), kept as
-// TypeScript and unchanged but for its import paths; the server's port is crates/engine/src/wire/codes.rs.
-//
 /**
- * How a typed or pasted code is read (SPEC §11 R191, which extends R104).
+ * Client and server code parsing must agree (SURFACE §10.4; SPEC §11; R191, R104).
  *
- * The client's code field and the server's redemption read a code through these functions and
- * nothing else, so the two can never disagree about what a player typed. The shape of a code (its
- * alphabet, length and grouping) is not stated here: it lives in the server's config (`crates/server/src/config.rs`)
- * (`INVITE_CODE_FORMAT`, `ROOM_CODE_FORMAT`, CLAUDE.md rule 9) and is passed in as a `CodeFormat`.
- *
- * The reading is:
- *  1. Input longer than `maxInputLength` is refused unread, so config bounds the work a caller can
- *     make a redemption do.
- *  2. Unicode compatibility normalisation (NFKC), which folds fullwidth forms and ligatures.
- *  3. Upper case one code point at a time. A code point whose upper case is more than one character
- *     ("ß" becomes "SS") is kept as it was, so it reads as foreign instead of growing the code.
- *  4. Every separator removed: whitespace, ASCII and Unicode dashes, the soft hyphen and the
- *     invisible joiners that mail and chat clients insert.
- *  5. What remains is walked against the alphabet, stopping at the first character that is not in
- *     it. Nothing is ever dropped, mapped or guessed at: R104's alphabet leaves out both halves of
- *     each look-alike pair (0 and O, 1 and I), so there is nothing to map to, and dropping a
- *     character shifts every later one and turns a typo into a different code.
+ * Format comes from server config (CLAUDE.md rule 9). Refuse oversized input; normalize NFKC,
+ * uppercase one code point at a time, remove separators, and stop at the first invalid character.
+ * Never map or drop characters: R104 omits look-alikes, and dropping one changes the code.
  */
 
-/** The shape of a code. The values live in the server's config (CLAUDE.md rule 9). */
+/** Code shape from server config (CLAUDE.md rule 9). */
 export type CodeFormat = {
   readonly alphabet: string;
   readonly length: number;
   readonly groupSize: number;
   readonly separator: string;
-  /** Longer raw input reads as `tooLong` without being read. */
   readonly maxInputLength: number;
 };
 
 export type CodeInputProblem =
-  /** An ASCII letter or digit outside the alphabet after upper-casing: R104's 0, 1, I, O. */
+  /** R104: ASCII alphanumerics outside the alphabet. */
   | { readonly kind: "excluded"; readonly character: string }
-  /** Any other character that is neither in the alphabet nor a separator. */
   | { readonly kind: "foreign"; readonly character: string }
-  /** More than `length` alphabet characters, or raw input longer than `maxInputLength`. */
   | { readonly kind: "tooLong" };
 
 export type CodeInputReading = {
-  /** The alphabet characters accepted, in order, stopping at the first problem; at most `length`. */
   readonly characters: string;
-  /** `characters` in groups of `groupSize` joined by `separator`, with no trailing separator. */
   readonly formatted: string;
-  /** problem === null && characters.length === length */
   readonly complete: boolean;
   readonly problem: CodeInputProblem | null;
 };
 
-/**
- * The separator set as a regular-expression character class: `\s` (which covers NBSP, U+3000 and
- * U+FEFF), the ASCII hyphen-minus, U+2010 to U+2015 (hyphens, figure dash, en and em dash, the
- * horizontal bar), U+2212 minus, U+FE58 and U+FE63 (small em dash and small hyphen-minus), U+FF0D
- * (fullwidth hyphen-minus), U+00AD (soft hyphen), U+200B to U+200D (zero-width space and joiners),
- * U+2060 (word joiner) and U+FEFF (the zero-width no-break space).
- */
+/** Code separators, including U+FE58/U+FE63 dashes and invisible characters introduced by mail or chat. */
 const SEPARATOR_CLASS =
   "[\\s\\-\\u2010-\\u2015\\u2212\\uFE58\\uFE63\\uFF0D\\u00AD\\u200B-\\u200D\\u2060\\uFEFF]";
 const SEPARATOR = new RegExp(`^${SEPARATOR_CLASS}$`, "u");
 
-/** An ASCII letter or digit, after upper-casing. */
 const ASCII_LETTER_OR_DIGIT = /^[0-9A-Z]$/u;
 const ASCII_LETTERS_AND_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-/** True for exactly one separator code point, and for nothing else. */
 export function isCodeSeparator(character: string): boolean {
   return SEPARATOR.test(character);
 }
 
-/**
- * NFKC, then each code point upper-cased on its own. A code point whose upper case is more than one
- * character is kept as it was. Separators are kept here; `normalizeCodeText` drops them.
- */
+/** NFKC and one-code-point uppercase; multi-character results stay foreign. */
 function upperCodePoints(raw: string): string[] {
   const out: string[] = [];
   for (const character of raw.normalize("NFKC")) {
@@ -84,11 +50,6 @@ function upperCodePoints(raw: string): string[] {
   return out;
 }
 
-/**
- * NFKC, then each code point upper-cased on its own (one that upper-cases to more than one
- * character, such as "ß", is kept as it was so it reads as foreign), then separators removed.
- * Knows nothing of an alphabet.
- */
 export function normalizeCodeText(raw: string): string {
   return upperCodePoints(raw)
     .filter((character) => !isCodeSeparator(character))
@@ -117,10 +78,7 @@ function readingOf(
   };
 }
 
-/**
- * Refuses raw.length > maxInputLength without reading it. Otherwise it walks normalizeCodeText(raw)
- * and stops at the first excluded, foreign or tooLong character. Never drops or maps a character.
- */
+/** Refuses oversized input before parsing and stops at the first invalid character without guessing. */
 export function readCodeInput(raw: string, format: CodeFormat): CodeInputReading {
   if (raw.length > format.maxInputLength) return readingOf("", { kind: "tooLong" }, format);
 
@@ -141,43 +99,27 @@ export function readCodeInput(raw: string, format: CodeFormat): CodeInputReading
   return readingOf(characters, null, format);
 }
 
-/** readCodeInput(raw, format).complete ? characters : null */
 export function canonicalCode(raw: string, format: CodeFormat): string | null {
   const reading = readCodeInput(raw, format);
   return reading.complete ? reading.characters : null;
 }
 
-/**
- * Caret index in `formatted` after `characterCount` characters:
- * n + (n > 0 ? Math.floor((n - 1) / groupSize) : 0).
- */
 export function formattedCaret(characterCount: number, format: CodeFormat): number {
   const n = characterCount;
   return n + (n > 0 ? Math.floor((n - 1) / Math.max(1, format.groupSize)) : 0);
 }
 
-/**
- * Which letters a word of pasted text is written in; digits have no case. "sentence" is a first
- * letter in upper case and every later letter in lower case ("Abcd"), which a phone keyboard makes
- * of the first word of a message.
- */
+/** "sentence" means only the first letter is upper-case. */
 type LetterCase = "upper" | "lower" | "sentence" | "mixed" | "none";
 
-/** One run of ASCII letters and digits (after upper-casing) in pasted text. */
 type Word = { readonly characters: string; readonly letterCase: LetterCase };
 
-/**
- * Words that sit next to each other in pasted text, each pair joined by separators only (`joins[i]`
- * joins `words[i]` and `words[i + 1]`), in the same case. Anything else between two words (a colon,
- * a full stop, a bracket, a letter outside ASCII) ends a chain, and so does a change of case: an
- * invite writes its code in one case, and "Here" or "Jack" beside it does not.
- */
+/** Same-case words adjacent through separators only. */
 type Chain = { readonly words: Word[]; readonly joins: string[] };
 
 function letterCaseOf(original: string): LetterCase {
   let upper = false;
   let lower = false;
-  /** Only the first letter is upper case, so far. */
   let sentence = true;
   let letters = 0;
   for (const character of original) {
@@ -195,12 +137,7 @@ function letterCaseOf(original: string): LetterCase {
   return "none";
 }
 
-/**
- * Whether two neighbouring words can belong to one code. Strict, the first reading: the same case.
- * Loose, the second reading `findCodeInText` falls back on when the strict one found nothing: a
- * sentence-case word counts as lower case, so "Abcd-efgh-jkmn-pqrs is your code", typed by hand on
- * a phone that capitalised the first letter, still holds its code.
- */
+/** Strict reading requires equal case; loose reading treats sentence case as lower for phone pastes. */
 function sameCase(a: LetterCase, b: LetterCase, loose: boolean): boolean {
   const fold = (letterCase: LetterCase): LetterCase => (loose && letterCase === "sentence" ? "lower" : letterCase);
   const x = fold(a);
@@ -214,8 +151,7 @@ function chainsIn(text: string, loose: boolean): Chain[] {
   let joins: string[] = [];
   let original = "";
   let characters = "";
-  /** The separators since the last word, or null when something else came between. (Cast, so the
-   *  checker does not narrow it to `null`: `endWord` sets it.) */
+  /** Cast permits `endWord` to update this value. */
   let join = null as string | null;
 
   const endWord = (): void => {
@@ -255,13 +191,7 @@ function chainsIn(text: string, loose: boolean): Chain[] {
   return chains;
 }
 
-/**
- * Whether a word could be part of a code, and so must not be cut away from one beside it: a stray
- * single character (a 17th key, even an excluded one), or a run of alphabet characters as long as a
- * group or shorter (a group, or part of one), or several whole groups run together. Anything else
- * is prose: a word holding a character the alphabet leaves out ("is", "code", "your"), or one whose
- * length no run of groups has ("thanks", "invite").
- */
+/** A possible code fragment is one character, a partial group, or whole alphabet groups. */
 function couldBelongToCode(word: Word, format: CodeFormat): boolean {
   const length = word.characters.length;
   if (length <= 1) return true;
@@ -273,15 +203,8 @@ function couldBelongToCode(word: Word, format: CodeFormat): boolean {
 }
 
 /**
- * The codes one chain holds. A chain that reads as exactly one code as a whole is that code,
- * however its groups are joined. Otherwise a code inside a longer chain counts only when its own
- * groups are joined one way and neither word beside it could be read as more of it: a neighbour
- * joined to it some other way ("HERE ABCD-EFGH-JKMN-PQRS") is not, and neither is one joined the
- * same way that no code could hold ("my code is abcd efgh jkmn pqrs thanks": "is" holds an I, and
- * "thanks" is six letters long). But in "ABCD-EFGH-JKMN-PQRS-T", "X-ABCD-EFGH-JKMN-PQRS" or
- * "abcd efgh jkmn pqrs tuvw" the extra word is joined exactly as the groups are and could be part
- * of a code, so the whole reads as one code too long (the server's reading, R145's identical error),
- * and the field must not quietly cut it down to a code the player never had.
+ * A whole chain may be one code; embedded candidates need uniform joins and unambiguous neighbours.
+ * A joined possible fragment makes the chain too long (R145), never a truncated code.
  */
 function codesInChain(chain: Chain, format: CodeFormat): string[] {
   let text = "";
@@ -299,7 +222,6 @@ function codesInChain(chain: Chain, format: CodeFormat): string[] {
     let characters = "";
     for (let end = start; end < count; end += 1) {
       if (end > start) {
-        // One way of joining groups, and only ever between whole groups.
         if (chain.joins[end - 1] !== internal || characters.length % size !== 0) break;
       }
       characters += chain.words[end]?.characters ?? "";
@@ -320,7 +242,6 @@ function codesInChain(chain: Chain, format: CodeFormat): string[] {
   return found;
 }
 
-/** The distinct codes the text's chains hold, stopping once there are two. */
 function codesInText(text: string, format: CodeFormat, loose: boolean): Set<string> {
   const found = new Set<string>();
   for (const chain of chainsIn(text, loose)) {
@@ -332,16 +253,7 @@ function codesInText(text: string, format: CodeFormat, loose: boolean): Set<stri
   return found;
 }
 
-/**
- * If canonicalCode(text) is non-null, returns it. Otherwise it reads the text as chains of words
- * (see `Chain`) and returns the code only if exactly one distinct code is found in them. Two
- * different codes, a code with an extra group joined on, or no code at all is null, and the paste
- * then goes through to the field's own reading.
- *
- * Only when the strict reading finds nothing at all is the text read again with a sentence-case
- * word joining lower-case ones (`sameCase`), so the looser reading can add a code but never change
- * what the strict one found.
- */
+/** Finds exactly one code; strict chains win over the sentence-case fallback. */
 export function findCodeInText(text: string, format: CodeFormat): string | null {
   const direct = canonicalCode(text, format);
   if (direct !== null) return direct;
@@ -353,7 +265,7 @@ export function findCodeInText(text: string, format: CodeFormat): string | null 
   return only ?? null;
 }
 
-/** ASCII [0-9A-Z] minus the alphabet, sorted: ["0", "1", "I", "O"] for R104. */
+/** R104: sorted ASCII alphanumerics excluded by the format. */
 export function excludedCharacters(format: CodeFormat): readonly string[] {
   return Array.from(ASCII_LETTERS_AND_DIGITS)
     .filter((character) => !format.alphabet.includes(character))

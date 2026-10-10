@@ -1,6 +1,4 @@
-// R256: the workshop's autosave. Every test drives the store through a fake server, an in-memory
-// (or broken) storage and a manual clock, so "after the debounce", "offline" and "a new visit"
-// are exact moments rather than real waits.
+// R256: Autosave tests use a fake server, in-memory/broken storage and a manual clock.
 
 import { portraitOrDefault } from "@jackioh/shared";
 import { checkImportRoom } from "@jackioh/validator";
@@ -46,11 +44,8 @@ const PROFILE = "profile-1";
 const CATALOG_VERSION = "test-catalog-1";
 const RETRY_MS = DECK_AUTOSAVE_RETRY_SECONDS * 1000;
 
-// ---------------------------------------------------------------------------------------------
 // Fakes
-// ---------------------------------------------------------------------------------------------
 
-/** Lets every pending promise callback run: the fake server answers in microtasks. */
 async function settle(): Promise<void> {
   for (let round = 0; round < 5; round += 1) {
     await new Promise<void>((resolve) => {
@@ -123,16 +118,14 @@ type Call = {
   body?: DeckInput | TrioInput | TrioImportInput;
 };
 
-/** An in-memory server with the refusals `crates/server/src/api/decks.rs` makes that matter here. */
+/** Mirrors deck/trio refusals from `crates/server/src/api/decks.rs`. */
 function fakeServer() {
   const decks = new Map<string, DeckInput>();
   const trios = new Map<string, TrioInput>();
   const calls: Call[] = [];
   const state = {
     offline: false,
-    /** A refusal per id, thrown until removed. */
     refusals: new Map<string, ApiRequestError>(),
-    /** Held requests: resolve() lets the next one answer. */
     hold: null as null | { release: () => void; wait: Promise<void> },
   };
 
@@ -174,7 +167,7 @@ function fakeServer() {
       await gate({ op: "deleteTrio", id });
       return { deleted: trios.delete(id) };
     },
-    /** R341: all or nothing, under the caps, as `POST /api/trios/import` is. */
+    /** R341: import is all-or-nothing under the server caps. */
     async importTrio(input: TrioImportInput) {
       await gate({ op: "importTrio", id: input.trio.id, body: input });
       const adding = input.slots.filter((deck) => deck !== null && !decks.has(deck.id)).length;
@@ -252,9 +245,7 @@ afterEach(() => {
   for (const store of stores.splice(0)) store.stop();
 });
 
-// ---------------------------------------------------------------------------------------------
 // Saving
-// ---------------------------------------------------------------------------------------------
 
 describe("the debounced save", () => {
   it("R256 an edit is saved by one PUT once the debounce has passed, and not before", async () => {
@@ -300,10 +291,10 @@ describe("the debounced save", () => {
       name: "Big Tempo",
       cards: [fixtureCardId(3), fixtureCardId(1)],
       catalogVersion: CATALOG_VERSION,
-      // D5: the portrait rides the same save; a deck the player never picked one for sends null.
+      // D5: Portrait saves with the deck; no selection sends null.
       portrait: null,
     });
-    // The field keeps what the player typed; only the save is cleaned.
+    // The draft retains input; only the saved name is normalized.
     expect(store.getSnapshot().decks[0]?.name).toBe("  Big   Tempo  ");
   });
 
@@ -381,9 +372,7 @@ describe("the debounced save", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Offline, and the next visit
-// ---------------------------------------------------------------------------------------------
 
 describe("offline", () => {
   it("R256 a failed transport shows offline, keeps the draft in the mirror, and a new visit restores and saves it", async () => {
@@ -404,7 +393,6 @@ describe("offline", () => {
     const mirrored = storage.data.get(mirrorKey(PROFILE)) ?? "";
     expect(mirrored).toContain("Aggro v2");
 
-    // The tab closes. Next visit: the server still has the old copy, and is reachable again.
     first.stop();
     server.state.offline = false;
     server.calls.length = 0;
@@ -470,9 +458,7 @@ describe("offline", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The merge
-// ---------------------------------------------------------------------------------------------
 
 describe("merging the mirror over the server", () => {
   it("R256 a server item the mirror does not know is taken, and a clean local one the server lacks is dropped", async () => {
@@ -526,7 +512,6 @@ describe("merging the mirror over the server", () => {
     );
     const clock = manualClock();
     const store = open({ api: server.api, clock, storage });
-    // One of each: a list keyed by id cannot hold one id twice, and a second copy would be sent twice.
     expect(store.getSnapshot().decks.map((item) => item.id)).toEqual(["dup-deck"]);
     expect(store.getSnapshot().trios.map((item) => item.id)).toEqual(["dup-trio"]);
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
@@ -581,9 +566,7 @@ describe("merging the mirror over the server", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Deletes, trios and refusals
-// ---------------------------------------------------------------------------------------------
 
 describe("deletes and trios", () => {
   it("R256 a trio naming a new deck is sent after the deck has landed", async () => {
@@ -692,9 +675,7 @@ describe("refusals", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Names
-// ---------------------------------------------------------------------------------------------
 
 describe("the name a save sends", () => {
   it("R256 an empty or blank name saves as the fallback", () => {
@@ -720,9 +701,7 @@ describe("the name a save sends", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A trio import (R340, R341)
-// ---------------------------------------------------------------------------------------------
 
 describe("a trio import", () => {
   const code = {
@@ -747,7 +726,6 @@ describe("a trio import", () => {
     expect(result.ok ? result.trioId : "").toBe(trio?.id);
     expect(trio?.deckIds).toEqual([snapshot.decks[0]?.id, null, snapshot.decks[1]?.id]);
     expect(trio?.name).toBe("Shared trio");
-    // Nothing is left for the autosave to send.
     await settle();
     expect(server.calls).toHaveLength(1);
   });
@@ -758,7 +736,7 @@ describe("a trio import", () => {
     for (const deck of full) server.decks.set(deck.id, { name: deck.name, cards: deck.cards, catalogVersion: CATALOG_VERSION });
     const store = open({ api: server.api, server: response(full) });
     const result = await store.importTrio(code);
-    // The shared validator's sentence (R340), never one of the client's own.
+    // R340: use the shared validator's message, never a client copy.
     const room = checkImportRoom({
       saved: { decks: MAX_SAVED_DECKS - 1, trios: 0 },
       limits: { decks: MAX_SAVED_DECKS, trios: MAX_SAVED_TRIOS },
@@ -838,9 +816,7 @@ describe("a trio import", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The deck's portrait (R641)
-// ---------------------------------------------------------------------------------------------
 
 describe("the deck's portrait (R641)", () => {
   it("R641 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
@@ -850,14 +826,13 @@ describe("the deck's portrait (R641)", () => {
     const store = open({ api: server.api, clock, storage });
 
     const id = store.createDeck({ name: "Aggro", portrait: "gary" }) ?? "";
-    // The snapshot carries it at once (the picker's `onPortrait` writes through the same edit).
     expect(store.getSnapshot().decks[0]?.portrait).toBe("gary");
-    // And it is in the mirror before anything else can happen — NEVER LOSE WORK.
+    // Mirror before waiting — never lose work.
     const mirrored = parseMirror(storage.data.get(mirrorKey(PROFILE)) ?? null);
     expect(mirrored?.decks[0]?.item.portrait).toBe("gary");
 
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
-    // D5: the PUT body carries the field, so the column round-trips.
+    // D5: PUT round-trips the portrait.
     const put = server.calls.find((call) => call.op === "putDeck")?.body as DeckInput | undefined;
     expect(put?.portrait).toBe("gary");
     expect(server.decks.get(id)?.portrait).toBe("gary");
@@ -877,12 +852,10 @@ describe("the deck's portrait (R641)", () => {
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get("d1")?.portrait).toBe("timmy");
 
-    // An unrelated edit must not drop it — the portrait rides the same row.
     store.updateDeck("d1", { name: "Aggro v2" });
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get("d1")).toMatchObject({ name: "Aggro v2", portrait: "timmy" });
 
-    // `null` is the column's cleared value — the deck reads vanilla again.
     store.updateDeck("d1", { portrait: null });
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get("d1")?.portrait).toBeNull();
@@ -898,7 +871,6 @@ describe("the deck's portrait (R641)", () => {
       server: response([{ ...savedDeck("d1", "Aggro", [], 1), portrait: "gary" }]),
     });
 
-    // No change, no request: a portrait equal to the held one is not an edit.
     store.updateDeck("d1", { portrait: "gary" });
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.calls).toEqual([]);
@@ -911,7 +883,7 @@ describe("the deck's portrait (R641)", () => {
 
   it("R641 a mirror row written before the portrait column reads back `null`", () => {
     const storage = memoryStorage();
-    // A mirror a pre-portrait client left behind: the item simply has no `portrait` key.
+    // Missing portrait data must preserve the mirror row as null.
     storage.setItem(
       mirrorKey(PROFILE),
       JSON.stringify({
@@ -928,12 +900,10 @@ describe("the deck's portrait (R641)", () => {
       }),
     );
     const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
-    // deckFrom normalizes the missing column to `null`, never dropping the row.
     expect(mirrored?.decks[0]?.item.portrait).toBeNull();
 
     const store = open({ api: fakeServer().api, storage, server: response([]) });
     const item = store.getSnapshot().decks[0];
-    // `null` reads as `vanilla` everywhere the deck is shown — the picker's collapsed control too.
     expect(item?.portrait).toBeNull();
     expect(portraitOrDefault(item?.portrait)).toBe("vanilla");
     expect(portraitOrDefault("not-a-portrait")).toBe("vanilla");

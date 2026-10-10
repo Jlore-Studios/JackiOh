@@ -1,19 +1,7 @@
-// The game log's history (SPEC §10.10, R745).
-//
-// `view.events` is a window sized for animation (§10.8, R168): after a busy turn the player's own
-// last play has left it. So the log joins each view's window to the last window the same viewer
-// was shown, with the animation runner's own diff (`newEventsSince`), and keeps every line that
-// leaves the window.
-//
-// A line is kept as it read when its event arrived: its words and the face of the definition it
-// names, never an instance id, so the history holds only what a view once said and follows no card
-// into a hidden zone (R97, R223). There is one history per viewer, because the seats read
-// differently redacted windows and hotseat's two seats must never share one. A view that shares no
-// event with the last one (a reconnect after a long drop, §9.5, or a board that caught up past a
-// whole window) cannot be joined: the history keeps what it had and adds one line saying so. A
-// view with no result after one with a result starts a new game, and its history empty.
-//
-// Presentation only: nothing here reaches the engine, the view or the wire (CLAUDE.md rule 7).
+// Game-log history (SPEC §10.10, R745) joins each viewer's event window (§10.8, R168).
+// It retains event-time wording and faces—not instance ids—so no card is followed into a hidden zone (R97, R223).
+// Per-viewer histories preserve redaction; reconnects or missed windows add a gap (§9.5).
+// Presentation only: nothing reaches the engine, view or wire (CLAUDE.md rule 7).
 
 import { useState } from "react";
 
@@ -23,28 +11,19 @@ import type { FaceModel } from "../cards/index.ts";
 import { newEventsSince } from "./animations.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 
-/** The `type` of the line that stands where two windows could not be joined. */
 export const LOG_GAP = "gap";
-/** What that line says. */
 export const LOG_GAP_TEXT = "Some events may be missing here";
 
-/** A line as the log keeps it: its words and the face of the definition it names, never an instance id. */
 export type LoggedLine = {
   readonly type: GameEvent["type"] | typeof LOG_GAP;
   readonly text: string;
   readonly face: FaceModel | null;
 };
-/** A kept line and the key it is drawn under, which it keeps as the window slides. */
 export type KeptLine = LoggedLine & { readonly key: string };
-/** One viewer's history. */
 export type SeatLog = {
-  /** The window this viewer's last view carried. */
   readonly events: readonly GameEvent[];
-  /** One entry per event of `events`: its key, and the line kept for it when it arrived (null: none). */
   readonly window: readonly { readonly key: string; readonly line: KeptLine | null }[];
-  /** The lines whose events have left the window, oldest first. */
   readonly kept: readonly KeptLine[];
-  /** The number the next key takes. */
   readonly next: number;
 };
 export type LogHistory = {
@@ -52,7 +31,6 @@ export type LogHistory = {
   readonly seats: Readonly<Partial<Record<PlayerId, SeatLog>>>;
 };
 export const EMPTY_LOG_HISTORY: LogHistory = { view: null, seats: {} };
-/** What the log draws for its viewer: the kept lines, then one key per event of the view's window. */
 export type ViewerLog = { readonly kept: readonly KeptLine[]; readonly keys: readonly string[] };
 
 export function advanceLogHistory(
@@ -95,7 +73,6 @@ export function advanceLogHistory(
   return { view, seats: { ...seats, [seat]: { events: view.events, window, kept, next } } };
 }
 
-/** The log's history for `view`'s viewer; `keep` is called only for events new to that viewer. */
 export function useLogHistory(view: PlayerView, keep: (event: GameEvent) => LoggedLine | null): ViewerLog {
   const [history, setHistory] = useState<LogHistory>(EMPTY_LOG_HISTORY);
   const current = advanceLogHistory(history, view, keep);

@@ -1,50 +1,6 @@
-// BUILD M8 spec 10 — "Pending account".
-//
-// Key assertions (BUILD M8, quoted verbatim):
-//
-//     "code screen shown; bad code error identical for three failure kinds; good code activates"
-//
-// THE IDENTICAL ERROR IS A SECURITY PROPERTY, not a cosmetic one. SPEC §9.4: "Missing, expired
-// and exhausted codes return an identical error in identical time", and §9.8's "Invite code brute
-// force" row makes 80-bit hashed codes worth it only if nothing else leaks. A difference in the
-// message, in the status, in one extra `details` field or in the wall clock is an oracle: it tells
-// a scanner that a guessed code EXISTS, which is most of the search. So this spec asserts the
-// three responses are identical as bytes and bounded in time, not merely "all errors".
-//
-// R107 is what makes "identical time" observable rather than aspirational: every redemption
-// response — the successes and the breaker's 503 too — is padded to
-// `REDEMPTION_RESPONSE_FLOOR_MS`, a floor comfortably above the §9.4 transaction's own work, so
-// the work each branch did is invisible from outside. The floor is imported from
-// `crates/server/src/config.rs`; no number here is a literal.
-//
-// BUILD M6-T1 owns the tight version of the timing claim ("the three failure responses within
-// 5 ms of each other over 50 samples") and that belongs in a unit test with an injected clock:
-// 50 samples is ten times §9.4's per-profile attempt limit, and an e2e sample carries HTTP
-// transport on top. What this spec can prove, and does, is that the floor is really there and
-// that the three kinds do not separate across it.
-//
-// THE ATTEMPT BUDGET. §9.4 step 2 rejects a profile that "made more than 5 attempts in the last
-// hour". This file spends five logged attempts: the bad code typed into the screen in the first
-// `it`, the three failure kinds over HTTP in the second, and the good code in the third. The
-// already-active re-redemption at the end is rejected at step 1, before step 4's log, so it costs
-// nothing. Five is the budget: `CODE_ATTEMPTS_PER_PROFILE_PER_HOUR` is 5 and the check counts the
-// attempts already logged, so the fifth still goes through — which is why there are three failure
-// kinds here and not four, and one typed code and not two.
-//
-// R111 is the other half of "good code activates": the launch grant is "one copy of every
-// non-token card, written by a trigger on the pending → active transition and idempotent, so a
-// repeated redemption cannot double a collection". So activation is asserted twice — once for the
-// grant, once for its idempotence — and then by the thing the grant exists for: R111 notes that
-// one copy of every non-token card is, with MAX_COPIES = 1 and three decks of 20, exactly enough
-// for a legal loadout, so a freshly activated account must be able to save three such decks as a
-// trio (R250, R252) and queue it for Best of 3, where L1–L6 are checked (R253).
-//
-// ORDER MATTERS in this file. The gate and the failure kinds are asserted while the fixture
-// account is still pending; the last `it` flips it to active and burns the good code. Cypress
-// runs `it`s in order, so that is fine within a run — but the `E2E=1` server must reseed
-// `e2e-pending` and its invite codes between runs (see the hand-off report).
-//
-// Needs: M6-T1 (auth, invite gate) and the code screen. See e2e/README.md.
+// BUILD M8: §9.4 and §9.8 require identical bad-code responses; R107 hides branch timing.
+// The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption; M6-T1 tests timing tightly.
+// R111's activation grant enables an L1–L6 legal trio (R250, R252, R253); test order leaves the fixture active.
 
 import {
   CODE_ALPHABET,
@@ -67,21 +23,12 @@ import {
 } from "../../support/testids.ts";
 import { mintId } from "../../support/commands.ts";
 
-// ---------------------------------------------------------------------------------------------
-// Local scaffolding. Items marked ASK belong in `e2e/support/**` and are in the hand-off report.
-// ---------------------------------------------------------------------------------------------
-
-/** ASK (support/commands.ts + support/config.ts): `cy.signIn(account)` and the session key. */
+/** ASK: `cy.signIn(account)` and its session key belong in `e2e/support/**`. */
 const SESSION_STORAGE_KEY = "jackioh.e2e.session";
 
-/**
- * NOT A SPEC VALUE, and deliberately not R107's floor. The floor is the assertion; this only
- * bounds how far apart two localhost round trips may land before the spread stops being
- * transport. BUILD M6-T1's 5 ms is the tight claim and lives in its unit test (see the header).
- */
+/** Not R107's floor: bounds localhost transport spread; M6-T1 owns the tight timing assertion. */
 const TRANSPORT_JITTER_MS = 100;
 
-/** SPEC §8 numbers 100 Core cards; R111 grants each of them, among every other set's. */
 const CORE_CARD_COUNT = Object.keys(CARD_NAMES).length;
 
 function api(path: string): string {
@@ -142,7 +89,7 @@ function visitAs(token: string, path: string): void {
   });
 }
 
-/** §9.4: "16 characters (80 bits) ... formatted XXXX-XXXX-XXXX-XXXX", over R104's alphabet. */
+/** §9.4 format over R104's alphabet. */
 function expectWellFormedInviteCode(formatted: string): void {
   const groups = formatted.split(INVITE_CODE_SEPARATOR);
   expect(
@@ -166,17 +113,12 @@ function expectWellFormedInviteCode(formatted: string): void {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-
 describe("10 invite gate — a pending account", () => {
-  // BUILD M8: every spec sets a seed. No game is started here, so the seed pins the scenario's
-  // identity and lets CI re-run the file with `--expose seed=`.
   const seed = seedFor("10-invite-gate");
 
   before(() => {
     expect(seed, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
-    // The suite's own fixture codes have to be codes §9.4 would mint, or a rejection could be
-    // "malformed" rather than one of the three kinds under test.
+    // §9.4 fixtures must be valid codes, not malformed inputs.
     for (const code of [
       inviteCodes.good(),
       inviteCodes.missing(),
@@ -188,8 +130,6 @@ describe("10 invite gate — a pending account", () => {
   });
 
   it("the code screen is shown, and a pending account can reach nothing else", () => {
-    // §9.4: "A pending account can log in, verify its email and see the code screen, and nothing
-    // else: no collection, loadout, queue or match."
     me(pendingToken()).should((response) => {
       expect(response.status, "`/api/auth/me` is `auth: \"user\"` — this *is* the code screen's read").to.eq(
         200,
@@ -201,7 +141,6 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.emailVerified, "§9.4 makes a verified email a precondition").to.eq(true);
     });
 
-    // The code screen's other read, so it can say "redemption is paused" instead of guessing.
     cy.request<{ redemptionEnabled: boolean; retryAfterMs: number }>({
       method: "GET",
       url: api("/api/codes/status"),
@@ -212,8 +151,7 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.retryAfterMs).to.eq(0);
     });
 
-    // "and nothing else". One 403 per door §9.4 names: the collection, the saved decks and trios
-    // that replaced the loadout (R250, R252), and the queue in each of its modes (R257).
+    // §9.4 gates collection, saved loadouts (R250, R252), and every queue mode (R257).
     const someId = mintId();
     const gated: { method: "GET" | "PUT" | "DELETE" | "POST"; path: string; body?: Record<string, unknown> }[] = [
       { method: "GET", path: "/api/collection" },
@@ -239,21 +177,14 @@ describe("10 invite gate — a pending account", () => {
       });
     }
 
-    // The redirect: a gated route sends a pending account to the code screen.
     visitAs(pendingToken(), routes.deckbuilder());
     cy.location("pathname").should("eq", routes.invite());
 
     visitAs(pendingToken(), routes.invite());
     cy.location("pathname").should("eq", routes.invite());
 
-    // "CODE SCREEN SHOWN", at the layer the word means. Until now this row was a URL and nothing
-    // else — an `/invite` route that rendered a blank page passed it, and this spec's own ASK
-    // said so. The ASK was half wrong: `apps/web/src/routes/invite.tsx` has exported and rendered
-    // every testid below since it was written; what was missing was any name for them under
-    // `e2e/`, which A13 in `support/testids.ts` now carries.
+    // A13: assert rendered controls, not only the `/invite` route.
     cy.get(ts(INVITE_CODE_INPUT)).should("be.visible").and("have.value", "");
-    // §9.4's format, shown rather than described: the placeholder is `XXXX-XXXX-XXXX-XXXX` built
-    // from the same constants this file imports, so a client that invented its own grouping fails.
     cy.get(ts(INVITE_CODE_INPUT)).should(
       "have.attr",
       "placeholder",
@@ -261,36 +192,19 @@ describe("10 invite gate — a pending account", () => {
         "X".repeat(INVITE_CODE_GROUP_SIZE),
       ).join(INVITE_CODE_SEPARATOR),
     );
-    // Nothing to submit yet, so nothing submittable, and no refusal on a screen nobody has used.
     cy.get(ts(INVITE_SUBMIT)).should("be.visible").and("be.disabled");
     cy.get(ts(INVITE_ERROR)).should("not.exist");
-    // Neither of the screen's other two states: the breaker is closed (asserted above through
-    // `/api/codes/status`) and this account is pending, not active.
     cy.get(ts(INVITE_PAUSED)).should("not.exist");
     cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
 
-    // THE TYPED-IN BAD CODE. §9.4's one sentence was asserted three times over `cy.request` in the
-    // next `it` and never once through the screen a person actually uses, which is the half of
-    // BUILD's row that a redirect cannot reach. Typed in lower case on purpose: R104's alphabet is
-    // upper-case only (`CODE_ALPHABET` has no `l`, `O`, `0` or `1`) and the input normalises
-    // before it reads, so the value the box settles on is the formatted code and nothing else.
-    //
-    // THE ATTEMPT BUDGET, which is why there is exactly one of these. §9.4 step 2 counts attempts
-    // per profile per hour and `crates/server/src/api/codes.rs` logs every attempt that gets past
-    // steps 2 and 3 — so this file now spends five: this one, the three failure kinds in the next
-    // `it`, and the good code in the last. `CODE_ATTEMPTS_PER_PROFILE_PER_HOUR` is 5 and the check
-    // is on the attempts already logged, so the fifth still goes through. A second typed code
-    // would spend the margin that keeps a re-run honest.
+    // R104 normalizes lower-case input to the canonical formatted code.
+    // §9.4 permits exactly this UI failure before the three HTTP failures and valid redemption.
     cy.get(ts(INVITE_CODE_INPUT)).type(inviteCodes.missing().toLowerCase());
     cy.get(ts(INVITE_CODE_INPUT)).should("have.value", inviteCodes.missing());
     cy.get(ts(INVITE_SUBMIT)).should("not.be.disabled").click();
 
-    // The server's sentence, on screen, verbatim. R145 draws the line this asserts: the client
-    // renders whatever `POST /api/codes/redeem` refused with, so a client that paraphrased would
-    // flatten §9.4's code failures into its own wording and the identical-error property would
-    // stop being observable where a user sees it.
+    // R145: render the server's §9.4 rejection verbatim.
     cy.get(ts(INVITE_ERROR)).should("have.text", REDEMPTION_IDENTICAL_ERROR);
-    // A refused code leaves the account where it was: still pending, still on the code screen.
     cy.location("pathname").should("eq", routes.invite());
     cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
     me(pendingToken()).should((response) => {
@@ -316,7 +230,6 @@ describe("10 invite gate — a pending account", () => {
 
     for (const kind of kinds) {
       redeem(kind.code).then((response) => {
-        // Asserted per kind as well as across them, so a failure names which kind broke.
         expect(response.status, `${kind.name}: §9.4's rejection is a 400 invalid_code`).to.eq(400);
         expect(response.body.error?.code, `${kind.name}: the same error code`).to.eq("invalid_code");
         expect(response.body.error?.message, `${kind.name}: the one client-facing sentence`).to.eq(
@@ -370,9 +283,7 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.needsInviteCode).to.eq(false);
     });
 
-    // R111: "one copy of every non-token card". §9.1: "Everyone owns every card at launch; keep
-    // the ledger anyway", which is why this is read from the ledger and not assumed. Every set's
-    // non-token cards (SPEC §8, §8.6, §8.7), read off the catalog the server runs.
+    // Read R111's grant from the §9.1 ledger across SPEC §8, §8.6, and §8.7.
     let expected = new Set<string>();
     cy.request<CatalogBody>({ method: "GET", url: api("/api/catalog") }).then((response) => {
       expected = new Set(
@@ -409,9 +320,7 @@ describe("10 invite gate — a pending account", () => {
       granted = JSON.stringify(entries);
     });
 
-    // Idempotence: "a repeated redemption cannot double a collection" (R111). §9.4 only makes
-    // redemption the pending → active transition, so an active account asking again is a
-    // conflict — distinguishable from the three code failures on purpose, because it is not one.
+    // R111 is idempotent; §9.4 makes repeat redemption an account-state conflict.
     redeem(inviteCodes.good()).should((response) => {
       expect(response.status, "an already-active account is 409, not a code failure").to.eq(409);
       expect(
@@ -433,9 +342,6 @@ describe("10 invite gate — a pending account", () => {
       });
     });
 
-    // R111's stated rationale, end to end: the grant is exactly enough for a legal loadout —
-    // three disjoint decks of DECK_SIZE, which is now a trio (R252). A save is only a draft (R250),
-    // so the proof is the queue: `POST /api/queue` runs L1–L6 on the trio (R253) and takes it.
     cy.installLoadout(accounts.pending(), "10-invite-gate-a").then((installed) => {
       cy.request<{ status: string; mode: string }>({
         method: "POST",
@@ -451,7 +357,6 @@ describe("10 invite gate — a pending account", () => {
         .should("eq", 200);
     });
 
-    // And the screen the gate used to bounce now stays open.
     visitAs(pendingToken(), routes.deckbuilder());
     cy.location("pathname").should("eq", routes.deckbuilder());
   });

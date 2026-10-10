@@ -1,20 +1,5 @@
-// R438: the keyword visuals on a board minion, in a real browser (issue #40).
-//
-// apps/web/src/cards/keywordVisuals.test.tsx proves the DOM and the stylesheet's text: which
-// treatments a unit draws, the caps, the gate on `data-kw-motion`, the reduced-motion blocks. What
-// only a layout engine can say is measured here, on MinionFace at three board sizes (a 1280x720
-// desktop's 43x60 minion, a tablet's 58x80, the largest zone's 81x113):
-//
-//   - each keyword's treatment is drawn: a box of real size inside the card, and a glyph at least
-//     GLYPH_MIN_PX wide;
-//   - no treatment covers the attack or health number or the name: the middle of each is still the
-//     gem or the plate itself, whatever keywords the unit has;
-//   - a glyph never sits on the cost gem;
-//   - loops run, at most AMBIENT_MAX treatments of a unit at once, and none at all once the settings
-//     panel's Reduce motion is on (the media query's half is the stylesheet test's).
-//
-// `--expose shots=1` also saves pictures of every row, at the smallest and the largest size, three
-// times larger (CSS zoom), for a person to look at.
+// R438: browser layout assertions for MinionFace keyword treatments at board sizes.
+// The stylesheet test covers DOM and CSS; this suite measures legibility, overlap, animation, and reduced motion.
 
 import { CATALOG } from "@jackioh/cards";
 import { KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
@@ -35,12 +20,7 @@ const SIZES = [
 /** A glyph disc's floor (keywords.css `--kw-glyph`). */
 const GLYPH_MIN_PX = 12;
 
-/**
- * The card's top-right corner, kept clear of the glyph row for the switch button's glyph. #258 moved
- * the switch out of the card into its zone's corner (board.css `.board .zone > .switch-button`),
- * where on a tile the card fills its glyph still sits over this corner, so the room stays reserved:
- * `clamp(14px, 28%, 18px)` wide, 2px from the edge.
- */
+/** Keep the zone-corner switch target clear of glyphs. */
 const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 
 /** How far a box may poke past the card's own edge (the card clips it anyway). */
@@ -74,11 +54,7 @@ const ROWS: readonly Row[] = [
   { id: "Stack, 2 buried", unit: { keywords: [{ kind: "Stack" }], buried: 2 } },
 ];
 
-/**
- * Tall enough for every row of the grid, so a hit test can reach the last one: a row is the largest
- * minion (113px) and its gap, and a new keyword adds a row, so the height follows the rows rather than
- * being a number to bump (R636 and R637 added two and pushed the last row past 3400).
- */
+/** R636/R637: derive grid height from row count so added keywords remain reachable. */
 const GRID_ROW_PX = 131;
 const GRID_SLACK_PX = 100;
 /** The viewport stays under this however many rows there are: the hit test scrolls each cell into view. */
@@ -241,9 +217,7 @@ describe("R438 keyword visuals on the board minion", () => {
   });
 
   if (SHOTS) {
-    // A board's smallest minion and its largest, three times larger (CSS zoom, so every px floor
-    // scales with them and the picture is the small card magnified), two rows to a picture, which
-    // is what fits the headless browser's 720px shot.
+    // Capture the smallest and largest cards at magnification for visual review.
     const CHUNK = 2;
     const ZOOM = 3;
     for (let start = 0; start < ROWS.length; start += CHUNK) {

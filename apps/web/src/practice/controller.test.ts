@@ -1,13 +1,5 @@
-// B36 of docs/polish/3-ai.md: the practice controller's pacing loop, against a scripted host.
-//
-// The host here is a fake that holds every request open until the test answers it, so "exactly
-// one request in flight" and "queued behind it" are observable, and the clock is vitest's fake
-// timers, so "waits firstActionMs / actionGapMs / promptAnswerMs" is checked to the millisecond:
-// nothing is sent one millisecond early, and exactly one `aiStep` is sent on time. The snapshots
-// are fixture views from `src/test/fixtures.ts`; the controller reads nothing but a snapshot.
-//
-// Seats: the human is p1 and the AI p2 throughout, so `waitingPending` (a prompt pending for p2)
-// is the AI's own prompt as the human sees it, and the AI's turns are the even ones.
+// B36: a scripted host and fake clock prove serial AI requests and exact pacing gaps.
+// The human is p1 and the AI p2 throughout.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -41,9 +33,7 @@ const TIMERS: PracticeTimers = {
   },
 };
 
-// ---------------------------------------------------------------------------------------------
-// the scripted host
-// ---------------------------------------------------------------------------------------------
+// The scripted host
 
 type Held = {
   id: number;
@@ -57,11 +47,9 @@ type Answer = DistributiveOmit<PracticeResponse, "id">;
 
 type FakeHost = {
   host: PracticeHost;
-  /** Every request, in the order the controller sent it. */
   requests: Held[];
   maxInFlight(): number;
   open(): Held[];
-  /** Answer the oldest open request. */
   respond(answer: Answer): void;
   fail(error: unknown): void;
   disposed(): number;
@@ -125,12 +113,10 @@ function snap(view: Partial<PlayerView>, aiToAct: boolean, legal: ActionBody[] =
   return { view: baseView({ viewer: "p1", ...view }), legal, aiToAct, error: null };
 }
 
-/** The AI (p2) mid-turn with nothing pending. */
 function aiTurn(turn: number, aiToAct = true): PracticeSnapshot {
   return snap({ turn, active: "p2", phase: "main", pending: null }, aiToAct);
 }
 
-/** The human's (p1) own main phase: nothing for the AI to do. */
 function humanTurn(turn: number): PracticeSnapshot {
   return snap({ turn, active: "p1", phase: "main", pending: null }, false, [{ type: "endTurn" }]);
 }
@@ -144,7 +130,6 @@ function bodies(fake: FakeHost): PracticeRequestBody[] {
   return fake.requests.map((request) => request.body);
 }
 
-/** Start the controller and answer `start` with `snapshot`. */
 async function startWith(fake: FakeHost, controller: PracticeController, snapshot: PracticeSnapshot): Promise<void> {
   const started = controller.start(CONFIG);
   await flush();
@@ -154,7 +139,6 @@ async function startWith(fake: FakeHost, controller: PracticeController, snapsho
   await flush();
 }
 
-/** Nothing is sent before `ms`, and exactly one `aiStep` is sent at `ms`. */
 async function expectAiStepAfter(fake: FakeHost, ms: number): Promise<void> {
   const before = fake.requests.length;
   expect(fake.open(), "no request is in flight while the gap runs").toHaveLength(0);
@@ -177,9 +161,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// ---------------------------------------------------------------------------------------------
-// lifecycle
-// ---------------------------------------------------------------------------------------------
+// Lifecycle
 
 describe("B36 the controller's lifecycle", () => {
   it("B36 starts idle with nothing known", () => {
@@ -288,9 +270,7 @@ describe("B36 the controller's lifecycle", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the pacing loop
-// ---------------------------------------------------------------------------------------------
+// The pacing loop
 
 describe("B36 the pacing loop", () => {
   it("B36 sends no aiStep while the snapshot says the AI owes nothing", async () => {
@@ -328,7 +308,6 @@ describe("B36 the pacing loop", () => {
     const fake = fakeHost();
     const controller = controllerFor(fake);
     await startWith(fake, controller, aiTurn(2));
-    // The very first step of the game: whichever gap it takes is not what this test is about.
     await vi.advanceTimersByTimeAsync(LONGEST_GAP);
     expect(fake.requests.at(-1)?.body).toEqual({ type: "aiStep" });
 
@@ -367,7 +346,6 @@ describe("B36 the pacing loop", () => {
     await flush();
     await vi.advanceTimersByTimeAsync(PACING.actionGapMs);
 
-    // Same turn, and the AI's own prompt is open: `pending.forYou === false && pendingFor === aiSeat`.
     expect(waitingPending).toEqual({ forYou: false, pendingFor: "p2" });
     fake.respond({ type: "snapshot", snapshot: snap({ turn: 2, active: "p2", phase: "main", pending: waitingPending }, true) });
     await flush();
@@ -426,11 +404,8 @@ describe("B36 the pacing loop", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R265: the opening mulligans, both open at once
-// ---------------------------------------------------------------------------------------------
+// R265: the opening mulligans are simultaneous.
 
-/** The human's (p1) own mulligan picker; `aiReady` says whether the AI has answered its own. */
 function mulliganOpen(aiReady: boolean): PracticeSnapshot {
   return snap(
     {
@@ -445,7 +420,6 @@ function mulliganOpen(aiReady: boolean): PracticeSnapshot {
   );
 }
 
-/** The human has answered and waits on the AI, whose mulligan is the prompt pending elsewhere. */
 function humanReady(): PracticeSnapshot {
   return snap(
     {
@@ -468,7 +442,6 @@ describe("R265 the mulligans: the AI answers its own at once and never waits on 
     expect(controller.getState().thinking).toBe(true);
     await expectAiStepAfter(fake, PACING.promptAnswerMs);
 
-    // The AI has answered: the human's picker stays, and nothing more is asked of the AI.
     fake.respond({ type: "snapshot", snapshot: mulliganOpen(true) });
     await flush();
     expect(controller.getState().thinking).toBe(false);
@@ -485,7 +458,6 @@ describe("R265 the mulligans: the AI answers its own at once and never waits on 
     const controller = controllerFor(fake);
     await startWith(fake, controller, mulliganOpen(false));
 
-    // The human is quicker than the gap: its answer is not held back behind the AI's.
     await vi.advanceTimersByTimeAsync(PACING.promptAnswerMs - 1);
     controller.act({ type: "mulligan", keep: ["c1"] });
     await flush();
@@ -514,9 +486,7 @@ describe("R265 the mulligans: the AI answers its own at once and never waits on 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the board gate
-// ---------------------------------------------------------------------------------------------
+// The board gate
 
 describe("the AI's next step waits for the board to catch up", () => {
   it("no step is sent while the board is busy, and the gap is timed from the moment it idles", async () => {
@@ -526,7 +496,6 @@ describe("the AI's next step waits for the board to catch up", () => {
     await vi.advanceTimersByTimeAsync(LONGEST_GAP);
     expect(fake.requests.at(-1)?.body).toEqual({ type: "aiStep" });
 
-    // The step's answer arrives while its events are still animating.
     controller.setBoardBusy(true);
     fake.respond({ type: "snapshot", snapshot: aiTurn(2) });
     await flush();
@@ -622,9 +591,7 @@ describe("any named hold keeps the AI's next step back (a voice line as well as 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// debug
-// ---------------------------------------------------------------------------------------------
+// Debug
 
 describe("B36 debug() rides the same queue", () => {
   const DEBUG: PracticeDebug = {
@@ -672,9 +639,7 @@ describe("B36 debug() rides the same queue", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R508: the human's last practice board travels through the controller
-// ---------------------------------------------------------------------------------------------
+// R508: carry the human's final practice board through the controller.
 
 describe("R508 the controller carries the human's last practice board", () => {
   afterEach(() => {

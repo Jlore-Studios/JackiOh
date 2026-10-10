@@ -1,10 +1,8 @@
 // The one inspect overlay the page may show (B23), and the plumbing every overlay shares.
 //
-// Store: one module-level `{ key, mode, anchor }`. Each trigger subscribes through
-// useSyncExternalStore with a snapshot that is null unless the open overlay is its own, so opening
-// or closing one card's preview re-renders that card and nothing else. A mounted CardDetail
-// registers its close callback here too, so `closeInspect()` reaches it and opening any overlay
-// closes whatever was open before.
+// One module-level `{ key, mode, anchor }`: each trigger's snapshot is null unless the open overlay
+// is its own, so opening one card's preview re-renders that card alone. A mounted CardDetail
+// registers its close callback here, so `closeInspect()` reaches it.
 
 import { useLayoutEffect, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject, SyntheticEvent } from "react";
@@ -34,14 +32,13 @@ export function inspectSnapshot(key: string | null): ActiveInspect | null {
   return key !== null && active !== null && active.key === key ? active : null;
 }
 
-/** Closes whatever is open, then opens `next`. */
 export function openInspect(next: ActiveInspect): void {
   closeInspect();
   active = next;
   emit();
 }
 
-/** Closes the open overlay, or only the one for `key`. Task 7's drag layer may call it when a drag starts. */
+/** Closes the open overlay, or only the one for `key`. */
 export function closeInspect(key?: string): void {
   const open = detail;
   if (open !== null && (key === undefined || open.key === key)) {
@@ -105,14 +102,12 @@ function restoreFocus(element: HTMLElement | null): void {
 type ModalOverlay = {
   /** Gives focus back, then calls the caller's onClose. */
   close: () => void;
-  /** For the scrim and the Close button. */
   dismissProps: {
     onPointerDown: () => void;
     onClick: (event: ReactMouseEvent<HTMLElement>) => void;
   };
 };
 
-/** What Tab can land on inside a dialog. */
 const TABBABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), ' +
   'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -124,10 +119,8 @@ function tabbablesIn(dialog: Element): HTMLElement[] {
 }
 
 /**
- * Keeps Tab inside `dialog`: from the last tabbable (or from anywhere outside) Tab goes to the
- * first, and Shift+Tab from the first (or from outside) goes to the last. Both overlays say
- * `aria-modal="true"`, and they are portalled to the end of <body>, so without this one Tab from
- * Close walks into the page under the scrim (B25).
+ * Keeps Tab inside `dialog`, wrapping last to first and first to last. Both overlays are portalled
+ * to the end of <body>, so without this one Tab from Close walks into the page under the scrim (B25).
  */
 function trapTab(event: KeyboardEvent, dialog: Element): void {
   const tabbables = tabbablesIn(dialog);
@@ -149,14 +142,10 @@ function trapTab(event: KeyboardEvent, dialog: Element): void {
 }
 
 /**
- * What the sheet and the detail share: focus moves to `focusRef` on open and back to the element
- * that had it on close, Tab stays inside the dialog that holds `focusRef`, Escape closes, and so do
- * the scrim and the Close button.
- *
- * The scrim and Close ignore a pointer click that started before the overlay opened: after a
- * touch long-press some browsers deliver the lifting finger's click to whatever now lies under it,
- * which is the scrim that just appeared. A keyboard click (detail 0), a press that began on the
- * element, or any click once CLICK_SUPPRESS_MS has passed still closes.
+ * What the sheet and the detail share: focus moves to `focusRef` and back, Tab stays inside, Escape,
+ * the scrim and Close dismiss. A pointer click that began before the overlay opened is ignored (after
+ * a long-press the lifting finger's click lands on the new scrim) unless it is a keyboard click, a
+ * press that began on the element, or CLICK_SUPPRESS_MS has passed.
  */
 export function useModalOverlay(onClose: () => void, focusRef: RefObject<HTMLElement | null>): ModalOverlay {
   const onCloseRef = useRef(onClose);
