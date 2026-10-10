@@ -4357,6 +4357,8 @@
       "run_id": "38026639251",
       "started_at": "2026-10-10T05:11:58Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "623": {
