@@ -4125,7 +4125,9 @@
     "602": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-10T13:19:36Z",
         "family": "claude",
