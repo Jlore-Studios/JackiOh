@@ -3,10 +3,12 @@
 // Jlorious #1–#100 first, then every other placed player grouped by Grape tier, highest tier
 // first, then how many are still playing placements. The caller's own standing heads the page.
 // The page is read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
-// through `rankWords`, and the hidden rating never reaches it.
+// through `rankWords`, and the hidden rating never reaches it. A row is keyed by its profile id and
+// shows the player's username, never the id (R1436).
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import Username from "../auth/Username.tsx";
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
 import { divisionNumeral, rankWords, tierName } from "../rank/rank.ts";
 import { BackLink } from "./nav.tsx";
@@ -83,8 +85,8 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
             ) : (
               <ol data-testid={leaderboardTestid.jlorious}>
                 {board.jlorious.map((row) => (
-                  <li key={row.position} data-you={row.you ? "you" : undefined}>
-                    #{row.position} {row.tag}
+                  <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                    #{row.position} <Username name={row.username} />
                     {row.you ? " (you)" : ""}
                   </li>
                 ))}
@@ -101,8 +103,8 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                 ) : (
                   <ul>
                     {tier.players.map((row) => (
-                      <li key={row.tag} data-you={row.you ? "you" : undefined}>
-                        {row.tag} · Division {divisionNumeral(row.division)} · {row.pips} {row.pips === 1 ? "pip" : "pips"}
+                      <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                        <Username name={row.username} /> · Division {divisionNumeral(row.division)} · {row.pips} {row.pips === 1 ? "pip" : "pips"}
                         {row.you ? " (you)" : ""}
                       </li>
                     ))}

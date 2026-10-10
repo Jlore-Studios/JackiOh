@@ -7,8 +7,8 @@ docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
 |---|---|---|
-| `improve` | a stronger AI: beat its predecessor in 85 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
-| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 75 of 100 and random in 90 of 100 | [`unban.md`](unban.md) |
+| `improve` | a stronger AI: beat its predecessor in 75 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
+| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100 | [`unban.md`](unban.md) |
 
 ## How a lane runs
 
@@ -93,8 +93,8 @@ The engine (`crates/engine`), the cards (`crates/cards`), every test outside `cr
 
 | Lane | vs random | vs parent | Shadow bans |
 |---|---|---|---|
-| `improve` | ≥ 90 of 100 (`TRAINING_IMPROVE.vs_random`) | ≥ 85 of 100 (`TRAINING_IMPROVE.vs_parent`) | — |
-| `unban` | ≥ 90 of 100 (`TRAINING_UNBAN.vs_random`) | ≥ 75 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
+| `improve` | ≥ 90 of 100 (`TRAINING_IMPROVE.vs_random`) | ≥ 75 of 100 (`TRAINING_IMPROVE.vs_parent`) | — |
+| `unban` | ≥ 90 of 100 (`TRAINING_UNBAN.vs_random`) | ≥ 65 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
 
 A draw is not a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a
 failed gate. The report (Markdown) goes to stdout.

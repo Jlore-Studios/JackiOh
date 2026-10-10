@@ -12,7 +12,9 @@
 // and answers 403 `account_pending`, and `wsServer.ts` runs the same `assertActive` on the upgrade.
 // What `Gated` does is read `GET /api/auth/me`, the endpoint §9.4 provides precisely so "the client
 // knows to show the code screen", and send the browser to the screen that will actually work. It
-// lives in exactly one place so there is one thing to change when §9.4 grows a status.
+// lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
+// read says whether an active account still owes the username prompt (R1435), which the gate then
+// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`).
 //
 // NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
 // error, the banned account, the 404, a screen whose code failed to load, and a check that is
@@ -61,12 +63,13 @@ import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
+import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useAccount, type Account } from "./net/gate.ts";
+import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
-  SITE_ORIGIN,
   loginPath,
   matchIdOf,
   navigate,
@@ -115,6 +118,9 @@ const StatsRoute = lazy(() => import("./routes/stats.tsx"));
  * working.
  */
 export { shellTestid };
+
+/** The tab title and canonical link live in `net/head.ts`, so the build can name pages as the app does. */
+export { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 
 /**
  * The frame every panel this file draws sits in: the wordmark on the tavern board. Exported for
@@ -346,11 +352,31 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
   return null;
 }
 
+/**
+ * R1435: the profiles this page has let past the username prompt, for as long as the page lives:
+ * one a gated screen was shown to while active, and one that answered the prompt here. The prompt
+ * meets an account before its first screen, never after. Each route mounts a gate of its own, so a
+ * gate's own state would forget, and a re-read that finds the prompt owed once a screen is up (a
+ * renewal, another tab, a server that gained usernames meanwhile) would raise it over the next
+ * screen: the match a queue just paired, mid-mulligan. Kept here instead, it waits for the next
+ * sign-in (a new page). A redemption on `/invite` showed its screen to a pending account, so the
+ * prompt still follows it. An answer counts at once, whatever the re-read after it finds.
+ */
+const usernamePromptPassed = new Set<string>();
+
+/** Test seam: a new page, which has let no profile past the prompt yet. */
+export function resetUsernamePromptForTests(): void {
+  usernamePromptPassed.clear();
+}
+
 export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
   const account = useAccount();
   // R634: an active account's game settings are kept level with this device's, on every gated screen.
   useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
+  // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
+  // renders nothing by changing.
+  const [, setAnswered] = useState(0);
 
   // In an effect, never during render: `navigate` dispatches an event that re-renders every
   // `usePathname` subscriber, and doing that while this component is rendering would be an update
@@ -383,6 +409,33 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
       </ShellPanel>
     );
   }
+  // R1435: an active account owes the username prompt until it picks or skips, and meets it before
+  // any gated screen. `promptOwed` is the server's; a server that sends no `username` owes none.
+  // Never while the account is in a match or a Conquest series: a reload mid-game, or the landing's
+  // Rejoin, opens the board (or the series' pick, its clock running) on a new page, and the prompt
+  // waits for the next sign-in like any other screen it found open.
+  const profileId = account.me.profile.id;
+  const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
+  if (
+    status === "active" &&
+    account.me.username?.promptOwed === true &&
+    !playing &&
+    !usernamePromptPassed.has(profileId)
+  ) {
+    return (
+      <UsernamePrompt
+        token={account.token}
+        name={account.me.username.name}
+        onAnswered={() => {
+          usernamePromptPassed.add(profileId);
+          setAnswered((count) => count + 1);
+        }}
+      />
+    );
+  }
+  // Remembered from the render itself, so the screen's first render already counts. Adding a member
+  // the set may hold already is the same however often React renders this.
+  if (status === "active") usernamePromptPassed.add(profileId);
 
   return children({ token: account.token, me: account.me });
 }
@@ -390,65 +443,6 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
 // ---------------------------------------------------------------------------------------------
 // The tab title and the canonical link
 // ---------------------------------------------------------------------------------------------
-
-/** The name every tab title ends with. */
-export const SITE_NAME = "JackiOh";
-
-/** The screen's name, for its tab title; null for a path the client serves nothing at. */
-function screenNameFor(path: string): string | null {
-  switch (path) {
-    case paths.landing:
-      return "";
-    case paths.login:
-      return "Sign in";
-    case paths.resetPassword:
-      return "Reset password";
-    case paths.invite:
-      return "Invite code";
-    case paths.decks:
-      return "Decks";
-    case paths.play:
-      return "Play online";
-    case paths.account:
-      return "Account";
-    case paths.practice:
-      return "Practice";
-    case paths.privacy:
-      return "Privacy";
-    case paths.terms:
-      return "Terms";
-    case paths.accessibility:
-      return "Accessibility";
-    case paths.patchNotes:
-      return "Patch notes";
-    case paths.almanac:
-      return "Almanac";
-    case paths.leaderboard:
-      return "Leaderboard";
-    case paths.stats:
-      return "Statistics";
-    case paths.hotseat:
-      return DEV_ONLY ? "Hotseat" : null;
-  }
-  if (matchIdOf(path) !== null) return "Match";
-  if (seriesIdOf(path) !== null) return "Conquest";
-  return null;
-}
-
-/**
- * The tab title for a path: "Sign in · JackiOh", and plain "JackiOh" on the landing page. The
- * match screen replaces it with "Your turn · JackiOh" while it is the player's turn (match.tsx).
- */
-export function documentTitleFor(path: string): string {
-  const name = screenNameFor(path);
-  if (name === null) return `Page not found · ${SITE_NAME}`;
-  return name === "" ? SITE_NAME : `${name} · ${SITE_NAME}`;
-}
-
-/** The canonical address of a path the client serves, or null for one it does not (a 404). */
-export function canonicalUrlFor(path: string): string | null {
-  return screenNameFor(path) === null ? null : `${SITE_ORIGIN}${path}`;
-}
 
 /**
  * Every route is served from one index.html, so a static canonical link would point every route at

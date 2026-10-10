@@ -17,7 +17,6 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_server::actor::contracts::RecordResultInput;
-use jackioh_server::api::crypto::player_tag;
 use jackioh_server::api::ranked::{
     RankedGameInput, SeasonDeps, leaderboard, open_season, open_season_in_tx, own_rank, rate_ranked_game,
 };
@@ -196,9 +195,19 @@ async fn ladder_of(app: &App, profile_id: &str) -> i64 {
     rank["ladder"].as_i64().unwrap_or(-1)
 }
 
-/// A placed player at `ladder` with `rating`, written straight into the season.
+/// The username `seed_placed` gives a profile: its id with `_` for `-` (`m-high` is `m_high`).
+fn username_of(profile_id: &str) -> String {
+    profile_id.replace('-', "_")
+}
+
+/// A placed player at `ladder` with `rating`, written straight into the season, named
+/// `username_of` its id.
 async fn seed_placed(app: &App, profile_id: &str, rating: f64, ladder: i32, extra: Value) {
-    seed_profile(app, json!({ "id": profile_id, "rating": rating })).await;
+    seed_profile(
+        app,
+        json!({ "id": profile_id, "rating": rating, "username": username_of(profile_id) }),
+    )
+    .await;
     let rank = merged(
         json_of(&fresh_rank(&season(), profile_id, 0)),
         json!({
@@ -504,14 +513,14 @@ mod r608_jlorious_through_the_server {
             .as_array()
             .expect("a list")
             .iter()
-            .map(|row| json!([row["position"], row["tag"], row["you"]]))
+            .map(|row| json!([row["position"], row["profileId"], row["username"], row["you"]]))
             .collect();
         assert_eq!(
             jlorious,
             vec![
-                json!([1, player_tag("m-high"), false]),
-                json!([2, player_tag(A), true]),
-                json!([3, player_tag("m-low"), false]),
+                json!([1, "m-high", "m_high", false]),
+                json!([2, A, username_of(A), true]),
+                json!([3, "m-low", "m_low", false]),
             ]
         );
         let peak = |rank: Value| rank["peakJlorious"].clone();
@@ -539,9 +548,9 @@ mod r608_jlorious_through_the_server {
             .as_array()
             .expect("players")
             .iter()
-            .map(|row| row["tag"].clone())
+            .map(|row| row["username"].clone())
             .collect();
-        assert_eq!(golden, vec![json!(player_tag("golden"))]);
+        assert_eq!(golden, vec![json!("golden")]);
         assert_eq!(JLORIOUS_SIZE, 100);
     }
 }
@@ -572,12 +581,12 @@ mod r612_what_the_client_reads {
         let stranger = add_user(&app, "user-stranger", "s@example.test", true);
         seed_profile(
             &app,
-            json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678 }),
+            json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678, "username": "Alice" }),
         )
         .await;
         seed_profile(
             &app,
-            json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654 }),
+            json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654, "username": "Bob", "usernameTag": 3 }),
         )
         .await;
         seed_profile(&app, json!({ "id": "stranger", "userId": "user-stranger" })).await;
@@ -601,7 +610,8 @@ mod r612_what_the_client_reads {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_ranked_answers_the_caller_s_tag_rank_streak_record_and_badges_and_never_a_rating() {
+    async fn r612_r1436_get_api_ranked_answers_the_caller_s_username_rank_streak_record_and_badges_and_never_a_rating()
+     {
         let Routed { app, token_a, .. } = routed().await;
         let got = get(&app, "/api/ranked", &token_a).await;
         assert_eq!(got.status, 200);
@@ -609,7 +619,8 @@ mod r612_what_the_client_reads {
             got.body,
             json!({
                 "season": season(),
-                "tag": player_tag(A),
+                "profileId": A,
+                "username": "Alice",
                 "rank": raisin(0),
                 "streak": 0,
                 "record": { "games": 0, "wins": 0, "losses": 0, "draws": 0 },
@@ -620,7 +631,8 @@ mod r612_what_the_client_reads {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_leaderboard_lists_tags_and_ranks_marks_the_caller_and_counts_the_raisins() {
+    async fn r612_r1436_get_api_leaderboard_lists_usernames_and_ranks_marks_the_caller_and_counts_the_raisins()
+     {
         let Routed { app, token_a, .. } = routed().await;
         put_rank(
             &app,
@@ -675,7 +687,7 @@ mod r612_what_the_client_reads {
             json!({
                 "tier": "normal",
                 "count": 1,
-                "players": [{ "tag": player_tag(A), "division": 2, "pips": 1, "you": true }],
+                "players": [{ "profileId": A, "username": "Alice", "division": 2, "pips": 1, "you": true }],
             })
         );
         assert_matches(
@@ -683,11 +695,11 @@ mod r612_what_the_client_reads {
             &json!({ "tier": "normal", "division": 2, "pips": 1 }),
             "you",
         );
-        mentions_none(&got.text, &["1234", "987", "profile-", "rating"]);
+        mentions_none(&got.text, &["1234", "987", "rating", "\"tag\""]);
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else()
+    async fn r612_r1436_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else()
      {
         let Routed {
             app,
@@ -703,12 +715,12 @@ mod r612_what_the_client_reads {
             json!({
                 "ranked": true,
                 "seats": {
-                    "p1": { "tag": player_tag(A), "rank": raisin(0), "you": true },
-                    "p2": { "tag": player_tag(B), "rank": raisin(0), "you": false },
+                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "you": true },
+                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "you": false },
                 },
             })
         );
-        mentions_none(&mine.text, &["rating", "profile-"]);
+        mentions_none(&mine.text, &["rating", "\"tag\""]);
         assert_eq!(
             get(&app, "/api/matches/match-1/ranks", &stranger).await.status,
             404
@@ -719,6 +731,53 @@ mod r612_what_the_client_reads {
                 .status,
             404
         );
+    }
+
+    /// R1436: the ladder names nobody; it joins each username in from `profiles`, so a rename shows
+    /// on the next read with no rank row rewritten.
+    #[tokio::test(start_paused = true)]
+    async fn r1436_a_rename_shows_on_the_leaderboard_at_once_and_rewrites_no_rank_row() {
+        let Routed { app, token_a, .. } = routed().await;
+        let placed = merged(
+            json_of(&fresh_rank(&season(), A, 0)),
+            json!({
+                "games": RANK_PLACEMENT_GAMES,
+                "ladder": tier_bottom(1) + 4,
+                "floor": 1,
+                "peakLadder": tier_bottom(1) + 4,
+            }),
+        );
+        put_rank(&app, placed).await;
+        let row_before = json_of(&store!(app, ranked_rank(&season(), A)));
+        let names = |body: &Value| -> Vec<Value> {
+            body["tiers"]
+                .as_array()
+                .expect("tiers")
+                .iter()
+                .flat_map(|tier| tier["players"].as_array().cloned().unwrap_or_default())
+                .map(|row| json!([row["profileId"], row["username"]]))
+                .collect()
+        };
+        let before = get(&app, "/api/leaderboard", &token_a).await;
+        assert_eq!(names(&before.body), vec![json!([A, "Alice"])]);
+
+        let (status, _headers, renamed) = call(
+            &app,
+            "PUT",
+            "/api/username",
+            Some(&token_a),
+            json!({ "username": "Alicia" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{renamed}");
+
+        let after = get(&app, "/api/leaderboard", &token_a).await;
+        assert_eq!(names(&after.body), vec![json!([A, "Alicia"])]);
+        assert_eq!(
+            get(&app, "/api/ranked", &token_a).await.body["username"],
+            json!("Alicia")
+        );
+        assert_eq!(json_of(&store!(app, ranked_rank(&season(), A))), row_before);
     }
 }
 

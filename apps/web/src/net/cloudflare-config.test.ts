@@ -1,20 +1,16 @@
-// Cloudflare (production) against vercel.json (staging). The two hosts must serve the same site:
-// the same paths to the app, the same 404s, the same security headers. vercel.json stays the source
-// of truth (deploy-routes.test.ts holds it against the route table); this file holds
-// public/_redirects, public/_headers and wrangler.jsonc equal to it, so a route or header added to
-// one host and not the other fails here rather than in production.
-//
-// Behaviour measured under `wrangler dev` (wrangler 4.147) before this file was written:
-//   - a rewrite to `/index.html` answers 307 -> `/` (assets' html_handling strips it), which drops
-//     the path, so every rewrite targets `/` instead;
-//   - `/login/` is not matched by a `/login` rule, so each path is listed with and without the slash;
-//   - unmatched paths get public/404.html with a 404 status (`not_found_handling: "404-page"`).
+// Cloudflare production must match Vercel staging: routes, 404s and security headers.
+// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it.
+// Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
+// Generated static pages need a folder rule; Vercel serves files before rewrites.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { PUBLIC_PAGES } from "../../static-pages.ts";
+import { paths } from "./navigate.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
@@ -27,7 +23,8 @@ type VercelConfig = {
 
 const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as VercelConfig;
 
-/** The paths Vercel rewrites, spelled the way _redirects must spell them. */
+const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
+
 function expectedRules(): string[] {
   const rules: string[] = [];
   for (const { source } of vercel.rewrites) {
@@ -37,7 +34,8 @@ function expectedRules(): string[] {
     if (names === undefined) throw new Error(`cloudflare-config.test.ts cannot read this source: ${source}`);
     for (const name of names) {
       const path = byId === null ? `/${name}` : `/${name}/:id`;
-      rules.push(path, `${path}/`);
+      if (EMITTED.has(path)) rules.push(`${path} ${path}/ 200`);
+      else rules.push(`${path} / 200`, `${path}/ / 200`);
     }
   }
   return rules;
@@ -52,17 +50,36 @@ const lines = (text: string): string[] =>
 describe("public/_redirects", () => {
   const rules = lines(readFileSync(join(PUBLIC, "_redirects"), "utf8")).map((line) => line.split(/\s+/u));
 
-  it("rewrites exactly the paths vercel.json rewrites, with and without a trailing slash", () => {
-    expect(rules.map(([from]) => from).sort()).toEqual(expectedRules().sort());
+  it("rewrites exactly the paths vercel.json rewrites, each page the build writes to its own folder", () => {
+    expect(rules.map((rule) => rule.join(" ")).sort()).toEqual(expectedRules().sort());
   });
 
-  it("rewrites (200) to `/`, never to `/index.html`, which Cloudflare answers with a redirect", () => {
-    for (const rule of rules) expect(rule.slice(1), rule[0]).toEqual(["/", "200"]);
+  it("rewrites (200), never to an `index.html`, which Cloudflare answers with a redirect", () => {
+    for (const [from, to, status] of rules) {
+      expect(status, from).toBe("200");
+      expect(to, from).not.toMatch(/index\.html$/u);
+    }
+  });
+
+  function served(path: string): boolean {
+    if (path === "/" || rules.some(([from]) => from === path)) return true;
+    return path.endsWith("/") && EMITTED.has(path.slice(0, -1));
+  }
+
+  it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
+    const fixed = Object.entries(paths)
+      // Production serves a genuine 404 at /dev/hotseat.
+      .filter(([name]) => name !== "hotseat")
+      .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
+    for (const path of fixed) {
+      expect(served(path), path).toBe(true);
+      if (path !== paths.landing) expect(served(`${path}/`), `${path}/`).toBe(true);
+    }
+    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat"]) expect(served(path), path).toBe(false);
   });
 });
 
 describe("public/_headers", () => {
-  /** Each block: a path line, then its indented `Key: value` lines. */
   function blocks(): { path: string; headers: { key: string; value: string }[] }[] {
     const out: { path: string; headers: { key: string; value: string }[] }[] = [];
     for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {

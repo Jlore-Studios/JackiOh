@@ -1,38 +1,15 @@
 //! A fused card's hooks: how each ingredient's list is handed its choices, resumed after a pause and
-//! ordered against what is already owed (SPEC §10.5, §10.6, R77, R90, R102, R113, R122). Found by the
-//! polish-4 edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens L7); every case here failed
-//! before its fix.
+//! ordered against what is already owed (SPEC §10.5, §10.6, R77, R90, R102, R113, R122).
+//! A fused Cry can pause with more of its list still to run, and one answered step can itself pause
+//! with a tail. Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
-//! Fused cards are the one place in Core where a Cry can pause with more of its list still to run,
-//! and where one answered step can itself pause with a tail, so they carry most of what lens L7
-//! found. Craft a Card's and #85's fusions are built directly with `subsystems.fuse`, as
-//! `099-craft-a-card.test.ts` does, so the ingredients are fixed rather than a seed's Discovers.
-//!
-//!  - R113: a paused fused Cry resumes ingredient by ingredient. It used to rebuild every ingredient's
-//!    list against the board as it now stood and skip as many effects as had run, and #22 Carnivorous
-//!    Cube's half is two effects shorter once its meal has gone, so the skip swallowed the next
-//!    ingredient's damage without a word.
-//!  - R90, R102: each ingredient resolves the slice of the play's choices that §10.5 step 1 read, not
-//!    a slice measured against the board at step 5, where the crafted card itself stands.
-//!  - R113, R122: answering a prompt takes the paused step up again, so the cursor resets and a pause
-//!    inside the answered step is owed ahead of everything older.
-//!  - Round 6, lenses L2 and "keywords and layers". R102, R41, §8 #68: each ingredient's list is built
-//!    when the combined list reaches it, so it reads the board the ingredients before it left — a
-//!    Cube crafted behind a Ceaseless Void eats nothing the Void exiled, and a Sorcerer crafted
-//!    behind a Reno reads the hero Reno healed. §5.2: a Fuse that adds a printed Divine Shield or
-//!    Reborn gives back a shield or a Reborn the kept card had spent.
-//!  - Round 7, lenses "card by card", "keywords and layers" and L2. R102: what each ingredient leaves
-//!    behind is its own — an answer comes back to the Mask that asked, each Cube remembers its own
-//!    meal, two Twinspells' grants and two Armors add up — and R43, R151: a Heroic Power's text #85
-//!    fuses onto a kept Mana Well rolls a power, as a card created later does.
-//!  - Round 8, lens "keywords and layers". R102, R124: two Going Longs' hero Armor adds up across a
-//!    Fuse, and each ingredient's text reads the price its own card was played for (a Suppressive
-//!    Aura paid 4 fused onto a Mana Well stays −5/−5). §8 #65.1: a radiant Spikey Pillow's aura, fused
-//!    into another card, still spares every Spikey Pillow.
-//!
-//! Port of `packages/cards/test/fused-hooks.test.ts` (SURFACE §4.1, §8). TS's live card objects are
-//! owned copies here, read back from the state by id after every step and written through
-//! `find_instance_mut`; a regular expression on a fused id is the hand check `is_fused_id`.
+//!  - R113, R122: a paused Cry resumes ingredient by ingredient; a pause inside an answered step is
+//!    owed ahead of everything older. R90, R102: each ingredient resolves the slice of the choices
+//!    that §10.5 step 1 read, not one measured at step 5, where the crafted card itself stands.
+//!  - R102, R41, §8 #68, §5.2: each list is built when the combined list reaches it, so it reads the
+//!    board the earlier ingredients left; a Fuse that adds a printed shield or Reborn gives one back.
+//!  - R43, R124, R151: what each ingredient leaves behind is its own (R102), and a Heroic Power's
+//!    text fused onto a kept card rolls a power.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
@@ -57,8 +34,8 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     }
 }
 
-/// `subsystems.fuse(sinkFor(s), args)`: TS's `sinkFor(s)` is a sink over the scenario's state with an
-/// event list of its own and an rng at the state's cursor, which nothing writes back.
+/// A sink over the scenario's state with an event list of its own and an rng at the state's cursor,
+/// which nothing writes back.
 fn fuse_in(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -90,7 +67,7 @@ fn craft(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
     )
 }
 
-/// TS `toMatch(/^t-\d+:<parts>$/)`: a fused definition's id, `t-<n>:` and then its ingredients.
+/// A fused definition's id: `t-<n>:` and then its ingredients.
 fn is_fused_id(id: &str, parts: &str) -> bool {
     match id.strip_prefix("t-").and_then(|rest| rest.split_once(':')) {
         Some((number, tail)) => {
@@ -177,12 +154,10 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
     #[test]
     fn r113_r122_r102_a_fused_radiant_mask_mask_finishes_the_answered_first_picks_second_question_before_the_other_masks_first()
      {
-        // #85 Unlicensed Experimentation fuses the Mask p2 plays onto p1's own (R77): built directly here.
-        // The fused start-of-turn hook is [ask A's first, ask B's first], and R102 brings each answer back
-        // to the Mask that asked, so an answered first pick is [A's pick, ask A's second] — never B's
-        // pick as well. Answering the first question pauses that answered step on A's second question — a
-        // pause during a resumption, which R113 owes "ahead of everything still owed", B's first question
-        // and the rest of the start of turn included. Two Masks, two picks each: four questions.
+        // The fused hook is [ask A's first, ask B's first] (R77: #85 fuses p2's Mask onto p1's, built
+        // directly here), and R102 brings each answer back to the Mask that asked, so an answered first
+        // pick is [A's pick, ask A's second]. That pause during a resumption is owed "ahead of everything
+        // still owed" (R113): B's first question and the rest of the start of turn come after it.
         let mut s = scenario(json!({
             "p1": {
                 "backrow": [{ "def": MASOCHISM_MASK, "radiant": true }],
@@ -425,10 +400,8 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 7 (lenses "card by card", "keywords and layers" and L2): what each ingredient's text leaves
-// behind is its own (R102), and a text fused onto a kept card is had in full (R43, R151).
-// ---------------------------------------------------------------------------
+// What each ingredient's text leaves behind is its own (R102), and a text fused onto a kept card is
+// had in full (R43, R151).
 
 const MANA_WELL: &str = "core-006";
 const POINTMASTER: &str = "core-020";
@@ -707,9 +680,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Round 8: a fused card's layers are each ingredient's
-// ---------------------------------------------------------------------------------------------
+// A fused card's layers are each ingredient's
 
 const SUPPRESSIVE_AURA: &str = "core-046"; // Field Spell, 2 embiggen 4
 const GOING_LONG: &str = "core-084"; // Field Spell, 2 embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
@@ -808,11 +779,10 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     #[test]
     fn r102_a_radiant_spikey_pillow_fused_with_another_card_still_spares_every_spikey_pillow_its_aura_names_7_8_65_1()
      {
-        // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack". p2
-        // plays Tempo Timmy, and p1's Unlicensed Experimentation fuses it onto the Pillow, p1's only
-        // Unit (R61, R77). The fused card carries the Pillow's text in full. On p1's turn its Masochism
-        // Mask summons a second, real Spikey Pillow: a Spikey Pillow, so the fused card's aura does not
-        // reach it. Jlockeed's Weapons gives it +4 attack and its own base aura −2.
+        // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack"; p2's
+        // Tempo Timmy is fused onto it by p1's Unlicensed Experimentation (R61, R77), and the fused card
+        // keeps that aura in full. The real Spikey Pillow p1's Masochism Mask summons is a Spikey
+        // Pillow, so the aura spares it; Jlockeed's Weapons gives it +4 attack and its own base aura −2.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -862,8 +832,7 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         }));
         let kept = backrow_at(&g, P1, 1);
         // Something the kept card remembers from before the Fuse, which R77 keeps where it is: no text
-        // of the card wrote it through `remember`, so it is none of what moves with the card's texts
-        // (re-entry.test.ts's R77 case has a Cube's meal move).
+        // of the card wrote it through `remember`, so it is none of what moves with the card's texts.
         g.card_mut(&kept.id)
             .memory
             .insert("r77-before".to_string(), json!("kept"));

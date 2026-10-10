@@ -1,5 +1,4 @@
-//! Admin script: opens the build's season (R609) — the same path the server takes at boot
-//! (← `apps/server/src/db/season-start.ts`).
+//! Admin script: opens the build's season (R609) — the same path the server takes at boot.
 //!
 //! A season is named by the minor version of the newest patch (R375), so the first deploy of a
 //! new minor version starts one. Opening it is what runs R609's soft reset: every rated player's
@@ -12,12 +11,9 @@
 //! jackioh-server season-start --dry-run
 //! ```
 //!
-//! `--dry-run` runs the identical path — open the season, reset every rated player — and rolls
-//! the transaction back, printing the report the real run would write. Without it the writes
-//! commit: the database now holds the season the next build's boot will find already open.
-//!
-//! The script never touches a season that is already open: `open_season_in_tx` answers
-//! `opened: false` and writes nothing, so the script is safe to re-run.
+//! `--dry-run` runs the identical path and rolls the transaction back, printing the report the
+//! real run would write. The script never touches a season that is already open:
+//! `open_season_in_tx` answers `opened: false` and writes nothing, so it is safe to re-run.
 
 use std::time::Duration;
 
@@ -29,7 +25,7 @@ use crate::api::ranked::{OpenedSeason, SeasonDeps, open_season_in_tx};
 use crate::db::pg::assert_postgres_url;
 use crate::db::store::Db;
 
-/// The one flag (TS `SeasonStartOptions`).
+/// The one flag.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct SeasonStartOptions {
     pub dry_run: bool,
@@ -55,10 +51,8 @@ pub fn parse_season_start_args(argv: &[String]) -> anyhow::Result<SeasonStartOpt
 /// a dry run the report is read out of the transaction and then the transaction is thrown away, so
 /// the answer describes exactly what a real run would have done and nothing it did survives.
 ///
-/// TS `openSeason({ ...deps, store })` is `store.tx((t) => openSeasonInTx(t, deps))`; that is what
-/// the real run does here, on the `Db` it was handed. TS's dry run threw a private symbol out of the
-/// transaction to roll it back; in Rust the transaction is dropped without `commit`, which rolls a
-/// Postgres transaction back and restores a fake's snapshot (`db::fake::FakeTx`).
+/// A dry run drops the transaction without `commit`, which rolls Postgres back and restores a
+/// fake's snapshot (`db::fake::FakeTx`).
 pub async fn start_season(
     store: &Db,
     deps: &SeasonDeps,
@@ -77,8 +71,7 @@ pub async fn start_season(
     Ok(opened)
 }
 
-/// TS `createPostgresStore({ connectionString })` for a one-shot script: a small pool with the same
-/// checkout and idle timeouts (`store.ts`), wrapped as the `Db` every store call takes.
+/// A small pool for a one-shot script, wrapped as the `Db` every store call takes.
 async fn connect(connection_string: &str) -> anyhow::Result<Db> {
     assert_postgres_url(connection_string)?;
     let pool = sqlx::postgres::PgPoolOptions::new()
@@ -90,21 +83,19 @@ async fn connect(connection_string: &str) -> anyhow::Result<Db> {
     Ok(Db::Pg(pool))
 }
 
-/// TS `main()` (`pnpm db:season-start`; `jackioh-server season-start [--dry-run]`).
+/// `jackioh-server season-start [--dry-run]`.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_season_start_args(&args)?;
     let source: IndexMap<String, String> = std::env::vars().collect();
     let env = crate::env::load_env(&source).map_err(|e| anyhow!("{e}"))?;
     let store = connect(&env.database_url).await?;
 
-    // TS `loadPatchVersion()`: the newest patch's version, which the binary carries compiled in
-    // (SURFACE §11.3); the clock and the log are the server's own (`tokio::time`, `tracing`).
+    // The newest patch's version is compiled into the binary (docs/v0.3.0/SURFACE.md §11.3).
     let deps = SeasonDeps {
         patch_version: jackioh_cards::catalog_version().to_string(),
     };
     let result = start_season(&store, &deps, options).await;
 
-    // TS `finally { await store.close() }`.
     if let Db::Pg(pool) = &store {
         pool.close().await;
     }

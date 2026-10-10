@@ -1,34 +1,7 @@
-// The tutorial's coach: which step of a lesson's script is showing, and what it points at
-// (SPEC §9.10, R292).
-//
-// Pure and framework-free, so a test can drive it exactly as the page does. It reads what the page
-// already holds — the human's `PlayerView`, the human's `legalActions` and whether the AI owes an
-// action — and nothing else, so it can say no more than the board shows (CLAUDE.md rule 7). It
-// never decides what is legal: a step that asks for an action points at it and waits, and the
-// engine accepts or refuses whatever the player does, exactly as in any other game.
-//
-// A lesson's script is two lists (`LessonScript`):
-//
-//  - `steps`, in order. The coach works through them one at a time. A step first waits until its
-//    `when` holds (default: at once), then shows — it is *active* from then on, and `since` holds the
-//    view it activated on. An `info` step is completed by "Got it" (`coachAck`), or by its own
-//    `done` if it has one. An `act` step is completed by its `done`, checked on every view,
-//    including the one it activates on, so a player who has already done what it asks is never
-//    asked. `moot` retires a step that no longer makes sense (the card it names has died, the turn
-//    it was about has ended) without a word.
-//  - `tips`, reactive. A tip shows once, the first time its `when` holds on a view — the AI's Taunt
-//    unit arriving, a trap springing — and goes when the player presses "Got it". While a tip is up,
-//    the current step waits behind it, but its `done` is still checked, so nothing the player does
-//    meanwhile is lost.
-//
-// Nothing can strand the player, and there is no "Skip step" (R314). The only thing the coach can
-// stop is the AI (`holdAi`), and only a tip or an `info` step holds it, both of which show "Got it"
-// (`coachDisplay` never lets an `act` step hold it); an `act` step waits for the player with the
-// game going on. A step that has been current through `TUTORIAL_STEP_TURNS_MAX` of the player's own
-// turn starts expires by itself, shown or still waiting for its moment (a `final` step, the
-// lesson's last, never expires: it ends with the game). When the game is over the coach is
-// finished, whatever step it was on. A script whose steps are all through is not: its tips still
-// come until the game ends. And "Exit tutorial" is in the HUD throughout, whatever the coach shows.
+// Tutorial coach tracks lesson steps and tips without deciding legality (SPEC §9.10, R292;
+// CLAUDE.md rule 7). There is no skip: only ackable `info` steps or tips may hold AI (R314).
+// Non-final steps expire after `TUTORIAL_STEP_TURNS_MAX` player turns; tips survive steps until game
+// end, and the HUD always offers exit.
 
 import type { ActionBody, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
@@ -37,44 +10,28 @@ import { TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 
 /** Everything the coach reads, all of it already the page's. */
 export type CoachCtx = {
-  /** viewFor(state, human): the newest snapshot's view. */
   view: PlayerView;
   /** legalActions(state, human). */
   legal: readonly ActionBody[];
-  /** The events that arrived with this view: new since the previous view the coach read. */
+  /** Events new since the previously observed view. */
   fresh: readonly GameEvent[];
-  /** Whether the AI owes an action (the snapshot's `aiToAct`). */
   aiToAct: boolean;
-  /**
-   * A card's name by definition id, from the public catalog the worker sent (§5.1), so the coach can
-   * name the card it suggests. Absent in a test that passes no catalog.
-   */
+  /** Public catalog lookup (§5.1); absent without a catalog in tests. */
   nameOf?: (defId: string) => string | undefined;
 };
 
-/**
- * What a step points at, in the board's own vocabulary. `coachTargets` turns it into the
- * `data-testid`s the board already renders (game/contract.ts), so the coach mark never needs a
- * hook into the board.
- */
+/** Board anchors; `coachTargets` maps them to the board's `data-testid`s. */
 export type CoachAnchor =
   /** The human's hand card of this definition (a deck holds each card once, §2.6). */
   | { kind: "handCard"; defId: string }
-  /** The human's whole hand. */
   | { kind: "hand" }
-  /** A unit of this definition on that side of the field. */
   | { kind: "unit"; side: Side; defId: string }
-  /** That side's five unit zones. */
   | { kind: "units"; side: Side }
-  /** That side's five backrow zones, or one of them. */
   | { kind: "backrow"; side: Side; lane?: number }
-  /** One zone. */
   | { kind: "zone"; side: Side; row: Row; lane: number }
   | { kind: "hero"; side: Side }
-  /** The human's mana crystals. */
   | { kind: "mana" }
   | { kind: "endTurn" }
-  /** The open prompt or picker (the mulligan, a Discover, a target picker). */
   | { kind: "prompt" }
   | { kind: "library"; side: Side }
   | { kind: "graveyard"; side: Side };
@@ -83,38 +40,25 @@ type Text = string | ((ctx: CoachCtx) => string);
 type AnchorOf = CoachAnchor | null | ((ctx: CoachCtx) => CoachAnchor | null);
 
 export type CoachStep = {
-  /** Unique within its lesson; tests and the page's `data-coach-step` name it. */
+  /** Tests and the page's `data-coach-step` use this lesson-unique id. */
   id: string;
-  /** A few words: the bubble's heading. */
   title: string;
-  /** One or two short sentences of plain language. */
   text: Text;
   anchor?: AnchorOf;
   /** `info`: "Got it" completes it. `act`: its `done` completes it. */
   kind: "info" | "act";
-  /** It may show only while this holds. Default: always. Checked until the step activates. */
+  /** `when` gates activation. */
   when?: (ctx: CoachCtx) => boolean;
-  /** Complete. `since` is the view the step activated on. Required for `act` steps. */
+  /** Required for `act`; receives the activation view. */
   done?: (ctx: CoachCtx, since: PlayerView) => boolean;
-  /** No longer makes sense: retired without a word. `since` is null while the step still waits. */
+  /** Retires a no-longer-sensible step without showing it. */
   moot?: (ctx: CoachCtx, since: PlayerView | null) => boolean;
-  /**
-   * What the step asks the player to do, as a test over the human's legal actions. The page never
-   * reads it to decide anything; the lesson tests follow it to prove the lesson can be won by doing
-   * what the coach says (R293), and the page may point at the card it names.
-   */
+  /** Lesson tests follow this legal-action predicate; the page never decides by it (R293). */
   expect?: (action: ActionBody, ctx: CoachCtx) => boolean;
-  /**
-   * Hold the AI's next step while this step shows, so the player can read it first. Only an `info`
-   * step holds: its "Got it" lets go. An `act` step's is ignored (`coachDisplay`, R314).
-   */
+  /** Only `info` may hold AI; `coachDisplay` ignores this for `act` (R314). */
   holdAi?: boolean;
-  /** The lesson's last step: it never expires, it ends with the game. */
   final?: boolean;
-  /**
-   * The step belongs to the player-turn it became current on: if that turn passes before it shows
-   * (the turn ended by itself, R82), it retires rather than show on a later turn it is not about.
-   */
+  /** Retire if its player turn passes before it shows (R82). */
   turnBound?: boolean;
 };
 
@@ -123,9 +67,7 @@ export type CoachTip = {
   title: string;
   text: Text;
   anchor?: AnchorOf;
-  /** Shown once, on the first view where this holds. */
   when: (ctx: CoachCtx) => boolean;
-  /** Hold the AI's next step while the tip shows. */
   holdAi?: boolean;
 };
 
@@ -138,23 +80,14 @@ export type LessonScript = {
 export type StepOutcome = "done" | "moot" | "expired";
 
 export type CoachState = {
-  /** The current step's index; `steps.length` once the script is through. */
   index: number;
-  /** The view the current step activated on; null while it waits for its `when`. */
   since: PlayerView | null;
-  /** The player's own turn starts seen while the current step has been current. */
   turnsOnStep: number;
-  /** The view's `turn` when the current step became current; null until a view has seen it. */
   currentFrom: number | null;
-  /** How each step before `index` ended. */
   outcomes: Readonly<Record<string, StepOutcome>>;
-  /** Tips already shown (or dismissed), in order. */
   tipsSeen: readonly string[];
-  /** Tips triggered and waiting to show, the first one showing. */
   tipQueue: readonly string[];
-  /** The last view's `turn`, to count the player's own turn starts. */
   lastTurn: number | null;
-  /** The game is over. (A script that is through still shows its tips until then.) */
   finished: boolean;
 };
 
@@ -199,20 +132,12 @@ function retire(state: CoachState, step: CoachStep, outcome: StepOutcome): Coach
   };
 }
 
-/**
- * Walk the steps from `state.index` on the newest view: retire what is moot or already done,
- * activate what may show, stop at the first step that waits or is showing.
- *
- * A waiting step is asked `moot` first: a card gone before its step ever showed was not played on
- * the coach's word. A showing step is asked `done` first: an attack that also ended the turn by
- * itself (R82) was done, not overtaken.
- */
+/** Retire waiting steps as moot before showing ones as done (R82). */
 function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): CoachState {
   let state = start;
-  // Each pass either stops or retires one step, so this ends within steps.length passes.
+  // Each pass stops or retires a step, bounding the loop by `steps.length`.
   for (;;) {
     const step = script.steps[state.index];
-    // Through the script: tips still come until the game ends, which is what finishes the coach.
     if (step === undefined) return state.since === null ? state : { ...state, since: null };
     if (state.currentFrom === null) state = { ...state, currentFrom: ctx.view.turn };
 
@@ -244,15 +169,11 @@ function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): Co
   }
 }
 
-/** The player's own turn has just started on this view. */
 function ownTurnStarted(state: CoachState, view: PlayerView): boolean {
   return state.lastTurn !== null && view.turn !== state.lastTurn && view.active === view.viewer;
 }
 
-/**
- * Read one new snapshot. Call it for every snapshot the page receives, in order (the first one
- * included), with the events that arrived with it.
- */
+/** Read every page snapshot in order, including the first. */
 export function coachObserve(script: LessonScript, current: CoachState, ctx: CoachCtx): CoachState {
   if (current.finished) return current;
   if (ctx.view.result !== null) {
@@ -261,7 +182,6 @@ export function coachObserve(script: LessonScript, current: CoachState, ctx: Coa
 
   let state: CoachState = current;
 
-  // Expiry: a step current through too many of the player's own turns goes by itself.
   if (ownTurnStarted(state, ctx.view)) {
     const turns = state.turnsOnStep + 1;
     const step = script.steps[state.index];
@@ -273,7 +193,6 @@ export function coachObserve(script: LessonScript, current: CoachState, ctx: Coa
   }
   state = { ...state, lastTurn: ctx.view.turn };
 
-  // Tips: each shows once, queued in script order behind any already waiting.
   const queued = new Set([...state.tipsSeen, ...state.tipQueue]);
   const triggered = script.tips.filter((tip) => !queued.has(tip.id) && safely(() => tip.when(ctx)));
   if (triggered.length > 0) state = { ...state, tipQueue: [...state.tipQueue, ...triggered.map((tip) => tip.id)] };
@@ -287,7 +206,6 @@ function dropTip(state: CoachState): CoachState {
   return { ...state, tipQueue: rest, tipsSeen: [...state.tipsSeen, shown] };
 }
 
-/** "Got it": the tip showing goes, else the showing `info` step is done. */
 export function coachAck(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachState {
   if (state.finished) return state;
   if (state.tipQueue.length > 0) return dropTip(state);
@@ -298,7 +216,6 @@ export function coachAck(script: LessonScript, state: CoachState, ctx: CoachCtx)
 
 export type CoachDisplay =
   | { mode: "finished" }
-  /** Nothing to show yet: the current step waits for its `when` (the AI's turn, say). */
   | { mode: "waiting"; stepNumber: number; stepCount: number; aiToAct: boolean }
   | {
       mode: "tip" | "step";
@@ -306,7 +223,6 @@ export type CoachDisplay =
       title: string;
       text: string;
       anchor: CoachAnchor | null;
-      /** A "Got it" button: every tip, and an `info` step. */
       ack: boolean;
       /** Hold the AI while this shows: only ever with `ack`, so "Got it" always lets go (R314). */
       holdAi: boolean;
@@ -314,7 +230,6 @@ export type CoachDisplay =
       stepCount: number;
     };
 
-/** What the coach shows on this view. */
 export function coachDisplay(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachDisplay {
   if (state.finished || ctx.view.result !== null) return { mode: "finished" };
   const stepCount = script.steps.length;
@@ -352,7 +267,7 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
   };
 }
 
-/** The step the coach is on, when it is showing (for the tests that follow the coach). */
+/** The displayed step for lesson tests. */
 export function activeStep(script: LessonScript, state: CoachState): CoachStep | null {
   if (state.finished || state.since === null || state.tipQueue.length > 0) return null;
   return script.steps[state.index] ?? null;

@@ -1,15 +1,6 @@
-// The board's series banner: which Conquest series this game belongs to, the score, each side's
-// decks that have won (and are locked, R330, R336), and once the game is over the way on to the next
-// one (SPEC §9.5).
-//
-// `/match/<id>` knows only its match. `GET /api/matches/:id/series` answers the series that match
-// is a game of (or null), as the caller's own projection, so the banner reads it once when the
-// board opens and again when the game ends (the score has moved), then every `SERIES_POLL_SECONDS`
-// while the series is still going: right after a game the server is opening the next pick phase,
-// and when both sides are down to their last deck those picks are made for them (R332), so the next
-// game may already be running. A match
-// that is not a series game makes one request and shows nothing. Nothing here is a rule (CLAUDE.md
-// rule 7): every word comes from the view.
+// Conquest series banner renders server-supplied data (SPEC §9.5; R330, R332, R336).
+// Poll while the series is active because the server may advance its next pick or game.
+// It never enforces rules (CLAUDE.md rule 7).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -19,25 +10,18 @@ import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";
 import "./lobby.css";
 
-/** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/** Chrome this component invented; `e2e/support/testids.ts` mirrors the strings. */
+/** `e2e/support/testids.ts` mirrors these test IDs. */
 export const seriesBannerTestid = {
-  /** The banner (`data-series-id`), on a series game only. */
   banner: "series-banner",
-  /** Once this game is over: the way to the next game (or to the series screen to pick for it). */
   continue: "series-banner-continue",
-  /** Once the series is over: its result (`data-outcome`). */
   result: "series-banner-result",
-  /** The same way on, as the first action of the board's result panel. */
   panelContinue: "result-series-continue",
-  /** One pip per deck, `data-won="true"` once it has won (R330): yours, then the opponent's. */
   yourDeck: (slot: number): string => `series-banner-you-deck-${String(slot)}`,
   opponentDeck: (slot: number): string => `series-banner-opponent-deck-${String(slot)}`,
 } as const;
 
-/** "2 of 3 decks have won": what a row of pips says to assistive technology. */
 function wonWords(decks: readonly { won: boolean }[]): string {
   const won = decks.filter((deck) => deck.won).length;
   return `${String(won)} of ${String(decks.length)} decks have won`;
@@ -45,7 +29,6 @@ function wonWords(decks: readonly { won: boolean }[]): string {
 
 type SeriesResult = NonNullable<SeriesView["result"]>;
 
-/** How a finished series reads from this player's side; the series screen says it the same way. */
 export const SERIES_OUTCOME_HEADLINE: Readonly<Record<SeriesResult["outcome"], string>> = {
   win: "You won the series",
   loss: "You lost the series",
@@ -53,12 +36,11 @@ export const SERIES_OUTCOME_HEADLINE: Readonly<Record<SeriesResult["outcome"], s
   abandoned: "The series was called off",
 };
 
-/** A call that may throw synchronously (or return nothing, in a test), as a promise. */
+/** Defer calls so synchronous test throws become promise rejections. */
 function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
 
-/** The answer's series, or null for "not a series game" (and for anything that is not an answer). */
 function seriesOf(answer: unknown): SeriesView | null {
   if (typeof answer !== "object" || answer === null) return null;
   const series = (answer as { series?: unknown }).series;
@@ -66,11 +48,7 @@ function seriesOf(answer: unknown): SeriesView | null {
   return typeof (series as { id?: unknown }).id === "string" ? (series as SeriesView) : null;
 }
 
-/**
- * The series `matchId` is a game of, or null (not a series game, or not read yet). Read on mount,
- * again when `gameOver` turns true, and every `SERIES_POLL_SECONDS` while the game is over and the
- * series is not. A failed read is ignored: the banner is a convenience, never a blocker.
- */
+/** Poll on mount and, once a game ends, while its series continues; ignore optional-banner failures. */
 export function useMatchSeries(token: string, matchId: string, gameOver: boolean): SeriesView | null {
   const [series, setSeries] = useState<SeriesView | null>(null);
   const [notSeries, setNotSeries] = useState(false);
@@ -106,18 +84,16 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
   return notSeries ? null : series;
 }
 
-/** Where "continue" goes from a finished game of `series`, and what it says; null once it is over. */
 export function nextStep(series: SeriesView, matchId: string): { href: string; label: string } | null {
   if (series.status === "over") return null;
   const next = `Continue to game ${String(series.gameNo)}`;
   if (series.status === "picking") return { href: paths.series(series.id), label: next };
   const running = series.currentMatchId;
   if (running !== null && running !== matchId) return { href: paths.match(running), label: next };
-  // The series has not moved on from this game yet: its screen will show the next pick.
+  // Before the next game exists, return to the series pick.
   return { href: paths.series(series.id), label: "Back to the series" };
 }
 
-/** The way on from a finished series game, or the series' result once it is over. */
 function WayOn({ series, matchId, testid }: { series: SeriesView; matchId: string; testid: string }): ReactElement {
   const step = nextStep(series, matchId);
   if (step === null) {
@@ -141,10 +117,6 @@ function WayOn({ series, matchId, testid }: { series: SeriesView; matchId: strin
 
 export type SeriesBannerProps = { series: SeriesView | null; matchId: string; gameOver: boolean };
 
-/**
- * "Conquest · You 1 – 0 Opponent", each side's decks as pips filled once they have won, and once this
- * game is over the way on or the result.
- */
 export function SeriesBanner({ series, matchId, gameOver }: SeriesBannerProps): ReactElement | null {
   if (series === null) return null;
   const result = series.result;
@@ -189,7 +161,6 @@ export function SeriesBanner({ series, matchId, gameOver }: SeriesBannerProps): 
   );
 }
 
-/** The same way on for the board's result panel, where it is the first (primary) action. */
 export function SeriesContinue({ series, matchId }: { series: SeriesView | null; matchId: string }): ReactElement | null {
   if (series === null) return null;
   return <WayOn series={series} matchId={matchId} testid={seriesBannerTestid.panelContinue} />;

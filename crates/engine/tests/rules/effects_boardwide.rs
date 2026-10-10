@@ -1,17 +1,14 @@
-//! The board-wide and adjacency verbs of the effects library (BUILD M3-T1 "every effect has its own
-//! test"; SPEC §6.3, §3.1, §3.2, §4.4, §4.5, R11, R12, R13, R16, R31, R46, R55, R59, R68, R78,
-//! §10.7). Eight verbs, all of them a thin walk over `cardsInScope` / `adjacentTo`:
-//!   destroyAll, destroyAdjacentTo   (effects/destroy.ts)  — #2, #16, #17, #43, #88
-//!   damageAll                       (effects/damage.ts)   — #13
-//!   bounceAll, exileAll, exileAdjacentTo, discardHand, exileHand
-//!                                   (effects/move.ts)     — #17, #34, #76, #78, #100
+//! The board-wide and adjacency verbs of the effects library (BUILD M3-T1; SPEC §6.3, §3.1, §3.2,
+//! §4.4, §4.5, §10.7; R11, R12, R13, R16, R31, R46, R55, R59, R68, R78), thin walks over
+//! `cardsInScope` / `adjacentTo`:
+//!   destroyAll, destroyAdjacentTo — #2, #16, #17, #43, #88
+//!   damageAll — #13
+//!   bounceAll, exileAll, exileAdjacentTo, discardHand, exileHand — #17, #34, #76, #78, #100
 //!
-//! What these tests are really pinning down is the difference between a sweep and a loop of
-//! single-target verbs: `destroyAll` only marks, so §4.5 collects the whole board under ONE state
-//! check (R59), and `damageAll` snapshots its targets, so one hit never changes who else is hit.
+//! These pin down the difference between a sweep and a loop of single-target verbs: `destroyAll`
+//! only marks, so §4.5 collects the whole board under ONE state check (R59), and `damageAll`
+//! snapshots its targets, so one hit never changes who else is hit.
 //! The fixture defs live here rather than in a shared fixture, per CLAUDE.md and BUILD §0.
-//!
-//! Port of `packages/engine/test/effects-boardwide.test.ts`.
 
 use std::collections::BTreeSet;
 
@@ -25,12 +22,8 @@ use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::{armoured, indestructible, plain, shielded};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards: one tagged body per scope filter the eight call sites use.
-// ---------------------------------------------------------------------------
 
-/// TS `unitDefOf(name, overrides)`; `index` is TS's `nextIndex` (1300, bumped once per call in
-/// declaration order: human 1301, felinor 1302, beast 1303, field-spell 1304).
 fn unit_def_of(name: &str, index: u32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("bw-{name}"),
@@ -104,7 +97,6 @@ struct RunOptions<'a> {
 }
 
 /// A sink plus `apply`, so one test can run a sweep and then the state check on the same events.
-/// It holds the state (TS's runner shared it), the events every apply appends to and the rng.
 struct Runner {
     state: GameState,
     events: Vec<GameEvent>,
@@ -129,7 +121,7 @@ impl Runner {
                 }]
             })
             .unwrap_or_default();
-        // TS handed over the live object: read it back as it stands now.
+        // Read the card back as it stands now, not the stale copy.
         let self_ = options.self_.map(|card| {
             find_instance(&self.state, &card.id)
                 .cloned()
@@ -194,8 +186,7 @@ impl Runner {
         ids_of(&self.state.players[player].exile)
     }
 
-    /// R11: a card that ceased to exist is in no pile of the state (TS read the detached instance's
-    /// `zone.z === "gone"`).
+    /// R11: a card that ceased to exist is in no pile of the state.
     fn gone(&self, card: &CardInstance) -> bool {
         find_instance(&self.state, &card.id).is_none()
     }
@@ -222,7 +213,7 @@ fn with_self(card: &CardInstance) -> RunOptions<'_> {
     }
 }
 
-/// The one card a single-card fixture call made, without an optional chain in the assertion.
+/// The one card a single-card fixture call made.
 fn only(cards: Vec<CardInstance>) -> CardInstance {
     if cards.len() != 1 {
         panic!("expected exactly one fixture card");
@@ -265,14 +256,11 @@ fn instance_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
         .collect()
 }
 
-/// TS `const chosen = { of: "chosen" } as const`.
 fn chosen() -> Value {
     json!({ "of": "chosen" })
 }
 
-// ---------------------------------------------------------------------------
 // destroyAll
-// ---------------------------------------------------------------------------
 
 mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     use super::*;
@@ -287,8 +275,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         let enemy_one = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let enemy_human = put(&mut state, HUMAN, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let enemy_two = put(&mut state, FELINOR, slot(PlayerId::P2, Row::Units, 3), json!({}));
-        // R12: owned by p1, standing on p2's side, so the sweep's scope is by side and the graveyard
-        // is by owner. These are two different questions and this card answers both at once.
+        // R12: owned by p1, standing on p2's side: the scope is by side, the graveyard by owner.
         let stolen = stolen_onto(&mut state, BEAST, PlayerId::P1, slot(PlayerId::P2, Row::Units, 4));
         let mut run = Runner::new(state);
 
@@ -334,7 +321,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
             sorted(vec![enemy_one.id.clone(), enemy_two.id.clone()])
         );
         assert_eq!(run.graveyard(PlayerId::P1), vec![stolen.id.clone()]);
-        // R59: one state check collected all three, so there are exactly three deaths from one pass.
+        // R59: one state check collected all three.
         assert_eq!(events_of_type(&run.events, GameEventType::Destroyed).len(), 3);
     }
 
@@ -427,8 +414,8 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
 
         run.apply(destroy_all(json_as(json!({ "side": "enemy" }))), None, defaults());
 
-        // The whole point: the scope does NOT pre-filter Indestructible. Were the mark never set,
-        // R46's Attack-Position switch and Taunt suppression below would silently never happen.
+        // The scope does NOT pre-filter Indestructible: without the mark, R46's Attack-Position
+        // switch and Taunt suppression below would never happen.
         assert_eq!(run.marked(&warded), Some(true));
         assert_eq!(run.marked(&mortal), Some(true));
 
@@ -473,9 +460,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // destroyAdjacentTo
-// ---------------------------------------------------------------------------
 
 mod destroy_adjacent_to_s3_1_m3_t1 {
     use super::*;
@@ -522,7 +507,6 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
         let far = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let mut run = Runner::new(state);
 
-        // Exactly what 016-hit-job.ts returns from its radiant Cry.
         run.apply_all(
             vec![
                 destroy(json_as(json!({ "target": chosen() }))),
@@ -567,9 +551,7 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // damageAll
-// ---------------------------------------------------------------------------
 
 mod damage_all_s6_3_s4_4_r59_m3_t1 {
     use super::*;
@@ -668,11 +650,9 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
             vec![2, 2, 2]
         );
 
-        // The list belongs to the apply that read it: a unit that joins the board afterwards took
-        // nothing from the first sweep and is hit by the next one. No engine verb can move a card off
-        // the field from inside `dealDamage`, so the snapshot's other half — a unit that dies mid-sweep
-        // not changing who else is hit — is asserted above as "each target hit exactly once, in
-        // `cardsInScope` order", which a per-hit re-read of the row could not promise.
+        // The list belongs to the apply that read it: a unit joining afterwards took nothing from the
+        // first sweep. No verb can remove a card from inside `dealDamage`, so the snapshot's other
+        // half is the assertion above: each target hit once, in `cardsInScope` order.
         let latecomer = put(
             &mut run.state,
             BEAST,
@@ -819,9 +799,7 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // bounceAll
-// ---------------------------------------------------------------------------
 
 mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     use super::*;
@@ -843,8 +821,7 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
             json!({}),
         );
         let theirs = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        // R747: p1 owns it, p2 is standing it up; a bounce sends it to its controller p2's hand,
-        // not its owner's — bouncing an enemy permanent never fills your own hand.
+        // R747: owned by p1, controlled by p2; a bounce goes to the controller's hand, not the owner's.
         let stolen = stolen_onto(&mut state, BEAST, PlayerId::P1, slot(PlayerId::P2, Row::Units, 2));
         let mut run = Runner::new(state);
 
@@ -917,9 +894,7 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // exileAll
-// ---------------------------------------------------------------------------
 
 mod exile_all_s6_3_r11_r55_m3_t1 {
     use super::*;
@@ -1006,9 +981,7 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // exileAdjacentTo
-// ---------------------------------------------------------------------------
 
 mod exile_adjacent_to_s3_1_m3_t1 {
     use super::*;
@@ -1079,9 +1052,7 @@ mod exile_adjacent_to_s3_1_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // discardHand
-// ---------------------------------------------------------------------------
 
 mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
     use super::*;
@@ -1183,9 +1154,7 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // exileHand
-// ---------------------------------------------------------------------------
 
 mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
     use super::*;

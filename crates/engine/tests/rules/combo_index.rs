@@ -3,8 +3,6 @@
 //! The card is a Field Spell with a grade counter on its instance. At the end of its controller's
 //! turn, "if cards played this turn >= grade, grade +1 and run every step from E up to the new
 //! grade" (§8 #93), the steps run in order and S is terminal (R27).
-//!
-//! Port of `packages/engine/test/comboIndex.test.ts`.
 
 use jackioh_engine::subsystems::combo_index::{
     GRADES, Grade, RaiseGradeArgs, StartGradeArgs, cascade_effects, combo_index_end_of_turn, grade_name,
@@ -17,7 +15,6 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
-/// TS's `def(name, type, extra)`, its running index written out (TS counted from 930 in file order).
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
         "id": format!("ci-{name}"),
@@ -107,7 +104,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The card on the field, at the grade the scenario needs.
 fn on_field(state: &mut GameState, grade: Option<i32>) -> CardInstance {
     let card = put(state, &combo_index().id, slot(P1, Row::Backrow, 1), json!({}));
     if let Some(grade) = grade {
@@ -157,7 +153,6 @@ fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).unwrap()
 }
 
-/// The live card (TS held the object itself; Rust looks it up by id).
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -267,7 +262,6 @@ mod r27_combo_index_s8_93_m3_t7 {
         sink_events(&mut second, &mut Vec::new(), |sink| {
             let at_d = on_field(sink.state, Some(grade_value(Grade::D))); // grade 2
             play(sink, &trick().id, false);
-            // One play is short of 2, so nothing happens; the second play reaches the threshold.
             assert!(!grade_rises(sink.state, &at_d));
             play(sink, &trick().id, false);
             assert_eq!(plays_this_turn(sink.state, P1), 2);
@@ -292,7 +286,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             assert_eq!(kinds_of(&combo_index_end_of_turn(sink, &card)), expected);
         });
 
-        // The cascade of each grade on its own, so "E→new grade in order" is the whole list every time.
         assert_eq!(
             kinds_of(&cascade_effects(grade_value(Grade::E))),
             STEP_KINDS[..1].to_vec()
@@ -365,7 +358,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             ])
         );
 
-        // Each step landed twice: 2 copies added, 2 enemy cards exiled, 2 cards radiant, 2 x 8 damage.
         assert_eq!(state.players.p1.hand.len(), hand_len + 2);
         assert_eq!(state.players.p2.hand.len(), 1);
         assert_eq!(state.players.p2.exile.len(), 2);
@@ -437,7 +429,6 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(copy.zone, Zone::Hand { player: P1 });
         assert_eq!(copy.damage, 0);
         assert_eq!(json_of(copy.counters), json!({}));
-        // The card it copied is untouched, still in the graveyard where its cast left it.
         assert_eq!(
             state
                 .players
@@ -454,7 +445,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             .collect();
         assert_eq!(added, vec![json!(copy.id)]);
 
-        // With nothing played this turn there is nothing to copy and the step does nothing.
         let mut empty = game("step-e-empty");
         sink_events(&mut empty, &mut Vec::new(), |sink| {
             let idle = on_field(sink.state, None);
@@ -517,7 +507,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         });
         assert_eq!(card(&small, &only_id).cost_mod, -1);
 
-        // TS `expect(() => run(…)).not.toThrow()`: a panic here fails the test.
+        // A panic here fails the test.
         let mut none = game("step-d-empty");
         sink_events(&mut none, &mut Vec::new(), |sink| {
             let none_card = on_field(sink.state, None);
@@ -553,7 +543,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             .map(|event| json_of(event)["instanceId"].clone())
             .collect();
         assert_eq!(exiled, vec![json!(gone.id)]);
-        // It is the opponent's hand, never the controller's.
         assert_eq!(
             state
                 .players
@@ -565,7 +554,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             mine.iter().map(|held| held.id.clone()).collect::<Vec<String>>()
         );
 
-        // An empty enemy hand leaves the step with nothing to do.
         let mut empty = game("step-c-empty");
         sink_events(&mut empty, &mut Vec::new(), |sink| {
             let card = on_field(sink.state, None);
@@ -686,8 +674,7 @@ mod r27_combo_index_s8_93_m3_t7 {
                 run(sink, &card, effects);
             });
 
-            // Every random pick of the S cascade, in one string: the copies, the discounts, the exiles
-            // and the cards that turned Radiant.
+            // Every random pick of the S cascade, in one string.
             serde_json::to_string(&json!({
                 "hand": state
                     .players

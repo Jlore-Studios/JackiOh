@@ -1,15 +1,12 @@
 // R437: a mark branded onto a card (#50 K-Pop Fanatic's pending steal on its target).
 //
-// The `marked` event (read through `markEventOf`, cards/marks.ts) says a mark came onto a card or
-// left it, and in which colour key. As it comes, a sigil in the mark's colours slams onto the card
-// and fades into the lasting aura the board draws (cards/CardMarks.tsx), with a ring and a burst of
-// the palette's particles; as it goes, the colour puffs away. The colours are the palette table's,
-// the one the aura reads, so the flourish and the mark always match and an unknown key falls back
-// the same way.
+// The `marked` event (via `markEventOf`, cards/marks.ts) says a mark came onto a card or left it. As
+// it comes, a sigil in the mark's colours slams on and fades into the board's lasting aura
+// (cards/CardMarks.tsx); as it goes, the colour puffs away. Colours come from the palette table the
+// aura reads, so the two always match.
 //
-// R202: the event names its card; one the viewer may not read is the sentinel and the planner finds
-// no element for it, so nothing plays. R200: the sigil lasts D + FX_BRAND_TAIL_MS (≤ T) and the burst
-// lands at FX_BRAND_SLAM_AT of the entry.
+// R202: a card the viewer may not read is the sentinel, so nothing plays. R200: the sigil lasts
+// D + FX_BRAND_TAIL_MS (≤ T) and the burst lands at FX_BRAND_SLAM_AT of the entry.
 
 import type { GameEvent } from "@jackioh/shared";
 

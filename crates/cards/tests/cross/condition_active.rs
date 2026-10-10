@@ -1,19 +1,7 @@
-//! Port of `packages/cards/test/condition-active.test.ts` (part 27.1).
-//!
-//! R195 (SPEC §10.8, §10.9): the five Core cards with a printed condition light up yellow through
+//! R195 (SPEC §10.8, §10.9): the cards with a printed condition light up yellow through
 //! `conditionActive`, and each test proves the flag agrees with the branch the card's own resolution
 //! then takes. The flag is read from `s.view(...)` (the viewer's `viewFor`), the branch from the
 //! scenario's own assertions after a real `s.play(...)` or `s.endTurn()`.
-//!
-//!   #10 Rapid Replenish  hand only          3 or more cards played earlier this turn
-//!   #53 Reno             hand only          your hero below 30 (radiant 60)
-//!   #68 Twisted Sorcerer hand only          your hero below 10, strict
-//!   #71 Intern Stimmy    hand and field     your library strictly larger than the opponent's
-//!   #93 Combo-Index      field only         your turn, cards played reach its grade, not at S
-//!   C #22 Mid Runner     hand only          your mana is 4 or more now (what "when you played this" reads)
-//!   C #36 Burn           hand only          base: mana left after paying its price now; Radiant: max mana; 4+
-//!   C #40 MC Tech        hand only          your opponent controls 4 or more permanents
-//!   C+ #50 Adaptive Growth hand only        you control fewer Units than the opponent
 //!
 //! The key is present and `true`, or absent: `glows` below fails on a key that is present with any
 //! other value.
@@ -21,18 +9,15 @@
 //! R196 closes the file: a fusion's hook is its ingredients' hooks or-ed, checked by crafting #53 Reno
 //! with #68 Twisted Sorcerer (R77's hand path, the one #99 Craft a Card takes) and playing the result.
 //!
-//! These are the per-card proofs §10.9 asks of a card with `conditionMet`; each card's own
-//! `NNN-slug.test.ts` points here (packages/cards/README.md §5), and the last test pins the set of
-//! cards that declare the hook to R195's list, so a new hook cannot land without a proof.
+//! These are the per-card proofs §10.9 asks of a card with `conditionMet` (crates/cards/README.md §5),
+//! and the last test pins the set of cards that declare the hook to R195's list.
 
 use jackioh_engine::testkit::*;
 use serde::Serialize;
 
-/// TS `ReturnType<Scenario["card"]>`.
 type Instance = CardInstance;
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
+/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -91,14 +76,12 @@ fn count_of(s: &Scenario, type_: &str) -> usize {
         .count()
 }
 
-/// TS `s.unit(p, lane) ?? ""`: the unit's id, or a reference that names nothing.
+/// The unit's id, or a reference that names nothing.
 fn unit_ref(s: &Scenario, player: &'static str, lane: i32) -> String {
     s.unit(player, lane).map(|card| card.id).unwrap_or_default()
 }
 
-// =============================================================================================
 // #10 Rapid Replenish (hand only): Combo 3
-// =============================================================================================
 
 /// #10 Rapid Replenish lights up at Combo 3 (R195, B5)
 mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
@@ -186,9 +169,9 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
         s.end_turn();
 
         assert_eq!(s.state().active, PlayerId::P2);
-        // "This turn" starts afresh for both players (§6.2, turn.ts's startTurn), so p1's three plays no
-        // longer count on p2's turn. That the hand is not even asked outside its own main phase, where a
-        // hook would answer true, is R195's rule 3, proved with a test-only hook in conditionActive.test.ts.
+        // "This turn" starts afresh for both players (§6.2), so p1's three plays no longer count on
+        // p2's turn. That the hand is not even asked outside its own main phase, where a hook would
+        // answer true, is R195's rule 3.
         assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         assert!(!hand_glows(&s, &spell));
     }
@@ -218,9 +201,7 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
     }
 }
 
-// =============================================================================================
 // #53 Reno (hand only): your hero below 30, radiant 60
-// =============================================================================================
 
 /// #53 Reno lights up below its floor (R195, B6)
 mod c53_reno_lights_up_below_its_floor_r195_b6 {
@@ -326,9 +307,7 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     }
 }
 
-// =============================================================================================
 // #68 Twisted Sorcerer (hand only): your hero below 10
-// =============================================================================================
 
 /// #68 Twisted Sorcerer lights up below 10 (R195, B7)
 mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
@@ -339,7 +318,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     /// A free Spell that keeps the turn open (§2.5's auto-end); never played.
     const ANCHOR: &str = "core-010";
 
-    /// TS `board(opts)`: the scenario with ANCHOR added at the end of p1's hand.
+    /// The scenario with ANCHOR added at the end of p1's hand.
     fn board(mut opts: Value) -> Scenario {
         let root = opts.as_object_mut().expect("scenario options are an object");
         let p1 = root.entry("p1").or_insert_with(|| json!({}));
@@ -437,9 +416,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     }
 }
 
-// =============================================================================================
 // #71 Intern Stimmy (hand and field): your library strictly larger
-// =============================================================================================
 
 /// #71 Intern Stimmy lights up while its controller's library is larger (R195, B8)
 mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 {
@@ -573,9 +550,7 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     }
 }
 
-// =============================================================================================
 // #93 Combo-Index (field only): your turn, cards played reach the grade, not at S
-// =============================================================================================
 
 /// #93 Combo-Index lights up when its grade will rise (R195, B9)
 mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
@@ -599,7 +574,7 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
         glows(s.view("p1").you.backrow[0].as_ref())
     }
 
-    /// `entry` is TS's `string | { def, counters?, radiant? }`.
+    /// `entry` is a def id or `{ def, counters?, radiant? }`.
     fn board(seed: &str, entry: Value) -> Scenario {
         setup(json!({
             "seed": seed,
@@ -680,8 +655,8 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
 
         assert_eq!(s.state().active, PlayerId::P2);
         assert_eq!(grade(&s), 2);
-        // "This turn" starts afresh for both players (§6.2, turn.ts's startTurn), so p1's two plays no
-        // longer count on p2's turn, and the hook's `yourTurn` would keep it dark even if they did.
+        // "This turn" starts afresh for both players (§6.2), so p1's two plays no longer count on
+        // p2's turn, and the hook's `yourTurn` would keep it dark even if they did.
         assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         assert!(!index_glows(&s));
     }
@@ -714,9 +689,7 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
     }
 }
 
-// =============================================================================================
 // R196: a fusion glows when any ingredient's condition holds
-// =============================================================================================
 
 /// R196 a crafted #53 Reno + #68 Twisted Sorcerer glows when either printed condition holds
 mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condition_holds {
@@ -736,8 +709,7 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
             "p2": { "field": [SPONGE] },
         }));
         let ingredients = vec![s.card(RENO).clone(), s.card(SORCERER).clone()];
-        // TS's `{ state, events: [], rng: createRng(seed, cursor) }`: a sink of its own, whose events
-        // and rng cursor are dropped afterwards, as TS dropped them.
+        // A sink of its own, whose events and rng cursor are dropped afterwards.
         let fused = {
             let state = s.state_mut();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -806,9 +778,7 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
     }
 }
 
-// =============================================================================================
 // Classic #22 Mid Runner (hand only): your mana is {threshold} or more now
-// =============================================================================================
 
 /// C #22 Mid Runner lights up in hand while your mana reaches its threshold (R195)
 mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_threshold_r195 {
@@ -821,9 +791,6 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
     fn bounces(s: &Scenario) -> usize {
         count_of(s, "bounced")
     }
-
-    // TS: `for (const face of ["base", "radiant"])`, two tests per face. Base bounces 2, Radiant 3
-    // (balance patch 1, issue #88).
 
     fn glows_at_4_mana_and_bounces(radiant: bool) {
         let count = if radiant { 3 } else { 2 };
@@ -871,7 +838,6 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
         let mut s = setup(
             json!({ "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": TARGETS } }),
         );
-        // TS stepped the live hand instance; here it is found again by id and stepped in place.
         let runner_id = nth(&copies_in_hand(&s, RUNNER), 0).id;
         let live = find_instance_mut(s.state_mut(), &runner_id).expect("the Runner in p1's hand");
         params::step_param(live, "threshold", 1);
@@ -905,9 +871,7 @@ mod classic_c22_mid_runner_lights_up_in_hand_while_your_mana_reaches_its_thresho
     }
 }
 
-// =============================================================================================
 // Classic #36 Burn (hand only): mana left after paying now (base), max mana (Radiant)
-// =============================================================================================
 
 /// C #36 Burn lights up in hand when it would draw if played now (R195)
 mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
@@ -1005,9 +969,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     }
 }
 
-// =============================================================================================
 // Classic #40 MC Tech (hand only): your opponent controls {threshold} or more permanents
-// =============================================================================================
 
 /// C #40 MC Tech lights up in hand while the opponent controls enough permanents (R195)
 mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_permanents_r195 {
@@ -1086,9 +1048,7 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
     }
 }
 
-// =============================================================================================
 // C+ #50 Adaptive Growth (hand only): you control fewer Units than your opponent
-// =============================================================================================
 
 /// C+ #50 Adaptive Growth lights up while you control fewer Units (R195)
 mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r195 {
@@ -1097,7 +1057,6 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
     const GROWTH: &str = "classicplus-050";
     const VANILLA: &str = "core-008";
 
-    /// TS `growth(mine, theirs, radiant = false)`; the default is passed explicitly.
     fn growth(mine: usize, theirs: usize, radiant: bool) -> Scenario {
         let card = if radiant {
             json!({ "def": GROWTH, "radiant": true })
@@ -1176,19 +1135,16 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
     }
 }
 
-// =============================================================================================
 // The set of cards that declare the hook is R195's list
-// =============================================================================================
 
 /// R195 the cards that declare conditionMet
 mod r195_the_cards_that_declare_condition_met {
-    // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
-    // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum), and so do R662's
-    // Core #18, #60, #70, #85, #96 and #100 (test/NNN-slug.test.ts).
+    // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own card
+    // files, and so do R662's Core #18, #60, #70, #85, #96 and #100.
     #[test]
     fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
      {
-        // TS `CARDS`: one entry per script file present, which is the registry `scripts_of` builds.
+        // One entry per script file present: the registry `scripts_of` builds.
         let cards = jackioh_cards::scripts_of();
         let mut hooked: Vec<String> = cards
             .iter()
@@ -1235,9 +1191,7 @@ mod r195_the_cards_that_declare_condition_met {
     }
 }
 
-// =============================================================================================
 // C #69 Plague Charger (field only): while it has a Plague Counter
-// =============================================================================================
 
 /// C #69 Plague Charger lights up while it has a Plague Counter (R195)
 mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
@@ -1246,8 +1200,6 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     const CHARGER: &str = "classic-069";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
-
-    // TS: `for (const radiant of [false, true])`, two tests per face.
 
     fn hits_on(s: &Scenario, instance_id: &str) -> usize {
         s.events()

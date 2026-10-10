@@ -1,25 +1,5 @@
-// What the animation runner reads off a burst beyond one event at a time (issue #124): which plays are
-// casts, which runs of events hit a whole pile, and which runs of hits sweep a whole side.
-//
-// - A cast (§6.3 Cast, R70) is a play begun while another play is still resolving: Jogg's Box's ten
-//   random Spells, Solarius Prime's five, a Cry that casts a card. Each one is a `cardPlayed` with cost
-//   paid 0 that the stream opens inside another play's `cardPlayed` … `cardResolved`, so the tracker
-//   below keeps the plays still open, across batches (a cast can wait behind a prompt the other seat
-//   answers), and says which play cast it and which of its casts it is. The runner holds each cast up
-//   long enough to read (`CAST_ENTRY_MS`), and the showcase holds the cast card up on both seats.
-// - A whole-pile impact: a run of events of one type that all land in one Deck, Graveyard or Exile and
-//   reach every card in it plays one "affecting this zone" entry instead of one per card; a run that
-//   reaches fewer cards than the pile holds (a card naming a number of them) still plays one per card.
-// - A sweep: a run of non-combat hits from one source (or of heals) that reaches every unit one side
-//   shows, its hero included or not, plays as one entry the effects layer rolls a fog over.
-//
-// No rule lives here (CLAUDE.md rule 7). Everything is read off the redacted events and the view the
-// entry is planned against: the plays the stream opens and closes, the ids an event names, the piles'
-// public counts and the units each side shows. A card the view hides is never looked up (R97, R202).
-// Which pile a hidden card's change lands in is never in the view (R242, R440 hide it on purpose), so
-// it is read only off a card whose public text names that pile (`HIDDEN_PILE_OF`).
-//
-// Pure, apart from the tracker's own memory.
+// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, and sweeps from redacted events and PlayerView.
+// R97, R202, R242, and R440 forbid hidden-card inference; `HIDDEN_PILE_OF` uses only public card text.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -33,9 +13,7 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 /** The most plays the tracker keeps open: deeper nesting than this is a stream it has lost track of. */
 export const PLAYS_OPEN_MAX = 16;
 
-/* ------------------------------------------------------------------------------------------- *
- * Casts
- * ------------------------------------------------------------------------------------------- */
+// Casts
 
 /** A play the stream has opened and not yet resolved, and how many casts it has made so far. */
 export type OpenPlay = { player: PlayerId; instanceId: string; defId: string; casts: number };
@@ -52,12 +30,7 @@ export type PlayTracker = {
 };
 
 /**
- * Tracks the plays still resolving. A `cardPlayed` opens one, and is a cast when another is open and
- * it paid nothing (a free play of the player's own never happens inside another play). Its
- * `cardResolved` closes it; R97's sentinel closes the innermost play of that player, as it may name
- * any. A `countered` play never opened (B5 E1 cancels it before §10.5 step 4's `cardPlayed`), so it
- * closes only a play it names exactly. A turn starting or the game ending clears whatever a lost
- * event left open.
+ * Tracks open plays. R97 may close the innermost play; B5 E1 counters before §10.5's `cardPlayed`, so it closes only an exact match.
  */
 export function createPlayTracker(): PlayTracker {
   let open: OpenPlay[] = [];
@@ -112,9 +85,7 @@ export function createPlayTracker(): PlayTracker {
   };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Whole-pile impacts
- * ------------------------------------------------------------------------------------------- */
+// Whole-pile impacts
 
 export type PileKind = "library" | "graveyard" | "exile";
 
@@ -128,16 +99,10 @@ export type Pile = { side: Side; pile: PileKind };
 export type ZoneImpact = Pile & { count: number; events: number };
 
 /**
- * The cards whose changes to cards nobody may read land in one library their public text names
- * (R440: each such change is reported, its card hidden, its pile not said), relative to the player of
- * the card resolving: `enemy` for the other player's library, `own` for its own. A card whose hidden
- * changes reach more than one pile (a hand and a deck, C+ #73's Buff) is not listed: its changes
- * stay where the view puts them, which is nowhere. Add a definition here when its text names the one
- * deck its hidden changes are in.
+ * R440 hidden changes map only where public text names one library; multi-pile cards (C+ #73) stay unmapped.
  */
 export const HIDDEN_PILE_OF: Readonly<Record<string, "own" | "enemy">> = {
-  // C+ #8 Withering Storm: base "Nerf 4 random cards in your opponent's deck", radiant "Nerf every
-  // card in your opponent's deck".
+  // C+ #8 Withering Storm changes the opponent's deck.
   "classicplus-008": "enemy",
   // Core #42: "Exile 7 random cards from your deck".
   "core-042": "own",
@@ -196,10 +161,7 @@ function otherOf(player: PlayerId): PlayerId {
 }
 
 /**
- * Where an event lands, when it lands in a pile: the pile the card was in as it changed, or the pile
- * a card was taken from. `inferred` marks a pile read off a card the view shows nowhere (an exile out
- * of a library); such a pile counts as reached whole only when the run is exactly its size. `play` is
- * the innermost play still resolving, whose public text may name the pile of a hidden change.
+ * `inferred` piles count whole only on an exact run, because the view did not show the card's origin.
  */
 export function pileOf(
   event: GameEvent,
@@ -212,17 +174,12 @@ export function pileOf(
       const held = publicPileOf(view, event.instanceId);
       if (held !== null) return held.pile === "graveyard" ? held : null;
       if (shown(view, event.instanceId)) return null;
-      // A card shown nowhere that left for exile: a library card, a hand card, or a face-down
-      // backrow card. The viewer's own hand and resolving cards are shown, so for the viewer's own
-      // cards this is their library (or, rarely, their face-down backrow); an opponent's hidden hand
-      // and backrow make the same guess unsound for opponent cards (e.g. an exiled hand card), so
-      // those stay unmapped and play singly.
+      // Only an own hidden card can be inferred as library: an opponent's could be from hand or backrow.
       const side = sideOf(view, event.owner);
       return side === "you" ? { side, pile: "library", inferred: true } : null;
     }
     case "shuffledIn":
-      // Every producer lands the card in `player`'s library (draw, setup, zones' graveyard landing),
-      // so the pile is certain even when the card is R97's sentinel — no inference.
+      // `shuffledIn` is certainly in the player's library, even for R97's sentinel.
       return { side: sideOf(view, event.player), pile: "library" };
     case "stolen":
       return event.zone === "library" || event.zone === "graveyard" || event.zone === "exile"
@@ -249,9 +206,7 @@ function samePile(a: Pile, b: Pile): boolean {
 }
 
 /**
- * The run of events from `at` that share its type and its pile, and whether it reaches the whole pile:
- * at least two events, and at least as many as the pile holds in `view` (exactly as many, for a pile
- * read off cards the view shows nowhere). Null when the event at `at` lands in no pile.
+ * A same-type, same-pile run is whole at two or more events and the pile count (exactly for inferred piles).
  */
 export function pileRunAt(
   events: readonly GameEvent[],
@@ -278,9 +233,7 @@ export function pileRunAt(
   return { pile: { side: pile.side, pile: pile.pile }, length, whole, count };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Sweeps
- * ------------------------------------------------------------------------------------------- */
+// Sweeps
 
 /** A sweep as the runner plays it: hits or heals, the sides every unit of which it reached, and its source. */
 export type Sweep = { tone: "damage" | "heal"; sides: readonly Side[]; sourceId: string | null };
@@ -309,10 +262,7 @@ function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; sou
 }
 
 /**
- * The sweep that starts at `at`, if one does: a run of at least two non-combat hits from one source
- * (a Divine Shield that takes one of them, or Armor that takes one whole, counts as hit) or of heals,
- * each on a different target, that reaches at least one unit and every unit on each side it touches.
- * A target hit again starts a new round, and so a new sweep (Blade Storm's repeats).
+ * A sweep reaches every unit on each touched side with distinct non-combat hits or heals.
  */
 export function sweepAt(
   events: readonly GameEvent[],

@@ -36,9 +36,8 @@ def secrets(*names: str) -> dict:
 class ParseTests(unittest.TestCase):
     def test_the_committed_file(self):
         pool = providers.load(ROOT)
-        # The usage order: claude-3, claude-7 (the same rules: no caps) and claude-1 first,
-        # then claude-4, claude-6 and claude-5 last of the Claude accounts (each under its
-        # caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
+        # The usage order: claude-3 (no caps), claude-7 and claude-1 first, then claude-4,
+        # claude-6 and claude-5 last of the Claude accounts (each under its caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
         # planning and review, and Devin last. (The AI's training lanes run outside the
         # harness: no subscription of theirs.)
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
@@ -436,25 +435,49 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("5-hour usage is 55%, at or over its 50% cap outside its hours",
                       why(evening, 0.55))
 
-    def test_claude_7_matches_claude_3_any_hour_with_no_caps(self):
-        """claude-7 runs under the same rules as claude-3: any hour, its whole 5-hour session and
-        no weekly cap, so no reading holds it, only a refusal."""
-        pool = providers.load(ROOT)
-        claude_7 = pool.get("claude-7")
-        claude_3 = pool.get("claude-3")
-        self.assertEqual(claude_7.secret, "CLAUDE_CODE_OAUTH_TOKEN_7")
-        self.assertEqual((claude_7.schedule, claude_7.limits.mode, dict(claude_7.limits.stops),
-                          dict(claude_7.off_hours)),
-                         (claude_3.schedule, "none", {}, dict(claude_3.off_hours)))
-        self.assertEqual(claude_7.hours("America/Chicago"), claude_3.hours("America/Chicago"))
-        later = clock.iso(DAY + timedelta(days=1))
+    def test_claude_7_works_any_hour_under_half_and_up_to_70_percent_from_1_to_10(self):
+        """claude-7's window is 01:00–10:00 Central under a 70% cap on its 5-hour session with
+        no weekly cap; from 10:00 to 01:00 it still works while that session is under 50%
+        (`off_hours`)."""
+        claude_7 = providers.load(ROOT).get("claude-7")
+        self.assertEqual((claude_7.secret, claude_7.schedule.mode,
+                          dict(claude_7.limits.stops), dict(claude_7.off_hours)),
+                         ("CLAUDE_CODE_OAUTH_TOKEN_7", "window",
+                          {"five_hour": 0.7}, {"five_hour": 0.5}))
+        self.assertEqual(claude_7.hours("America/Chicago"),
+                         "01:00–10:00 America/Chicago, outside them up to 50% of 5-hour")
+        later = clock.iso(DAY + timedelta(days=1))  # past every check below
         everyone = Secrets.of(secrets(*providers.SECRETS))
-        full = {"five_hour": {"utilization": 0.99, "resets_at": later},
-                "seven_day": {"utilization": 0.99, "resets_at": later}}
-        for at in (DAY, NIGHT):
-            self.assertIsNone(providers.availability(
-                claude_7, {"providers": {"claude-7": {"usage": full}}}, at, "America/Chicago",
-                everyone, starting=True))
+
+        def why(at, five_hour, seven_day=0.1, starting=False):
+            entry = {"usage": {"five_hour": {"utilization": five_hour, "resets_at": later},
+                               "seven_day": {"utilization": seven_day, "resets_at": later}}}
+            return providers.availability(claude_7, {"providers": {"claude-7": entry}}, at,
+                                          "America/Chicago", everyone, starting=starting)
+
+        early = DAY - timedelta(hours=10, minutes=30)  # 01:30 CDT, inside the window
+        morning = DAY - timedelta(hours=2, minutes=30)  # 09:30 CDT, inside it
+        late_morning = DAY - timedelta(hours=2)  # 10:00 CDT, the window has closed
+        midnight = DAY + timedelta(hours=12, minutes=30)  # 00:30 CDT, outside it
+        for inside in (early, morning):
+            self.assertIsNone(why(inside, 0.6))
+            # No weekly cap: a nearly spent week holds nothing back, in or out of the window.
+            self.assertIsNone(why(inside, 0.1, seven_day=0.99))
+            self.assertIn("5-hour usage is 72%, at or over its 70% cap; ", why(inside, 0.72))
+        for outside in (late_morning, DAY, midnight):
+            self.assertIsNone(why(outside, 0.3))
+            self.assertIsNone(why(outside, 0.3, seven_day=0.99))
+            self.assertIn("5-hour usage is 55%, at or over its 50% cap outside its hours",
+                          why(outside, 0.55))
+        # A build starts only `start_headroom` under the cap that holds then.
+        self.assertIsNone(why(morning, 0.5, starting=True))
+        self.assertIn("too close to its 70% cap", why(morning, 0.67, starting=True))
+        self.assertIn("too close to its 50% cap outside its hours",
+                      why(DAY, 0.47, starting=True))
+        # A run going on stops at the cap that holds when it is checked.
+        entry = {"usage": {"five_hour": {"utilization": 0.55, "resets_at": later}}}
+        self.assertIsNone(providers.refusal(claude_7, entry, morning, "America/Chicago"))
+        self.assertIsNotNone(providers.refusal(claude_7, entry, DAY, "America/Chicago"))
         # Without its secret it takes nothing.
         self.assertIn("CLAUDE_CODE_OAUTH_TOKEN_7", providers.availability(
             claude_7, {}, NIGHT, "America/Chicago", Secrets.of(secrets("CLAUDE_CODE_OAUTH_TOKEN"))))
@@ -491,12 +514,12 @@ class MatchingTests(unittest.TestCase):
                          {"gpt": 1.0, "agy": 1.0, "muse": 1.0})
 
     def test_claude_2_and_3_work_any_hour(self):
-        """The committed hours: claude-1, claude-2, claude-3 and claude-7 run all day, claude-1
-        under its 100% cap with no weekly cap, claude-2 under 90% and claude-3 and claude-7 with
-        none; claude-4 and
+        """The committed hours: claude-1, claude-2 and claude-3 run all day, claude-1 under its
+        100% cap with no weekly cap, claude-2 under 90% and claude-3 with none; claude-4 and
         claude-6 run all day too, up to 70% of their 5-hour session from 03:00 to 15:00 and
-        under 50% otherwise, with no weekly cap, and claude-5 under 40%/60% (their own tests
-        are above). By day claude-3, claude-7, claude-1, claude-4, claude-6 and then claude-5
+        under 50% otherwise, claude-7 the same from 01:00 to 10:00, all three with no weekly
+        cap, and claude-5 under 40%/60% (their own tests are above). By day claude-3, claude-7,
+        claude-1, claude-4, claude-6 and then claude-5
         take Opus's
         work first, and claude-2, kept back, plans for the medium models."""
         pool = providers.load(ROOT)
@@ -505,7 +528,7 @@ class MatchingTests(unittest.TestCase):
                                  "claude-3": ("always", "none"), "claude-4": ("window", "caps"),
                                  "claude-5": ("always", "caps"),
                                  "claude-6": ("window", "caps"),
-                                 "claude-7": ("always", "none")})
+                                 "claude-7": ("window", "caps")})
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:hard"))
@@ -523,7 +546,7 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
         gh.add_issue(11, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
-        # claude-7, under the same rules as claude-3, takes the next.
+        # claude-7, next in the usage order, takes the next (under 50% outside 01:00–10:00).
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
                          (11, "claude-7", "build"))
         gh.runs["11"] = {"status": "in_progress"}

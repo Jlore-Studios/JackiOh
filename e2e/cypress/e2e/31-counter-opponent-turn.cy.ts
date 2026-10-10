@@ -1,29 +1,7 @@
-// BUILD M9-T12 `31-counter-opponent-turn.cy.ts`: "P2 has C #17 Counterspell set; P1 plays a Spell"
-// (§10.5's announce window, R17, R448; issue #66).
-//
-// What it asserts, read off the DOM player 1's view drew (CLAUDE.md rule 7), plus the play counts,
-// which no element draws:
-//
-//   1. Player 1 plays #5 Stockpile (1 mana: "Draw 2. Heal your hero 2."). It is announced
-//      (`cardAnnounced`), Counterspell fires inside player 1's turn (`trapFired`), and the Spell is
-//      `countered`.
-//   2. It never resolved. It is in player 1's graveyard, the hand is one card smaller and did not draw
-//      2, the crystal it cost stays spent, and neither the game's nor the turn's play count moved
-//      (no `cardPlayed`: "treated as never played", so Combo has nothing to count). Counterspell is
-//      spent from player 2's backrow.
-//   3. A countered card reaches no other trap (R17). #60 Bear Honeypot, set beside Counterspell,
-//      springs on any 1-cost card, but it is still face-down and player 2's unit row is still empty.
-//      Issue #66 names Sheepish for this. Sheepish answers only Units and C #17 counters only
-//      Spells, so no countered card could ever reach Sheepish; the Honeypot is the trap a countered
-//      Spell would have sprung.
-//   4. The Honeypot was armed all along: the 1-cost Unit player 1 plays next is not countered, and it
-//      springs the Honeypot (`trapFired`), which goes to player 2's graveyard.
-//
-// Decks: player 1 plays spec 03's `03-plays-a`. `31-counter-b` is spec 03's player-2 deck with
-// Counterspell and Bear Honeypot as its only Traps. Seed 31-counter-74 was chosen by replaying these
-// moves against the engine. It has Counterspell and The Coin in player 2's hand on player-turn 2,
-// Bear Honeypot there on player-turn 4, and Stockpile and Mr. Vanilla in player 1's hand on
-// player-turn 5.
+// BUILD M9-T12 `31-counter-opponent-turn.cy.ts`: P2's C #17 Counterspell announces for P1's Spell (§10.5, R17, R448).
+// #5 Stockpile is countered before it resolves; #60 Bear Honeypot stays armed for the next card.
+// Read player 1's DOM and unrendered play counts (CLAUDE.md rule 7). A countered Spell neither
+// resolves nor reaches another trap (R17).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -49,7 +27,6 @@ function ensureSeat(player: PlayerId): void {
   });
 }
 
-/** The game's plays (`state.counters.played`) and player 1's this turn (`turnLog.cardsPlayed`). */
 function playCounts(): Cypress.Chainable<PlayCounts> {
   return cy.gameState().then((state) => {
     const counters = (state as { counters?: { played?: number } }).counters;
@@ -77,7 +54,7 @@ describe("BUILD M9 31: a Counter answers the opponent's Spell on their turn", ()
         cy.advanceToTurn(5);
         ensureSeat("p1");
 
-        // R33: two face-down cards, neither named on player 1's screen.
+        // R33: player 1 cannot identify either face-down card.
         for (const lane of [COUNTER_LANE, HONEYPOT_LANE] as const) {
           cy.get(ts(zoneId("opponent", "backrow", lane))).find('[data-face-down="true"]').should("exist");
         }
@@ -91,13 +68,12 @@ describe("BUILD M9 31: a Counter answers the opponent's Spell on their turn", ()
 
             cy.handCardByName("Stockpile").then((stockpile) => {
               cy.get(ts(handCardId(stockpile))).click();
-              // §10.5: announced first, then the trap answers inside the announce window.
+              // §10.5: announce before the trap responds.
               cy.expectAnimating("cardAnnounced");
               cy.expectAnimating("trapFired");
               cy.expectAnimating("countered");
               cy.settled();
 
-              // Countered: to its owner's graveyard, unresolved, its crystal spent.
               cy.get(ts(handCardId(stockpile))).should("not.exist");
               cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
               cy.get(HAND_CARDS).should("have.length", handBefore - 1);
@@ -106,7 +82,6 @@ describe("BUILD M9 31: a Counter answers the opponent's Spell on their turn", ()
                 expect(after, "a countered card is treated as never played (no Combo count)").to.deep.eq(before);
               });
 
-              // Counterspell is spent; the Honeypot beside it never saw the card.
               cy.get(ts(zoneId("opponent", "backrow", COUNTER_LANE))).find('[data-face-down="true"]').should("not.exist");
               cy.get(ts(zoneId("opponent", "backrow", HONEYPOT_LANE))).find('[data-face-down="true"]').should("exist");
               cy.get(ts(cardId(honeypot))).should("not.exist");
@@ -118,7 +93,6 @@ describe("BUILD M9 31: a Counter answers the opponent's Spell on their turn", ()
                 expect(state.pending).to.eq(null);
               });
 
-              // Counterspell answers Spells only: the Unit is not countered, and it springs the Honeypot.
               cy.handCardByName("Mr. Vanilla").then((vanilla) => {
                 cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 1 }, expectAnimating: "trapFired" });
                 cy.get(ts(zoneId("opponent", "backrow", HONEYPOT_LANE))).find('[data-face-down="true"]').should("not.exist");

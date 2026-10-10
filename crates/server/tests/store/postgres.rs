@@ -1,17 +1,14 @@
-//! What only a real Postgres can prove about the Postgres store (`Db::Pg`, `src/db/pg.rs`) — the
-//! half of the store that is not behaviour the in-memory fake could ever have
-//! (`tests/store/contract.rs` covers that half against both). Everything here is about the
-//! DATABASE: which role the store runs as, that `SET LOCAL` really is local, that the `app.*`
-//! functions are the ones doing the work, and the schema invariants the port leans on (§9.4, §9.5).
+//! What only a real Postgres can prove about the Postgres store (`Db::Pg`, `src/db/pg.rs`);
+//! `tests/store/contract.rs` covers the rest against both stores. Here: which role the store runs as,
+//! that `SET LOCAL` really is local, that the `app.*` functions do the work, and the schema
+//! invariants the store leans on (§9.4, §9.5).
 //!
-//! The port of `apps/server/test/db/postgres.spec.ts`. Run with `tests/db/run.sh`, which stands a
-//! Postgres up and sets `DATABASE_URL`; without it every case here returns at once, so `cargo test`
-//! stays hermetic. The cases share one database and truncate it, so `run.sh` runs them one at a time
-//! (`--test-threads=1`).
+//! Run with `tests/db/run.sh`, which sets `DATABASE_URL`; without it every case returns at once, so
+//! `cargo test` stays hermetic. The cases share one database and truncate it, so `run.sh` runs them
+//! one at a time (`--test-threads=1`).
 //!
-//! Each store call that TS made outside `store.tx` is its own transaction here too: `once!` begins
-//! one (`Db::begin`), makes the call and commits, as TS's `session.run` did. Rows go in as the JSON
-//! TS wrote and come out as JSON, so these cases read the wire shapes, not Rust field names.
+//! A store call made outside `store.tx` is its own transaction: `once!` begins one (`Db::begin`),
+//! makes the call and commits. Rows go in and come out as JSON, so these cases read the wire shapes.
 
 use std::collections::BTreeSet;
 use std::future::Future;
@@ -25,9 +22,8 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
-/// One transaction around one store call, as TS's `session.run` gave every method called outside
-/// `store.tx`: begin (the role switch and the subject), the call, commit. Answers the call's value,
-/// or the first error's text; an error drops the transaction, which rolls it back.
+/// One transaction around one store call: begin (the role switch and the subject), the call,
+/// commit. Answers the call's value, or the first error's text; an error drops the transaction.
 macro_rules! once {
     ($db:expr, $sub:expr, |$tx:ident| $call:expr) => {
         async {
@@ -40,9 +36,7 @@ macro_rules! once {
     };
 }
 
-// ---------------------------------------------------------------------------
-// The fixture catalog and the database setup (`test/db/harness.ts`, the parts this file used)
-// ---------------------------------------------------------------------------
+// The fixture catalog and the database setup
 
 /// SPEC §9.4 L2: `DECK_SIZE` is 20, and L1 says three decks, so 60 ids is the floor.
 const CATALOG_VERSION: &str = "core-1";
@@ -91,9 +85,7 @@ async fn seed_cards(admin: &PgPool) {
     .expect("seed the fixture cards");
 }
 
-// ---------------------------------------------------------------------------
 // Small helpers
-// ---------------------------------------------------------------------------
 
 fn uuid() -> String {
     uuid::Uuid::new_v4().to_string()
@@ -112,7 +104,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
 }
 
-/// A row from the JSON TS wrote it as; the store method's parameter names the type.
+/// A row from its JSON; the store method's parameter names the type.
 fn de<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
@@ -122,7 +114,6 @@ fn js<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a store row serialises")
 }
 
-/// `Date.now()`.
 fn now_ms() -> i64 {
     (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
 }
@@ -191,7 +182,7 @@ struct ProbeRow {
     uid: Option<String>,
 }
 
-/// TS's `beforeAll` and `beforeEach` together: each case here stands alone.
+/// Each case stands alone.
 struct Ctx {
     url: String,
     admin: PgPool,
@@ -225,7 +216,6 @@ async fn setup() -> Option<Ctx> {
 }
 
 impl Ctx {
-    /// TS's `afterAll`.
     async fn finish(self) {
         self.pool.close().await;
         sqlx::raw_sql(PROBE_TEARDOWN)
@@ -341,9 +331,7 @@ async fn create_match(db: &Db, row: Value) {
     once!(db, None, |tx| tx.matches_create(&de(row.clone()))).expect("matches.create");
 }
 
-// ---------------------------------------------------------------------------
 // The thing that bit this project before: SET LOCAL outside a transaction
-// ---------------------------------------------------------------------------
 
 mod the_acting_role {
     use super::*;
@@ -447,9 +435,7 @@ mod the_acting_role {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Migration 0001's signup trigger and R111's launch-grant trigger
-// ---------------------------------------------------------------------------
 
 mod triggers_the_application_never_sees {
     use super::*;
@@ -497,9 +483,7 @@ mod triggers_the_application_never_sees {
     }
 }
 
-// ---------------------------------------------------------------------------
 // SPEC §9.4's redemption, as the one database transaction the spec describes
-// ---------------------------------------------------------------------------
 
 mod app_redeem_invite_code {
     use super::*;
@@ -633,9 +617,7 @@ mod app_redeem_invite_code {
     }
 }
 
-// ---------------------------------------------------------------------------
 // app.upsert_deck / app.upsert_trio: the SQL is stricter than the port, on purpose
-// ---------------------------------------------------------------------------
 
 mod r250_r252_app_upsert_deck_and_app_upsert_trio {
     use super::*;
@@ -674,9 +656,8 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         decks.iter().map(js).collect()
     }
 
-    /// ports.ts: "The cap is checked under a lock on the profile, so two concurrent creates cannot
-    /// both pass it." The in-memory store is single-threaded and cannot show this; here the creates
-    /// really do run at once, on separate connections, each in its own transaction.
+    /// The cap is checked under a lock on the profile, so two concurrent creates cannot both pass it.
+    /// The in-memory store cannot show this; here the creates run at once, on separate connections.
     #[tokio::test]
     async fn r250_lets_exactly_as_many_concurrent_creates_through_as_the_cap_has_room_for() {
         let Some(ctx) = setup().await else { return };
@@ -755,7 +736,6 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         for _ in 0..3 {
             outcomes.push(upsert(&ctx.db, deck(&profile_id, json!({})), 10).await);
         }
-        // TS's `finally`: the cap goes back before anything is asserted.
         sqlx::raw_sql("update app.settings set value = to_jsonb(10) where key = 'max_saved_decks'")
             .execute(&ctx.admin)
             .await
@@ -864,9 +844,7 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R263: a reserved match id is a row here, and discarding it releases what it held
-// ---------------------------------------------------------------------------
 
 mod r263_matches_discard_open {
     use super::*;
@@ -1046,9 +1024,7 @@ mod r672_profiles_current_match_id {
     }
 }
 
-// ---------------------------------------------------------------------------
 // app.append_match_action: the nonce dedupe the port cannot express
-// ---------------------------------------------------------------------------
 
 mod app_append_match_action {
     use super::*;
@@ -1153,9 +1129,7 @@ mod app_append_match_action {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The two atomic claims (§9.5), under genuine concurrency
-// ---------------------------------------------------------------------------
 
 mod concurrency {
     use super::*;
@@ -1267,9 +1241,7 @@ mod concurrency {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The reaper's input (§9.5)
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn app_live_matches_backs_matches_live_and_an_open_room_is_not_one() {
@@ -1319,4 +1291,76 @@ async fn app_live_matches_backs_matches_live_and_an_open_room_is_not_one() {
     let ids: Vec<Value> = live.iter().map(|row| js(row)["id"].clone()).collect();
     assert_eq!(ids, vec![json!(match_id)]);
     ctx.finish().await;
+}
+
+// ---------------------------------------------------------------------------
+// R1435: the usernames `seed-accounts` gives its accounts
+// ---------------------------------------------------------------------------
+
+mod r1435_seed_accounts {
+    use super::*;
+    use jackioh_server::cli::seed_accounts::name_seeded_account;
+
+    /// One profile's username columns as the database holds them: base, key, tag, whether the
+    /// prompt is answered, and whether no change has started a cooldown.
+    async fn username_row(admin: &PgPool, profile_id: &str) -> (String, String, Option<i32>, bool, bool) {
+        let row = sqlx::query(
+            "select username_base, username_key, username_tag, username_prompted,
+                    username_changed_at is null as no_cooldown
+               from public.profiles where id = $1",
+        )
+        .bind(uid(profile_id))
+        .fetch_one(admin)
+        .await
+        .expect("the profile's username");
+        (
+            row.try_get("username_base").expect("username_base"),
+            row.try_get("username_key").expect("username_key"),
+            row.try_get("username_tag").expect("username_tag"),
+            row.try_get("username_prompted").expect("username_prompted"),
+            row.try_get("no_cooldown").expect("no_cooldown"),
+        )
+    }
+
+    #[tokio::test]
+    async fn r1435_seed_accounts_names_its_accounts_bare_and_prompted() {
+        let Some(ctx) = setup().await else { return };
+        let first = ctx.active_profile().await;
+        let second = ctx.active_profile().await;
+        // Each starts as its sign-up's default, owing the prompt (R1434).
+        assert_eq!(
+            username_row(&ctx.admin, &first).await,
+            ("Player".to_string(), "player".to_string(), Some(1), false, true)
+        );
+
+        let mut conn = ctx.admin.acquire().await.expect("a connection");
+        name_seeded_account(&mut conn, &first, 1)
+            .await
+            .expect("the first account named");
+        name_seeded_account(&mut conn, &second, 2)
+            .await
+            .expect("the second account named");
+        // A second run writes the same name over itself.
+        name_seeded_account(&mut conn, &first, 1)
+            .await
+            .expect("the first account named again");
+        drop(conn);
+
+        assert_eq!(
+            username_row(&ctx.admin, &first).await,
+            ("Fixture1".to_string(), "fixture1".to_string(), None, true, true)
+        );
+        assert_eq!(
+            username_row(&ctx.admin, &second).await,
+            ("Fixture2".to_string(), "fixture2".to_string(), None, true, true)
+        );
+        // And the store reads it as `/api/auth/me` does: no prompt owed, a change allowed at once.
+        let profile = once!(ctx.db, Some(first.as_str()), |tx| tx.profiles_get_by_id(&first))
+            .expect("profiles.getById");
+        let profile = must(profile, "the seeded profile");
+        assert_eq!(profile.username(), "Fixture1");
+        assert!(profile.username_prompted);
+        assert_eq!(profile.username_changed_at, None);
+        ctx.finish().await;
+    }
 }

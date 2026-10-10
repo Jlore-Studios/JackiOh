@@ -1,10 +1,6 @@
 //! Copy the last Spell's text (docs/classic-sets.md B5 E14; Classic #57 Echo; SPEC §8.6 row 57, R399,
-//! R545–R547), proved on fixture cards (`fixtures/copiedText.ts`): a copier declares and resolves the
-//! last Spell's choices and script on the face it was played on, its X and Echo, the continuations of
-//! its prompts, its Cast on draw, its preview and glow; the copy is fixed as the play begins; it records
-//! the Spell it copied, never itself; and the opponent's view never names it in hand.
-//!
-//! Port of `packages/engine/test/copied-text.test.ts`.
+//! R545–R547), on fixture cards: the copy is fixed as the play begins, records the Spell it copied
+//! (never itself) and is never named in the opponent's view of the hand.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -24,19 +20,18 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::copied_text::{CT, with_copied_text};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 
-/// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
+/// Every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// `JSON.parse(JSON.stringify(state))`.
 fn round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively.
+/// Every key the expected object names matches, recursively.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -49,9 +44,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
-/// the rng are kept beside the state, so the test can read the state between calls as TS's shared
-/// objects let it.
+/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -155,12 +148,12 @@ fn plays_of(state: &GameState, player: PlayerId, instance_id: &str) -> Vec<Actio
         .collect()
 }
 
-/// One field of every play, as JSON (`plays.map((play) => play.<key>)`).
+/// One field of every play, as JSON.
 fn field_of_plays(plays: &[ActionBody], key: &str) -> Vec<Value> {
     plays.iter().map(|play| json_of(play)[key].clone()).collect()
 }
 
-/// p2's unit in `lane`, the top of its pile (`state.players.p2.units[lane - 1]?.[0]`).
+/// The top of `player`'s pile in `lane`.
 fn top_unit(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
     state.players[player]
         .units
@@ -169,7 +162,7 @@ fn top_unit(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardIns
         .and_then(|pile| pile.first())
 }
 
-/// The hand card a view shows for `instance_id`, when the hand is a list (`Array.isArray(view.you.hand)`).
+/// The hand card a view shows for `instance_id`, when the hand is a list.
 fn held_in(hand: &Value, instance_id: &str) -> Value {
     hand.as_array()
         .and_then(|cards| cards.iter().find(|held| held["instanceId"] == json!(instance_id)))
@@ -380,12 +373,10 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         );
     }
 
-    /// The last Spell can be a fused card that has since gone where no player sees it: in part 40's
-    /// sweep (`sweep:easy:core-076:2`) a deck card fused by Classic+ #73, keeping its cost (R470), was
-    /// played and went back to the bottom of its deck by its own Pile On clause. The definition is the
-    /// state's (`transient_defs`, which nothing removes), so the copier still reads the copied X off it.
-    /// Only a state without that definition reaches `copied_chooses_x`'s `def_of` panic, and no action
-    /// makes one: the AI's `redact` did (`crates/ai/tests/ai/redact_play_records.rs`).
+    /// The last Spell can be a fused card since gone where no player sees it (part 40's sweep: a deck
+    /// card fused by Classic+ #73, keeping its cost, R470, played, then sent to its deck's bottom). Its
+    /// definition stays in the state (`transient_defs`), so the copier still reads its X; only the AI's
+    /// `redact` made a state without it, which panics `def_of` (`crates/ai/tests/ai/redact_play_records.rs`).
     #[test]
     fn r545_r399_a_fused_x_cost_last_spell_back_in_its_deck_keeps_its_definition_and_the_copier_chooses_its_x()
      {

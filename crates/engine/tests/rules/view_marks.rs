@@ -1,21 +1,16 @@
-//! Two marks v0.1.1 adds to a backrow card's view (SPEC §10.8), each read by the client and decided
-//! by the engine alone (CLAUDE.md rule 7):
+//! Two marks on a backrow card's view (SPEC §10.8), each read by the client and decided by the
+//! engine alone (CLAUDE.md rule 7):
 //!
 //!   R371  `unrevealed: true` on the controller's own view of a Trap or Field Trap that is still
 //!         face-down, so the board can say "your opponent can't see this card" without working out
-//!         R33 itself. It is the same answer `backrowIsPublic` gives the other seat, so the mark and
-//!         the back cannot disagree: present exactly when the other player sees a back.
+//!         R33 itself. It is the same answer `backrowIsPublic` gives the other seat: present exactly
+//!         when the other player sees a back.
 //!   R372  `counters.gradeLetter`, the letter #93 Combo-Index's grade counter stands for (E..S), and
 //!         a preview value's `display`, the word a value prints as, carried through `previewOf`
-//!         untouched. The Core card's own values are proved in packages/cards
-//!         (test/093-combo-index.test.ts).
+//!         untouched.
 //!
-//! Test-only definitions, registered over the fixture catalog as viewFor.test.ts and
-//! preview.test.ts register theirs, and put back afterwards.
-//!
-//! Port of `packages/engine/test/view-marks.test.ts`. TS's `beforeAll`/`afterAll` saved the registries
-//! and put them back after the file; each Rust test runs on its own thread with its own testkit
-//! override (SURFACE §8), so nothing registered here outlives its test and there is nothing to restore.
+//! Test-only definitions, registered over the fixture catalog.
+//! Surface contract: docs/v0.3.0/SURFACE.md §8.
 
 use jackioh_engine::effects::steal;
 use jackioh_engine::subsystems::combo_index::GRADES;
@@ -23,7 +18,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{new_game, put, sink_for, slot};
 
-/// TS `def(name, type)`; `index` is the one TS's `nextIndex` counter gave it (3701 on).
+/// A test-only definition; `index` is its catalog index (3701 on).
 fn def(name: &str, type_: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("vm-{name}"),
@@ -120,12 +115,12 @@ fn public_card(entry: Option<&Option<BackrowView>>) -> PublicBackrowView {
     }
 }
 
-/// A backrow entry as its JSON (`entry?.faceDown`, `"unrevealed" in entry`).
+/// A backrow entry as its JSON.
 fn entry_json(entry: &impl serde::Serialize) -> Value {
     serde_json::to_value(entry).expect("a view serialises")
 }
 
-/// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
+/// Every key of `expected` is in `actual` with a matching value.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected

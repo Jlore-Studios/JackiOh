@@ -1,21 +1,15 @@
-//! SPEC §9.11, R376: the engine's `summarize_game` over real cards. The engine's
-//! tests/rules/game_summary.rs proves it with fixtures; this file plays real games with SPEC §10.7's
-//! policy, as the fuzz gate does, and checks the record against oracles it does not use:
+//! SPEC §9.11, R376: the engine's `summarize_game` over real cards; tests/rules/game_summary.rs in
+//! the engine proves it with fixtures. These games are played with SPEC §10.7's policy, as the fuzz
+//! gate plays them, and checked against oracles it does not use:
 //!
 //!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
 //!    first turn's draw), and The Coin is in the second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
-//!    announce window (§10.5 step 3a, R448), which were never played, and each as the card it resolves
-//!    as when step 3 replaced it (C #23 Devil's Pact, R449): these games counter and replace some. #96
-//!    My Pawn plays out a turn for its owner's opponent inside the action of the attack that sprang it,
-//!    with no `play` in the log, so a game in which it fired may hold more plays than the log names,
-//!    never fewer and never out of order;
-//!  - so a cast (#21 Hinder or #90.1 CN-Virus cast on its draw, §2.4), which emits `cardPlayed` with
-//!    no `play` behind it, is never counted as one: these games cast some, and the plays still match;
-//!  - the draws are every card drawn from the first turn on, less those burned on a full hand (R4) and
-//!    those cast on their draw, which never reached the hand: these games burn and cast some.
-//!
-//! Port of `packages/cards/test/game-summary.test.ts` (part 5).
+//!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
+//!    replacement (C #23 Devil's Pact, R449); #96 My Pawn plays out a turn inside an attack's action
+//!    with no `play` logged, so such a game may hold more plays than the log names, never fewer;
+//!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
+//!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
 use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::deckable;
@@ -50,7 +44,7 @@ fn sorted(ids: &[String]) -> Vec<String> {
     out
 }
 
-/// A `drawn` event, as the cards a step drew wait for their fate (TS `Extract<GameEvent, { type: "drawn" }>`).
+/// A `drawn` event, as the cards a step drew wait for their fate.
 struct Drawn {
     player: PlayerId,
     instance_id: String,
@@ -64,7 +58,7 @@ struct DrawsKept {
     casts: i32,
 }
 
-/// The instance id of the events that decide a drawn card's fate (TS `"instanceId" in event`).
+/// The instance id of the events that decide a drawn card's fate.
 fn fate_instance_id(event: &GameEvent) -> Option<&str> {
     match event {
         GameEvent::AddedToHand { instance_id, .. }
@@ -76,12 +70,10 @@ fn fate_instance_id(event: &GameEvent) -> Option<&str> {
     }
 }
 
-/// The cards a step drew into each hand from event `from` on, by what became of each card a `drawn`
-/// names, whatever came between: it entered the hand (an `addedToHand` names it), burned on a full
-/// hand (a `burned` does, R4) or was cast on its draw (§2.4: its `cardPlayed`, or the `countered` or
-/// `transformed` that took its place, R448, R449). Only the first reached the hand. A cast's choices
-/// are asked before its announce, so a draw whose fate a prompt holds waits in `waiting` for a later
-/// step's events.
+/// The cards a step drew into each hand from event `from` on, by what became of each `drawn` card:
+/// an `addedToHand` names it (it reached the hand), a `burned` does (R4), or it was cast on its draw
+/// (§2.4: its `cardPlayed`, or the `countered` or `transformed` that took its place, R448, R449). A
+/// cast's choices are asked before its announce, so a draw a prompt holds waits in `waiting`.
 fn draws_kept(events: &[GameEvent], from: usize, waiting: &mut Vec<Drawn>) -> DrawsKept {
     let mut kept: PerPlayer<Vec<String>> = PerPlayer::new(Vec::new(), Vec::new());
     let mut burns = 0;
@@ -152,7 +144,6 @@ fn open_play(plays: &PerPlayer<Vec<Play>>, instance_id: &str) -> Option<(PlayerI
 mod summarize_game_over_real_cards_s9_11 {
     use super::*;
 
-    // TS ran this with `{ timeout: 120_000 }`; cargo test has no per-test timeout.
     #[test]
     fn r376_reads_opening_hands_plays_and_casts_off_real_games_as_the_state_and_the_log_show_them() {
         register_all();
@@ -241,8 +232,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && plays[seat][at].announced
                             {
-                                // TS: `plays[event.player].splice(plays[event.player].indexOf(play), 1)`,
-                                // which takes the last entry when the play is the other seat's.
+                                // Takes the last entry when the play is the other seat's.
                                 let list = &mut plays[*countered];
                                 if seat == *countered {
                                     list.remove(at);
@@ -309,7 +299,7 @@ mod summarize_game_over_real_cards_s9_11 {
                     {
                         let mut p1 = hand(&result.state, PlayerId::P1);
                         for card in &step.kept.p1 {
-                            // TS: `p1.splice(p1.lastIndexOf(card), 1)`; -1 takes the last entry.
+                            // A card not in the hand takes the last entry.
                             let at = p1
                                 .iter()
                                 .rposition(|id| id == card)

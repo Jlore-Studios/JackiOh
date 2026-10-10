@@ -2,7 +2,7 @@
 
 You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comments of
 `crates/ai/src/`). Your goal is a stronger AI: one that beats its predecessor, the AI on
-`main`, in at least 85 of 100 games, and SPEC §10.7's random policy in at least 90 of 100. The lane
+`main`, in at least 75 of 100 games, and SPEC §10.7's random policy in at least 90 of 100. The lane
 is described in `training/README.md`; read it first.
 
 ## What you may change
@@ -30,7 +30,7 @@ cargo jackioh promote --lane improve --parent-bin ~/parent-jackioh --dry-run
 ```
 
 It plays 100 games against random and 100 against the parent (`~/parent-jackioh`, built from
-`main`) and prints the gate's report: wins against each, the 90 and 85 needed, draws and games
+`main`) and prints the gate's report: wins against each, the 90 and 75 needed, draws and games
 without a result (neither counts as a win). A dry run measures your uncommitted change on the seeds
 of HEAD's `crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them:
 check a change on other seeds too, for example

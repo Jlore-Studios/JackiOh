@@ -811,6 +811,10 @@ declare
     -- 0018: the one write path for a player's settings (R633, R634), DEFINER and service_role's
     -- alone for the same reason (02's R633 block asserts a client cannot call it).
     ['merge_player_settings',       'definer'],
+    -- 0028, R1434: the BEFORE INSERT trigger that names a new profile the lowest free Player#n,
+    -- DEFINER for handle_new_user's reason: it reads every profile's username whichever role
+    -- inserts the row (15 CHECK 8 asserts no client role may attach it to a table of its own).
+    ['assign_default_username',     'definer'],
     ['catalog_version',             'invoker'],
     ['current_profile_id',          'invoker'],
     ['deny_row_mutation',           'invoker'],

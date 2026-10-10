@@ -1,15 +1,10 @@
 //! Last boards on the server (C+ #29 Portal to the Past, R417, R565; BUILD M9-T11: "a finished game
 //! writes both seats' last boards, never the opponent's face-down cards").
 //!
-//! The first block is the real engine under the real registry, actor and results writer, over the
-//! fake store: a real game ends with a face-down card on the field, each seat's stored board is
-//! exactly the field its own final view showed, and the next match between the same profiles
-//! starts from those boards, frozen on its row, so a rebuilt actor folds the same game. The second
-//! block is the wiring the real game cannot reach on demand, straight through the results writer.
-//!
-//! Port of `apps/server/test/match/last-boards.test.ts`. TS's `enginePort()` is the engine itself
-//! here (SURFACE §11.3: the server calls `jackioh_engine` directly), and the second block's
-//! scripted port, which it never drove, is not needed at all.
+//! The first block plays a real game over the fake store: each seat's stored board is the field its
+//! own final view showed, and the next match starts from those boards, frozen on its row, so a
+//! rebuilt actor folds the same game. The second goes straight through the results writer.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;
 
@@ -32,7 +27,7 @@ const P2: &str = "profile-2";
 /// The epoch-ms stamp the rows below are written at; the results writer only stores it.
 const AT: i64 = 1_700_000_000_000;
 
-/// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
+/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -54,7 +49,7 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
+/// The fake store behind the test app.
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -62,7 +57,7 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// TS's `store.onCall`: every store method named `method` fails with `message` until cleared.
+/// Every store method named `method` fails with `message` until cleared.
 async fn fail_on(app: &App, method: &'static str, message: &'static str) {
     fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
         if called == method {
@@ -109,7 +104,7 @@ fn shown_field(view: &Value) -> Vec<Value> {
     field
 }
 
-/// The test app with both profiles seeded (TS's `world(engine)`; the engine needs no wiring).
+/// The test app with both profiles seeded.
 async fn world() -> Arc<App> {
     let app = test_app().await;
     let data = fake(&app);
@@ -143,7 +138,7 @@ async fn view_of(actor: &MatchActor, player: PlayerId) -> Value {
     to_json(&actor.view_for(player))
 }
 
-/// TS's `submit`: one action as `player`, under the next `lb-<n>` nonce; a refusal fails the test.
+/// One action as `player`, under the next `lb-<n>` nonce; a refusal fails the test.
 struct Submitter {
     actor: MatchActor,
     n: u32,
@@ -436,7 +431,7 @@ mod r565_the_results_writer_and_the_boards {
         let app = world().await;
         let first: Vec<LastBoardEntry> = from(board_1());
         store!(app, t => t.last_boards_put(P1, from(json!("server")), &first, AT as _).await.expect("lastBoards.put"));
-        // A ceiling long past (TS: one millisecond ago).
+        // A ceiling long past.
         live_match(&app, "m-reaped", 0).await;
         assert_eq!(
             reap_stuck_matches(&app).await.expect("the reaper runs"),

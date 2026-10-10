@@ -1,16 +1,12 @@
-// R658: a prompt's options are dragged as well as clicked (docs/polish/7-mobile-ux.md S9, #261).
+// R658: a prompt's options are dragged as well as clicked (docs/polish/7-mobile-ux.md S9).
 //
-// A press on one of the open picker's options (`prompt-option-<key>`) that travels
-// DRAG_THRESHOLD_PX lifts it: a ghost with the option's name follows the pointer, and the option
-// itself fades where it sits. Released outside the picker's panel (over the board), the option is
-// clicked, so the drop does exactly what a click on it does: a one-of-N picker (a Discover, a
-// "Choose one", a target list) sends its answer, and a picker of several picks (the mulligan)
-// toggles that pick. Released back over the panel, or cancelled (Escape, the context menu, a lost
-// pointer), it does nothing. Nothing here reads a rule or an option's meaning (CLAUDE.md rule 7):
-// what the click does is Prompt.tsx's, and its options came from the engine.
+// A press on an open picker's option (`prompt-option-<key>`) that travels DRAG_THRESHOLD_PX lifts it:
+// a ghost with its name follows the pointer. Released outside the picker's panel the option is
+// clicked, so the drop does exactly what a click does; released over the panel, or cancelled
+// (Escape, the context menu, a lost pointer), it does nothing. Nothing here reads a rule or an
+// option's meaning (CLAUDE.md rule 7): what the click does is Prompt.tsx's.
 //
-// The board's own drags are DragLayer.tsx's; this one never starts on the board, and that one never
-// starts in a picker, since the picker sits outside `[data-testid="board"]`.
+// The board's own drags are DragLayer.tsx's; the picker sits outside `[data-testid="board"]`.
 
 import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 

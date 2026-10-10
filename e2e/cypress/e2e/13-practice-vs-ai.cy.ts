@@ -1,44 +1,6 @@
-// Spec 13 — practice against the AI (SPEC §9.9, R187; docs/polish/3-ai.md B40). With spec 01,
-// docs/v0.3.0/README.md V19: a practice game on the WASM engine and AI.
-//
-// What it proves, in a real browser against `pnpm build:e2e` + `vite preview` and NO server:
-//
-//   * an anonymous `/practice` shows the setup screen;
-//   * an Easy game with the human seated p2 shows `practice-thinking` while the AI mulligans and
-//     then plays — the AI answers its own mulligan at once, while the human's picker is still open
-//     (R265), and that picker says so ("Opponent is ready") — and the AI's first turn changes the
-//     opponent's side of the board (mana, hand or units) between the human's mulligan and the
-//     human's first turn;
-//   * a few human turns end through the UI with no `action-error`;
-//   * after the AI's turns the log still holds the human's first End turn and the game's first
-//     turn (R745);
-//   * the game the browser played folds in Node, with the handicaps the page reports, to the
-//     browser's own hash (`cy.task("replayHash")`, R187);
-//   * conceding — `concede`, then Concede in the "Concede this game?" dialog it opens — shows the
-//     result overlay with "Loss", and the practice result dialog with "Defeat";
-//   * a Hard game with the human seated p2 shows `mana-opponent` at `data-max="2"` on the AI's
-//     first turn (§9.9's `min(turns + 1, 7)`, R181), and its log, with the Hard handicap the page
-//     reports, folds in Node to the browser's own hash (Easy stores no handicap, R180, so this is
-//     the game that proves the handicapped replay end to end);
-//   * a reload in the middle of a game picks it up on the same state (R668);
-//   * Save and leave keeps the game: the setup, and a reload of it, show the practice menu with its
-//     banner rather than the game, and Resume picks it up on the same log and hash; Leave without
-//     saving keeps nothing, and the next visit shows no banner (R765);
-//   * nothing ever requests `/api` or opens a WebSocket.
-//
-// House rules (BUILD M8): seeds come from `seedFor`, every wait is `cy.settled()` or a retried
-// assertion on a testid (never `cy.wait(ms)`), and every selector comes from support/testids.ts.
-//
-// Two harness choices, both about observing rather than steering:
-//
-//   * The DOM is recorded from the first byte (`installRecorder`, a MutationObserver installed in
-//     `onBeforeLoad`). The AI's steps arrive faster than Cypress polls under `&pace=fast`, so
-//     "the think indicator was shown while the AI mulliganed" is read off a record of every state
-//     the page showed, not off whichever instant a retried `cy.get` happened to land on.
-//   * The Hard game prefers reduced motion. The board holds a view back while its events animate
-//     (BUILD M5-T4) and then jumps to the newest one, so with animations on, a short AI turn can be
-//     over before its first view is ever drawn. Reduced motion draws every view as it arrives,
-//     which is what "shows data-max=2 on the AI's first turn" needs to be observable at all.
+// Spec 13 (V19): practice against the AI without a server (SPEC §9.9, R187; B40).
+// It observes R265 mulligan thinking, R745 log retention, R181/R180 handicaps, R668 reload, and R765 save/leave.
+// BUILD M8 uses deterministic seeds, retried testids, and no `cy.wait(ms)`; recorder history and reduced motion make BUILD M5-T4 AI turns observable.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -78,42 +40,25 @@ import {
 } from "../../support/testids.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
 
-/**
- * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. The human here only ends turns,
- * so the seed has to be a game the Easy AI takes more than `HUMAN_TURNS` of its turns to win: with a
- * random deck, R635 re-dealt the old seed (`13-practice`) into a game the human lost after its third
- * turn, and patch v0.2.9's Pocket Chaos (2)→(4) re-dealt `13-practice-n` the same way (the AI-deck
- * draw is cost-bucket weighted), into a game the Easy AI wins on turn 7, before the human's fourth.
- * The AI's own moves deal games too: AI generation 1 (#585, the unban lane) won `13-practice-r`
- * after the human's second turn. This one lets the human, answering nothing but the mulligan, reach
- * five of its turns against generation 0 and six against generation 1, where the spec needs four —
- * found by playing each candidate through the practice core with both AIs, the same method as
- * before. A later AI promotion that wins it sooner fails this spec in its own pull request.
- */
+/** BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. */
 const SEED = seedFor("13-practice-t");
 
-/**
- * The Hard game's own seed: it needs an AI first turn the page has time to show, which the old seed
- * still gives and `13-practice-n:hard` does not (the Hard AI plays nothing and ends it at once).
- */
+/** The Hard seed yields an observable first AI turn. */
 const HARD_SEED = `${seedFor("13-practice")}:hard`;
 
-/** Human turns played through the UI before the concede. */
 const HUMAN_TURNS = 3;
 
-/** The module worker loads the engine, the 110 card scripts and the AI before the first answer. */
+/** The worker loads engine, card scripts, and AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
 
-/** A prompt the human must answer mid-turn (a cast-on-draw, R58) is rare; this bounds the loop. */
+/** Bound rare cast-on-draw prompts (R58). */
 const PROMPT_BUDGET = 10;
 
 type Difficulty = "easy" | "medium" | "hard";
 
-// ---------------------------------------------------------------------------------------------
-// the page's dev handle (apps/web/src/routes/practice.tsx, dev builds only)
-// ---------------------------------------------------------------------------------------------
+// Page dev handle.
 
-/** A structural subset of `PracticeDebug` (apps/web/src/practice/protocol.ts). */
+/** Structural subset of `PracticeDebug`. */
 type PracticeDebugLike = {
   seed: string;
   decks: [string[], string[]];
@@ -123,7 +68,7 @@ type PracticeDebugLike = {
   hash: string;
   difficulty: Difficulty;
   humanSeat: PlayerId;
-  /** R433: the dealt seats (the human's, on the random deck). */
+  /** R433: dealt seats for the random deck. */
   dealt?: PlayerId[];
 };
 
@@ -133,11 +78,8 @@ type PracticeHandleLike = {
   readonly thinking: boolean;
 };
 
-// ---------------------------------------------------------------------------------------------
-// the recorder
-// ---------------------------------------------------------------------------------------------
+// Recorder.
 
-/** One state of the page, as far as this spec cares. */
 type Sample = {
   thinking: boolean;
   turn: string | null;
@@ -147,7 +89,7 @@ type Sample = {
   opponentHand: string | null;
   opponentUnits: number;
   prompt: string | null;
-  /** R265: the human's mulligan picker's word on the AI's own mulligan, `data-ready`; null without a picker. */
+  /** R265: the human picker reports the AI mulligan with `data-ready`. */
   opponentReady: string | null;
 };
 
@@ -155,12 +97,10 @@ type Recorder = { samples: Sample[]; sockets: number };
 
 type PracticeWindow = { __jackiohPractice?: PracticeHandleLike; __practiceRecorder?: Recorder };
 
-/** Any `card-<instanceId>`, the element a unit on the field renders as. */
 const ANY_CARD = `[data-testid^="${cardId("")}"]`;
 
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 
-/** The units on the opponent's side: every card inside one of its five unit zones. */
 function opponentUnitCount(doc: Document): number {
   return LANES.reduce(
     (count, lane) => count + (doc.querySelector(ts(zoneId("opponent", "units", lane)))?.querySelectorAll(ANY_CARD).length ?? 0),
@@ -183,10 +123,7 @@ function sampleOf(doc: Document): Sample {
   };
 }
 
-/**
- * Record every distinct page state from before the app's first script runs, and count every
- * WebSocket the page opens. Installed in `onBeforeLoad`, so nothing the page does escapes it.
- */
+/** Record page states and WebSockets from `onBeforeLoad`. */
 function installRecorder(win: Cypress.AUTWindow): void {
   const recorder: Recorder = { samples: [], sockets: 0 };
   (win as unknown as PracticeWindow).__practiceRecorder = recorder;
@@ -212,7 +149,7 @@ function installRecorder(win: Cypress.AUTWindow): void {
   });
 }
 
-/** `prefers-reduced-motion: reduce`, for the one test that must see every view drawn (header). */
+/** Reduce motion so the recorder observes every drawn view. */
 function preferReducedMotion(win: Cypress.AUTWindow): void {
   const real = win.matchMedia.bind(win);
   win.matchMedia = (query: string): MediaQueryList => {
@@ -249,9 +186,7 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
     .then((win) => (win as unknown as PracticeWindow).__jackiohPractice as PracticeHandleLike);
 }
 
-// ---------------------------------------------------------------------------------------------
-// driving the page
-// ---------------------------------------------------------------------------------------------
+// Drive the page.
 
 function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): string {
   const params = new URLSearchParams({ seed, difficulty, deck: "random", seat, pace: "fast" });
@@ -267,28 +202,20 @@ function visitPractice(url: string, options: { reducedMotion?: boolean } = {}): 
   });
 }
 
-/** Any `prompt-option-<key>`. */
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
 
-/** A toggle already chosen: `aria-pressed` (Prompt.tsx) or `data-selected` (the board's spelling). */
 function isPicked($option: JQuery<HTMLElement>): boolean {
   const marked = $option.closest("[aria-pressed], [data-selected]");
   const element = marked.length > 0 ? marked : $option;
   return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
 }
 
-/**
- * `cy.settled()` for a moment that can hand play to the AI. The AI takes its next step each time
- * the board has caught up with the last one (practice/controller.ts), so the board may go busy and
- * idle again for a whole AI turn, far longer than `timeouts.animation` allows for one action's
- * animations. The board must still settle; it gets as long as whole AI turns take, like
- * `waitForHuman`.
- */
+/** The AI can take whole turns between board settlements. */
 function settledThroughAiTurn(): void {
   cy.get(ANIMATING, { timeout: timeouts.game, log: false }).should("not.exist");
 }
 
-/** R9 through the prompt UI: select every card to keep, then confirm. */
+/** R9: select every mulligan card, then confirm. */
 function keepWholeHand(): void {
   cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
   cy.get(promptOf("mulligan")).within(() => {
@@ -301,7 +228,6 @@ function keepWholeHand(): void {
   settledThroughAiTurn();
 }
 
-/** Answer whatever prompt the human holds with its first option, confirming if it asks to be. */
 function answerFirstOption(): void {
   cy.get(PROMPT).first().within(() => {
     cy.get(ANY_PROMPT_OPTION).first().click();
@@ -313,7 +239,6 @@ function answerFirstOption(): void {
   settledThroughAiTurn();
 }
 
-/** The opponent's side of the board as the human sees it: mana, hand size and units. */
 function opponentSide(): Cypress.Chainable<string> {
   return cy.document({ log: false }).then((doc) => {
     const sample = sampleOf(doc);
@@ -323,7 +248,6 @@ function opponentSide(): Cypress.Chainable<string> {
 
 type Waited = "turn" | "prompt" | "over";
 
-/** Wait, as long as whole AI turns take, for the human's own main phase, a prompt, or the end. */
 function waitForHuman(): Cypress.Chainable<Waited> {
   return cy
     .get("body", { timeout: timeouts.game })
@@ -346,7 +270,7 @@ function waitForHuman(): Cypress.Chainable<Waited> {
     });
 }
 
-/** The human's main phase, answering any prompt on the way (at most PROMPT_BUDGET of them). */
+/** Reach the human main phase, resolving at most PROMPT_BUDGET prompts. */
 function reachHumanTurn(prompts = PROMPT_BUDGET): void {
   waitForHuman().then((waited) => {
     expect(waited, "the game is still on when the human is due to act").to.not.eq("over");
@@ -370,9 +294,7 @@ function endHumanTurns(remaining: number): void {
   endHumanTurns(remaining - 1);
 }
 
-// ---------------------------------------------------------------------------------------------
-// no server
-// ---------------------------------------------------------------------------------------------
+// No server.
 
 let apiRequests = 0;
 
@@ -392,9 +314,7 @@ function expectNoServer(): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// the spec
-// ---------------------------------------------------------------------------------------------
+// Spec.
 
 describe("13 — practice against the AI, with no account and no server (§9.9, B40)", () => {
   it("B40 anonymous /practice shows setup", () => {
@@ -427,9 +347,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
     cy.get(ts(PRACTICE_SETUP)).should("not.exist");
 
-    // R265: both mulligans open with the deal, so the human's picker is up at once, and the AI
-    // answers its own without waiting for the human's (practice/controller.ts): the picker, still
-    // open, turns to "Opponent is ready" while the human has not pressed anything.
+    // R265: the AI answers its mulligan while the human picker remains open.
     cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(promptOf("mulligan"))
       .find(ts(MULLIGAN_OPPONENT_READY), { timeout: timeouts.view })
@@ -456,7 +374,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       });
     });
 
-    // R745: the turn the human ends first, read off the board, for the log's check below.
     let firstEnded = "";
     reachHumanTurn();
     cy.get(ts(BOARD))
@@ -478,26 +395,24 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       ).to.eq(true);
     });
 
-    // R745: the log keeps the whole game, not only the view's last events.
+    // R745: the log retains early turns.
     reachHumanTurn();
     cy.then(() => {
       cy.get(`${ts(LOG)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);
     });
     cy.get(`${ts(LOG)} .log-line[data-event="turnStarted"]`).should("contain.text", "Turn 1: Opponent");
 
-    // Concede on the human's own turn: the overlay is viewer-relative (§10.8), so it says Loss. The
-    // control only asks ("Concede this game?"); `cy.concede` confirms in the dialog it opens.
+    // §10.8 makes the concede overlay viewer-relative.
     reachHumanTurn();
     cy.concede();
     cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("be.visible").and("contain.text", "Loss");
-    // The practice route's own end screen says the same thing, and offers the next game.
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view })
       .should("be.visible")
       .and("have.attr", "data-outcome", "loss")
       .and("contain.text", "Defeat");
     cy.get(ts(ACTION_ERROR)).should("not.exist");
 
-    // R187: the browser's game folds in Node, with the handicaps the page reports, to its own hash.
+    // R187: fold the browser log and reported handicaps to its hash.
     practiceHandle()
       .then((handle) => handle.snapshot())
       .then((debug) => {
@@ -546,8 +461,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       expect(firstAiTurn?.opponentMax, "Hard refreshes to min(turns + 1, 7) = 2 on its first turn (R181)").to.eq("2");
     });
 
-    // R180, R187: a handicapped game replays too. Easy's handicap is a human's and is not stored
-    // (R180), so it is this game that carries one through the worker's debug snapshot and the fold.
+    // R180 / R187: this Hard game carries its handicap through replay.
     practiceHandle()
       .then((handle) => handle.snapshot())
       .then((debug) => {
@@ -590,8 +504,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     visitPractice(practiceUrl(`${SEED}:reload`, "medium", "p2"), { reducedMotion: true });
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
     keepWholeHand();
-    // The AI has played its first turn, and on the human's own turn it owes nothing, so the state
-    // holds still across the reload.
     reachHumanTurn();
 
     practiceHandle()
@@ -599,7 +511,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       .then((before) => {
         expect(before.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
 
-        // No parameter that starts a game: the page asks the worker for the game it kept (R668).
+        // R668: without a new-game parameter, the worker restores its saved game.
         visitPractice("/practice?pace=fast");
         cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
           .should("have.attr", "data-difficulty", "medium")
@@ -623,7 +535,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     visitPractice(practiceUrl(`${SEED}:save`, "medium", "p2"), { reducedMotion: true });
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
     keepWholeHand();
-    // On the human's own turn the AI owes nothing, so the state holds still while the game is away.
     reachHumanTurn();
 
     practiceHandle()
@@ -638,7 +549,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
         cy.get(ts(PRACTICE_RESUME_BANNER)).should("have.attr", "data-difficulty", "medium");
         cy.get(ts(PRACTICE_HUD)).should("not.exist");
 
-        // A reload now keeps the player on the menu: the game was left on purpose, not in play.
         visitPractice("/practice?pace=fast");
         cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
         cy.get(ts(PRACTICE_RESUME_BANNER)).should("be.visible");
@@ -659,7 +569,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
           });
       });
 
-    // Leave without saving: out to the main menu, and the practice menu offers nothing back.
     cy.get(ts(PRACTICE_MENU)).click();
     cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
     cy.get(ts(PRACTICE_LEAVE_CONFIRM)).click();

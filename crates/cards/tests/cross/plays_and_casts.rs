@@ -1,6 +1,5 @@
 //! A play, and a cast, from §10.5 step 1 to step 8 (SPEC §2.3, §2.4, §4.5, §6.3 Sacrifice and
-//! Tribute, §10.5, R17, R34, R57, R59, R65, R70, R210). Found by the polish-4 edge-case hunt, round 2
-//! (docs/polish/4-edge-cases.md, lenses L2 and L7); every case here failed before its fix.
+//! Tribute, §10.5, R17, R34, R57, R59, R65, R70, R210); see docs/polish/4-edge-cases.md.
 //!
 //!  - R70: a cast is a play, so it runs §10.5's steps — Gifted Program's hook, Quickstriker's and
 //!    /fullsend's granted Combos, its Echo repeats — and a cast-on-draw cast is whole, and the state
@@ -10,12 +9,7 @@
 //!  - R65: X is a play-time choice, so an X-cost Spell back in hand costs 0 again.
 //!  - R210: the zone a play names is held while its Tribute is paid, and a tributed Reborn unit
 //!    comes back (§6.1, §6.3 "counts as a death").
-//!  - Round 5, lens L8. R217: a draw a cast-on-draw cast makes continues that cast's chain, so
-//!    R58's cap bounds a CN-Virus chain under /fullsend's Combo draw, which recursed without end.
-//!  - Round 6, lens "engine invariants". R58, §10.3: the resolution loop's cap holds every trigger a
-//!    legal play can set off, so a Call to Chaos drawing a library of CN-Viruses beside #33 resolves.
-//!
-//! Port of `packages/cards/test/plays-and-casts.test.ts`.
+//!  - R217, R58, §10.3: a cast's draw continues its chain; the loop's cap bounds every trigger.
 
 use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
@@ -43,7 +37,7 @@ const LIBRARY: &[&str] = &[
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// TS `findIndex`: the first index matching, or -1.
+/// The first index matching, or -1.
 fn find_index(events: &[GameEvent], matches: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(matches).map_or(-1, |at| at as i64)
 }
@@ -54,11 +48,10 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     #[test]
     fn r70_a_cast_on_draw_spell_s_echo_repeat_resolves_before_the_draw_repeats_2_4_10_5_step_6() {
         register_all();
-        // p1 has Twinspell's grant up. At p1's start of turn the draw takes #27 Blood Ridden Glowy Jelly
-        // Bean, which casts itself (R70: a cast Spell takes Twinspell's Echo). Its first resolution finds
-        // no card in p1's hand to make Radiant; its Echo repeat, which is part of the same cast
-        // (§10.5 step 6), finds none either. Only then does the draw repeat (§2.4) and put Mr. Vanilla in
-        // the hand — so Mr. Vanilla must still be non-Radiant.
+        // p1 has Twinspell's grant up. The start-of-turn draw takes #27 Blood Ridden, which casts itself
+        // (R70: a cast Spell takes Twinspell's Echo). Its resolution and its Echo repeat (§10.5 step 6)
+        // find no card in p1's hand to make Radiant; only then does the draw repeat (§2.4), so Mr.
+        // Vanilla stays non-Radiant.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [TWINSPELL],
@@ -168,14 +161,12 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     #[test]
     fn r70_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_10_5_step_5() {
         register_all();
-        // p1 plays /fullsend (this turn "your cards gain 'Combo: draw 1'"), then Mr. Vanilla: 1 card
-        // played earlier, so Mr. Vanilla's granted Combo draws — Hinder, which casts itself. The cast is
-        // a play for every rule that counts or reacts to plays, Combo named first (R70), with 2 cards
-        // played earlier this turn, so Hinder's granted Combo draws 1 (a Reno). The Cry's random
-        // discard (R682) resolves after that draw, so it eats the Reno; then the cast-on-draw draw
-        // repeats (§2.4) and brings a second Reno, the one card left standing.
+        // p1 plays /fullsend ("your cards gain 'Combo: draw 1'" this turn), then Mr. Vanilla, whose Combo
+        // draws Hinder, which casts itself. A cast is a play for Combo too (R70), with 2 cards played
+        // earlier, so Hinder's Combo draws a Reno. The Cry's random discard (R682) resolves after that
+        // draw and eats it; the cast-on-draw draw then repeats (§2.4) and brings the one Reno left.
         let mut g = scenario(json!({
-            // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+            // The Radiant /fullsend: the face that grants "Combo: Draw 1".
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, VANILLA], "library": [HINDER, RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [RENO, RENO] },
         }));
@@ -364,8 +355,7 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
         }));
         g.play(FULLSEND, json!({}));
 
-        // §9.3: `reduce` returns a state (or refuses the action); it never throws on a legal play. (TS
-        // `expect(() => g.play(VANILLA)).not.toThrow()`: a refusal or a panic fails this test.)
+        // §9.3: `reduce` never throws on a legal play; a refusal or a panic fails this test.
         g.play(VANILLA, json!({}));
         assert!(g.state().pending.is_none());
         // The Vanilla's Combo draw began the chain, and every CN-Virus cast in it counts toward one cap.
@@ -381,13 +371,10 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
 }
 
 const CHAOS: &str = "core-095"; // #95 Call to Chaos (Core Edition), Spell, 4
-// TS `LONG_PLAY_TIMEOUT_MS = 60_000`: the one play below sets off about 1,100 casts, each a play #33
-// answers — seconds of work, and several times that under the coverage run's instrumentation, past
-// vitest's default 5 s. A Rust `#[test]` has no per-test timeout, so the constant is not ported.
 const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so the turn never auto-ends
 
-/// #95's roll is the first rng draw of its play (see `095-call-to-chaos.test.ts`), so the cursor
-/// picks the effect. The seed and the search are that file's.
+/// #95's roll is the first rng draw of its play, so the cursor picks the effect. The seed and the
+/// search are `c095_call_to_chaos.rs`'s.
 const CHAOS_SEED: &str = "chaos-card";
 fn chaos_cursor_for(effect: &str) -> u32 {
     for cursor in 0..500 {
@@ -406,17 +393,10 @@ fn chaos_cursor_for(effect: &str) -> u32 {
 }
 
 mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
-    // Found by the lens's probe, which tried every action `legalActions` offered in seeded random
-    // games: on turn 24 of one, p2's library had filled with #90's CN-Viruses, p1 had a #33 in play,
-    // and the #95 in p2's hand threw out of `reduce` when played.
-    //
-    // "Draw your whole library" is one draw per card the library held when the effect started (R58),
-    // and each of those draws casts at most 20 CN-Viruses (R58, R217). Each virus used to shuffle its
-    // two copies in at once, so the chain fed itself and the play ran to about 1,100 casts, every one
-    // a play #33 answers (R70): past a flat 1,000-pass `settle`, which is why SETTLE_PASS_CAP is now
-    // derived from the rules (`triggers.ts`). R350 (patch v0.1.1) holds a virus's copies to the end
-    // of the turn, and #33's copies wait for its queued trigger, so the same play now casts only what
-    // the library held and fatigues for the rest: it still resolves whole, and the fatigue kills.
+    // A seeded random game filled p2's library with #90's CN-Viruses beside p1's #33, and p2's #95 threw
+    // out of `reduce`. "Draw your whole library" is one draw per card held (R58), each casting at most
+    // 20 CN-Viruses (R58, R217), every cast a play #33 answers (R70). R350 holds a virus's copies to the
+    // end of the turn: the play casts only what the library held, then fatigues to death.
     use super::*;
 
     #[test]
@@ -434,7 +414,6 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
         }));
         s.state_mut().rng_cursor = chaos_cursor_for("draw");
 
-        // TS `expect(() => s.play(CHAOS)).not.toThrow()`: a refusal or a panic fails this test.
         s.play(CHAOS, json!({}));
         assert!(s.state().pending.is_none());
         // R58: 55 draws; the chains cast only viruses the library held, so at most 55, and never a copy.
@@ -451,7 +430,6 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
                 .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
         );
         // The draws past the empty library are §2.4's fatigue, which Going Long's Armor 2 cannot hold.
-        // (TS `filter(fatigue).length > 0`.)
         assert!(
             s.events()
                 .iter()

@@ -27,6 +27,7 @@
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::time::Duration;
 
 use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
@@ -49,7 +50,10 @@ use crate::actor::protocol::{
 };
 use crate::actor::ws_server::Socket;
 use crate::app::now_ms;
-use crate::config::{AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND, MATCH_VOIDED_CLOSE_CODE};
+use crate::config::{
+    AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+};
 use crate::db::store::{MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -798,15 +802,12 @@ impl MatchActor {
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
         };
-        if let Err(error) = crate::api::results::record_result(&self.shared.deps, input).await {
-            tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), message = %error);
-        }
-
-        let finished = one_tx!(self.shared.deps.db, |t| t
-            .matches_finish(self.match_id_str(), at)
-            .await?);
-        if let Err(error) = finished {
-            tracing::warn!(event = "match.finish.failed", matchId = %self.match_id_str(), message = %error);
+        // The write finishes the match row in the same transaction, so nothing else here does: a row
+        // finished apart from it would outlive a failed write, with no result and both players stuck
+        // in the match. R1437: a write that never lands leaves the match `live` for the next socket.
+        if !self.record_result_with_retries(input).await {
+            self.let_go_unrecorded();
+            return;
         }
 
         tracing::info!(
@@ -816,6 +817,38 @@ impl MatchActor {
             reason = %result.reason,
             turns = snapshot.turn,
         );
+    }
+
+    /// R1437: `record_result`, tried up to `MATCH_RECORD_RESULT_ATTEMPTS` times, the first wait
+    /// `MATCH_RECORD_RESULT_BACKOFF_MS` and each next one twice the last. A repeat is safe: a write
+    /// that finds the match's row already written answers that row (`api/results.rs`). It runs on the
+    /// actor's queue, which the game's end has left nothing to do but refuse actions and push views.
+    /// Answers whether the result landed.
+    async fn record_result_with_retries(&self, input: RecordResultInput) -> bool {
+        let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
+        for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
+            match crate::api::results::record_result(&self.shared.deps, input.clone()).await {
+                Ok(_) => return true,
+                Err(error) => {
+                    tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), attempt = attempt, message = %error);
+                }
+            }
+            if attempt < MATCH_RECORD_RESULT_ATTEMPTS {
+                tokio::time::sleep(Duration::from_millis(wait_ms as u64)).await;
+                wait_ms *= 2;
+            }
+        }
+        false
+    }
+
+    /// R1437: the result never landed, so the match is still `live` and both players are still in it.
+    /// The registry forgets this actor (as R679's void does, since `stop` would wait on the queue this
+    /// runs in) and both sockets close as `stop` closes them, which the client reconnects on: the next
+    /// socket rebuilds the actor from the log, and the rebuilt actor writes the result as it arms.
+    fn let_go_unrecorded(&self) {
+        self.shared.deps.matches.forget(self.match_id_str());
+        self.halt();
+        tracing::warn!(event = "match.result.unrecorded", matchId = %self.match_id_str());
     }
 
     /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
@@ -1204,6 +1237,12 @@ impl MatchActor {
 
     /// Drops the actor: stops the clock and lets both sockets go, leaving the log alone.
     pub async fn stop(&self) {
+        self.halt();
+        self.idle().await;
+    }
+
+    /// `stop` without waiting for the queue to drain, so a task on the queue can call it.
+    fn halt(&self) {
         let sockets = {
             let mut core = self.lock();
             core.stopped = true;
@@ -1220,7 +1259,6 @@ impl MatchActor {
                 socket.close(Some(1001), Some("the actor is going away"));
             }
         }
-        self.idle().await;
     }
 
     /// R672: which seats hold an open socket right now. The registry's `presence_of` reads this, so a
