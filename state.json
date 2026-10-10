@@ -6056,17 +6056,21 @@
         {
           "at": "2026-10-10T13:46:58Z",
           "minutes": 1.5
+        },
+        {
+          "at": "2026-10-10T19:21:49Z",
+          "minutes": 39.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T17:50:00Z",
+          "resets_at": "2026-10-10T22:50:00Z",
           "utilization": 0.9
         },
-        "observed_at": "2026-10-10T13:46:58Z",
+        "observed_at": "2026-10-10T19:21:49Z",
         "seven_day": {
           "resets_at": "2026-10-17T05:00:00Z",
-          "utilization": 0.16
+          "utilization": 0.24
         },
         "status": "allowed_warning"
       }
