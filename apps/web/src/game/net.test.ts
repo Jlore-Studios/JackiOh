@@ -5,7 +5,7 @@
 // `random`) exist for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
 // in-memory socket.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
@@ -608,6 +608,18 @@ describe("a silent socket", () => {
     // It was just heard from, so waking again asks nothing.
     h.wake();
     expect(live.frames()).toEqual([HELLO, HELLO]);
+  });
+
+  it("R1437 a socket whose monotonic clock stood still through a sleep is still probed", () => {
+    const h = connected();
+    // `performance.now()` leaves a sleeping machine's time out; the wall clock does not.
+    const wall = vi.spyOn(Date, "now").mockReturnValue(Date.now() + SILENCE_MS + 1);
+    try {
+      h.wake();
+      expect(h.socket().frames()).toEqual([HELLO, HELLO]);
+    } finally {
+      wall.mockRestore();
+    }
   });
 
   it("R1437 a socket heard within the ping interval is not probed", () => {

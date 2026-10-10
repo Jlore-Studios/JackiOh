@@ -523,6 +523,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let pendingRetry: unknown = null;
   /** R1437: the monotonic reading at which the open socket was created or last heard from. */
   let heardAt = 0;
+  /**
+   * R1437: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
+   * out on most platforms, so a socket heard just before a laptop slept would read as recent on
+   * waking; the wall clock keeps counting.
+   */
+  let heardWall = 0;
   /** R1437: the timer of a wake probe still waiting for its answer. */
   let probe: unknown = null;
   /** R1437: stops listening for the page waking; null while it is not. */
@@ -617,12 +623,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       return;
     }
     socket = created;
-    heardAt = monotonic();
+    hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
     created.onopen = () => {
       if (socket !== created) return;
-      heardAt = monotonic();
+      hear();
       retry = 0;
       patch({ connection: "open" });
       // §9.5: the actor reads `hello` as "push me a fresh full view", which is what a reconnected
@@ -636,7 +642,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 
     created.onmessage = (event) => {
       if (socket !== created) return;
-      heardAt = monotonic();
+      hear();
       cancelProbe();
       if (typeof event.data !== "string") return; // Text frames only (`socketFromWs`).
       const frame = parseServerFrame(event.data);
@@ -697,6 +703,16 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     }
   }
 
+  function hear(): void {
+    heardAt = monotonic();
+    heardWall = Date.now();
+  }
+
+  /** How long the open socket has been quiet: the larger of the two clocks' readings, so a sleep counts. */
+  function silentFor(): number {
+    return Math.max(monotonic() - heardAt, Date.now() - heardWall);
+  }
+
   /**
    * R1437: the page woke (its tab turned visible, the network came back). A phone that changed
    * networks or a laptop that slept can leave a socket that never reports its own end, and the
@@ -708,7 +724,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   function onWake(): void {
     const live = socket;
     if (stopped || live === null || probe !== null) return;
-    if (monotonic() - heardAt <= SILENT_SOCKET_MS) return;
+    if (silentFor() <= SILENT_SOCKET_MS) return;
     if (live.readyState !== OPEN) {
       replace(live);
       return;
