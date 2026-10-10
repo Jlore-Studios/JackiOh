@@ -4524,10 +4524,8 @@
       "run_id": "38087413077",
       "started_at": "2026-10-10T21:24:03Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: the builder's session failed and changed nothing: API Error: Connection refused \u2014 a firewall or proxy may be blocking it (ECONNREFUSED)"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "646": {
