@@ -133,6 +133,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `lucky_on(state, card)` | the card's Lucky X now — its printed Lucky as tuning leaves it plus every Lucky it was given (R1438); every luck-based roll a card makes reads it |
 | `highest_permanent_cost(state, player)` | the highest R396 cost among the permanents acting on a side, `None` with none (R901) |
 | `base_stats_of(state, card)` | §10.4 layer 1: the stat override as its face wears it, else the printed stats; no buffs, tuning or auras (R1181) |
+| `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |

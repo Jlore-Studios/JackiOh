@@ -1389,8 +1389,35 @@
     "meditative-052": { // Economic Anxiety
       cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
     },
+    "meditative-055": { // Dragon Fruit
+      cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
+    },
+    "meditative-056": { // House Party
+      cast: { voice: "announcer", text: "Everybody in! The house is open!" },
+    },
+    "meditative-061": { // Joon Jorker
+      play: { voice: "hustler", text: "Let me hype up my neighbor!" },
+      death: { voice: "hustler", text: "Who hypes you now?" },
+    },
+    "meditative-062": { // Small Time Recruits
+      cast: { voice: "guard", text: "Small fry, report for duty!" },
+    },
     "meditative-064": { // Traitorous Blood
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
+    },
+    "meditative-066": { // Fiery Waraxe
+      cast: { voice: "hero", text: "Burn bright, swing hard!" },
+    },
+    "meditative-068": { // Catnip
+      cast: { voice: "cat", text: "Mrrrow! Who left the nip out?" },
+    },
+    "meditative-070": { // I'M WILL BE YOUR DOOM
+      play: { voice: "brute", text: "I'M WILL BE YOUR DOOM" },
+      death: { voice: "brute", text: "Doom... was me." },
+    },
+    "meditative-070-1": { // Ready… I'm
+      play: { voice: "kid", text: "Ready... I'm" },
+      death: { voice: "kid", text: "Not ready!" },
     },
     "meditative-071": { // Pareto Optimality
       cast: { voice: "sapi-teacher", text: "There is always a better move." },
@@ -1401,6 +1428,14 @@
     "meditative-072": { // The Banisher
       play: { voice: "robot", text: "You are unmade." },
       death: { voice: "robot", text: "Banished with you." },
+    },
+    "meditative-073": { // Plate Packer
+      play: { voice: "brute", text: "Three-oh-five is the new two-twenty-five" },
+      death: { voice: "brute", text: "Spot me... spot me!" },
+    },
+    "meditative-074": { // Montaña Giant
+      play: { voice: "storyteller", text: "The mountain wakes." },
+      death: { voice: "storyteller", text: "The mountain sleeps." },
     },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },

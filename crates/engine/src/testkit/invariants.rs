@@ -7,7 +7,9 @@
 //!   - `turn`, from `turnStarted`;
 //!   - `entered`, the turn of each instance's latest entry, and `stint`, how many entries it has had.
 //!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
-//!     stepping from its backrow zone into a unit zone enters it on that turn, R383), or a
+//!     stepping from its backrow zone into a unit zone enters it on that turn, R383, except an
+//!     "Animated on your turn" card animating at its controller's start of turn that has been on
+//!     that side since the turn began: that enters nothing, R1062), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //!     side or a Stack card resuming emits nothing and changes nothing;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack;
@@ -829,6 +831,15 @@ impl InvariantMonitor {
         self.readied.shift_remove(id);
     }
 
+    /// R1062: an "Animated on your turn" card whose latest entry was on an earlier turn enters nothing as it
+    /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
+    fn on_its_side_before_this_turn(&self, id: &str, state: &GameState) -> bool {
+        let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {
+            return false;
+        };
+        at < self.turn && has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn)
+    }
+
     /// I1 for one unit and one would-be target set.
     fn sick_attack(
         state: &GameState,
@@ -966,8 +977,10 @@ impl InvariantMonitor {
                     // R383: moving into the unit row is entering it on that turn; a carried Unit stepping
                     // down off its carrier (C+ #33, carriers.rs) was a Unit on the field all along and enters nothing.
                     // ME-ALTPLAY, R1041: a set Unit keeps its set turn as `summonedTurn`, so its reveal
-                    // animation enters nothing either.
-                    if *carried != Some(true) {
+                    // animation enters nothing either. R1062: nor does an "Animated on your turn" card
+                    // animating at its controller's start of turn that has been on that side since the
+                    // turn began.
+                    if *carried != Some(true) && !self.on_its_side_before_this_turn(instance_id, state) {
                         let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
                             crate::catalog::def_of(Some(state), &card.def_id).type_
                                 == crate::wire::CardType::Unit

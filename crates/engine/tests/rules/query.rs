@@ -622,3 +622,26 @@ mod r1181_base_stats_of_meditative_94 {
         assert_eq!(face_of(&state, &card).health, 6);
     }
 }
+
+/// R1064: every point of Armor on the field, Units through §10.4 and both heroes (Meditative #73).
+mod r1064_armor_on_field {
+    use super::*;
+    use crate::rules::fixtures::combat::armoured;
+
+    #[test]
+    fn r1064_sums_every_acting_unit_s_armor_through_the_layers_and_both_heroes() {
+        let mut state = board("r1064-armor");
+        state.players.p1.hero.armor = 2;
+        state.players.p2.hero.armor = 1;
+        put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let plain_card = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
+        must(find_instance_mut(&mut state, &plain_card.id), "the plain unit").position = Some(Position::Def);
+        assert_eq!(armor_on_field(&state), 11);
+    }
+
+    #[test]
+    fn r1064_an_empty_board_has_none() {
+        let state = board("r1064-empty");
+        assert_eq!(armor_on_field(&state), 0);
+    }
+}

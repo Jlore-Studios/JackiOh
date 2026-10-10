@@ -337,3 +337,51 @@ mod r80_library_cap_m1_t7 {
         assert!(state.players.p1.library.iter().any(|c| c.id == card.id));
     }
 }
+
+/// R1061: a named draw's radiant rider makes the card Radiant in the hand, not one the hand cap burns.
+mod r1061_named_draw_radiant_rider {
+    use super::*;
+
+    #[test]
+    fn r1061_a_named_draw_s_radiant_rider_makes_the_card_radiant_in_the_hand_and_not_a_card_the_hand_cap_burns()
+     {
+        let mut state = new_game("r1061-radiant", None);
+        // A hand one short of the cap: the first named draw fits, the second burns.
+        state.players.p1.hand.clear();
+        for _ in 0..HAND_CAP - 1 {
+            in_hand_draw_filler(&mut state);
+        }
+        let library = set_library(&mut state, PlayerId::P1, &strings(&["fx-1", "fx-2"]));
+        let (first, second) = (library[0].id.clone(), library[1].id.clone());
+        let mut bench = Bench::new(&state);
+        {
+            let mut sink = bench.sink(&mut state);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..Default::default()
+                },
+            );
+            (draw_effect::draw_from_library(json_as(json!({ "instanceId": first, "radiant": true }))).apply)(
+                &mut ctx,
+            );
+            (draw_effect::draw_from_library(json_as(json!({ "instanceId": second, "radiant": true }))).apply)(
+                &mut ctx,
+            );
+        }
+        let drawn = find_instance(&state, &first).expect("the drawn card");
+        assert_eq!(drawn.zone.z(), ZoneName::Hand);
+        assert!(drawn.radiant);
+        let burned = find_instance(&state, &second).expect("the burned card");
+        assert_eq!(burned.zone.z(), ZoneName::Graveyard);
+        assert!(!burned.radiant);
+        assert_eq!(of_type(&bench.events, GameEventType::RadiantSet).len(), 1);
+    }
+
+    fn in_hand_draw_filler(state: &mut GameState) {
+        let card = new_instance(state, "fx-1", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        state.players.p1.hand.push(card);
+    }
+}

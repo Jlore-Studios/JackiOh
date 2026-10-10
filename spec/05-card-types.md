@@ -6,7 +6,7 @@ Every card carries the fields below; the catalog stores the base and Radiant for
 
 | Field | Values | Catalog field |
 | --- | --- | --- |
-| Cost | 0 to 6, 10 (C+ #64 Mulch Muncher), 100 (Ceaseless Void), X, or "A embiggen B" | `cost: number or 'X' or {base, embiggen}` |
+| Cost | 0 to 6, 8 (Meditative #74 Montaña Giant), 10 (C+ #64 Mulch Muncher), 100 (Ceaseless Void), X, or "A embiggen B" | `cost: number or 'X' or {base, embiggen}` |
 | Type | Unit, Spell, Field Spell, Trap, Field Trap; a face may carry its own type, which is the card's while that face is up (C+ #22 Blood Moon's Radiant face is a Field Trap, [[§5.2]]) | `type`, `base.type?`, `radiant.type?` |
 | Tribes and tags | Human, Felinor, KY, CN, Fruit, Call to Chaos, Quickdraw, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Token (Jlockeed: [[R278]]; Book on every "Book of …" card, Pancake on C+ #12, #13 and the eight Pancake tokens, AI on the ten AI generated cards, Plague on every card that uses Plague Counters; patch v0.2.Y (#322) adds Catalyst on C+ #38 Solarius and C+ #46 Felinor Flagbearer, Prime on the two tokens their Deaths shuffle in, C+ #38.1 Solarius Prime and C+ #46.1 Felinor Flagbearer Prime, and Acclaimed on C #80 BOOM! Big Max and C+ #37 Wardrum; no rule and no pool reads these three) | `tags: string[]` |
 | Rarity | Common, Rare, Epic, Legendary, Mythic; Token for every token. A Classic+ token may print a rarity on its frame, a display field for the card frame and the summon sting that no pool ever reads | `rarity`, `printedRarity?` |
