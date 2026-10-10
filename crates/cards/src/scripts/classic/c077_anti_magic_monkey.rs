@@ -5,13 +5,9 @@
 //!            takes them from (a hand, or a graveyard a permission lets its owner play from, §6.3 Play),
 //!            as a price for a play; a cast pays nothing (R70). Tunes: surcharge 1 ↑ (Radiant 2)."
 //!
-//! The aura is B5 E15's price rule (`Script.costAura`): a flat rung of the declared surcharge
-//! (`param`, R386) on every player's cards of the Spell type — a card's type is its running face's
-//! (B2.7) — read by R65's `effectiveCost` wherever a play would take the card from. An X-cost Spell
-//! costs exactly its X and takes no rule (R65). The rule is laid only while the Monkey acts on the
-//! field: dormant under a Stack pile it is not on the field for effects (§3.2, R13), and it is gone the
-//! moment it leaves. Stack is printed on both faces (§10.4 layer 1), so it may be played onto an
-//! occupied unit zone (§6.2).
+//! The aura is B5's price rule (`Script.costAura`, R386) on all Spells (B2.7), read by R65's
+//! `effectiveCost`. An X-cost Spell costs its X (R65). Dormant under a Stack pile it is off (§3.2,
+//! R13), and gone when it leaves. Stack is printed on both faces (§10.4 layer 1, §6.2).
 
 use jackioh_engine::prelude::*;
 
@@ -39,17 +35,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #77 Anti-Magic Monkey — SPEC §8.6 row 77, BUILD M9 Classic row C 77: "Stack; Aura: every Spell (the
-// Spell type, not a Field Spell or a Trap) either player could play (in a hand, or in a graveyard a
-// permission lets its owner play from, R65) costs (1) more; X-cost Spells untouched (R65); casts pay
-// nothing (R70); it is off while dormant under a Stack pile and gone when it leaves; a hidden hand
-// card's `costChanged` shows −1 to the other player (R177); radiant 10/10: (2) more; its tuned number
-// (surcharge) reads through `param()` (R386)".
-//
-// The aura is B5 E15's price rule, read by R65's `effectiveCost` wherever a play takes a card from: a
-// hand, or a graveyard C #28 Second Wind's permission opens (its Radiant face, so a played card lands
-// in the graveyard as usual), whose plays are sent to `reduce` since the harness's `play` takes a hand
-// card.
+// SPEC §8.6 row 77: Spells cost (1) more (Radiant 2; R65, R70, R177, R386, B5).
+// Off while dormant under Stack, gone when leaving. Graveyard plays via C #28
+// Second Wind are sent to `reduce` since the harness's `play` takes a hand card.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -194,7 +182,6 @@ mod tests {
                 .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(id))
                 .map(|action| action["x"].as_i64().unwrap_or(0))
                 .collect();
-            // TS `Math.max(...[])` is -Infinity, which no number equals.
             assert_eq!(xs.iter().copied().max(), Some(4));
             s.play(DIVIDEND, json!({ "x": 4, "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }))
                 .expect_mana(P1, 0);

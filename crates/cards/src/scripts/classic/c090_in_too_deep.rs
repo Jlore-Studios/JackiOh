@@ -1,73 +1,12 @@
-//! C #90 In Too Deep (SPEC §8.6 row 90). (1) Field Spell, Quickdraw, Mythic.
-//!   Base:    "Indestructible\nQuest: Draw 2 cards. Each quest you complete offers rewards; the reward
-//!            you choose sets your next quest."
-//!   Radiant: "Indestructible\nQuest: Draw 2 cards. Each quest you complete gives every reward it
-//!            offers, and you follow every path."
-//!   Engine:  "Quests (§10.1, R404): `memory.quest`, the tree data in the card file. Quest 1 opens as
-//!            the card enters the field. … Completion is noticed at the state check after the event
-//!            that completes it, on either player's turn, and the reward choice is a `reward` prompt
-//!            (§10.6) for the card's controller then. … Radiant: each completed quest grants all of its
-//!            rewards and opens all of their quests, with no reward prompt; a quest reached by two paths
-//!            opens once, and a reward two completed quests offer (D, G, H) is granted by each. …
-//!            Quickdraw: it starts in your opening hand (§2.1). Tunes: none."
-//!
-//! THE SPLIT (B5 E33). The machinery is the engine's (`subsystems/quests.ts`): it keeps the count on
-//! the instance (`memory.quest`), opens quest 1 as the card enters the field, counts each event the
-//! resolution loop reaches from the moment a quest opens, notices a completion at the state check and
-//! reports it (`questCompleted`), and shows the open quests in both views (§10.8). The TREE below is
-//! this card's data (`Script.quests`): the ten quests as R404 reads them countable, and the thirteen
-//! rewards with the quest each leads to. The REWARDS are this card's verbs, run by its own trigger on
-//! its own `questCompleted`.
-//!
-//! BASE. The trigger asks the card's controller a `reward` prompt (§10.6) over the completed quest's
-//! rewards — on the other player's turn too, a non-active player's prompt (R79) — and the answer runs
-//! the chosen reward and opens the quest it leads to (`resume.reward`). A quest of one reward (7–10)
-//! still asks: SPEC makes the reward a prompt. RADIANT. The trigger runs every reward of the quest in
-//! the tree's order, then opens every quest they lead to: the rewards are what completing the quest
-//! gives, and the paths begin after them, as the base face's next quest opens after its reward. A
-//! quest reached by two paths opens once (`openQuest` opens only a quest never opened), and a reward
-//! two completed quests offer (D, G, H) is granted by each, since each completion runs its own list.
-//! Counting from the moment a quest opens holds inside a reward too: reward H draws its 2 before quest
-//! 9 opens, and those draws are not its (R404); a deck H emptied is a deck "already empty when the
-//! quest opens", which completes quest 9 at once.
-//!
-//! THE REWARDS, each with the reading it needs:
-//!   A  heal your hero 6.
-//!   B  deal 3 damage to a target — any Unit or hero, either side (§8 Conventions), asked as the reward
-//!      resolves; no target fizzles and the next quest still opens.
-//!   C  return 2 random cards from your graveyard to your hand — two different cards (R60), all of them
-//!      if fewer; a full hand burns one back once (§2.4, `returnRandomFromGraveyard`).
-//!   D  place 3 Plague Counters (§6.3, R471, R689): three placements, all on the one permanent you choose,
-//!      either side (`placePlagueTokens`).
-//!   E  a random Unit of yours gets +3/+3 (`buffRandomUnit`, R60); none, nothing.
-//!   F  bounce a target permanent — a Unit or a backrow card, either side, face-down ones and this card
-//!      included; this card bounced ends its own quest line (R78), so its next quest never opens.
-//!   G  your opponent discards 2 cards of their choice (R16): their own hand prompt; fewer, all they have.
-//!   H  draw 2.
-//!   I  Recruit a card (§6.3): the first permanent from the top of your deck.
-//!   J  gain 100 mana, as next-turn mana (R540): quest 7 completes as your turn ends, so mana for "this
-//!      turn" would lapse unspent; it is the next refresh's rider, a badge until your next turn.
-//!   K  exile your opponent's deck: every card of it, bottom up (no draw, no fatigue).
-//!   L  Aura: you may play cards from your graveyard (§6.3 Play, E11): this card's `graveyardPlay`.
-//!   M  Aura: your Units have Indestructible: this card's `aura` (§10.4 layer 5); Indestructible gives
-//!      no Taunt (R347).
-//! L and M hold while the card stays on the field; a Tribute or an exile ends them, and leaving the
-//! field resets the quest line (R78). It is Indestructible (catalog keyword): a destroy leaves it (R46).
-//!
-//! THE QUESTS, as R404 reads them (counted from the moment each opens):
-//!   1 draws of yours, 2 (R541: every draw that took a card — burned, cast on draw or kept; a draw a
-//!     limit stopped and a fatigue draw take none); 2 enemy permanents destroyed by anything, 2 (on the
-//!     side they died on); 3 permanents you control at once, 3, this card included (board); 4 a turn of
-//!     yours ending with 3+ unspent mana; 5 damage your cards deal to enemies, 12 (R542: the side the
-//!     source and the target stood on as the hit landed); 6 your Units' total attack and total health,
-//!     both 10+, at once (board); 7 a turn of yours ending with 5+ unspent mana; 8 cards entering either
-//!     exile, 3; 9 a draw of yours that takes your deck's last card; 10 Units in your graveyard, 6
-//!     (board).
-//!
-//! Rulings: R404 (the card), R540 (J's mana), R541 (what a draw is), R542 (whose damage, whose death),
-//! R543 (Radiant: rewards before paths), R78, R46, R347, R60, R16. No declared numbers (Tunes: none),
-//! so the amounts are this file's named constants. Its proof: `test/classic/090-in-too-deep.test.ts`
-//! (the `mod tests` at the bottom of this file).
+//! C #90 In Too Deep (SPEC §8.6 row 90). (1) Field Spell, Quickdraw (§2.1), Mythic.
+//! Indestructible; ten quests, thirteen rewards. Base offers reward prompt (§10.6, R79); Radiant
+//! gives every reward and opens all paths (R543).
+//! Engine: Quests (§10.1, R404), split B5, views (§10.8).
+//! Rewards: A heal, B damage (§8), C return (R60, §2.4), D Plague (§6.3, R471, R689), E buff (R60),
+//! F bounce (R78), G discard (R16), H draw, I Recruit (§6.3), J mana (R540), K exile deck,
+//! L graveyard play (§6.3, R78), M Indestructible aura (§10.4 layer 5, R347). Indestructible (R46).
+//! Quests (R404): 1 draws (R541); 2 kills; 3 board; 4 float; 5 damage (R542); 6 totals; 7 float;
+//! 8 exiles; 9 empty deck; 10 grave units.
 
 use jackioh_engine::effects::{
     bounce, buff_random_unit, choose_from_hand, choose_reward, choose_target, chosen_options, damage,
@@ -97,7 +36,7 @@ const REWARD_DISCARD: i32 = 2;
 const REWARD_DRAW: i32 = 2;
 const REWARD_MANA: i32 = 100;
 
-/// One quest of the tree (a private builder for TS's object literal).
+/// One quest of the tree.
 fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
     QuestDef {
         id: id.to_string(),
@@ -107,7 +46,7 @@ fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
     }
 }
 
-/// One reward of the tree (a private builder for TS's object literal).
+/// One reward of the tree.
 fn reward(id: &str, text: &str, next: Option<&str>) -> QuestRewardDef {
     QuestRewardDef {
         id: id.to_string(),
@@ -117,7 +56,6 @@ fn reward(id: &str, text: &str, next: Option<&str>) -> QuestRewardDef {
 }
 
 /// The quest tree (SPEC §8.6 row 90, R404): what completes each quest, and where each reward leads.
-/// (TS's module constant `IN_TOO_DEEP_QUESTS`; a function here, since a `QuestBook` owns its strings.)
 fn in_too_deep_quests() -> QuestBook {
     QuestBook {
         first: "1".to_string(),
@@ -276,7 +214,7 @@ fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<QuestDef
     subsystems::quest_def_of(&book, quest).cloned()
 }
 
-/// The reward prompt's options: each reward's id under its caption (TS `{ id, label }[]`).
+/// The reward prompt's options: each reward's id under its caption.
 fn reward_options(quest: &QuestDef) -> Vec<Value> {
     let book = in_too_deep_quests();
     quest
@@ -386,22 +324,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #90 In Too Deep (SPEC §8.6 row 90; BUILD M9 row C 90; R404, R540–R543). (1) Field Spell,
-// Quickdraw, Mythic: Indestructible, and a quest line — ten quests, thirteen rewards, a `reward`
-// prompt on the base face, every reward and every path on the Radiant face. Quest 1's text lives in
-// the quest line, not the card text: it appears on the card face only after the card is played.
-//
-// The quest machinery is the engine's (`subsystems/quests.ts`, proved alone by
-// `packages/engine/test/quests.test.ts`); this file proves the card: its tree, each of its ten quests
-// as R404 reads them, each of its thirteen rewards and the quest it leads to, both faces, both views,
-// a pause through JSON and a game folded from its log.
-//
-// Reaching a deep quest by playing the whole path before it would make each test the length of the
-// tree, so a test of quest N writes the quest line the path would have left (`line`), as the Heroic
-// Power tests write the power its arrival rolls: the path itself is proved by the reward tests, each
-// of which checks the quest it opens. A reward test completes its quest by writing its count at the
-// goal and letting the next state check notice it (`completeAtNextCheck`), the counting being each
-// quest's own test.
+// SPEC §8.6 (R404, R540, R543): Field Spell with 10 quests and 13 rewards. Tests verify the tree,
+// each quest and reward, both faces, and test helpers (line) set up deep quest states directly.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -443,7 +367,7 @@ mod tests {
     const VIRUS: &str = "core-090-1";
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// The cards a side holds so §2.5 never ends a turn on its own (TS `SPARE`).
+    /// The cards a side holds so §2.5 never ends a turn on its own.
     const SPARE_HAND: [&str; 3] = [NOTEBOOK, STOCKPILE, TIMMY];
     const SPARE_LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
     /// Spell 4: steal target enemy permanent
@@ -460,12 +384,11 @@ mod tests {
     const BOOK_OF_BOOKS: &str = "classicplus-054";
     /// C+ #57 Book of Stats, (1) Spell: give a Unit +5/+5
     const BOOK_OF_STATS: &str = "classicplus-057";
-    /// Issue #473's loop: the seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
+    /// Loop seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
     /// two adds, so the first few seeds find one), and the mana the replays may spend.
     const BOOK_OF_STATS_SEEDS: u32 = 64;
     const REPLAY_MANA: i32 = 6;
 
-    /// TS's object spread: `extra`'s keys written over `target`'s.
     fn merge_into(target: &mut Value, extra: Value) {
         if let (Some(target), Value::Object(extra)) = (target.as_object_mut(), extra) {
             for (key, value) in extra {
@@ -474,15 +397,13 @@ mod tests {
         }
     }
 
-    /// TS `{ …extra, ...SPARE }` (and `{ ...SPARE, …extra }`): no side setup here names a key SPARE has
-    /// as well, so the order of the spread does not matter.
+    /// No side setup here names a key SPARE has as well, so the order of the spread does not matter.
     fn spare(extra: Value) -> Value {
         let mut side = json!({ "hand": SPARE_HAND, "library": SPARE_LIBRARY });
         merge_into(&mut side, extra);
         side
     }
 
-    /// TS `[ITD, ...(SPARE.hand ?? [])]`.
     fn itd_and_spare_hand() -> Vec<&'static str> {
         let mut hand = vec![ITD];
         hand.extend(SPARE_HAND);
@@ -493,7 +414,7 @@ mod tests {
         subsystems::quest_memory_of(s.card(ITD))
     }
 
-    /// The quest line as JSON, for TS's `toEqual` and `toMatchObject` on it.
+    /// The quest line as JSON.
     fn line_json(memory: &subsystems::QuestMemory) -> Value {
         json!({
             "active": memory.active,

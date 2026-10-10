@@ -43,15 +43,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #26 Tommy Tempo — SPEC §8.7 row 26, BUILD M9 Classic+ row C+ 26: "Taunt; cast on draw (R70: free,
-// counts as played) into your leftmost open unit zone, then, once the rest of the drawing effect's
-// list resolves (a "Draw 2" still draws its second card), your turn ends as if you had pressed End
-// turn, every end-of-turn step running; drawn at the start of your turn it ends that turn before your
-// main phase; drawn on the opponent's turn only the summon happens; with no open zone it goes to your
-// hand uncast as R58's cap sends one (burned when the hand is full); played from a hand it is a plain
-// Unit and ends nothing; radiant you may take one more main-phase action (a play, an attack, a
-// position switch, an activation, or ending the turn yourself) and the turn ends once it resolves
-// (R415); the action count reads through `param()`".
+// C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
+// leftmost open unit zone, ending the turn after the drawing effect resolves. With no open zone it
+// goes to hand uncast under R58's cap. Radiant allows one more main-phase action before ending (R415).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,7 +64,6 @@ mod tests {
     const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover a (2) Cost card (a prompt)
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
     fn spread(defaults: Value, overrides: &Value) -> Value {
         let mut out = defaults;
         if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
@@ -99,7 +92,6 @@ mod tests {
 
     use crate::unit_or_blank;
 
-    /// TS `s.hand(p)[0] ?? FILLER`.
     fn first_in_hand(s: &Scenario, player: PlayerId) -> String {
         s.hand(player).first().map_or_else(|| FILLER.to_string(), |card| card.id.clone())
     }
@@ -122,7 +114,6 @@ mod tests {
         })
     }
 
-    /// JS `findIndex`: the first position of an event that matches, or −1.
     fn find_index(log: &[GameEvent], matches: impl Fn(&GameEvent) -> bool) -> i64 {
         log.iter()
             .position(matches)

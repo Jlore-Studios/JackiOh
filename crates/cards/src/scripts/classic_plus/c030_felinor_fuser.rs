@@ -3,19 +3,13 @@
 //!   Base:    "Cry: Discover a Felinor Unit, then another. Fuse both into this."
 //!   Radiant: "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
 //!
-//! Two chained Discovers, the shape #98 Heroic Power's Stitching makes them (R352): the first answer
-//! re-enters this script with the pick carried in the second prompt's data, and the second answer
-//! fuses both picks onto this unit. Each Discover offers three different non-token Felinor-tagged
-//! Units (R405: "Felinors" are the creatures) of every set (R380), never Felinor Fuser itself, which
-//! `discoverFromCatalog` leaves out by id — every ingredient's id on a fused Fuser (R387).
+//! Two chained Discovers (R352): the first answer re-enters with the pick in the second prompt's
+//! data, and the second fuses both picks onto this unit. Each Discover offers three different
+//! non-token Felinor-tagged Units of every set (R380, R405), never Felinor Fuser itself (R387).
 //!
-//! The Fuse is R77 with this unit as the target on the field (`fuseCards`): it keeps its instance,
-//! zone, damage, position and radiant flag, sums the stats, unions the keywords, joins the texts, costs
-//! min(sum, 4), and its id names the three (R179); the Discovered cards were never cards on a board
-//! and cease to exist, so their Cries never run. On the Radiant face the Discovered cards are Radiant:
-//! each goes in on its Radiant face, lending it to both of the fusion's forms (§6.3 Fuse), and the
-//! kept Radiant instance reads the Radiant form (R77). A Discover with no pool fizzles, and fewer than
-//! two picks fuse nothing (R352, R77).
+//! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,
+//! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
+//! Cries never run. Radiant ingredients lend their Radiant face to both forms (§6.3, R77).
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -44,8 +38,7 @@ fn picks_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     }
 }
 
-/// TS's `discover` closure inside `felinorFuser`: one Discover of a Felinor Unit, the picks so far in
-/// its data.
+/// One Discover of a Felinor Unit, the picks so far in its data.
 fn discover(radiant: bool, picks: &[String]) -> Effect {
     let mut args = json!({
         "step": PICKED,
@@ -95,13 +88,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #30 Felinor Fuser — SPEC §8.7 row 30, BUILD M9 Classic+ row C+ 30: "Cry: two chained Discovers,
-// each of 3 different non-token Felinor Units of any set but Felinor Fuser (R387, R405), the first
-// answer carried in the second prompt; then both are fused into this unit (R77, R102): it keeps its
-// instance, zone, damage and position, stats sum, keywords union, texts join, its cost becomes min(sum,
-// 4), and its definition id names the three (R179); the fused-in Cries never run, it being on the field
-// already; the options reach only the chooser (R177); paused between the prompts the state survives
-// JSON and replays; radiant Discovers Radiant Felinor Units and its Radiant face sums the Radiant faces".
+// C+ #30 Felinor Fuser — SPEC §8.7 row 30: two chained Discovers of Felinor Units of any set
+// but Felinor Fuser (R387, R405), first answer in second prompt; then both fused into this unit (R77,
+// R102, R179); options reach only chooser (R177); radiant Discovers Radiant Felinor Units.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -170,7 +159,7 @@ mod tests {
             assert_eq!(ID, FUSER);
             assert_eq!(crate::card_def(ID).id, FUSER);
             let scripts = script();
-            // TS `expect(base).not.toBe(radiant)`: each face is its own script, built by its own call.
+            // Each face is its own script, built by its own call.
             assert!(!std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
                 scripts.radiant.cry.as_ref().unwrap()

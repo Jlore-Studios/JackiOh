@@ -28,18 +28,6 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #75 Argusland — SPEC §8.6 row 75, BUILD M9 Classic row C 75: "Aura: damage to your hero is
-// halved, rounded up, after Armor and before the hit caps (§4.4 step 2), so a 5 becomes 3 and a 1
-// stays 1, fatigue included; losing health (R18) and damage to Units are untouched; several
-// multiply; the lethal window reads the halved amount (§4.4 step 4a); gone when it leaves; radiant:
-// quartered, rounded up; its tuned number (divisor) reads through `param()` (R386)".
-//
-// The hits come from Core cards with their own tests: attacks by Gary the Gambler (1/1), Mr. Vanilla
-// (4/4), Prem Panther (5/4), Pointmaster (7/1) and Midrange Menace (9/9); Lunar Eclipse's 3 damage to
-// a target; Stockpile's "Draw 2" into an empty deck for fatigue; Blood Ridden Glowy Jelly Bean's
-// "lose 5 health" cast on draw. Going Long gives the hero Armor 2, Anti-oneshot Armor caps a hit at
-// 5, Magic Jammed destroys a backrow card, and My Pawn (R44) and C #52 Final Gambit read the lethal
-// projection and the lethal window.
 
 /// `describe("C #75 Argusland")`.
 #[cfg(test)]
@@ -109,7 +97,7 @@ mod tests {
             json!([{ "key": "divisor", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 2 }])
         );
         let scripts = script();
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face, its guard the same one.
+        // The Radiant face is the base face, its guard the same one.
         let guard = scripts.base.hero_guard.as_ref().expect("a hero guard");
         assert!(Arc::ptr_eq(guard, scripts.radiant.hero_guard.as_ref().expect("a hero guard")));
     }

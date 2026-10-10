@@ -7,19 +7,7 @@
 //!            its (1). Radiant: `legalActions` offers the opponent no play of a card that costs (3) or
 //!            more at that moment (R65); casts (R70) are not plays from hand and are unaffected. Tunes:
 //!            surcharge 1 ↑; threshold 3 ↓."
-//!
-//! The aura is B5 E15's price rule (`Script.costAura`), laid while the Lobbyist acts on the field
-//! (the top of its pile) and read by R65's `effectiveCost` on every card a play would take:
-//!   - Base: a threshold rung on every player's cards, `minCost` the declared threshold and `amount` the
-//!     declared surcharge; the ladder tests the threshold against the price the flat rungs left (R363),
-//!     before this rule adds its own, so a (2) Cost card is never lifted into range. An X-cost card
-//!     costs exactly its X and takes no rule (R65); a cast pays nothing (R70).
-//!   - Radiant: a ban (`ban: true`) on the opponent's cards whose finished price is the threshold or
-//!     more (an X card at its chosen X included): `legalActions` never offers such a play and §10.5
-//!     step 1 refuses it, read last (R65); its controller's own plays and every cast are untouched.
-//!
-//! Both numbers are declared and read through `param` (R386); "threshold ↓" moves toward harder for a
-//! Degrade — up, so fewer cards are caught.
+//! Cost aura (B5): radiant ban refused in §10.5 step 1; numbers read through param (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -58,18 +46,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #68 Small Card Lobbyist — SPEC §8.6 row 68, BUILD M9 Classic row C 68: "Aura: every (3)+ Cost card
-// either player could play (in a hand, or in a graveyard a permission lets its owner play from, R65)
-// costs (1) more, the threshold read before this aura adds its 1, as R363 reads Curvature's, so a (2)
-// Cost card is not lifted into range; X-cost cards are untouched (R65); casts pay nothing (R70); gone
-// when it leaves; a hidden hand card's `costChanged` shows −1 to the other player (R177); radiant
-// 22/26: the opponent can't play a (3)+ Cost card at all, checked last (R65) and absent from their
-// `legalActions`, an X card for X of 3 or more included; casts still happen; your plays are free of
-// it; its tuned numbers (surcharge, threshold) read through `param()` (R386)".
-//
-// A graveyard play is shown under C #28 Second Wind's permission (its Radiant face, so a played card
-// lands in the graveyard as usual), sent to `reduce` since the harness's `play` takes a hand card. A
-// cast of a (3)+ Cost card is shown with a Cast-on-draw card a `costMod` has priced at (3).
+// C #68 Small Card Lobbyist (SPEC §8.6 row 68). Aura: (3)+ Cost cards cost (1) more (R65, R363, R70);
+// hidden hand costChanged shows −1 (R177). Radiant: opponent can't play (3)+ Cost cards (R65);
+// tuned numbers read through param (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -357,7 +336,7 @@ mod tests {
                     "active": "p2",
                 }));
                 let id = s.card(DIVIDEND).id.clone();
-                // TS `new Set(…)`, then `[...xs].sort()`: the distinct X values offered, in order.
+                // The distinct X values offered, in order.
                 let mut xs: Vec<Option<i64>> = legal_actions(s.state(), P2)
                     .iter()
                     .map(js)

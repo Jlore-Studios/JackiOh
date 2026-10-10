@@ -38,19 +38,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #54 Rewind — SPEC §8.6 row 54, BUILD M9 Classic row C 54: "A declared target: one of your Units on
-// the field (the top of a pile) or a Unit card in your graveyard that has a Cry; its Cry runs with that
-// Unit as `self` under your control, its choices yours as prompts (R70's caster picks); a Cry that acts
-// on "this" finds nothing when the Unit is in a graveyard; running a Cry is not a play of that Unit; no
-// Unit with a Cry → it may still be played and fizzles, counting as played (§8's conventions, R90);
-// radiant: any Unit with a Cry on the field or in either graveyard, its Cry run twice, each run with
-// its own choices; its tuned number (repeats) reads through `param()` (R386)". The base face prints no
-// repeats, so it is tuned on the Radiant face only (R749).
-//
-// The Cries are Core cards with their own tests: Gary the Gambler (flips coins to buff itself), Me and
-// Mr Token (summons a Rush Token), Duplicating Felinors (summons a copy of itself), Bigot (destroys a
-// target enemy non-Human Unit) and Twisted Sorcerer (deals 4 damage to a target). Mr. Vanilla has no
-// Cry; Felinor Fiender's Stack buries a card beneath it.
+// C #54 — SPEC §8.6 row 54, BUILD M9 Classic row C 54: Cry runs with that Unit as `self` under your control,
+// choices yours as prompts (R70). No Unit with a Cry still plays and fizzles (§8 conventions, R90).
+// Radiant runs twice; repeats tuned on Radiant face only (R749; `param()`, R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -76,13 +66,13 @@ mod tests {
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    /// Written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serialises");
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// TS `applicableChanges(s.state, s.card(ref), direction)`, each row as its JSON name.
+    /// Applicable changes, each row as its JSON name.
     fn changes(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<Value> {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
     }

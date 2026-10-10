@@ -2,28 +2,11 @@
 //!   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.
 //!             Whenever Plague Counters are placed on this, draw {draw}." — 1 token, draw 1
 //!   Radiant: the same text — 2 tokens, draw 2
-//!   Engine:  "Plague Counters (§6.3): the Cry's declared target (R81) is another permanent on either
-//!            side, face-down cards included, and gets one placement of 1 (Radiant 2). The draw is a
-//!            trigger on a placement on this card, by any card of either player, once per placement
-//!            however many tokens it places. Tunes: tokens 1 ↑; draw 1 ↑."
 //!
-//! The Cry's target is declared with the play (R81): the top of any unit pile or any backrow card on
-//! either side, the Crawler itself never (it is still in hand as the play is chosen, and the filter
-//! says "another" besides). A face-down card its chooser may not read is offered by its id alone and
-//! the placement on it never names it to them (R177). With no other permanent on the field the target
-//! fizzles and the Crawler enters anyway (a target the board cannot satisfy is not a price).
-//!
-//! "Place N Plague Counters on X" is ONE placement of N (`placePlague`), multiplied by what the card
-//! receiving it says (C #27 Pestilent Slime's ×2); it is reported once as `counterChanged` carrying
-//! `placed`.
-//!
-//! "Whenever Plague Counters are placed on this" answers each such report naming this card: once per
-//! placement, however many tokens it put on (a C #27 doubling included), whoever made it — a removal
-//! (C #78's, C #74's spent tokens) carries no `placed` and draws nothing. The condition is the
-//! trigger's `when` (R99) and is checked again in `run`, so it holds whichever of the two the queue
-//! reads for a non-trap trigger.
-//!
-//! Both numbers are the declared `tokens` and `draw` (R386), read through `param` on the running face.
+//! The Cry targets another permanent on either side (R81, §6.3; face-down offered by id alone, R177;
+//! fizzles if none). "Whenever Plague Counters are placed on this" triggers once per placement naming
+//! it, whoever placed them (R99; removal draws nothing).
+//! Tuned numbers `tokens` and `draw` (R386) read through `param` on the running face.
 
 use jackioh_engine::effects::{draw, place_plague};
 use jackioh_engine::prelude::*;
@@ -81,15 +64,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #53 Plague Crawler — SPEC §8.6 row 53, BUILD M9 Classic row C 53: "Cry: one Plague Counter on another
-// permanent (a declared target, either side, face-down included; with none it enters anyway); whenever
-// Plague Counters are placed on it, by either player, draw 1, once per placement however many tokens
-// (C #27's doubling included); a face-down option carries only its id (R177) and the placement on it
-// never names it to you; radiant 4/4: 2 tokens, draw 2; its tuned numbers (tokens, draw) read through
-// `param()` (R386)".
-//
-// The C #27 Pestilent Slime case fuses a Crawler onto a Slime (R77), so the Slime's multiplier and the
-// Crawler's trigger sit on one card; it needs C #27's script (cards-classic-a) registered.
+// C #53 — SPEC §8.6 row 53, BUILD M9 Classic row C 53: Cry places plague tokens on another permanent
+// (face-down carries only id, R177); draws on placement on it; tuned numbers read via `param()` (R386).
+// Fusing Crawler onto C #27 Pestilent Slime (R77) tests multiplier and trigger sitting on one card.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -142,7 +119,6 @@ mod tests {
             .count()
     }
 
-    /// The TS default for `player` is "p1"; every caller passes it.
     fn plays_of(s: &Scenario, card: &CardInstance, player: PlayerId) -> Vec<ActionBody> {
         legal_actions(s.state(), player)
             .into_iter()
@@ -151,7 +127,6 @@ mod tests {
     }
 
     /// The cards `legal_actions` offers as the play's target, each once (a play is listed once per zone).
-    /// The TS default for `player` is "p1"; every caller passes it.
     fn offered_targets(s: &Scenario, card: &CardInstance, player: PlayerId) -> Vec<String> {
         let mut ids: IndexSet<String> = IndexSet::new();
         for play in plays_of(s, card, player) {
@@ -199,7 +174,7 @@ mod tests {
                     { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
                 ]),
             );
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script.
+            // The Radiant face is the same script.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(

@@ -9,25 +9,7 @@
 //!            returning this to your hand (R78's reset; the hand cap applies).
 //!            Neither trigger answers the play that moved the card (R401, R119): the Unit that summons it
 //!            doesn't bounce it, and the card that bounces it doesn't summon it back. Tunes: none."
-//!
-//! Readings:
-//!   - R548: both triggers answer a play of yours once it has resolved — §10.5 step 7's `cardResolved`,
-//!     which a cast's play emits too (R70) and a countered play never does (B5 E1) — the moment the
-//!     card's "After you play" names, as Hearthstone's "after you play" waits for the card to resolve.
-//!     R401 then holds by the dispatch itself (§10.3, R212): an event is offered to the cards where they
-//!     stand as it is dispatched, so the `cardResolved` of the Unit that summons the Striker reaches it
-//!     in hand and never on the field, and the `cardResolved` of the card that bounces it reaches it on
-//!     the field and never in hand.
-//!   - Its own play does not bounce it (R119): the field trigger passes over the play naming this card,
-//!     the check R119 leaves to a permanent that is not a trap.
-//!   - "Summon this" is B5 E26's `summonThis`: from the hand only, no Cry (R1), summoning sick, R64's
-//!     leftmost open, unlocked, unreserved unit zone, nothing when the row is full. A summon is no play,
-//!     so it answers nothing that answers plays.
-//!   - "A Unit" is the played card's definition's type; "you" is the play's player, the Striker's
-//!     controller (its owner, in hand). The opponent's plays do nothing.
-//!   - The return is §6.3 Bounce: R78's reset, the hand cap (a burned card goes to the graveyard, §2.4).
-//!
-//! Rush on the Radiant face is printed (§10.4 layer 1). No tuned numbers.
+//! Dispatch (§10.3, R212, §10.5, R70, B5), bounce (§6.3, §2.4), printed Rush (§10.4).
 
 use jackioh_engine::effects::{bounce, summon_this};
 use jackioh_engine::prelude::*;
@@ -35,7 +17,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-066";
 
 /// R548: a play of this card's controller's that has resolved, other than this card's own (R119).
-/// TS's `Resolved | null`: the event handed back is always a `GameEvent::CardResolved`.
 fn your_other_play<'e>(ctx: &EffectContext<'_>, event: &'e GameEvent) -> Option<&'e GameEvent> {
     let GameEvent::CardResolved { player, instance_id, .. } = event else {
         return None;
@@ -89,15 +70,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #66 EU Striker — SPEC §8.6 row 66, BUILD M9 Classic row C 66: "From your hand: after you play a Unit
-// and it resolves, it is summoned into your leftmost open zone (no Cry, summoning sick; a full board →
-// it stays in hand); on the field: after you play any card, it returns to your hand (R78 reset);
-// neither answers the play that moved it (R401, R119): the Unit that summons it doesn't bounce it, the
-// card that bounces it doesn't summon it back, and its own play doesn't bounce it; a cast is a play
-// (R70) and a countered card is not; the opponent's plays do nothing; the opponent's view never names
-// it in your hand, and the summon is the first they see of it; radiant 10/8 Rush; no tuned numbers".
-//
-// R548: both triggers answer a play of yours once it has resolved (§10.5 step 7's `cardResolved`).
+// C #66 EU Striker (SPEC §8.6 row 66). R548: both triggers answer a play of yours once it has
+// resolved (§10.5); neither answers the play that moved it (R401, R119; R78 reset; R70 cast).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -127,17 +101,14 @@ mod tests {
             .collect()
     }
 
-    /// TS `s.unit(p, lane)?.id`.
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         s.unit(player, lane).map(|unit| unit.id.clone())
     }
 
-    /// TS `s.unit(p, lane)?.defId`.
     fn unit_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         s.unit(player, lane).map(|unit| unit.def_id.clone())
     }
 
-    /// TS `s.hand(p).filter((card) => card.defId === defId)`.
     fn held(s: &Scenario, player: PlayerId, def_id: &str) -> Vec<CardInstance> {
         s.hand(player).iter().filter(|card| card.def_id == def_id).cloned().collect()
     }
@@ -167,8 +138,7 @@ mod tests {
                 scripts.base.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
                 vec![json!(["cardResolved"])],
             );
-            // TS `expect(radiant).toBe(base)`: the radiant face is the base script itself, so its
-            // triggers are the very same closures.
+            // The radiant face is the base script itself, so its triggers are the very same closures.
             assert_eq!(scripts.radiant.hand_triggers.len(), scripts.base.hand_triggers.len());
             assert_eq!(scripts.radiant.triggers.len(), scripts.base.triggers.len());
             for (radiant, base) in scripts.radiant.hand_triggers.iter().zip(&scripts.base.hand_triggers) {

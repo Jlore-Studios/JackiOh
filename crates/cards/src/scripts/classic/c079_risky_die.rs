@@ -7,20 +7,9 @@
 //!            above 0 (Radiant: above 1); an X-cost card counts 0 in hand (R65) and is kept. Tunes: draw
 //!            3 ↑; kept threshold 0 ↑."
 //!
-//! Readings:
-//!   - "Draw N" is N draws (§2.4): cast on draw, fatigue, the hand cap and a draw limit each act on
-//!     their own draw, and a cast on draw that asks pauses the rest (R113).
-//!   - "They" are the cards the draws moved from the library into the hand: the library is noted on
-//!     the resolving card as the Spell begins (`remember`, so a pause cannot lose it), and "they" are
-//!     then the hand cards that were in it. A card cast on draw, a burned card, a draw a limit stopped
-//!     and a fatigue hit put nothing there; a card an effect created in the hand meanwhile (a cast on
-//!     draw that adds cards) was never in the library; and cards already in the hand are untouched.
-//!   - Each of them gets `costMod` −1, which persists in every zone (R78); then each whose cost in hand
-//!     now (R65's `effectiveCost`: a player's discounts and surcharges included, an X-cost card 0) is
-//!     more than the threshold is exiled, publicly. The kept ones stay hidden in hand (R97).
-//!
-//! Both numbers are declared and read through `param` (R386): the draw count, and the kept threshold
-//! ("↑": an Upgrade keeps more).
+//! "Draw N" is N individual draws (§2.4, R113 pauses). "They" are library cards entering hand.
+//! Each gets `costMod` −1 (persists across zones, R78); cards exceeding threshold by hand cost
+//! (R65) are exiled publicly, while kept cards stay hidden (R97). Tunes read via `param` (R386).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw, exile, for_each_card, remember, set_cost_mod};
 use jackioh_engine::prelude::*;
@@ -94,12 +83,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #79 Risky Die — SPEC §8.6 row 79, BUILD M9 Classic row C 79: "Draw 3; the cards those draws put in
-// your hand (not a cast-on-draw card, a burned one or a draw a limit stopped) cost (1) less (`costMod`,
-// R78), then each of them that costs (1) or more is exiled; an X-cost card costs 0 in hand (R65) and
-// stays; cards already in your hand are untouched; kept cards are never named in the opponent's view
-// and exiled ones are public; radiant: only those that cost (2) or more are exiled; its tuned numbers
-// (draw, kept threshold) read through `param()` (R386)".
+// SPEC §8.6 row 79: Draw 3; drawn hand cards get `costMod` −1 (R78) and exile if
+// cost exceeds threshold (0 base, 1 radiant; R65). Kept cards hidden, exiled public
+// (R97). Tuned numbers read via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -129,7 +115,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `drawnIds(events, player = "p1")`.
+    /// Instance IDs of cards drawn by `player`.
     fn drawn_ids(events: &[GameEvent], player: PlayerId) -> Vec<String> {
         events
             .iter()

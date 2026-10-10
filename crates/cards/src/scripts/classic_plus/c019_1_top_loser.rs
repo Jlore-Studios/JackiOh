@@ -21,15 +21,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #19.1 Top Loser — SPEC §8.7 row 19.1, BUILD M9 Classic+ row C+ 19.1: "Armor 3; cannot be in
-// Defense Position (a switch is refused, a switch-all effect leaves it in Attack); only an enemy Unit
-// in its own lane's unit zone may attack it, declared or forced: a forced attack from another lane
-// does not happen and a random-enemy forced attack from another lane never draws it (§4.2 step 2); a
-// Taunt given to it binds only the attacker in its lane; effects still target it; a Token, it ceases
-// to exist when it leaves; its Armor reads through `param()`; radiant 10/10 Armor 6 and Immune to
-// Spells: no Spell targets it and no Spell's effect touches it (Powder Spray, Whirlwind, Brawl pass it
-// by), while Field Spells, Traps and Units still reach it and it may still be attacked from its lane".
-//
+// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune.
 // Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386):
 // the "reads through param()" clause is proved by an Upgrade of that number.
 #[cfg(test)]
@@ -55,7 +47,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
     fn spread(defaults: Value, overrides: &Value) -> Value {
         let mut out = defaults;
         if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
@@ -84,7 +75,6 @@ mod tests {
         }
     }
 
-    /// TS wrote through the live instance `top(s)` handed back.
     fn top_mut(s: &mut Scenario) -> &mut CardInstance {
         let id = top(s).id;
         find_instance_mut(s.state_mut(), &id).expect("no Top Loser in lane 3")
@@ -143,7 +133,6 @@ mod tests {
                     ..StaticFlags::default()
                 })
             );
-            // TS `expect(radiant).toBe(base)`: the radiant face is the base script.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
         }
 

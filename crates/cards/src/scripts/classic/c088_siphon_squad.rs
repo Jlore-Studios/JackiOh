@@ -10,21 +10,16 @@
 //!            every other layer. The self-Tribute is a condition checked at every state check, the one right
 //!            after it is set included. … live while face-down … (R403). The base face's `preview` (R280)
 //!            shows X, to its controller only while it is face-down (§10.8). Tunes: multiplier 2 ↑."
-//!
-//! R403: the aura and the self-Tribute (`tributeWhen`, read at every state check) work from the moment it
-//! is set, face-down. The preview is X off the public unit count; `viewFor` shows a face-down card's to
-//! its controller alone. Its proofs are in `test/preview.test.ts`.
+
 
 use jackioh_engine::effects::reveal;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-088";
 
-/// TS `type Read = { state: GameState; self: CardInstance; radiant: boolean }`: the aura's and
-/// `tributeWhen`'s argument as it is, and the preview's context narrowed to it (`read_of`).
+/// The aura's and `tribute_when`'s argument, and the preview's context narrowed to it (`read_of`).
 type Read<'a> = HookArgs<'a>;
 
-/// The preview's `ConditionContext` as a `Read`.
 fn read_of(c: ConditionContext<'_>) -> Read<'_> {
     HookArgs {
         state: c.state,
@@ -44,7 +39,7 @@ fn x_now(read: Read<'_>) -> i32 {
 
 fn siphon(mod_: fn(Read<'_>) -> StatMod, preview: fn(Read<'_>) -> Vec<PreviewValue>) -> Script {
     Script {
-        // "Start of Turn: Reveal" (balance patch 1, R686): at its controller's start of turn the card
+        // "Start of Turn: Reveal" (R686): at its controller's start of turn the card
         // shows its face to both players. The aura keeps working — revealed is not face-up, and a Field
         // Trap fires face-down or up alike.
         start_of_turn: Some(hook(|_ctx| vec![reveal(Default::default())])),
@@ -90,17 +85,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #88 Siphon Squad — SPEC §8.6 row 88, BUILD M9 Classic row C 88: "Live while face-down (R403): its aura
-// works from the moment it is set; Start of Turn: Reveal (R686) shows its face at its controller's next
-// start of turn, still armed; enemy Units have −X Attack, X twice the number of Units the opponent
-// controls, recomputed on every change and floored at 0; whenever the opponent controls no Units, at any
-// state check including the one right after it is set, it Tributes itself; until it reveals, the
-// opponent's view shows their attack drop and never names the card (R33); its preview is X, for its
-// controller only while it is face-down and for both players once it is face-up (R280, §10.8); radiant:
-// enemy Units have 0 Attack, set after every other layer (§10.4), so their hits are no hits (R63); its
-// tuned number (multiplier) reads through `param()` (R386)".
-//
-// The preview's proofs are in `test/preview.test.ts`.
+// SPEC §8.6 (R403): aura works while face-down, revealed at start of turn (R686). Enemy units have
+// −X Attack floored at 0, hidden until revealed (R33); preview shows X (§10.8, R280). Multiplier
+// is tuned via param() (R386). Radiant sets attack to 0 after all other layers (§10.4, R63).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

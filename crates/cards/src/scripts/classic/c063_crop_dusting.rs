@@ -1,26 +1,16 @@
 //! C #63 Crop Dusting (SPEC §8.6 row 63). (2) Trap, Common.
 //!   Base:    "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each
 //!            permanent. Draw {draw}." — 1 counter, draw 1
-//!   Radiant: the same text — 3 counters, draw 3 (the designer's Radiant face, issue #44)
+//!   Radiant: the same text — 3 counters, draw 3
 //!   Engine:  "A Trap whose condition is its controller's start of turn, fired with the start-of-turn
 //!            triggers (§2.2, R62); it fires once and goes to the graveyard. Each permanent on the field,
 //!            both sides, face-down ones included, gets one placement (Plague Counters, §6.3) of 1
 //!            (Radiant 3). Tunes: tokens 1 ↑; draw 1 ↑."
 //!
-//! A Trap is set face-down (R33) and fires by answering an event (§5.1, R99): this one answers its own
-//! controller's `turnStarted`, so it stays set through the opponent's turn and fires at the start of its
-//! controller's next one. The engine dispatches `turnStarted` to the traps at the first settle of the
-//! turn (after the refresh and the Brittle tick), so it fires before the turn's draw, as R62 has every
-//! start-of-turn trigger do. Firing turns it face-up and spends it to its owner's graveyard.
-//!
-//! "Each permanent" is one placement of {tokens} on every permanent on the field (`placePlagueEach`):
-//! the top of each unit pile and every backrow card, both sides, face-down ones included, in R68's
-//! order — each multiplied by the card that receives it (C #27) and each its own placement for "whenever
-//! Plague Counters are placed on this" (C #53). The firing trap is one of them too (R550); it is spent to
-//! the graveyard as its firing ends, and its tokens go with it (R78). A placement on a card a player may not
-//! read never names it to them (R97). Then the draw.
-//!
-//! Both numbers are the declared `tokens` and `draw` (R386), read through `param`.
+//! A Trap is set face-down (R33) and answers its controller's `turnStarted` (§5.1, R99) before the turn's draw (R62).
+//! Placements go in R68's order to every permanent (the firing trap included, R550, R78), unrevealed to
+//! players who may not read them (R97). Both numbers are declared `tokens` and `draw` (R386).
+
 
 use jackioh_engine::effects::{draw, place_plague_each};
 use jackioh_engine::prelude::*;
@@ -32,7 +22,6 @@ fn your_turn_starts(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::TurnStarted { player, .. } if *player == ctx.controller)
 }
 
-/// The Trap's one trigger (TS `TrapTrigger`, a `TriggerDef`).
 fn dusting() -> TriggerDef {
     TriggerDef::new("crop-dusting", &[GameEventType::TurnStarted], |ctx, _event| {
         vec![
@@ -59,12 +48,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: "Face-down (R33); fires at the start
-// of your next turn with the start-of-turn triggers (R62) and goes to the graveyard; places 1 Plague
-// Counter on each permanent on the field, both sides, face-down ones included (C #27 doubles its own),
-// then draws 1; the placement on a face-down card never names it to the player who can't read it (R97);
-// radiant: 3 counters each and draw 3 (the designer's Radiant face, issue #44); its tuned numbers
-// (tokens, draw) read through `param()` (R386)".
+// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: face-down (R33), fires at start of
+// your next turn with start-of-turn triggers (R62) and goes to graveyard. Places 1 Plague Counter on each
+// permanent, face-down included (R97; C #27 doubles), then draws 1; radiant: 3 counters each and draw 3;
+// tuned numbers (tokens, draw) read through `param()` (R386).
 //
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
 #[cfg(test)]
@@ -93,7 +80,7 @@ mod tests {
         vec![card; n]
     }
 
-    /// Each card's placements, in the order the first one reached it (TS's insertion-ordered `Map`).
+    /// Each card's placements, in the order the first one reached it.
     fn placed_on(s: &Scenario) -> IndexMap<String, Vec<Value>> {
         let mut out: IndexMap<String, Vec<Value>> = IndexMap::new();
         for event in s.events().iter().map(js) {
@@ -160,7 +147,7 @@ mod tests {
                     { "key": "draw", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 },
                 ]),
             );
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration and the same hooks.
+            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(
                 scripts.radiant.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
                 scripts.base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),

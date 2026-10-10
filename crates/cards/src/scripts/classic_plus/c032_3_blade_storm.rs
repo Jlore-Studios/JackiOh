@@ -2,16 +2,12 @@
 //!   Base:    "Cast Whirlwind until a Unit dies." (the round cap stays a declared number, not shown)
 //!   Radiant: "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
 //!
-//! Each round is one effect list followed by its own state check — one of the two effect lists R59 lets
-//! check inside themselves, beside R283's — so the Units a round killed die, and their Death hooks
-//! resolve, before the next round. The storm stops after a round in which any Unit died (a Reborn death counts), after
-//! its round cap, or when no Unit is left (`castRoundsUntilDeath`, `damageRoundsUntilDeath`). The cap is the declared
-//! number `rounds` (R386), read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces, which
-//! only a Degrade or an Upgrade of this card moves. The base face's every round casts Whirlwind
-//! (C+ #21, Pierce dealing 1 to all Units) as a real Spell cast (R70), so each hit goes through §4.4 —
-//! Divine Shield, Armor, Spell Damage and Immune to Spells apply round by round — and "whenever you
-//! cast a Spell" answers every round. The Radiant face hits enemy Units only; a death on either side
-//! still stops it. Its `refs` name Whirlwind (R279).
+//! Each round is one effect list followed by its own state check (R59, beside R283) so killed Units die
+//! and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
+//! (Reborn counts), after its round cap, or when no Unit is left. Cap is declared `rounds` (R386),
+//! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces. Base face casts Whirlwind (C+ #21)
+//! as a real Spell cast (R70, §4.4), so Divine Shield, Armor, Spell Damage apply round by round.
+//! Radiant face hits enemy Units only; a death on either side still stops it (refs Whirlwind, R279).
 
 use jackioh_engine::effects::{cast_rounds_until_death, damage_rounds_until_death};
 use jackioh_engine::prelude::*;
@@ -21,8 +17,8 @@ pub const ID: &str = "classicplus-032-3";
 /// Whirlwind (C+ #21), which the base face casts round after round.
 const WHIRLWIND: &str = "classicplus-021";
 
-/// The Radiant face's hit of each round, "Deal 1 damage", is the declared number `damage` (R386, patch
-/// v0.3.2); the base face's rounds cast Whirlwind, whose own 1 is Whirlwind's number.
+/// The Radiant face's hit of each round, "Deal 1 damage", is the declared number `damage` (R386);
+/// the base face's rounds cast Whirlwind, whose own 1 is Whirlwind's number.
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
@@ -46,19 +42,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #32.3 Blade Storm — SPEC §8.7 row 32.3, BUILD M9 Classic+ row C+ 32.3: the base face casts
-// Whirlwind (C+ #21: Pierce, 1 damage to all Units) round after round, each round one effect list
-// followed by its own state check (one of the two in-list checks R59 names, beside R283's), Death
-// triggers resolving before the next round; it stops after a round in which any Unit died (a Reborn
-// death counts), when no Unit is left, or after its round cap, 30 (`BLADE_STORM_ROUNDS`), which reads
-// through `param()` (step 8) but is printed on the Radiant face only, so a Degrade or Upgrade moves it
-// on this card only; each round is a real Spell cast (R70, R652), so Pierce goes through Armor, Spell
-// Damage raises every round's hits and Divine Shields pop in the first round; a board nothing kills
-// runs exactly 30 rounds and stops; radiant deals 1 damage to all enemy Units per round instead, a
-// death on either side still stopping it".
-//
-// The engine proves the cast rounds against fixture cards too (`packages/engine/test/rounds.test.ts`),
-// a Death hook that asks inside a round's check among them.
+// C+ #32.3 Blade Storm (SPEC §8.7, R59, R70, R283, R652): base face casts Whirlwind round after
+// round until a Unit dies, no Unit is left, or round cap is reached. Radiant hits enemy Units only.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -142,7 +127,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `s.unit(seat, lane) ?? fallback`: the unit's id, or the fallback reference.
+    /// The unit's id, or the fallback reference.
     fn unit_or(s: &Scenario, seat: PlayerId, lane: i32, fallback: &str) -> String {
         s.unit(seat, lane).map(|card| card.id).unwrap_or_else(|| fallback.to_string())
     }
@@ -164,7 +149,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.id, STORM);
             let scripts = script();
-            // TS `expect(base).not.toBe(radiant)`: the two faces are two scripts.
+            // The two faces are two scripts.
             assert!(!std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
                 scripts.radiant.cry.as_ref().unwrap()

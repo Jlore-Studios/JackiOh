@@ -2,19 +2,12 @@
 //!   Base:    "This enters with X Plague Counters on it.
 //!             Aura: Counter every card played whose cost equals the number of Plague Counters on this."
 //!   Radiant: "… Counter every card your opponent plays whose cost equals the number of Plague Counters on this."
-//!   Engine:  "X is at least 1 (R348), and on the field it costs the X it was played for (R396). Counter
-//!            (§6.3), in §10.5's announce window, on every announce whose cost paid equals the current count
-//!            (both players'; Radiant: the opponent's). "Cost" is the cost paid, as #60 Bear Honeypot reads it
-//!            (R56), so a free cast (R70) is countered only at a count of 0. … It is not on the field during
-//!            its own announce, so it never counters itself. Tunes: none."
 //!
-//! "Enters with X" is one placement of X on itself as its Cry (`placePlague`). The Aura answers each
-//! `cardAnnounced` whose `costPaid` equals the tokens on it now — the count moves as tokens are placed and
-//! removed (C #78) — by countering that play to its owner's graveyard (`counterPlay`).
+//! X is at least 1 (R348), and on the field costs the X paid (R396). Counter (§6.3) in §10.5's announce
+//! window when cost paid equals the current Plague count (R56; Radiant: opponent only); free casts (R70)
+//! are countered only at count 0. It never counters itself.
 //!
-//! Patch v0.2.7 (#126, R667): `wouldCounter` is the same match asked ahead of any play, so the engine
-//! can warn the viewer off a hand card the Chalice would counter (`counteredOnPlay`). Both halves call
-//! `counters`, so the warning and the counter cannot disagree.
+//! R667: `wouldCounter` uses the same match ahead of a play to mark hand cards (`counteredOnPlay`).
 
 use jackioh_engine::effects::{counter_play, place_plague};
 use jackioh_engine::prelude::*;
@@ -29,8 +22,7 @@ fn counters(self_: &CardInstance, controller: PlayerId, player: PlayerId, cost_p
     cost_paid == plague_on(self_)
 }
 
-/// The announced play's instance id when the Chalice, as it stands now, counters it. TS read the live
-/// `ctx.self`, so its count is the one on the card at this moment (`live_self`).
+/// The announced play's instance id when the Chalice, as it stands now, counters it (`live_self`).
 fn matches(ctx: &EffectContext<'_>, event: &GameEvent, opponent_only: bool) -> Option<String> {
     let GameEvent::CardAnnounced { player, instance_id, cost_paid, .. } = event else {
         return None;
@@ -72,13 +64,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #87 Plague Chalice — SPEC §8.6 row 87, BUILD M9 Classic row C 87: "X chosen with the play, at least 1
-// (R348); it enters with X Plague Counters; Aura: every card either player plays whose cost paid equals its
-// current token count is countered in the announce window (§10.5), treated as never played as C #17's
-// is; a free cast is countered only at a count of 0 (R70); the count moves (C #78 removes tokens,
-// placements add them); it isn't on the field during its own announce and never counters itself; a set
-// trap's cost is public (R351), so countering it reveals only what the graveyard then shows; leaving the
-// field ends it; radiant: only the opponent's plays; no tuned numbers".
+// C #87 Plague Chalice (SPEC §8.6 row 87). Field Spell: enters with X Plague Counters (R348);
+// Aura counters plays in §10.5's announce window matching the token count; free casts countered
+// only at count 0 (R70); set trap cost is public (R351). Radiant: opponent's plays only.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -445,7 +433,7 @@ mod tests {
         }
     }
 
-    /// C #87 Plague Chalice: R667 the warning on the viewer's hand (patch v0.2.7)
+    /// C #87 Plague Chalice: R667 the warning on the viewer's hand
     mod r667_the_warning_on_the_viewer_s_hand_patch_v0_2_7 {
         use super::*;
 

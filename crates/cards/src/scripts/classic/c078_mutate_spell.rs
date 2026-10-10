@@ -4,18 +4,9 @@
 //!            {attacks|time|times}." — draw 2, 1 attack
 //!   Radiant: "… If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your
 //!            hand or in your deck, or exile it if you have none. …" — draw 4, 2 attacks
-//!   Engine:  "Activate ♾️ (§6.2, R384) with a declared target (a permanent with a Plague Counter, either
-//!            side), bounded by `ACTIVATE_UNLIMITED_CAP` and by the tokens on the field; removing the token
-//!            is the ability's cost. "Attacks a random enemy" is a forced attack (R53) on a random enemy,
-//!            hero or unit, drawn from the targets it may attack (§4.2); the Radiant's second attack is its
-//!            own combat and happens only if the unit is still on the field (R96). The Radiant's fuse is
-//!            Fuse (§6.3, R77, R102; the enemy card ceases to exist) onto the card you choose … an
-//!            Immutable card of yours is not offered (R23). Tunes: draw 2 ↑; attacks 1 ↑."
-//!
-//! R402: the target travels in the `activate` action (R81, R384); with no tokened permanent on the field
-//! the ability can't be activated. The branch is read off the target as it was activated: whose it is,
-//! and its row. The forced attacks are `forcedAttackRandom`; the Radiant fuse is `fuseOntoYourCard`, whose
-//! prompt offers your cards of its type (the deck's to you alone) and exiles the card when there is none.
+//!   Engine:  "Activate ♾️ (§6.2, R81, R384; R402 target in action): remove a Plague Counter. Forced
+//!            attack (R53, §4.2; Radiant second attack R96). Radiant fuse (§6.3, R77, R102) ignores
+//!            Immutable (R23) and exiles if none. Tunes: draw 2 ↑; attacks 1 ↑."
 
 use jackioh_engine::effects::{
     consume_plague, draw, exile, forced_attack_random, fuse_onto_your_card, instance_of,
@@ -83,17 +74,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #78 Mutate Spell — SPEC §8.6 row 78, BUILD M9 Classic row C 78: "A Field Spell (R402); Activate ♾️
-// (R384), the target carried in the `activate` action: a permanent with a Plague Counter, either side,
-// face-down included (the option carries only its id, R177); remove one token, then: an enemy permanent is
-// exiled; your backrow card, itself included, draws 2; your Unit makes one forced attack (R53) on a random
-// enemy it may attack, hero or Unit, spending no exertion; with no tokened permanent it can't activate; at
-// most `ACTIVATE_UNLIMITED_CAP` uses per turn; not a play; radiant: an enemy permanent is fused (R77, R102)
-// onto a card of yours of its type, picked in a prompt over your field, hand and deck, your Immutable
-// cards never offered and the deck's cards shown to you only (§10.8), never named in the opponent's view;
-// the enemy card ceases to exist; with no card of its type it is exiled; your backrow card draws 4; your
-// Unit attacks a random enemy twice, the second only if it survived the first; its tuned numbers (draw,
-// attacks) read through `param()` (R386)".
+// SPEC §8.6 row 78: Field Spell (R402); Activate ♾️ (R384) removes Plague token:
+// enemy exiled (Radiant fused R77, R102; Immutable excluded, §10.8 hidden);
+// backrow draws 2 (Radiant 4); Unit forced-attacks random enemy (R53; R177, R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -511,7 +494,7 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// `extra` holds the optional `hand`, `field` and `library` lists TS's `fusing` took.
+        /// `extra` holds the optional `hand`, `field` and `library` lists.
         fn fusing(extra: Value) -> Scenario {
             let list = |key: &str| extra[key].as_array().cloned().unwrap_or_default();
             let mut hand = vec![json!(FILLER)];

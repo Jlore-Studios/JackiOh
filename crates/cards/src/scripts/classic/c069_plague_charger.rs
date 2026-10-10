@@ -3,25 +3,10 @@
 //!             Has First Strike while it has a Plague Counter.
 //!             Has +{attack} Attack for each Plague Counter on it." — +2
 //!   Radiant: the same text — +4
-//!   Engine:  "A conditional keyword (§6.1) and a self stat layer (§10.4) reading its own
-//!            `counters.plague`, both following the count as tokens are placed and consumed. Tunes:
-//!            attack per token 2 ↑."
 //!
-//! Charge is printed on both catalog faces (§10.4 layer 1).
-//!
-//! "Has First Strike while it has a Plague Counter" is a keyword that holds only while a condition does
-//! (§6.1): the card's `conditionalKeywords`, read with its printed keywords on every read (§10.4), so it
-//! comes and goes with the tokens. "+{attack} Attack for each Plague Counter on it" is §10.4 layer 5's
-//! "stats per Plague Counter": an aura of this card on itself alone, its tokens times the declared
-//! `attack`. Both read the card's own counters, which R78 clears when it leaves the field, so a Charger
-//! with no token — in hand, or back on the field after a bounce — has neither. A Vanilla Charger has no
-//! text, so neither (§6.3). The aura's own attack reaches no other unit.
-//!
-//! R195: the printed condition is "while it has a Plague Counter", read on the field (`conditionMet`,
-//! proved in `test/condition-active.test.ts`): it glows exactly while it has First Strike. A Charger in
-//! hand holds no tokens (R78), so it never glows there.
-//!
-//! The number is the declared `attack` (R386), read through `param` on the face it wears.
+//! First Strike while it has a Plague Counter (§6.1, §10.4) and +{attack} Attack per token (self aura,
+//! §10.4 layer 5) follow its tokens; both clear when it leaves the field (R78; vanilla has neither, §6.3).
+//! Glows on the field while it has a Plague Counter (R195). The attack bonus tunes through `param` (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -71,16 +56,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #69 Plague Charger — SPEC §8.6 row 69, BUILD M9 Classic row C 69: "Charge; +2 Attack for each Plague
-// Token on it (a self stat layer, §10.4) and First Strike exactly while it has one (a keyword while a
-// condition holds, §6.1), both following the tokens as they come and go and gone when it leaves (R78);
-// with no token it has neither; radiant 8/4: +4 per token; its tuned number (attack per token) reads
-// through `param()` (R386)".
-//
-// Its yellow glow (R195, `conditionMet`: "while it has a Plague Counter", on the field) is proved, both
-// answers, in `test/condition-active.test.ts`.
-
-/// `describe("C #69 Plague Charger")`.
+// C #69 Plague Charger — SPEC §8.6 row 69, BUILD M9 Classic row C 69: Charge; +2 Attack per Plague Token
+// (self aura, §10.4) and First Strike while it has one (§6.1); tokens clear on leave (R78); radiant: +4
+// per token; attack tunes through `param()` (R386). Glows on field while it has a Plague Counter (R195).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,7 +106,7 @@ mod tests {
         assert!(base.conditional_keywords.is_some());
         assert!(base.aura.is_some());
         assert!(base.condition_met.is_some());
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face, every hook the same one.
+        // The Radiant face is the base face, every hook the same one.
         assert!(Arc::ptr_eq(
             base.conditional_keywords.as_ref().expect("a conditional keyword"),
             radiant.conditional_keywords.as_ref().expect("a conditional keyword")
@@ -143,7 +121,6 @@ mod tests {
         ));
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -277,7 +254,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
