@@ -4501,6 +4501,7 @@
     "645": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T17:02:03Z",
         "difficulty": "hard",
@@ -4509,6 +4510,7 @@
         "why": "Design across crates: the server must start brokering a password grant, which SPEC \u00a79.4 and crates/server/src/auth.rs rule out today, plus the web form and a new ruling. 'Several crates' alone would be medium, but this security design is what makes it hard."
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-10T21:22:33Z",
         "family": "claude",
@@ -4518,7 +4520,7 @@
         "reason": "the builder's session failed and changed nothing: API Error: Connection refused \u2014 a firewall or proxy may be blocking it (ECONNREFUSED)",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; cat .bot-notes.md 2>/dev/null | head -30; echo ----; wc -l .bot-journal.md; grep -n \\\"^## \\\\|^### \\\" .bot-journal.md | tail -30; git status --sh\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-645/.bot-journal.md\", \"offset\": 372}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-645/.bot-journal.md\", \"offset\": 238, \"limit\": 90}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Run 6 (claude-1, opus): re-read the diff (no defects), every check green\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; (cargo fmt --check && echo FMT_OK; cargo jackioh spec check 2>&1 | tail -3; cargo test -p jackioh-server r1443 2>&1 | grep -E \\\"^test |^test res\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; git diff fcf4e14c -- crates/server/src/api/auth.rs crates/server/src/auth.rs crates/server/src/username/mod.rs crates/server/src/db/pg.rs crates\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; git diff fcf4e14c -- apps/web/src/net apps/web/src/routes/login.tsx spec/rulings/R1443.md\", \"description\": \"Show web source and ruling diff\"}\n- Grep: {\"pattern\": \"pub fn address_key|pub fn create_rate_limiter|fn prune|retain\", \"path\": \"/home/runner/work/_temp/work/item-645/crates/server/src/api/http.rs\", \"output_mode\": \"content\", \"-A\": 6}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-645; ls apps/web/src/wasm/pkg >/dev/null 2>&1 && echo PKG_PRESENT || echo NO_PKG\", \"description\": \"Check the WASM package exists\"}\n- Bash: {\"command\": \"sleep 600; cat /tmp/run7-rust.txt\", \"description\": \"Wait for the Rust checks and show output\", \"timeout\": 660000}\n- tool error: Exit code 143 Command timed out after 10m 0s\n- said: API Error: Connection refused \u2014 a firewall or proxy may be blocking it (ECONNREFUSED)"
       },
-      "interruptions": 2,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
