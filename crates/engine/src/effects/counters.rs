@@ -1,9 +1,7 @@
 //! Counters on an instance and locks on a zone (§6.3). Plague Counters live on the instance and R78
 //! clears them when the card leaves the field; a Lock lives on the zone and outlives every occupant.
 //! The Plague Counter rules themselves — what a placement is, the multiplier, the report — are
-//! `crate::plague`'s (R471); the placement verbs of patch v0.2.0 are `super::plague`'s.
-//!
-//! Port of `packages/engine/src/effects/counters.ts`.
+//! `crate::plague`'s (R471); the placement verbs are `super::plague`'s.
 
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +20,6 @@ fn instance_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardInstanc
     }
 }
 
-/// `plague`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlagueArgs {
@@ -50,7 +47,6 @@ pub fn plague(args: PlagueArgs) -> Effect {
     })
 }
 
-/// `clear_plague`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ClearPlagueArgs {
@@ -102,7 +98,7 @@ fn zone_for(ctx: &EffectContext<'_>, spec: &ZoneSpec) -> Option<ZoneSlot> {
                 lane: *lane,
             })
         }
-        // TS read the live `ctx.self` object: the card where it stands now.
+        // The live card: where it stands now.
         ZoneSpec::SelfCard => ctx.live_self().and_then(|card| slot_of(ctx.state, card)),
         ZoneSpec::Chosen { index } => {
             let card = instance_of(ctx, &TargetSpec::Chosen { index: *index })?;
@@ -111,7 +107,6 @@ fn zone_for(ctx: &EffectContext<'_>, spec: &ZoneSpec) -> Option<ZoneSlot> {
     }
 }
 
-/// `lock`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LockArgs {
@@ -138,7 +133,6 @@ pub fn lock(args: LockArgs) -> Effect {
     })
 }
 
-/// `unlock`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct UnlockArgs {

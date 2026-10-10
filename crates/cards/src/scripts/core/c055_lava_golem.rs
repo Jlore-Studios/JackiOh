@@ -11,6 +11,7 @@
 //!   * `tribute_enemies` — "Can use enemy Units as Tributes" (R101).
 //!   * `enemy_tribute_hands_over` — base face (R360): an opposing unit in the Tribute puts the Golem on the
 //!     opponent's side, in the lane named else their leftmost open one (R15); still the player's card and play.
+//!
 //! R65/§6.3: a mana price of 0 does not touch the Tribute (#41 Sheepish's free copy still needs three units).
 
 use jackioh_engine::prelude::*;

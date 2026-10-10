@@ -4,19 +4,12 @@
 //! rotating player's lanes 1 to 5, then the opponent's lanes 5 down to 1, and back (§3.1). Both
 //! rings turn together, one step, in the direction the play declared (R81).
 //!
-//! What travels with a card: its instance. A rotation never takes a card off the field, so R78's
-//! reset never runs and its damage, buffs, counters and position all come along (R14). What
-//! changes is `controller`, and only when the card's new zone is on the other side of the centre
-//! line. That crossing is an entry (R171): the card takes this turn as its
-//! `summoned_turn` and a fresh exertion, so it is summoning sick on its new side for the rest of the
-//! turn. A card that moves along its own side has entered nothing and keeps both. The owner never
-//! changes on a crossing; a bounce takes the card to its controller's hand as theirs (R747), and it
-//! goes to its owner's library, graveyard or exile (R12) whenever it later leaves the field. A face-down trap that crosses is read by its new controller and no
-//! longer by the old one, which follows from `controller` alone, so `face_up` is deliberately
-//! untouched here (R33).
-//!
-//! Port of `packages/engine/src/subsystems/rotation.ts`. `RotationDirection` is the wire's
-//! (`rotated.direction`, part 1's freeze), re-exported here under TS's module path.
+//! A rotation never takes a card off the field, so R78's reset never runs: its instance, damage, buffs,
+//! counters and position come along (R14). Only `controller` changes, and only across the centre line;
+//! that crossing is an entry (R171), so the card takes this turn as its `summoned_turn` and a fresh
+//! exertion and is summoning sick on its new side. The owner never changes: a bounce goes to the
+//! controller's hand (R747), a later leave to the owner's library, graveyard or exile (R12). A face-down
+//! trap that crosses is read by its new controller alone, so `face_up` is left untouched (R33).
 
 use std::borrow::Borrow;
 
@@ -32,7 +25,6 @@ pub use crate::wire::RotationDirection;
 /// R14: two rings, rotated together.
 pub const ROTATION_ROWS: &[Row] = &[Row::Units, Row::Backrow];
 
-/// TS `RotationArgs`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RotationArgs {
@@ -45,7 +37,6 @@ pub struct RotationArgs {
     pub radiant: Option<bool>,
 }
 
-/// TS `RotationResult`.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct RotationResult {
     /// Cards that reached a new zone, in ring order: the unit ring first, then the backrow ring.
@@ -129,14 +120,10 @@ fn bounce_home(sink: &mut EngineSink<'_>, card: &CardInstance, cost_override: Op
     });
 }
 
-/// Rotate both rings one step (§3.1, R14, §8 #52). Silas is on the field when his Cry resolves, so
-/// he is in the snapshot and rotates with everything else.
-///
-/// The whole board is read before anything is placed, so one rotation is a single atomic step: no
-/// card can land on a zone whose occupant has not moved yet, and a full ring keeps every card.
-///
-/// Events (§10.3): `rotated` once for the rotation, then `controlChanged` per card that crossed and
-/// `bounced` per card that was bounced, in ring order.
+/// Rotate both rings one step (§3.1, R14, §8 #52). Silas is on the field when his Cry resolves, so he
+/// rotates too. The whole board is read before anything is placed: one atomic step, so no card lands
+/// on a zone whose occupant has not moved yet. Events (§10.3): `rotated` once, then `controlChanged`
+/// per card that crossed and `bounced` per card that was bounced, in ring order.
 pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationResult {
     let radiant = args.radiant == Some(true);
 
@@ -162,7 +149,6 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         direction: args.direction,
     });
 
-    // Read first, then place: every card comes off the field before any card lands.
     for entry in &entries {
         for card in &entry.cards {
             let options = crate::zones::RemoveFromFieldOptions {
@@ -177,13 +163,10 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
     for entry in &entries {
         let crosses = entry.to.player != entry.from.player;
 
-        // #52 radiant: "cards that would move to the opponent are bounced to their controller's hand
-        // costing 0 instead" — the cards the rotating player would lose, which are the ones leaving
-        // their side. "The opponent" is the rotating player's (§8 Conventions: "your" is the
-        // controller), so a card crossing the other way, onto the rotating player's side, is not one of
-        // them: the base clause the radiant cell does not restate still holds for it, and it crosses and
-        // changes control like any other (R14, R171). The bounce goes to the card's controller's hand (R747).
-        // A Locked destination would have bounced an outbound card anyway, so this also covers that case.
+        // #52 radiant: cards that would move to the opponent bounce to their controller's hand costing 0
+        // instead (R747) — the ones the rotating player would lose, those leaving their side ("your" is the
+        // controller, §8 Conventions). A card crossing onto the rotating player's side crosses and changes
+        // control like any other (R14, R171). A Locked destination bounces an outbound card anyway.
         if radiant && crosses && entry.from.player == args.perspective {
             for card in &entry.cards {
                 bounce_home(sink, card, Some(0));
@@ -209,7 +192,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
             let Some(previous) = before.get(at).copied() else {
                 continue;
             };
-            // TS read the live instance, which the placement had moved to its new side.
+            // The live instance, which the placement has moved to its new side.
             let Some(placed) = find_instance(sink.state, &card.id).cloned() else {
                 continue;
             };

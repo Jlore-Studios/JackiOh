@@ -1,26 +1,20 @@
 //! #86 "Miss" Mrow (SPEC §8.4, R12, R13, R15, R42, R78, R171, R361).
 //!
 //! Base: "Can't attack. Death: Steal the Unit that destroyed this." Radiant: "Rush. Death: Steal the
-//! Unit that destroyed this." (patch v0.1.1: the Death used to steal every enemy
-//! unit, and the Radiant face used to print Taunt).
+//! Unit that destroyed this."
 //!
-//! The Death clause is the same on both faces, so both faces run one Death hook and differ only in
-//! the printed face, which is the catalog's: the base face prints the keyword `Can't attack`, which
-//! `combat.ts`'s `whyAttackRefused` reads off `unitView(...).keywords`, and the radiant face prints
-//! `Rush` (§8 Conventions: a keyword list gives the face's complete list), so it may attack units the
-//! turn it lands. Neither needs a line of script.
+//! Both faces run one Death hook and differ only in the printed face, which is the catalog's: `Can't
+//! attack` on the base, `Rush` on the radiant (§8 Conventions: a keyword list gives the face's complete
+//! list). Neither needs a line of script.
 //!
-//! "The Unit that destroyed this" is R42's killer, which R361 makes a card-facing fact: the unit
-//! whose hit took Mrow to 0 health (or whose Poisonous hit marked it), read off Mrow's last-known
-//! state (R78) — the Death hook runs at §4.5 step 3 on that snapshot. `killerOf` answers it only while
-//! the killer is a Unit acting on the field, so a destroy effect, a Tribute, a Spell's damage, a
-//! killer that died in the same combat or one dormant under a Stack (R13) gives nothing to take.
+//! "The Unit that destroyed this" is R42's killer, a card-facing fact by R361, read off Mrow's
+//! last-known state (R78) at §4.5 step 3. `killerOf` answers only while the killer is a Unit acting on
+//! the field: a destroy effect, a Tribute, a Spell's damage, a killer that died in the same combat or
+//! one dormant under a Stack (R13) gives nothing to take.
 //!
-//! The take is one `steal`, which is §6.3's Steal: R15 places it (the same lane on Mrow's
-//! controller's side when free, else the first free zone; with none, it stays), it keeps its damage
-//! and buffs (R78), it has entered its new controller's side this turn (R171), and a killer its
-//! controller already controls — a unit of Mrow's own side — is left where it is. `ctx.controller`
-//! is the side Mrow was on as it died, so a stolen Mrow takes the killer for whoever controlled it.
+//! The take is one `steal` (§6.3): R15 places it, it keeps its damage and buffs (R78), it has entered
+//! its new controller's side this turn (R171), and a killer already on Mrow's side is left where it is.
+//! `ctx.controller` is the side Mrow was on as it died.
 
 use jackioh_engine::prelude::*;
 
@@ -52,8 +46,7 @@ pub fn script() -> CardScripts {
 
 // #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86): "Cannot attack; Death takes control of the Unit
 // that destroyed it (R42's killer, R361), placed per R15, and nothing when no Unit on the field
-// destroyed it; radiant has Rush instead". Patch v0.1.1 replaced "Death: steal all enemy units" and
-// the radiant face's Taunt.
+// destroyed it; radiant has Rush instead".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,7 +133,6 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|card| card.owner), Some(P2));
             assert_eq!(s.unit(P1, 1).map(|card| card.controller), Some(P1));
             assert_eq!(s.unit(P1, 1).map(|card| card.damage), Some(1));
-            // The other enemy unit had no part in it and stays with p2.
             assert_eq!(s.unit(P2, 2).as_ref().map(|card| card.def_id.as_str()), Some(GARY));
             assert_eq!(s.unit(P2, 2).map(|card| card.controller), Some(P2));
         }
@@ -312,7 +304,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SORCERER, "lane": 1 }, { "def": GARY, "lane": 2 }] },
             }));
 
-            // The radiant 2/2 attacks a 5/5: it deals 2, takes 5 and dies, and the 5/5 destroyed it.
             s.attack(MROW, SORCERER);
 
             s.expect_in_zone(MROW, "graveyard");

@@ -1,23 +1,16 @@
 //! The opponent's reply (SPEC §9.9, docs/polish/3-ai.md "The opponent's reply"). A line that passes
 //! the turn is worth what is left of it after the opponent answers, so `decide` scores its best lines
 //! one turn deeper: on the determinization, the opponent plays its turn by a fixed rule and ends it,
-//! and the line is scored at the seat's next decision.
-//!
-//! The rule, one step at a time:
-//!   1. A card the line itself put in the opponent's hand (a Pocket Chaos it was handed, the units a
-//!      Flood bounced) is no guess: the seat watched it arrive. The opponent plays the one whose
-//!      result its own evaluation likes best, if that beats standing still.
+//! and the line is scored at the seat's next decision. The rule:
+//!   1. A card the line itself put in the opponent's hand is no guess: the seat watched it arrive.
+//!      The opponent plays the one whose result its own evaluation likes best, if that beats
+//!      standing still.
 //!   2. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
 //!      best value read off the layers (lethal, a kill it survives, a trade up, the face).
 //!   3. When neither is worth doing it ends its turn.
 //!
-//! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
-//! noise, not information. Every step is a real `reduce` (one node each), so the engine decides what
-//! actually happens: traps, First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the
-//! seat's own start of turn. Nothing here recurses.
-//!
-//! Port of `packages/ai/src/reply.ts`. TS's `try { reduce } catch` is `catch_unwind` around
-//! `reduce`, whose refusals come back as `error` and whose impossible states panic (SURFACE §4.4.9).
+//! It plays none of the cards it held unseen: they are samples, and a guessed hand adds noise. Every
+//! step is a real `reduce` (one node each), so the engine decides what happens. Nothing recurses.
 
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -162,7 +155,8 @@ fn ranked_attacks(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     ranked.into_iter().map(|(action, _)| action).collect()
 }
 
-/// One opponent action through the reducer; `None` when it panics or is refused.
+/// One opponent action through the reducer; `None` when it is refused or panics (an impossible state
+/// is a panic, §4.4.9).
 fn reduce_for(
     state: &GameState,
     actor: PlayerId,
@@ -176,11 +170,11 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s answer: TS's `GameState | null | undefined`.
+/// `known_play`'s answer.
 enum Known {
-    /// The counter refused a node (TS `null`).
+    /// The counter refused a node.
     Cut,
-    /// No such play is worth making (TS `undefined`).
+    /// No such play is worth making.
     Nothing,
     Played(Box<GameState>),
 }
@@ -241,13 +235,10 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
         .collect()
 }
 
-/// The opponent's reply to a line that handed it the turn: from `state` (the opponent's main phase,
-/// or a prompt on the way there) it plays by the rule in this file's header and ends its turn.
-/// Prompts on either side are answered with their first legal answer. `hidden` holds the ids of the
-/// cards the opponent held unseen when the decision began (`hidden_card_ids` of the decision's
-/// determinization, TS's default); any other card in its hand is one it may play. Returns the state
-/// at the seat's next main phase or prompt, or where the game ended; `None` when the counter refused
-/// a node.
+/// The opponent's reply to a line that handed it the turn: from `state` it plays by the rule in this
+/// file's header and ends its turn; prompts on either side get their first legal answer. Cards in
+/// `hidden` (unseen when the decision began) are never played. Returns the state at the seat's next
+/// main phase or prompt, or where the game ended; `None` when the counter refused a node.
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
@@ -315,8 +306,7 @@ pub fn simulate_reply(
 /// A closed line's value after the opponent's reply: `end` is where the line stopped. A line that
 /// handed the opponent the turn is scored at the seat's next decision, where the seat swings first,
 /// less the crystals it left unspent; a line that ended the game, or stopped on the seat's own
-/// prompt, keeps its static score. `hidden` is as for `simulate_reply` (TS's default:
-/// `hidden_card_ids(end, seat)`). `None` when the counter ran out.
+/// prompt, keeps its static score. `hidden` is as for `simulate_reply`; `None` when out of nodes.
 pub fn reply_score(
     end: &GameState,
     seat: PlayerId,

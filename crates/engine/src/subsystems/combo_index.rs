@@ -1,23 +1,15 @@
 //! Combo-Index (SPEC §8 #93, R27): the grade counter, its end-of-turn threshold and the E→S cascade.
 //!
-//! The grade is state, not script: it lives in `instance.counters.grade` as 1..6 for E..S (§10.1),
-//! so a paused game, a replay and `view_for` all read the same number, and the letter comes from
-//! `GRADES` here. At the end of its controller's turn — an ordinary end-of-turn trigger (§10.3,
-//! R62) — the card compares the cards that player has played this turn with the current grade: at
-//! `cardsPlayed >= grade` the grade rises by one and every step from E up to the new grade runs, in
-//! order (R27). Grade S is terminal, so at S the check does nothing at all, and the S step is "run
-//! E–A again", which is the one extra round the cascade ever does.
+//! The grade is state, not script: `instance.counters.grade`, 1..6 for E..S (§10.1), so a paused game, a
+//! replay and `view_for` read the same number; the letter comes from `GRADES`. At the end of its
+//! controller's turn (an ordinary end-of-turn trigger, §10.3, R62) the card compares the cards that player
+//! played this turn with the grade: at `cardsPlayed >= grade` the grade rises by one and every step from E
+//! up to the new grade runs, in order (R27). S is terminal, so at S the check does nothing, and the S step
+//! is "run E–A again", the one extra round the cascade ever does.
 //!
-//! The card file (M4) stays a list of effects: `end_of_turn: hook(|ctx| combo_index_end_of_turn(ctx, …))`.
-//! Every step is an effect from `crate::effects`; the only direct state change here is the counter
-//! itself, because no effect in the library owns `counters.grade`. The radiant text ("Start of
-//! turn: add a Combo-Fodder to your hand", §8) is one `add_to_hand` on the card's own `start_of_turn`
-//! hook and waits for the catalog id of #93.1, so it lives in the card file, not here.
-//!
-//! Port of `packages/engine/src/subsystems/comboIndex.ts`. `FIRST_GRADE`, `GRADE_D_CARDS`,
-//! `GRADE_D_DISCOUNT` and `GRADE_A_DAMAGE` live in `crate::config` (CLAUDE.md rule 9; part 1 moved
-//! them, and `subsystems/mod.rs` re-exports them under TS's `subsystems.X` path); `LAST_GRADE` is
-//! derived from `GRADES` here, as TS derived it.
+//! Every step is an effect from `crate::effects`; the only direct state change here is the counter itself.
+//! The radiant text (§8) is one `add_to_hand` on the card's own `start_of_turn` hook, so it lives in the card file.
+//! The numbers live in `crate::config` (CLAUDE.md rule 9); `LAST_GRADE` is derived from `GRADES`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -33,9 +25,8 @@ use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CounterKind, GameEvent, PlayerId, Selection, opponent_of};
 
-/// §8 #93: a grade's letter (TS `Grade = (typeof GRADES)[number]`). Written by hand rather than with
-/// `wire::string_union!`, which would export a client type the wire does not have (the view carries
-/// the letter as a string).
+/// §8 #93: a grade's letter. Written by hand rather than with `wire::string_union!`, which would export a
+/// client type the wire does not have (the view carries the letter as a string).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Grade {
     E,
@@ -47,7 +38,6 @@ pub enum Grade {
 }
 
 impl Grade {
-    /// The letter itself, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             Grade::E => "E",
@@ -111,19 +101,11 @@ pub fn plays_this_turn(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].turn_log.cards_played
 }
 
-/// The cards this player played this turn that a copy can still be made from. `turnLog.playedIds`
-/// holds instance ids (§10.1), so a card that has ceased to exist — a unit token that left the
-/// field (R11) — leaves nothing to copy.
-///
-/// R86: such an id drops out of the pool instead of staying in it and making the E step fizzle at
-/// random, following R60's shape for a random pick over existing cards ("or all of them if fewer
-/// exist"): "a card you played this turn" is the card, not the object that card left behind.
-///
-/// R133: the log records one entry per play, so a card played, bounced and replayed appears twice.
-/// The pool is the *set* of cards played, not the list of plays, so each id is weighed once and a
-/// replayed card is one candidate for `rng.pick`. Deduping by id before the lookup keeps R86's half
-/// intact — a set of ids cannot resurrect a card that has ceased to exist — and the first play's
-/// position is kept, so the pool stays in play order and the pick stays replayable.
+/// The cards this player played this turn that a copy can still be made from. `turnLog.playedIds` holds
+/// instance ids (§10.1), so a card that has ceased to exist (a unit token that left the field, R11) is
+/// dropped from the pool rather than making the E step fizzle at random (R86, in R60's shape).
+/// R133: the log has one entry per play, so the pool is the *set* of cards played, deduped by id before
+/// the lookup and kept in first-play order, so a replayed card is one candidate and the pick replays.
 pub fn played_cards_this_turn(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut seen: Vec<&str> = Vec::new();
     let mut out: Vec<&CardInstance> = Vec::new();
@@ -150,8 +132,7 @@ pub fn grade_rises(state: &GameState, instance: &CardInstance) -> bool {
     plays_this_turn(state, instance.controller) >= grade
 }
 
-/// TS wrote `card.counters.grade` through the live object; here the card in the state, by id. The
-/// event names the card even when it is nowhere now (TS's object outlived its zone).
+/// Writes the grade on the card in the state, by id. The event names the card even when it is nowhere now.
 fn write_grade(ctx: &mut EffectContext<'_>, card: &CardInstance, next: i32) {
     let value = clamp_grade(next);
     if value == grade_of(card) && card.counters.grade.is_some() {
@@ -168,8 +149,7 @@ fn write_grade(ctx: &mut EffectContext<'_>, card: &CardInstance, next: i32) {
     });
 }
 
-/// The card an effect of this module names: the running card as it stands now (TS's live
-/// `ctx.self`), or the instance by id.
+/// The card an effect of this module names: the running card as it stands now, or the instance by id.
 fn card_of(ctx: &EffectContext<'_>, instance_id: Option<&str>) -> Option<CardInstance> {
     match instance_id {
         None => ctx.live_self().cloned(),
@@ -177,7 +157,6 @@ fn card_of(ctx: &EffectContext<'_>, instance_id: Option<&str>) -> Option<CardIns
     }
 }
 
-/// `start_grade`'s argument (TS `{ instanceId? } = {}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct StartGradeArgs {
@@ -197,7 +176,6 @@ pub fn start_grade(args: StartGradeArgs) -> Effect {
     })
 }
 
-/// `raise_grade`'s argument (TS `{ instanceId?; to? } = {}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RaiseGradeArgs {
@@ -223,12 +201,9 @@ pub fn raise_grade(args: RaiseGradeArgs) -> Effect {
 }
 
 /// Name one existing card for an effects-library `TargetSpec`. The library resolves `{ of: "chosen" }`
-/// against `ctx.targets` (R81), so a random pick this subsystem made is handed over as the selection
-/// it would have been if a player had picked it, and the library effect does the work (CLAUDE.md
-/// rule 5: nothing here duplicates an effect that already exists).
-///
-/// TS spread a fresh context with that one target; here the context's own `targets` are swapped for
-/// the one selection around the effect's `apply` and restored after.
+/// against `ctx.targets` (R81), so a random pick made here is handed over as the selection a player
+/// would have made, and the library effect does the work (CLAUDE.md rule 5). The context's own `targets`
+/// are swapped for that one selection around the effect's `apply` and restored after.
 fn naming(ctx: &mut EffectContext<'_>, card_id: &str, effect: &Effect) {
     let held = std::mem::replace(
         &mut ctx.targets,

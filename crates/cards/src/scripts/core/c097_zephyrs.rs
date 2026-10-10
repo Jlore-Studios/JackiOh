@@ -4,38 +4,12 @@
 //!            so "exile this" is kept and the pick arrives Radiant (§8 Conventions).
 //!   Engine:  "Scorer in 10.7 ranks every non-token Core card except #97 for the current state;
 //!            Discover offers the top 3 (R29)".
-//!
-//! THE RANKING IS THE SUBSYSTEM'S. §10.7: "for each candidate, simulate a dry-run score: lethal
-//! available → max; can clear the enemy board → high; hero below 10 and card heals → high; otherwise
-//! stats-per-mana plus draw value. Deterministic, ranks all non-token Core cards except Zephyrs
-//! itself, Discover offers the top 3. The weights are engine constants". That is
-//! `subsystems/scorer.rs` (`rank`, `top_three`, `SCORER_WEIGHTS`), and this card only asks it for the
-//! three ids and hands them to the Discover. No weight, no tie-break and no candidate filter is
-//! restated here, and `{ radiant }` is passed through so the radiant face scores the radiant faces
-//! (`ScorerOptions`, §5.2).
-//!
-//! WHY A `defId` POOL. `discover_from_catalog` draws its options from `catalog::query`, and `query`
-//! honours a `defId` list as "a pool a script builds from ids it already holds" (§5.1). So naming
-//! the scorer's three ids offers exactly those three and nothing else. Tokens cannot slip in through
-//! `asksForTokens`'s `defId` branch: `scorer::candidate_defs` is `query({ set: "Core",
-//! excludeDefId: <#97's id> })`, which already drops every token (§5.1), so the list can only hold
-//! non-token Core cards ("only from the core set" keeps it Core, B2.6). `count: 3` is R29's "the top
-//! 3" said out loud rather than left to a default.
-//!
-//! R29's "EXCEPT #97" COMES FOR FREE TWICE: `candidate_defs` excludes #97's id, and
-//! `discover_from_catalog` adds `excludeDefId` for the running card's own id on top of it (§5.1: "a
-//! random pool never offers the card that generated it", R387).
-//!
-//! WHY THE EXILE IS THE SECOND EFFECT AND NOT THE FIRST. §8.5's row reads "Discover …; exile this",
-//! and `prompts::apply_resumable` is built for exactly that shape: the effect after the one that
-//! opened the prompt is parked in `state.work` as a continuation of this same hook and drained once
-//! the answer comes back, so "exile this" happens whether the prompt pauses the list or not. Putting
-//! the exile first would also work mechanically — `resolve_target({ of: "self" })` reads `ctx.self`,
-//! which the resume still finds in the exile pile — but it would change the order §8.5 prints and
-//! would exile the card before its own text had finished, so the row's order is the one kept.
-//!
-//! §10.5 step 7 sends a resolved Spell to the graveyard "or exile"; this card is the "or exile", and
-//! `exile` bumps `state.counters.exiled`, which is R55's counter #100 reads.
+//! The ranking is the subsystem's (§10.7): `subsystems/scorer.rs` owns every weight and filter, so
+//! this card only asks it for three ids and passes `{ radiant }`, so the radiant face ranks radiant
+//! faces (`ScorerOptions`, §5.2). The ids are a `defId` pool (§5.1), so only those three are offered;
+//! tokens and #97 are out already (R29, B2.6, R387). The exile is the second effect, as §8.5 prints
+//! it: `apply_resumable` parks it on `state.work` and drains it after the answer (§10.6). §10.5
+//! step 7 sends a resolved Spell to the graveyard "or exile": `exile` bumps R55's counter.
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog, exile};
 use jackioh_engine::prelude::*;
@@ -100,15 +74,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #97 Zephyrs — SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29.
 // BUILD M4-T4 row 97: "Scorer deterministic; a lethal-enabling card ranks first when lethal
-// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant". The polish-4 edge-case
-// hunt, round 5 (lens "card by card"), found the scorer blind to card text: §10.7's dry run now plays
-// each candidate on a copy of the state, so a burn spell, a board wipe and a heal count. Round 6
-// found the dry run reading cards its player may not (R222: the opponent's face-down trap, the
-// library's order), a Charge body's swing read off its printed attack rather than through the
-// viewer's auras, and plays it never tried: the one enemy unit behind the viewer's own permanents,
-// and #55's Tribute of the enemy's units.
+// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant". §10.7's dry run plays
+// each candidate on a copy of the state and reads only what its player may read (R222).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -328,29 +296,23 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // §10.7's priorities for cards whose claim lives in their text.
-    // -------------------------------------------------------------------------------------------
 
     /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
     fn offered_ids(s: &Scenario) -> Vec<String> {
         option_ids(&open(s.state()))
     }
 
-    /// Every Core card whose own text heals its controller's hero: #5 Stockpile ("heal your hero 2"),
-    /// #24 Efficiency Dividend ("heal a target 2X"), #47 Fig of Life ("Heal a target 20"), #53 Reno
-    /// ("set it to 30"), #56 Jilliax (Lifesteal), #74 Adaptive UI ("heal your hero X") and #95 Call to
-    /// Chaos (one roll heals 30). #19 Midrange Menace (heals itself) and #93 Combo-Index (grade A's
-    /// Lifesteal) are allowed too, so a scorer that reads "heals" more loosely still passes.
+    /// Every Core card whose own text heals its controller's hero: #5 Stockpile, #24 Efficiency Dividend,
+    /// #47 Fig of Life, #53 Reno, #56 Jilliax (Lifesteal), #74 Adaptive UI and #95 Call to Chaos. #19 Midrange
+    /// Menace and #93 Combo-Index are allowed too, so a scorer that reads "heals" more loosely still passes.
     const HEALERS: &[&str] = &[
         "core-005", "core-024", "core-047", "core-053", "core-056", "core-074", "core-095", "core-019", "core-093",
     ];
 
-    /// Every Core card whose own text removes a whole enemy board of ordinary units: #17 Flood ("bounce
-    /// all units"), #43 Big Felinor ("destroy all non-Felinor units"), #88 Twisting Nether ("destroy all
-    /// permanents") and #100 Ceaseless Void ("exile all other permanents"). #87 Pocket Chaos (swap boards
-    /// with an empty one) and #16 Hit Job (its radiant face takes the neighbours) are allowed too, and so
-    /// is #55 Lava Golem: its Tribute 3 may take enemy units (R101), so it is paid with the three 7/7s.
+    /// Every Core card whose own text removes a whole enemy board of ordinary units: #17 Flood, #43 Big
+    /// Felinor, #88 Twisting Nether and #100 Ceaseless Void. #87 Pocket Chaos, #16 Hit Job and #55 Lava
+    /// Golem are allowed too: its Tribute 3 may take enemy units (R101), so it is paid with the three 7/7s.
     const CLEARERS: &[&str] = &["core-017", "core-043", "core-088", "core-100", "core-087", "core-016", "core-055"];
 
     /// Every Core card that, played from p1's 4 mana, deals 3 or more to the enemy hero this turn:

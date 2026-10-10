@@ -1,38 +1,15 @@
 //! #94 Genn's Greed (SPEC §8.4, R4, R26, R55, R65, R66, R135, BUILD M4-T4 row 94).
-//!
 //! Base: "Draw every 2-cost card from your library; exile every odd-cost card in your library, hand
-//! and GY (X-cost cards exempt); gain 2 mana". Radiant: "Gain 6" — a cell that changes only a number
-//! changes only that number (§8 Conventions), so the draw and the exile are kept verbatim and only
-//! the mana moves from 2 to 6.
-//!
-//! R26 (decide, `GENN_GREED_EXILES = "odd"`) settles the garbled source line as "exile all odd-cost
-//! cards". R66 settles what "cost" means in both halves: "both the 2-cost draw and the odd-cost
-//! exile read each card's cost per R65 AT RESOLUTION; X-cost cards are exempt from both". So the
-//! number both clauses read is `effectiveCost(state, instance)` — R65's one calculation for an
-//! instance: `costOverride`, else the printed cost, plus the instance's `costMod` (which persists in
-//! every zone, R78). The player's discounts are prices for a play from the hand, so they reach neither
-//! a library card nor a graveyard one (R65): /fullsend's "this turn your cards cost 1 less" does not
-//! make a 4 in the library a 3. `queryCost` is the other half of R65 and is wrong
-//! here because it reads a DEFINITION and so cannot see the `costMod` #7 Jewelosco Scarab left on a
-//! card or the discount #95 Call to Chaos put across a whole library. A printed 3 discounted to 2 is
-//! therefore drawn, and a printed 2 pushed to 3 is odd and exiled instead.
-//!
-//! THE ORDER IS §8's AND R135's. The draw runs first, so the 2-cost cards are in hand before the
-//! exile looks at hands — and 2 is even, so nothing this card drew is then exiled. R4's hand cap
-//! applies to the draw, and a card burned to the graveyard by the cap is likewise even and survives
-//! the exile. Inside the exile the zones go library, then hand, then graveyard, and each card is its
-//! own exile, so R55's counter moves once per card and anything watching an exile sees them one at a
-//! time: `exileMatching` is written to R135 and this file only names the order it already keeps.
-//!
-//! The draw clause reads its set once, as it begins, and keeps it (`forEachCard`): a drawn card that is
-//! cast on draw and asks has left the library by the answer, and the draws still owed are the ones
-//! the clause began with (R113). The exile reads its set once too (R135).
-//!
-//! The two clauses are one effect per card and one sweep, not a loop in this file that touches state:
-//! `drawFromLibrary` is the §6.3 Draw of a card a script named (the verb #30 Archivist asks for too),
-//! and `exileMatching` is §6.3 Exile over the three off-field zones by cost. Reading the library to
-//! name the cards is a read, not a mutation (CLAUDE.md rule 5), and it goes through `zoneCards`
-//! (engine/src/query.ts), which answers with a copy, so this file never names a field of PlayerState.
+//! and GY (X-cost cards exempt); gain 2 mana". Radiant: "Gain 6" — only the number moves (§8
+//! Conventions), so the draw and the exile are kept verbatim.
+//! R26 (`GENN_GREED_EXILES = "odd"`) settles the garbled source line as "exile all odd-cost cards".
+//! R66: both clauses read each card's cost per R65 AT RESOLUTION, `effectiveCost` (the printed cost
+//! plus the instance's `costMod`, which persists in every zone, R78); X-cost cards are exempt.
+//! Player discounts price a play from the hand, so they reach no library or graveyard card (R65),
+//! and `queryCost` reads a DEFINITION, so it cannot see a `costMod`.
+//! THE ORDER IS §8's AND R135's: the draw runs first, so 2-cost cards are in hand before the exile
+//! looks at hands, and 2 is even. Each exile is its own, so R55's counter moves once per card. Each
+//! clause reads its set once (R113); reading is no mutation (CLAUDE.md rule 5); see §6.3 Draw, Exile.
 
 use jackioh_engine::prelude::*;
 
@@ -43,7 +20,7 @@ const DRAWN_COST: i32 = 2;
 
 /// R66: every card in your library that costs 2 RIGHT NOW, X-cost cards exempt, in library order
 /// (top down), which is the order they are drawn in. By instance id, which is what `forEachCard`
-/// keeps (TS took the instances and read their ids).
+/// keeps.
 fn drawn_cards(ctx: &EffectContext<'_>) -> Vec<String> {
     zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
         .iter()
@@ -92,25 +69,6 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #94 Genn's Greed (SPEC §8 row 94, §2.3, §2.4; R4, R26, R65, R66).
-//
-// BUILD M4-T4 row 94: "Draws every 2-cost card; odd current-cost cards exiled from library, hand
-// and GY, X-cost exempt (R26, R66); +2 mana (radiant +6)".
-//
-// §8: "Draw every 2-cost card from your library; exile every odd-cost card in your library, hand
-// and GY (X-cost cards exempt); gain 2 mana", radiant "Gain 6" — a cell that changes only a number
-// changes only that number (§8 Conventions), so the draw and the exile are identical on both faces
-// and only the mana moves.
-//
-// R26 settles the garbled source line as "exile all ODD-cost cards". R66 settles what "cost" means
-// in both halves: each card's cost per R65 read AT RESOLUTION, with X-cost cards exempt from both.
-// §8's own order matters and is asserted: the draw runs first, so a drawn 2-cost card is in hand
-// before the exile looks at hands — and 2 is even, so nothing this card drew is then exiled.
-//
-// STATUS: the script (`packages/cards/src/scripts/094-genns-greed.ts`) implements only the mana
-// clause and documents both other clauses as BLOCKED on missing engine verbs. The tests below are
-// written as the card SHOULD behave, so the draw and exile cases FAIL and name the gap rather than
-// being weakened or skipped. The mana cases pass. See the report.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,8 +83,7 @@ mod tests {
     const TWO_COST: [&str; 3] = ["core-020", "core-045", "core-056"]; // Pointmaster, Deft Duelist, Jilliax
     /// Odd — what the exile clause names.
     const ODD_COST: [&str; 4] = ["core-008", "core-005", "core-053", "core-019"]; // 1, 1, 3, 3
-    /// A (2) Cost Spell on top of a library the test does not look at: Greed draws it. (#16 Hit Job was it
-    /// until patch v0.2.0 made it (3), which Greed exiles.)
+    /// A (2) Cost Spell on top of a library the test does not look at: Greed draws it.
     const FILLER_SPELL: &str = "core-069"; // #69 Call to Arms
     /// Even and not 2, so neither clause touches it.
     const FOUR_COST: &str = "core-025";
@@ -141,7 +98,7 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `zones(s)`: p1's four off-field piles, by def id.
+    /// p1's four off-field piles, by def id.
     struct Zones {
         hand: Vec<String>,
         library: Vec<String>,
@@ -158,13 +115,11 @@ mod tests {
         }
     }
 
-    /// `ids.includes(id)` over def ids.
     fn has(ids: &[String], id: &str) -> bool {
         ids.iter().any(|candidate| candidate == id)
     }
 
     /// The board every clause is read against: a 2-cost, an odd, an even non-2 and an X in each pile.
-    /// TS `greedBoard(seed, radiant = false)`.
     fn greed_board(seed: &str, radiant: bool) -> Scenario {
         let greed = if radiant { json!({ "def": GREED, "radiant": true }) } else { json!(GREED) };
         scenario(json!({
@@ -181,9 +136,7 @@ mod tests {
         }))
     }
 
-    // =========================================================================================
-    // the mana clause (§2.3) — implemented
-    // =========================================================================================
+    // the mana clause (§2.3)
 
     mod n94_genn_s_greed_mana {
         use super::*;
@@ -305,9 +258,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // the draw clause — §8 "Draw every 2-cost card from your library"
-    // =========================================================================================
 
     mod n94_genn_s_greed_the_2_cost_draw_r66 {
         use super::*;
@@ -358,7 +309,7 @@ mod tests {
         #[test]
         fn r66_the_cost_is_read_at_resolution_so_a_card_discounted_to_2_is_drawn_and_a_2_pushed_to_3_is_not() {
             crate::register_all();
-            // HARNESS GAP (reported): no `SideSetup` key seeds `costMod`, and R66's whole point is that the
+            // HARNESS GAP: no `SideSetup` key seeds `costMod`, and R66's whole point is that the
             // number is `effectiveCost` at resolution rather than the printed cost, so the test writes it.
             let mut s = scenario(json!({
                 "seed": "core-094-r66",
@@ -446,9 +397,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // the exile clause — §8 "exile every odd-cost card in your library, hand and GY"
-    // =========================================================================================
 
     mod n94_genn_s_greed_the_odd_cost_exile_r26_r66 {
         use super::*;
@@ -591,9 +540,8 @@ mod tests {
         #[test]
         fn r135_exiling_one_card_does_not_flip_ceaseless_void_s_parity_halfway_through_the_clause_r66_r55() {
             crate::register_all();
-            // Found by the polish-4 edge-case hunt, round 7 (lens "card by card"). Genn's Greed and a
-            // Ceaseless Void in hand; one odd-cost card on top of the library, which the exile clause meets
-            // before the hand (R135: library, then hand, then graveyard).
+            // Genn's Greed and a Ceaseless Void in hand; one odd-cost card on top of the library, which
+            // the exile clause meets before the hand (R135: library, then hand, then graveyard).
             let mut s = scenario(json!({
                 "seed": "r7-card-genn-void",
                 "p1": { "field": ["core-008"], "hand": [GREED, "core-100"], "library": ["core-005"] },

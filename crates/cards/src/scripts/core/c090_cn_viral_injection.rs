@@ -7,34 +7,24 @@
 //! §8's Conventions: the radiant cell restates only WHAT is shuffled, so the count (one), the
 //! destination (the opponent's library) and everything else are kept.
 //!
-//! OWNERSHIP IS THE WHOLE POINT. `shuffleInto` creates the token with `newInstance(state, defId,
-//! player, …)`, and `newInstance` sets both `owner` and `controller` to that player, so `player:
-//! "enemy"` makes the opponent the OWNER of the virus, not merely its controller. Off the field
-//! ownership is what decides everything (R12): the card sits in their library, feeds their draws,
-//! and its cast-on-draw chain therefore runs on their turn and damages their hero. A steal-style
-//! control change would have done none of that, which is why this is `player`, not a target.
+//! OWNERSHIP IS THE WHOLE POINT. `shuffleInto` with `player: "enemy"` makes the opponent the OWNER of
+//! the virus, not merely its controller, and off the field ownership decides everything (R12): the
+//! card sits in their library, feeds their draws, and its cast-on-draw chain runs on their turn and
+//! damages their hero. A steal-style control change would do none of that, hence `player`, not a target.
 //!
-//! `shuffleIntoLibrary` (engine/src/draw.ts) puts it at `rng.int(library.length + 1)` — a uniformly
-//! random position in the whole pile, drawn from the match rng so a replay reproduces it (§9.2) —
-//! and emits `shuffledIn` carrying that position. R80: a library holds at most `LIBRARY_CAP` cards
-//! and a card that would be shuffled into a full one "is not created", so a full library simply
-//! refuses the shuffle and this spell fizzles; the spell still counts as played (§8 Conventions).
+//! The shuffle lands at a uniformly random position, drawn from the match rng so a replay reproduces it
+//! (§9.2). R80: a library holds at most `LIBRARY_CAP` cards and a card shuffled into a full one "is not
+//! created", so a full library refuses the shuffle and this spell fizzles but still counts as played.
 //!
 //! THE RADIANT FLAG TRAVELS, NOTHING ELSE DOES. `shuffleInto`'s `radiant` sets the flag on the fresh
-//! instance, which is what R57 says a copy shuffled into a library carries. The flag then decides
-//! which face runs on the draw (§5.2): `flagsOf` reads `scriptOf(instance)`, so a Radiant CN-Virus
-//! casts its radiant text and shuffles 3 copies instead of 2 — and `shuffleCopiesOfSelf` copies the
-//! flag onto those, so the whole chain stays Radiant.
-//!
-//! The token's id comes from the catalog through `cardDef`, never a string literal: #90.1 is a real
-//! catalog entry and `cardDef` throws if it ever stops being one.
+//! instance (R57), and the flag decides which face runs on the draw (§5.2): a Radiant CN-Virus casts
+//! its radiant text and shuffles 3 copies instead of 2, with the flag copied onto them.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-090";
 
-/// #90.1 CN-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry
-/// (SURFACE §7.4), as `cardDef` did.
+/// #90.1 CN-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
 const VIRUS: &str = "core-090-1";
 
 /// `radiantVirus` is the whole of the radiant text.
@@ -62,28 +52,12 @@ pub fn script() -> CardScripts {
 // #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
 // R11, R12, R57, R58, R63, R70, R80, R316, R350).
 //
-// BUILD M4-T4 row 90:   "Virus shuffled into the opponent's library at a random position; radiant
-//                        virus is radiant". Patch v0.1.1 (issue #27) made it cost 2.
-// BUILD M4-T4 row 90.1: "On draw: 1 damage through the pipeline (Going Long reduces it), draw
-//                        again; 2 copies shuffled in at the end of the turn (R350); a chain stops at
-//                        20 casts (R58); radiant 3 copies". R275 scales the radiant face's damage
-//                        too: "take 2 damage; 3 copies".
-//
-// The two cards are tested in one file because #90's whole effect is to hand #90.1 to the OTHER
-// player: ownership (R12) is what makes the token's cast-on-draw chain run on the opponent's draws
-// and damage the opponent's hero, so "who owns the virus" is asserted on #90 and "what the virus
-// does to its owner" on #90.1.
-//
-// R11 is the difference from every unit token in the game: #90.1 is a SPELL token, so it lives in
-// a hand and a library like a real card and reaches the graveyard after resolving. A card that
-// ceased to exist is tagged `gone`, never `exile` (R86), and nothing here is ever `gone`.
-//
-// Two routes reach the virus's script and both are tested: playing it from hand (its `cry` alone,
-// with no draw around it) and drawing it (`staticFlags.castOnDraw`, which is where R58's chain cap
-// lives). R350 holds a cast's copies back to the end of the turn it was cast on, so a chain casts
-// only the viruses the library already held: CAST_ON_DRAW_CHAIN_CAP is 20, so a library of 21
-// viruses costs its owner exactly 20 health and leaves the 21st in hand uncast, and the 40 copies
-// go in as the turn ends.
+// Both are tested here because #90 hands #90.1 to the OTHER player: ownership (R12) makes the token's
+// cast-on-draw chain run on the opponent's draws. R11: #90.1 is a SPELL token, so it reaches the
+// graveyard after resolving and is never `gone` (R86). R275 scales the radiant face's damage too. The
+// virus's script is reached from hand (its `cry` alone) and by a draw (`staticFlags.castOnDraw`, where
+// R58's chain cap lives). R350 holds a cast's copies to the end of the turn, so a chain casts only the
+// viruses the library already held: 21 in a library cost exactly 20 health and leave the 21st uncast.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,12 +69,12 @@ mod tests {
     const INJECTION: &str = "core-090";
     const VIRUS: &str = "core-090-1";
 
-    /// R58's cap, restated from `engine/src/config.ts` so a change to it fails here by name.
+    /// R58's cap, restated from `CAST_ON_DRAW_CHAIN_CAP` so a change to it fails here by name.
     const CHAIN_CAP: usize = 20;
     /// R80's cap, likewise.
     const LIBRARY_CAP: usize = 60;
 
-    /// One `shuffledIn` event, as TS's `shuffledIn` helper reduced it.
+    /// One `shuffledIn` event.
     #[derive(Clone, Debug, PartialEq)]
     struct Shuffled {
         def_id: String,
@@ -146,7 +120,6 @@ mod tests {
         json!(vec!["core-005"; count])
     }
 
-    /// `type` of an event, as TS names it.
     fn type_of(event: &GameEvent) -> String {
         event.event_type().to_string()
     }
@@ -159,9 +132,7 @@ mod tests {
         s.state().players[player].library.clone()
     }
 
-    // =========================================================================================
     // #90 CN-Viral Injection — base
-    // =========================================================================================
 
     mod n90_cn_viral_injection_base {
         use super::*;
@@ -235,7 +206,6 @@ mod tests {
 
             s.expect_in_zone(INJECTION, "graveyard");
             assert_eq!(s.state().players[P1].turn_log.cards_played, 1);
-            // Patch v0.1.1: it costs 2.
             s.expect_mana(P1, 2);
         }
 
@@ -294,9 +264,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #90 CN-Viral Injection — radiant
-    // =========================================================================================
 
     mod n90_cn_viral_injection_radiant {
         use super::*;
@@ -348,9 +316,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // R311: what the library's owner is shown of a virus going in (SPEC §10.8)
-    // =========================================================================================
 
     mod n90_and_n90_1_r311_the_owner_s_library_list {
         use super::*;
@@ -402,9 +368,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #90.1 CN-Virus — base, played from hand (the `cry` with no draw around it)
-    // =========================================================================================
 
     /// The delayed effects a CN-Virus has armed and not yet run (R350).
     fn armed_copies(s: &Scenario) -> usize {
@@ -642,9 +606,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // #90.1 CN-Virus — cast on draw and R58's chain
-    // =========================================================================================
 
     mod n90_1_cn_virus_cast_on_draw_r58_r70 {
         use super::*;
@@ -826,11 +788,9 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // §5.1: the token is in no random pool
-    // =========================================================================================
 
-    /// TS `query(args).map((card) => card.id)`: the ids `catalog.query` answers (§5.1).
+    /// The ids the catalog query answers (§5.1).
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as::<CatalogQueryArgs>(args))
             .iter()

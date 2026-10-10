@@ -9,6 +9,7 @@
 //!      trying its first AI_SEARCH.lethalWidth moves at once, so a lethal that starts with a card late
 //!      in move order is found on a wide board, where depth-first spends everything below its first
 //!      move. A move past the first lethalWidth of its position is never tried by either walk.
+//!
 //! A line counts only when it wins on every determinization.
 
 use std::rc::Rc;

@@ -2,28 +2,14 @@
 //! other module uses. A card's `tuning` rides it through every zone (R78 leaves it alone); what writes
 //! it is `effects::tune`.
 //!
-//! The numbered keywords a script reads as a flag rather than as a `Keyword` — Echo (`staticFlags.echo`),
-//! Activate (`ActivationDecl.uses`), Tribute (`staticFlags.tribute`) — and an X-cost card's X are read
-//! through `tuned_count` wherever the engine reads them, so a Degrade or Upgrade of that number is felt
-//! where the number is used. The numbered keywords that are `Keyword`s (Armor, Lucky, Brittle, Spell
-//! Damage) are tuned in the layers (§10.4) by the same step (`tuned_keywords`, read by `layers::face_of`).
+//! Echo, Activate, Tribute (flags a script declares, not `Keyword`s) and an X-cost card's X are read
+//! through `tuned_count`; the numbered `Keyword`s (Armor, Lucky, Brittle, Spell Damage) are tuned in
+//! the layers (§10.4) by `tuned_keywords`, read by `layers::face_of`.
 //!
-//! What each field of a `Tuning` holds:
-//!   - `attack`, `health`: the stats changes, summed — a delta beside the layer-4 buffs, which moves
-//!     max health on the field and the face a card will enter with anywhere else (B3.4 rule 6).
-//!   - `addKeywords`: the keywords an Upgrade added; `removeKeywords`: the printed keyword kinds a
-//!     Degrade removed (a granted keyword a Degrade removes is simply taken off the instance).
-//!   - `x`: a step count per numbered keyword or X (`X_KEY`), each step `TUNE_X_STEP`.
-//!   - `numbers`: a step count per declared number (`CardDef.params` key), each step that number's
-//!     own (`params::param_step`), so a card made Radiant keeps its steps on its Radiant numbers.
-//!   - `set`: a number KY's Constant set outright; the steps after it count from it (`tuned_count`).
-//!     A declared number's key is a catalog `params` key (camelCase), a keyword's its kind (capitalised),
-//!     so the two never share a key.
-//!     The cost change is the card's `costMod` (R65), never a field here.
-//!
-//! Port of `packages/engine/src/tuning.ts`. TS's `Pick<CardInstance, "tuning">` arguments take the
-//! instance; TS's `delete record[key]` is `IndexMap::shift_remove`, which keeps the other keys in
-//! insertion order as JS does.
+//! `attack`/`health` are deltas beside the layer-4 buffs (B3.4 rule 6); `addKeywords`/`removeKeywords`
+//! an Upgrade's additions and a Degrade's removed printed kinds; `x` and `numbers` step counts (each
+//! step `TUNE_X_STEP` or `params::param_step`); `set` KY's Constant, steps counting from it. Keys: a
+//! `params` key (camelCase) or a keyword kind (capitalised), never shared. The cost is `costMod` (R65).
 
 use indexmap::IndexMap;
 
@@ -60,7 +46,7 @@ pub fn tuned_count(instance: &CardInstance, key: &str, printed: i32) -> i32 {
     tuned_count_with_min(instance, key, printed, TUNED_FLOOR)
 }
 
-/// `tuned_count` with TS's optional `min` given.
+/// `tuned_count` with the floor given.
 pub fn tuned_count_with_min(instance: &CardInstance, key: &str, printed: i32, min: i32) -> i32 {
     if printed <= 0 {
         return printed;
@@ -181,7 +167,8 @@ pub fn tuning_of(instance: &mut CardInstance) -> &mut Tuning {
     instance.tuning.get_or_insert_with(Tuning::default)
 }
 
-/// Add `delta` to a step count, dropping a count that comes back to 0 so an untuned card stores nothing.
+/// Add `delta` to a step count, dropping a count that comes back to 0 so an untuned card stores nothing
+/// (`shift_remove` keeps the other keys in order).
 pub fn add_step(record: Option<&IndexMap<String, i32>>, key: &str, delta: i32) -> IndexMap<String, i32> {
     let mut out = record.cloned().unwrap_or_default();
     let next = out.get(key).copied().unwrap_or(0) + delta;
@@ -193,7 +180,7 @@ pub fn add_step(record: Option<&IndexMap<String, i32>>, key: &str, delta: i32) -
     out
 }
 
-/// Drop every empty field of a record; true when nothing is left (TS `Object.keys(tuning).length === 0`).
+/// Drop every empty field of a record; true when nothing is left.
 fn tidy(tuning: &mut Tuning) -> bool {
     if tuning.attack.unwrap_or(0) == 0 {
         tuning.attack = None;

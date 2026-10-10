@@ -1,47 +1,16 @@
 //! Quests (docs/classic-sets.md B5 E33): the machinery of Classic #90 In Too Deep (SPEC §8.6 row 90,
-//! §10.1, §10.6, §10.8; R404). The TREE — which quests there are, what completes each, which rewards
-//! each offers and where each reward leads — is data the card's script declares (`Script.quests`, a
-//! `QuestBook`); the REWARDS are ordinary verbs in the card file, and the card's own trigger answers
-//! `questCompleted` with them. This module is what no card file may do: keep the count.
+//! §10.1, §10.6, §10.8; R404). The tree (which quests there are, what completes each, which rewards
+//! each offers and where each leads) is data the card's script declares (`Script.quests`, a
+//! `QuestBook`); the rewards are ordinary verbs in the card file, and the card's own trigger answers
+//! `questCompleted` with them: a `reward` prompt on the base face (§10.6), every reward on the Radiant
+//! face. This module is what no card file may do: keep the count.
 //!
-//! STATE (§10.1). Everything lives on the card's instance, `memory.quest` (`QuestMemory`): the open
-//! quests, each counted quest's progress, the completed quests, the auras held (rewards L and M), and
-//! the quests opened by a reward whose opening the event stream has not reached yet (`waiting`). Plain
-//! JSON, so a paused state survives a round trip and a log folds to the same hash (§9.3). R78 resets
-//! memory as a card leaves the field, which is the whole of "leaving the field resets the quest line":
-//! nothing here has to watch for it.
+//! State (§10.1) is the card's instance, `memory.quest` (`QuestMemory`): plain JSON, so a paused state
+//! survives a round trip and a log folds to the same hash (§9.3). R78 resets memory as a card leaves
+//! the field, which is the whole of "leaving the field resets the quest line".
 //!
-//! COUNTING, "from the moment it opens" (R404). A count moves as the resolution loop dispatches an event
-//! (`observe_quest_event`, called once at the top of `triggers::dispatch_event`), and the loop dispatches
-//! events in the order they were emitted — so "after the quest opened" is "after its opening in the
-//! event stream":
-//!   - a quest a reward opens is `waiting` until its own opening report (`questProgressed`, emitted as
-//!     it opens) is dispatched: the events emitted before it in the same action — reward H's own two
-//!     draws before quest 9 opens — are dispatched first, and count for nothing;
-//!   - the first quest opens as the card enters the field: at the first dispatch or state check that
-//!     finds the card on the field with no quest memory, and it is counting at once. R212 keeps an
-//!     event from before the card's arrival away from it: a card that has moved since an event (its
-//!     `cardPlayed`, its `summoned` comes after the event) does not answer it.
-//!     The side a card stood on when an event happened is read as R212 reads it, off what happened since
-//!     (`side_when`): `destroyed` names the controller a card died under (`destroyed.controller`), a
-//!     draw that took the last card of the drawer's deck says so (`drawn.emptied`).
-//!
-//! COMPLETION is noticed at the state check (`notice_quests`, called once at the end of
-//! `state_check::state_check`, when the board has settled): a counted quest whose count reached its goal,
-//! or a board quest whose condition holds now (3, 6, 10 — read off the board there, never counted), is
-//! completed and reported by `questCompleted`, which the card's trigger answers — a `reward` prompt for
-//! its controller on the base face (§10.6), every reward on the Radiant face. A quest reached by two
-//! paths opens once (`open_quest` opens a quest only if it was never opened), and a reward two
-//! completed quests offer is granted by each (each completion runs its own rewards).
-//!
-//! THE VIEW (§10.8, R404): `quest_view_of` — the open quests, their progress and the rewards on offer,
-//! and the auras held — on every view of the card, which is a face-up Field Spell both players read.
-//!
-//! Port of `packages/engine/src/subsystems/quests.ts`. The tree's types (`QuestGoal`, `QuestDef`,
-//! `QuestRewardDef`, `QuestBook`) are part 1's, in `script.rs` (a `Script` field holds one); they are
-//! re-exported here so TS's `subsystems.QuestBook` path still names them. TS wrote the quest line
-//! through the live card; here it is written on the card in the state, by id. Reading a card's tree
-//! needs the state (`scripts::script_of`, SURFACE §6.6), so `quest_book_of` takes it.
+//! Counting starts "from the moment it opens" (R404): events dispatch in emit order, so a quest a reward
+//! opens waits for its own opening report, and an event from before a card's arrival never reaches it (R212).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -59,28 +28,11 @@ use crate::wire::{
 };
 use crate::zones::{active_units_of, card_at, slots_of};
 
-// ---------------------------------------------------------------------------
 // The tree, as a card declares it
-// ---------------------------------------------------------------------------
 
-// What completes a quest (R404's countable readings): `QuestGoal` (part 1's, `script.rs`). Counted goals
-// move as events are dispatched; board goals are read off the board at each state check.
-//
-// - `draws`: draws of yours — every draw that took a card, one burned at the hand cap or cast on draw
-//   included; a draw a limit stopped never happened, and a fatigue draw takes no card (R541).
-// - `enemyPermanentsDestroyed`: permanents your opponent controlled as they were destroyed, by anything.
-// - `unspentManaAtTurnEnd`: a turn of yours ended with at least `mana` unspent (goal 1).
-// - `damageToEnemies`: damage your cards dealt to your opponent's hero and the units they controlled.
-// - `cardsExiled`: cards entering either exile pile (a unit token ceases to exist instead, R11).
-// - `deckEmptiedByDraw`: a draw of yours took the last card of your deck (goal 1); a deck already empty
-//   when the quest opens completes it at once.
-// - board: `permanentsControlled` (the tops of your unit piles and your backrow cards, this one
-//   included), `unitTotals` (your Units' total attack and total health both at least `total`),
-//   `unitsInGraveyard` (Units in your graveyard).
-//
-// `QuestDef` is one quest (its text, its goal, its rewards in order), `QuestRewardDef` one reward (its
-// text and the quest it opens next, null at the end of a line), `QuestBook` a card's tree
-// (`Script.quests`: the quest that opens as it enters, every quest, every reward).
+// What completes a quest (R404's countable readings): `QuestGoal` (`script.rs`, which describes each
+// goal). Counted goals move as events are dispatched, and a draw a limit stopped or a fatigue draw
+// counts for nothing (R541); board goals are read off the board at each state check.
 pub use crate::script::{QuestBook, QuestDef, QuestGoal, QuestRewardDef};
 
 /// The goals the state check reads off the board rather than counting.
@@ -107,7 +59,8 @@ pub fn quest_goal_of(quest: &QuestDef) -> i32 {
     }
 }
 
-/// The quest tree a card's running face declares, or `None` (a Vanilla card has none, R115).
+/// The quest tree a card's running face declares, or `None` (a Vanilla card has none, R115). It reads
+/// the card's script, which needs the state (SURFACE §6.6).
 pub fn quest_book_of(state: &GameState, card: &CardInstance) -> Option<QuestBook> {
     crate::scripts::script_of(state, card).quests.clone()
 }
@@ -120,9 +73,7 @@ pub fn quest_reward_of<'b>(book: &'b QuestBook, id: &str) -> Option<&'b QuestRew
     book.rewards.iter().find(|reward| reward.id == id)
 }
 
-// ---------------------------------------------------------------------------
 // The quest line on the instance (§10.1)
-// ---------------------------------------------------------------------------
 
 /// Where the quest line lives on the instance (`memory.quest`, §10.1).
 pub const QUEST_MEMORY_KEY: &str = "quest";
@@ -153,7 +104,7 @@ fn string_list(raw: Option<&Value>) -> Vec<String> {
     }
 }
 
-/// A finite number in the bag, as TS's `typeof value === "number" && Number.isFinite(value)`.
+/// A finite number in the bag.
 fn finite_count(value: &Value) -> Option<i32> {
     value
         .as_f64()
@@ -164,7 +115,7 @@ fn finite_count(value: &Value) -> Option<i32> {
 /// The card's quest line, read back defensively (it may have come through JSON), or `None`.
 pub fn quest_memory_of(card: &CardInstance) -> Option<QuestMemory> {
     let raw = card.memory.get(QUEST_MEMORY_KEY)?;
-    // TS's `typeof raw === "object"`: an object, or an array (whose named fields are all absent).
+    // An object, or an array (whose named fields are all absent).
     if !raw.is_object() && !raw.is_array() {
         return None;
     }
@@ -203,7 +154,7 @@ fn write_memory(card: &mut CardInstance, memory: &QuestMemory) {
     );
 }
 
-/// `write_memory` on the card as it stands in the state (TS wrote through the live object).
+/// `write_memory` on the card as it stands in the state.
 fn store_memory(state: &mut GameState, card_id: &str, memory: &QuestMemory) {
     if let Some(card) = find_instance_mut(state, card_id) {
         write_memory(card, memory);
@@ -231,9 +182,7 @@ pub fn held_quest_auras(card: &CardInstance) -> Vec<String> {
         .unwrap_or_default()
 }
 
-// ---------------------------------------------------------------------------
 // The board goals, read now
-// ---------------------------------------------------------------------------
 
 fn backrow_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     slots_of(player, Row::Backrow)
@@ -290,9 +239,7 @@ pub fn quest_progress_of(state: &GameState, card: &CardInstance, quest: &QuestDe
     goal.min(value).max(0)
 }
 
-// ---------------------------------------------------------------------------
 // Opening a quest
-// ---------------------------------------------------------------------------
 
 fn report(sink: &mut EngineSink<'_>, card: &CardInstance, quest: &QuestDef, progress: i32) {
     sink.events.push(GameEvent::QuestProgressed {
@@ -389,7 +336,7 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
 }
 
 /// The running card, on the field on the stay its run began with (R174), with a quest tree — as it
-/// stands in the state now (TS's live `ctx.self`).
+/// stands in the state now.
 fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;
     let self_ = find_instance(ctx.sink.state, &on_stay.id)?.clone();
@@ -400,9 +347,7 @@ fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     Some(self_)
 }
 
-// ---------------------------------------------------------------------------
 // Counting, as the loop dispatches each event
-// ---------------------------------------------------------------------------
 
 /// Every card with a quest tree acting on the field, in R68's order: the active side first.
 fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
@@ -432,9 +377,8 @@ fn hero_side(id: &str) -> Option<PlayerId> {
 
 /// R212: the side a card or hero stood on when an event happened, read off the events that followed
 /// it — a change of control since hands back the controller before it, and a card destroyed since died
-/// under the controller its `destroyed` names — and otherwise off the card where it is now: on the
-/// field its controller, resolving its player, in a pile its owner. `None` for a card gone with nothing
-/// to say (a replaced card).
+/// under the controller its `destroyed` names — and otherwise off the card where it is now. `None` for
+/// a card gone with nothing to say (a replaced card).
 fn side_when(state: &GameState, id: &str, after: &[GameEvent]) -> Option<PlayerId> {
     if let Some(hero) = hero_side(id) {
         return Some(hero);
@@ -483,7 +427,7 @@ fn entered_exile(state: &GameState, def_id: &str) -> bool {
 }
 
 /// What one event adds to a quest of `goal` for a card controlled by `me`, or 0. `after` is the events
-/// that followed this one (TS read them lazily; the caller has them already).
+/// that followed this one.
 fn credit_of(
     state: &GameState,
     goal: &QuestGoal,
@@ -545,16 +489,10 @@ const COUNTED_EVENTS: [GameEventType; 5] = [
     GameEventType::Damage,
 ];
 
-/// §10.3, R404: one event reaching the resolution loop, before the traps and the triggers see it. A
-/// quest a reward opened starts counting once its own opening report is dispatched; a card on the
-/// field with no quest line opens its first quest; then every open, counting quest of every card on
-/// the field that the event counts for moves, and says so (`questProgressed`). `after` is the events
-/// that followed this one (`triggers::events_after_dispatched`), read only when a quest card is on the
-/// field: a card that has moved since the event did not see it (R212).
-///
-/// TS's `after: () => …` closed over the sink; here it is handed the sink, which a closure capturing it
-/// could not share with the `&mut` argument. It is read once, before anything here writes, as TS's
-/// memo first read it.
+/// §10.3, R404: one event reaching the resolution loop, before the traps and the triggers see it: every
+/// open, counting quest of every card on the field that the event counts for moves, and says so
+/// (`questProgressed`). `after` is the events that followed this one (`triggers::events_after_dispatched`),
+/// read once before anything here writes: a card that has moved since did not see the event (R212).
 pub fn observe_quest_event(
     sink: &mut EngineSink<'_>,
     event: &GameEvent,
@@ -636,9 +574,7 @@ pub fn observe_quest_event(
     }
 }
 
-// ---------------------------------------------------------------------------
 // Completion, at the state check
-// ---------------------------------------------------------------------------
 
 fn complete(state: &GameState, card: &CardInstance, quest: &QuestDef, memory: &QuestMemory) -> bool {
     if is_board_goal(&quest.goal) {
@@ -650,7 +586,8 @@ fn complete(state: &GameState, card: &CardInstance, quest: &QuestDef, memory: &Q
 /// §4.5, R404: the state check has settled the board, so every card with a quest tree on the field opens
 /// its first quest if it has none yet, and every open quest whose count reached its goal or whose board
 /// condition holds now is completed — moved to `done` and reported by `questCompleted`, in R68's order
-/// and each card's quests in the order they opened. The card's trigger answers the report.
+/// and each card's quests in the order they opened. Each completion runs its own rewards, even one
+/// another completed quest offers.
 pub fn notice_quests(sink: &mut EngineSink<'_>) {
     for card in quest_cards_in_order(sink.state) {
         open_first_if_new(sink, &card.id);
@@ -703,9 +640,7 @@ pub fn notice_quests(sink: &mut EngineSink<'_>) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The view (§10.8)
-// ---------------------------------------------------------------------------
 
 /// R404, §10.8: the open quests with their progress and the rewards on offer, and the auras held, or
 /// `None` for a card with no quest line. Everything here is the tree's own text and public counts, so

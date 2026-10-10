@@ -4,8 +4,6 @@
 //!
 //! Each is card-specific — no Core card and no generic B5 system asks for either — so they live here,
 //! beside the effects library they are written in.
-//!
-//! Port of `packages/engine/src/effects/datacenter.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +22,7 @@ use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, KeywordKind, PLAYER_IDS, PlayerId, Row, ZoneName, opponent_of};
 use crate::zones::{card_at, slots_of};
 
-// ---------------------------------------------------------------------------------------------
 // T-AI-4 Chain of Thought
-// ---------------------------------------------------------------------------------------------
 
 /// `drawWhileCheap`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -38,13 +34,10 @@ pub struct DrawWhileCheapArgs {
     pub player: Option<PlayerId>,
 }
 
-/// T-AI-4: "Draw 1. If it costs (`maxCost`) or less, repeat this, up to `repeats` more times." Each
-/// round is one §2.4 draw; "it" is the card THAT draw put in the hand (`cardThisDrawPutInHand`, R596),
-/// priced as it arrives (R65's current cost: an X-cost card reads 0). A card cast on draw never gets
-/// there (R58) — not even the card the cast's own repeat then brings (R596) — a burned one isn't
-/// there, and a fatigue or limited draw brings none, so each ends the chain; so does the end of the game
-/// (R216). A draw can pause only on a cast-on-draw card that asks (R158), whose draw has then ended the
-/// chain already: its cast parks its own remainder (R113), and nothing of this chain is left to owe.
+/// T-AI-4: "Draw 1. If it costs (`maxCost`) or less, repeat, up to `repeats` more times." Each round is one
+/// §2.4 draw; "it" is the card THAT draw put in the hand (R596), priced as it arrives (R65: X-cost reads 0).
+/// A card cast on draw (R58, R596), a burned card, a fatigue or limited draw and the game's end (R216) end
+/// the chain; a cast that asks (R158) parks its own remainder (R113), so the chain owes nothing.
 pub fn draw_while_cheap(args: DrawWhileCheapArgs) -> Effect {
     Effect::new("drawWhileCheap", move |ctx| {
         let player = args.player.unwrap_or(ctx.controller);
@@ -52,7 +45,7 @@ pub fn draw_while_cheap(args: DrawWhileCheapArgs) -> Effect {
             if ctx.sink.state.result.is_some() {
                 return;
             }
-            // TS compared the prompt objects; a prompt's id names it alone.
+            // A prompt's id names it alone.
             let before = ctx.sink.state.pending.as_ref().map(|pending| pending.id.clone());
             let from = ctx.sink.events.len();
             let outcome = draw_one(ctx, player, None);
@@ -71,9 +64,7 @@ pub fn draw_while_cheap(args: DrawWhileCheapArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // T-AI-6 Datacenter Fire
-// ---------------------------------------------------------------------------------------------
 
 /// Whose Field Spells a sweep takes, relative to the card running it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -84,8 +75,7 @@ pub enum FieldSpellSide {
 }
 
 /// The reader a doomed count needs: the card running it (a Spell's effects pass a Spell-immune card by).
-/// (TS `Pick<EffectContext, "state" | "self" | "defId" | "radiant" | "controller">`, which a running
-/// effect and a card's `preview` both hand over.)
+/// A running effect and a card's `preview` both hand one over.
 #[derive(Clone, Copy)]
 pub struct SweepReader<'a> {
     pub state: &'a GameState,
@@ -140,12 +130,11 @@ fn reader_unaffected_by(reader: &SweepReader<'_>, card: &CardInstance) -> bool {
     card.zone.z() == ZoneName::Field && reader_is_spell(reader) && immune_to_spells(reader.state, card)
 }
 
-/// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now — every Field Spell in a
-/// backrow zone of those sides (the acting card of each zone, so an Ivory Tower beneath the Unit it
-/// holds counts, R418, and a card dormant under a backrow pile does not, §3.2), except an Indestructible
-/// one (R46) and one unaffected by the running Spell (B5 E35). Traps and Field Traps are no Field
-/// Spells, and an animated one standing in a unit zone is a Unit there (R383), so not one (R588). A pure read, so a card's
-/// `preview` (R280) and its resolution count the same cards.
+/// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now: those of the sides in a
+/// backrow zone (the acting card of each: an Ivory Tower beneath its Unit counts, R418; a card dormant
+/// under a backrow pile does not, §3.2), except Indestructible (R46) or unaffected by the running Spell
+/// (B5 E35). An animated card in a unit zone is a Unit there (R383, R588). A pure read, so `preview` (R280)
+/// and resolution agree.
 pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec<CardInstance> {
     let sides: Vec<PlayerId> = if side == FieldSpellSide::Enemy {
         vec![opponent_of(reader.controller)]
@@ -181,12 +170,10 @@ pub struct DestroyFieldSpellsAndHitArgs {
 }
 
 /// T-AI-6 Datacenter Fire: "Destroy all Field Spells. Deal `damagePer` damage to each hero for each one
-/// destroyed" (Radiant: the enemy's Field Spells, and the enemy hero). Every Field Spell of those sides is
-/// marked destroyed (§6.3 Destroy over a backrow scope, so §4.5's check collects them together, R59, and
-/// fires their Death), and the ones the mark will take (`fieldSpellsDoomed`, read as the sweep lands, as
-/// C+ #12.6's "each one destroyed" is, R408) set the hit: one §4.4 instance per hero of `damagePer` times
-/// that count, from the running Spell (so Spell Damage raises it once and a per-hit cap caps it once), in
-/// R68's order. None doomed, no damage.
+/// destroyed" (Radiant: the enemy's, and the enemy hero). Every Field Spell of those sides is marked destroyed
+/// (§6.3; §4.5's check collects them together, R59, and fires their Death); the ones the mark will take
+/// (`fieldSpellsDoomed`, as C+ #12.6's "each one destroyed", R408) set one §4.4 instance per hero of `damagePer`
+/// times that count, from the running Spell (Spell Damage and a per-hit cap apply once), in R68's order.
 pub fn destroy_field_spells_and_hit(args: DestroyFieldSpellsAndHitArgs) -> Effect {
     Effect::new("destroyFieldSpellsAndHit", move |ctx| {
         let doomed = field_spells_doomed(SweepReader::of_context(ctx), args.side).len() as i32;

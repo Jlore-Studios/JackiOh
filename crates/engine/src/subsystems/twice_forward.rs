@@ -3,23 +3,15 @@
 //! fuses it (or, on the Radiant face, a Radiant copy of it) into itself and gains Brittle.
 //!
 //! The count is the card's own (`memory.plays`, §10.1), so it survives JSON, a replay and the Fuse that
-//! keeps this instance (R77 keeps the target's memory; nothing here is a `remember` note, so a Fuse
-//! never re-roots it, `work::reroot_remembered`). It is kept by the trap trigger's own predicate: §10.3
-//! offers a trap each event once (`traps::fire_trap`; one a predicate declined is never owed it again,
-//! R99), and the predicate is the only part of a trap that runs without firing it — a fired Field Trap
-//! is face-up from then on (R33), and this one must stay face-down until it first activates. So the
-//! predicate counts each play as it is played (`cardPlayed`, §10.5 step 4), notes the card an even
-//! count names (`memory.fuseOn`), and admits that card's `cardResolved` — firing the trap — only when
-//! there is a card to fuse; with nothing left to fuse it reveals and gains its Brittle there (R687).
-//! Counting plays, not resolutions, keeps "every second card your opponent plays" right when a play
-//! casts a card that resolves before it (R70): the cast is the later play.
-//! ponytail: a trap predicate that writes its card's own counter; a "watch without firing" trigger kind in
-//! traps.rs is the upgrade path if a second card ever needs one.
-//!
-//! Port of `packages/engine/src/subsystems/twiceForward.ts`. The predicate writes the card (its memory,
-//! its face, its Brittle), so its `when` takes `&mut EffectContext` — the one `TriggerDef.when` that
-//! must (see `78f131c^:.fullsend/notes/part-08-3.md`, GAPS). TS's live `ctx.self` is the card as it stands in
-//! the state, read and written here by its id.
+//! keeps this instance (R77; nothing here is a `remember` note, so a Fuse never re-roots it,
+//! `work::reroot_remembered`). The trap trigger's own predicate keeps it: §10.3 offers a trap each event
+//! once (`traps::fire_trap`; a predicate that declined is never owed it again, R99), and a fired Field
+//! Trap is face-up from then on (R33), while this one must stay face-down until it first activates. So
+//! the predicate counts each play (`cardPlayed`, §10.5 step 4), notes the card an even count names
+//! (`memory.fuseOn`), and admits that card's `cardResolved` only when there is a card to fuse; with none
+//! left it reveals and gains its Brittle there (R687). Counting plays, not resolutions, keeps "every
+//! second card" right when a play casts a card that resolves before it (R70). The predicate writes the
+//! card, so its `when` takes `&mut EffectContext`.
 
 use std::sync::Arc;
 
@@ -44,7 +36,7 @@ const FUSE_ON_KEY: &str = "fuseOn";
 const EVERY: &str = "plays";
 const GAIN: &str = "brittleGain";
 
-/// `Extract<GameEvent, { type: "cardResolved" }>`: the fields of a resolved play this module reads.
+/// The fields of a `cardResolved` this module reads.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Resolved {
     instance_id: String,
@@ -111,15 +103,15 @@ fn reveal_self(state: &mut GameState, self_id: &str) {
     }
 }
 
-/// Writes one memory key on the card as it stands in the state (TS wrote through the live `ctx.self`).
+/// Writes one memory key on the card as it stands in the state.
 fn remember(state: &mut GameState, self_id: &str, key: &str, value: Value) {
     if let Some(card) = find_instance_mut(state, self_id) {
         card.memory.insert(key.to_string(), value);
     }
 }
 
-/// TS `twiceForwardTrigger`'s `when`: count the opponent's play, or admit the resolution of a play an
-/// even count named (R425, R687, R99).
+/// The trigger's `when`: count the opponent's play, or admit the resolution of a play an even count
+/// named (R425, R687, R99).
 fn watch(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(self_) = ctx.live_self().cloned() else {
         return false;
@@ -131,7 +123,7 @@ fn watch(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> 
     {
         let plays = twice_forward_plays(&self_) + 1;
         remember(ctx.sink.state, &self_.id, TWICE_FORWARD_PLAYS_KEY, json!(plays));
-        // JS `plays % 0` is NaN, never 0: a zero step fuses nothing (and Rust's `%` would panic).
+        // A zero step fuses nothing (and `%` by zero would panic).
         let every = param(ctx, EVERY);
         if every != 0 && plays % every == 0 {
             let mut fuse_on = owed(&self_);
@@ -160,7 +152,7 @@ fn watch(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> 
     false
 }
 
-/// TS `twiceForwardTrigger`'s `run`: the first fuse reveals the card, then the fuse and the gain.
+/// The trigger's `run`: the first fuse reveals the card, then the fuse and the gain.
 fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return Vec::new();
@@ -189,8 +181,8 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     ]
 }
 
-/// `twice_forward_trigger`'s argument, TS's `{ radiantCopy: boolean }` (data, so a card may write the
-/// literal: `json_as(json!({ "radiantCopy": true }))`).
+/// `twice_forward_trigger`'s argument (data, so a card may write the literal:
+/// `json_as(json!({ "radiantCopy": true }))`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TwiceForwardArgs {

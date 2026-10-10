@@ -1,32 +1,17 @@
 //! The targeting point (docs/classic-sets.md B5 E5 "a friendly unit is targeted", E9's target redirect;
-//! R450): what happens the moment a player targets a card, before anything resolves at it.
+//! R450): what happens the moment a player targets a card, before anything resolves at it. In order:
+//!   1. A targeting cost (Classic #89 Paul Allen's Ghost), binding both players: random discards (R682),
+//!      paid at §10.5 step 2 (`pay_targeting_discards`) or before a prompt answer goes on. With fewer
+//!      cards than the cost in hand the card is never a legal target (`targeting::can_pay_to_target`).
+//!   2. An interception (Classic #33 Joro): the first card in the targeted unit's controller's hand
+//!      whose `replacements` declare `{ on: "targeted", where: "hand" }` and answer this source (`by:
+//!      "spell"` needs a Spell, R651) is summoned (R64's leftmost open unit zone; with none, nothing
+//!      happens), no Cry, summoning sick, and the first pick it answers moves to it (`redirected`
+//!      "target"), only when it is itself a legal pick of that declaration (Spellbender).
 //!
-//! Two things answer a targeting, in this order:
-//!   1. A targeting cost (Classic #89 Paul Allen's Ghost: "to target this with anything but an attack,
-//!      a player must also discard N cards"). The discards are random at pay time (R682); §10.5 step
-//!      2 pays them (`pay_targeting_discards`), and a prompt answer naming such a card pays them before
-//!      it goes on. It binds both players. With fewer cards than the cost in hand the card is not a
-//!      legal target at all (`targeting::can_pay_to_target`), so it is never offered.
-//!   2. An interception (Classic #33 Joro: "While this is in your hand: when your opponent targets one
-//!      of your Units with a Spell, summon this and make it the new target"). The first card in the
-//!      targeted unit's controller's hand whose `replacements` declare `{ on: "targeted", where:
-//!      "hand" }` and answer this source (`by: "spell"` needs a Spell, R651) is
-//!      summoned (R64's leftmost open unit zone; with none, nothing happens), with no Cry and
-//!      summoning sick, and the pick moves to it — `redirected` "target". One interceptor answers one targeting: a play naming several of
-//!      that player's units redirects the first. A declared pick moves only when the interceptor is
-//!      itself a legal pick of that declaration (Hearthstone's Spellbender); a cost already paid for
-//!      the first pick stays paid.
-//!      "Targeting" is choosing: declared `target` picks of a play, a cast and an activation, and every
-//!      answer to a `target` prompt. Random picks, "all" effects, Tributes, hand picks and zone picks target
-//!      nothing (R450). The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with
-//!      `what: "attack"`.
-//!
-//! A prompt answer reaches this through `prompts.rs`'s calls into this module (TS
-//! `prompts.registerTargetingHooks`, which goes, SURFACE §6.6: `prompts.rs` calls
-//! `targetable_options`, `why_target_answer_refused` and `target_answer` here directly) and through the
-//! play pipeline's own answerer (`play_steps::answer_play_prompt`), which owns its prompts (R122).
-//!
-//! Port of `packages/engine/src/targetingPoint.ts` (part 3).
+//! The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with `what: "attack"`; a
+//! play's own prompts go through `play_steps::answer_play_prompt` (R122), the rest through `prompts.rs`
+//! (SURFACE §6.6).
 
 use serde_json::json;
 
@@ -36,16 +21,15 @@ use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState, PendingChoice, PromptOption, find_instance};
 use crate::wire::{CardType, GameEvent, PlayerId, PromptKind, RedirectWhat, Selection, ZoneName};
 
-/// What a redirect moved: a chosen target here, an attack at §4.2 step 2 (`combat.rs`). TS's
-/// `"target" | "attack"`, the two literals of the event's own `redirected.what` that a targeting can
-/// move, so it is that type.
+/// What a redirect moved: a chosen target here, an attack at §4.2 step 2 (`combat.rs`); the event's
+/// own `redirected.what` type.
 pub type RedirectKind = RedirectWhat;
 
 /// `InterceptArgs.accepts`: whether this card may stand as pick `index`, read on the state as it stands.
 pub type InterceptorFilter<'a> = dyn Fn(&GameState, &CardInstance, usize) -> bool + 'a;
 
-/// TS `InterceptArgs`. The two predicates borrow what their caller closes over; `accepts` is also
-/// handed the state as it stands, because the caller's state is the sink this call writes to.
+/// The two predicates borrow what their caller closes over; `accepts` is also handed the state as it
+/// stands, because the caller's state is the sink this call writes to.
 pub struct InterceptArgs<'a> {
     /// The player who targeted.
     pub chooser: PlayerId,
@@ -123,11 +107,9 @@ pub fn intercept_targeting(sink: &mut EngineSink<'_>, args: InterceptArgs<'_>) -
 }
 
 /// R450, R682, §6.3 Discard: pay a targeting cost of `count` discards — random cards from the
-/// player's hand outside `keep`, drawn through the match rng. Fewer cards than the cost ends it; a
-/// cost nobody can pay is never listed or offered (`can_pay_to_target`, `why_targeting_discards_unpayable`),
-/// so the keep is what the refusal kept: the card a play is taking out of that hand, and any hand
-/// card the same play or activation picks. A prompt answer keeps nothing, as its refusal does (TS
-/// `keep = []`: pass `&[]`).
+/// player's hand outside `keep`, drawn through the match rng. `keep` is what the refusal kept
+/// (`why_targeting_discards_unpayable`): the card a play is taking out of that hand and any hand card
+/// the same play or activation picks; a prompt answer keeps nothing (pass `&[]`).
 pub fn pay_targeting_discards(sink: &mut EngineSink<'_>, player: PlayerId, count: i32, keep: &[String]) {
     for _ in 0..count.max(0) {
         let hand: Vec<CardInstance> = sink.state.players[player]
@@ -146,9 +128,7 @@ pub fn pay_targeting_discards(sink: &mut EngineSink<'_>, player: PlayerId, count
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A prompt's answer (R450): the cost, then the interception
-// ---------------------------------------------------------------------------------------------
 
 /// R450: why a `target` answer cannot stand — its picks cost more cards than its chooser holds (two
 /// costly picks of one prompt, each payable alone). `Ok` for any other prompt.
@@ -207,8 +187,7 @@ pub fn target_answer(
 }
 
 /// R450, E35: the options a `target` prompt may offer its chooser — none they could not pay to target,
-/// and none Immune to Spells when a Spell asks. Every other prompt keeps its options. (Private in TS,
-/// where `registerTargetingHooks` handed it to `prompts.ts`; `prompts.rs` calls it here.)
+/// and none Immune to Spells when a Spell asks. Every other prompt keeps its options.
 pub fn targetable_options(state: &GameState, args: &OpenPromptArgs) -> Vec<PromptOption> {
     if args.kind != PromptKind::Target {
         return args.options.to_vec();
