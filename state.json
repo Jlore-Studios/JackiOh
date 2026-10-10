@@ -6172,19 +6172,23 @@
         {
           "at": "2026-10-10T13:42:28Z",
           "minutes": 20.1
+        },
+        {
+          "at": "2026-10-10T13:46:58Z",
+          "minutes": 1.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-10T17:50:00Z",
-          "utilization": 0.8
+          "utilization": 0.9
         },
-        "observed_at": "2026-10-10T13:42:28Z",
+        "observed_at": "2026-10-10T13:46:58Z",
         "seven_day": {
           "resets_at": "2026-10-17T05:00:00Z",
-          "utilization": 0.15
+          "utilization": 0.16
         },
-        "status": "allowed"
+        "status": "allowed_warning"
       }
     },
     "claude-3": {
