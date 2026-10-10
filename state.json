@@ -4636,6 +4636,14 @@
         }
       }
     },
+    "633": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-10T06:26:37Z",
+      "issue": 558,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "68": {
       "action": "build",
       "died": 0,
