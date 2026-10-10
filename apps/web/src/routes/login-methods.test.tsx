@@ -347,7 +347,13 @@ describe("R1443 signing in with a username", () => {
   it("R1443 a username signs in through our server, and the field says it takes one", async () => {
     const calls = serve({ "POST /api/auth/username-signin": ok(null) });
     render(<LoginRoute />);
-    expect(screen.getByLabelText("Email or username")).toHaveAttribute("type", "text");
+    const field = screen.getByLabelText("Email or username");
+    expect(field).toHaveAttribute("type", "text");
+    // As text it keeps an email field's keyboard, and a phone keyboard rewrites nothing typed.
+    expect(field).toHaveAttribute("inputmode", "email");
+    expect(field).toHaveAttribute("autocapitalize", "none");
+    expect(field).toHaveAttribute("autocorrect", "off");
+    expect(field).toHaveAttribute("spellcheck", "false");
     signInAs(` ${NAME} `);
     await settle();
     expect(paths_(calls)).toEqual(["POST /api/auth/username-signin"]);

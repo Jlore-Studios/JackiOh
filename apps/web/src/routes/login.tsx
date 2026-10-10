@@ -1177,10 +1177,15 @@ export default function LoginRoute(): ReactElement {
                 <input
                   id="login-email"
                   data-testid={loginTestid.email}
-                  // R1443: sign-in takes a username too, which an email field would refuse.
+                  // R1443: sign-in takes a username too, which an email field would refuse. As text
+                  // it keeps an email field's keyboard (its @) and, like one, is never capitalised,
+                  // corrected or spell-checked by a phone keyboard.
                   type={signingIn ? "text" : "email"}
+                  inputMode="email"
                   autoComplete="username"
                   autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={email}
                   aria-invalid={emailError !== null}
                   aria-describedby={emailError !== null ? "login-email-error" : undefined}
