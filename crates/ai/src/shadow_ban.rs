@@ -75,14 +75,21 @@
 /// at stock weight it shows up in a few decks, the mulligan returns it like any other 4-cost, and
 /// the never-played slot costs a fraction of a draw — the ban it came off measured a deal the
 /// beam's shape makes dead, not a card the AI mishandles.
+///
+/// Generation 5 removed `core-055` (Lava Golem): the only entry the Rust sweep of record would have
+/// kept for `timeout`, and the report itself says what that flag measured — a decision over two
+/// seconds in a game that also held an R29 scorer (Zephrys Zealotism's perfect hand and Zephyrs'
+/// Discover rank dry-run whole pools of cards, "from a card dealt or one a determinization sampled
+/// into the opponent's hand, so neither card need be in the game"). The card it was charged to is
+/// the one the sweep watched the AI play best: 222 casts at easy for +4545.7 mean eval delta and
+/// 168 at hard for +23833.0, every tribute set enumerated by `legal_actions` (R101's own list keeps
+/// the enemy units) and every one priced by the same eval that reads the Golem's `controller`
+/// whether it lands at home or across the table (R360). Dealt ×3 by `UNBANNED_PREFER` on the same
+/// evidence as the generation-2 unban: a card the AI demonstrably plays well belongs in its decks.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-042",
         "neverPlayed: hard: affordable in hand on 21 turns, never played",
-    ),
-    (
-        "core-055",
-        "neverPlayed: hard: affordable in hand on 22 turns, never played",
     ),
     (
         "core-076",
@@ -395,7 +402,12 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// the table now teaches. `core-099` is not preferred either: the beam prunes
 /// its Discover chain before the fused payoff lands (the generation-4 note
 /// above the ban table), so preferring it would only deal a dead card more.
-pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093", "core-094"];
+/// `core-055` joins them in generation 5 on the strongest numbers the sweep of
+/// record took (222 casts at easy for +4545.7, 168 at hard for +23833.0): the
+/// AI already plays the Golem well, so it should meet it often.
+pub const UNBANNED_PREFER: &[&str] = &[
+    "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
+];
 pub const UNBANNED_PREFER_BY: f64 = 3.0;
 
 /// `DEALT_Q` is measured against this: the candidate's share of the records the
