@@ -4124,6 +4124,8 @@
       "run_id": "38024930294",
       "started_at": "2026-10-10T04:41:57Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "602": {
