@@ -4449,7 +4449,7 @@
       "failures": 0,
       "feedback_since": "2026-10-10T14:59:29Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 602,
       "kind": "revise",
       "last_findings": [],
