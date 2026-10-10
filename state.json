@@ -6493,14 +6493,18 @@
         {
           "at": "2026-10-10T04:15:27Z",
           "minutes": 11.2
+        },
+        {
+          "at": "2026-10-10T04:38:43Z",
+          "minutes": 20.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-10T09:00:00Z",
-          "utilization": 0.08
+          "utilization": 0.21
         },
-        "observed_at": "2026-10-10T04:15:27Z",
+        "observed_at": "2026-10-10T04:38:43Z",
         "status": "allowed"
       }
     },
