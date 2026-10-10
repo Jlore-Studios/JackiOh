@@ -1,26 +1,5 @@
-// Lesson "spells"'s coach script (SPEC §9.10): the steps the coach walks the player through, and the
-// tips it shows when something new happens. Written against this lesson's fixed seed and decks
-// (lessons/spells.ts), so it may name the cards the seed deals.
-//
-// The seed deals the player Tempo Timmy, Mr. Vanilla and Twisted Sorcerer, then draws Lunar Eclipse,
-// Deft Duelist, True Strike, Big D-fender and Hit Job in that order; the AI opens with Me and Mr
-// Token, The Coin and Right-house defender (Taunt, Divine Shield, Reborn). The coach line:
-//
-//   turn 1  Mr. Vanilla; read a card; end the turn.
-//   turn 2  Mr. Vanilla attacks the Taunt, and its Divine Shield breaks; Lunar Eclipse finishes the
-//           defender, and Reborn brings it back; Tempo Timmy arrives and attacks at once (Rush).
-//   turn 3  Twisted Sorcerer's Cry and True Strike (which ignores Armor) destroy the AI's Archivist in
-//           Defense; Tempo Timmy's First Strike finishes the defender; Mr. Vanilla hits the hero.
-//   turn 4  Twisted Sorcerer clears the AI's Taunt (Jilliax); Deft Duelist charges the hero the turn
-//           it arrives, and Mr. Vanilla follows; Big D-fender arrives and goes to Defense Position.
-//   turn 5  Hit Job, which costs (3), destroys the Taunt the AI has put in the way (its Rush Token in
-//           Defense); from then on the coach names every next move (`yourMove`) until the enemy hero
-//           falls, on the player's 8th turn.
-//
-// Every step belongs to one of the player's turns (`onTurn`), reads only the view and the legal
-// actions (CLAUDE.md rule 7), and retires without a word once its moment has passed, so a player who
-// does things their own way is never asked for something that can no longer happen. The tips
-// answer what the AI does, whenever it does it.
+// Fixed "spells" coach script (SPEC §9.10). Steps use only the view and legal actions
+// (CLAUDE.md rule 7), retiring when no longer applicable.
 
 import type { ActionBody, PlayerView, Selection, UnitView } from "@jackioh/shared";
 
@@ -61,20 +40,14 @@ const LUNAR_DAMAGE = 3;
 const TRUE_STRIKE_DAMAGE = 4;
 const SORCERER_DAMAGE = 4;
 
-// ---------------------------------------------------------------------------------------------
-// reads of the view this lesson needs
-// ---------------------------------------------------------------------------------------------
+// View reads
 
 /** The AI's units that carry Taunt, printed or from Defense Position. */
 function enemyTaunts(view: PlayerView): UnitView[] {
   return unitsOf(view, "opponent").filter((unit) => hasKeyword(unit, "Taunt"));
 }
 
-/**
- * The human's unit of this definition arrived this turn, as far as the view's recent events reach
- * (`PlayerView.events`): its `summoned` comes after the turn's `turnStarted`. The Rush and Charge
- * steps ask for an attack "the turn it arrives", so they say so only when it did.
- */
+/** Checks whether this unit arrived after the turn started, for Rush and Charge prompts. */
 function arrivedThisTurn(view: PlayerView, defId: string): boolean {
   const unit = unitOf(view, "you", defId);
   if (unit === undefined) return false;
@@ -92,9 +65,7 @@ function unitName(ctx: CoachCtx, instanceId: string): string {
   return unit === undefined ? "that unit" : cardName(ctx, unit.defId);
 }
 
-// ---------------------------------------------------------------------------------------------
-// aiming a spell or a Cry
-// ---------------------------------------------------------------------------------------------
+// Aiming spells and Cries
 
 /** What a step asks the player to aim at: a selection its play action carries (R81). */
 type Aim = (ctx: CoachCtx) => Selection | null;
@@ -109,11 +80,7 @@ function byValue(a: UnitView, b: UnitView): number {
   return b.attack + b.health - (a.attack + a.health);
 }
 
-/**
- * Where `damage` is best spent: an enemy unit it destroys outright — a Taunt first, as it stands in
- * the way, then the biggest — never one whose Divine Shield would soak it all; else the biggest
- * enemy unit it can hurt; else the enemy hero. `ignoresArmor` is True Strike's text.
- */
+/** Prioritizes lethal Taunts, then unshielded units; `ignoresArmor` is True Strike's text. */
 function damageAim(damage: number, ignoresArmor = false): Aim {
   return (ctx) => {
     const dealt = (unit: UnitView): number => (ignoresArmor ? damage : Math.max(0, damage - unit.armor));
@@ -133,10 +100,7 @@ function biggestOpen(ctx: CoachCtx): Selection | null {
   return target === undefined ? { pick: "hero", player: ctx.view.opponent.player } : { pick: "instance", instanceId: target.instanceId };
 }
 
-/**
- * The enemy unit most worth destroying outright: the biggest Taunt, as it stands between the
- * player's units and the hero; else the biggest unit on the board.
- */
+/** Prefer a Taunt, which blocks hero attacks, otherwise the biggest enemy. */
 function removalAim(ctx: CoachCtx): Selection | null {
   const taunts = enemyTaunts(ctx.view);
   const target = [...(taunts.length > 0 ? taunts : unitsOf(ctx.view, "opponent"))].sort(byValue)[0];
@@ -166,11 +130,7 @@ type Common = {
   holdAi?: boolean;
 };
 
-/**
- * "Play this card at that target": a targeted spell, or a unit whose Cry takes a target (§6.2:
- * targets are chosen at play time). Shows while the engine offers that play at that target; done
- * once the card has left the hand; moot if it is gone before the step ever showed.
- */
+/** Targeted-card prompt (§6.2); retires if its card leaves hand before it can show. */
 function playAt(options: Common & { defId: string; aim: Aim }): CoachStep {
   const { defId, aim, when, ...rest } = options;
   const matches = (action: ActionBody, ctx: CoachCtx): boolean => {
@@ -190,16 +150,7 @@ function playAt(options: Common & { defId: string; aim: Aim }): CoachStep {
   };
 }
 
-/**
- * This step belongs to the player's own turn `n`: it may show only then, and it retires without a
- * word once that turn has passed. Before that turn's main phase it waits, so a step about a card
- * still to be drawn waits for the draw. From then on, a step that cannot show when its moment comes
- * never will (the card has gone, the mana is spent, the unit that was to attack is not there), so
- * it retires at once rather than hold back the steps behind it; and an `act` step already showing
- * retires the same way once what it asks is no longer on offer (the coach checks `done` first, so a
- * step the player has just done is done, not moot). A player who does things their own way meets
- * the next step that still makes sense.
- */
+/** Restricts steps to the player's turn, retiring unavailable prompts without blocking later steps; `done` wins over `moot`. */
 function onTurn(n: number, step: CoachStep): CoachStep {
   const ownWhen = step.when;
   const ownMoot = step.moot;
@@ -217,24 +168,14 @@ function onTurn(n: number, step: CoachStep): CoachStep {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// suggesting an attack
-// ---------------------------------------------------------------------------------------------
+// Attack suggestions
 
-/**
- * What the board suggests an attack on a unit comes to (§4.3), as the coach's advice reads it
- * (advice.ts `trades`): whether the defender falls, and whether the attacker lives through its
- * answer. Advice only, read off the view: the engine alone resolves the attack.
- */
+/** Advice-only view of attack outcome (§4.3); the engine resolves the attack. */
 function outcome(ctx: CoachCtx, attack: Attack): { kills: boolean; survives: boolean } | undefined {
   return trades(ctx).find((trade) => trade.action.attackerId === attack.attackerId && trade.action.targetId === attack.targetId);
 }
 
-/**
- * The attack the coach suggests next, among the ones the engine offers: the enemy hero whenever it
- * may be attacked; else a blow that destroys the unit in the way (a Taunt, since only a Taunt can
- * keep the hero out), one the attacker survives first; else none.
- */
+/** Prefer hero attacks, then killing attacks whose attacker survives. */
 function goodAttack(ctx: CoachCtx): Attack | undefined {
   const attacks = legalAttacksOf(ctx);
   const hero = heroTargetId(ctx.view, "opponent");
@@ -252,11 +193,7 @@ function endTurnText(settled: string): (ctx: CoachCtx) => string {
   return (ctx) => (goodAttack(ctx) === undefined ? settled : "Attack with what can still attack, then press End turn.");
 }
 
-/**
- * "Attack well": the coach suggests one good attack at a time (`goodAttack`). With `clearing`, only
- * while an enemy Taunt still stands, and done once none does; otherwise until no good attack is
- * left. Done, either way, once the turn has passed.
- */
+/** Suggests good attacks; clearing stops after Taunts are gone, otherwise when no attack remains. */
 function attackWell(options: Common & { clearing?: boolean }): CoachStep {
   const { when, clearing = false, ...rest } = options;
   const blocked = (ctx: CoachCtx): boolean => enemyTaunts(ctx.view).length > 0;
@@ -269,7 +206,6 @@ function attackWell(options: Common & { clearing?: boolean }): CoachStep {
     },
     ...rest,
     when: (ctx) => myMain(ctx) && goodAttack(ctx) !== undefined && (!clearing || blocked(ctx)) && (when === undefined || when(ctx)),
-    // Clearing the way is moot once nothing blocks it.
     moot: (ctx, since) => clearing && since === null && myMain(ctx) && !blocked(ctx),
     done: (ctx, since) => {
       if (ctx.view.turn !== since.turn) return true;
@@ -294,19 +230,12 @@ function attackAdvice(ctx: CoachCtx): string {
   return `${blocker} ${attacker} can destroy it: attack it.`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the last step: every move until the enemy hero falls
-// ---------------------------------------------------------------------------------------------
+// Endgame
 
-/**
- * The last step: the coach names one move at a time, and points at it, until the enemy hero falls
- * (advice.ts: a finishing blow first, and a Taunt in the way cleared even at the attacker's cost).
- */
+/** Names the next move until the enemy hero falls. */
 const win: CoachStep = yourMove({ id: "win", title: "Win the game", final: true });
 
-// ---------------------------------------------------------------------------------------------
-// the script
-// ---------------------------------------------------------------------------------------------
+// Script
 
 export const script: LessonScript = {
   lessonId: "spells",
@@ -362,7 +291,6 @@ export const script: LessonScript = {
         attacker: VANILLA,
         target: { defId: DEFENDER },
         title: "Attack the Taunt",
-        // The "taunt" tip has just said what Taunt is; this says what to do, and what to watch for.
         text: (ctx) => {
           const defender = unitOf(ctx.view, "opponent", DEFENDER);
           const shielded = defender !== undefined && hasKeyword(defender, "Divine Shield");
@@ -432,7 +360,7 @@ export const script: LessonScript = {
         target: { defId: DEFENDER },
         title: "First Strike",
         text: "Tempo Timmy has First Strike: it hits first, so if that blow kills, it takes no damage back. Attack Right-house defender.",
-        // Only when the blow does kill, so the lesson it teaches is the one the board shows.
+        // Show First Strike only when the blow kills.
         when: (ctx) => {
           const attack = legalAttacksOf(ctx).find(
             (candidate) =>
@@ -529,7 +457,6 @@ export const script: LessonScript = {
     tip({
       id: "taunt",
       title: "Taunt",
-      // What Taunt is. The step that follows ("attack-taunt") says what to do about it.
       text: (ctx) => {
         const unit = enemyTaunts(ctx.view)[0];
         const name = unit === undefined ? "unit" : cardName(ctx, unit.defId);
@@ -593,7 +520,6 @@ export const script: LessonScript = {
       id: "ai-spell",
       title: "The AI's spells",
       text: "The AI cast a spell at you. Its spells can hit your units or your hero, just like yours.",
-      // Lunar Eclipse is the AI deck's one spell with a target (lessons/spells.ts).
       when: (ctx) => freshOf(ctx, "cardPlayed").some((event) => event.player !== ctx.view.viewer && event.defId === LUNAR),
     }),
     tip({
@@ -602,7 +528,7 @@ export const script: LessonScript = {
       text: "Jilliax has Lifesteal: the damage it deals heals the AI's hero by as much.",
       anchor: { kind: "hero", side: "opponent" },
       when: (ctx) => {
-        // Jilliax on the AI's side, or dying in the very exchange that healed its hero.
+        // Include Jilliax destroyed in this exchange.
         const jilliax = new Set([
           ...unitsOf(ctx.view, "opponent").filter((unit) => unit.defId === JILLIAX).map((unit) => unit.instanceId),
           ...freshOf(ctx, "destroyed").filter((event) => event.defId === JILLIAX && event.owner !== ctx.view.viewer).map((event) => event.instanceId),

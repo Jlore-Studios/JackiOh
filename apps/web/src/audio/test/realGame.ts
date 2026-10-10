@@ -1,9 +1,7 @@
 // Test helper for the audio suite: real engine games, reached the way the client reaches them
 // (`game/engine.ts`'s `enginePort()`, over the WebAssembly engine), so a test can feed the director the very views
-// `viewFor` redacts for each seat (R97, R154). It is not a test file.
-//
-// The driver is deterministic: a seed, two decks and a caller's policy. Nothing here decides a
-// rule; every action it sends comes from `legalActions`.
+// `viewFor` redacts for each seat (R97, R154). It is not a test file. The driver is deterministic
+// and decides no rule: every action it sends comes from `legalActions`.
 
 import type { Handicap } from "@jackioh/engine/config";
 import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
@@ -121,9 +119,8 @@ export type SeatViews = { p1: PlayerView; p2: PlayerView };
 
 /**
  * The first seed (`<prefix>-0`, `-1`, …) where p2 casts `defId` as it draws it, with both seats'
- * views right after the cast has resolved (any prompt it asked answered with the first listed answer)
- * and `settled` holding of them; null when none of `seeds` does within `steps` actions. Every action
- * is an End turn or the first listed answer, so the search is deterministic.
+ * views right after the cast resolved (prompts answered first-listed) and `settled` holding of them;
+ * null when no seed does within `steps` actions. Every action is End turn or an answer: deterministic.
  */
 export function castOnDrawViews(
   prefix: string,

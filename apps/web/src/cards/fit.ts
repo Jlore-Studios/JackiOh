@@ -1,47 +1,6 @@
-// Text that fits its box (docs/polish/6-cards.md, Surface B "fit.ts").
-//
-// Two layers. The tiers are coarse and pure: a long name or a long rules text starts from a smaller
-// font (TIER_SCALE), chosen from its length alone, so the first paint is already close. Then
-// `useFitText` measures the real box and shrinks the font the rest of the way by writing one inline
-// custom property, `--cf-fit`, which cards.css multiplies into the font size. Everything on a face
-// is sized in container units, so the factor that fits at one card size fits at every size.
-//
-// THE READING FLOOR (rules text only). Shrinking alone printed the densest cards at 6 px in the
-// deck builder's grid. So a rules box whose fitted font is under FIT_FLOOR_PX tries, in order:
-//  1. its own box from full size (`--cf-text-scale: 1` inline): the length tier's head start is a
-//     first-paint guess, and a text it undersold may still fit at the floor;
-//  2. the long layout (`data-long="true"` on the `.cf`: a shorter art window and a taller rules box,
-//     cards.css);
-//  3. the floor itself, clamped with an ellipsis (`data-clamped`, with `--cf-clamp-lines` set to
-//     the lines the box holds). The detail view and the hover preview print the text whole.
-// A face too small to print even full-size text at the floor (a hand card, a Discover option) is
-// fitted as before: the floor is for faces that can reach it.
-//
-// BATCHED. A fit is a search: write `--cf-fit`, read whether the box spills, write again. Run one
-// element at a time that is a forced layout per step, and 318 cards in the Almanac (two boxes each)
-// spent most of a second and a half of its first paint in them. So a fit is a generator
-// that yields each read as a thunk, and one scheduler runs every pending fit in rounds: all the
-// writes of a round, then all its reads, so the whole page lays out once per round (about a dozen
-// times) instead of once per element step. `useFitText` queues its fit from the layout effect and
-// the scheduler runs on the microtask that follows the commit, before the browser paints, so no card
-// is ever seen unfitted. `flushFits` runs the queue now (a test's, or anything that must read the
-// result at once).
-//
-// SKIPPED FACES WAIT (#263). The pool grid lets the browser skip the layout of its off-screen faces
-// (`content-visibility: auto` on `.db-card-face`, which carries SKIPPABLE_ATTRIBUTE). A skipped
-// face has no layout to read, and reading it anyway lays it out on its own, which across the
-// Almanac cost more than the skip saved. So a fit's first read asks whether its element is skipped,
-// with the one question that never lays anything out: `checkVisibility({ contentVisibilityAuto:
-// true })` (a plain `checkVisibility()` does lay out a skipped subtree). False inside a skippable
-// holder means skipped, unless the holder's own last `contentvisibilityautostatechange` said it is
-// not, in which case the box is hidden some other way and the fit runs as before (a no-op). A
-// skipped fit is parked. When a holder of a parked fit is un-skipped, every parked fit is queued
-// again: Chrome flips every face a scroll brings near at once and only then dispatches their
-// events, so the first event finds them all, and they fit in one batch. Chrome dispatches those
-// events after it has painted the frame that un-skipped them, so a face shows its length tier's
-// first guess for that one frame. In a scroll the browser un-skips a face well before it reaches
-// the screen, so this shows only after a jump or a fresh mount, and only on a face the fit changes
-// (about one in ten). A browser without `checkVisibility` (jsdom) never parks.
+// Fits card text in its box (docs/polish/6-cards.md, Surface B): tiers start smaller and `useFitText` sets `--cf-fit`, which cards.css applies.
+// Rules text retries full size, then `data-long`, before clamping at FIT_FLOOR_PX.
+// Fits batch layout reads and park while `content-visibility: auto` skips a holder.
 
 import { useLayoutEffect, type RefObject } from "react";
 
@@ -57,12 +16,10 @@ function tierOf(length: number, max: { s: number; m: number; l: number; xl: numb
   return "xxl";
 }
 
-/** ≤12 s, ≤18 m, ≤24 l, ≤30 xl, else xxl. */
 export function nameTier(name: string): LengthTier {
   return tierOf(name.length, NAME_TIER_MAX);
 }
 
-/** ≤40 s, ≤90 m, ≤160 l, ≤260 xl, else xxl. Pass the base text and the radiant clause together. */
 export function textTier(text: string): LengthTier {
   return tierOf(text.length, TEXT_TIER_MAX);
 }
@@ -71,7 +28,7 @@ export function textTier(text: string): LengthTier {
 const SLACK_PX = 1;
 
 const FIT_PROPERTY = "--cf-fit";
-/** The length tier's font scale, which CardFace sets on the face; the fitter overrides it inline. */
+/** CardFace's tier scale, overridden inline while fitting. */
 const SCALE_PROPERTY = "--cf-text-scale";
 const CLAMP_LINES_PROPERTY = "--cf-clamp-lines";
 const CLAMPED = "data-clamped";
@@ -79,7 +36,7 @@ const CLAMPED = "data-clamped";
 export const LONG_ATTRIBUTE = "data-long";
 /** The face element a rules box asks for the long layout. */
 const FACE_SELECTOR = ".cf";
-/** CardFace's two halves of a rules box: the base text, and the radiant clause under its rule. */
+/** CardFace's base text and radiant-clause halves of a rules box. */
 const BASE_SELECTOR = ".cf-text-base";
 const RADIANT_SELECTOR = ".cf-text-radiant";
 /** cards.css's rules-box line height, for a browser that reports `normal`. */
@@ -88,10 +45,7 @@ const FALLBACK_LINE_HEIGHT = 1.18;
 const FLOOR_SLACK_PX = 0.05;
 
 export type FitOptions = {
-  /**
-   * The rules box's reading floor in px (FIT_FLOOR_PX). Absent, the text shrinks to FIT_MIN and
-   * then clamps, as a name does.
-   */
+  /** Rules-text floor in px; without it, text shrinks to FIT_MIN then clamps. */
   floorPx?: number;
 };
 
@@ -113,18 +67,15 @@ function fontPx(element: HTMLElement): number {
 type Probe = () => unknown;
 /** Yielded instead of a read: the element is skipped, so the fit waits until it is not. */
 const PARK = Symbol("park");
-/** A fit in progress: its writes run as it is stepped, each `yield` hands over a read and waits for it. */
+/** A fit in progress: each `yield` hands over a read and waits for it. */
 type Steps<T> = Generator<Probe | typeof PARK, T, unknown>;
 
-/** Asks for one read of layout and waits for its answer, which is the probe's own result. */
+/** Asks for one layout read and returns the probe's result. */
 function* read<T>(probe: () => T): Steps<T> {
   return (yield probe) as T;
 }
 
-/**
- * Binary-searches the largest `--cf-fit` in FIT_MIN..1 that fits and leaves it set. Returns it, or
- * null when even FIT_MIN spills (FIT_MIN is left set).
- */
+/** Finds the largest fitting `--cf-fit`; leaves FIT_MIN set when it still spills. */
 function* search(element: HTMLElement): Steps<number | null> {
   setFit(element, 1);
   if (!(yield* read(() => overflows(element)))) return 1;
@@ -149,7 +100,7 @@ function* readable(element: HTMLElement, best: number | null, floorPx: number): 
   return best !== null && (yield* read(() => fontPx(element))) >= floorPx - FLOOR_SLACK_PX;
 }
 
-/** The largest font this rules box can print at all: full size, no tier scale, no shrink. */
+/** The rules box's font at full size, without tier scaling or fitting. */
 function* fullSizePx(element: HTMLElement): Steps<number> {
   element.style.setProperty(SCALE_PROPERTY, "1");
   setFit(element, 1);
@@ -158,12 +109,7 @@ function* fullSizePx(element: HTMLElement): Steps<number> {
   return px;
 }
 
-/**
- * Holds the text at the floor (or at full size, if the floor is above it) and clamps it to the
- * lines its box holds, with an ellipsis. A clamped box is as tall as its lines, up to the box
- * (cards.css), so nothing past the last line is painted; a line is kept back for the gap above a
- * radiant clause.
- */
+/** Clamps floor-size text with room for the gap above a radiant clause. */
 function* clampAtFloor(element: HTMLElement, floorPx: number): Steps<void> {
   const current = yield* read(() => fontPx(element));
   const factor = Number(element.style.getPropertyValue(FIT_PROPERTY)) || 1;
@@ -186,11 +132,7 @@ function* clampAtFloor(element: HTMLElement, floorPx: number): Steps<void> {
   element.style.setProperty(CLAMP_LINES_PROPERTY, String(lines));
 }
 
-/**
- * One fitting pass. Without layout (jsdom, or a rules box the small-card container query hides)
- * it only drops a stale `data-clamped` and `data-long`, which are absent in jsdom, so there it
- * changes nothing.
- */
+/** One fitting pass; without layout it only clears stale layout attributes. */
 function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   const face = options.floorPx === undefined ? null : element.closest<HTMLElement>(FACE_SELECTOR);
   if (yield* read(() => element.clientWidth === 0 && element.clientHeight === 0)) {
@@ -206,7 +148,7 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   face?.removeAttribute(LONG_ATTRIBUTE);
 
   const { floorPx } = options;
-  // No floor, or a face too small to reach it: shrink to fit, and clamp only past FIT_MIN.
+  // No reachable floor: shrink to fit, then clamp only past FIT_MIN.
   if (floorPx === undefined || (yield* fullSizePx(element)) < floorPx - FLOOR_SLACK_PX) {
     // Even the smallest font spills: the CSS line-clamps with an ellipsis instead.
     if ((yield* search(element)) === null) element.setAttribute(CLAMPED, "true");
@@ -229,21 +171,18 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   yield* clampAtFloor(element, floorPx);
 }
 
-/** The box a pass settled at, as `useFitText` compares it with the next notice of a resize. */
+/** A pass's settled box, used to detect a resize. */
 function boxOf(element: HTMLElement): string {
   return `${element.clientWidth}x${element.clientHeight}`;
 }
 
-/** On an element the browser may skip the layout of (`content-visibility: auto`), the pool grid's items. */
+/** Marks a pool-grid holder whose layout the browser may skip. */
 export const SKIPPABLE_ATTRIBUTE = "data-skippable";
 
 /** Each skippable holder's last reported state: true while its contents are skipped. */
 const holderSkipped = new WeakMap<Element, boolean>();
 
-/**
- * True when the browser is skipping `element`'s layout for `content-visibility: auto` (see the
- * header). Style only: it never lays anything out.
- */
+/** Whether `content-visibility: auto` skips this element without forcing layout. */
 function skipped(element: HTMLElement): boolean {
   if (typeof element.checkVisibility !== "function") return false;
   const holder = element.closest(`[${SKIPPABLE_ATTRIBUTE}]`);
@@ -251,11 +190,7 @@ function skipped(element: HTMLElement): boolean {
   return !element.checkVisibility({ contentVisibilityAuto: true }) && holderSkipped.get(holder) !== false;
 }
 
-/**
- * A fit, then one more read of the box it left. Reading it from the pass's own callback would force
- * a layout per element (the pass's last write is behind it); as a step of the pass it is read with
- * everyone else's. While the element is skipped it waits, parked, and asks again once resumed.
- */
+/** Measures with the fit's reads, avoiding one layout per element; skipped elements park. */
 function* fitThenMeasure(element: HTMLElement, options: FitOptions): Steps<string> {
   while (yield* read(() => skipped(element))) yield PARK;
   yield* fit(element, options);
@@ -265,7 +200,7 @@ function* fitThenMeasure(element: HTMLElement, options: FitOptions): Steps<strin
 type Job = {
   element: HTMLElement;
   steps: Steps<string>;
-  /** What the job's last read answered, which its next step receives. */
+  /** The last read's answer, passed to the next step. */
   reading: unknown;
   onDone: ((box: string) => void) | undefined;
   cancelled: boolean;
@@ -284,11 +219,7 @@ function queueFlush(): void {
   queueMicrotask(flushFits);
 }
 
-/**
- * A holder's contents were skipped or un-skipped. If it holds a parked fit and came near the screen,
- * every parked fit asks again, since the browser has already flipped every item this scroll
- * un-skips (see the header); those still skipped park again on their first read.
- */
+/** Requeues parked fits when their holder is un-skipped; still-skipped fits park again. */
 function onStateChange(event: Event): void {
   const target = event.target;
   const state = (event as Event & { skipped?: boolean }).skipped;
@@ -302,23 +233,14 @@ function onStateChange(event: Event): void {
 
 let listening = false;
 
-/**
- * From the first fit on, the document hears every holder's state (the event does not bubble, so in
- * the capture phase), which is before the browser first decides any of them.
- */
+/** Listen in capture because this non-bubbling event must reach every holder. */
 function listen(): void {
   if (listening || typeof document === "undefined") return;
   listening = true;
   document.addEventListener(STATE_CHANGE, onStateChange, true);
 }
 
-/**
- * Runs every queued fit to the end, in rounds. A round steps each fit up to its next read (so every
- * write of the round lands first), then runs all of those reads together, which is one layout for
- * the lot. A fit's boxes never depend on another's (each face sizes its text from its own
- * container), so the order they run in changes nothing. One fit throwing ends only that fit; the
- * first error is rethrown once the rest are done.
- */
+/** Batches each round's writes before reads, then rethrows the first error after remaining fits. */
 export function flushFits(): void {
   flushQueued = false;
   let live = [...queue];
@@ -356,11 +278,7 @@ export function flushFits(): void {
   if (failed) throw failure;
 }
 
-/**
- * Queues one fitting pass for `element`, to run with every other queued pass on the next microtask
- * (which is before the browser paints what the caller just committed). `onDone` runs when the pass
- * has finished, with the box (`<width>x<height>`) the element was left at. Returns the function that drops it, for a pass the element no longer needs.
- */
+/** Queues a fitting pass before paint; returns its cancellation function. */
 export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: (box: string) => void): () => void {
   const job: Job = { element, steps: fitThenMeasure(element, options), reading: undefined, onDone, cancelled: false };
   queue.add(job);
@@ -373,21 +291,7 @@ export function scheduleFit(element: HTMLElement, options: FitOptions, onDone?: 
   };
 }
 
-/**
- * Binary-searches the inline custom property `--cf-fit` (FIT_MIN..1, FIT_STEPS steps) on `ref`
- * until scrollHeight ≤ clientHeight + 1 and scrollWidth ≤ clientWidth + 1. Re-runs on resize
- * (ResizeObserver when present) and when `content` changes. If FIT_MIN still overflows it sets
- * `data-clamped="true"` and the CSS line-clamps with an ellipsis. With `floorPx` (the rules box)
- * it also keeps the text readable: the long layout first, then a clamp at the floor (see the
- * header). A no-op when the element has no layout (clientWidth and clientHeight both 0, which is
- * every element in jsdom). The pass runs batched with the rest of the page's, on the microtask
- * after the commit (`scheduleFit`).
- */
-/**
- * Every mounted fit's refit, for when a web font lands (fonts.css). The face is measured, and a
- * box's size does not change when its font swaps in, so no ResizeObserver notices: the metric-matched
- * fallback keeps the drift to a fraction of a pixel, and this refits exactly once the face is in.
- */
+/** Refits mounted faces when web fonts load, which ResizeObserver cannot detect. */
 const refitOnFonts = new Set<() => void>();
 let fontsWatched = false;
 
@@ -401,6 +305,7 @@ function watchFonts(): void {
   });
 }
 
+/** Fits text on resize or content changes; overflowing text clamps and rules text preserves its floor. */
 export function useFitText(ref: RefObject<HTMLElement | null>, content: string, options: FitOptions = {}): void {
   const { floorPx } = options;
   useLayoutEffect(() => {
@@ -408,10 +313,7 @@ export function useFitText(ref: RefObject<HTMLElement | null>, content: string, 
     if (element === null) return undefined;
 
     const fitOptions: FitOptions = floorPx === undefined ? {} : { floorPx };
-    // The observed box is sized by its container, never by its font. The long layout does resize
-    // it, but a refit lands on the same layout again, so the size it settles at is stable. Unknown
-    // until the first pass has run: a notice before that has nothing to compare with, and that
-    // pass measures the box as it is anyway.
+    // The container sizes this box; its first pass establishes the comparison baseline.
     let last: string | undefined;
     const queueFit = (): (() => void) =>
       scheduleFit(element, fitOptions, (box) => {

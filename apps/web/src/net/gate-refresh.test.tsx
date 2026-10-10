@@ -1,11 +1,5 @@
-// Session renewal at the gate (docs/polish/5-sign-in.md, B32, B33, R194), asserted through the real
-// modules: a session in localStorage, `/api/auth/me` and the provider's token endpoint over a
-// stubbed `fetch`, and the URL and storage as the answer.
-//
-// A token near its expiry, or one the API answers 401, is renewed once with the refresh token and
-// the read retried. A renewal the provider refuses ends the session and says so on /login. A
-// renewal that fails for want of a network keeps the session. A session with no refresh token
-// (the e2e fixtures) is never renewed.
+// Session renewal at the gate (docs/polish/5-sign-in.md, B32, B33, R194): a near-expiry or refused
+// token renews once; refusal ends the session, network failure keeps it, and fixtures never renew.
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,9 +27,7 @@ const SLOW = { timeout: 5_000 } as const;
 /** A test that waits `SLOW` more than once needs more than vitest's 5 s default for the whole test. */
 const SLOW_TEST = { timeout: 30_000 } as const;
 
-// ---------------------------------------------------------------------------------------------
-// the stubbed API and provider
-// ---------------------------------------------------------------------------------------------
+// Stubbed API and provider
 
 type Call = { url: string; token: string | null; body: unknown };
 type Reply = { status: number; body?: unknown } | "reject" | "hang";
@@ -153,9 +145,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B32: renew once, retry once
-// ---------------------------------------------------------------------------------------------
 
 describe("R194 B32 renewal", () => {
   it("R194 a 401 from /api/auth/me renews once and retries with the new token", async () => {
@@ -208,11 +198,7 @@ describe("R194 B32 renewal", () => {
   });
 
   it("R194 a renewal timer that comes due before the clock says it should still renews, a moment later", SLOW_TEST, async () => {
-    // Node measures a timer from the event loop's cached clock, which a long task (a render) leaves
-    // behind `Date.now()`, so under load the renewal timer can come due a little before the time it
-    // was set for. It used to return there and renew nothing until the page was next woken: a
-    // renewal that never came, which is what "the gate's own renewal during a match" (in
-    // gate-session-changes.test.tsx) ran into when it timed out on CI.
+    // Node's cached event-loop clock can run a timer before `Date.now()` reaches its deadline.
     const lead = 300;
     store({ accessToken: OLD, refreshToken: OLD_REFRESH, expiresAt: Date.now() + MARGIN_MS + lead });
     const { refreshCalls } = serve({
@@ -223,7 +209,7 @@ describe("R194 B32 renewal", () => {
     const realNow = Date.now.bind(Date);
     let early = false;
     vi.spyOn(window, "setTimeout").mockImplementation(((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
-      // The renewal timer is the one set for at most `lead` ms; it runs with the clock 80 ms behind.
+      // Run the renewal timer with the clock 80 ms behind.
       if (!early && typeof handler === "function" && typeof ms === "number" && ms > 0 && ms <= lead) {
         early = true;
         return realSetTimeout(() => {
@@ -269,7 +255,7 @@ describe("R194 B32 renewal", () => {
     store({ accessToken: OLD, refreshToken: OLD_REFRESH, expiresAt: Date.now() + 60 * MARGIN_MS });
     const releases: (() => void)[] = [];
     const { refreshCalls } = serve({ me: acceptsOnlyNew, refresh: () => "hang" });
-    // Hold the provider's answer until both screens have asked.
+    // Hold the provider's answer until both screens ask.
     vi.stubGlobal(
       "fetch",
       vi.fn((input: unknown, init?: RequestInit) => {
@@ -325,9 +311,7 @@ describe("R194 B32 renewal", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B33: a refused renewal ends the session, and /login says so
-// ---------------------------------------------------------------------------------------------
+// B33: a refused renewal ends the session and /login says so
 
 describe("R194 B33 a refused renewal", () => {
   it.each([
@@ -380,9 +364,7 @@ describe("R194 B33 a refused renewal", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B33: the redirect target, with no DOM in the way
-// ---------------------------------------------------------------------------------------------
+// B33: redirect target without the DOM
 
 describe("R194 B33 where an ended session is sent", () => {
   it("R194 redirectFor sends an expired account to /login?reason=expired and a plain one to /login", () => {

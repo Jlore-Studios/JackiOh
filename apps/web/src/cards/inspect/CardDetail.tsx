@@ -1,26 +1,7 @@
-// The deck builder's detail view (B29): both printed faces side by side at every width, a meta
-// line (its lines of code last, E36), the glossary of both faces, and the caller's meta and actions above Close. It is a centred
-// modal dialog over a scrim, closed by Close, the scrim or Escape (B25), and it takes the one
-// inspect slot: opening it closes any hover preview or sheet, and closeInspect() closes it.
-//
-// Both faces and the reading-size rules are where a reference in a card's text is a control (R279):
-// hovering, focusing or tapping a name shows the card it names. The Radiant face and the Radiant
-// line mark what the base face does not have in gold (R277).
-//
-// Under the faces, the rules text is printed again at reading size. Two faces side by side on a
-// 390 px phone are about 170 px wide each, where a 400-character card prints at 5 px; inspect.css
-// shows this block on narrow screens and short ones, and on any screen for a card long enough to
-// shrink hard. On a wide screen up to 900 px tall (a 1280x720 desktop, a phone on its side) the
-// faces stand at the height the screen allows, with the rest of the dialog in a column beside
-// them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
-// is visible the moment the dialog opens, which is also where focus lands.
-//
-// After the glossary, the card's flavour line and artist credit (R660, Flavour.tsx).
-//
-// Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
-// "History" control, it loads the card's patch history when opened and lists each patch that changed
-// the card, newest first, with its faces as that patch left them and what changed marked. The
-// Patch notes page opens the detail with it already open (`historyOpen`).
+// Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29).
+// It is the sole inspect slot, closed by Close, scrim or Escape (B25).
+// Card-text refs are controls and Radiant differences are gold (R279, R277); reading-size rules and
+// pinned actions keep long faces usable. Flavour then History follow the glossary (R660, R388).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -59,9 +40,8 @@ export type CardDetailProps = {
 };
 
 /**
- * `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any, then ` · N lines of
- * code` (E36) when the card's script was counted. A face with a type of its own (B2.7, Classic+ #22
- * Blood Moon's Radiant Field Trap) says so after the type: "Trap (Radiant: Field Trap)".
+ * `#<index> · <set> · <rarity> · <type>`, then tags and ` · N lines of code` (E36) when present. A
+ * Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)".
  */
 export function detailMetaLine(def: CardDef): string {
   const radiantType = def.radiant.type;
@@ -77,8 +57,7 @@ const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
 
 /**
  * The rules at reading size: the base text, then the Radiant face's whole text with what the base
- * face does not have marked (R277). A Radiant text equal to the base one (a card whose Radiant face
- * changes only its stats) is not printed twice.
+ * lacks marked (R277); a Radiant text equal to the base one is not printed twice.
  */
 function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel }): ReactElement | null {
   const radiantLine = radiant.text.full === base.text.full ? null : radiant.text;

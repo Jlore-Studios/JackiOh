@@ -1,20 +1,7 @@
-// A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8, patch
-// v0.2.0). The face itself carries them as badges and marks (CardStates.tsx, tuning.ts), but a hover
-// preview takes no pointer events, so their tooltips cannot be read there, and a touch sheet has no
-// hover at all: this spells each one out.
-//
-// - The tuned ribbon (R386, R1320): "Buffed", "Nerfed" or "Tuned" (every change better, every change
-//   worse, or a mix), with its glyph, then each change in words with ▲ (better) or ▼ (worse) and the
-//   word itself for a screen reader: "+2 Attack", "Gained Rush", "Damage 2 → 3", "Tribute −1".
-// - Every other state badge's words: "Brittle 2: crumbles at 0" (R385), "Returns to hand · can't
-//   cost less than (2)", "Cast on draw", "Targets enemies" (E39), and the animated mark (R383).
-// - A quest line (B5 E33, R404, In Too Deep): each open quest's text with its progress, "1/2", and the
-//   rewards it offers under it, then each aura the line holds. The texts are drawn by RulesText.
-// - What a copier copies (B5 E14, R511, Echo): "Copying: Book of Knowledge", "(Radiant)" when it is.
-//
-// `LocLine` is E36's meta line: "27 lines of code", a fused card's being its ingredients' sum (the
-// view's definition carries it). The detail view prints the same words in its own meta line
-// (CardDetail.tsx).
+// A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
+// preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
+// read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
+// quest line (B5 E33, R404) and what a copier copies (B5 E14, R511). `LocLine` is E36's meta line.
 
 import type { ReactElement } from "react";
 
@@ -36,7 +23,6 @@ export function copyingWords(copying: { name: string; radiant: boolean }): strin
   return `Copying: ${copying.name}${copying.radiant ? " (Radiant)" : ""}`;
 }
 
-/** Whether a face has anything for StateNotes to print. */
 export function hasStateNotes(face: FaceModel): boolean {
   return (
     stateBadges(face).length > 0 ||

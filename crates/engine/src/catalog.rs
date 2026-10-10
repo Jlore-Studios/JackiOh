@@ -234,7 +234,7 @@ pub struct CatalogQueryArgs {
     /// R1422: has at least one of these tags.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub any_tags: Option<Vec<Tag>>,
-    /// R1437: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
+    /// R1442: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck_based: Option<bool>,
     /// R1080: the printed base attack and health a pool asks for.
@@ -344,10 +344,10 @@ fn tag_pool_takes_token(args: &CatalogQueryArgs, def: &CardDef) -> bool {
         .any(|tag| POOL_TOKEN_TAGS.contains(tag) && def.tags.contains(tag))
 }
 
-/// R1437: the words of a card's text that make it flip a coin, read lower-cased.
+/// R1442: the words of a card's text that make it flip a coin, read lower-cased.
 pub const COIN_FLIP_WORDS: &str = "flip a coin";
 
-/// MD-G1, R1437: a Luck-based card has a roll Lucky improves — it prints Lucky on either face (§6.1),
+/// MD-G1, R1442: a Luck-based card has a roll Lucky improves — it prints Lucky on either face (§6.1),
 /// or its text flips a coin, whose better side is heads (R1440). Read off the definition, so Lucky
 /// given to a card (R1438) never puts it in the pool.
 pub fn is_luck_based(def: &CardDef) -> bool {

@@ -278,8 +278,8 @@ mod r387_a_card_never_generates_itself_named_by_its_id {
     }
 }
 
-/// R1437: the Luck-based pool (Meditative #101 Gachaholic's) is read off the definitions
-mod r1437_the_luck_based_pool_is_read_off_the_definitions {
+/// R1442: the Luck-based pool (Meditative #101 Gachaholic's) is read off the definitions
+mod r1442_the_luck_based_pool_is_read_off_the_definitions {
     use super::*;
 
     fn lucky_face(text: &str) -> Value {
@@ -333,7 +333,7 @@ mod r1437_the_luck_based_pool_is_read_off_the_definitions {
     }
 
     #[test]
-    fn r1437_luck_based_keeps_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+    fn r1442_luck_based_keeps_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
         register_catalog(catalog_of(luck_defs()));
         // Lucky printed on either face, or "Flip a coin" in either face's text, any case. Lucky named
         // in a text that prints none (#101's own "Give it Lucky") is not a roll, and a token is in no

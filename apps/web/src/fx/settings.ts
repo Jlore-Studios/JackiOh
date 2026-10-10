@@ -1,12 +1,7 @@
 // The viewer's effects settings (docs/polish/1-animations.md, Surface S3): speed (R201, R435), intensity
-// and a motion override. They are a per-viewer presentation preference, so they live in this
-// browser only, under `FX_SETTINGS_KEY` in `localStorage`. Task 7's settings panel mounts
-// `useFxSettings` at integration; the animation runner reads `getFxSettings()` at every enqueue.
-//
-// Storage is optional. A missing `window`, a throwing `localStorage` getter (private mode, blocked
-// site data), a quota error on write or unparsable JSON all fall back to the defaults or to the
-// in-memory value, and nothing here ever throws because of it. Every value read back is normalized
-// field by field, so a stale or hand-edited entry can never put the runner outside R201's range.
+// and a motion override, kept per browser under `FX_SETTINGS_KEY`; the runner reads `getFxSettings()`
+// at every enqueue. Storage is optional and nothing here throws on it. Every value read back is
+// normalized field by field, so a stale or hand-edited entry can never leave R201's range.
 
 import { useSyncExternalStore } from "react";
 
@@ -51,7 +46,6 @@ export function normalizeFxSettings(raw: unknown): FxSettings {
   };
 }
 
-/** `window.localStorage`, or null when there is no window or the getter throws. */
 function defaultStorage(): Storage | null {
   try {
     return window.localStorage;
@@ -60,11 +54,7 @@ function defaultStorage(): Storage | null {
   }
 }
 
-/**
- * Reads `FX_SETTINGS_KEY` from `storage` (the page's `localStorage` when omitted; `null` means no
- * storage at all). Absent, throwing or unparsable storage gives `DEFAULT_FX_SETTINGS` itself (it is
- * frozen, and `setFxSettings` always builds a new object, so sharing it is safe).
- */
+/** Absent, throwing or unparsable storage gives the frozen `DEFAULT_FX_SETTINGS` itself; sharing it is safe. */
 export function loadFxSettings(storage?: Storage | null): FxSettings {
   try {
     const store = storage === undefined ? defaultStorage() : storage;
@@ -116,7 +106,6 @@ export function subscribeFxSettings(listener: (settings: FxSettings) => void): (
   };
 }
 
-/** The current settings and a setter; re-renders whenever `setFxSettings` runs. */
 export function useFxSettings(): readonly [FxSettings, (patch: Partial<FxSettings>) => void] {
   const settings = useSyncExternalStore(subscribeFxSettings, getFxSettings, getFxSettings);
   return [settings, setFxSettings] as const;

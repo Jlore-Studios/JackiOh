@@ -1,19 +1,6 @@
-// The landing page: `/`, the one screen that is not a form.
-//
-// NO SPEC RULE LIVES HERE. It is the front door (docs/polish/5-sign-in.md, B37-B39): a warm tavern
-// hero with the wordmark and a fanned hand of cards, and one dominant call to action. Everything
-// visual is CSS in `landing.css`, scoped under `.landing` (its palette is
-// `auth/tavern.css`'s, which the sign-in screens share), so nothing here can move the board's
-// pixel-measured layout (index.css's header says why that matters).
-//
-// The page is not gated, so it asks for the account itself. `useAccount` answers `loading` first,
-// and the corner stays empty for that beat rather than flashing "Sign in" at somebody who is. A
-// beat, not a minute: a sleeping server can take most of one to wake, so after
-// `GATE_SLOW_NOTICE_SECONDS` the corner offers what this device's own storage says (Account when it
-// holds a session, else Sign in) without waiting for the server's answer.
-//
-// R765: the same read says whether the player is in an online game. While they are, a banner tops
-// the page with the way back to it (`GameBanner.tsx`, kept current by `net/liveGame.ts`).
+// Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
+// `.landing` so it cannot affect the board layout. After `GATE_SLOW_NOTICE_SECONDS`, local session
+// state avoids flashing Sign in while the account read is slow. R765 shows an active online game.
 
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -68,11 +55,7 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
-/**
- * `data-motion` on the root: the media query, or the settings panel's "Reduce motion". The CSS also
- * honours the media query and the setting's `<html>` attribute directly (index.css), so this
- * attribute is what a test can see, not the only thing stopping motion.
- */
+/** `data-motion` exposes the media query or setting to tests; CSS also honours both directly. */
 function useMotion(): LandingMotion {
   const [reduced, setReduced] = useState(prefersReducedMotion);
   const settingReduces = useSetting("reduceMotion");
@@ -97,29 +80,14 @@ function useMotion(): LandingMotion {
 function accountState(account: Account): LandingAccountState {
   if (account.kind === "loading") return "loading";
   if (account.kind === "ready") return "signed-in";
-  // A read that failed (an unreachable or rate-limiting server) says nothing about the device: one
-  // that holds a session is offered its account screen, where sign-out is, not a sign-in that would
-  // replace (and revoke) that session and then meet the same unreachable server.
+  // A failed read does not override a local session: offer Account, not Sign in.
   if (account.kind === "error" && readSession() !== null) return "signed-in";
   return "anonymous";
 }
 
-// ---------------------------------------------------------------------------------------------
 // The hand of cards
-// ---------------------------------------------------------------------------------------------
 
-/**
- * Five cards, left to right: four real faces dealt by `landingFan.ts` at random for this visit
- * (R374) and drawn by the cards module's CardFace, the middle one on its Radiant face, and a card
- * back last. The deal, the float, the spread and a swap's fizzle and apparition (R704) are
- * landing.css's; the faces are the game's own, so the first screen shows cards as the board, the
- * deck builder and the inspect sheet draw them.
- *
- * R639: a face is a control. A click, a tap, or Enter or Space on it opens the card's detail dialog
- * (`onOpen`), so a featured card can be read at full size on a phone as well as with a pointer. The
- * hand holds still while a pointer is over it or focus is in it (`onHold`), since a card that
- * changes under a reader's hand is hard to read or to press.
- */
+/** R374 deals four real faces and a back; R639 makes each face a readable control and holds the fan while it is read. R704 owns its animation. */
 function CardFan({
   hand,
   onOpen,
@@ -164,21 +132,14 @@ function CardFan({
   );
 }
 
-/**
- * R704: one place in the fan. When the hand swaps the card in it, the card going out stays for
- * `ROTATION_SWAP_MS` as a ghost over the new one and fizzles away (landing.css's `landing-fizzle`)
- * while the new card fades in (`landing-apparition`). The ghost is decoration: hidden from
- * assistive tech, no control, no fan card's test id, and it takes no pointer.
- */
+/** R704 keeps the outgoing card as a decorative, inert ghost for `ROTATION_SWAP_MS`. */
 function LandingFanSlot({ face, index, onOpen, onHold }: {
   face: FanFace;
   index: number;
   onOpen: (def: CardDef) => void;
   onHold: (held: boolean) => void;
 }): ReactElement {
-  // The card shown last render and the one just swapped out. A new card is noticed while rendering
-  // (React's "storing information from previous renders"), so the ghost and the new card first
-  // paint together.
+  // Rendering notices a new card so its ghost and replacement first paint together.
   const [shown, setShown] = useState(face);
   const [leaving, setLeaving] = useState<FanFace | null>(null);
   if (shown.def.id !== face.def.id) {
@@ -213,13 +174,7 @@ function LandingFanSlot({ face, index, onOpen, onHold }: {
   );
 }
 
-/**
- * One face of the fan. #165: on a touch screen a held finger is the mouse-over the screen lacks —
- * the hold shows the card's hover preview while the finger stays down, and the fan stands still
- * for it as it does for a pointer resting on it. A real mouse is untouched (`hover: false`): its
- * click opens the detail dialog, as ever, and a hold's release click is swallowed so it does not
- * also open one.
- */
+/** A touch hold previews a face and holds the fan; mouse clicks still open its detail dialog. */
 function LandingFanCard({
   def,
   radiant,
@@ -240,8 +195,7 @@ function LandingFanCard({
     { key: `landing-fan-${def.id}`, face },
     { hover: false, touchHold: "preview", prefer: "above" },
   );
-  // R704: how the card came in, fixed when it mounts: the opening deal or a swap's apparition.
-  // It never changes, so the card is not dealt in again once the swap's ghost has gone.
+  // R704 fixes this mount's opening-deal or swap apparition.
   const [entry] = useState<"deal" | "swap">(swapped ? "swap" : "deal");
   const held = inspect.open !== null;
   useEffect(() => {
@@ -280,7 +234,6 @@ function LandingFanCard({
   );
 }
 
-/** Drifting sparks over the hearth. The design allows at most twelve. */
 const EMBER_COUNT = 10;
 
 function Backdrop(): ReactElement {
@@ -298,9 +251,7 @@ function Backdrop(): ReactElement {
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // The corner slot and the calls to action
-// ---------------------------------------------------------------------------------------------
 
 /** True once the account has been loading for `GATE_SLOW_NOTICE_SECONDS`. */
 function useSlowLoading(account: Account): boolean {
@@ -324,7 +275,7 @@ function useSlowLoading(account: Account): boolean {
 function Corner({ account }: { account: Account }): ReactElement | null {
   const slow = useSlowLoading(account);
   if (account.kind === "loading" && !slow) return null;
-  // Signed in, or not known yet (slow, or the read failed) on a device that holds a session.
+  // A slow or failed read with a local session still offers Account.
   const holdsSession = (account.kind === "loading" || account.kind === "error") && readSession() !== null;
   if (account.kind === "ready" || holdsSession) {
     return (
@@ -385,9 +336,7 @@ function Actions(): ReactElement {
         Online play is invite-only for now: you&rsquo;ll need an invite code after signing up.
       </p>
       {DEV_ONLY ? (
-        // Dev-only, and really absent in production: main.tsx serves NotFound for /dev/hotseat
-        // when MODE is production, so this link would 404 on a deploy. A full page load on
-        // purpose, because the hotseat reads its seed and decks from the query at boot.
+        // Production has no hotseat route; it boots from this full page load's query.
         <a
           className="landing-dev-link"
           href={`${paths.hotseat}?seed=42&a=first20&b=first20`}
@@ -400,9 +349,7 @@ function Actions(): ReactElement {
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // The page
-// ---------------------------------------------------------------------------------------------
 
 export type LandingRouteProps = {
   /** R374: where the fan's deal draws its randomness; `Math.random` on the page, a seeded source in tests. */
@@ -416,9 +363,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   // R765: the player's live online game, for the banner at the top.
   const liveGame = useLiveGame(account);
   const motion = useMotion();
-  // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
-  // deals from every shipped set instead of Core alone, favouring cards that print at full size.
-  // R704: either way the hand then swaps one card at a time (below), from the pool it was dealt from.
+  // R374 deals once per mount; R639 uses all shipped cards after enough games; R704 rotates that pool.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
   const [hand, setHand] = useState(() =>
     readPlayerStats().games >= ROTATION_MIN_GAMES
@@ -429,10 +374,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const [held, setHeld] = useState(false);
   const nextSlot = useRef(0);
 
-  // R639, R704: the rotation. One slot swaps for a fresh card each interval, left to right: from
-  // every shipped set, weighted, once the device has logged enough games, and among Core's cards,
-  // evenly, until then. The hand stands still while a card is open or held and while the page is
-  // hidden, and under reduced motion (a hand that changes by itself is motion).
+  // R639/R704 rotate left to right, but never while read, hidden, or under reduced motion.
   useEffect(() => {
     if (motion === "reduced" || open !== null || held) return undefined;
     const timer = window.setInterval(() => {

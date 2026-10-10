@@ -3,7 +3,7 @@
 //! Base:    "Cry: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
 //! Radiant: "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
 //! Engine:
-//! - **The pull:** `add_random_from_catalog` over `query::luck_based()` (MD-G1, R1437): one uniform pick
+//! - **The pull:** `add_random_from_catalog` over `query::luck_based()` (MD-G1, R1442): one uniform pick
 //!   of the non-token cards that print Lucky or flip a coin, of every set that ships (R1420), on its
 //!   base face at its printed cost, hidden from the opponent (R97); a full hand burns it (§2.4).
 //! - **Given Lucky:** the verb's `lucky` rider (MD-G2, R1438) gives the card Lucky {lucky} once it is in
@@ -51,7 +51,7 @@ pub fn script() -> CardScripts {
 
 // M #101 Gachaholic — SPEC §8.8 row 101, BUILD M10 row M 101: "Its Cry adds one random non-token
 // card that prints Lucky or flips a coin, of the sets that ship, on its base face at its printed cost
-// and hidden from the opponent (R1437), and gives it Lucky 1 (R1438); a full hand burns it; its Lucky
+// and hidden from the opponent (R1442), and gives it Lucky 1 (R1438); a full hand burns it; its Lucky
 // reads through `param()` (R386); previewed, the pool reaches Meditative cards (R1420); radiant no Cry,
 // an Activate once a turn, the turn it is played included (R384)".
 #[cfg(test)]
@@ -101,7 +101,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1437_its_cry_adds_one_shipped_luck_based_card_hidden_on_its_base_face_at_its_printed_cost() {
+            fn r1442_its_cry_adds_one_shipped_luck_based_card_hidden_on_its_base_face_at_its_printed_cost() {
                 let mut seen: Vec<String> = Vec::new();
                 for n in 0..24 {
                     let mut s = holding(&format!("gachaholic-{n}"), false, 1);

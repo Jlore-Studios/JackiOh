@@ -1,17 +1,5 @@
-// The lesson path at the top of `/practice` (SPEC §9.10): the tutorial's lessons in order, joined
-// like a path, each with what it teaches and whether it is open (R294's unlock rule, progress.ts).
-//
-// Four across on a desktop, one under another on a phone (tutorial.css). A locked lesson's button
-// stays focusable and says why it is locked (`aria-disabled`, not `disabled`), and does nothing.
-// Once every lesson is done the path folds to its header, so a player who has finished the
-// tutorial gets straight to practice; one button opens it again.
-//
-// R322: while a lesson is still to do, the header also offers "Hide tutorial", which folds the
-// whole path to a single "Show tutorial" button in its place. The choice is the player's and is
-// kept with their progress (progress.ts, and the account's copy, R321), so it holds on the next
-// visit and whatever the progress: a path hidden before the last lesson stays hidden after it. A
-// finished path offers no Hide, since it already folds to its header by itself. Focus follows the
-// player's own press to the button that undoes it, so a keyboard is never left on nothing.
+// Tutorial path for `/practice` (SPEC §9.10, R294); locked lessons remain focusable.
+// R322 (with account copy, R321): the player may persistently hide the path, with focus returned to Show or Hide.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -29,7 +17,6 @@ import "./tutorial.css";
 import "./path-visibility.css";
 
 type TutorialPathProps = {
-  /** Start (or replay) this lesson. Never called for a locked one. */
   onStart(lesson: TutorialLesson): void;
 };
 
@@ -147,13 +134,10 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
   const done = TUTORIAL_LESSONS.filter((lesson) => lessonStatus(progress, lesson) === "completed").length;
   const allDone = done === total;
   const next = nextLessonToPlay(progress);
-  /** The player's own choice to show or fold the path; unset, it is open until every lesson is done. */
   const [openChoice, setOpenChoice] = useState<boolean | null>(null);
   const open = openChoice ?? !allDone;
 
-  // R322: hidden by the player's own choice, stored with the progress.
   const hidden = isTutorialHidden(progress);
-  /** Where focus goes once this component's own Hide or Show has re-rendered it; null otherwise. */
   const focusAfter = useRef<"show" | "reveal" | null>(null);
   const showButton = useRef<HTMLButtonElement>(null);
   const hideButton = useRef<HTMLButtonElement>(null);
@@ -162,7 +146,6 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
     const wanted = focusAfter.current;
     if (wanted === null) return;
     focusAfter.current = null;
-    // After Show, the Hide button — or, on a finished path, which offers none, its Show lessons.
     const target = wanted === "show" ? showButton.current : (hideButton.current ?? toggleButton.current);
     target?.focus();
   }, [hidden]);

@@ -1,9 +1,4 @@
-// `/login` after polish 5 (docs/polish/5-sign-in.md): validation (B24), refusals in the client's
-// own words (B25, B26), confirmation resend with its cooldown (B27), forgot password (B28), emailed
-// links (B29, B30, R193), the expired-session notice (B33) and no destination read from a URL (B35).
-//
-// The provider is a stubbed `fetch`; nothing leaves the process. A link is put in the address bar
-// with `history.replaceState` before the screen renders, the way a browser opens it.
+// `/login` coverage: B24, B25, B26, B27, B28, B29, B30, B33, B35, and R193; `fetch` is stubbed.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,9 +44,7 @@ const LINK_EXPIRES_AT_S = 2_000_000_000;
 const PROVIDER_DESCRIPTION = "PROVIDER-DESCRIPTION-91c2 Email link is invalid or has expired";
 const PROVIDER_MSG = "PROVIDER-MSG-91c2";
 
-// ---------------------------------------------------------------------------------------------
 // links: unsigned three-part JWTs with a base64url JSON payload
-// ---------------------------------------------------------------------------------------------
 
 function base64url(text: string): string {
   return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -65,17 +58,11 @@ function jwt(payload: Record<string, unknown>): string {
   ].join(".");
 }
 
-/**
- * Every link's refresh token, and what the provider renews it into. `/login` renews a link as soon
- * as it reads it (R193), so the stubbed provider answers each registered refresh token with a new
- * access token of the same account, and the stubbed server verifies that one as the link's own.
- */
+/** R193: register a link renewal so the stub server verifies the renewed token as its account. */
 const renewals = new Map<string, { renewed: string; rotated: string }>();
-/** A renewed access token -> the link's own, so `server`'s accounts can be keyed on the link's. */
 const renewedFrom = new Map<string, string>();
 let linkCount = 0;
 
-/** Registers a link's refresh token with the stubbed provider; returns the renewed access token. */
 function renewable(token: string, refreshToken: string, payload: Record<string, unknown>): string {
   const renewed = jwt({ ...payload, renewed: refreshToken });
   renewals.set(refreshToken, { renewed, rotated: `${refreshToken}-rotated` });
@@ -83,7 +70,6 @@ function renewable(token: string, refreshToken: string, payload: Record<string, 
   return renewed;
 }
 
-/** The fragment Supabase appends to a confirmation or recovery link. */
 function link(type: string, email: string | null): { token: string; hash: string; refresh: string; renewed: string } {
   linkCount += 1;
   const payload = email === null ? { sub: "user-1" } : { sub: "user-1", email };
@@ -101,10 +87,7 @@ function link(type: string, email: string | null): { token: string; hash: string
   return { token, hash: `#${params.toString()}`, refresh, renewed };
 }
 
-/**
- * The session a link leaves once `/login` has renewed it (R193). Its expiry is `expires_in` from
- * when it was renewed, on this device's clock (R194), so any number stands here.
- */
+/** R193/R194: a renewed link expires from the device clock, so this fixture accepts any expiry. */
 function linkSession(renewedLink: { refresh: string; renewed: string }) {
   return {
     accessToken: renewedLink.renewed,
@@ -113,7 +96,6 @@ function linkSession(renewedLink: { refresh: string; renewed: string }) {
   };
 }
 
-/** The provider's answer to a refresh grant for a registered link, or null for any other. */
 function renewalAnswer(url: URL, body: unknown): Response | null {
   if (url.pathname !== "/auth/v1/token" || url.searchParams.get("grant_type") !== "refresh_token") return null;
   const refreshToken = (body as { refresh_token?: unknown } | undefined)?.refresh_token;
@@ -127,9 +109,7 @@ function renewalAnswer(url: URL, body: unknown): Response | null {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // the stubbed provider
-// ---------------------------------------------------------------------------------------------
 
 type Call = { url: URL; method: string; body: unknown; auth?: string | null };
 type Answer = { status: number; body?: unknown };
@@ -148,7 +128,6 @@ function providerResponse(status: number, body?: unknown): Response {
   } as unknown as Response;
 }
 
-/** Answers by pathname (`/auth/v1/token`, `/auth/v1/resend`, …); anything else is a 404. */
 function provider(answers: Record<string, Answer>): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -167,11 +146,7 @@ function provider(answers: Record<string, Answer>): Call[] {
   return calls;
 }
 
-/**
- * The provider (by pathname, as `provider` answers) plus our server's `GET /api/auth/me`, which
- * verifies a token: it answers 200 with the account's address for a token in `accounts`, and 401
- * for any other, as the real server does for a forged or spent one. `"hang"` never answers.
- */
+/** Stub provider plus `/api/auth/me`; unknown tokens get 401 and `"hang"` never answers. */
 function server(accounts: Record<string, string | null> | "hang", answers: Record<string, Answer> = {}): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -229,9 +204,7 @@ const SIGNED_IN = {
   },
 } as const;
 
-// ---------------------------------------------------------------------------------------------
 // the screen
-// ---------------------------------------------------------------------------------------------
 
 function at(url: string): void {
   window.history.replaceState(null, "", url);
@@ -258,7 +231,6 @@ function bodyText(): string {
   return document.body.textContent ?? "";
 }
 
-/** Settle promise chains without touching timers (the cooldown runs on fake ones). */
 async function flushMicrotasks(): Promise<void> {
   await act(async () => {
     for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
@@ -280,8 +252,7 @@ beforeEach(() => {
 afterEach(async () => {
   cleanup();
   vi.useRealTimers();
-  // A link still pending when the screen unmounts is revoked just after the unmount: let that land
-  // on this test's stubbed provider, not the next test's.
+  // Let pending-link revocation land on this test's stubbed provider.
   await new Promise((resolve) => setTimeout(resolve, 0));
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -289,9 +260,7 @@ afterEach(async () => {
   releaseRecoverySession();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B24: validation
-// ---------------------------------------------------------------------------------------------
 
 describe("B24 validation", () => {
   it("B24 sign-up refuses an invalid email without calling the provider", () => {
@@ -382,9 +351,7 @@ describe("B24 validation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B25, B26: refusals, in the client's words
-// ---------------------------------------------------------------------------------------------
 
 describe("B25 B26 refusals", () => {
   it("B25 an unconfirmed email reads SIGN_IN_FAILED_MESSAGE and no provider text reaches the page", async () => {
@@ -444,9 +411,7 @@ describe("B25 B26 refusals", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B27 / R192: resend, and its cooldown
-// ---------------------------------------------------------------------------------------------
 
 describe("R192 B27 resend", () => {
   async function signUpAndWaitForResend(calls: () => Call[]): Promise<HTMLElement> {
@@ -472,9 +437,7 @@ describe("R192 B27 resend", () => {
   }
 
   it("R192 B27 after a sign-up, resend waits out the interval the sign-up started, then posts type signup to <origin>/login", async () => {
-    // The sign-up itself mailed the address, which starts the provider's per-address interval: a
-    // resend straight away would be refused, and the neutral notice would claim a mail was sent.
-    // The interval is counted on the clock, so the clock is faked with the timers.
+    // R192: sending starts a per-address interval, so fake the clock before testing resend.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
     const calls = provider({
       "/auth/v1/signup": { status: 200, body: { id: "user-1" } },
@@ -499,8 +462,7 @@ describe("R192 B27 resend", () => {
     await act(async () => {
       fireEvent.click(ready);
     });
-    // Like the reset's, the resend's PKCE challenge is hashed on the thread pool (R323), so the
-    // page's answer is waited for rather than a fixed number of microtasks.
+    // R323 hashes PKCE asynchronously, so wait for the page's answer.
     await waitFor(() => {
       expect(bodyText()).toContain(AUTH_NOTICES.resendSent);
     });
@@ -512,7 +474,6 @@ describe("R192 B27 resend", () => {
     expect(sent[0]?.url.searchParams.get("redirect_to")).toBe(`${window.location.origin}/login`);
     expect(bodyText()).toContain(AUTH_NOTICES.resendSent);
 
-    // And the resend starts the interval again, counted down a second at a time.
     expect(screen.getByTestId(loginTestid.resendCooldown)).toHaveAttribute(
       "data-seconds",
       String(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS),
@@ -542,7 +503,6 @@ describe("R192 B27 resend", () => {
     expect(screen.getByTestId(loginTestid.resend)).toBeEnabled();
     expect(screen.queryByTestId(loginTestid.resendCooldown)).toBeNull();
 
-    // Back to the address that was mailed, in another case: the interval is still running.
     setField(loginTestid.email, EMAIL.toUpperCase());
     expect(screen.getByTestId(loginTestid.resend)).toBeDisabled();
   });
@@ -567,14 +527,12 @@ describe("R192 B27 resend", () => {
   });
 
   it("R192 B27 a provider failure on resend reads the same neutral notice: only a known address can fail there", async () => {
-    // GoTrue answers an unknown address 200 without reaching its mailer, so a 500 (the mail could
-    // not be sent) or an allow-list refusal would tell the page the address has an account.
+    // A mailer failure or allow-list refusal implies an account; unknown addresses receive 200.
     for (const answer of [
       { status: 500, body: { error_code: "unexpected_failure" } },
       { status: 400, body: { error_code: "email_address_not_authorized" } },
     ]) {
       cleanup();
-      // Each answer is another browser's: this one's send would still be in its interval.
       window.localStorage.clear();
       provider({
         "/auth/v1/token": { status: 400, body: { error_code: "invalid_credentials" } },
@@ -637,9 +595,7 @@ describe("R192 B27 resend", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B28: forgot password
-// ---------------------------------------------------------------------------------------------
 
 describe("B28 forgot password", () => {
   async function requestReset(email: string): Promise<void> {
@@ -686,7 +642,6 @@ describe("B28 forgot password", () => {
       { status: 429, body: { error_code: "over_email_send_rate_limit", msg: PROVIDER_MSG } },
     ]) {
       cleanup();
-      // Each answer is another browser's: this one's send would still be in its interval.
       window.localStorage.clear();
       provider({ "/auth/v1/recover": answer });
       render(<LoginRoute />);
@@ -757,16 +712,11 @@ describe("B28 forgot password", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B29 / R193: confirmation links
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 B29 confirmation links", () => {
   it("R193 a signup link for the sign-up this browser started signs nothing in: the player signs in with the password they chose", async () => {
-    // Account pre-hijack: someone registered this address first with a password of their own. The
-    // provider leaves an existing unconfirmed account's password alone when the address signs up
-    // again (it only mails the link again, and answers 200), so the account the player confirms
-    // keeps the other person's password. Signing in by hand is what exposes it.
+    // A pre-hijacked, unconfirmed account keeps its attacker's password; confirmation cannot sign it in.
     const calls = server({}, { "/auth/v1/signup": { status: 200, body: { id: "user-1", email: EMAIL } } });
     render(<LoginRoute />);
     toSignUp();
@@ -780,7 +730,6 @@ describe("R193 B29 confirmation links", () => {
     expect(pendingEmail()).toBe(EMAIL);
     cleanup();
 
-    // The genuine confirmation link, opened in the same browser.
     const { token, hash, renewed } = link("signup", EMAIL);
     const linkCalls = server({ [token]: EMAIL }, { "/auth/v1/logout": { status: 204 } });
     at(`/login${hash}`);
@@ -792,10 +741,8 @@ describe("R193 B29 confirmation links", () => {
     expect(readSession()).toBeNull();
     expect(window.location.pathname).toBe(paths.login);
     expect(screen.getByTestId(loginTestid.password)).toHaveValue("");
-    // The link's session is not kept, so it is revoked: its renewal, since the link's own refresh
-    // token was spent on arrival (its tokens were in the URL).
+    // Revoke the renewal because the URL session is not kept.
     expect(callsTo(linkCalls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${renewed}`]);
-    // The sign-up is confirmed: its "open the link first" hint is over.
     expect(pendingEmail()).toBeNull();
     expect(window.location.href).not.toContain(token);
     expect(window.location.href).not.toContain("access_token");
@@ -827,7 +774,7 @@ describe("R193 B29 confirmation links", () => {
 
       const confirmed = await screen.findByTestId(loginTestid.confirmed);
       expect(confirmed.textContent).toContain(AUTH_NOTICES.emailConfirmed);
-      // The link can be anyone's: its address is never put in a form (see the R193 chain below).
+      // A link can be anyone's, so it never fills a form.
       expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
       expect(readSession()).toBeNull();
       expect(window.location.pathname).toBe(paths.login);
@@ -848,8 +795,7 @@ describe("R193 B29 confirmation links", () => {
   });
 
   it("R193 a forged token naming the pending address, beside someone else's real refresh token, signs nothing in", async () => {
-    // The victim signed up here. The attacker's link: an unsigned token whose payload names the
-    // victim, and the attacker's own refresh token, which renews into the attacker's account.
+    // The forged payload names the victim, but its real refresh token belongs to the attacker.
     rememberPendingEmail(EMAIL);
     const forged = jwt({ sub: "whoever", email: EMAIL });
     const attackerToken = jwt({ sub: "attacker", email: "attacker@evil.example" });
@@ -864,8 +810,7 @@ describe("R193 B29 confirmation links", () => {
       token_type: "bearer",
       type: "signup",
     });
-    // The server verifies each token it is given: the renewal is the attacker's account, whatever
-    // the forged token's payload said.
+    // Verification follows the renewal, not the forged payload.
     const calls = server({ [attackerToken]: "attacker@evil.example" }, { "/auth/v1/logout": { status: 204 } });
     at(`/login#${params.toString()}`);
     render(<LoginRoute />);
@@ -875,16 +820,14 @@ describe("R193 B29 confirmation links", () => {
     expect(readSession()).toBeNull();
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     expect(window.location.pathname).toBe(paths.login);
-    // Nothing from the link is filled in, the victim's sign-up is still the one waited on, and the
-    // attacker's session the link renewed into is revoked.
+    // The forged link fills nothing; its renewed attacker session is revoked.
     expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
     expect(pendingEmail()).toBe(EMAIL);
     expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${attackerRenewed}`]);
   });
 
   it("R193 a link's unverified address is never filled in or announced as confirmed", async () => {
-    // A crafted link naming the attacker's address. Filling it in would let one click on "Forgot
-    // your password?" arm this browser to accept the attacker's own reset link.
+    // Filling an attacker's address would arm this browser for the attacker's reset link.
     const params = new URLSearchParams({
       access_token: jwt({ sub: "x", email: "attacker@evil.example" }),
       refresh_token: "junk",
@@ -978,9 +921,7 @@ describe("R193 B29 confirmation links", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B30 / R193: recovery and error links
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 B30 recovery and error links", () => {
   it("R193 a recovery link for the address this browser asked to reset holds its session for this tab only and goes to /reset-password", async () => {
@@ -1179,9 +1120,7 @@ describe("R193 B30 recovery and error links", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R323, R324: PKCE links (a one-time code in the query, exchanged with the verifier kept here)
-// ---------------------------------------------------------------------------------------------
 
 describe("R323 R324 PKCE links", () => {
   /** A GoTrue auth code: a UUID. */
@@ -1333,9 +1272,7 @@ describe("R323 R324 PKCE links", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B33: the expired-session notice
-// ---------------------------------------------------------------------------------------------
 
 describe("B33 /login?reason=expired", () => {
   it("B33 shows login-session-expired with the sessionExpired notice", () => {
@@ -1354,9 +1291,7 @@ describe("B33 /login?reason=expired", () => {
   );
 });
 
-// ---------------------------------------------------------------------------------------------
 // B35: no destination is read from a URL
-// ---------------------------------------------------------------------------------------------
 
 describe("B35 fixed destinations", () => {
   it("B35 /login?next=https://evil.example then a sign-in lands on the main menu", async () => {
@@ -1405,9 +1340,7 @@ describe("B35 fixed destinations", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B24: a shown password is not rewritten by a phone keyboard
-// ---------------------------------------------------------------------------------------------
 
 describe("B24 show password", () => {
   it("B24 the password field is never auto-capitalised, auto-corrected or spell-checked, shown or hidden", () => {
@@ -1423,9 +1356,7 @@ describe("B24 show password", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // After the second panel: what the screen says on the way in, and the sessions it replaces
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 the addresses this browser waits on", () => {
   it("R193 an address remembered longer ago than an emailed link can live arms nothing", () => {
@@ -1560,9 +1491,7 @@ describe("R194 a session another account replaces is revoked", () => {
 });
 
 
-// ---------------------------------------------------------------------------------------------
 // R193: a link never arms this browser's guard with an address the player did not type
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 an address from a link is never put in a form", () => {
   const ATTACKER = "attacker@evil.example";
@@ -1670,9 +1599,7 @@ describe("R193 an address from a link is never put in a form", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R193: a link's session this browser does not keep is revoked
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 a link's session that is not kept is revoked at the provider", () => {
   it.each([
@@ -1823,9 +1750,7 @@ describe("R193 a link's session that is not kept is revoked at the provider", ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R192: the provider's interval survives a reload and another device, and is counted on the clock
-// ---------------------------------------------------------------------------------------------
 
 describe("R192 the mail interval, wherever it started", () => {
   it("R192 a reset asked for moments ago in this browser is not asked for again after a reload", async () => {
@@ -1932,9 +1857,7 @@ describe("R192 the mail interval, wherever it started", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // What happened is said first, and the field to fix takes focus
-// ---------------------------------------------------------------------------------------------
 
 describe("the screen says what happened before the form", () => {
   it("after a sign-up, the 'check your email' notice sits above the sign-in form and takes focus", async () => {
@@ -1976,9 +1899,7 @@ describe("the screen says what happened before the form", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The third panel round
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 a recovery link the server could not check", () => {
   it("R193 is kept for 'Try again', says so in reset words, and offers no confirmation resend", async () => {

@@ -13,6 +13,7 @@
 
 use std::any::Any;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -23,10 +24,11 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::reap_stuck_matches;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_RECORD_RESULT_ATTEMPTS, PROMPT_CLOCK_SECONDS,
+    TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{Db, StoreError};
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -1121,5 +1123,152 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         assert_eq!(rows[0]["winnerProfileId"], Value::Null);
         assert_eq!(rows[0]["turns"], json!(0));
         assert_eq!(expired(&h).await, Vec::<Value>::new());
+    }
+}
+
+/// R1437: the actor's write of a finished game's result is the whole ending (§9.5), and a store that
+/// fails it is tried again; one that never takes it leaves the match `live`, with both players still
+/// in it, for the next socket's rebuild to record. The fake store's `on_call` seam fails the
+/// transaction's `results.insert`, which rolls the whole write back.
+mod r1437_a_result_the_store_fails_to_take {
+    use super::*;
+
+    /// Both seats' `inMatchId`, p1's first.
+    async fn in_match(h: &Harness) -> Vec<Value> {
+        let mut flags = Vec::new();
+        for id in ["profile-1", "profile-2"] {
+            let profile = store!(h.app, t => t.profiles_get_by_id(id).await.expect("profiles.getById"))
+                .expect("the profile");
+            flags.push(to_json(&profile)["inMatchId"].clone());
+        }
+        flags
+    }
+
+    /// From here on, counts the store's `results.insert` and `matches.finish` calls, and fails the
+    /// first `failing` inserts. Answers the two counts.
+    async fn count_calls(h: &Harness, failing: usize) -> (Arc<AtomicUsize>, Arc<AtomicUsize>) {
+        let inserts = Arc::new(AtomicUsize::new(0));
+        let finishes = Arc::new(AtomicUsize::new(0));
+        let (seen_inserts, seen_finishes) = (Arc::clone(&inserts), Arc::clone(&finishes));
+        fake(&h.app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+            if method == "results.insert" && seen_inserts.fetch_add(1, Ordering::SeqCst) < failing {
+                return Err(StoreError::Other("the store is away".to_string()));
+            }
+            if method == "matches.finish" {
+                seen_finishes.fetch_add(1, Ordering::SeqCst);
+            }
+            Ok(())
+        }));
+        (inserts, finishes)
+    }
+
+    /// Both players in the match, as the queue leaves them, and both seats attached.
+    async fn in_play() -> (Harness, MatchActor, FakeSocket, FakeSocket) {
+        let h = start_match(StartOptions::default()).await;
+        for id in ["profile-1", "profile-2"] {
+            store!(h.app, t => t.profiles_set_in_match(id, Some(MATCH_ID)).await.expect("profiles.setInMatch"));
+        }
+        let actor = actor_of(&h).await;
+        let p1 = create_fake_socket();
+        let p2 = create_fake_socket();
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
+        actor.idle().await;
+        (h, actor, p1, p2)
+    }
+
+    /// p1 concedes. `submit` answers once the action has run to its end, the result's write and
+    /// its retries included; a frame through the socket would leave `idle` racing the socket's reader.
+    async fn concede(actor: &MatchActor) {
+        let reply = to_json(
+            &actor
+                .submit(PlayerId::P1, "gg".to_string(), from(json!({ "type": "concede" })))
+                .await,
+        );
+        assert_eq!(reply["type"], "ack", "the concession was refused: {reply}");
+    }
+
+    /// The one result row, p1's concession.
+    async fn assert_conceded_by_p1(h: &Harness) {
+        let rows = results(h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["reason"], "concede");
+        assert_eq!(rows[0]["winnerProfileId"], "profile-2");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_written_at_the_first_try_finishes_the_match_row_in_its_own_transaction_only() {
+        let (h, actor, p1, _p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, 0).await;
+        concede(&actor).await;
+
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(inserts.load(Ordering::SeqCst), 1);
+        assert_eq!(finishes.load(Ordering::SeqCst), 1);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(p1.is_open());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_write_the_store_fails_once_is_tried_again_and_lands_once() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, _p1, p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, 1).await;
+        concede(&actor).await;
+
+        let actions = table(&h.app, |data| json!(data.tables.match_actions)).await;
+        assert_eq!(actions.last().expect("last")["action"]["type"], "concede");
+        assert_eq!(
+            last_view(&p2)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+        assert_eq!(logs.count("match.recordResult.failed"), 1);
+        assert_eq!(inserts.load(Ordering::SeqCst), 2);
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(finishes.load(Ordering::SeqCst), 1);
+        assert!(h.app.matches.has(MATCH_ID));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_the_store_never_takes_leaves_the_match_live_until_the_next_socket_records_it() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, p1, p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, usize::MAX).await;
+        concede(&actor).await;
+
+        assert_eq!(
+            logs.count("match.recordResult.failed"),
+            MATCH_RECORD_RESULT_ATTEMPTS
+        );
+        assert_eq!(inserts.load(Ordering::SeqCst), MATCH_RECORD_RESULT_ATTEMPTS);
+        assert_eq!(finishes.load(Ordering::SeqCst), 0);
+        assert_eq!(results(&h).await, Vec::<Value>::new());
+        assert_eq!(match_row(&h.app).await["status"], "live");
+        assert_eq!(in_match(&h).await, vec![json!(MATCH_ID), json!(MATCH_ID)]);
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert_eq!(p1.close_code(), Some(1001));
+        assert_eq!(p2.close_code(), Some(1001));
+
+        fake(&h.app).lock().await.on_call = None;
+        let back = create_fake_socket();
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", back.socket())
+            .await
+            .expect("profile-1 attaches");
+        actor_of(&h).await.idle().await;
+
+        assert!(logs.has("match.rebuilt"));
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(
+            last_view(&back)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
     }
 }

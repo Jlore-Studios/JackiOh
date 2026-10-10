@@ -1,14 +1,4 @@
-// The board's half of the glow contract (docs/polish/7-mobile-ux.md, S6), rendered through `Game`
-// so the highlight is the one the client really computes from `legal` and its own interaction:
-//
-//   B16  every card, zone, hero, `power` and `end-turn` carries `data-glow="ready"` exactly when its
-//        testid is in `highlight.glow`, and no `data-glow` attribute otherwise;
-//   B17  a card root carries `data-condition-active="true"` exactly when its `CardView` has
-//        `conditionActive: true` (R195), for hand, unit and backrow cards alike; card backs never do.
-//
-// The expected glow is `highlightFor(view, legal, interaction).glow`, with the interaction built by
-// the same `onClickTarget` the board's click drives, and each test also names the testids it
-// expects to glow, so a highlight that went empty cannot pass by matching an empty DOM.
+// S6: B16 data-glow follows highlight.glow; B17 data-condition-active follows CardView.conditionActive (R195).
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -32,7 +22,6 @@ afterEach(cleanup);
 
 const noop = (): void => undefined;
 
-/** Three cards in hand, two units and a face-up backrow card on your side, a hero power; one enemy. */
 function boardView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -74,12 +63,10 @@ function ownHand(view: PlayerView): CardView[] {
   return hand;
 }
 
-/** S6's `zone-<side>-<row>-<lane>`, lanes 1 to 5, spelled out so a loop can build it. */
 function zoneTestid(side: "you" | "opponent", row: "units" | "backrow", lane: number): string {
   return `zone-${side}-${row}-${lane}`;
 }
 
-/** Every element B16 speaks for that this view renders. */
 function glowableTestids(view: PlayerView): string[] {
   const ids: string[] = ownHand(view).map((c) => testid.handCard(c.instanceId));
   for (const side of ["you", "opponent"] as const) {
@@ -102,10 +89,6 @@ function byTestid(id: string): Element {
   return el;
 }
 
-/**
- * B16's two halves: each glowable element carries `data-glow="ready"` iff its testid glows, and no
- * element anywhere in the document carries a `data-glow` that the glow set does not name.
- */
 function expectDomGlow(view: PlayerView, glow: ReadonlySet<string>): void {
   for (const id of glowableTestids(view)) {
     expect(byTestid(id).getAttribute("data-glow"), id).toBe(glow.has(id) ? "ready" : null);
@@ -132,7 +115,6 @@ describe("B16 data-glow on the board follows highlight.glow", () => {
     }
     expectDomGlow(view, glow);
 
-    // Legal but never green: the switch-only unit, end-turn while moves remain, draw and concede.
     expect(screen.getByTestId(testid.card("u2"))).not.toHaveAttribute("data-glow");
     expect(screen.getByTestId(testid.endTurn)).not.toHaveAttribute("data-glow");
     expect(screen.getByTestId(testid.offerDraw)).not.toHaveAttribute("data-glow");
@@ -214,7 +196,7 @@ describe("B16 data-glow on the board follows highlight.glow", () => {
     const view = boardView();
     render(<Game view={view} legal={LEGAL} onAction={noop} />);
 
-    // data-legal stays the click gate; the glow is a separate, narrower attribute.
+    // Glow does not replace the data-legal click gate.
     const u2 = screen.getByTestId(testid.card("u2"));
     expect(u2).toHaveAttribute("data-legal", "true");
     expect(u2).not.toHaveAttribute("data-glow");
@@ -224,9 +206,7 @@ describe("B16 data-glow on the board follows highlight.glow", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B17: data-condition-active
-// ---------------------------------------------------------------------------------------------
 
 function flaggedView(): PlayerView {
   return baseView({

@@ -332,6 +332,7 @@ Notes that matter:
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
 | Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction — then the actor is dropped from the map |
+| The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
 | Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
@@ -612,7 +613,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_meditative_set.sql` — and records them in
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` → `0029_meditative_set.sql` — and records them in
    `app.migrations`. Expected
    result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
@@ -638,7 +639,13 @@ step that is not yet implemented says which BUILD task delivers it.
    project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
    Catalyst, Prime and Acclaimed, as 0020 did with Plague. 0027 adds `tickets.lean_newest` and
    `matches.room_lean_newest`, where All Random's "More cards from the newest set" waits for the deal
-   (R1372); both default to false, so nothing is backfilled. 0028 comes with the patch that ships the
+   (R1372); both default to false, so nothing is backfilled. 0028 gives every profile a username
+   (R1432–R1436): it replaces `profiles.display_name` with the base name, its key, its tag, the time
+   of the last change and whether the prompt was answered, names every existing profile `Player#n`
+   in order of sign-up, and names every new one the lowest free `Player#n` by trigger; a client
+   reads its own row's username columns and writes none of them. It only adds: `display_name`,
+   which no server reads from 0028 on, stays for the deploy before it, which reads it until the new
+   one serves, and a later migration drops it. 0029 comes with the patch that ships the
    Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
    Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of

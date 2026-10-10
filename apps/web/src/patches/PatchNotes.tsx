@@ -1,19 +1,5 @@
-// The Patch notes page's body (brief B4.2 item 5, R388, R507): every patch, newest first, with its
-// version, date, title, source and notes, and the cards it touched.
-//
-// - The newest PATCHES_OPEN_ON_LOAD patches show their cards on arrival; every other patch shows
-//   its counts and a "Show the cards" control, and loads its snapshot and the one before it only
-//   when opened, so the page never downloads a snapshot nobody asked to see.
-// - A patch's cards, filtered by name: the changed cards whose faces print the change as faces from
-//   that patch's snapshot, each with what changed marked (ChangeList); the changed cards whose every
-//   change lies in data a face does not print (lines of code, the cards a text names) as names with
-//   a line saying what changed; the added cards as names grouped by set, each set's tokens apart, so
-//   a patch that adds hundreds of cards is a list to scan and not hundreds of faces; and the removed
-//   cards as names.
-// - Every name and face opens the card as it stands now in the collection's detail view, with its
-//   History section open.
-//
-// It reads the patch source and nothing else, and decides nothing (CLAUDE.md rule 7).
+// Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
+// They read public patch data only (CLAUDE.md rule 7).
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -37,12 +23,10 @@ type OpenCard = (id: string) => void;
 
 const NO_DEFS: CardDefs = {};
 
-/** "1 card", "206 cards". */
 function cards(count: number): string {
   return `${String(count)} ${count === 1 ? "card" : "cards"}`;
 }
 
-/** "206 added · 111 changed", from the patch's own record; nothing for a kind it has none of. */
 export function countsLine(patch: Patch): string {
   // R674: Glitch is not counted, as it is not listed (history.ts `patchCards`).
   const count = (kind: Patch["changes"][number]["kind"]): number =>
@@ -112,7 +96,6 @@ function Section({ title, count, children }: { title: string; count: number; chi
   );
 }
 
-/** A patch's cards, filtered by `query`. */
 function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: string; onOpen: OpenCard }): ReactElement {
   const keep = (def: CardDef): boolean => nameMatches(def.name, query);
   const changed = all.changed.filter((delta) => keep(delta.def));
@@ -187,7 +170,6 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
   );
 }
 
-/** A patch's cards: its snapshot and the one before it, loaded on first show, then the filter and the lists. */
 function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: readonly Patch[]; onOpen: OpenCard }): ReactElement {
   const source = usePatchSource();
   const [query, setQuery] = useState("");
@@ -296,7 +278,6 @@ function PatchEntry({
   );
 }
 
-/** The card a name opened, as it stands now, in the detail view with its history open. */
 function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Patch[]; onClose: () => void }): ReactElement | null {
   const source = usePatchSource();
   const read = useLoaded<CardDef | null>(`open:${id}`, async () => currentDef(id, patches, await source.index(), (version) => source.snapshot(version)));
@@ -304,7 +285,6 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <CardDetail def={read.value} onClose={onClose} historyOpen />;
 }
 
-/** The list, once patches.json has loaded: references resolve against the newest snapshot. */
 function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
   const source = usePatchSource();
   const [openId, setOpenId] = useState<string | null>(null);

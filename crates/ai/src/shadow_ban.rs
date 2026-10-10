@@ -59,32 +59,68 @@
 /// and both passes — its generation-0 `neverPlayed` row measured 4 affordable turns, far under the
 /// flag's bar — and pass 2 watched the AI cast it 145 times at easy for +2.2 mean eval delta. Two
 /// mana for three cards is exactly the card advantage the mirror's tempo race runs on.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "core-042",
-        "neverPlayed: hard: affordable in hand on 21 turns, never played",
-    ),
-    (
-        "core-055",
-        "neverPlayed: hard: affordable in hand on 22 turns, never played",
-    ),
-    (
-        "core-076",
-        "neverPlayed: hard: affordable in hand on 15 turns, never played",
-    ),
-    (
-        "core-078",
-        "neverPlayed: easy: affordable in hand on 31 turns, never played",
-    ),
-    (
-        "core-094",
-        "neverPlayed: hard: affordable in hand on 13 turns, never played",
-    ),
-    (
-        "core-099",
-        "neverPlayed: easy: affordable in hand on 21 turns, never played; hard: affordable in hand on 13 turns, never played",
-    ),
-];
+///
+/// Generation 3 removed `core-094` (Genn's Greed): the sweep of record cleared it — its
+/// `neverPlayed` row measured a card whose draw-and-exile read as pure loss to the eval that
+/// priced it, not a misplay. The eval already counts what the cast moves: the drawn two-costs land
+/// in hand (`hand_card`), the exiled odd-costs leave library and hand (`library_card`,
+/// `hand_card`), so a determinized world shows the whole trade and the beam casts it only when the
+/// dealt deck's two-cost density makes it pay.
+///
+/// Generation 4 removed `core-099` (Craft a Card): the sweep of record cleared it at both tiers,
+/// and its `neverPlayed` flag names a structural blind spot rather than a misplay — the two
+/// Discover answers sit between the cast and the fused card, so the beam's open-prompt states read
+/// as a spent spell with no payoff and prune the line before the 0-cost fused unit lands (a sweep
+/// on this build still shows 0 plays in 16 affordable turns). It is not in `UNBANNED_PREFER`: dealt
+/// at stock weight it shows up in a few decks, the mulligan returns it like any other 4-cost, and
+/// the never-played slot costs a fraction of a draw — the ban it came off measured a deal the
+/// beam's shape makes dead, not a card the AI mishandles.
+///
+/// Generation 5 removed `core-055` (Lava Golem): the only entry the Rust sweep of record would have
+/// kept for `timeout`, and the report itself says what that flag measured — a decision over two
+/// seconds in a game that also held an R29 scorer (Zephrys Zealotism's perfect hand and Zephyrs'
+/// Discover rank dry-run whole pools of cards, "from a card dealt or one a determinization sampled
+/// into the opponent's hand, so neither card need be in the game"). The card it was charged to is
+/// the one the sweep watched the AI play best: 222 casts at easy for +4545.7 mean eval delta and
+/// 168 at hard for +23833.0, every tribute set enumerated by `legal_actions` (R101's own list keeps
+/// the enemy units) and every one priced by the same eval that reads the Golem's `controller`
+/// whether it lands at home or across the table (R360). Dealt ×3 by `UNBANNED_PREFER` on the same
+/// evidence as the generation-2 unban: a card the AI demonstrably plays well belongs in its decks.
+///
+/// Generation 6 removed `core-078` (/fullsend): its `neverPlayed` row is the same beam-horizon
+/// blind spot as generation-4's core-099 — the cast alone buys nothing (4 paid, 3 refreshed, a
+/// discount that pays back only across the rest of the line, and a delayed hand-exile the eval
+/// reads only once it fires), so no prefix of the line ever outbids the tempo plays beside it.
+/// What makes the row a blind spot rather than a misplay is that a cast that did survive selection
+/// would be honest: the exile is real engine state, every simulated EndTurn runs it, and an open
+/// line is scored with its turn ended — a /fullsend that fails to cash its hand costs itself by
+/// the same eval that would have to pick it. Dealt at stock weight and not in `UNBANNED_PREFER`,
+/// the never-played slot costs a fraction of a draw where it lands at all.
+///
+/// Generation 7 removed `core-042` (Eugenics): the Rust sweep of record cleared it at both
+/// tiers and both passes — pass 2 watched the AI cast it 34 times at easy for -2.3 mean
+/// evaluate change and 30 at hard for -0.4, so the generation-0 `neverPlayed` row measured a
+/// deal an older AI's beam never made worth casting, not a card this one mishandles. The casts
+/// it does choose are honest on the terms the eval sees: the exiled seven leave the library
+/// `library_card` counts, and the line is picked only where the cast outbids the tempo play
+/// beside it; the Radiant flags themselves are the part no weight prices, the same blind spot
+/// generation 4 and 6 named, so most deals still end with it unplayed. Not in
+/// `UNBANNED_PREFER`, dealt at stock weight (`DEALT_Q` has no row for it, so it keeps
+/// `DEALT_Q_PRIOR`): preferring it would deal a mostly-dead slot three times as often.
+///
+/// Generation 8 removed `core-076` (Field of Dreams), the last entry. The two rows against it
+/// are both artifacts rather than a misplay: its easy `selfHarm` mean of -22,729.5 over 44
+/// pass-2 plays sums to within a hundred of a single -`AI_EVAL.win` swing charged to the card
+/// — the artifact #628 was written for (`record_sweep_play` now keeps a game-ending play out
+/// of the mean and counts it as a losing or winning play) — and a fresh sweep on this build
+/// watches the beam decline it on every affordable turn at both tiers (0 plays over 16 easy
+/// and 11 hard). Paying three to swap a hand for Reminisce copies reads as the loss it is in
+/// the tempo mirror while the eval prices each copy like any other one-cost, so the beam's
+/// refusal is the right call where it lands. Dealt at stock weight and not in
+/// `UNBANNED_PREFER` on the generation-4 precedent: a card the beam correctly never casts is a
+/// dead slot costing a fraction of a draw, and preferring it would deal that slot three times
+/// as often.
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -382,8 +418,25 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// the records show the AI losing the games it casts Fauci in, so it deals at
 /// its measured weight like any other card. `core-057` joins them in
 /// generation 2 on the sweep's numbers (played 145 times at easy, +2.2 mean
-/// eval delta) — card advantage is what the tempo mirror rewards.
-pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093"];
+/// eval delta) — card advantage is what the tempo mirror rewards. `core-094`
+/// joins them in generation 3: the sweep cleared it, and the AI meets the card
+/// the table now teaches. `core-099` is not preferred either: the beam prunes
+/// its Discover chain before the fused payoff lands (the generation-4 note
+/// above the ban table), so preferring it would only deal a dead card more.
+/// `core-055` joins them in generation 5 on the strongest numbers the sweep of
+/// record took (222 casts at easy for +4545.7, 168 at hard for +23833.0): the
+/// AI already plays the Golem well, so it should meet it often. `core-078` is
+/// not preferred on the generation-4 precedent: its refresh, discount and
+/// hand-exile pay only across a whole dumped hand (the generation-6 note above
+/// the ban table), so preferring it would deal the dead slot three times as
+/// often. `core-042` is not preferred on the same precedent (the generation-7
+/// note): the sweep watched the casts it makes land near neutral, so the extra
+/// deals would buy nothing. `core-076` is not preferred on the generation-4
+/// precedent (the generation-8 note): the beam declines it on every affordable
+/// turn, so preferring it would deal the dead slot three times as often.
+pub const UNBANNED_PREFER: &[&str] = &[
+    "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
+];
 pub const UNBANNED_PREFER_BY: f64 = 3.0;
 
 /// `DEALT_Q` is measured against this: the candidate's share of the records the
@@ -402,8 +455,9 @@ pub const DEAL_MULLIGAN_KEEP: f64 = 2.0;
 
 /// Per defId, the share of games the candidate won with it dealt into its deck,
 /// shrunk toward `DEALT_Q_PRIOR` (`(w + 60 x prior) / (n + 60)` over the lane's
-/// `self-vs-bin` records). The seven banned ids are absent: a deck dealt under
-/// this AI's ban list never holds one. Sorted by id.
+/// `self-vs-bin` records). The ids banned when the table was last fit are
+/// absent: a deck dealt under a ban list never holds one. They are all unbanned
+/// now; an absent id prices as `DEALT_Q_PRIOR`. Sorted by id.
 pub const DEALT_Q: &[(&str, f64)] = &[
     ("classic-001", 0.5742),
     ("classic-002", 0.5418),

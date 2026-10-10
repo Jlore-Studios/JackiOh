@@ -15,8 +15,8 @@
 //! pass 1's numbers meet a flag's condition at half strength (`half_flags`), or it is banned already
 //! or on `SHADOW_WATCH`. Pass 2 (`sweep_at_risk`) forces each at-risk card into more games, on seeds of
 //! its own, with every at-risk card's filler weight boosted, and counts every at-risk card the AI was
-//! dealt, forced or not. A `neverPlayed` or `selfHarm` ban needs pass 2's numbers; `error` and
-//! `timeout` ban from any game whose forced card the card was (`sweep_verdict`).
+//! dealt, forced or not. A `neverPlayed`, `selfHarm` or `selfKill` ban needs pass 2's numbers; `error`
+//! and `timeout` ban from any game whose forced card the card was (`sweep_verdict`).
 //!
 //! Pure like the rest of src/: the clock arrives as `now`, which the CLI passes and a test leaves
 //! out, so a test's sweep never times out on a slow machine.
@@ -49,6 +49,7 @@ pub enum SweepFlag {
     Timeout,
     NeverPlayed,
     SelfHarm,
+    SelfKill,
 }
 
 impl SweepFlag {
@@ -59,6 +60,7 @@ impl SweepFlag {
             SweepFlag::Timeout => "timeout",
             SweepFlag::NeverPlayed => "neverPlayed",
             SweepFlag::SelfHarm => "selfHarm",
+            SweepFlag::SelfKill => "selfKill",
         }
     }
 }
@@ -91,6 +93,11 @@ pub struct AiSweep {
     pub ban_affordable_turns: i32,
     /// R390: a selfHarm ban needs this many plays over pass 2's games.
     pub ban_harm_plays: i32,
+    /// R390: selfKill needs at least this many plays on which the AI lost the game; half of it puts a
+    /// card at risk.
+    pub min_losing_plays: i32,
+    /// R390, R601: a selfKill ban needs this many lost games over pass 2's games.
+    pub ban_losing_plays: i32,
 }
 
 pub const AI_SWEEP: AiSweep = AiSweep {
@@ -105,6 +112,8 @@ pub const AI_SWEEP: AiSweep = AiSweep {
     at_risk_boost: 4,
     ban_affordable_turns: 6,
     ban_harm_plays: 8,
+    min_losing_plays: 2,
+    ban_losing_plays: 4,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -117,8 +126,15 @@ pub struct SweepStats {
     pub plays: i32,
     pub errors: i32,
     pub timeouts: i32,
+    /// R390: over the plays after which the game went on.
     pub eval_delta_sum: f64,
     pub eval_delta_count: i32,
+    /// R390: plays on which the AI lost the game, out of the mean (selfKill's count). 0 in older slices.
+    #[serde(default)]
+    pub losing_plays: i32,
+    /// R390: plays on which the AI won the game, out of the mean. 0 in older slices.
+    #[serde(default)]
+    pub winning_plays: i32,
 }
 
 /// One card at one tier. `unswept` is a card that was never once affordable in hand, so its games
@@ -203,6 +219,7 @@ const FLAG_ORDER: &[SweepFlag] = &[
     SweepFlag::Timeout,
     SweepFlag::NeverPlayed,
     SweepFlag::SelfHarm,
+    SweepFlag::SelfKill,
 ];
 
 fn mean(stats: &SweepStats) -> f64 {
@@ -232,7 +249,8 @@ fn to_fixed_1(x: f64) -> String {
 }
 
 /// error: errors > 0; timeout: timeouts > 0; neverPlayed: affordableTurns >= minAffordableTurns && plays === 0;
-/// selfHarm: evalDeltaCount >= minHarmPlays && evalDeltaSum / evalDeltaCount < selfHarmDelta. In that order.
+/// selfHarm: evalDeltaCount >= minHarmPlays && evalDeltaSum / evalDeltaCount < selfHarmDelta;
+/// selfKill: losingPlays >= minLosingPlays. In that order.
 pub fn sweep_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     let mut flags = Vec::new();
     if stats.errors > 0 {
@@ -247,12 +265,16 @@ pub fn sweep_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     if stats.eval_delta_count >= AI_SWEEP.min_harm_plays && mean(stats) < AI_SWEEP.self_harm_delta {
         flags.push(SweepFlag::SelfHarm);
     }
+    if stats.losing_plays >= AI_SWEEP.min_losing_plays {
+        flags.push(SweepFlag::SelfKill);
+    }
     flags
 }
 
 /// R390: the judgement flags at half strength, which put a card at risk: `neverPlayed` when it sat
 /// affordable on minAffordableTurns turns and was played at most once, `selfHarm` when its plays'
-/// mean evaluation change is below half of selfHarmDelta.
+/// mean evaluation change is below half of selfHarmDelta, `selfKill` on half of minLosingPlays lost
+/// games (one).
 pub fn half_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     let mut flags = Vec::new();
     if stats.affordable_turns >= AI_SWEEP.min_affordable_turns && stats.plays <= 1 {
@@ -260,6 +282,9 @@ pub fn half_flags(stats: &SweepStats) -> Vec<SweepFlag> {
     }
     if stats.eval_delta_count > 0 && mean(stats) < AI_SWEEP.self_harm_delta / 2.0 {
         flags.push(SweepFlag::SelfHarm);
+    }
+    if stats.losing_plays >= (AI_SWEEP.min_losing_plays / 2).max(1) {
+        flags.push(SweepFlag::SelfKill);
     }
     flags
 }
@@ -296,8 +321,8 @@ pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, 
 }
 
 /// R390: the cards pass 2's filler never deals — banned for `error` or `timeout` today, or flagged so
-/// by pass 1 — so a known bug is never filler. A card banned for `neverPlayed` or `selfHarm` is at
-/// risk, and pass 2's filler lifts its ban.
+/// by pass 1 — so a known bug is never filler. A card banned for `neverPlayed`, `selfHarm` or
+/// `selfKill` is at risk, and pass 2's filler lifts its ban.
 ///
 /// TS's default: pass `SHADOW_BAN`.
 pub fn pass2_keep_out(pass1: &[SweepResult], ban: &[(&str, &str)]) -> Vec<String> {
@@ -420,6 +445,8 @@ fn empty_stats(def_id: &str) -> SweepStats {
         timeouts: 0,
         eval_delta_sum: 0.0,
         eval_delta_count: 0,
+        losing_plays: 0,
+        winning_plays: 0,
     }
 }
 
@@ -433,6 +460,8 @@ fn add_stats(into: &mut SweepStats, from: &SweepStats) {
     into.timeouts += from.timeouts;
     into.eval_delta_sum += from.eval_delta_sum;
     into.eval_delta_count += from.eval_delta_count;
+    into.losing_plays += from.losing_plays;
+    into.winning_plays += from.winning_plays;
 }
 
 fn holds_card(state: &GameState, seat: PlayerId, def_id: &str) -> bool {
@@ -448,11 +477,32 @@ struct SweepGame {
     timeouts: i32,
 }
 
+/// R390: one play of a card by `seat`, counted into its stats. Every play counts in `plays`. A play
+/// from or into a finished game stays out of the mean evaluation change, since `evaluate` scores a
+/// finished game ±AI_EVAL.win and one such play would decide the mean alone: `seat` winning on it
+/// counts in `winning_plays`, losing on it in `losing_plays`, and a draw in neither.
+pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &GameState, seat: PlayerId) {
+    stats.plays += 1;
+    if before.result.is_some() {
+        return;
+    }
+    match after.result.as_ref().map(|result| result.winner.player()) {
+        None => {
+            stats.eval_delta_sum += evaluate(after, seat, NextSwing::Enemy, &AI_EVAL)
+                - evaluate(before, seat, NextSwing::Enemy, &AI_EVAL);
+            stats.eval_delta_count += 1;
+        }
+        Some(Some(winner)) if winner == seat => stats.winning_plays += 1,
+        Some(Some(_)) => stats.losing_plays += 1,
+        Some(None) => {}
+    }
+}
+
 /// One sweep game, counted for each `tracked` card the AI's deck holds (games 1): drawn (drawnGames
 /// 1), the turns it sat in hand affordable (effectiveCost <= mana at the AI's turn start), and its
-/// plays (true-state evaluate delta for the playing seat, before → after). The game's errors (throws,
-/// rejected or "fallback" AI actions; a game that cannot even be dealt is one) and timeouts (a
-/// decision whose `now()` duration > decisionMs, or maxActions hit) come back beside them.
+/// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions; a game
+/// that cannot even be dealt is one) and timeouts (a decision whose `now()` duration > decisionMs, or
+/// maxActions hit) come back beside them.
 fn play_sweep_game(
     seed: &str,
     def_id: &str,
@@ -539,10 +589,7 @@ fn play_sweep_game(
                         if let Some(played_def) = played_def
                             && let Some(stats) = cards.iter_mut().find(|entry| entry.def_id == played_def)
                         {
-                            stats.plays += 1;
-                            stats.eval_delta_sum += evaluate(after, ai_seat, NextSwing::Enemy, &AI_EVAL)
-                                - evaluate(before, ai_seat, NextSwing::Enemy, &AI_EVAL);
-                            stats.eval_delta_count += 1;
+                            record_sweep_play(stats, before, after, ai_seat);
                         }
                     }
                 },
@@ -727,9 +774,13 @@ fn flag_detail(stats: &SweepStats, flag: SweepFlag, pass2: bool) -> String {
             stats.affordable_turns
         ),
         SweepFlag::SelfHarm => format!(
-            "mean evaluate change {} over {} play(s){over}",
+            "mean evaluate change {} over {} play(s) that did not end the game{over}",
             to_fixed_1(mean(stats)),
             stats.eval_delta_count
+        ),
+        SweepFlag::SelfKill => format!(
+            "lost the game on {} of {} play(s){over}",
+            stats.losing_plays, stats.plays
         ),
     }
 }
@@ -746,8 +797,13 @@ fn numbers_of(stats: &SweepStats) -> String {
     } else {
         format!(", mean evaluate change {}", to_fixed_1(mean(stats)))
     };
+    let lost = if stats.losing_plays == 0 {
+        String::new()
+    } else {
+        format!(", lost the game on {} play(s)", stats.losing_plays)
+    };
     format!(
-        "affordable on {} turns over {} games, {played}{harm}",
+        "affordable on {} turns over {} games, {played}{harm}{lost}",
         stats.affordable_turns, stats.games
     )
 }
@@ -756,10 +812,10 @@ fn numbers_of(stats: &SweepStats) -> String {
 /// results; `pass2` may be every pass-2 result of the sweep, since the card's numbers are read out of
 /// each, forced or filler. Per tier: `error` and `timeout` from the card's own games of either pass;
 /// `neverPlayed` from pass 2's numbers alone, banAffordableTurns affordable turns and no play;
-/// `selfHarm` from pass 2's, at least banHarmPlays plays averaging below selfHarmDelta. A flag at any
-/// tier bans the card, every flagging tier named. Unswept when no tier of either pass ever saw it
-/// affordable. Watched (R600) when it is not banned and its own numbers this sweep, of either pass,
-/// meet a flag at half strength.
+/// `selfHarm` from pass 2's, at least banHarmPlays plays averaging below selfHarmDelta; `selfKill` from
+/// pass 2's, at least banLosingPlays lost games. A flag at any tier bans the card, every flagging
+/// tier named. Unswept when no tier of either pass ever saw it affordable. Watched (R600) when it is
+/// not banned and its own numbers this sweep, of either pass, meet a flag at half strength.
 ///
 /// TS's default `pass2 = []`: pass `&[]`.
 pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdict {
@@ -807,6 +863,10 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
         if second.eval_delta_count >= AI_SWEEP.ban_harm_plays && mean(&second) < AI_SWEEP.self_harm_delta {
             flagged.insert(SweepFlag::SelfHarm);
             parts.push(flag_detail(&second, SweepFlag::SelfHarm, true));
+        }
+        if second.losing_plays >= AI_SWEEP.ban_losing_plays {
+            flagged.insert(SweepFlag::SelfKill);
+            parts.push(flag_detail(&second, SweepFlag::SelfKill, true));
         }
         if !parts.is_empty() {
             details.push(format!("{tier}: {}", parts.join(", ")));

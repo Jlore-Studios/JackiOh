@@ -1,74 +1,42 @@
-// Where the patch history comes from (brief B4.2, R388): the one seam between the client and the
-// catalog workstream's `crates/cards/patches/`, which holds
-//
-//   - `patches.json`: every patch in patch order, `{ version, date, title, source, notes, changes }`,
-//     each change `{ id, name, kind: "added" | "changed" | "removed", fields? }`;
-//   - `<version>.json`: the whole catalog as that patch left it (id -> CardDef, catalog.json's shape);
-//   - `index.json`: card id -> the versions in which that card changed, in patch order.
-//
-// LAZY BY FILE. Vite's `import.meta.glob` turns every file into its own chunk behind a loader, so
-// no page bundles a snapshot and a page that shows two patches downloads two snapshots. Each file is
-// loaded at most once per page (a failed load is forgotten, so "Try again" asks again). The data is
-// public (§5.1) and static, so the Patch notes page needs no server and no account.
-//
-// The glob names the directory by path: Vite resolves a glob that starts with `./`, `../` or `/` (or
-// an alias), never a package specifier, and `@jackioh/cards/patches/*.json` fails with "Invalid glob".
-// The package's `"./patches/*"` export is the same directory.
-//
-// THE ORDER OF PATCHES IS THE FILE'S (R105 as B4.2 rewrites it): `patches()` returns patches.json's
-// array as it stands. Nothing here or downstream parses, compares or sorts a version string.
-//
-// Components never import this module's real source directly: they read `usePatchSource()`
-// (context.tsx), which tests fill with `sourceFromData` fixtures.
+// Static public patch data (§5.1) loads lazily one file at a time (R388); failed loads can retry.
+// Patch order follows patches.json, never version-string sorting (R105 as B4.2 rewrites it).
+// Keep the glob path-based: Vite rejects package specifiers.
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
-/** One card a patch touched, as patches.json records it. */
 export type PatchChange = {
   readonly id: string;
   readonly name: string;
   readonly kind: "added" | "changed" | "removed";
-  /** The fields that changed ("cost", "base.text", …), on a "changed" entry. */
   readonly fields?: readonly string[];
 };
 
-/** One patch, as patches.json records it. */
 export type Patch = {
   readonly version: string;
-  /** ISO date, "2026-09-30"; shown as written, never parsed. */
   readonly date: string;
   readonly title: string;
-  /** Where the patch came from: the issue, PR or commits. */
   readonly source: string;
   readonly notes: string;
   readonly changes: readonly PatchChange[];
 };
 
-/** The whole catalog as one patch left it: id -> definition. */
 export type Snapshot = CardDefs;
 
-/** Card id -> the versions in which it changed, in patch order (its first is the one that added it). */
 export type HistoryIndex = Readonly<Record<string, readonly string[]>>;
 
-/** The seam: everything the Patch notes page and the History section know about patches. */
 export type PatchSource = {
-  /** Every patch in patch order, oldest first, as patches.json lists them; [] when there are none. */
   patches(): Promise<readonly Patch[]>;
-  /** Card id -> the versions in which it changed; {} when there are none. */
   index(): Promise<HistoryIndex>;
-  /** The catalog as `version` left it, or null when no snapshot of that version exists. */
   snapshot(version: string): Promise<Snapshot | null>;
 };
 
-/** A file's loader, as `import.meta.glob` hands them out: resolves to the file's parsed JSON. */
 export type Loader = () => Promise<unknown>;
 
-/** The files that are not snapshots: the list, the index, and the shipping ledger (R646). */
+/** R646: files that are not snapshots. */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";
 
-/** "../../../../crates/cards/patches/v0.1.1.json" -> "v0.1.1". */
 export function fileStem(path: string): string {
   const name = path.slice(path.lastIndexOf("/") + 1);
   return name.endsWith(".json") ? name.slice(0, -".json".length) : name;
@@ -78,7 +46,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** patches.json, checked for the fields every screen reads; anything else is a broken file. */
 function readPatches(value: unknown): readonly Patch[] {
   if (!Array.isArray(value)) throw new Error("patches.json is not a list of patches");
   for (const patch of value) {
@@ -99,10 +66,7 @@ function readSnapshot(value: unknown, version: string): Snapshot {
   return value as Record<string, CardDef>;
 }
 
-/**
- * A source over one loader per file, keyed by file stem ("patches", "index", "v0.1.1"). Each file
- * is loaded once; a load that fails is dropped from the cache, so asking again retries it.
- */
+/** One cached loader per file; failures leave no cache entry so callers can retry. */
 export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): PatchSource {
   const cache = new Map<string, Promise<unknown>>();
   const load = (stem: string): Promise<unknown> | null => {
@@ -134,14 +98,12 @@ export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): Pa
   };
 }
 
-/** `import.meta.glob`'s map (path -> loader) keyed by file stem instead. */
 export function loadersByStem(glob: Readonly<Record<string, Loader>>): Record<string, Loader> {
   const out: Record<string, Loader> = {};
   for (const [path, loader] of Object.entries(glob)) out[fileStem(path)] = loader;
   return out;
 }
 
-/** A source over data already in hand: the fixtures tests feed through the context. */
 export function sourceFromData(data: {
   patches: readonly Patch[];
   index: HistoryIndex;
@@ -154,11 +116,8 @@ export function sourceFromData(data: {
   };
 }
 
-/** No patch data at all: the page's empty state. */
 export const EMPTY_PATCH_SOURCE: PatchSource = sourceFromData({ patches: [], index: {}, snapshots: {} });
 
-/** The catalog workstream's files, one lazy chunk each. */
 const PATCH_FILES = import.meta.glob<unknown>("../../../../crates/cards/patches/*.json", { import: "default" });
 
-/** The real patch history, from `crates/cards/patches/`. */
 export const realPatchSource: PatchSource = sourceFromLoaders(loadersByStem(PATCH_FILES));

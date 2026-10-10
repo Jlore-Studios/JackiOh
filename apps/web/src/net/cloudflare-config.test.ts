@@ -1,26 +1,7 @@
-// Cloudflare (production) against vercel.json (staging). The two hosts must serve the same site:
-// the same paths to the app, the same 404s, the same security headers. vercel.json stays the source
-// of truth (deploy-routes.test.ts holds it against the route table); this file holds
-// public/_redirects, public/_headers and wrangler.jsonc equal to it, so a route or header added to
-// one host and not the other fails here rather than in production.
-//
-// Behaviour measured under `wrangler dev` (wrangler 4.147) before this file was written:
-//   - a rewrite to `/index.html` answers 307 -> `/` (assets' html_handling strips it), which drops
-//     the path, so every rewrite targets `/` instead;
-//   - `/login/` is not matched by a `/login` rule, so each path is listed with and without the slash;
-//   - unmatched paths get public/404.html with a 404 status (`not_found_handling: "404-page"`).
-//
-// A page the build writes (static-pages.ts) is a real file, `almanac/index.html`. Measured the same
-// way (wrangler 4.147, `wrangler dev` on the built dist), with that file in place:
-//   - `/almanac / 200` and `/almanac/ / 200` answer both paths with the landing HTML, status 200: a
-//     rule wins over the file;
-//   - with no almanac rule, `/almanac` is a 307 to `/almanac/` (and `/almanac?x=1` to `/almanac/?x=1`),
-//     `/almanac/` is the almanac file, and `/almanac/index.html` is a 307 to `/almanac/`;
-//   - `/almanac /almanac/ 200` alone serves the almanac file at `/almanac`, `/almanac/` and
-//     `/almanac?x=1`, each with status 200, and `/almanac/extra` is a 404;
-// so each page the build writes has that one rule to its own folder. vercel.json keeps its rewrites
-// unchanged: Vercel serves a file before it applies a rewrite (not measured here), so they only
-// answer a path that has no file.
+// Cloudflare production must match Vercel staging: routes, 404s and security headers.
+// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it.
+// Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
+// Generated static pages need a folder rule; Vercel serves files before rewrites.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -42,10 +23,8 @@ type VercelConfig = {
 
 const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as VercelConfig;
 
-/** The pages the build writes a file for (static-pages.ts). */
 const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
 
-/** The paths Vercel rewrites, as the rules _redirects must hold: a page with a file goes to its folder. */
 function expectedRules(): string[] {
   const rules: string[] = [];
   for (const { source } of vercel.rewrites) {
@@ -82,7 +61,6 @@ describe("public/_redirects", () => {
     }
   });
 
-  /** Whether a request for `path` is answered: `/`, a rule's own path, or a folder's slashed path. */
   function served(path: string): boolean {
     if (path === "/" || rules.some(([from]) => from === path)) return true;
     return path.endsWith("/") && EMITTED.has(path.slice(0, -1));
@@ -90,7 +68,7 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves NotFound at /dev/hotseat (main.tsx), so a real 404 there is right.
+      // Production serves a genuine 404 at /dev/hotseat.
       .filter(([name]) => name !== "hotseat")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {
@@ -102,7 +80,6 @@ describe("public/_redirects", () => {
 });
 
 describe("public/_headers", () => {
-  /** Each block: a path line, then its indented `Key: value` lines. */
   function blocks(): { path: string; headers: { key: string; value: string }[] }[] {
     const out: { path: string; headers: { key: string; value: string }[] }[] = [];
     for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {
