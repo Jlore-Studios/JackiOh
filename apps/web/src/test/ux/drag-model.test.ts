@@ -474,7 +474,8 @@ describe("B35 resolveDrop acts only on a drop the plan allows", () => {
   it("B35 a board drop with freeDrop that still needs a picker returns the play in flight and sends nothing yet", () => {
     const got = resolveDrop(view(), LEGAL, PLAN_X1, BOARD);
 
-    expect(got).toEqual(pickInPlay(PLAN_X1.lifted, {}));
+    // R1044: a free drop picks face-up, so a picker that follows never offers to set the card.
+    expect(got).toEqual(pickInPlay(PLAN_X1.lifted, { faceDown: "up" }));
     expect(got.action).toBeUndefined();
     expect(got.interaction.stage).toBe("playing");
     if (got.interaction.stage !== "playing") return;
