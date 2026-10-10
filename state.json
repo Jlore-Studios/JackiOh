@@ -6060,7 +6060,7 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-10-10T15:10:00Z",
+      "refused_until": "2026-10-10T20:50:00Z",
       "spent": [
         {
           "at": "2026-10-03T10:13:19Z",
@@ -6481,15 +6481,20 @@
         {
           "at": "2026-10-10T17:02:00Z",
           "minutes": 15.1
+        },
+        {
+          "at": "2026-10-10T17:04:51Z",
+          "minutes": 0.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-10T20:50:00Z",
-          "utilization": 0.78
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-10T17:02:00Z",
-        "status": "allowed"
+        "observed_at": "2026-10-10T17:04:51Z",
+        "rejected_resets_at": "2026-10-10T20:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
