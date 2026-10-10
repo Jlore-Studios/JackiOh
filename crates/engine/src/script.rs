@@ -835,6 +835,9 @@ pub struct Script {
     /// The play-time choices this card declares (R81).
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
+    /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
+    /// play's events, and blanked from an in-flight play the other seat reads.
+    pub secret_modes: bool,
     /// R195: the condition `view_for` surfaces as `conditionActive` (§10.8).
     pub condition_met: Option<ConditionHook>,
     /// R280: the numbers the card's formula comes to now, which `view_for` surfaces as `preview` (§10.8).

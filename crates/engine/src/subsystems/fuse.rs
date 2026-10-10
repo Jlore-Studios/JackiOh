@@ -1109,6 +1109,8 @@ fn combine_objects(records: &[Script]) -> Script {
         static_flags: combine_static_flags(records),
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
+        // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
+        secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
         preview: eager_condition(records.iter().map(|s| s.preview.clone()).collect()),
         activations: concat(records.iter().map(|s| s.activations.clone())),

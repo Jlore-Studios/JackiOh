@@ -610,6 +610,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+
+  // ---- Meditative MB05 (ME-SECRET, R860–R864) ----
+  // A secret is kept like a trap is set; its reveal stings like a trap's; a judgement notifies.
+  secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
+  secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  predicted: { sfx: "notify", cues: () => [sfx("notify")] },
 };
 
 /**

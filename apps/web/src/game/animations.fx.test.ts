@@ -167,6 +167,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -282,6 +285,10 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   damageAbsorbed: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
+  // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
+  secretChosen: null,
+  secretRevealed: null,
+  predicted: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -395,6 +402,9 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
   jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
+  secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
+  secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
+  predicted: ["jk-badge-fade", 400, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {

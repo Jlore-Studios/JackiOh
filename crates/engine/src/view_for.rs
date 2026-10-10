@@ -967,6 +967,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
+        // R860: the side's secrets, the choice only where the viewer may read it.
+        secrets: crate::secrets::secret_views(state, player, viewer),
     }
 }
 
@@ -1748,7 +1750,12 @@ fn redact_event(
         | GameEventType::Emoted
         | GameEventType::GameOver
         // R961: the Jade Counter is public, a player and a number.
-        | GameEventType::JadeChanged => event.clone(),
+        | GameEventType::JadeChanged
+        // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
+        // are public once they happen.
+        | GameEventType::SecretChosen
+        | GameEventType::SecretRevealed
+        | GameEventType::Predicted => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

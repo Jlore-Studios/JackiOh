@@ -102,6 +102,24 @@ string_union! {
 }
 
 string_union! {
+    /// ME-SECRET, R860: Mind Games' hidden choice (`secretRevealed.choice`, a Fortify Mind's `guess`).
+    pub enum SecretChoice {
+        Greed = "greed",
+        Attack = "attack",
+        Defend = "defend",
+    }
+}
+
+string_union! {
+    /// ME-SECRET, R864: a prediction's outcome (`predicted.outcome`).
+    pub enum PredictOutcome {
+        Won = "won",
+        Same = "same",
+        Lost = "lost",
+    }
+}
+
+string_union! {
     /// `redirected.what`.
     pub enum RedirectWhat {
         Damage = "damage",
@@ -763,6 +781,28 @@ pub enum GameEvent {
         player: PlayerId,
         value: i32,
     },
+    // -------------------------------------------------------------------------------------------
+    // Meditative MB05 (ME-SECRET, R860–R865)
+    // -------------------------------------------------------------------------------------------
+    /// R860: a secret was kept. Public only that it exists: the player and the id, never the choice.
+    SecretChosen {
+        player: PlayerId,
+        secret_id: String,
+    },
+    /// R864: a secret was revealed — by its reward resolving, or by a Fortify Mind judged against it.
+    /// Public: both players read the choice from here on.
+    SecretRevealed {
+        player: PlayerId,
+        secret_id: String,
+        choice: SecretChoice,
+    },
+    /// R864: a Fortify Mind's guess was judged against its linked secret. Public.
+    Predicted {
+        player: PlayerId,
+        secret_id: String,
+        guess: SecretChoice,
+        outcome: PredictOutcome,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -864,6 +904,9 @@ string_union! {
         Translated = "translated",
         DamageAbsorbed = "damageAbsorbed",
         JadeChanged = "jadeChanged",
+        SecretChosen = "secretChosen",
+        SecretRevealed = "secretRevealed",
+        Predicted = "predicted",
     }
 }
 
@@ -998,6 +1041,9 @@ impl GameEvent {
             GameEvent::Translated { .. } => GameEventType::Translated,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
+            GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
+            GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
+            GameEvent::Predicted { .. } => GameEventType::Predicted,
         }
     }
 }
@@ -1054,7 +1100,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 68);
+        assert_eq!(GAME_EVENT_TYPES.len(), 72);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1097,7 +1143,8 @@ mod tests {
         );
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
         assert_eq!(event.event_type().as_str(), "damageAbsorbed");
-        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961).
+        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
+        // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
     }
 }

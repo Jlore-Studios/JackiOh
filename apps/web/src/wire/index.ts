@@ -68,6 +68,7 @@ export type { PendingPromptView } from "./generated/PendingPromptView.ts";
 export type { PendingView } from "./generated/PendingView.ts";
 export type { PlayerId } from "./generated/PlayerId.ts";
 export type { PlayerView } from "./generated/PlayerView.ts";
+export type { PredictOutcome } from "./generated/PredictOutcome.ts";
 export type { PreviewValue } from "./generated/PreviewValue.ts";
 export type { PrintedRarity } from "./generated/PrintedRarity.ts";
 export type { PromptKind } from "./generated/PromptKind.ts";
@@ -75,6 +76,8 @@ export type { QuestView } from "./generated/QuestView.ts";
 export type { Rarity } from "./generated/Rarity.ts";
 export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
+export type { SecretChoice } from "./generated/SecretChoice.ts";
+export type { SecretView } from "./generated/SecretView.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
@@ -179,6 +182,9 @@ export const GAME_EVENT_TYPES = [
   "translated",
   "damageAbsorbed",
   "jadeChanged",
+  "secretChosen",
+  "secretRevealed",
+  "predicted",
 ] as const satisfies readonly GameEventType[];
 
 /**

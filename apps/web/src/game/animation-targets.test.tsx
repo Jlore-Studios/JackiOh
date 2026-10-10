@@ -150,6 +150,9 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     translated: { type: "translated", instanceId: enemy },
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
     jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+    secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+    secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+    predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   };
 }
 

@@ -44,6 +44,7 @@ pub use crate::replacements::*;
 pub use crate::restrictions::*;
 pub use crate::rng::*;
 pub use crate::script::*;
+pub use crate::secrets::*;
 pub use crate::state::*;
 pub use crate::times_played::*;
 pub use crate::traps::*;

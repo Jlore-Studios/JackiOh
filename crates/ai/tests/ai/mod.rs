@@ -27,6 +27,7 @@ pub mod redact_play_records;
 pub mod redact_twice;
 pub mod reply;
 pub mod search;
+pub mod secrets;
 pub mod shadow_ban;
 pub mod support;
 pub mod surface;

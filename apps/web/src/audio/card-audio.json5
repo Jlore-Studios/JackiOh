@@ -1271,6 +1271,12 @@
     "meditative-017": { // True Craft a Card
       cast: { voice: "narrator", text: "It compiles. Ship it." },
     },
+    "meditative-022": { // Mind Games
+      cast: { voice: "sapi-mystic", text: "I've already chosen. You'll find out." },
+    },
+    "meditative-022-1": { // Fortify Mind
+      cast: { voice: "sapi-trickster", text: "I can read you like a book." },
+    },
     "meditative-023": { // Golly Bob Howdy
       play: { voice: "elder", text: "Well golly bob howdy, neighbors!" },
       death: { voice: "elder", text: "Golly, that smarts." },

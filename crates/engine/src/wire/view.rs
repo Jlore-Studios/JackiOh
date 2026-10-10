@@ -13,7 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
 use crate::wire::craft::CraftRecipe;
-use crate::wire::events::{GameEvent, GameResult, Position};
+use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice};
 use crate::wire::string_union;
 
 string_union! {
@@ -814,6 +814,22 @@ impl RowFlags {
     }
 }
 
+/// ME-SECRET, R860: one secret of a side, as the viewer reads it — the choice only for its owner,
+/// or for anyone once revealed (R864).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretView {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub choice: Option<SecretChoice>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -875,6 +891,11 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// ME-SECRET, R860: the secrets this side holds, the choice only where the viewer may read it.
+    /// Absent while none are held (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub secrets: Option<Vec<SecretView>>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.
