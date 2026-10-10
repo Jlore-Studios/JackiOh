@@ -6432,14 +6432,18 @@
         {
           "at": "2026-10-10T02:05:25Z",
           "minutes": 15.6
+        },
+        {
+          "at": "2026-10-10T04:15:27Z",
+          "minutes": 11.2
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T04:00:00Z",
-          "utilization": 0.5
+          "resets_at": "2026-10-10T09:00:00Z",
+          "utilization": 0.08
         },
-        "observed_at": "2026-10-10T02:05:25Z",
+        "observed_at": "2026-10-10T04:15:27Z",
         "status": "allowed"
       }
     },
