@@ -875,6 +875,15 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
+    /// game without one serialises as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub extra_turns: Option<i32>,
+    /// R847 (Meditative #19.1): this player's once-a-game Temporal Rift flag. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub rift_extra_turn: Option<bool>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.

@@ -79,6 +79,8 @@ const CLASSIC_PREVIEWED: [&str; 6] = [
 const DATACENTER_FIRE: &str = "classicplus-t-ai-06";
 const TWICE_FORWARD: &str = "classicplus-074";
 const NEW_SET_PREVIEWED: [&str; 2] = [TWICE_FORWARD, DATACENTER_FIRE];
+/// Meditative cards that declare one (R280), each proved in its own script file.
+const MEDITATIVE_PREVIEWED: [&str; 1] = ["meditative-008"];
 
 /// Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file.
 const SNAKE: &str = "classicplus-003"; // C+ #3's hits: test/classic-plus/003-second-amendment-snake.test.ts
@@ -306,6 +308,7 @@ mod r280_the_core_cards_that_declare_preview {
             .chain(CLASSIC_PREVIEWED.iter())
             .chain(CLASSIC_PLUS_C_PREVIEWED.iter())
             .chain(NEW_SET_PREVIEWED.iter())
+            .chain(MEDITATIVE_PREVIEWED.iter())
             .chain(AUDITS.iter())
             .map(|id| (*id).to_string())
             .collect();

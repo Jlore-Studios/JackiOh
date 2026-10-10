@@ -1275,6 +1275,9 @@
     "meditative-007": { // Introspection
       cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
     },
+    "meditative-008": { // Reach the Summit
+      cast: { voice: "announcer", text: "One step closer to the summit!" },
+    },
     "meditative-009": { // Joint Filing
       cast: { voice: "sapi-bureaucrat", text: "Filed twice, just to be sure." },
     },
@@ -1305,6 +1308,18 @@
     },
     "meditative-017": { // True Craft a Card
       cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
+    "meditative-018": { // Expedition12
+      cast: { voice: "prof", text: "Sacrifice now, shine later." },
+    },
+    "meditative-019": { // Expedition1234
+      cast: { voice: "prof", text: "The long road it is." },
+    },
+    "meditative-019-1": { // Temporal Rift
+      cast: { voice: "alien", text: "Again. Once more. Again." },
+    },
+    "meditative-020": { // Aestheticize the Game
+      cast: { voice: "announcer", text: "A win, but make it beautiful." },
     },
     "meditative-021": { // API Key Fishing
       cast: { voice: "hustler", text: "Just click the link, friend." },

@@ -1026,7 +1026,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         if dying.is_empty() {
-            if hero_check(sink) {
+            // R850: the settled game-end point — a hero at 0 loses first, then a held win wins.
+            if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.

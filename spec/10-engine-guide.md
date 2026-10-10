@@ -43,7 +43,7 @@ type PlayerState = {
   units: (Pile | null)[5]; backrow: (CardInstance | null)[5];  // Pile = CardInstance[] top-first
   resolving: CardInstance[];    // cards mid-resolution: a Spell between its play and its GY (10.5 step 4)
   locks: { units: boolean[5]; backrow: boolean[5] };
-  mods: PlayerModifier[];       // next-spell discount, this-turn discounts, Curvature, Twinspell echo, /fullsend's Combo draw; since v0.2.0 also price rules (`costRule`, R455), `enchantNextSpell` (C+ #14), `replacePlays` (C #23, R449), `turnEnds` (R456), `startOfTurnEffect` (a rest-of-game effect, R458) and `healToDamage` (C+ #22)
+  mods: PlayerModifier[];       // next-spell discount, this-turn discounts, Curvature, Twinspell echo, /fullsend's Combo draw; since v0.2.0 also price rules (`costRule`, R455), `enchantNextSpell` (C+ #14), `replacePlays` (C #23, R449), `turnEnds` (R456), `startOfTurnEffect` (a rest-of-game effect, R458), `healToDamage` (C+ #22) and `altWin` (a chosen alternative win, never expiring, R848)
   turnLog: { playedIds: string[]; cardsPlayed: number; unspentAtEnd?: number; costsPaid?: number[]; playedByType?: Partial<Record<CardType, number>> };  // costsPaid: what each play paid, beside playedIds (R213); plays by type counted on both players' turns (C+ #37, R451)
   draws?: { turn: number; count: number };  // this player's draws on the running turn, whoever's it is (C #9, R457)
   jade?: number;  // this player's Jade Counter, absent until it first rises (R961, R962)
@@ -52,6 +52,10 @@ type PlayerState = {
   carried?: (CardInstance | null)[];  // the Unit each backrow zone carries (C+ #33, R446)
   drawOffer: { offeredTurn?: number; blockedUntil?: number }; fatigueCount: number;
   turnsStarted: number;         // drives the mana refresh (2.3)
+  lostRefreshThrough?: number;  // the turnsStarted index through which the refresh gives 0 (R844)
+  extraTurns?: number;           // owed extra turns, taken at the end of the player's turn (R846)
+  riftExtraTurn?: true;         // the once-a-game Temporal Rift flag (R847)
+  wonByEffect?: true;           // set when an effect won the game for this player (R850)
   aiTurn: boolean;              // My Pawn: the AI policy plays out the rest of this turn
   handicap?: Handicap;          // an AI seat's resources in practice; absent = this spec's (9.9, R180)
   handCap?: number;             // this seat's hand size, once set for the rest of the game (M #79, R1143); absent = 10
@@ -166,6 +170,7 @@ Patch v0.2.0's cards add to the view, each under the same rules of who may read 
 - **A card with a granted tag** carries `tags` on every view of it the viewer may read, where they differ from its definition's — and on no view they may not read ([[R923]]).
 - **A set hand size** is public on both seats as `handCap`: Meditative #79's rest-of-game setting, absent until one is set ([[R1143]]).
 - **A marked hand** shows its owner each mark on its card and the other player only the count, `handMarked`, never which ([[R1141]]).
+- **Lost refreshes, extra turns and held wins.** Each side carries its lost-refresh badge ("Your next N refreshes give 0 mana") while a loss covers a future refresh and its owed-turns badge ("Extra turns owed: N") while any is owed, and its `extraTurns` count and Rift flag, all public on both seats ([[R844]], [[R846]], [[R847]]); each held alternative win shows its progress ([[R848]]).
 
 Two marks since v0.1.1 name what a client would otherwise have to work out. A backrow Trap or Field Trap that has not flipped face-up carries `unrevealed: true` on its controller's own view of it, exactly where the other player sees a face-down marker ([[R33]], [[R351]], [[R371]]); the key is absent otherwise. A backrow card with a grade counter carries the letter it stands for beside it, `counters.gradeLetter` (#93, E to S), and a `preview` value may carry `display`, the word it prints as, such as that letter ([[R372]]).
 

@@ -5105,14 +5105,12 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             .filter(|row| row.index.starts_with("12.") || row.index.starts_with("19."))
             .map(|row| row.index.to_string())
             .collect();
-        legendary.extend(strings(&["42.1", "45.1", "46.1", "73.1", "75.1"]));
+        legendary.extend(strings(&["42.1", "46.1", "73.1", "75.1"]));
         let mut expected: BTreeMap<String, String> = legendary
             .into_iter()
             .map(|index| (index, "Legendary".to_string()))
             .collect();
         for (index, rarity) in [
-            ("28.1", "Common"),
-            ("30.1", "Epic"),
             ("32.1", "Epic"),
             ("32.2", "Epic"),
             ("32.3", "Epic"),
@@ -5124,32 +5122,13 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("65.3", "Rare"),
             ("65.4", "Legendary"),
             ("65.5", "Mythic"),
-            // M #91.1 Windfurious Prime (meditative-091-1) prints the designer's Epic.
-            ("91.1", "Epic"),
-            ("71.1", "Mythic"),
-            ("93.1", "Common"),
-            ("93.2", "Common"),
-            ("93.3", "Common"),
-        ] {
-            expected.insert(index.to_string(), rarity.to_string());
-        }
-        // §8.8 prints it on the nine buildings of M #97 too.
-        for (index, rarity) in [
-            ("97.1", "Common"),
-            ("97.2", "Common"),
-            ("97.3", "Rare"),
-            ("97.4", "Rare"),
-            ("97.5", "Epic"),
-            ("97.6", "Epic"),
-            ("97.7", "Epic"),
-            ("97.8", "Legendary"),
-            ("97.9", "Mythic"),
         ] {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
-        // §8.8 prints a designer rarity on Meditative tokens too (M #28.1 Common, M #30.1 Epic, M
-        // #91.1 Epic, M #97's buildings); every other printed rarity stays a Classic+ token's.
+        // §8.8 prints a designer rarity on Meditative tokens too (the next test, keyed by the
+        // Meditative index, since M #19.1 and C+ #19.1 share one); every other printed rarity stays
+        // a Classic+ token's.
         assert!(
             entries()
                 .into_iter()
@@ -5161,14 +5140,35 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 
     #[test]
     fn b2_5_prints_the_designer_s_rarity_on_every_meditative_token_the_catalog_holds() {
-        // The designer's rarity of each Meditative token the catalog holds yet, by index: Rare for
-        // the Rock and the Jade, Common for the Dud, Mythic for the Red Jade and the Beauty.
+        // The designer's rarity of each Meditative token the catalog holds yet, by index (§8.8): Epic
+        // for M #19.1 Temporal Rift; Common for M #28.1; Epic for M #30.1; Rare for the Rock and the
+        // Jade, Common for the Dud, Mythic for the Red Jade and the Beauty; Legendary for M #45.1;
+        // Mythic for M #71.1; Epic for M #91.1 Windfurious Prime; Common for M #93's three; and M #97's
+        // nine buildings.
         const MEDITATIVE_PRINTED: &[(&str, &str)] = &[
+            ("19.1", "Epic"),
+            ("28.1", "Common"),
+            ("30.1", "Epic"),
             ("39.1", "Rare"),
             ("39.2", "Rare"),
             ("39.3", "Common"),
             ("39.4", "Mythic"),
             ("39.5", "Mythic"),
+            ("45.1", "Legendary"),
+            ("71.1", "Mythic"),
+            ("91.1", "Epic"),
+            ("93.1", "Common"),
+            ("93.2", "Common"),
+            ("93.3", "Common"),
+            ("97.1", "Common"),
+            ("97.2", "Common"),
+            ("97.3", "Rare"),
+            ("97.4", "Rare"),
+            ("97.5", "Epic"),
+            ("97.6", "Epic"),
+            ("97.7", "Epic"),
+            ("97.8", "Legendary"),
+            ("97.9", "Mythic"),
         ];
         let printed: BTreeMap<String, String> = entries()
             .into_iter()

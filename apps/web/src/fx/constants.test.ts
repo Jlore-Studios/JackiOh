@@ -122,6 +122,8 @@ const S2 = {
   FX_TEXT: {
     yourTurn: "Your turn",
     opponentTurn: "Opponent's turn",
+    yourExtraTurn: "Your extra turn",
+    opponentExtraTurn: "Opponent's extra turn",
     autoEnded: "No moves left",
     chaosRolled: "Call to Chaos:",
     turnCutShort: "Turn cut short",

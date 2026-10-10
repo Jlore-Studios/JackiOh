@@ -95,6 +95,7 @@ pub mod triggers;
 pub mod tuning;
 pub mod turn;
 pub mod view_for;
+pub mod win_conditions;
 pub mod work;
 pub mod zones;
 
@@ -172,6 +173,7 @@ pub use triggers::*;
 pub use tuning::*;
 pub use turn::*;
 pub use view_for::*;
+pub use win_conditions::*;
 pub use work::*;
 pub use zones::*;
 

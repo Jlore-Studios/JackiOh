@@ -11,7 +11,7 @@
 //! may exceed 4.
 //!
 //! "If you do": the gift's mana follows only when the Unit actually changed sides — with no free zone
-//! on the opponent's side it stays and nothing is gained (MD-A5). The owner doesn't change (§3.2), so
+//! on the opponent's side it stays and nothing is gained (R803). The owner doesn't change (§3.2), so
 //! a given Unit that dies goes to its owner's graveyard. The number is declared and read through
 //! `param` (R386); the base face prints none (R749).
 
@@ -32,7 +32,7 @@ pub fn script() -> CardScripts {
             let Some(unit) = instance_of(ctx, &TargetSpec::Chosen { index: None }) else {
                 return vec![];
             };
-            // The gift's price, read before it moves (MD-A5, R65, R396).
+            // The gift's price, read before it moves (R803, R65, R396).
             let gain = cost_now(&*ctx.state, &unit) * param(&*ctx, "multiple");
             let id = unit.id.clone();
             let moved = id.clone();

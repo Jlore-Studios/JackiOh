@@ -65,6 +65,15 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason): st
     case "voided":
       // R679: a Glitch voided the match; it counts for nobody.
       return "This match never happened.";
+    case "alt-win":
+      // R850: a held alternative win won.
+      if (outcome === "draw") return "Both players met a winning condition.";
+      return outcome === "win"
+        ? "You met your winning condition."
+        : "Your opponent met their winning condition.";
+    case "won-by-effect":
+      // R850: an effect won the game outright.
+      return outcome === "win" ? "Your card won the game." : "Your opponent's card won the game.";
   }
 }
 

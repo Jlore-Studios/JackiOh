@@ -820,6 +820,13 @@ const turnBanner: Recipe = (event, p) => {
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
   if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
   if (event.type !== "turnStarted") return [];
+  // R845: an extra turn's banner says so.
+  if (event.extra === true) {
+    if (event.player === p.view.viewer) {
+      return [banner(p.D, FX_TEXT.yourExtraTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];
+    }
+    return [banner(p.D, FX_TEXT.opponentExtraTurn, "opponent")];
+  }
   if (event.player === p.view.viewer) {
     return [banner(p.D, FX_TEXT.yourTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];
   }
