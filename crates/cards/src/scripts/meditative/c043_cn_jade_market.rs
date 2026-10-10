@@ -81,11 +81,11 @@ mod tests {
     fn the_hand_cap_burns_the_rest() {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": { "hand": [ID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
+            "p1": { "hand": [ID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
             "p2": { "hand": [FILLER] },
         }));
 
-        // Nine after the play: three Rocks make twelve, so two burn.
+        // Nine after the play: the first Rock makes ten, the cap (§2.4), so the other two burn.
         s.play(ID, json!({ "x": 3 }));
 
         assert_eq!(s.hand(P1).len(), 10);

@@ -245,23 +245,41 @@ fn r81_every_embiggen_cards_view_shows_its_embiggen_price_as_it_stands_and_that_
             let g = holding(&id, radiant, embiggen);
             view_prices_are_charged(&g, &held(&g, &id), base, embiggen, &what);
 
-            // The card's own discount reaches both prices (R65).
+            // The card's own discount reaches both prices (R65), each floored at (0), so a (0)
+            // base price stays (0).
             let g = scenario(json!({
                 "p1": { "hand": [{ "def": id, "radiant": radiant, "costMod": -1 }], "mana": embiggen },
             }));
             let what = format!("{id} (radiant {radiant}) at costMod -1");
-            view_prices_are_charged(&g, &held(&g, &id), base - 1, embiggen - 1, &what);
+            view_prices_are_charged(
+                &g,
+                &held(&g, &id),
+                (base - 1).max(0),
+                (embiggen - 1).max(0),
+                &what,
+            );
         }
     }
 }
 
+/// R363: Professor Curvature takes (1) off a price that is (4) or more, and leaves a lower one.
+fn under_curvature(price: i32) -> i32 {
+    if price >= 4 { price - 1 } else { price }
+}
+
 #[test]
 fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_and_the_view_says_so() {
-    for (id, base, embiggen) in embiggen_cards() {
-        assert!(
-            base < 4 && embiggen >= 4,
-            "{id}: the case needs A below (4) and B at (4)+"
-        );
+    let cards = embiggen_cards();
+    // The case the ruling is about: A below (4) and B at (4)+, so the discount reaches B alone.
+    assert!(
+        cards
+            .iter()
+            .any(|(_, base, embiggen)| *base < 4 && *embiggen >= 4),
+        "the catalog holds an embiggen card with A below (4) and B at (4)+"
+    );
+    // Every embiggen card is driven: each price is reached exactly when it is (4)+, so M #81
+    // Deadman's Hand's (0) embiggen (2) is reached at neither.
+    for (id, base, embiggen) in cards {
         for radiant in [false, true] {
             let mut g = scenario(json!({
                 "p1": { "hand": [CURVATURE, { "def": id, "radiant": radiant }] },
@@ -271,7 +289,13 @@ fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_an
             to_p1s_next_turn(&mut g, from);
             g.state_mut().players.p1.mana.current = embiggen;
             let what = format!("{id} (radiant {radiant}) under Professor Curvature");
-            view_prices_are_charged(&g, &held(&g, &id), base, embiggen - 1, &what);
+            view_prices_are_charged(
+                &g,
+                &held(&g, &id),
+                under_curvature(base),
+                under_curvature(embiggen),
+                &what,
+            );
         }
     }
 }

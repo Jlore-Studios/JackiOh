@@ -1,14 +1,14 @@
 //! M #45 Knowledge Breaker (SPEC §8.8 row 45): (1) Unit, CN, KY, Catalyst, Legendary, 1/3 → 2/6.
 //!
 //! Base:    "Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
-//!           Aura: You may play your Units face-down into your backrow as Animated Field Traps that
-//!           reveal at the start of your turn.
+//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+//!           start of your next turn.
 //!           Death: Shuffle a Knowledge Breaker Prime into your deck."
 //! Radiant: "Divine Shield
 //!           Cry: Nerf every other CN or KY card on the field, in each hand and in each deck
 //!           {times|time|times}.
-//!           Aura: You may play your Units face-down into your backrow as Animated Field Traps that
-//!           reveal at the start of your turn.
+//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+//!           start of your next turn.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
 //! - Cry: `degrade` over every other CN or KY card on fields, hands and decks, `times`.
@@ -77,13 +77,33 @@ mod tests {
     const PRIME: &str = "meditative-045-1";
     const CNKY: &str = "meditative-038";
     const VANILLA: &str = "core-008";
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
+    const HIT_JOB: &str = "core-016"; // Destroy a Unit.
 
+    /// The cards a Nerf changed. A card of a hidden pile the scope's filters left out is cued with
+    /// no change (R440), so a cue is not a Nerf.
     fn degraded_ids(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Degraded { instance_id, .. } => Some(instance_id.clone()),
+                GameEvent::Degraded { instance_id, change, .. } if *change != TuningChange::None => {
+                    Some(instance_id.clone())
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The cards of a hidden pile the Nerf cued without changing them (R440).
+    fn cued_ids(s: &Scenario) -> Vec<String> {
+        s.events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Degraded {
+                    instance_id,
+                    change: TuningChange::None,
+                    hidden_from: Some(_),
+                    ..
+                } => Some(instance_id.clone()),
                 _ => None,
             })
             .collect()
@@ -112,6 +132,7 @@ mod tests {
         }))
     }
 
+    /// Every H1B Printer of a side: a Field Spell, so the one on the field stands in the backrow.
     fn cnky_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
         let state = s.state();
         let side = &state.players[player];
@@ -119,6 +140,7 @@ mod tests {
             .iter()
             .flatten()
             .flatten()
+            .chain(side.backrow.iter().flatten())
             .chain(side.hand.iter())
             .chain(side.library.iter())
             .filter(|card| card.def_id == CNKY)
@@ -143,16 +165,27 @@ mod tests {
             for id in before_p1.iter().chain(before_p2.iter()) {
                 assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 1, "{id}");
             }
-            // Itself is excluded, and the vanilla controls are untouched.
+            // Itself is excluded, and the vanilla controls are untouched: the two in p1's hidden
+            // hand and deck are only cued (R440), the one on p2's field gets no event at all.
             assert!(!degraded.contains(&breaker.id));
             let state = s.state();
-            let vanilla_hit = state.players[P1]
+            let hidden_vanillas: Vec<String> = state.players[P1]
                 .hand
                 .iter()
                 .chain(state.players[P1].library.iter())
-                .chain(state.players[P2].hand.iter())
-                .any(|card| card.def_id == VANILLA && degraded.contains(&card.id));
-            assert!(!vanilla_hit);
+                .filter(|card| card.def_id == VANILLA)
+                .map(|card| card.id.clone())
+                .collect();
+            assert_eq!(hidden_vanillas.len(), 2);
+            let cued = cued_ids(&s);
+            for id in &hidden_vanillas {
+                assert!(!degraded.contains(id), "{id} was Nerfed");
+                assert!(cued.contains(id), "{id} was not cued");
+            }
+            let field_vanilla = s.unit(P2, 2).expect("p2's vanilla").id;
+            assert!(!s.events().iter().any(|event| {
+                matches!(event, GameEvent::Degraded { instance_id, .. } if *instance_id == field_vanilla)
+            }));
         }
 
         #[test]
@@ -175,7 +208,10 @@ mod tests {
             assert!(s.state().pending.is_none());
             s.end_turn();
             assert!(s.state().pending.is_none());
-            let set = s.backrow(P1, 2).expect("the set unit");
+            // R1041, R383: it turned face-up and animated into the unit zone of its own lane.
+            assert!(s.backrow(P1, 2).is_none());
+            let set = s.unit(P1, 2).expect("the revealed unit");
+            assert_eq!(set.def_id, VANILLA);
             assert_eq!(set.face_up, Some(true));
             assert_eq!(set.set_as, None);
             // It kept its set turn, so it may attack at once.
@@ -195,17 +231,17 @@ mod tests {
                     "seed": if radiant_face { "breaker-death-r" } else { "breaker-death" },
                     "p1": {
                         "mana": 8,
-                        "hand": [{ "def": BREAKER, "radiant": radiant_face }],
-                        "field": [{ "def": CNKY, "lane": 1 }],
+                        "hand": [HIT_JOB],
+                        "field": [{ "def": BREAKER, "radiant": radiant_face, "lane": 2 }],
                         "library": [VANILLA],
                     },
-                    "p2": { "hand": [VANILLA], "field": [{ "def": MENACE, "lane": 1 }] },
+                    "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }] },
                 }));
-                let breaker = s.hand(P1).iter().find(|card| card.def_id == BREAKER).cloned().unwrap();
-                s.play(&breaker.id, json!({ "zone": 2 }));
-                // Suicide into the 9/9 Taunt: its Death shuffles exactly one Prime.
-                s.attack(BREAKER, MENACE);
-                s.expect_in_zone(BREAKER, "graveyard");
+                let breaker = s.unit(P1, 2).expect("the Breaker");
+                // Hit Job destroys it (the Radiant face's Divine Shield stops damage, not a
+                // destroy): its Death shuffles exactly one Prime.
+                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": breaker.id }] }));
+                s.expect_in_zone(&breaker, "graveyard");
                 let library = s.pile(P1, "library");
                 let primes: Vec<_> =
                     library.iter().filter(|card| card.def_id == PRIME).collect();
@@ -216,10 +252,12 @@ mod tests {
 
         #[test]
         fn the_opponents_units_get_no_permission() {
+            // p2's own turn, so its plays are listed at all; the Breaker acts on p1's side.
             let s = scenario(json!({
                 "seed": "breaker-foe",
+                "active": "p2",
                 "p1": { "mana": 8, "hand": [VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
-                "p2": { "hand": [VANILLA], "library": [VANILLA] },
+                "p2": { "mana": 8, "hand": [VANILLA], "library": [VANILLA] },
             }));
             let enemy = s.hand(P2).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
             let plays: Vec<ActionBody> = legal_actions(s.state(), P2)

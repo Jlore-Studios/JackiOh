@@ -59,6 +59,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // Draw, heal; no declared targets.
     const ECLIPSE: &str = "core-035"; // Deal 3 to a target.
     const VANILLA: &str = "core-008";
+    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2.
 
     /// Answer the open Target prompt at the enemy hero.
     fn answer_hero(s: &mut Scenario) {
@@ -139,7 +140,7 @@ mod tests {
                 "p1": {
                     "mana": 8,
                     "hand": [ECLIPSE],
-                    "field": [{ "def": PARANOIA, "lane": 1 }],
+                    "field": [{ "def": PARANOIA, "lane": 1 }, { "def": SOLARIUS, "lane": 1 }],
                     "library": [VANILLA],
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
@@ -147,9 +148,10 @@ mod tests {
             let eclipse = s.hand(P1).iter().find(|card| card.def_id == ECLIPSE).cloned().unwrap();
             let health = s.state().players.p2.hero.health;
             // Setting the Spell deals nothing: its text waits for the reveal.
-            s.play(&eclipse.id, json!({ "zone": 1, "row": "backrow", "faceDown": "endOfThisTurn" }));
+            s.play(&eclipse.id, json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }));
             assert_eq!(s.state().players.p2.hero.health, health);
-            // Revealed, it deals its 3 to the chosen hero.
+            // Revealed, it deals its 3 to the chosen hero: its damage is a Trap's, so Solarius's
+            // Spell Damage +2 adds nothing (MD-E17).
             s.end_turn();
             answer_hero(&mut s);
             assert_eq!(s.state().players.p2.hero.health, health - 3);
@@ -165,7 +167,9 @@ mod tests {
                 "seed": "paranoia-echo",
                 "p1": {
                     "mana": 8,
-                    "hand": [ECLIPSE],
+                    // A Vanilla still to play, so the set does not end the turn by itself (R82)
+                    // and `end_turn` below is what reveals it.
+                    "hand": [ECLIPSE, VANILLA],
                     "field": [{ "def": PARANOIA, "lane": 1, "radiant": true }],
                     "library": [VANILLA],
                 },
@@ -173,7 +177,7 @@ mod tests {
             }));
             let eclipse = s.hand(P1).iter().find(|card| card.def_id == ECLIPSE).cloned().unwrap();
             let health = s.state().players.p2.hero.health;
-            s.play(&eclipse.id, json!({ "zone": 1, "row": "backrow", "faceDown": "endOfThisTurn" }));
+            s.play(&eclipse.id, json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }));
             s.end_turn();
             // First resolution asks with a prompt; so does the Echo repeat.
             assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));

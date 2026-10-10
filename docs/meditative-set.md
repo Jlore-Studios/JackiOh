@@ -2057,13 +2057,13 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 > Shuffle Radiant Knowledge Breaker Prime into your Deck
 
 - **Text:** Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
   Death: Shuffle a Knowledge Breaker Prime into your deck.
 - **Radiant:** Divine Shield
   Cry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
   Death: Shuffle a Radiant Knowledge Breaker Prime into your deck.
 - **Engine:**
   - Cry: `degrade { scope: { side: any, zones: [field, hand, library], tags: [CN, KY], excludeSelf },
@@ -2095,6 +2095,10 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 - **Numbers:** `times` 1 → 2 ↑ (on the Radiant face only, R749).
 - **Check:**
   - "field Animated Field Traps" corrected (the first "field" dropped).
+  - "activate at the Start of your turn" printed "reveal at the start of your next turn": R366's
+    vocabulary retires "start of your turn", and the turn meant is the next one (MD-C17). "Into your
+    backrow" is left out, as #99 Paranoia's "play your Spells face-down as Traps" leaves it: a Field
+    Trap is played nowhere else, and the face stays under the longest-text tier.
   - Divine Shield moved to the keyword line.
   - R279: this card's name sits inside its Prime's, so `refs` list both (C+ #38's precedent).
   - R275: stats doubled, Divine Shield added, Nerf twice, Radiant Prime.
@@ -2110,12 +2114,12 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 
 - **Text:** Rush
   Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
 - **Radiant:** Rush, Poisonous
   Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
 - **Engine:**
   - Cry, in the text's order: first `summon_random { query: { type: TRAP_TYPES } }` five times. These
     are non-token Traps and Field Traps of every set (R380), repeats allowed (R60), placed face-down
@@ -4204,9 +4208,9 @@ files: `crates/cards/src/scripts/meditative/c095_call_to_chaos_meditative_editio
 > triple the attack against units in the same lane
 
 - **Text:** Tribute 2, Armor 3, Can't attack, First Strike
-  This strikes Units in its lane with {multiplier} times its Attack.
+  This strikes Units in its lane with {multiplier}× its Attack.
 - **Radiant:** Tribute 2, Armor 5, Can't attack, First Strike
-  This strikes Units in its lane with {multiplier} times its Attack.
+  This strikes Units in its lane with {multiplier}× its Attack.
 - **Engine:** NEW: LANE-STRIKE. In `combat::resolve_combat`, where both attacks are read once (R94), a
   combatant whose face declares the lane multiplier has its attack multiplied by `multiplier` when the
   other combatant stands in the opposing unit zone of its own lane (§3.1); the hit then goes through

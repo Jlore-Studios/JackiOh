@@ -5137,9 +5137,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
-        // §8.8 prints a designer rarity on Meditative tokens too (the next test, keyed by the
-        // Meditative index, since M #19.1 and C+ #19.1 share one); every other printed rarity stays
-        // a Classic+ token's.
+        // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart:
+        // their indices repeat Classic+ ones); every printed rarity is a Classic+ or a Meditative
+        // token's, never a card's.
         assert!(
             entries()
                 .into_iter()
@@ -5151,14 +5151,10 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 
     #[test]
     fn b2_5_prints_the_designer_s_rarity_on_every_meditative_token_the_catalog_holds() {
-        // The designer's rarity of each Meditative token the catalog holds yet, by index (§8.8): Epic
-        // for M #19.1 Temporal Rift; Common for M #28.1; Epic for M #30.1; Rare for the Rock and the
-        // Jade, Common for the Dud, Mythic for the Red Jade and the Beauty; Legendary for M #45.1;
-        // Mythic for M #71.1; Epic for M #91.1 Windfurious Prime; Common for M #93's three; and M #97's
-        // nine buildings; Legendary for M #95.1 CN Golem and Rare for M
-        // #96.1 Journey Complete (MB24).
+        // The rarity §7 and §8.8 print on each of the set's thirty tokens, by index.
         const MEDITATIVE_PRINTED: &[(&str, &str)] = &[
             ("19.1", "Epic"),
+            ("22.1", "Epic"),
             ("28.1", "Common"),
             ("30.1", "Epic"),
             ("39.1", "Rare"),
@@ -5167,6 +5163,10 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("39.4", "Mythic"),
             ("39.5", "Mythic"),
             ("45.1", "Legendary"),
+            ("49.1", "Mythic"),
+            ("49.2", "Mythic"),
+            ("49.3", "Mythic"),
+            ("70.1", "Common"),
             ("71.1", "Mythic"),
             ("91.1", "Epic"),
             ("93.1", "Common"),
@@ -5184,29 +5184,44 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("97.8", "Legendary"),
             ("97.9", "Mythic"),
         ];
-        let printed: BTreeMap<String, String> = entries()
+        // Every Meditative token the catalog holds yet (R1420: the set joins part by part), with
+        // what it prints.
+        let present: BTreeMap<String, Option<String>> = entries()
             .into_iter()
-            .filter(|entry| entry.set == SetName::Meditative)
-            .filter_map(|entry| {
-                entry
-                    .printed_rarity
-                    .map(|rarity| (entry.index.clone(), rarity.as_str().to_string()))
+            .filter(|entry| entry.set == SetName::Meditative && entry.token)
+            .map(|entry| {
+                (
+                    entry.index.clone(),
+                    entry.printed_rarity.map(|rarity| rarity.as_str().to_string()),
+                )
             })
             .collect();
-        for (index, rarity) in MEDITATIVE_PRINTED {
-            assert_eq!(
-                printed.get(*index).map(String::as_str),
-                Some(*rarity),
-                "Meditative token {index} prints {rarity}"
-            );
+        assert!(!present.is_empty(), "the catalog holds Meditative tokens");
+        let mut wrong: Vec<String> = Vec::new();
+        for (index, printed) in &present {
+            match MEDITATIVE_PRINTED.iter().find(|(row, _)| row == index) {
+                None => wrong.push(format!("Meditative token {index} has no row")),
+                Some((_, rarity)) if printed.as_deref() != Some(*rarity) => {
+                    wrong.push(format!(
+                        "Meditative token {index} prints {printed:?}, not {rarity}"
+                    ));
+                }
+                Some(_) => {}
+            }
         }
-        // Every Meditative token present has a row above.
-        let without_row: Vec<String> = printed
-            .keys()
-            .filter(|index| !MEDITATIVE_PRINTED.iter().any(|(row, _)| row == index))
-            .cloned()
+        assert_eq!(
+            wrong,
+            Vec::<String>::new(),
+            "every present token prints its row's rarity"
+        );
+        // No Meditative card prints one: a printed rarity is a token's.
+        let cards: Vec<String> = entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Meditative && !entry.token)
+            .filter(|entry| entry.printed_rarity.is_some())
+            .map(|entry| entry.id.clone())
             .collect();
-        assert_eq!(without_row, Vec::<String>::new(), "every present token has a row");
+        assert_eq!(cards, Vec::<String>::new());
     }
 }
 

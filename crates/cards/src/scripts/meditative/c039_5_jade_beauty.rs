@@ -143,10 +143,12 @@ mod tests {
             s.hand(P2).iter().all(|card| card.radiant),
             "the Saintess's Death fired"
         );
-        // The Defender's Reborn brought it back at 1 health.
+        // The Defender's Reborn brought it back at 1 health (§4.5 step 4), before the Saintess's
+        // Death resolved, so her "your other Units" made it Radiant too: a 2/2 at 1 health.
         let reborn = s.unit(P2, 2).expect("the Defender's Reborn body");
         assert_eq!(reborn.def_id, DEFENDER);
-        s.expect_stats(&reborn.id, json!({ "attack": 1, "health": 1 }));
+        assert!(reborn.radiant, "the Saintess's Death reached the Reborn body");
+        s.expect_stats(&reborn.id, json!({ "attack": 2, "health": 1 }));
         // The Beauty and its side stand untouched.
         assert_eq!(s.unit(P1, beauty_lane(&s)).map(|unit| unit.def_id), Some(ID.to_string()));
     }
@@ -276,17 +278,21 @@ mod tests {
         s.attack(&beauty, &prey);
         assert!(s.card(&prey).zone.z() != ZoneName::Field, "the 40 hit kills the prey");
 
-        // §5.2: made Radiant on the field, its damage is kept — a Dud-marked Beauty ascends hurt.
+        // §5.2: made Radiant on the field, its damage is kept — a hurt Beauty ascends hurt.
+        // Indestructible, it takes no damage in play (§4.5), so the setup gives it 2.
         let mut s = scenario(json!({
-            "p1": { "hand": ["meditative-039-4", "meditative-039-4", FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
-            "p2": { "hand": ["meditative-039-3", FILLER], "library": LIBRARY },
+            "p1": {
+                "hand": ["meditative-039-4", "meditative-039-4", FILLER],
+                "field": [{ "def": ID, "lane": 1, "damage": 2 }],
+                "library": LIBRARY,
+            },
+            "p2": { "hand": [FILLER], "library": LIBRARY },
         }));
         let lane = beauty_lane(&s);
         let scarred = s.unit(P1, lane).expect("the Beauty").id.clone();
+        s.expect_stats(&scarred, json!({ "attack": 20, "health": 18 }));
+        // Red Jade to 5 (a second Beauty arrives), then to 10: every Beauty turns Radiant.
         s.play("meditative-039-4", json!({}));
-        s.end_turn();
-        s.play("meditative-039-3", json!({ "targets": [{ "pick": "instance", "instanceId": scarred }] }));
-        s.end_turn();
         s.play("meditative-039-4", json!({}));
         let ascended = s.card(&scarred);
         assert!(ascended.radiant, "crossing 10 made it Radiant");

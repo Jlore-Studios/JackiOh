@@ -1,6 +1,6 @@
 //! M #97.5 Bunker (SPEC §8.8 row 97.5, R1283). (2) Unit, Token (printed Epic), 5/10 → 10/30.
-//!   Base:    "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
-//!   Radiant: "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
+//!   Base:    "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
+//!   Radiant: "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
 //!   Engine:  "NEW: a lane multiplier (LANE-STRIKE): where combat reads both attacks once (R94), a
 //!            combatant whose face declares it has its attack multiplied when the other combatant stands
 //!            in the opposing unit zone of its own lane (§3.1), the hit then going through §4.4 as usual
