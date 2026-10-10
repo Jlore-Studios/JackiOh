@@ -4516,7 +4516,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-journal.md; echo ----; cat .bot-notes.md | head -50; ls spec/rulings | tail -5\", \"description\": \"Read journal and notes, list latest rulings\"}\n- said: You've hit your session limit \u00b7 resets 8:50pm (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
