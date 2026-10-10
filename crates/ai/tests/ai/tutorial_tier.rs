@@ -1,33 +1,14 @@
 //! R290: the tutorial's opponent is easier than Easy, by play (SPEC §9.9, R180).
 //!
 //! The tutorial deals its AI seat AI_TUTORIAL: a 12-card deck, at most 3 mana crystals and a hero at
-//! 20. The AI itself is the one every tier plays (same search, evaluation and budget), so the tier is
-//! only easier if those resources make it lose more, and this file plays games to show that they do.
-//! The human's stand-in is the greedy baseline (the one gate-greedy.test.ts measures the AI against)
-//! at a human's resources. It has to beat the AI at AI_TUTORIAL in about half its games, and on the
-//! same seeds it has to beat the tutorial AI more often than it beats the AI at Easy (a human's
-//! resources exactly, R180).
+//! 20. The AI itself is the one every tier plays, so the tier is only easier if those resources make
+//! it lose more. The human's stand-in, the greedy baseline at a human's resources, has to beat the AI
+//! at AI_TUTORIAL in about half its games, and on the same seeds more often than the AI at Easy.
 //!
-//! Game n plays seed `${TUTORIAL_TIER.series}:greedy:${n}` at both tiers, so the greedy seat, its
-//! deck and the game's rng stream are the same at both, and only the AI seat's handicap and deck
-//! differ. Greedy sits p1 when n is odd. Both seats are dealt by the gates' one rule (gate.ts's
-//! `gameConfig`), `buildAiDeck(createRng(`${seed}:deck:${seat}`), the seat's deckSize, { manaCap })`,
-//! with the shadow ban (R186) on both sides. Every game has to be clean and fold back to its hash,
-//! as the gates' games do (B31).
-//!
-//! Measured on this series at AI_GATE_BUDGET, 100 games per tier (seeds 1–100), since patch v0.1.1
-//! (issue #27): greedy won 53 against AI_TUTORIAL (the AI won 45, 2 were turn-cap draws) and 17
-//! against Easy (the AI won 79, 4 draws). Before the patch it won 74 and 27. The patch's cards and
-//! the shadow ban its sweep made (R186) moved both, and the tutorial AI, whose 12 cards cost at most
-//! 3 to cast, gained the most: #8 Mr. Vanilla is a 4/4 for 1 and #20 Pointmaster a 7/1 for 2. The
-//! tier is still far easier than Easy, which is R290's claim. §10.7's random policy, on
-//! `${series}:random:${n}` the same way, won 17 of 100 against AI_TUTORIAL and 2 of 100 against Easy
-//! before the patch. Random is not asserted: a run small enough for `pnpm test` holds too few of its
-//! wins to tell the tiers apart.
-//!
-//! Port of `packages/ai/test/tutorial-tier.test.ts`. TS's `msPerGame`/`msFixed` were the vitest
-//! timeout's parts; `cargo test` has no per-test timeout, so they are not ported. TS's per-file cache
-//! of the played games is a `OnceLock` per tier, filled once by whichever test asks first.
+//! Game n plays seed `${TUTORIAL_TIER.series}:greedy:${n}` at both tiers, so only the AI seat's
+//! handicap and deck differ. Both seats are dealt by the gates' one rule, with the shadow ban (R186)
+//! on both sides, and every game has to be clean and fold back to its hash (B31).
+//! §10.7's random policy is not asserted: a run small enough for `pnpm test` holds too few wins.
 
 use std::io::Write as _;
 use std::sync::OnceLock;
@@ -35,13 +16,10 @@ use std::sync::OnceLock;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-/// Every number this file states (CLAUDE.md rule 9). The runs are frozen, so they pass or fail the
-/// same way every time; the thresholds sit below what was measured so that a change which re-deals
-/// every game (as The Coin did, R244) still passes when the tier is as much easier as measured. At the
-/// rates measured before patch v0.1.1 a re-dealt run failed the first threshold about 3 times in 100
-/// and the second about 4, near the 5 the gates allow (SPEC §9.9); at the patch's rates it fails them
-/// about 22 and 9 times in 100, since the tutorial AI is now nearer greedy's strength. Holding the old
-/// margin would take a weaker AI_TUTORIAL (R290), a design decision this file does not make.
+/// Every number this file states (CLAUDE.md rule 9). The runs are frozen; the thresholds sit below
+/// what was measured so that a change which re-deals every game (as The Coin did, R244) still passes
+/// when the tier is as much easier as measured. A re-dealt run fails them about 22 and 9 times in 100
+/// (the gates allow 5, SPEC §9.9); a wider margin would take a weaker AI_TUTORIAL (R290).
 struct TutorialTier {
     /// The frozen seed series; no gate or tuning run plays it.
     series: &'static str,
@@ -49,8 +27,7 @@ struct TutorialTier {
     tutorial_games: i32,
     /// Greedy's wins against AI_TUTORIAL the run needs: about half of its 13. Measured: 6 of these 13
     /// (53 of 100 on seeds 1–100, where a re-dealt run of 13 reaches 6 about 78 times in 100, and an AI
-    /// as strong as Easy, 17 of 100, lets it about once in 70). It was 7, a majority, while greedy won
-    /// 74 of 100; patch v0.1.1 made the tutorial AI stronger (see above).
+    /// as strong as Easy, 17 of 100, lets it about once in 70).
     greedy_wins_vs_tutorial: i32,
     /// Games 1..easyGames are played at Easy too, for the comparison on the same seeds. An Easy game
     /// costs the AI more than twice the search of a tutorial one (4 crystals give it more to try), so
@@ -70,7 +47,6 @@ const TUTORIAL_TIER: TutorialTier = TutorialTier {
     greedy_margin_over_easy: 1,
 };
 
-/// TS's `Tier = "tutorial" | "easy"`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Tier {
     Tutorial,
@@ -86,7 +62,6 @@ impl Tier {
     }
 }
 
-/// TS's `TIER_HANDICAP`.
 fn tier_handicap(tier: Tier) -> Handicap {
     match tier {
         Tier::Tutorial => AI_TUTORIAL,
@@ -94,7 +69,6 @@ fn tier_handicap(tier: Tier) -> Handicap {
     }
 }
 
-/// TS's `TIER_GAMES`.
 fn tier_games(tier: Tier) -> i32 {
     match tier {
         Tier::Tutorial => TUTORIAL_TIER.tutorial_games,
@@ -107,7 +81,7 @@ fn human_seat_of(n: i32) -> PlayerId {
     if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 
-/// The deck a config deals `seat` (TS `config.decks[seat === "p1" ? 0 : 1]`).
+/// The deck a config deals `seat`.
 fn deck_at(config: &MatchConfig, seat: PlayerId) -> &Vec<String> {
     match seat {
         PlayerId::P1 => &config.decks.0,
@@ -205,7 +179,7 @@ fn play_tier(tier: Tier) -> Vec<TierGame> {
     games
 }
 
-/// Plays games 1..TIER_GAMES[tier] at `tier`, once per test binary (TS: once per file).
+/// Plays games 1..TIER_GAMES[tier] at `tier`, once per test binary.
 fn run(tier: Tier) -> &'static [TierGame] {
     let cache = match tier {
         Tier::Tutorial => &TUTORIAL_PLAYED,
@@ -313,8 +287,7 @@ mod r290_the_tutorial_tier_by_play {
         let games = run(Tier::Tutorial);
         assert_eq!(games.len() as i32, TUTORIAL_TIER.tutorial_games);
         let wins = wins_of(games, None);
-        // Written to stdout past the test harness's capture, as the gates write theirs (TS: a passing
-        // test's console output is swallowed).
+        // Written to stdout past the test harness's capture, as the gates write theirs.
         let _ = writeln!(
             std::io::stdout(),
             "[R290 tutorial tier] greedy won {wins} of {} against AI_TUTORIAL; {} needed",

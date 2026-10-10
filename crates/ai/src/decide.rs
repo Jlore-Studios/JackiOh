@@ -29,7 +29,7 @@ use crate::candidates::{action_key, candidate_actions};
 use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH};
 use crate::determinize::{DeterminizeOptions, determinize};
 use crate::lethal::find_lethal;
-use crate::mulligan::mulligan_keep;
+use crate::mulligan::mulligan_keep_shaped;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
@@ -165,7 +165,7 @@ fn plan(
 
     // 3. The mulligan: its own, at once, whether or not the other seat has answered (R265).
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
-        let keep = mulligan_keep(&public, seat, AI_MULLIGAN.keep_max_cost);
+        let keep = mulligan_keep_shaped(&public, seat, AI_MULLIGAN.keep_max_cost);
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 

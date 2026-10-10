@@ -1,6 +1,5 @@
 //! Combat, damage and keyword fixtures for the M2-M3 engine tests (BUILD §0): one plain CardDef per
-//! keyword or statline the tests need, so a test reads `put(state, taunter.id, ...)` rather than
-//! building a def inline. The real cards, with their own tests, arrive in M4.
+//! keyword or statline the tests need. The real cards, with their own tests, arrive in M4.
 //!
 //! Each def echoes the §8 card named in its doc comment, trimmed to the one property its name
 //! promises; the stats are the ones the importing tests assert (SPEC §6.1 keywords, §4.1 to §4.5
@@ -9,9 +8,7 @@
 //! defs that mirror a specific card's radiant text (Big D-fender, Moths, Deft Duelist, Spikey
 //! Pillow), which SPEC §8 pins.
 //!
-//! Port of `packages/engine/test/fixtures/combat.ts`. Each TS `export const x = def({ … })` is a
-//! `pub static x: LazyLock<CardDef>` under TS's name snake_cased (SURFACE §4.2), so a test reads
-//! `taunter.id` as TS does; `COMBAT_DEFS` and `COMBAT_SCRIPTS` keep their names.
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.2.
 
 #![allow(non_upper_case_globals)]
 
@@ -19,7 +16,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::testkit::*;
 
-/// TS `{ ...base, ...extra }`: every key of `extra` written over `base`.
+/// Every key of `extra` written over `base`.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -29,8 +26,8 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `def(overrides)`: a Core Common Unit at cost 1 with empty faces, `overrides` (which names the
-/// `id`, `index` and `name`) over it.
+/// A Core Common Unit at cost 1 with empty faces, `overrides` (which names the `id`, `index` and
+/// `name`) over it.
 fn def(overrides: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -47,9 +44,7 @@ fn def(overrides: Value) -> CardDef {
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Bodies with no keywords.
-// ---------------------------------------------------------------------------
 
 /// The vanilla 3/3 every test attacks with, trades and targets. No keywords at all (§6.1).
 pub static plain: LazyLock<CardDef> = LazyLock::new(|| {
@@ -86,9 +81,7 @@ pub static zero_attack: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-// ---------------------------------------------------------------------------
 // One keyword each (§6.1).
-// ---------------------------------------------------------------------------
 
 /// §8 #19's keyword: Taunt on a 2/5.
 pub static taunter: LazyLock<CardDef> = LazyLock::new(|| {
@@ -147,9 +140,8 @@ pub static shielded: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// §8 #25 (the 4-mana 7/7), trimmed to its Armor: 7/7 with Armor 7 (§4.4 step 2). #25's radiant text
-/// swaps the Armor for Indestructible; the fixture keeps Armor on both faces so `armoured` always
-/// means "Armor 7" and `indestructible` is the fixture that means Indestructible.
+/// §8 #25 (the 4-mana 7/7), trimmed to its Armor 7 (§4.4 step 2). #25's radiant text swaps the Armor
+/// for Indestructible; the fixture keeps Armor on both faces so `indestructible` is the one that means that.
 pub static armoured: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-armoured",
@@ -254,8 +246,8 @@ pub static pacifist: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// §8 #92's Stack keyword (§3.2, R13), without Felinor Fiender's set-stat layer. `placeOnField`
-/// takes `{ stack: true }`, so the keyword is here for the view and the validator to read.
+/// §8 #92's Stack keyword (§3.2, R13), without Felinor Fiender's set-stat layer; here for the view
+/// and the validator to read.
 pub static stacker: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-stacker",
@@ -267,13 +259,10 @@ pub static stacker: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-// ---------------------------------------------------------------------------
 // The three §8 cards whose rules text the tests exercise, scripts included.
-// ---------------------------------------------------------------------------
 
-/// §8 #9 Moths to the Flame, 1/14 (2/28 with Armor 1 radiant). The forced-attack tests call
-/// `forceAttack`/`forceAttacksOn` directly, so this is the body they aim at and it needs no script;
-/// the start-of-turn half of #9's text is the real card's job in M4 (R53).
+/// §8 #9 Moths to the Flame, 1/14 (2/28 with Armor 1 radiant): the body the forced-attack tests aim
+/// at, with no script; the start-of-turn half of #9's text is the real card's job in M4 (R53).
 pub static moths: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-moths",
@@ -451,10 +440,7 @@ fn spikey_pillow_scripts() -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Registration. `setupCatalog` in ./harness.ts must fold both of these in, the way it already
-// folds in ./scripts.ts's `fixtureCatalog` and `FIXTURE_SCRIPTS`.
-// ---------------------------------------------------------------------------
+// Registration: `harness.rs` folds `COMBAT_DEFS` and `COMBAT_SCRIPTS` in.
 
 pub static COMBAT_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -492,8 +478,7 @@ pub static COMBAT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
     ])
 });
 
-/// Every combat fixture on top of `base`, mirroring `fixtureCatalog` in ./scripts.ts. TS
-/// `combatCatalog(base = {})`: pass `CardDefs::new()` for the default.
+/// Every combat fixture on top of `base`.
 pub fn combat_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in COMBAT_DEFS.iter() {
@@ -502,7 +487,7 @@ pub fn combat_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// Part 24's brief, step 2: this file's scripts (`COMBAT_SCRIPTS`).
+/// This file's scripts (`COMBAT_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     COMBAT_SCRIPTS.clone()
 }

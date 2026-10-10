@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Alias } from "vite";
 
+import { staticPages } from "./static-pages.ts";
+
 // The client is a pure `PlayerView` renderer (CLAUDE.md rule 7, SPEC §10.8): it sends intent
 // and draws what the engine hands it. The rules are the Rust engine, compiled to WebAssembly
 // (`src/wasm/`, built into `src/wasm/pkg/` by `scripts/build-wasm.sh`, which `predev`, `prebuild`,
@@ -33,7 +35,8 @@ export const jackiohAliases: Alias[] = [
 ];
 
 export default defineConfig({
-  plugins: [react()],
+  // `staticPages` writes each public page's own HTML and `sitemap.xml` after the bundle (static-pages.ts).
+  plugins: [react(), staticPages()],
   resolve: { alias: jackiohAliases },
   server: {
     port: 5173,

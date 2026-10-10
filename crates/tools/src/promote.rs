@@ -18,8 +18,8 @@
 //!
 //! | Lane      | vs random                              | vs parent                              | shadow bans                      |
 //! |-----------|----------------------------------------|----------------------------------------|----------------------------------|
-//! | `improve` | ≥ `TRAINING_IMPROVE.vs_random` (90)    | ≥ `TRAINING_IMPROVE.vs_parent` (85)    | —                                |
-//! | `unban`   | ≥ `TRAINING_UNBAN.vs_random` (90)      | ≥ `TRAINING_UNBAN.vs_parent` (75)      | strictly fewer than the parent's |
+//! | `improve` | ≥ `TRAINING_IMPROVE.vs_random` (90)    | ≥ `TRAINING_IMPROVE.vs_parent` (75)    | —                                |
+//! | `unban`   | ≥ `TRAINING_UNBAN.vs_random` (90)      | ≥ `TRAINING_UNBAN.vs_parent` (65)      | strictly fewer than the parent's |
 //!
 //! A draw is not a win, and neither is a game without a result. Without `--dry-run` or `--verify`, a
 //! pass writes `crates/ai/generation.json` and appends the same object to
@@ -63,9 +63,9 @@ const VERIFIED_FIELDS: &[&str] = &[
 /// The two training lanes (docs/v0.3.0/README.md §8).
 #[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lane {
-    /// Beat the parent: ≥ 85 of 100 against it and ≥ 90 of 100 against random.
+    /// Beat the parent: ≥ 75 of 100 against it and ≥ 90 of 100 against random.
     Improve,
-    /// Play well with fewer shadow bans: strictly fewer than the parent's, ≥ 75 of 100 against it and
+    /// Play well with fewer shadow bans: strictly fewer than the parent's, ≥ 65 of 100 against it and
     /// ≥ 90 of 100 against random.
     Unban,
 }
@@ -457,32 +457,32 @@ mod tests {
     }
 
     #[test]
-    fn the_improve_gate_needs_90_against_random_and_85_against_the_parent() {
-        assert!(gate_failures(Lane::Improve, &counts(90, 85, 11, 11)).is_empty());
+    fn the_improve_gate_needs_90_against_random_and_75_against_the_parent() {
+        assert!(gate_failures(Lane::Improve, &counts(90, 75, 11, 11)).is_empty());
         assert!(gate_failures(Lane::Improve, &counts(100, 100, 11, 11)).is_empty());
-        assert_eq!(gate_failures(Lane::Improve, &counts(89, 85, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Improve, &counts(90, 84, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Improve, &counts(89, 84, 11, 11)).len(), 2);
+        assert_eq!(gate_failures(Lane::Improve, &counts(89, 75, 11, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Improve, &counts(90, 74, 11, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Improve, &counts(89, 74, 11, 11)).len(), 2);
         // The improve lane has no shadow-ban rule: more bans than the parent's still promote.
-        assert!(gate_failures(Lane::Improve, &counts(90, 85, 12, 11)).is_empty());
+        assert!(gate_failures(Lane::Improve, &counts(90, 75, 12, 11)).is_empty());
         assert_eq!(TRAINING_IMPROVE.vs_random, 90);
-        assert_eq!(TRAINING_IMPROVE.vs_parent, 85);
+        assert_eq!(TRAINING_IMPROVE.vs_parent, 75);
     }
 
     #[test]
-    fn the_unban_gate_needs_strictly_fewer_bans_90_against_random_and_75_against_the_parent() {
-        assert!(gate_failures(Lane::Unban, &counts(90, 75, 10, 11)).is_empty());
+    fn the_unban_gate_needs_strictly_fewer_bans_90_against_random_and_65_against_the_parent() {
+        assert!(gate_failures(Lane::Unban, &counts(90, 65, 10, 11)).is_empty());
         assert!(gate_failures(Lane::Unban, &counts(95, 80, 0, 11)).is_empty());
         // Strictly fewer: as many bans as the parent is a failure, more is too.
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 75, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 75, 12, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 74, 10, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(89, 75, 10, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(89, 74, 11, 11)).len(), 3);
-        // 75 against the parent passes the unban lane and fails the improve lane.
-        assert!(!gate_failures(Lane::Improve, &counts(90, 75, 10, 11)).is_empty());
+        assert_eq!(gate_failures(Lane::Unban, &counts(90, 65, 11, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(90, 65, 12, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(90, 64, 10, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(89, 65, 10, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(89, 64, 11, 11)).len(), 3);
+        // 65 against the parent passes the unban lane and fails the improve lane.
+        assert!(!gate_failures(Lane::Improve, &counts(90, 65, 10, 11)).is_empty());
         assert_eq!(TRAINING_UNBAN.vs_random, 90);
-        assert_eq!(TRAINING_UNBAN.vs_parent, 75);
+        assert_eq!(TRAINING_UNBAN.vs_parent, 65);
     }
 
     #[test]
@@ -625,10 +625,18 @@ mod tests {
         assert!(mismatches[0].starts_with("generation:"));
         assert!(mismatches[1].starts_with("vsParent:"));
 
-        // Generation 0's record (the port) never verifies as a promotion.
-        let port: Value = serde_json::from_str(include_str!("../../ai/generation.json")).unwrap();
-        assert_eq!(port["generation"], json!(0));
-        assert_eq!(port["lane"], json!("port"));
+        // Generation 0's record (the port) never verifies as a promotion. Its text, not the live
+        // crates/ai/generation.json, which every promotion replaces and no lane may test around.
+        let port = json!({
+            "generation": 0,
+            "lane": "port",
+            "parent": null,
+            "vsRandom": "94/100",
+            "vsParent": null,
+            "shadowBan": 11,
+            "date": "2026-10-07",
+            "source": "packages/ai at 91cc43c (94/100, 35/50, 47/50 in TS)"
+        });
         assert!(!verify_mismatches(&port, &measured).is_empty());
     }
 

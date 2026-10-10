@@ -161,21 +161,31 @@ mod the_lethal_solvers_walks {
         // Patch v0.1.1's rules moved these seeded games off the boards they used to reach, so a third
         // series keeps the count of positions with attackers ready above the floor below.
         states.extend(random_policy_states("lethal-ready-gap-3", 3, 600));
-        let mut config = game_config(Matchup::AiVsGreedy, 1, AI_GATE_BUDGET, AI_GATE.seed_series);
-        config.max_actions = Some(150);
-        let mut played: Vec<GameState> = Vec::new();
-        {
-            let mut hooks = MatchHooks {
-                after_action: Some(Box::new(
-                    |before: &GameState, _after: &GameState, _seat: PlayerId, _action: &ActionBody| {
-                        played.push(before.clone());
-                    },
-                )),
-                ..MatchHooks::default()
-            };
-            play_match(&config, &mut hooks);
+        // The unban lane's dealt decks play shorter games than the port's, so a fourth series and a
+        // second played match keep the coverage floor honest.
+        states.extend(random_policy_states("lethal-ready-gap-4", 3, 600));
+        for game_index in [1, 2] {
+            let mut config = game_config(
+                Matchup::AiVsGreedy,
+                game_index,
+                AI_GATE_BUDGET,
+                AI_GATE.seed_series,
+            );
+            config.max_actions = Some(150);
+            let mut played: Vec<GameState> = Vec::new();
+            {
+                let mut hooks = MatchHooks {
+                    after_action: Some(Box::new(
+                        |before: &GameState, _after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                            played.push(before.clone());
+                        },
+                    )),
+                    ..MatchHooks::default()
+                };
+                play_match(&config, &mut hooks);
+            }
+            states.extend(played);
         }
-        states.extend(played);
 
         let mut with_attackers = 0;
         for state in &states {

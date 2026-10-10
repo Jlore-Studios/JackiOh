@@ -932,15 +932,20 @@ pub struct TrainingGate {
     pub vs_parent: i32,
 }
 
-/// SURFACE §14.2: the `improve` lane's gate.
+/// SURFACE §14.2: the `improve` lane's gate. Against the parent the bar only has to be out of
+/// variance's reach: a successor no stronger than its parent wins about 50 of 100, with a standard
+/// deviation of 5, so 75 is five deviations out. It was 85 until the lane's first sessions measured
+/// a ceiling near 55–60 of 100 for the AI's design at its fixed budget.
 pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
     vs_random: 90,
-    vs_parent: 85,
+    vs_parent: 75,
 };
-/// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent).
+/// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent). Its bar
+/// against the parent is lower than improve's, since unbanning cards is its gain: 65 is three
+/// deviations above an equal successor's 50 of 100. It was 75.
 pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
     vs_random: 90,
-    vs_parent: 75,
+    vs_parent: 65,
 };
 
 // ---------------------------------------------------------------------------------------------

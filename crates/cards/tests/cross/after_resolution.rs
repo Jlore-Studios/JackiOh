@@ -1,23 +1,16 @@
-//! Port of `packages/cards/test/after-resolution.test.ts` (part 27.1).
-//!
 //! §10.5 steps 6 and 7: an Echo repeat, the state check after a card's last resolution, and the traps
-//! that answer it (SPEC §4.5, §10.5, R17, R59, R61, R174). Found by the polish-4 edge-case hunt, round
-//! 3 (docs/polish/4-edge-cases.md, lenses L7 and the combat windows); every case here failed before
-//! its fix.
+//! that answer it (SPEC §4.5, §10.5, R17, R59, R61, R174).
 //!
 //!  - §10.5 step 6 is "repeat step 5", and step 5 is the granted Combo parts (#38, #78) and then the
 //!    card's own script, so a repeat runs all three.
-//!  - §4.5, R59: the check runs after a card's whole Cry or spell, which is before step 7's
-//!    `cardResolved`, so #60 and #85 meet the board the card left.
-//!  - R174, R61: the traps answering one play fire one after another, and once an earlier one has
-//!    taken the played card off the field, the next one meets a play that is no longer in play.
-//!  - §4.5, R118 (round 4, lens L2): step 4's loop, which lets a trap answer the play, runs no state
-//!    check before anything has resolved, so a card that arrives at 0 or less health still resolves
-//!    its Cry and dies in the check after it.
-//!  - R174 (round 7): the play follows the stay step 4 put the card on — a played unit a step-4 trap
-//!    killed, or one that died in its own resolution, and that is back through Reborn is a new
-//!    arrival with no Cry to resolve and not in play at step 7 (R1, R118, R61) — and its declared
-//!    targets the stays step 1 checked, so a target a step-4 trap destroyed is gone for step 5.
+//!  - §4.5, R59: the check runs after a card's whole Cry or spell, before step 7's `cardResolved`, so
+//!    #60 and #85 meet the board the card left.
+//!  - R174, R61: the traps answering one play fire one after another; once an earlier one has taken
+//!    the played card off the field, the next meets a play that is no longer in play.
+//!  - §4.5, R118: step 4's loop runs no state check before anything has resolved, so a card that
+//!    arrives at 0 or less health still resolves its Cry and dies in the check after it.
+//!  - R174: the play follows the stay step 4 put the card on (a unit back through Reborn is a new
+//!    arrival, not in play at step 7; R1, R118, R61), and its targets the stays step 1 checked.
 
 use jackioh_engine::testkit::*;
 
@@ -43,8 +36,8 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
+/// The harness with the real catalog and every card script registered: the engine's testkit cannot
+/// name the cards crate, so the cards test does.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -92,9 +85,8 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
 
     #[test]
     fn r30_s10_5_fullsends_granted_combo_draw_1_draws_once_per_resolution_of_an_echoed_spell_s8_c78() {
-        // A Radiant /fullsend (the face that grants the Combo draw since patch v0.1.1) and Twinspell were
-        // played earlier: each of Stockpile's two resolutions draws 1 for the granted Combo and then 2
-        // for Stockpile — 6 cards in all.
+        // A Radiant /fullsend (its face grants the Combo draw) and Twinspell were played earlier: each
+        // of Stockpile's two resolutions draws 1 for the granted Combo and then 2 for Stockpile.
         let mut g = setup(json!({
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, TWINSPELL, STOCKPILE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "library": LIBRARY },
@@ -283,10 +275,7 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 7 (lenses L2, "combat windows" and "engine invariants"): the play follows the stay step 4
-// put the card on, and its choices the stays step 1 checked them on (R174).
-// ---------------------------------------------------------------------------
+// The play follows the stay step 4 put the card on, and its choices the stays step 1 checked (R174)
 
 const POINTMASTER: &str = "core-020";
 const COLLATERAL_DAMAGE: &str = "core-034";
@@ -294,8 +283,8 @@ const PLASTIC_SURGERY: &str = "core-063";
 
 /// A fixture card: a transient def in the match state and its script in the registry.
 ///
-/// `face` is TS's `{ attack?, health?, keywords? }` (`{}` for none); a Unit's printed stats default to
-/// 2/2 and its keywords to none, as TS's.
+/// `face` is `{ attack?, health?, keywords? }` (`{}` for none); a Unit's printed stats default to 2/2
+/// and its keywords to none.
 fn fixture_card(state: &mut GameState, id: &str, type_: &str, script: Script, face: Value) {
     let keywords = face.get("keywords").cloned().unwrap_or_else(|| json!([]));
     let printed = if type_ == "Unit" {
@@ -416,11 +405,10 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
 
         g.play(&unit, json!({ "zone": 3 }));
 
-        // The trap killed the played unit at step 4 and its Reborn brought it straight back (§4.5 step 4):
-        // a reset instance that has entered the field again (R78, R83), whose "Cry does not fire". R118
-        // and R17: the trap took the played card off the field, so the Cry is lost. And R61: a Reborn
-        // result never sets #85 off, which meets the play as no longer in play (R174), so the body is
-        // still the fixture on p1's side rather than fused away onto p2's Gary.
+        // The trap killed the played unit at step 4 and Reborn brought it straight back (§4.5 step 4): a
+        // reset instance that entered the field again (R78, R83). R118, R17: the trap took the played
+        // card off the field, so its Cry is lost. R61: a Reborn result never sets #85 off, which meets
+        // the play as no longer in play (R174), so the body stays the fixture on p1's side, not fused.
         let body = find_instance(g.state(), &unit.id).map(|body| {
             format!(
                 "{}:{}:{}",

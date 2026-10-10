@@ -147,7 +147,8 @@ throws the path away, so every rewrite targets `/` instead. And a `/login` rule 
 `/login/`, so each path is listed both ways. With those, every case in `deploy-routes.test.ts`
 (screens, match and series ids, trailing slashes, and the paths that must 404) behaves the same on
 Cloudflare as on Vercel, query strings survive (so emailed auth links work), and the headers are on
-every response.
+every response. A page the build writes (`apps/web/static-pages.ts`) is rewritten to its own folder
+(`cloudflare-config.test.ts` has the measurement).
 
 ## 4. What you need to do
 
@@ -259,7 +260,8 @@ canonical origin, which still say `jackioh.vercel.app`:
 
 - `apps/web/src/net/navigate.ts` `SITE_ORIGIN`
 - `apps/web/index.html`: `og:url`, `og:image` and the JSON-LD `url`
-- `apps/web/public/robots.txt`, `public/sitemap.xml`, `public/.well-known/security.txt`
+- `apps/web/public/robots.txt`, `public/.well-known/security.txt` (`dist/sitemap.xml` and each
+  page's canonical link and `og:url` are written from `SITE_ORIGIN` by `apps/web/static-pages.ts`)
 - `apps/web/src/routes/privacy.tsx`: "Vercel hosts this website" should name Cloudflare. This is
   your privacy policy, so it has to be accurate about who hosts the site.
 - `crates/server/tests/deploy/rehearse.sh` `PUBLIC_ORIGINS`

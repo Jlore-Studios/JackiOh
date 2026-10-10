@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/graveyard-play.test.ts`.
-//!
 //! Playing cards from the graveyard (docs/classic-sets.md B5 E11; R454): the permissions, what
 //! `legalActions` offers under them, §10.5 taking the card out of the graveyard, R65's prices, the
 //! Plague Counter payment, a pause mid-play surviving JSON, and what the other seat sees.
@@ -19,7 +17,7 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// `playsOf(state, instanceId, player)`, each offered play as its JSON (TS's `{ type: "play", … }`).
+/// Each play `plays_of` offers, as its JSON.
 fn plays_json(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
     plays_of(state, instance_id, player)
         .iter()
@@ -27,14 +25,13 @@ fn plays_json(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Val
         .collect()
 }
 
-/// TS `{ ...play, playerId }`.
 fn with_player(body: Value, player: PlayerId) -> Value {
     let mut body = body;
     body["playerId"] = json!(player);
     body
 }
 
-/// `eventsOfType(events, type)`, each event as its JSON.
+/// The events of `kind`, each as its JSON.
 fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -46,7 +43,7 @@ fn view_events_of(state: &GameState, viewer: PlayerId, kind: GameEventType) -> V
     of_type(&view_for(state, viewer).events, kind)
 }
 
-/// Jest's `toMatchObject` over JSON: objects by subset, arrays by length and element.
+/// Whether `actual` matches `expected` over JSON: objects by subset, arrays by length and element.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -59,12 +56,12 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// A refusal's text, for TS's `toMatch` (`""` when the action was not refused, which no pattern matches).
+/// A refusal's text (`""` when the action was not refused, which no pattern matches).
 fn refusal(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
 
-/// TS's `/no card .* in p1's hand/`: the one pattern here that is not a literal.
+/// The refusal `no card .* in <player>'s hand`: the one pattern here that is not a literal.
 fn no_card_in_hand(text: &str, player: &str) -> bool {
     let head = "no card ";
     let tail = format!(" in {player}'s hand");
@@ -76,7 +73,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// TS `sinkFor(state)` / `{ state, events: [] }`: a sink lent with the state to one engine call.
+/// A sink lent with the state to one engine call.
 struct Bench {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -118,7 +115,6 @@ mod r454_e11_play_from_the_graveyard {
         let mut state = pb_playing("r454-offer");
         let spell = in_graveyard(&mut state, &grave_spell().id, PlayerId::P1);
 
-        // No permission: nothing offered, and the play is refused.
         assert_eq!(plays_json(&state, &spell.id, PlayerId::P1), Vec::<Value>::new());
         assert!(
             refusal(&pb_reduce(
@@ -142,12 +138,10 @@ mod r454_e11_play_from_the_graveyard {
         let result = pb_reduce(&state, with_player(only(&offered), PlayerId::P1));
         assert_eq!(result.error, None);
         let after = &result.state;
-        // Its script ran (1 damage), it was counted as a play, and it paid its price.
         assert_eq!(hero_health(after, PlayerId::P2), before - 1);
         assert_eq!(after.counters.played, played + 1);
         assert!(after.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(after.players.p1.mana.current, 3);
-        // The play said where it came from; the Spell resolved and landed in the graveyard again.
         let card_played = only(&of_type(&result.events, GameEventType::CardPlayed));
         assert_eq!(card_played["from"], json!("graveyard"));
         assert_eq!(card_played["costPaid"], json!(1));
@@ -306,7 +300,6 @@ mod r454_e11_play_from_the_graveyard {
             Default::default(),
         );
         assert_eq!(effective_cost(&state, &spell, Default::default()), 2);
-        // The view prints that price.
         let shown: Vec<CardView> = view_for(&state, PlayerId::P1)
             .you
             .graveyard
@@ -370,7 +363,6 @@ mod r454_e11_play_from_the_graveyard {
         let spell = in_graveyard(&mut state, &grave_spell().id, PlayerId::P1);
         state.players.p1.mana.current = 1;
 
-        // Units only.
         assert_eq!(plays_json(&state, &spell.id, PlayerId::P1), Vec::<Value>::new());
         // 1 token + 1 mana, or 2 tokens; never mana alone under this permission.
         let payments: Vec<Value> = plays_json(&state, &body.id, PlayerId::P1)
@@ -402,7 +394,6 @@ mod r454_e11_play_from_the_graveyard {
             json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 3 }, "playerId": "p1" })
         ))
         .contains("not that many"));
-        // A hand card never spends tokens.
         let hand_card = only(&state.players.p1.hand);
         let hand_play = pb_reduce(
             &state,
@@ -590,8 +581,6 @@ mod r454_e11_play_from_the_graveyard {
             },
         );
         register_scripts(patched);
-        // TS's `try … finally` restores the registry; here the override is this test thread's own, so
-        // a failing assertion cannot leak it, and the restore runs after the assertions as in TS.
         let result = pb_reduce(
             &state,
             json!({

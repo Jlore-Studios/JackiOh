@@ -2,12 +2,11 @@
 //! queue-time helpers the queue and the rooms share (`read_mode_choice`, `freeze_choice`,
 //! `assert_not_in_series`; R253, R257, R264).
 //!
-//! What this file is NOT: a test of D1–D4, T1–T3 or L1–L6. Those rules live in the shared validator
-//! (`jackioh_engine::validator`) and are tested there, rule by rule and message by message. Here the
-//! questions are the endpoints' own: is the id a UUID, is the catalog current, are the draft issues
-//! passed through untouched, what does each store outcome answer, and is another profile's id
-//! indistinguishable from a missing one. Every expected issue below is the shared module's own
-//! verdict for the same input, computed here, never a sentence typed out.
+//! Not a test of D1–D4, T1–T3 or L1–L6: those live in the shared validator
+//! (`jackioh_engine::validator`) and are tested there. Here the questions are the endpoints' own:
+//! is the id a UUID, is the catalog current, are the draft issues passed through untouched, what
+//! does each store outcome answer, and is another profile's id indistinguishable from a missing
+//! one. Every expected issue is the shared module's own verdict for the same input.
 //!
 //! The rulings, by their test titles:
 //!  - R250: a save checks structure only (D1–D4), at most `MAX_SAVED_DECKS` decks;
@@ -17,12 +16,8 @@
 //!    (R340);
 //!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource.
 //!
-//! Ported from `apps/server/test/api/decks.test.ts` (part 18). TS ran on `createTestDeps()` — a
-//! 24-card synthetic catalog and a validator port it could swap; the Rust test app serves the
-//! compiled-in catalog and the handlers call the shared validator directly (SURFACE §11.3), so the
-//! cards here are the real catalog's playable ids, and where TS recorded what its validator port
-//! was asked, the test asserts what the real validator then answers. R257's legacy body (no `mode`,
-//! a `deckIndex`) is gone (SURFACE §11.3), and its tests say so.
+//! The test app serves the compiled-in catalog and the handlers call the shared validator directly
+//! (SURFACE §11.3), so the cards here are the real catalog's playable ids.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -57,9 +52,7 @@ fn uuid(n: usize) -> String {
     format!("00000000-0000-4000-8000-{n:012}")
 }
 
-// ---------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
 
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
@@ -92,7 +85,7 @@ fn assert_matches(actual: &Value, expected: &Value, at: &str) {
     }
 }
 
-/// The fake store behind the test app (TS `deps.store`).
+/// The fake store behind the test app.
 async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -100,7 +93,7 @@ async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     }
 }
 
-/// One store call in a transaction of its own (TS called the store's methods bare).
+/// One store call in a transaction of its own.
 macro_rules! store {
     ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
         let mut t = $app.db.begin(None).await.expect("begin");
@@ -110,19 +103,19 @@ macro_rules! store {
     }};
 }
 
-/// The version the server's catalog is at (TS `deps.catalog.version`).
+/// The version the server's catalog is at.
 fn catalog_version() -> String {
     jackioh_cards::catalog_version().to_string()
 }
 
-/// TS `catalog.isToken`: a Token by flag or by tag.
+/// A Token by flag or by tag.
 fn is_token(card_id: &str) -> bool {
     jackioh_cards::CATALOG
         .get(card_id)
         .is_some_and(|def| def.token || def.tags.iter().any(|tag| tag.as_str() == "Token"))
 }
 
-/// Distinct playable ids of the catalog, from `start` (TS `cards(target, count, start)`).
+/// Distinct playable ids of the catalog, from `start`.
 fn cards(count: usize, start: usize) -> Vec<String> {
     jackioh_cards::CATALOG_IDS
         .iter()
@@ -133,7 +126,7 @@ fn cards(count: usize, start: usize) -> Vec<String> {
         .collect()
 }
 
-/// One Token of the catalog (TS's `"token-sheep"`).
+/// One Token of the catalog.
 fn a_token() -> String {
     jackioh_cards::CATALOG_IDS
         .iter()
@@ -173,7 +166,7 @@ fn first_message(issues: &Value) -> Value {
     issues[0]["message"].clone()
 }
 
-/// TS `beforeEach`: a fresh app with two active profiles.
+/// A fresh app with two active profiles.
 struct Ctx {
     app: Arc<App>,
     token: String,
@@ -274,9 +267,7 @@ fn error_code(body: &Value) -> &Value {
     &body["error"]["code"]
 }
 
-// ---------------------------------------------------------------------------
 // Decks
-// ---------------------------------------------------------------------------
 
 mod saved_decks_9_4_r250_r256 {
     use super::*;
@@ -758,9 +749,7 @@ mod the_deck_s_portrait_r641_d5 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Trios
-// ---------------------------------------------------------------------------
 
 mod saved_trios_9_4_r252 {
     use super::*;
@@ -982,9 +971,7 @@ mod saved_trios_9_4_r252 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A trio import (R340, R341)
-// ---------------------------------------------------------------------------
 
 mod a_trio_import_9_4_r340_r341 {
     use super::*;
@@ -1294,18 +1281,14 @@ mod a_trio_import_9_4_r340_r341 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §9.4's gate
-// ---------------------------------------------------------------------------
 
 mod the_routes_9_4_a_pending_account_sees_no_decks {
     use super::*;
 
     #[test]
     fn declares_every_deck_and_trio_route_active() {
-        // TS read `createDeckRoutes()`; the Rust server has one table, `app::ROUTES` of
-        // `(method, path, AuthLevel, handler)` in `allRoutes()` order, and the deck routes are the
-        // ones under these two prefixes.
+        // The deck routes are the `app::ROUTES` entries under these two prefixes.
         let routes: Vec<_> = app::ROUTES
             .iter()
             .filter(|route| route.1.starts_with("/api/decks") || route.1.starts_with("/api/trios"))
@@ -1358,9 +1341,7 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The queue-time helpers
-// ---------------------------------------------------------------------------
 
 mod read_mode_choice_r257 {
     use super::*;
@@ -1404,8 +1385,7 @@ mod read_mode_choice_r257 {
     #[test]
     fn r257_s_legacy_body_is_gone_no_mode_and_a_deck_index_are_refused_and_a_deck_index_beside_a_deck_id_is_not_read()
      {
-        // TS read `{ deckId }` as Best of 1 and took a `deckIndex` in place of `deckId`. SURFACE
-        // §11.3 drops both forms: the mode is always named and the deck always by id.
+        // The mode is always named and the deck always by id (SURFACE §11.3).
         for body in [
             json!({ "deckId": uuid(1) }),
             json!({ "deckIndex": 0 }),
@@ -1443,10 +1423,8 @@ mod read_mode_choice_r257 {
 }
 
 mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
-    //! TS swapped in a validator that approved everything and recorded what it was asked. The Rust
-    //! freeze calls the shared validator itself (SURFACE §11.3), so what TS read off the recording
-    //! is read off the real verdict instead: a legal deck freezes, and an illegal one is refused in
-    //! the validator's own words, naming the deck by its saved name.
+    //! The freeze calls the shared validator itself (SURFACE §11.3): a legal deck freezes, and an
+    //! illegal one is refused in the validator's own words, naming the deck by its saved name.
 
     use super::*;
 
@@ -1576,8 +1554,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
 
     #[tokio::test(start_paused = true)]
     async fn r165_makes_queueing_with_nothing_saved_a_deck_failure_422_not_a_missing_resource() {
-        // TS asked for `deckIndex: 0` of an empty list; the Rust choice names a deck by id, and with
-        // nothing saved that id names nothing, which is the same refusal.
+        // The choice names a deck by id, and with nothing saved that id names nothing.
         let ctx = setup().await;
         let error = freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
             .await
@@ -1608,8 +1585,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
     #[tokio::test(start_paused = true)]
     async fn r253_passes_the_validator_s_issues_through_as_a_422_first_sentence_as_the_message() {
         let ctx = setup().await;
-        // Short (L2) and holding a card this profile does not own (L5): TS injected two issues of
-        // this shape; here they are the shared validator's own verdict on the deck.
+        // Short (L2) and holding a card this profile does not own (L5): the shared validator's verdict.
         let deck = cards(3, 0);
         own(&ctx.app, PROFILE, &deck[1..]).await;
         save(&ctx.app, saved_deck(&uuid(1), "Aggro", &deck, PROFILE, 0)).await;
