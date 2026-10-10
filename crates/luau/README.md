@@ -119,9 +119,9 @@ card's loaded chunk by card id, so one card id has one bytecode for the life of 
 hook call runs the card's chunk again, so the module, and every module-level local in it, starts
 fresh: a counter a hook increments reads the same on every call. Re-running the chunk is L8's
 price: in a release build, a hook called through `load_card`'s closure (the chunk run, the hook
-called, its return walked and its effects built) took about 10 µs for a hook with one effect and no
-reader, and 15 µs for one with two readers and two effects (measured for #558 on a 4-core runner).
-Building a sandbox, once per thread, took under half a millisecond.
+called, its return walked and its effects built) took about 8 µs for a hook with one effect and no
+reader, and 11 µs for one with two readers and two effects (measured for #558 on a 4-core runner).
+Building a sandbox, once per thread, took about 0.2 ms.
 
 ## How a hook is called
 

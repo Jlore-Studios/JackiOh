@@ -54,7 +54,11 @@ pub const REMOVED_MATH: [&str; 3] = ["random", "randomseed", "noise"];
 /// bytecode (a fastcall), and folds one with constant arguments while compiling, without reading the
 /// global, so a member the sandbox removed would still run. `compile` turns each of these off (every
 /// `vector` and `buffer` builtin, and every `math` one outside `lint::MATH_ALLOWED`), so such a call
-/// reads the global and finds nothing. The lint refuses all of them by name first.
+/// reads the global and finds nothing. The lint refuses all of them by name first. `integer` has no
+/// builtin to turn off: Luau 0.740 builds its fastcalls only under the `LuauIntegerFastcalls` flag,
+/// which is off by default and which nothing here sets (a Luau that turns it on adds them here).
+/// Luau turns off a builtin, not a spelling, so `buffer.writeu8` turns off `buffer.writei8` too,
+/// and so on for each width.
 pub const DISABLED_BUILTINS: [&str; 54] = [
     "vector.create",
     "vector.magnitude",
