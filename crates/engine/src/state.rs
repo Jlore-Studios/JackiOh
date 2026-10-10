@@ -467,6 +467,10 @@ pub enum ModifierKind {
     HeroArmor {
         amount: i32,
     },
+    /// MD-C21, R1021: Meditative #48 Tranquility — this player's hero is immune to damage: every
+    /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
+    /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
+    HeroImmune,
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's

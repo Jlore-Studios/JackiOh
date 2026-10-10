@@ -106,6 +106,13 @@ pub struct FuseCardsArgs {
     /// R470: the kept card keeps the cost it had ("its cost doesn't change").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// ME-FUSE-RANDOM (Meditative #47 饕餮, MD-C20): instead of named ingredients, fuse one card
+    /// drawn uniformly from this scope into the kept target — an enemy permanent on the field (tops
+    /// of piles, both rows, face-down cards included, never Immutable) or a card of the opponent's
+    /// library. A library ingredient goes in as a fresh phantom (its definition only), and the
+    /// library card ceases to exist, so its id never reaches a view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_ingredient: Option<crate::effects::card_scope::CardScope>,
 }
 
 /// §6.3 Fuse per R77, wrapped. The ingredients are named in two ways, in this order: cards that
@@ -137,6 +144,12 @@ pub struct FuseCardsArgs {
 /// that is off the field or Immutable (R23), and for a call that names neither a target nor a hand.
 pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     Effect::new("fuseCards", move |ctx| {
+        // ME-FUSE-RANDOM first: the ingredient is drawn inside `apply` from the match rng, and the
+        // kept card is the target named beside it. Nothing else of this call runs then.
+        if let Some(scope) = &args.random_ingredient {
+            fuse_random_ingredient(ctx, &args, scope);
+            return;
+        }
         // Resolved ONCE, before any fusion: these objects are reused for every fusion below, so an
         // ingredient the first fusion consumed still contributes its definition to the second.
         let mut ingredients: Vec<CardInstance> = Vec::new();
@@ -267,6 +280,84 @@ fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<&'
         .or_else(|| ctx.def_id.clone());
     let asked = asked.cloned().unwrap_or_default();
     query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()))
+}
+
+/// ME-FUSE-RANDOM (Meditative #47, MD-C20): fuse one card drawn uniformly from `scope` into the
+/// kept target named beside it. The kept card is `targetInstanceId`'s live instance; an Immutable
+/// kept card eats nothing and draws nothing (R23). The pool is the scope's cards minus the kept
+/// card and minus every Immutable card (being eaten changes its text, R23); with none, nothing is
+/// fused and nothing is drawn. A library ingredient goes in as a fresh phantom of its definition —
+/// radiant flag, tuning and enchantments carried — and the library card ceases to exist, so its id
+/// never reaches a view.
+fn fuse_random_ingredient(
+    ctx: &mut EffectContext<'_>,
+    args: &FuseCardsArgs,
+    scope: &crate::effects::card_scope::CardScope,
+) {
+    // The kept card is the target's live instance; without one there is no fusion.
+    let Some(kept_id) = args.target_instance_id.clone() else {
+        return;
+    };
+    let Some(kept) = find_instance(ctx.sink.state, &kept_id).cloned() else {
+        return;
+    };
+    // An Immutable kept card eats nothing and draws nothing (R23).
+    if !keepable(ctx.sink.state, &kept) {
+        return;
+    }
+    // The scope's cards minus the kept card and minus every Immutable one; a card the scope
+    // reaches that has left meanwhile is no ingredient.
+    let pool: Vec<CardInstance> = crate::effects::card_scope::cards_in_card_scope(ctx, scope, None)
+        .into_iter()
+        .map(|entry| entry.card)
+        .filter(|card| card.id != kept.id)
+        .filter(|card| find_instance(ctx.sink.state, &card.id).is_some())
+        .filter(|card| {
+            find_instance(ctx.sink.state, &card.id)
+                .is_none_or(|live| !unit_has(ctx.sink.state, live, KeywordKind::Immutable))
+        })
+        .collect();
+    if pool.is_empty() {
+        return;
+    }
+    let Some(picked) = ctx.sink.rng.pick(&pool).cloned() else {
+        return;
+    };
+    // A library ingredient goes in as a fresh phantom of its definition — radiant flag, tuning
+    // and enchantments carried — and the library card ceases to exist, so its id never reaches a
+    // view. A field ingredient goes in as the card standing there.
+    let ingredient = match picked.zone {
+        Zone::Library { player } => {
+            let mut phantom = new_instance(
+                &mut *ctx.sink.state,
+                &picked.def_id,
+                player,
+                Zone::Gone { player },
+            );
+            phantom.radiant = picked.radiant;
+            phantom.tuning = picked.tuning.clone();
+            phantom.enchantments = picked.enchantments.clone();
+            if let Some(live) = find_instance(ctx.sink.state, &picked.id).cloned() {
+                let mut gone = live;
+                crate::zones::cease_to_exist(&mut *ctx.sink.state, &mut gone);
+            }
+            phantom
+        }
+        _ => {
+            let Some(live) = find_instance(ctx.sink.state, &picked.id).cloned() else {
+                return;
+            };
+            live
+        }
+    };
+    fuse(
+        ctx,
+        FuseArgs {
+            ingredients: vec![ingredient],
+            target: Some(kept),
+            ..FuseArgs::default()
+        },
+    );
 }
 
 /// R23, R470: a card a Fuse may keep — on the field and acting (R77's target), or in a hand or a

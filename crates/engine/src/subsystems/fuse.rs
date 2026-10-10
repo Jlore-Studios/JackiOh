@@ -1123,6 +1123,7 @@ fn combine_objects(records: &[Script]) -> Script {
         hero_guard: eager_read(records.iter().map(|s| s.hero_guard.clone()).collect()),
         conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
+        after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         plague_multiplier: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),

@@ -778,6 +778,8 @@ fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> St
         // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
         // R757: #98's Armor Up, until the player's next turn.
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
+        // MD-C21: Tranquility's immunity badge.
+        ModifierKind::HeroImmune => "Your hero is immune to damage until your next turn".to_string(),
         ModifierKind::ReplacePlays { def_id, radiant } => {
             let name = find_def_in(state, def_id).map_or_else(|| def_id.clone(), |def| def.name.clone());
             format!(

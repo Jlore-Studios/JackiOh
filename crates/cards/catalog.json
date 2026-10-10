@@ -11920,6 +11920,338 @@
       "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn."
     }
   },
+  "meditative-046": {
+    "id": "meditative-046",
+    "index": "46",
+    "name": "Conjure Intellect",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": {
+      "base": 2,
+      "embiggen": 4
+    },
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 31,
+    "base": {
+      "keywords": [],
+      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nPaid (4): They cost ({setCost})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nPaid (4): They cost ({setCost})."
+    }
+  },
+  "meditative-047": {
+    "id": "meditative-047",
+    "index": "47",
+    "name": "饕餮",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "loc": 29,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "End of turn: Fuse a random enemy permanent into this."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck into this."
+    }
+  },
+  "meditative-048": {
+    "id": "meditative-048",
+    "index": "48",
+    "name": "Tranquility",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "End your turn. Your hero is immune to damage until your next turn begins."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your hero is immune to damage until your next turn begins."
+    }
+  },
+  "meditative-049": {
+    "id": "meditative-049",
+    "index": "49",
+    "name": "YileGPT Tamed",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Acclaimed"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-049-1",
+      "meditative-049-2"
+    ],
+    "loc": 40,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Summon a Yile's Virus for your opponent across from this.\nDeath: Put a YileGPT Unleashed on the bottom of your deck."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Summon a Radiant Yile's Virus for your opponent across from this.\nDeath: Put a Radiant YileGPT Unleashed on the bottom of your deck."
+    }
+  },
+  "meditative-049-1": {
+    "id": "meditative-049-1",
+    "index": "49.1",
+    "name": "YileGPT Unleashed",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Acclaimed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 10,
+    "refs": [
+      "classic-018",
+      "classic-t-glitch",
+      "classicplus-078",
+      "meditative-049-2",
+      "meditative-049-3"
+    ],
+    "params": [
+      {
+        "key": "picks",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "max": 5,
+        "tunedOn": "base"
+      },
+      {
+        "key": "datacenters",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "glitches",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      },
+      {
+        "key": "nerfs",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "viruses",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "radiants",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 149,
+    "base": {
+      "attack": 8,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}.\nStart of turn: Make a random permanent of yours Radiant.\nWhenever you end your turn with unspent mana, this costs that much less."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Armor",
+          "n": 5
+        }
+      ],
+      "text": "Can't attack, Armor 5\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}.\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nWhenever you end your turn with unspent mana, this costs that much less."
+    }
+  },
+  "meditative-049-2": {
+    "id": "meditative-049-2",
+    "index": "49.2",
+    "name": "Yile's Virus",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Acclaimed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 2,
+    "refs": [
+      "meditative-049-2"
+    ],
+    "params": [
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 57,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nCan't be in Defense Position.\nActivate: Destroy this.\nDeath: Discard {discards|random card|random cards}.\nStart of turn: Deal {damage} damage to each adjacent Unit that isn't a Yile's Virus, and to your hero."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nCan't be in Defense Position.\nActivate: Destroy this.\nDeath: Discard {discards|random card|random cards}.\nStart of turn: Deal {damage} damage to each adjacent Unit that isn't a Yile's Virus, and to your hero."
+    }
+  },
+  "meditative-049-3": {
+    "id": "meditative-049-3",
+    "index": "49.3",
+    "name": "AI Girlfriend",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN",
+      "Acclaimed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 43,
+    "base": {
+      "attack": 2,
+      "health": 30,
+      "keywords": [
+        {
+          "kind": "Animated"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 60,
+      "keywords": [
+        {
+          "kind": "Animated"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
+    }
+  },
   "meditative-052": {
     "id": "meditative-052",
     "index": "52",

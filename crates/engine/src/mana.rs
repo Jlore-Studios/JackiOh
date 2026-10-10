@@ -100,7 +100,11 @@ pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
 /// at the cleanup of that player's next turn, which is why this is a separate question from expiry.
 pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
     // R757: Armor Up's Armor holds from the moment it is gained until its expiry's cleanup removes it.
-    if matches!(modifier.kind, ModifierKind::HeroArmor { .. }) {
+    // MD-C21: Tranquility's immunity holds the same way.
+    if matches!(
+        modifier.kind,
+        ModifierKind::HeroArmor { .. } | ModifierKind::HeroImmune
+    ) {
         return true;
     }
     match modifier.expiry {

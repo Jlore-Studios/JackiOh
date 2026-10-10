@@ -1748,6 +1748,12 @@ fn close_combat(
     copies_for: Option<PlayerId>,
 ) {
     let snapshot = live_or_given(sink.state, attacker);
+    // MD-C26: the defender as it fought, read before the check that closes its combat — a pure
+    // read, with no rng, so a combat with no hook on either side replays exactly as before.
+    let defender_snapshot = match target {
+        DamageTarget::Unit { instance } => Some(live_or_given(sink.state, instance)),
+        DamageTarget::Hero { .. } => None,
+    };
     let since = crate::stays::exit_mark(sink.state);
     let from = sink.events.len();
     crate::state_check::state_check(sink);
@@ -1761,39 +1767,65 @@ fn close_combat(
             }
         }
     }
+    if sink.state.result.is_some() {
+        return;
+    }
+    // MD-C26: the attacker's `afterAttack` runs first; only when it has one.
+    let attacker_id = snapshot.id.clone();
     if crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
-        .is_none()
-        || sink.state.result.is_some()
+        .is_some()
     {
-        return;
+        let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Destroyed {
+                    instance_id,
+                    killer_id: Some(killer),
+                    ..
+                } if *killer == snapshot.id => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        let owed = OwedAfterAttack {
+            attacker_id: snapshot.id.clone(),
+            target_id: target_id_of(target),
+            snapshot,
+            destroyed_ids,
+            forced,
+            since,
+            survived: None,
+            check_only: None,
+        };
+        if is_paused(sink) {
+            owe_after_attack(sink, &owed);
+            return;
+        }
+        run_after_attack(sink, &owed, None);
     }
-    let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
-        .iter()
-        .filter_map(|event| match event {
-            GameEvent::Destroyed {
-                instance_id,
-                killer_id: Some(killer),
-                ..
-            } if *killer == snapshot.id => Some(instance_id.clone()),
-            _ => None,
-        })
-        .collect();
-    let owed = OwedAfterAttack {
-        attacker_id: snapshot.id.clone(),
-        target_id: target_id_of(target),
-        snapshot,
-        destroyed_ids,
-        forced,
-        since,
-        survived: None,
-        check_only: None,
-    };
-    if is_paused(sink) {
-        owe_after_attack(sink, &owed);
-        return;
+    // MD-C26: then the defender's `afterAttacked`, once per combat it was the target of — never
+    // for an attack on the hero, which has no defender snapshot.
+    if let Some(defender) = defender_snapshot
+        && crate::scripts::script_of(sink.state, &defender)
+            .after_attacked
+            .is_some()
+    {
+        let owed = OwedAfterAttacked {
+            defender_id: defender.id.clone(),
+            attacker_id,
+            snapshot: defender,
+            forced,
+            since,
+            defender_survived: None,
+            attacker_survived: None,
+            check_only: None,
+        };
+        if is_paused(sink) {
+            owe_after_attacked(sink, &owed);
+            return;
+        }
+        run_after_attacked(sink, &owed, None);
     }
-    run_after_attack(sink, &owed, None);
 }
 
 fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
@@ -1908,4 +1940,184 @@ pub fn run_owed_after_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
         return;
     }
     run_after_attack(sink, &owed, paused_of(&item.resume.data));
+}
+
+// ---------------------------------------------------------------------------------------------
+// "After this is attacked": the defender's `afterAttacked` hook, once the combat's state check
+// has closed (Meditative #49.3, MD-C26, R1026)
+// ---------------------------------------------------------------------------------------------
+
+/// R113: the `resume.hook` of the engine sequence this section parks — a defender's
+/// `afterAttacked` hook owed behind the state check that closes its combat, or the rest of that
+/// hook after a question of its own, with the check that follows it.
+pub const AFTER_ATTACKED_WORK: &str = "@afterAttacked";
+
+/// The facts a combat hands its defender's `afterAttacked` hook, in the hook's `ctx.data`
+/// (`after_attacked_of` reads them back): the attacker's id, whether the attack was forced (R53),
+/// and whether the attacker is still on the field on the stay it attacked from once the check has
+/// closed. The attacker's hook runs first (MD-C26).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AfterAttackedFacts {
+    pub attacker_id: String,
+    pub forced: bool,
+    pub attacker_survived: bool,
+}
+
+/// The combat facts an `afterAttacked` hook was handed, or `None` outside one.
+pub fn after_attacked_of(ctx: &crate::script::EffectContext<'_>) -> Option<AfterAttackedFacts> {
+    let data = &ctx.data;
+    let attacker_id = data.get("attackerId")?.as_str()?.to_string();
+    let forced = data.get("forced")?.as_bool()?;
+    let attacker_survived = data.get("attackerSurvived")?.as_bool()?;
+    Some(AfterAttackedFacts {
+        attacker_id,
+        forced,
+        attacker_survived,
+    })
+}
+
+/// What an owed `afterAttacked` carries, all JSON: the combat's facts and the defender as it fought.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct OwedAfterAttacked {
+    defender_id: String,
+    /// The defender just before the check that closed its combat (R78, R89): its self if it died.
+    snapshot: CardInstance,
+    attacker_id: String,
+    forced: bool,
+    /// The field's departures before that check, to tell a survivor from a Reborn body (R174).
+    since: u32,
+    /// Judged once, as the hook first runs, when the check has closed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    defender_survived: Option<bool>,
+    /// Judged once, beside it: whether the attacker is still on the field it attacked from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    attacker_survived: Option<bool>,
+    /// The hook is done and only the state check that follows it is owed. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    check_only: Option<bool>,
+}
+
+const AFTER_ATTACKED_KEY: &str = "attacked";
+
+/// Whether this card is still on the field on the stay it fought from: live, acting, and not left
+/// since the check's mark — the same judgement `run_after_attack` makes for its attacker.
+fn fought_on(state: &GameState, since: u32, id: &str) -> bool {
+    find_instance(state, id).is_some_and(|live| {
+        is_active_on_field(state, live) && !crate::stays::left_field_after(state, since, &live.id)
+    })
+}
+
+/// The defender's hook, from `paused` when a question split it, then the check that follows it.
+fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, paused: Option<PausedStep>) {
+    let Some(hook) = crate::scripts::script_of(sink.state, &owed.snapshot)
+        .after_attacked
+        .clone()
+    else {
+        return;
+    };
+    if sink.state.result.is_some() {
+        return;
+    }
+    let live = find_instance(sink.state, &owed.defender_id).cloned();
+    let defender_survived = owed
+        .defender_survived
+        .unwrap_or_else(|| fought_on(sink.state, owed.since, &owed.defender_id));
+    let attacker_survived = owed
+        .attacker_survived
+        .unwrap_or_else(|| fought_on(sink.state, owed.since, &owed.attacker_id));
+    let judged = OwedAfterAttacked {
+        defender_survived: Some(defender_survived),
+        attacker_survived: Some(attacker_survived),
+        ..owed.clone()
+    };
+    // A survivor is itself, on the field; one that died is the snapshot it fought with, which a
+    // continuation reads back too (`prompts::SELF_KEY`, R89).
+    let self_card = match (&live, defender_survived) {
+        (Some(live), true) => live.clone(),
+        _ => owed.snapshot.clone(),
+    };
+    // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("attackerId".to_string(), json!(owed.attacker_id));
+    data.insert("forced".to_string(), json!(owed.forced));
+    data.insert("attackerSurvived".to_string(), json!(attacker_survived));
+    if !defender_survived {
+        data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
+    }
+    let mut plan_data = IndexMap::new();
+    plan_data.insert(AFTER_ATTACKED_KEY.to_string(), to_json(&judged));
+    let plan = WorkPlan {
+        def_id: String::new(),
+        hook: AFTER_ATTACKED_WORK.to_string(),
+        step: "hook".to_string(),
+        radiant: false,
+        instance_id: None,
+        data: plan_data,
+        owner: self_card.controller,
+    };
+    let status = {
+        let mut ctx = crate::resolve::make_context(
+            sink,
+            Some(&self_card),
+            crate::resolve::HookOptions {
+                // MD-C26: the player who controlled it in that combat, though a Death in the check took it since.
+                controller: Some(owed.snapshot.controller),
+                data: Some(data),
+                ..crate::resolve::HookOptions::default()
+            },
+        );
+        if let Some(paused) = &paused {
+            if let Some(exits_from) = paused.exits_from {
+                ctx.exits_from = Some(exits_from);
+            }
+            if let Some(summoned) = &paused.summoned {
+                ctx.summoned = Some(summoned.clone());
+            }
+        }
+        let effects = hook(&mut ctx);
+        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
+    };
+    match status {
+        crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),
+        // The hook's last effect asked: the hook is done, and the check after it waits for the answer.
+        crate::prompts::ListStatus::Asked => owe_after_attacked(
+            sink,
+            &OwedAfterAttacked {
+                check_only: Some(true),
+                ..judged
+            },
+        ),
+        _ => {}
+    }
+}
+
+fn owe_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked) {
+    let mut data = IndexMap::new();
+    data.insert(AFTER_ATTACKED_KEY.to_string(), to_json(owed));
+    owe(sink, engine_resume(AFTER_ATTACKED_WORK, "hook", data));
+}
+
+fn owed_after_attacked_of(data: &IndexMap<String, Value>) -> Option<OwedAfterAttacked> {
+    let raw = data.get(AFTER_ATTACKED_KEY)?;
+    let owed = raw.as_object()?;
+    owed.get("defenderId")?.as_str()?;
+    owed.get("attackerId")?.as_str()?;
+    owed.get("since")?.as_u64()?;
+    owed.get("snapshot")?;
+    owed.get("forced")?.as_bool()?;
+    serde_json::from_value::<OwedAfterAttacked>(raw.clone()).ok()
+}
+
+/// `work.rs`'s handler: the hook (or its rest), then the check, where the pause left them (R113).
+pub fn run_owed_after_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
+    let Some(owed) = owed_after_attacked_of(&item.resume.data) else {
+        return;
+    };
+    if owed.check_only == Some(true) {
+        crate::state_check::state_check(sink);
+        return;
+    }
+    run_after_attacked(sink, &owed, paused_of(&item.resume.data));
 }

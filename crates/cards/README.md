@@ -138,6 +138,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts (R426) |
+| `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
 

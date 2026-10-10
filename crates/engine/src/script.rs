@@ -901,6 +901,14 @@ pub struct Script {
     /// (R44). `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
     /// destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
     pub after_attack: Option<Hook>,
+    /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
+    /// state check that closes each combat it was the target of has run, a declared attack's or a
+    /// forced one's, also when it died there — then on the snapshot it fought with, as a Death hook
+    /// reads its card (R78, R89). Not for a Cleave splash (no attack on it) nor for an attack on
+    /// the hero (MD-C26, R1026). `ctx.data` holds the combat's facts, read with
+    /// `combat::after_attacked_of`: `{ attackerId, forced, attackerSurvived }`. A whole effect
+    /// list, parkable like any (R113).
+    pub after_attacked: Option<Hook>,
     // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
     /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
     /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
@@ -954,6 +962,7 @@ impl Script {
             "endOfTurn" => self.end_of_turn.as_ref(),
             "onPlayHook" => self.on_play_hook.as_ref(),
             "afterAttack" => self.after_attack.as_ref(),
+            "afterAttacked" => self.after_attacked.as_ref(),
             "startOfOpponentTurn" => self.start_of_opponent_turn.as_ref(),
             _ => None,
         }
