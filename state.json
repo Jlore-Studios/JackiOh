@@ -4780,8 +4780,13 @@
     "what": "build #602 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-10T01:44:56Z",
-    "notes": [],
+    "at": "2026-10-10T01:55:38Z",
+    "notes": [
+      "#620 needs a plan",
+      "#621 needs a plan",
+      "#622 needs a plan",
+      "#623 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
