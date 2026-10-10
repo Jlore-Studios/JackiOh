@@ -4508,7 +4508,7 @@
         "tier": "strong",
         "why": "Design across crates: the server must start brokering a password grant, which SPEC \u00a79.4 and crates/server/src/auth.rs rule out today, plus the web form and a new ruling. 'Several crates' alone would be medium, but this security design is what makes it hard."
       },
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-10-10T21:22:33Z",
         "family": "claude",
@@ -4525,7 +4525,9 @@
       "planned_at": "2026-10-10T17:02:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 651,
       "provider": "claude-3",
+      "question": "",
       "run_id": "38087413077",
       "started_at": "2026-10-10T21:24:03Z",
       "stop_requested": false,
