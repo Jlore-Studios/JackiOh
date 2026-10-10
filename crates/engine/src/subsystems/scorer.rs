@@ -147,7 +147,8 @@ fn lethal_contribution(state: &GameState, viewer: PlayerId, def: &CardDef, face:
     if !has_keyword(&face.keywords, KeywordKind::Charge) {
         return 0;
     }
-    if crate::catalog::query_cost(def) > state.players[viewer].mana.current {
+    // R1223: lethal may be bought on borrowed mana.
+    if crate::catalog::query_cost(def) > crate::credit::spendable_mana(state, viewer) {
         return 0;
     }
     // It must reach the field this turn: §3.2 plays a Unit into an empty, unlocked zone, or a Stack

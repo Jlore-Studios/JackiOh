@@ -58,7 +58,8 @@
     "Immune to Spells": "法术免疫",
     "Windfury": "风怒",
     "Temporary": "临时",
-    "Deft": "灵巧"
+    "Deft": "灵巧",
+    "Untributable": "不可献祭"
   },
   "labels": {
     "Cry:": "战吼：",
@@ -102,6 +103,7 @@
     "Windfury": { "label": "风怒", "rule": "每回合可以攻击两次" },
     "Temporary": { "label": "临时", "rule": "在其拥有者的回合结束时从手牌中弃掉" },
     "Deft": { "label": "灵巧", "rule": "可以在同一回合内攻击并切换表示形式" },
+    "Untributable": { "label": "不可献祭", "rule": "无法被献祭" },
     "Can't be in Defense Position": { "label": "无法成为守备表示", "rule": "永远不会切换为守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },

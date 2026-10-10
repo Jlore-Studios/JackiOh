@@ -13,6 +13,7 @@ pub mod combat_judge;
 pub mod copied_text;
 pub mod core_patches;
 pub mod craft;
+pub mod credit;
 pub mod damage_combat;
 pub mod datacenter;
 pub mod field;

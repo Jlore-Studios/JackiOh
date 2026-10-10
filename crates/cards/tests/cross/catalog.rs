@@ -4169,7 +4169,16 @@ const MEDITATIVE: &[SpecRow] = &[
         st(1, 1),
         st(2, 2),
     ),
-    row("89", "Jlarna", c(0), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "89",
+        "Jlarna",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "90",
         "Spell Basket",

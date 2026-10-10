@@ -620,6 +620,17 @@ pub struct StaticFlags {
     /// Nerfs are on this card, read off its running face in every zone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tune_multiplier: Option<TuneMultiplier>,
+    /// R1223: while this card acts on its controller's field, they may spend mana they don't have,
+    /// owing up to this much at once (Meditative #89 Jlarna's credit line).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_line: Option<i32>,
+    /// R1223: how many instalments a debt on this credit line is split into (Jlarna: 4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_instalments: Option<i32>,
+    /// R1225: this face carries the end-of-turn Tribute for an unused credit line (Jlarna's base
+    /// face). The view and the AI read it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_lapses: Option<bool>,
 }
 
 string_union! {

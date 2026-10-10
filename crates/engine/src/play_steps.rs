@@ -53,7 +53,7 @@ use crate::echo::{
 };
 use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
-use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, spend_mana};
+use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost};
 use crate::modifiers::remove_modifier;
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
@@ -702,7 +702,8 @@ pub fn validate_play(
     why_play_banned(state, player, &card, cost)?;
     if from == PlayFrom::Graveyard {
         why_graveyard_play_refused(state, player, &card, cost, action.plague.as_ref())?;
-    } else if cost > state.players[player].mana.current {
+    // R1223: the refusal reads the one affordability function, as `legal_actions` does.
+    } else if cost > crate::credit::spendable_mana(state, player) {
         return Err(EngineError::new(format!(
             "{} costs {cost}, more than your mana",
             def_of(Some(state), &card.def_id).name
@@ -909,8 +910,9 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     let spent_rules = cost_rules_spent_by(sink.state, &card);
 
     // R454: Plague Counters pay their part of the price, and the mana the rest.
+    // R1223: the rest may be borrowed past current mana, up to the credit limit.
     let due = mana_due(run.cost_paid, run.plague.as_ref());
-    spend_mana(&mut sink.state.players[run.player], due);
+    crate::credit::pay_mana(sink.state, run.player, due);
     let changed = mana_event(run.player, &sink.state.players[run.player]);
     sink.events.push(changed);
     if let Some(plague) = run.plague.clone()

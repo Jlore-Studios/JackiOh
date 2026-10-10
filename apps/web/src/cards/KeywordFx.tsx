@@ -339,6 +339,14 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Untributable: () => (
+    <Part className="kw-glyph-art kw-anchor" anim fit="contain">
+      <path d="M50 14 L50 78 M28 34 L72 34" stroke="#0b0d12" strokeWidth="8" strokeLinecap="round" />
+      <path d="M50 14 L50 78 M28 34 L72 34" stroke="#c9b88a" strokeWidth="4" strokeLinecap="round" />
+      <path d="M26 56 C26 76 38 86 50 86 C62 86 74 76 74 56" fill="none" stroke="#c9b88a" strokeWidth="4" strokeLinecap="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

@@ -47,6 +47,7 @@ export type { CraftPreview } from "./generated/CraftPreview.ts";
 export type { CraftRecipe } from "./generated/CraftRecipe.ts";
 export type { CraftVerb } from "./generated/CraftVerb.ts";
 export type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
+export type { CreditView } from "./generated/CreditView.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";

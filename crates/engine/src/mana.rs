@@ -39,6 +39,9 @@ pub fn refresh_mana(side: &mut PlayerState) {
     side.mana.max = max;
     side.mana.current = (max + side.mana.next_turn_mod).max(0);
     side.mana.next_turn_mod = 0;
+    // R1224: ME-TURN's repayment schedule — the next instalment comes off the refresh, after any
+    // rider. A lost refresh forgives the instalment: there is nothing to take it from.
+    crate::credit::take_instalment(side);
 }
 
 /// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh
@@ -269,7 +272,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
 }
 
 pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    effective_cost(state, instance, CostOptions::default()) <= state.players[instance.controller].mana.current
+    // R1223: affordability reads the one function — current mana plus the credit line's offer.
+    effective_cost(state, instance, CostOptions::default())
+        <= crate::credit::spendable_mana(state, instance.controller)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —

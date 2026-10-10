@@ -40,6 +40,7 @@
   --kw-period-seal: 3.4s;
   --kw-period-edge: 3.6s;
   --kw-period-dart: 1.2s;
+  --kw-period-anchor: 2.8s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -371,6 +372,10 @@
   animation: kw-deft-dart var(--kw-period-dart) ease-in-out infinite alternate;
 }
 
+.cf .kw-fx[data-keyword-fx="Untributable"][data-kw-motion="on"] .kw-anim {
+  animation: kw-untributable-anchor var(--kw-period-anchor) ease-in-out infinite alternate;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -583,6 +588,15 @@
   }
   to {
     transform: translate(-7%, 7%);
+  }
+}
+
+@keyframes kw-untributable-anchor {
+  from {
+    transform: translateY(4%) rotate(-2deg);
+  }
+  to {
+    transform: translateY(-4%) rotate(2deg);
   }
 }
 

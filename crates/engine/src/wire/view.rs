@@ -814,6 +814,31 @@ impl RowFlags {
     }
 }
 
+/// R1223–R1225: what the client shows of a credit line — how much more its controller can borrow
+/// (`available`, while a line acts), the instalment each coming refresh owes (`owed`, next first),
+/// the instalment the last refresh took (`locked`), and, while a lapsing face acts, whether the line
+/// was used this turn (`used`). Public: lenders are face-up field cards and the schedule is public.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CreditView {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub available: Option<i32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owed: Vec<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub locked: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub used: Option<bool>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -864,6 +889,11 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hand_marked: Option<i32>,
+    /// R1223: this seat's credit line as the client shows it. Absent with no line, no debt and no
+    /// locked instalment, so a game without credit views as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub credit: Option<CreditView>,
     pub locks: RowFlags,
     /// R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
     /// Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the

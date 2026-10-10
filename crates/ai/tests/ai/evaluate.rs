@@ -343,3 +343,45 @@ mod face_threat_b13 {
         assert_eq!(face_threat(&state, PlayerId::P2), 0);
     }
 }
+
+mod r1224_r1225_credit_line {
+    use super::*;
+
+    use jackioh_engine::SetName;
+    use jackioh_engine::testkit::preview_sets;
+
+    const JLARNA: &str = "meditative-089";
+
+    fn indebted(base: &GameState, owed: Vec<i32>) -> GameState {
+        let mut out = clone(base);
+        out.players[AI].owed_instalments = if owed.is_empty() { None } else { Some(owed) };
+        out
+    }
+
+    #[test]
+    fn r1224_owed_instalments_lower_the_score() {
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let plain = board(base());
+        let owed = indebted(&plain, vec![1, 1]);
+        assert!(eval(&owed, AI) < eval(&plain, AI));
+        let expected = AI_EVAL.owed_mana * 2.0;
+        assert_close(eval(&plain, AI) - eval(&owed, AI), expected, 9);
+    }
+
+    #[test]
+    fn r1225_an_unused_base_jlarna_is_worth_nothing_on_its_turn() {
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let bare = board(json!({ "active": "p1", "p1": {}, "p2": {} }));
+        let mut held = board(json!({
+            "active": "p1",
+            "p1": { "backrow": [JLARNA] },
+            "p2": {},
+        }));
+        // Nothing borrowed this turn, on its controller's turn: the end of turn will tribute it.
+        assert_eq!(held.players[AI].turn_log.mana_borrowed, None);
+        assert_eq!(eval(&held, AI), eval(&bare, AI));
+        // Borrowed: the same card counts again.
+        held.players[AI].turn_log.mana_borrowed = Some(1);
+        assert!(eval(&held, AI) > eval(&bare, AI));
+    }
+}
