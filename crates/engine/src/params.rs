@@ -427,12 +427,24 @@ pub fn steppable_params(
     instance: &CardInstance,
     change: TuneDirection,
 ) -> Vec<SteppableParam> {
+    steppable_params_times(state, instance, change, crate::config::TUNE_MULTIPLIER_NONE)
+}
+
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): `steppable_params` moved `times` steps at once.
+/// Each step is one unit in the row's direction; the first step that would not move the value stops
+/// the walk, so what a bound refuses is lost and only what moved is recorded.
+pub fn steppable_params_times(
+    state: &GameState,
+    instance: &CardInstance,
+    change: TuneDirection,
+    times: i32,
+) -> Vec<SteppableParam> {
     params_of(state, &instance.def_id)
         .into_iter()
         .filter(|param| param_in_reach(state, instance, param))
         .filter_map(|param| {
             let toward_better = if change == TuneDirection::Upgrade { 1 } else { -1 };
-            let steps = if param.better == ParamBetter::Up {
+            let unit = if param.better == ParamBetter::Up {
                 toward_better
             } else {
                 -toward_better
@@ -444,14 +456,23 @@ pub fn steppable_params(
                 .and_then(|numbers| numbers.get(&param.key))
                 .copied()
                 .unwrap_or(0);
-            let next = value_with(&param, instance.radiant, tuning, Some(recorded + steps));
-            if next == now {
+            let mut value = now;
+            let mut taken = 0;
+            for k in 1..=times.max(1) {
+                let next = value_with(&param, instance.radiant, tuning, Some(recorded + unit * k));
+                if next == value {
+                    break;
+                }
+                value = next;
+                taken = k;
+            }
+            if taken == 0 {
                 None
             } else {
                 Some(SteppableParam {
                     param,
-                    steps,
-                    delta: next - now,
+                    steps: unit * taken,
+                    delta: value - now,
                 })
             }
         })

@@ -447,6 +447,31 @@ pub static bottle: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R1160 (Meditative #84 Volatility's shape): a 3/4 (Radiant 6/8) at cost 2 whose Buffs and Nerfs
+/// are twice as effective (Radiant: Buffs three times, Nerfs plain). Next free index is 4431: the
+/// plan's 4427 is taken by `translator` (landed after the plan was written).
+pub static volatile: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "volatile",
+        4431,
+        json!({
+            "cost": 2,
+            "base": {
+                "attack": 3,
+                "health": 4,
+                "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }, { "kind": "Armor", "n": 3 }, { "kind": "Can't attack" }],
+                "text": "Buffs and Nerfs are twice as effective on this.",
+            },
+            "radiant": {
+                "attack": 6,
+                "health": 8,
+                "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }, { "kind": "Armor", "n": 3 }, { "kind": "Can't attack" }],
+                "text": "Buffs are three times as effective on this.",
+            },
+        }),
+    )
+});
+
 pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
@@ -479,6 +504,7 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         greeter.clone(),
         opener.clone(),
         bottle.clone(),
+        volatile.clone(),
     ]
 });
 
@@ -782,6 +808,31 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                 })),
                 ..Script::default()
             }),
+        ),
+        (
+            volatile.id.clone(),
+            CardScripts {
+                base: Script {
+                    static_flags: Some(StaticFlags {
+                        tune_multiplier: Some(TuneMultiplier {
+                            upgrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                            degrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                        }),
+                        ..StaticFlags::default()
+                    }),
+                    ..Script::default()
+                },
+                radiant: Script {
+                    static_flags: Some(StaticFlags {
+                        tune_multiplier: Some(TuneMultiplier {
+                            upgrade: Some(VOLATILITY_RADIANT_BUFF_MULTIPLIER),
+                            degrade: None,
+                        }),
+                        ..StaticFlags::default()
+                    }),
+                    ..Script::default()
+                },
+            },
         ),
     ])
 });

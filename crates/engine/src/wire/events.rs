@@ -784,11 +784,30 @@ fn is_zero(value: &i32) -> bool {
 )]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum TuningChange {
-    Cost { delta: i32 },
-    Stats { attack: i32, health: i32 },
-    Keyword { keyword: Keyword, added: bool },
-    X { key: String, delta: i32 },
-    Number { key: String, delta: i32 },
+    Cost {
+        delta: i32,
+    },
+    Stats {
+        attack: i32,
+        health: i32,
+    },
+    Keyword {
+        keyword: Keyword,
+        added: bool,
+        /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): the other keywords one multiplied
+        /// application moved. Never `Some(empty)`, so shipped games hash as before (D14).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        also: Option<Vec<Keyword>>,
+    },
+    X {
+        key: String,
+        delta: i32,
+    },
+    Number {
+        key: String,
+        delta: i32,
+    },
     None,
 }
 

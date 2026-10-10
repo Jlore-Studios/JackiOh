@@ -469,7 +469,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             let change = changes(&once(&mut state, &unit.id, TuneDirection::Upgrade))
                 .into_iter()
                 .next();
-            if let Some(TuningChange::Keyword { keyword, added }) = change {
+            if let Some(TuningChange::Keyword { keyword, added, .. }) = change {
                 assert!(added);
                 let now = live(&state, &unit.id);
                 assert_eq!(
@@ -1648,4 +1648,349 @@ fn unit_view_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {
         .find(|view| view["instanceId"] == c.id.as_str())
         .and_then(|view| view["keywords"].as_array().cloned())
         .unwrap_or_default()
+}
+
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): one Buff or Nerf application on a card with a
+/// tune multiplier is still one draw and one event, with each row's change scaled.
+mod r1160_tune_multiplier {
+    use super::*;
+    use jackioh_engine::effects::{buff, tune_multiplier_of};
+    use jackioh_engine::params::{steppable_params, steppable_params_times};
+
+    fn volatile_hand(seed: &str) -> (GameState, CardInstance) {
+        let mut state = game(seed);
+        let card = card(&mut state, &instance_fx::volatile.id);
+        (state, card)
+    }
+
+    #[test]
+    fn r1160_a_doubled_buff_is_one_event_each_row_twice_as_large() {
+        let (mut saw_cost, mut saw_stats, mut saw_keyword, mut saw_x) = (false, false, false, false);
+        let mut best_attack = 0;
+        for seed in 1..=40 {
+            let (mut state, card) = volatile_hand(&format!("r1160-b{seed}"));
+            let events = once(&mut state, &card.id, TuneDirection::Upgrade);
+            let ups = tuned(&events, GameEventType::Upgraded);
+            assert_eq!(ups.len(), 1, "one application is one event (seed {seed})");
+            assert_eq!(ups[0].hidden_from, Some(vec![PlayerId::P2]));
+            match &ups[0].change {
+                TuningChange::Cost { delta } => {
+                    assert_eq!(*delta, -2);
+                    assert_eq!(live(&state, &card.id).cost_mod, -2);
+                    saw_cost = true;
+                }
+                TuningChange::Stats { attack, health } => {
+                    assert_eq!(attack + health, 2 * TUNE_STAT_TOTAL);
+                    best_attack = best_attack.max(*attack);
+                    saw_stats = true;
+                }
+                TuningChange::Keyword { keyword, added, also } => {
+                    assert!(added);
+                    let also = also.as_ref().expect("a doubled add moves two keywords");
+                    assert_eq!(also.len(), 1);
+                    assert_ne!(also[0].kind(), keyword.kind());
+                    saw_keyword = true;
+                }
+                TuningChange::X { key, delta } => {
+                    assert_eq!(key, "Armor");
+                    assert_eq!(*delta, 2);
+                    assert_eq!(x_tuning(&live(&state, &card.id), "Armor"), Some(2));
+                    saw_x = true;
+                }
+                other => panic!("unexpected change {other:?} (seed {seed})"),
+            }
+        }
+        assert!(
+            saw_cost && saw_stats && saw_keyword && saw_x,
+            "every row is drawn"
+        );
+        assert!(
+            best_attack > TUNE_STAT_TOTAL,
+            "some split puts more than half on attack"
+        );
+    }
+
+    #[test]
+    fn r1160_a_doubled_nerf_stops_at_its_bounds_and_never_removes_a_harmful_keyword() {
+        let (mut saw_cost, mut saw_keyword, mut saw_x) = (false, false, false);
+        for seed in 1..=40 {
+            let (mut state, card) = volatile_hand(&format!("r1160-n{seed}"));
+            live_mut(&mut state, &card.id).cost_mod = 1;
+            let events = once(&mut state, &card.id, TuneDirection::Degrade);
+            let downs = tuned(&events, GameEventType::Degraded);
+            assert_eq!(downs.len(), 1, "one application is one event (seed {seed})");
+            assert_eq!(downs[0].hidden_from, Some(vec![PlayerId::P2]));
+            match &downs[0].change {
+                TuningChange::Cost { delta } => {
+                    assert_eq!(*delta, 1, "one step from the (4) cap");
+                    saw_cost = true;
+                }
+                TuningChange::Stats { .. } => {}
+                TuningChange::Keyword { keyword, added, also } => {
+                    assert!(!added);
+                    let also = also.as_ref().expect("a doubled remove takes two keywords");
+                    assert_eq!(also.len(), 1);
+                    assert_ne!(keyword.kind(), also[0].kind());
+                    for moved in std::iter::once(keyword).chain(also.iter()) {
+                        assert_ne!(moved.kind(), KeywordKind::CantAttack, "never a harmful one");
+                    }
+                    let removed = live(&state, &card.id)
+                        .tuning
+                        .clone()
+                        .and_then(|tuning| tuning.remove_keywords)
+                        .unwrap_or_default();
+                    assert!(removed.contains(&keyword.kind()));
+                    assert!(removed.contains(&also[0].kind()));
+                    saw_keyword = true;
+                }
+                TuningChange::X { key, delta } => {
+                    assert_eq!(key, "Armor");
+                    assert_eq!(*delta, -2);
+                    assert_eq!(x_tuning(&live(&state, &card.id), "Armor"), Some(-2));
+                    saw_x = true;
+                }
+                other => panic!("unexpected change {other:?} (seed {seed})"),
+            }
+        }
+        assert!(
+            saw_cost && saw_keyword && saw_x,
+            "the cost, keyword and X rows are drawn"
+        );
+    }
+
+    #[test]
+    fn r1160_the_record_never_passes_a_floor() {
+        let mut x_seen = 0;
+        for seed in 1..=40 {
+            let (mut state, card) = volatile_hand(&format!("r1160-f{seed}"));
+            {
+                let live = live_mut(&mut state, &card.id);
+                live.cost_mod = 2; // (4): no cost row for a Degrade
+                // 0 attack and 1 health: no stats row either.
+                live.tuning = tuning(json!({ "attack": -3, "health": -3, "x": { "Armor": -1 } }));
+            }
+            assert_eq!(
+                rows(&state, &card.id, TuneDirection::Degrade),
+                json!(["keyword", "x"])
+            );
+            let events = once(&mut state, &card.id, TuneDirection::Degrade);
+            let downs = tuned(&events, GameEventType::Degraded);
+            assert_eq!(downs.len(), 1);
+            if let TuningChange::X { key, delta } = &downs[0].change {
+                assert_eq!(key, "Armor");
+                assert_eq!(*delta, -1, "what the floor refused is lost");
+                assert_eq!(x_tuning(&live(&state, &card.id), "Armor"), Some(-2));
+                x_seen += 1;
+            }
+        }
+        assert!(x_seen > 0, "the X row was drawn");
+    }
+
+    #[test]
+    fn r1160_steppable_params_times_moves_n_steps_and_stops_at_a_bound() {
+        let mut state = game("r1160-params");
+        let spell = card(&mut state, &instance_fx::numbered.id);
+        let items = steppable_params_times(&state, &spell, TuneDirection::Upgrade, 2);
+        let steps_of = |key: &str| {
+            items
+                .iter()
+                .find(|item| item.param.key == key)
+                .map(|item| (item.steps, item.delta))
+        };
+        assert_eq!(steps_of("damage"), Some((2, 2)));
+        assert_eq!(steps_of("huge"), Some((2, 10)));
+        assert_eq!(steps_of("threshold"), Some((-1, -1)));
+        // `huge` from 40 moves one step to its max, then stops.
+        live_mut(&mut state, &spell.id).tuning = tuning(json!({ "numbers": { "huge": 4 } }));
+        assert_eq!(param(&state, &spell.id, "huge"), 40);
+        let items = steppable_params_times(&state, &live(&state, &spell.id), TuneDirection::Upgrade, 2);
+        let huge = items
+            .iter()
+            .find(|item| item.param.key == "huge")
+            .expect("huge is steppable");
+        assert_eq!((huge.steps, huge.delta), (1, 4));
+        // Times 1 is today's walk.
+        let fresh = live(&state, &spell.id);
+        assert_eq!(
+            steppable_params_times(&state, &fresh, TuneDirection::Upgrade, 1),
+            steppable_params(&state, &fresh, TuneDirection::Upgrade)
+        );
+        assert_eq!(
+            steppable_params_times(&state, &fresh, TuneDirection::Degrade, 1),
+            steppable_params(&state, &fresh, TuneDirection::Degrade)
+        );
+    }
+
+    #[test]
+    fn r1160_the_radiant_face_triples_buffs_and_leaves_nerfs_plain() {
+        let mut state = game("r1160-radiant-face");
+        let vol = card(&mut state, &instance_fx::volatile.id);
+        assert_eq!(
+            tune_multiplier_of(&state, &live(&state, &vol.id), TuneDirection::Upgrade),
+            2
+        );
+        live_mut(&mut state, &vol.id).radiant = true;
+        let radiant = live(&state, &vol.id);
+        assert_eq!(tune_multiplier_of(&state, &radiant, TuneDirection::Upgrade), 3);
+        assert_eq!(tune_multiplier_of(&state, &radiant, TuneDirection::Degrade), 1);
+
+        let (mut up_stats, mut up_keyword) = (false, false);
+        for seed in 1..=40 {
+            let mut state = game(&format!("r1160-ru{seed}"));
+            let vol = card(&mut state, &instance_fx::volatile.id);
+            live_mut(&mut state, &vol.id).radiant = true;
+            let events = once(&mut state, &vol.id, TuneDirection::Upgrade);
+            let ups = tuned(&events, GameEventType::Upgraded);
+            assert_eq!(ups.len(), 1);
+            match &ups[0].change {
+                TuningChange::Stats { attack, health } => {
+                    assert_eq!(attack + health, 3 * TUNE_STAT_TOTAL);
+                    up_stats = true;
+                }
+                TuningChange::Keyword { added, also, .. } => {
+                    assert!(added);
+                    assert_eq!(also.as_ref().map(Vec::len), Some(2));
+                    up_keyword = true;
+                }
+                TuningChange::Cost { .. } | TuningChange::X { .. } => {}
+                other => panic!("unexpected change {other:?}"),
+            }
+        }
+        assert!(
+            up_stats && up_keyword,
+            "a tripled Upgrade moves stats by 12 and keywords by 3"
+        );
+
+        let (mut down_keyword, mut down_x) = (false, false);
+        for seed in 1..=40 {
+            let mut state = game(&format!("r1160-rd{seed}"));
+            let vol = card(&mut state, &instance_fx::volatile.id);
+            live_mut(&mut state, &vol.id).radiant = true;
+            let events = once(&mut state, &vol.id, TuneDirection::Degrade);
+            let downs = tuned(&events, GameEventType::Degraded);
+            assert_eq!(downs.len(), 1);
+            match &downs[0].change {
+                TuningChange::Keyword { added, also, .. } => {
+                    assert!(!added);
+                    assert_eq!(also, &None);
+                    down_keyword = true;
+                }
+                TuningChange::X { key, delta } => {
+                    assert_eq!(key, "Armor");
+                    assert_eq!(*delta, -1);
+                    down_x = true;
+                }
+                TuningChange::Cost { .. } | TuningChange::Stats { .. } => {}
+                other => panic!("unexpected change {other:?}"),
+            }
+        }
+        assert!(
+            down_keyword && down_x,
+            "a plain Nerf adds no `also` and moves X by 1"
+        );
+    }
+
+    #[test]
+    fn r1160_the_multiplier_holds_in_hand_deck_and_field_a_vanilla_card_has_none() {
+        let mut state = game("r1160-zones");
+        let hand = card(&mut state, &instance_fx::volatile.id);
+        let deck = set_library(
+            &mut state,
+            PlayerId::P1,
+            std::slice::from_ref(&instance_fx::volatile.id),
+        );
+        let field = put(
+            &mut state,
+            &instance_fx::volatile.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        for id in [&hand.id, &deck[0].id, &field.id] {
+            let card = live(&state, id);
+            assert_eq!(
+                tune_multiplier_of(&state, &card, TuneDirection::Upgrade),
+                2,
+                "{id}"
+            );
+            assert_eq!(
+                tune_multiplier_of(&state, &card, TuneDirection::Degrade),
+                2,
+                "{id}"
+            );
+        }
+        live_mut(&mut state, &hand.id).vanilla = true;
+        let plain = live(&state, &hand.id);
+        assert_eq!(tune_multiplier_of(&state, &plain, TuneDirection::Upgrade), 1);
+        assert_eq!(tune_multiplier_of(&state, &plain, TuneDirection::Degrade), 1);
+    }
+
+    #[test]
+    fn r1160_r102_a_fused_cards_multipliers_multiply() {
+        let mut state = game("r1160-fuse");
+        let kept = put(
+            &mut state,
+            &instance_fx::volatile.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let other = put(
+            &mut state,
+            &instance_fx::volatile.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let (kept_now, other_now) = (live(&state, &kept.id), live(&state, &other.id));
+        let fused = with_sink(&mut state, |sink| {
+            jackioh_engine::subsystems::fuse::fuse(
+                sink,
+                json_as(json!({ "ingredients": [other_now], "target": kept_now })),
+            )
+        });
+        assert_eq!(fused.map(|card| card.id), Some(kept.id.clone()));
+        let fused_card = live(&state, &kept.id);
+        assert_eq!(tune_multiplier_of(&state, &fused_card, TuneDirection::Upgrade), 4);
+        assert_eq!(tune_multiplier_of(&state, &fused_card, TuneDirection::Degrade), 4);
+    }
+
+    #[test]
+    fn r1160_a_stat_buff_and_kys_constant_are_not_multiplied() {
+        let mut state = game("r1160-plain");
+        let unit = put(
+            &mut state,
+            &instance_fx::volatile.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        run(
+            &mut state,
+            buff(json_as(
+                json!({ "target": { "of": "instance", "instanceId": unit.id }, "attack": 2, "health": 2 }),
+            )),
+            RunOptions::default(),
+        );
+        let after = live(&state, &unit.id);
+        assert_eq!((after.buffs.attack, after.buffs.health), (2, 2));
+
+        // KY's Constant sets the number outright (copied from `r386_each_number_is_set…`).
+        let spell = card(&mut state, &instance_fx::volatile.id);
+        let events = run(
+            &mut state,
+            set_number(json_as(
+                json!({ "instanceId": spell.id, "which": "cost", "value": 3 }),
+            )),
+            RunOptions::default(),
+        );
+        assert_eq!(live(&state, &spell.id).cost_mod, 1);
+        assert_eq!(
+            to_json(&events),
+            json!([{
+                "type": "numberChanged",
+                "instanceId": spell.id,
+                "defId": instance_fx::volatile.id,
+                "key": "cost",
+                "value": 3,
+                "hiddenFrom": ["p2"],
+            }])
+        );
+    }
 }

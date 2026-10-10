@@ -8,11 +8,11 @@ import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardFace } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
-import { faceModel, frameRarity, type FaceModel, type FaceSource } from "./model.ts";
+import { ALL_TRIBES, faceModel, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
 import { termsIn } from "./rules.ts";
 
@@ -591,5 +591,20 @@ describe("R503: a token's printed rarity", () => {
     expect(frameRarity(unknown)).toBeNull();
     // A face built by hand without the field reads as none.
     expect(frameRarity({ rarity: "Epic" })).toBe("Epic");
+  });
+});
+
+describe("R1162: All Tribes", () => {
+  it("R1162 a card with every tribal tag prints All Tribes in their place; one missing a tribe prints its tags", () => {
+    const tribes = ["Human", "Felinor", "KY", "CN", "Jlockeed"] as Tag[];
+    expect(frameTags(tribes)).toEqual([ALL_TRIBES]);
+    expect(frameTags([...tribes, "Quickdraw" as Tag])).toEqual([ALL_TRIBES, "Quickdraw"]);
+    expect(frameTags(["Human", "Felinor", "KY", "CN"] as Tag[])).toEqual([
+      "Human",
+      "Felinor",
+      "KY",
+      "CN",
+    ]);
+    expect(frameTags([])).toEqual([]);
   });
 });

@@ -9,4 +9,9 @@ import type { Keyword } from "./Keyword";
  * moved. `none` is R440's cue on a card someone may not read that nothing could change (Immutable, or
  * no change applies), so the events over a hidden pile number the applications, never the changes.
  */
-export type TuningChange = { "kind": "cost", delta: number, } | { "kind": "stats", attack: number, health: number, } | { "kind": "keyword", keyword: Keyword, added: boolean, } | { "kind": "x", key: string, delta: number, } | { "kind": "number", key: string, delta: number, } | { "kind": "none" };
+export type TuningChange = { "kind": "cost", delta: number, } | { "kind": "stats", attack: number, health: number, } | { "kind": "keyword", keyword: Keyword, added: boolean, 
+/**
+ * R1160 (Meditative #84 Volatility, ME-TUNEMULT): the other keywords one multiplied
+ * application moved. Never `Some(empty)`, so shipped games hash as before (D14).
+ */
+also?: Array<Keyword>, } | { "kind": "x", key: string, delta: number, } | { "kind": "number", key: string, delta: number, } | { "kind": "none" };

@@ -60,6 +60,7 @@ import {
   type Tag,
   type Tuning,
 } from "@jackioh/shared";
+import { TRIBAL_TAGS } from "@jackioh/engine/config";
 
 import {
   HEROIC_POWER_ID,
@@ -485,6 +486,19 @@ function printedValues(def: CardDef, radiant: boolean): Record<string, number> {
  */
 export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
   return face.printedRarity ?? face.rarity;
+}
+
+/** R1382, R1162 (Meditative #87 Tatches the Totem): what the frame prints for a card with every tribal tag (R1424), in place of the five. */
+export const ALL_TRIBES = "All Tribes";
+
+/**
+ * R1382, R1162: the tags the frame prints. A card with every tribal tag (`TRIBAL_TAGS`, R1424) prints
+ * `ALL_TRIBES` in their place, then its non-tribal tags in order; any other card prints its tags.
+ * Read off the tags: no catalog field.
+ */
+export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
+  if (!TRIBAL_TAGS.every((tribe) => tags.includes(tribe))) return tags;
+  return [ALL_TRIBES, ...tags.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
 /**

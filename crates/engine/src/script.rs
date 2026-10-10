@@ -447,6 +447,18 @@ impl FlagOrCount {
     }
 }
 
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs
+/// (`upgrade`) and Nerfs (`degrade`) are on this card. Each direction names its own multiplier;
+/// a direction no ingredient names is plain.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TuneMultiplier {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrade: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub degrade: Option<i32>,
+}
+
 /// A card's static flags. Data, so a card may write them as the TS object literal
 /// (`json_as(json!({ "castOnDraw": true }))`). `deftDuelist` (legacy, read nowhere) is not ported
 /// (SURFACE §7.2).
@@ -604,6 +616,10 @@ pub struct StaticFlags {
     /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane_multiplier: Option<i32>,
+    /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs and
+    /// Nerfs are on this card, read off its running face in every zone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tune_multiplier: Option<TuneMultiplier>,
 }
 
 string_union! {
