@@ -7,10 +7,11 @@
 //!    limits that read them look back `CODE_ATTEMPT_WINDOW_SECONDS` at most.
 //!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
 //!    match is replayed from its log; the result row, and so the rating history, is kept.
+//!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
 //!
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every
 //! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
-//! `app.purge_expired_rows` (migration 0013).
+//! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,7 +21,8 @@ use serde_json::json;
 use crate::api::http::{log_info, log_warn, now_ms};
 use crate::app::App;
 use crate::config::{
-    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
+    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+    RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
@@ -34,6 +36,7 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
         .purge_expired(&RetentionPurgeInput {
             code_attempts_before: now - CODE_ATTEMPT_RETENTION_DAYS * MS_PER_DAY,
             match_actions_ended_before: now - MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY,
+            play_telemetry_ended_before: now - PLAY_TELEMETRY_RETENTION_DAYS * MS_PER_DAY,
         })
         .await?;
     tx.commit().await?;
@@ -47,10 +50,14 @@ pub async fn run_purge(app: Arc<App>) {
     loop {
         match purge_expired(&app).await {
             Ok(purged) => {
-                if purged.code_attempts + purged.match_actions > 0 {
+                if purged.code_attempts + purged.match_actions + purged.play_telemetry > 0 {
                     log_info(
                         "retention.purged",
-                        json!({ "codeAttempts": purged.code_attempts, "matchActions": purged.match_actions }),
+                        json!({
+                            "codeAttempts": purged.code_attempts,
+                            "matchActions": purged.match_actions,
+                            "playTelemetry": purged.play_telemetry,
+                        }),
                     );
                 }
             }

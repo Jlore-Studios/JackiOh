@@ -9,4 +9,5 @@ pub mod match_actor;
 pub mod protocol;
 pub mod registry;
 pub mod rooms;
+pub mod telemetry;
 pub mod ws_server;

@@ -935,3 +935,60 @@ mod rematch_presence {
         assert!(app.matches.presence_of(match_id).is_none());
     }
 }
+
+// R1442 — the offers among the finished match's play telemetry
+
+mod r1442_rematch_signals {
+    use super::*;
+
+    /// Each seat's `(rematchOffered, rematchAccepted)`, p1 first.
+    async fn marks(app: &App, match_id: &str) -> Vec<(Value, Value)> {
+        let held = to_json(&q!(app, play_telemetry_of(match_id)));
+        held["matchSignals"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|row| (row["rematchOffered"].clone(), row["rematchAccepted"].clone()))
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1442_an_offer_marks_its_seat_offered_and_the_offer_that_makes_the_rematch_accepted() {
+        let app = test_app().await;
+        let (a, b, finished) = names("signals");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+        // The signals the match's result left (`actor::telemetry`), neither seat having offered.
+        {
+            let mut data = fake(&app).await;
+            for seat in ["p1", "p2"] {
+                data.tables.match_signals.push(from(json!({
+                    "matchId": finished,
+                    "seat": seat,
+                    "drawOffers": 0,
+                    "drawAccepted": false,
+                    "rematchOffered": false,
+                    "rematchAccepted": false,
+                    "timeouts": 0,
+                    "pilot": "human",
+                })));
+            }
+        }
+
+        assert_eq!(offer(&app, &token_a, &finished, STAKE_NORMAL).await.0, 200);
+        assert_eq!(
+            marks(&app, &finished).await,
+            vec![(json!(true), json!(false)), (json!(false), json!(false))]
+        );
+
+        let (status, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(status, 200);
+        assert!(created["matchId"].is_string(), "{created}");
+        assert_eq!(
+            marks(&app, &finished).await,
+            vec![(json!(true), json!(false)), (json!(true), json!(true))]
+        );
+    }
+}

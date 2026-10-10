@@ -102,8 +102,8 @@ placeholders (`app::load_server_env`).
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
-`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import` and `stats-export` read
-`DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
+`timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -201,6 +201,27 @@ writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stat
 only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
+
+## Play telemetry (§9.11, R1442)
+
+```
+target/release/jackioh-server timing-backfill   # the action logs still held, folded into action_timings
+target/release/jackioh-server timing-fit        # log-normal fits of human think times, rows to paste into config
+```
+
+Once a live match's result commits, the actor writes how it was played in one transaction
+(`actor::telemetry`): `action_timings` (each person's move, its think time from the push that made
+it the seat's move, the clock left, the rank bucket), `emote_events` and `match_signals` (concedes,
+draws, rematches and timeouts), each keyed by match and seat with no profile id and no client grant
+(migration 0029). A failure is logged as `telemetry.write_failed` and the result stands.
+
+`timing-backfill` folds every finished match whose log `match_actions` still holds and that has no
+action timing yet, the way a rebuilt actor replays it, into the rows the live path writes, less the
+clock and the rank bucket the log does not hold; a match today's engine no longer folds whole is
+skipped. `timing-fit` groups the human moves (`pilot = 'ai'` left out) by rank bucket, action kind
+and first move of the turn, fits each bucket of at least `TIMING_FIT_MIN_SAMPLES` with a log-normal
+and prints one `ThinkTimeFit` row per bucket, to paste by hand into `config.rs`'s
+`THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. Neither takes an option.
 
 ## Tests
 

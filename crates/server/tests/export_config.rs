@@ -11,8 +11,8 @@
 //! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
 //! them for the lobby's room links (R767), the four `USERNAME_*` hints for the username field
-//! (R1432, R1435), and the three `WS_*` heartbeat numbers for the match client's wake probe and the
-//! tests that read them (R1441).
+//! (R1432, R1435), the three `WS_*` heartbeat numbers for the match client's wake probe and the
+//! tests that read them (R1441), and `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442).
 
 use serde_json::{Value, json};
 
@@ -123,6 +123,10 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("MAX_SAVED_DECKS", json!(c::MAX_SAVED_DECKS)),
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
         ("MULLIGAN_CLOCK_MS", json!(c::MULLIGAN_CLOCK_MS)),
+        (
+            "PLAY_TELEMETRY_RETENTION_DAYS",
+            json!(c::PLAY_TELEMETRY_RETENTION_DAYS),
+        ),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
         (
@@ -191,9 +195,10 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 58,
+        listed, 59,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
-         four USERNAME_* hints (R1432, R1435) and the three WS_* heartbeat numbers (R1441)"
+         four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441) and the play \
+         telemetry's retention for the privacy policy (R1442)"
     );
 }
 

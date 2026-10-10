@@ -1,4 +1,4 @@
--- Usernames (migration 0028, R1434; issue #579). Runs last, after 14_patch_retcon.sql. Four profiles
+-- Usernames (migration 0028, R1434; issue #579). Runs after 14_patch_retcon.sql. Four profiles
 -- predate 0028: 03b's 44444444-… and 14b's b1400000-…-1, -2 and -3, so 0028's backfill named those
 -- four, and every profile 01-14 signed up since was named by 0028's trigger.
 \set ON_ERROR_STOP on
