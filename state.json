@@ -4191,6 +4191,7 @@
     "579": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-09T20:19:44Z",
         "family": "claude",
@@ -4207,7 +4208,9 @@
       "planned_at": "2026-10-09T03:52:37Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 619,
       "provider": "claude-6",
+      "question": "",
       "run_id": "38002521958",
       "started_at": "2026-10-09T23:04:43Z",
       "stop_requested": false,
