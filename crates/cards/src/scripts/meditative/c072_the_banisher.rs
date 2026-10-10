@@ -51,27 +51,50 @@ mod tests {
         crate::register_all();
         scenario(json!({
             "p1": { "field": [ID, ID] },
-            "p2": { "field": [BIG, MENACE] },
+            "p2": { "field": [MENACE, BIG] },
         }))
+    }
+
+    /// The ids the last step's `exiled` and `destroyed` events name.
+    fn exiled_and_destroyed(s: &Scenario) -> (Vec<String>, Vec<String>) {
+        let mut exiled = Vec::new();
+        let mut destroyed = Vec::new();
+        for event in s.last_events() {
+            match event {
+                GameEvent::Exiled { instance_id, .. } => exiled.push(instance_id.clone()),
+                GameEvent::Destroyed { instance_id, .. } => destroyed.push(instance_id.clone()),
+                _ => {}
+            }
+        }
+        (exiled, destroyed)
     }
 
     #[test]
     fn exiles_both_ways() {
         let mut s = banisher_game();
-        // Ours hits their big Felinor: marked, then exiled ahead of deaths.
+        // Ours attacks their Taunt, the 9/9 Menace: its 2 marks it, and the check exiles it ahead of
+        // deaths, so no death collects it. The Banisher itself dies to the strike back as usual.
         let banisher = s.unit(P1, 1).unwrap().id;
-        let foe = s.unit(P2, 1).unwrap().id;
-        s.attack(&banisher, &foe);
-        s.expect_events(json!(["exiled"]));
-        s.expect_in_zone(&foe, "exile");
-        let seen: Vec<&str> = s.events().iter().map(|event| event.event_type().as_str()).collect();
-        assert!(!seen.contains(&"destroyed"), "no death collected it: {seen:?}");
-        // Their Menace hits our second Banisher: the mark works facing either way.
+        let menace = s.unit(P2, 1).unwrap().id;
+        s.attack(&banisher, &menace);
+        assert_eq!(
+            exiled_and_destroyed(&s),
+            (vec![menace.clone()], vec![banisher.clone()])
+        );
+        s.expect_in_zone(&menace, "exile");
+        s.expect_in_zone(&banisher, "graveyard");
+        // Their big Felinor attacks our second Banisher: its strike back marks the attacker, so the
+        // exile works facing either way, and our Banisher dies as usual.
         s.end_turn();
-        let menace = s.unit(P2, 2).unwrap().id;
+        let big = s.unit(P2, 2).unwrap().id;
         let ours = s.unit(P1, 2).unwrap().id;
-        s.attack(&menace, &ours);
-        s.expect_in_zone(&ours, "exile");
+        s.attack(&big, &ours);
+        assert_eq!(
+            exiled_and_destroyed(&s),
+            (vec![big.clone()], vec![ours.clone()])
+        );
+        s.expect_in_zone(&big, "exile");
+        s.expect_in_zone(&ours, "graveyard");
     }
 
     #[test]

@@ -108,6 +108,25 @@ mod tests {
         }))
     }
 
+    /// Each combat `damage` event of the last step as `(sourceId, targetId, amount)`. A unit the hit
+    /// destroyed lies in the graveyard with its damage gone, so the events are the record. Fatigue
+    /// from the turns that end by themselves after the attack (R82) is not combat and is left out.
+    fn hits(s: &Scenario) -> Vec<(Option<String>, String, i32)> {
+        s.last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Damage {
+                    source_id,
+                    target_id,
+                    amount,
+                    combat: true,
+                    ..
+                } => Some((source_id.clone(), target_id.clone(), *amount)),
+                _ => None,
+            })
+            .collect()
+    }
+
     #[test]
     fn redirects_to_neighbour() {
         let mut s = blood_game();
@@ -115,9 +134,17 @@ mod tests {
         let neighbour = s.unit(P2, 2).unwrap().id;
         s.end_turn();
         s.attack(&foe, "hero");
-        // The attack fought the ally instead: the neighbour took the Vanilla's 4.
-        assert_eq!(s.card(&neighbour).damage, 4);
-        s.expect_events(json!(["attackDeclared", "revealed", "redirected"]));
+        // The attack fought the ally instead: the neighbour took the Vanilla's 4 and struck back
+        // for its 1, the hero took nothing, and the 1/1 is destroyed.
+        assert_eq!(
+            hits(&s),
+            vec![
+                (Some(foe.clone()), neighbour.clone(), 4),
+                (Some(neighbour.clone()), foe.clone(), 1),
+            ]
+        );
+        s.expect_in_zone(&neighbour, "graveyard");
+        s.expect_events(json!(["attackDeclared", "trapFired", "redirected"]));
         s.expect_in_zone(ID, "graveyard");
     }
 
@@ -131,10 +158,17 @@ mod tests {
             "p2": { "field": [VANILLA] },
         }));
         let foe = s.unit(P2, 1).unwrap().id;
-        let health = s.view(P1).you.hero.health;
         s.end_turn();
         s.attack(&foe, "hero");
-        assert_eq!(s.view(P1).you.hero.health, health - 4);
+        // The hero took the Vanilla's 4 (the turns that end by themselves afterwards add fatigue,
+        // which is no part of the attack), and nothing fired.
+        assert_eq!(hits(&s), vec![(Some(foe.clone()), "hero-p1".to_string(), 4)]);
+        let kinds: Vec<&str> = s
+            .last_events()
+            .iter()
+            .map(|event| event.event_type().as_str())
+            .collect();
+        assert!(!kinds.contains(&"trapFired") && !kinds.contains(&"redirected"));
         s.expect_in_zone(ID, "field");
     }
 
@@ -151,13 +185,17 @@ mod tests {
         let right = s.unit(P2, 3).unwrap().id;
         s.end_turn();
         s.attack(&foe, "hero");
-        let left_hit = s.card(&left).damage;
-        let right_hit = s.card(&right).damage;
+        // The Vanilla's 4 lands on exactly one of the two, and on nothing else.
+        let struck: Vec<String> = hits(&s)
+            .into_iter()
+            .filter(|(source, _, amount)| source.as_deref() == Some(foe.as_str()) && *amount == 4)
+            .map(|(_, target, _)| target)
+            .collect();
         assert!(
-            (left_hit == 4 && right_hit == 0) || (left_hit == 0 && right_hit == 4),
-            "one neighbour takes the 4: {left_hit} vs {right_hit}"
+            struck == vec![left.clone()] || struck == vec![right.clone()],
+            "one neighbour takes the 4: {struck:?}"
         );
-        s.expect_events(json!(["attackDeclared", "revealed", "redirected"]));
+        s.expect_events(json!(["attackDeclared", "trapFired", "redirected"]));
     }
 
     #[test]
