@@ -4421,10 +4421,8 @@
     "what": "plan #620 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-10T04:00:48Z",
-    "notes": [
-      "started a night run, as a lane was free: #623 (medium) is queued to build, for `claude-6`: plan on `claude-6` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-10T04:11:30Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
