@@ -161,6 +161,7 @@ on this list during Waves 1–3.
 | unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
 | unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
 | unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
+| mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
 
@@ -172,6 +173,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
