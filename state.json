@@ -8134,9 +8134,9 @@
   "suggest": {
     "asks": [],
     "last_run": "2026-10-10T00:26:22Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "38009006751",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
