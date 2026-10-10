@@ -541,12 +541,14 @@ pub(super) fn chinese_keyword_label(keyword: &Keyword, terms: &Value) -> String 
     }
 }
 
-/// `/^(献祭|回响)\d+$/`: a Tribute or Echo count in the keyword list, as `is_tribute_or_echo_count`.
+/// `/^(献祭\d+|回响(\d+|X))$/`: a Tribute or Echo count in the keyword list, as
+/// `is_tribute_or_echo_count` (a computed Echo X, R802, prints "回响X").
 fn is_chinese_tribute_or_echo_count(item: &str) -> bool {
-    ["献祭", "回响"].iter().any(|word| {
-        item.strip_prefix(word)
-            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
-    })
+    if let Some(n) = item.strip_prefix("回响") {
+        return !n.is_empty() && (n == "X" || n.bytes().all(|b| b.is_ascii_digit()));
+    }
+    item.strip_prefix("献祭")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// `/。[”」]?$/`.
@@ -1617,6 +1619,11 @@ mod r1302_a_face_printed_in_chinese {
         // C+ #7's "Cry and start of turn:": a label after another label's words is still its opening.
         assert_eq!(
             cjk_failures("战吼和回合开始时：召唤一个单位。", &[]),
+            Vec::<String>::new()
+        );
+        // R802's computed Echo X leads its list as an Echo count does (Meditative #5).
+        assert_eq!(
+            cjk_failures("回响X，吸血\n造成1点伤害。", &[Keyword::Lifesteal]),
             Vec::<String>::new()
         );
         for wrong in [
