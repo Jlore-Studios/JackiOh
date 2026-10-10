@@ -207,7 +207,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Acclaimed",
       "Wincon",
     ]);
-    // Only the ten AI tokens carry "AI" and the two Prime tokens "Prime", and the pool never offers a
+    // Only the ten AI tokens carry "AI" and the Prime tokens "Prime", and the pool never offers a
     // Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
@@ -645,8 +645,19 @@ describe("the Jlockeed tag (R278)", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
-    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two.
-    expect([...kept].sort()).toEqual(["classic-004", "classicplus-048", "classicplus-051", "classicplus-052", "core-013", "core-014"]);
+    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two;
+    // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockheed's Evil Blueprints
+    // (#97.9 Jlockheed's Headquarters is a token, which the pool never offers).
+    const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
+    expect([...kept].sort()).toEqual([
+      "classic-004",
+      "classicplus-048",
+      "classicplus-051",
+      "classicplus-052",
+      "core-013",
+      "core-014",
+      ...meditative,
+    ]);
   });
 });
 
@@ -700,8 +711,11 @@ describe("the almanac's pool (R630)", () => {
   it("R1420 shows no card of a set that has not shipped, on the almanac's shelf or in the deck builder's pool", () => {
     const base = CORE_CATALOG["core-002"];
     if (base === undefined) throw new Error("no core-002 in the catalog");
-    const building: CardDef = { ...base, id: "meditative-002", index: "2", set: "Meditative", name: "Set being built" };
-    const token: CardDef = { ...building, id: "meditative-002-1", index: "2.1", token: true, tags: ["Token"], rarity: "Token" };
+    // A set that has not shipped: Meditative until its patch (issue #553), and from then on Boss, which
+    // is reserved (§5) and ships no card.
+    const unshipped: SetName = setShips("Meditative") ? "Boss" : "Meditative";
+    const building: CardDef = { ...base, id: "unshipped-002", index: "2", set: unshipped, name: "Set being built" };
+    const token: CardDef = { ...building, id: "unshipped-002-1", index: "2.1", token: true, tags: ["Token"], rarity: "Token" };
     const withSet: CatalogSnapshot = {
       version: "r1420-test",
       cards: { ...CORE_CATALOG, [building.id]: building, [token.id]: token },
@@ -713,7 +727,7 @@ describe("the almanac's pool (R630)", () => {
     }
     expect(visiblePool(withSet, { [building.id]: 1 }, filter({ ownedOnly: true }), DEFAULT_SORT)).not.toContain(building.id);
     expect(almanacPool(withSet, DEFAULT_FILTER, DEFAULT_SORT)).toEqual(almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT));
-    expect(setShips("Meditative")).toBe(false);
+    expect(setShips(unshipped)).toBe(false);
     expect(setShips("Core")).toBe(true);
   });
 

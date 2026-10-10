@@ -67,7 +67,7 @@ export const FILTER_TAGS: readonly Tag[] = [
   // The mechanics patch: every card that uses Plague Counters.
   "Plague",
   // Patch v0.2.Y: Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max
-  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the two Prime tokens carry it.
+  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the Prime tokens carry it.
   "Catalyst",
   "Acclaimed",
   // The Meditative set's (R1381): #8 Reach the Summit and #20 Aestheticize the Game, which win the
@@ -77,7 +77,7 @@ export const FILTER_TAGS: readonly Tag[] = [
 
 /**
  * The almanac's tag chips (R630): the deck builder's, then the three only tokens carry, "Prime" (the
- * two Prime tokens), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
+ * Prime tokens, R1421), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
  * a catalog card carries.
  */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Token"];
