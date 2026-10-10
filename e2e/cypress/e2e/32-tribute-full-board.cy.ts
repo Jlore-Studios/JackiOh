@@ -1,4 +1,5 @@
 // BUILD M9-T12: C #45 Nature Titan's Tribute follows R391; R64 and R13 exclude lanes 1 and 2.
+// #3 Right-house defender reserves lane 1; #92 Felinor Fiender stacks in lane 2.
 // R180 provides the full-row setup. DOM assertions use player 1's view (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";

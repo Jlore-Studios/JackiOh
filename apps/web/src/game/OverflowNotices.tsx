@@ -1,4 +1,5 @@
 // Notices for §2.4's overflows (SPEC §10.10, R318) use the runner's entries: the newest wins per pile or hand.
+// #33 Unstable Clone Machine is the library-overflow fixture.
 // `data-playing="true"` follows its entry; reduced motion starts none.
 // No rule lives here (CLAUDE.md rule 7); only redacted event data is read (R97, R202), showing a back for the sentinel.
 

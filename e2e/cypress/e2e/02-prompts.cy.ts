@@ -1,6 +1,8 @@
 // BUILD M8: each picker is answered whether it is a `play` choice or a `PendingChoice` (R81, R123; §10.6).
 // Mulligans are simultaneous per seat (R9, R265; §2.1, §10.2); short mode menus use Discover.
 // Seeded one-kind specs avoid the hand cap (R4; §2.4).
+// Fixtures: #7 Jewelosco Scarab, #15 Me and Mr Token, #17 Flood, #24 Efficiency Dividend, and
+// #30 Archivist cover choices; #46 Suppressive Aura, #55 Lava Golem, and #67 Zoomerbin Oomen cover zones.
 
 import { seedFor } from "../../support/config.ts";
 import {

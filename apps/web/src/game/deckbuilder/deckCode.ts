@@ -3,8 +3,8 @@
 //
 // `JKO<version>.` precedes an unpadded base64url body:
 // [name-byte-length] [UTF-8 name] [LEB128 card count] [LEB128 card numbers] [two-byte checksum].
-// Version 2 uses a card's set offset plus §5 index (B2.2); non-whole-number Token indices cannot
-// be encoded (R251). Names failing D1 fall back to "Imported deck". FNV-1a detects damaged pastes.
+// Version 2 uses a card's set offset plus §5 index (B2.2); non-whole-number Token indices like
+// "T-AI-1" cannot be encoded (R251). Names failing D1 fall back to "Imported deck". FNV-1a detects damaged pastes.
 // Older codes are refused except Core-only version 1 (R255).
 //
 // Decoding is total: it rejects over-long or malformed input before resolving name (D1) and cards.

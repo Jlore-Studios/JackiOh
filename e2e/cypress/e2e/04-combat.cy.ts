@@ -1,3 +1,5 @@
+// #8 Mr. Vanilla tests DEF; #11 Tempo Timmy and #56 Jilliax test First Strike and Divine Shield.
+// #20 Pointmaster then tests a lethal First Strike against the shieldless Jilliax.
 // BUILD M8 computes combat results before reading the UI (§3, §4.1, §4.3, §4.4, §4.5; R93).
 // BUILD M5-T4 damage and heal pops are asserted while the animation runs, then against durable stats.
 

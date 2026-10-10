@@ -1,4 +1,6 @@
 // BUILD M9-T12 `29-animated-trap.cy.ts`: P2's Tesla animates during P1's turn (R383).
+// #77 Professor Curvature triggers it; #8 Mr. Vanilla and #11 Tempo Timmy test later triggers,
+// while #62 Friend of Felinors fills the unit row.
 // Read each seat's DOM only (CLAUDE.md rule 7): P1 cannot identify a set Tesla (R33), and Lifesteal
 // can heal beyond 30 (R19). An animated Tesla remains in place on later triggers (R383).
 

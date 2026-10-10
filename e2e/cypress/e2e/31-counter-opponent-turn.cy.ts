@@ -1,4 +1,5 @@
 // BUILD M9-T12 `31-counter-opponent-turn.cy.ts`: P2's C #17 Counterspell announces for P1's Spell (§10.5, R17, R448).
+// #5 Stockpile is countered before it resolves; #60 Bear Honeypot stays armed for the next card.
 // Read player 1's DOM and unrendered play counts (CLAUDE.md rule 7). A countered Spell neither
 // resolves nor reaches another trap (R17).
 

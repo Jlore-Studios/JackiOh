@@ -1,5 +1,6 @@
 // BUILD M8: R389 doubles R2's cap to 60 player-turns, 30 per seat; §2.5 makes it a draw.
 // #75 Infinite Reserves replaces fatigue with Rush Tokens; both opening hands hold it (§2.4).
+// #100 Ceaseless Void stays unaffordable while the fixture advances no-action turns.
 // R82 auto-ends no-action turns after Reserves; max mana stays below the other cards' costs (§2.3).
 
 import { constants, seedFor } from "../../support/config.ts";

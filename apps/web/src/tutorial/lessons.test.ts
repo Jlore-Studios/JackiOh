@@ -1,5 +1,6 @@
-// R291 lessons are deterministic R187 practice games with the R290 handicap. Their decks respect
-// R186 and taught mechanics; the practice core exposes only the human's view (rule 7).
+// R291 lessons are deterministic R187 practice games with the R290 handicap. #53 Reno and #70
+// Spiteful Stab would over-reward its 20-health opponent, so their decks respect R186 and taught
+// mechanics; the practice core exposes only the human's view (rule 7).
 
 import { describe, expect, it } from "vitest";
 

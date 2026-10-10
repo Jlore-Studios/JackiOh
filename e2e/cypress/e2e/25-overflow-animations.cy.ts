@@ -1,5 +1,7 @@
 // Overflow animation coverage (SPEC §2.4; R80, R82, R119, R180, R182, R184, R201, R244, R315,
 // R316, R317, R318, R373; BUILD M5-T1, M5-T3, M5-T4).
+// #5 Stockpile and #6 Mana Well drive fatigue and burns; #4 Gary the Gambler, #8 Mr. Vanilla, #33
+// Unstable Clone Machine, #66 The Rock, and #90 CN-Viral Injection drive library overflow.
 // Fixtures assert their preconditions because deck order affects each seeded game.
 // BUILD M8: each fixture owns its seed and uses retried waits.
 

@@ -1,4 +1,5 @@
-// R502: `cardPlayed` after its own `drawn` identifies Cast on draw (SPEC §2.4, R58).
+// R502: #21 Hinder and #27 Blood Ridden Glowy Jelly Bean show why `cardPlayed` after its own
+// `drawn` identifies Cast on draw (SPEC §2.4, R58).
 // Its announcement (B5 E1) and prompts can fall between those events.
 // R97: the sentinel matches either id; R227: a face-down cast carries its drawn id as `formerId`.
 

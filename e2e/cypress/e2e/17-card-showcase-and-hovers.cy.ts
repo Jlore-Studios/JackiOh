@@ -1,4 +1,5 @@
 // Spec 17: card showcases, inspection, and current in-play display (SPEC §10.8, §10.10; R97, R202, R247, R313, R752).
+// #32 Prem Panther is the inspected card-reference fixture.
 // It uses `seedFor`, settled assertions, and support/testids selectors; the page-side recorder measures showcase duration.
 //
 // Run it with:

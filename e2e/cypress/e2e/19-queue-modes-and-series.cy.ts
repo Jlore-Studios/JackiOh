@@ -1,4 +1,5 @@
 // BUILD M8 spec 19: Best-of-1, All Random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
+// #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
 // Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
 // BUILD M5-T1 fixes testids; M6/M7 supply the server, actor, queue and results.

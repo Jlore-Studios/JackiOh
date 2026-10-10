@@ -1,6 +1,8 @@
 // BUILD M8: R14 and §3.1 rotate each row's ten zones as one ring; crossing its centre changes control (§3.2), not ownership (R12).
 // R33 and §10.8 require a face-down trap's controller alone to see its identity. R73 swaps each lane across the board with ownership intact.
 // R81 declared `direction` and `mode` choices travel in `play`; §10.6 supplies no prompt. BUILD M5-T4 observes the resulting zone testids.
+// #1 Big D-fender, #20, #32 Prem Panther, #45 Deft Duelist, #56, #91 Fed Fauci, and #96 My Pawn
+// supply rotation and swap fixtures.
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";

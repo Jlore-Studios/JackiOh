@@ -1,4 +1,5 @@
 // BUILD M8: P2's Sheepish interrupts then resumes P1's play (R1, R17, R23, R118, R427; §10.3).
+// #15 Me and Mr Token triggers it; #19 Midrange Menace and #81 Radiant Saintess verify later plays.
 // The trap validates hidden information (R33; CLAUDE.md rule 7, §10.8); the modifier validates face-up views (R169).
 // R48's discount is dormant until its controller's next turn, then expires.
 

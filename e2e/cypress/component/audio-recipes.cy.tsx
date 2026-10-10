@@ -3,6 +3,7 @@
 // B16: impact RMS rises from 1 -> 4 -> 10, and 25 matches 10 within 1%.
 // B57 measures SFX through the real mix against decoded voice lines.
 // `sfx.ts` remains independently importable, and every B14 parameter render is bounded by `durationMs`.
+// R506: #21 Hinder and #27 Blood Ridden Glowy Jelly Bean have conspicuous mana-crack effects.
 // Run with:
 //   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
 //     --spec cypress/component/audio-recipes.cy.tsx
