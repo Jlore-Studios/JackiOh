@@ -4313,6 +4313,13 @@
     "623": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-10T04:15:31Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 5 fails (crates/ai/src/sweep.rs) and rule 3 fails (R390, R601, R600, R186, \u00a79.9 amended); not hard: the sweep's bookkeeping, not the AI's search, in one module plus text"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
