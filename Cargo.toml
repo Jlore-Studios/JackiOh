@@ -17,7 +17,7 @@ jackioh-engine = { path = "crates/engine" }
 jackioh-cards = { path = "crates/cards" }
 jackioh-ai = { path = "crates/ai" }
 
-# Third-party crates (SURFACE §2), versions as written; `=` only for wasm-bindgen.
+# Third-party crates (SURFACE §2), versions as written; `=` for wasm-bindgen and mlua.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151" }
 indexmap = { version = "2.14.2", features = ["serde"] }
@@ -44,6 +44,9 @@ anyhow = { version = "1.0.104" }
 thiserror = { version = "2.0.21" }
 clap = { version = "4.6.7", features = ["derive"] }
 rayon = { version = "1.12.0" }
+# The Luau host (`crates/luau`, #442 L3): Luau alone, with serde, and no `send`, `async`, `luau-jit`
+# or `module`. Pinned exactly, since the Luau its `luau0-src` builds is the one `luau-analyze` matches.
+mlua = { version = "=0.12.2", default-features = false, features = ["luau", "serde"] }
 # The server's username checks (SPEC §9.4, R1432–R1434): NFKC and NFD, full case folding,
 # grapheme clusters, scripts and general categories.
 caseless = { version = "0.2.2" }
