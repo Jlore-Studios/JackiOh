@@ -417,6 +417,14 @@ pub const MATCH_REAPER_INTERVAL_SECONDS: i64 = 30;
 /// if the winner rolled back, lands this one. Three losses in a row is a storm, not a race worth
 /// waiting out (the same bound R263 gives a series transition's compare-and-set).
 pub const RESULT_WRITE_ATTEMPTS: usize = 3;
+/// SPEC §11 R1437: how many times the match actor tries to write a finished game's result
+/// (`api::results::record_result`) before it lets go of the match. Each try is the whole
+/// transaction, so one that fails leaves the match as it was: `live`, both players still in it.
+/// Three tries outlast a blip in the store; the rebuild R1437 falls back on outlasts an outage.
+pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
+/// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
+/// try after it (250 ms, then 500 ms).
+pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
