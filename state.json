@@ -4736,10 +4736,8 @@
     "what": "build #602 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-10T00:25:23Z",
-    "notes": [
-      "started a night run, as a lane was free: a suggestion survey is due, for `claude-3`"
-    ],
+    "at": "2026-10-10T00:36:12Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
