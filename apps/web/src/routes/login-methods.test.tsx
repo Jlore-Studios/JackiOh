@@ -1,6 +1,7 @@
 // `/login`'s further ways in (issue #267): the email sign-in link and code (R664), the second step
-// for an account with an authenticator app (R665) and the OAuth providers (R666). The provider and
-// our server are a stubbed `fetch`; nothing leaves the process.
+// for an account with an authenticator app (R665), a username in place of the email (R1443, issue
+// #645) and the OAuth providers (R666). The provider and our server are a stubbed `fetch`; nothing
+// leaves the process.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -323,6 +324,99 @@ describe("R665 the second step for an account with an authenticator app", () => 
     await settle();
     expect(readSession()?.accessToken).toBe(AAL1);
     expect(window.location.pathname).toBe(paths.landing);
+  });
+});
+
+describe("R1443 signing in with a username", () => {
+  const NAME = "Max#3";
+
+  /** Our server's answer to a username sign-in: the session, never the address. */
+  function ok(secondFactor: string | null): Answer {
+    return {
+      status: 200,
+      body: { session: { accessToken: AAL1, refreshToken: "refresh-1", expiresIn: 3600 }, emailVerified: true, secondFactor },
+    };
+  }
+
+  function signInAs(name: string): void {
+    setField(loginTestid.email, name);
+    setField(loginTestid.password, PASSWORD);
+    submitForm();
+  }
+
+  it("R1443 a username signs in through our server, and the field says it takes one", async () => {
+    const calls = serve({ "POST /api/auth/username-signin": ok(null) });
+    render(<LoginRoute />);
+    expect(screen.getByLabelText("Email or username")).toHaveAttribute("type", "text");
+    signInAs(` ${NAME} `);
+    await settle();
+    expect(paths_(calls)).toEqual(["POST /api/auth/username-signin"]);
+    expect(calls[0]?.body).toEqual({ username: NAME, password: PASSWORD });
+    expect(calls[0]?.auth).toBeNull();
+    expect(readSession()?.accessToken).toBe(AAL1);
+    expect(readSession()?.refreshToken).toBe("refresh-1");
+    expect(window.location.pathname).toBe(paths.landing);
+  });
+
+  it("R1443 a refused username reads one sentence of our own and stores nothing", async () => {
+    const calls = serve({
+      "POST /api/auth/username-signin": { status: 401, body: { error: { code: "unauthorized", message: "server text" } } },
+    });
+    render(<LoginRoute />);
+    signInAs(NAME);
+    await settle();
+    expect(screen.getByTestId(loginTestid.error).textContent).toBe(AUTH_MESSAGES.usernameCredentials);
+    expect(document.body.textContent).not.toContain("server text");
+    // A resend of a confirmation needs an address, which a username is not.
+    expect(screen.queryByTestId(loginTestid.resend)).toBeNull();
+    expect(readSession()).toBeNull();
+    expect(paths_(calls)).toEqual(["POST /api/auth/username-signin"]);
+  });
+
+  it("R1443 a rate limit says so, never the refusal", async () => {
+    serve({
+      "POST /api/auth/username-signin": {
+        status: 429,
+        body: { error: { code: "rate_limited", message: "server text", details: { retryAfterMs: 1000 } } },
+      },
+    });
+    render(<LoginRoute />);
+    signInAs(NAME);
+    await settle();
+    expect(screen.getByTestId(loginTestid.error).textContent).toBe(AUTH_MESSAGES.usernameRateLimited);
+    expect(document.body.textContent).not.toContain("server text");
+    expect(readSession()).toBeNull();
+  });
+
+  it("R1443 an account with an authenticator app is asked for its code after a username sign-in", async () => {
+    const calls = serve({ "POST /api/auth/username-signin": ok("factor-1"), ...MFA_ANSWERS });
+    render(<LoginRoute />);
+    signInAs(NAME);
+    await settle();
+    expect(screen.getByTestId(loginTestid.form)).toHaveAttribute("data-mode", "mfa");
+    expect(readSession()).toBeNull();
+
+    setField(loginTestid.code, "123456");
+    submitForm();
+    await settle();
+    expect(paths_(calls)).toEqual([
+      "POST /api/auth/username-signin",
+      "POST /auth/v1/factors/factor-1/challenge",
+      "POST /auth/v1/factors/factor-1/verify",
+    ]);
+    expect(calls[1]?.auth).toBe(`Bearer ${AAL1}`);
+    expect(readSession()?.accessToken).toBe(AAL2);
+    expect(window.location.pathname).toBe(paths.landing);
+  });
+
+  it("R1443 anything with an @ still goes straight to the provider", async () => {
+    const calls = serve({ "/auth/v1/token": tokens(AAL1), "POST /api/auth/username-signin": ok(null) });
+    render(<LoginRoute />);
+    signInAs(EMAIL);
+    await settle();
+    expect(paths_(calls)).toEqual(["POST /auth/v1/token"]);
+    expect(calls[0]?.body).toEqual({ email: EMAIL, password: PASSWORD });
+    expect(readSession()?.accessToken).toBe(AAL1);
   });
 });
 

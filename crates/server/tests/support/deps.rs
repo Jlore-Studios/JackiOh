@@ -189,6 +189,10 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             jackioh_server::config::API_REQUESTS_PER_MINUTE as _,
             API_RATE_WINDOW_MS as _,
         ),
+        sign_in_limiter: jackioh_server::api::http::create_rate_limiter(
+            jackioh_server::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
+            jackioh_server::config::USERNAME_SIGN_IN_WINDOW_MS,
+        ),
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
     });

@@ -21,7 +21,8 @@ browser ──WSS────▶ match actor     ──▶ jackioh-engine (reduc
 ```
 
 The browser authenticates against Supabase Auth directly and sends the access token, which this
-server verifies (JWKS, or the HS256 fallback). It never brokers a password outside E2E mode.
+server verifies (JWKS, or the HS256 fallback). It never brokers a password outside E2E mode, except
+a sign-in by username, which it makes with the account's address and answers without it (R1443).
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
@@ -117,6 +118,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
+| `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
 | `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, and the caller's `username: { name, nextChangeAt, promptOwed }` (R1435) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |

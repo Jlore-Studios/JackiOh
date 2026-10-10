@@ -1,19 +1,21 @@
-//! SPEC §11 R159, R160, R194 and R665 — the rulings `src/auth.rs` and `src/api/auth.rs` make about
-//! §9.4's front door.
+//! SPEC §11 R159, R160, R194, R665 and R1443 — the rulings `src/auth.rs` and `src/api/auth.rs` make
+//! about §9.4's front door.
 //!
 //!  - **R159**: §9.4 step 1's "verified email" is read from the auth provider, and only the
 //!    *positive* answer may be remembered, briefly and per user id. A provider that cannot be
 //!    reached fails closed.
 //!  - **R160**: sign-up and sign-in answer identically for every outcome that depends on whether an
 //!    account exists, so neither endpoint becomes an account-enumeration oracle. No sign-up is
-//!    brokered at all (SURFACE §11.3) and sign-in is for the E2E fixtures only, so R160 is held
-//!    by those two doors.
+//!    brokered at all (SURFACE §11.3) and sign-in by email is for the E2E fixtures only, so R160 is
+//!    held by those two doors and by R1443's sign-in by username.
 //!  - **R194**: a session the provider has ended is not honoured here either.
 //!  - **R665**: an account with an authenticator app is honoured only at `aal2`.
+//!  - **R1443**: a username signs in through the server, which asks the provider with the account's
+//!    address and never sends that address back.
 //!
 //! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
-//! `127.0.0.1` answering the four endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
-//! user lookup and the admin delete) and counting every call. Its JWKS is empty, so tier 1 fails
+//! `127.0.0.1` answering the five endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
+//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS is empty, so tier 1 fails
 //! *locally*; the cache clock is [`Clock`], a manual one, through the provider's `now` seam.
 //!
 //! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
@@ -25,10 +27,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, RawQuery, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use indexmap::{IndexMap, IndexSet};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use serde_json::{Value, json};
@@ -157,6 +159,19 @@ pub(crate) enum DeletionReply {
     Unavailable,
 }
 
+/// What `POST /auth/v1/token` answers: R1443's password grant.
+#[derive(Clone)]
+pub(crate) enum GrantReply {
+    /// 200 with this body (GoTrue's raw JSON).
+    Tokens(Value),
+    /// 400 `invalid_credentials`: GoTrue's answer to a wrong password or an unconfirmed address.
+    Refused,
+    /// 429: GoTrue's own per-address limit.
+    RateLimited,
+    /// 500: nobody useful answered.
+    Unavailable,
+}
+
 type AdminScript = Arc<dyn Fn(&str) -> AdminReply + Send + Sync>;
 type UserScript = Arc<dyn Fn(&str) -> UserReply + Send + Sync>;
 
@@ -169,6 +184,9 @@ struct GoTrueState {
     deleted: Vec<String>,
     /// Users a delete removed: every later admin lookup answers 404 for them, as GoTrue does.
     gone: IndexSet<String>,
+    grant: GrantReply,
+    /// Every password grant asked for: its query and its body.
+    grants: Vec<(Option<String>, Value)>,
 }
 
 /// GoTrue on `127.0.0.1:<port>`, scripted per test and counting what it is asked.
@@ -265,9 +283,43 @@ async fn user_by_token(State(state): State<Arc<Mutex<GoTrueState>>>, headers: He
     }
 }
 
+async fn token(
+    State(state): State<Arc<Mutex<GoTrueState>>>,
+    RawQuery(query): RawQuery,
+    Json(body): Json<Value>,
+) -> Response {
+    let reply = {
+        let mut state = state.lock().expect("GoTrue state");
+        state.grants.push((query, body));
+        state.grant.clone()
+    };
+    match reply {
+        GrantReply::Tokens(body) => (StatusCode::OK, Json(body)).into_response(),
+        GrantReply::Refused => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "code": 400,
+                "error_code": "invalid_credentials",
+                "msg": "Invalid login credentials",
+            })),
+        )
+            .into_response(),
+        GrantReply::RateLimited => (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(json!({ "code": 429, "error_code": "over_request_rate_limit", "msg": "Request rate limit reached" })),
+        )
+            .into_response(),
+        GrantReply::Unavailable => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "code": 500, "msg": "Internal Server Error" })),
+        )
+            .into_response(),
+    }
+}
+
 impl GoTrue {
-    /// Starts one. The admin lookup answers a confirmed user, deletes succeed, and `/auth/v1/user`
-    /// answers as unreachable until a test scripts it.
+    /// Starts one. The admin lookup answers a confirmed user, deletes succeed, `/auth/v1/user`
+    /// answers as unreachable and a password grant is refused until a test scripts them.
     pub(crate) async fn start() -> GoTrue {
         let state = Arc::new(Mutex::new(GoTrueState {
             admin: Arc::new(|user_id: &str| AdminReply::Ok(confirmed_user(user_id))),
@@ -277,11 +329,14 @@ impl GoTrue {
             user_calls: 0,
             deleted: Vec::new(),
             gone: IndexSet::new(),
+            grant: GrantReply::Refused,
+            grants: Vec::new(),
         }));
         let routes = axum::Router::new()
             .route("/auth/v1/.well-known/jwks.json", get(jwks))
             .route("/auth/v1/user", get(user_by_token))
             .route("/auth/v1/admin/users/{id}", get(admin_user).delete(admin_delete))
+            .route("/auth/v1/token", post(token))
             .with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
             .await
@@ -327,6 +382,15 @@ impl GoTrue {
 
     pub(crate) fn deleted(&self) -> Vec<String> {
         self.state.lock().expect("GoTrue state").deleted.clone()
+    }
+
+    fn answer_grant(&self, reply: GrantReply) {
+        self.state.lock().expect("GoTrue state").grant = reply;
+    }
+
+    /// Every password grant asked for, in order: its query and its body.
+    fn grants(&self) -> Vec<(Option<String>, Value)> {
+        self.state.lock().expect("GoTrue state").grants.clone()
     }
 }
 
@@ -432,11 +496,24 @@ pub(crate) async fn raw(
     token: Option<&str>,
     body: Option<Value>,
 ) -> (u16, String) {
+    raw_from(app, "203.0.113.7", method, path, token, body).await
+}
+
+/// `raw` from the client address `address` (the suite trusts one proxy hop, so the last
+/// `X-Forwarded-For` entry is the client's, R190).
+pub(crate) async fn raw_from(
+    app: &Arc<App>,
+    address: &str,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    body: Option<Value>,
+) -> (u16, String) {
     let mut request = axum::http::Request::builder()
         .method(method)
         .uri(format!("https://server.test{path}"))
         .header("content-type", "application/json")
-        .header("x-forwarded-for", "203.0.113.7")
+        .header("x-forwarded-for", address)
         .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
             [127, 0, 0, 1],
             40_000,
@@ -776,9 +853,10 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
 
 /// R160 — the identical sign-up and sign-in error (§9.2, §9.4, §9.8; extends R145).
 ///
-/// The Supabase provider brokers no password at all (SURFACE §11.3: `sign_in` answers unavailable,
-/// and `/api/auth/signup` is gone), so the doors R160 guards are the E2E fixture sign-in
-/// (`/api/auth/signin`, under `E2E=1` only) and the absent sign-up route.
+/// The Supabase provider brokers no password by email (SURFACE §11.3: `sign_in` answers
+/// unavailable, and `/api/auth/signup` is gone), so the doors R160 guards here are the E2E fixture
+/// sign-in (`/api/auth/signin`, under `E2E=1` only) and the absent sign-up route. The sign-in by
+/// username is R1443's, below.
 mod r160_r145_the_identical_sign_up_and_sign_in_error {
     use super::*;
 
@@ -893,6 +971,241 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         let h = Harness::new().await;
         let refused = h.auth.sign_in("a@b.test", "p").await;
         assert!(matches!(refused, Err(AuthError::Unavailable { .. })));
+    }
+}
+
+// R1443
+
+/// R1443 — signing in with a username (§9.4, R160, R190, R192, R665).
+///
+/// The fixtures hold the usernames R144's reseed gives them, bare: `e2e_p1`, `e2e_p2`.
+mod r1443_username_sign_in {
+    use super::*;
+    use jackioh_server::config::{USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW, USERNAME_SIGN_IN_WINDOW_MS};
+
+    /// The address `raw` sends from.
+    const ADDRESS: &str = "203.0.113.7";
+
+    async fn sign_in_from(app: &Arc<App>, address: &str, username: &str, password: &str) -> (u16, String) {
+        raw_from(
+            app,
+            address,
+            "POST",
+            "/api/auth/username-signin",
+            None,
+            Some(json!({ "username": username, "password": password })),
+        )
+        .await
+    }
+
+    async fn sign_in(app: &Arc<App>, username: &str, password: &str) -> (u16, String) {
+        sign_in_from(app, ADDRESS, username, password).await
+    }
+
+    fn body_of(text: &str) -> Value {
+        serde_json::from_str(text).expect("a JSON body")
+    }
+
+    async fn claim(app: &Arc<App>, token: &str, username: &str) {
+        let (status, _, body) = call(
+            app,
+            "PUT",
+            "/api/username",
+            Some(token),
+            json!({ "username": username }),
+        )
+        .await;
+        assert_eq!(status, 200, "claim {username}: {body}");
+    }
+
+    #[tokio::test]
+    async fn r1443_signs_in_by_username_in_any_case_and_with_a_tag() {
+        let app = test_app().await;
+        let (status, text) = sign_in(&app, "E2E_P1", "e2e-p1-password").await;
+        assert_eq!(status, 200, "{text}");
+        let body = body_of(&text);
+        assert_eq!(body["session"]["accessToken"], json!("e2e-token-p1"));
+        assert_eq!(body["emailVerified"], json!(true));
+        assert_eq!(body["secondFactor"], Value::Null);
+
+        // `Max` is p2's, bare; `Max#1` is p1's.
+        claim(&app, "e2e-token-p2", "Max").await;
+        claim(&app, "e2e-token-p1", "Max#1").await;
+        let (status, text) = sign_in(&app, "max", "e2e-p2-password").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(body_of(&text)["session"]["accessToken"], json!("e2e-token-p2"));
+        let (status, text) = sign_in(&app, " MAX#1 ", "e2e-p1-password").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(body_of(&text)["session"]["accessToken"], json!("e2e-token-p1"));
+        // The tag names the account: `Max#1` with p2's password is not p2.
+        assert_eq!(sign_in(&app, "Max#1", "e2e-p2-password").await.0, 401);
+        // The name p1 gave up names nobody now.
+        assert_eq!(sign_in(&app, "e2e_p1", "e2e-p1-password").await.0, 401);
+    }
+
+    #[tokio::test]
+    async fn r1443_no_such_name_a_wrong_password_and_a_malformed_name_read_byte_identically() {
+        let app = test_app().await;
+        let responses = [
+            sign_in(&app, "ghost", "hunter2").await,            // no such name
+            sign_in(&app, "e2e_p1", "hunter2").await,           // wrong password
+            sign_in(&app, "e2e_p1#x", "hunter2").await,         // no name at all
+            sign_in(&app, "e2e_p1#1", "e2e-p1-password").await, // a tag the account does not carry
+        ];
+        assert!(
+            responses.iter().all(|(status, _)| *status == 401),
+            "{responses:?}"
+        );
+        let bodies: IndexSet<&str> = responses.iter().map(|(_, body)| body.as_str()).collect();
+        assert_eq!(bodies.len(), 1);
+        let body = responses[0].1.as_str();
+        assert!(!body.contains('@'), "{body}");
+        assert!(!body.to_lowercase().contains("invalid login credentials"));
+        assert_ne!(
+            body,
+            sign_in_email_refusal(&app).await,
+            "its own sentence, not the email door's"
+        );
+
+        let missing = raw(
+            &app,
+            "POST",
+            "/api/auth/username-signin",
+            None,
+            Some(json!({ "username": "e2e_p1" })),
+        )
+        .await;
+        assert_eq!(missing.0, 400);
+        let missing = raw(
+            &app,
+            "POST",
+            "/api/auth/username-signin",
+            None,
+            Some(json!({ "password": "e2e-p1-password" })),
+        )
+        .await;
+        assert_eq!(missing.0, 400);
+    }
+
+    /// The email door's refusal, for telling the two apart.
+    async fn sign_in_email_refusal(app: &Arc<App>) -> String {
+        raw(
+            app,
+            "POST",
+            "/api/auth/signin",
+            None,
+            Some(json!({ "email": "ghost@example.test", "password": "hunter2" })),
+        )
+        .await
+        .1
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1443_limits_attempts_per_address_and_per_name() {
+        let app = test_app().await;
+        for _ in 0..USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW {
+            assert_eq!(sign_in_from(&app, "198.51.100.1", "e2e_p1", "wrong").await.0, 401);
+        }
+        // The address is spent, whichever name it tries next and with the right password…
+        let (status, text) = sign_in_from(&app, "198.51.100.1", "e2e_p2", "e2e-p2-password").await;
+        assert_eq!(status, 429, "{text}");
+        let wait = body_of(&text)["error"]["details"]["retryAfterMs"]
+            .as_i64()
+            .expect("R192's wait");
+        assert!(wait > 0 && wait <= USERNAME_SIGN_IN_WINDOW_MS, "{wait}");
+        // …and so is the name, from any other address.
+        let (status, _) = sign_in_from(&app, "198.51.100.2", "E2E_P1", "e2e-p1-password").await;
+        assert_eq!(status, 429);
+        // Another name from another address is untouched: the refused try above never reached it.
+        let (status, _) = sign_in_from(&app, "198.51.100.2", "e2e_p2", "e2e-p2-password").await;
+        assert_eq!(status, 200);
+
+        // The wait it named is the wait.
+        tokio::time::advance(Duration::from_millis(u64::try_from(wait).expect("a wait"))).await;
+        let (status, _) = sign_in_from(&app, "198.51.100.1", "e2e_p1", "e2e-p1-password").await;
+        assert_eq!(status, 200);
+    }
+
+    #[tokio::test]
+    async fn r1443_asks_the_provider_with_the_accounts_address_and_never_sends_it_back() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "refresh_token": "refresh-1",
+            "expires_in": 3600,
+            "user": {
+                "id": "e2e-p1",
+                "email": "e2e-p1@jackioh.test",
+                "email_confirmed_at": "2026-10-01T00:00:00Z",
+                "factors": [{ "id": "factor-1", "factor_type": "totp", "status": "verified" }],
+            },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "E2E_P1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(
+            body_of(&text),
+            json!({
+                "session": { "accessToken": "access-1", "refreshToken": "refresh-1", "expiresIn": 3600 },
+                "emailVerified": true,
+                "secondFactor": "factor-1",
+            })
+        );
+        assert!(!text.contains("e2e-p1@jackioh.test"));
+        assert_eq!(
+            h.gotrue.grants(),
+            vec![(
+                Some("grant_type=password".to_string()),
+                json!({ "email": "e2e-p1@jackioh.test", "password": "pw" }),
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn r1443_turns_the_providers_refusal_limit_and_outage_into_ours() {
+        let h = Harness::new().await;
+        let app = h.app().await;
+        let log = Captured::default();
+        let _guard = log.install();
+
+        // A refusal (the scripted GoTrue's default) reads as no such name does, and no such name
+        // never reaches the provider.
+        let refused = sign_in(&app, "e2e_p1", "pw-never-logged").await;
+        let ghost = sign_in(&app, "ghost", "pw-never-logged").await;
+        assert_eq!(refused.0, 401);
+        assert_eq!(refused, ghost);
+        assert_eq!(h.gotrue.grants().len(), 1);
+        let logged = log.text();
+        assert!(logged.contains("auth.username_signin_rejected"), "{logged}");
+        for secret in ["e2e-p1@jackioh.test", "e2e_p1", "pw-never-logged"] {
+            assert!(!logged.contains(secret), "the log names {secret}: {logged}");
+        }
+
+        h.gotrue.answer_grant(GrantReply::RateLimited);
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 429);
+        assert_eq!(
+            body_of(&text)["error"]["details"]["retryAfterMs"],
+            json!(USERNAME_SIGN_IN_WINDOW_MS)
+        );
+        assert_ne!(text, refused.1);
+
+        h.gotrue.answer_grant(GrantReply::Unavailable);
+        assert_eq!(sign_in(&app, "e2e_p1", "pw").await.0, 503);
+
+        // An answer that is not a session is no session: no token, or an authenticator app the
+        // session could never be raised past (R665) for want of its id.
+        for answer in [
+            json!({ "refresh_token": "refresh-1" }),
+            json!({
+                "access_token": "access-1",
+                "user": { "factors": [{ "factor_type": "totp", "status": "verified" }] },
+            }),
+        ] {
+            h.gotrue.answer_grant(GrantReply::Tokens(answer));
+            assert_eq!(sign_in(&app, "e2e_p1", "pw").await.0, 503);
+        }
     }
 }
 

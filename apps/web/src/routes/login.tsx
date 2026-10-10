@@ -39,6 +39,7 @@ import {
   revokeSignedOutSession,
   secondFactorFor,
   signIn,
+  signInWithUsername,
   signUp,
   startOAuthSignIn,
   verifyEmailCode,
@@ -808,7 +809,7 @@ export default function LoginRoute(): ReactElement {
       nextPasswordError = newPasswordProblem(password);
     } else if (mode === "signIn") {
       // An existing password is whatever the account has: sign-in only asks for something typed.
-      nextEmailError = requiredProblem(address, "email");
+      nextEmailError = requiredProblem(address, "email or username");
       nextPasswordError = requiredProblem(password, "password");
     } else {
       nextEmailError = emailProblem(email);
@@ -870,13 +871,17 @@ export default function LoginRoute(): ReactElement {
 
     // Read before the attempt: a successful sign-in forgets it.
     const justSignedUp = pendingEmail();
-    signIn(address, password)
+    // R1432: a username never holds @, so what was typed says which door it goes to (R1443).
+    const byUsername = !address.includes("@");
+    (byUsername ? signInWithUsername(address, password) : signIn(address, password))
       .then((result) => {
         // Kept at once, or (R665) once its authenticator code has been typed.
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
         setError(messageOf(cause));
+        // The resend link and the confirm-first hint below are for an address.
+        if (byUsername) return;
         // An unconfirmed address reads as `credentials` (R160), so the way forward for it is
         // offered after any such refusal rather than only after a telling one. Not after a network
         // failure or a rate limit, which say nothing about the address and which a mailer would not
@@ -1166,12 +1171,16 @@ export default function LoginRoute(): ReactElement {
           >
             {secondFactor ? null : (
               <>
-                <label htmlFor="login-email">{claiming ? "Your account's email" : "Email"}</label>
+                <label htmlFor="login-email">
+                  {claiming ? "Your account's email" : signingIn ? "Email or username" : "Email"}
+                </label>
                 <input
                   id="login-email"
                   data-testid={loginTestid.email}
-                  type="email"
+                  // R1443: sign-in takes a username too, which an email field would refuse.
+                  type={signingIn ? "text" : "email"}
                   autoComplete="username"
+                  autoCapitalize="none"
                   value={email}
                   aria-invalid={emailError !== null}
                   aria-describedby={emailError !== null ? "login-email-error" : undefined}
