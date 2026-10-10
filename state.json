@@ -4753,8 +4753,10 @@
     "what": "build #602 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-10T08:24:10Z",
-    "notes": [],
+    "at": "2026-10-10T08:34:03Z",
+    "notes": [
+      "started a night run, as a lane was free: #602 (medium) is queued to build, for `claude-6`: build on `claude-6` (claude, `sonnet`, medium); review on `claude-6` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
