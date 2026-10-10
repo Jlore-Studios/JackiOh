@@ -4560,11 +4560,13 @@
         "by": "`claude` (strong)",
         "sha": "4449666beba78df665d3b69f3eb4ce827cc22080"
       },
+      "closed_at": "2026-10-10T06:34:44Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-10T05:48:02Z",
       "issue": 620,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
