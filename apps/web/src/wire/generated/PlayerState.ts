@@ -20,6 +20,11 @@ resolving: Array<CardInstance>, units: Array<Array<CardInstance> | null>, backro
  */
 turnsStarted: number, 
 /**
+ * R1223: the instalment due at each of this player's coming refreshes, the next one first,
+ * with trailing zeros trimmed; `None` when empty, so a game without credit hashes as before.
+ */
+owedInstalments?: Array<number>, 
+/**
  * My Pawn: the AI policy plays out the rest of this turn (R44).
  */
 aiTurn: boolean, 
