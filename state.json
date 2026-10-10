@@ -4487,19 +4487,16 @@
           "gemini"
         ],
         "builder": "gemini",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [
           {
             "family": "gemini",
-            "run": "38055395433",
+            "run": "38061748168",
             "tier": "medium"
           }
         ],
-        "sha": "ed4c9b5052b764a6a9409999204efa01d6b153f5",
+        "sha": "907dd5f94ab6fb46e37786365f3cabb10bbb9370",
         "tiers": {
-          "claude": "strong",
           "gemini": "medium"
         }
       }
