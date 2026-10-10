@@ -31,8 +31,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, Row, Selection,
-    ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId, PromptKind, Row,
+    Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -370,6 +370,16 @@ fn parse_zone(value: &Value) -> Option<ZoneChoice> {
     Some(ZoneChoice { row, lane })
 }
 
+fn parse_plague(value: &Value) -> Option<PlagueSpend> {
+    let record = value.as_object()?;
+    let from = is_string(record.get("from"))?;
+    let tokens = non_negative_int(record.get("tokens"))?;
+    Some(PlagueSpend {
+        from: from.to_string(),
+        tokens,
+    })
+}
+
 fn parse_selection(value: &Value) -> Option<Selection> {
     let record = (value).as_object()?;
     match record.get("pick").and_then(Value::as_str) {
@@ -468,7 +478,15 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 };
                 modes = Some(parsed);
             }
-            // TS's whitelist has no `plague`: a client play never carries one.
+            // B5 E11, R454: the Plague Counters that pay for a play from the graveyard (Classic #74
+            // Corpse Plantation), as `legal_actions` lists them; whether they may pay is the reducer's.
+            let mut plague = None;
+            if let Some(value) = raw.get("plague") {
+                let Some(parsed) = parse_plague(value) else {
+                    return Err(malformed(r#""play.plague" must be { from, tokens }"#));
+                };
+                plague = Some(parsed);
+            }
             Ok(ActionBody::Play {
                 instance_id: instance_id.to_string(),
                 zone,
@@ -477,7 +495,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 tributes,
                 targets,
                 modes,
-                plague: None,
+                plague,
             })
         }
         ActionType::Attack => {
