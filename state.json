@@ -4520,6 +4520,11 @@
             "family": "gemini",
             "run": "38028008563",
             "tier": "medium"
+          },
+          {
+            "family": "gemini",
+            "run": "38029187617",
+            "tier": "medium"
           }
         ],
         "sha": "9d225969ab04c94271bb4ff2942c0d18a1078a67",
