@@ -122,12 +122,7 @@ fn r1125_casts_and_unwatched_store_nothing() {
 
     // A judge watches, but an attack is no play: nothing stored.
     let mut state = watched("r1125-attack");
-    let attacker = put(
-        &mut state,
-        &cheap_card.id,
-        slot(P2, Row::Units, 1),
-        Default::default(),
-    );
+    let attacker = put(&mut state, &cheap.id, slot(P2, Row::Units, 1), Default::default());
     let out = jackioh_engine::reduce::reduce(
         &state,
         &Action::new(
@@ -178,12 +173,19 @@ fn r1125_replay_fold_matches_hash() {
     in_hand(&mut state, &cheap.id, P2, 1);
     let dear_card = in_hand(&mut state, &dear.id, P2, 1).into_iter().next().unwrap();
     let first = play(&state, P2, &dear_card.id, "n1");
-    let second = play(&state, P2, &dear_card.id, "n2");
+    // The second time from the state as a log's fold holds it: through JSON, under another nonce.
+    let restored: GameState =
+        serde_json::from_value(serde_json::to_value(&state).expect("serialises")).expect("parses");
+    let second = play(&restored, P2, &dear_card.id, "n2");
     assert!(first.error.is_none());
+    assert!(second.error.is_none());
     assert_eq!(
-        serde_json::to_value(&first.state).expect("serialises"),
-        serde_json::to_value(&second.state).expect("serialises")
+        first.state.play_judgement.as_ref().map(|judged| judged.optimal),
+        Some(false),
+        "the dear play was judged"
     );
+    // The nonce log is bookkeeping (`hash_state` leaves it out); everything else is the same game.
+    assert_eq!(hash_state(&first.state), hash_state(&second.state));
     assert_eq!(
         serde_json::to_value(&first.events).expect("serialises"),
         serde_json::to_value(&second.events).expect("serialises")

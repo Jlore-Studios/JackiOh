@@ -1085,6 +1085,57 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         (state, attacker, defender, neighbour, trap)
     }
 
+    /// Each `damage` event as `(sourceId, targetId, amount)`.
+    fn hits(events: &[GameEvent]) -> Vec<(Option<String>, String, i32)> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Damage {
+                    source_id,
+                    target_id,
+                    amount,
+                    ..
+                } => Some((source_id.clone(), target_id.clone(), *amount)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The ids `destroyed` names, in order.
+    fn destroyed_ids(events: &[GameEvent]) -> Vec<String> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Destroyed { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// §4.3 between allies, two 3/3s: the attacker hits its neighbour for 3 and is struck back for
+    /// 3, and the state check destroys both. The original target is untouched.
+    fn assert_allies_fought(
+        sink: &Bench<'_>,
+        attacker: &CardInstance,
+        defender: &CardInstance,
+        neighbour: &CardInstance,
+    ) {
+        assert_eq!(
+            hits(&sink.events),
+            vec![
+                (Some(attacker.id.clone()), neighbour.id.clone(), 3),
+                (Some(neighbour.id.clone()), attacker.id.clone(), 3),
+            ]
+        );
+        let mut gone = destroyed_ids(&sink.events);
+        gone.sort();
+        let mut both = vec![attacker.id.clone(), neighbour.id.clone()];
+        both.sort();
+        assert_eq!(gone, both);
+        assert_eq!(live(&*sink.state, neighbour).zone.z(), ZoneName::Graveyard);
+        assert_eq!(live(&*sink.state, defender).damage, 0);
+    }
+
     #[test]
     fn r1122_redirected_attack_fights_the_ally() {
         let (mut state, attacker, defender, neighbour, trap) = redirect_swing("redirect", &redirector().id);
@@ -1097,18 +1148,17 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
             json_of(&events_of_type(&sink.events, GameEventType::Redirected)),
             json!([{ "type": "redirected", "what": "attack", "fromId": defender.id, "toId": neighbour.id, "byInstanceId": trap.id }])
         );
-        // §4.3 between allies: the 3/3 hits its neighbour for 3 and is struck back for 3. The
-        // original target is untouched, and the window is shut again.
-        assert_eq!(live(sink.state, &defender).damage, 0);
-        assert_eq!(live(sink.state, &neighbour).damage, 3);
+        assert_allies_fought(&sink, &attacker, &defender, &neighbour);
+        // The window is shut again.
         assert!(sink.state.declared_attack.is_none());
     }
 
     #[test]
     fn r1122_later_trap_skips_it() {
         // The redirector answers first (lane order); the canceller behind it is never offered the
-        // re-aimed attack, so no attack is cancelled and the allies still fight.
-        let (mut state, attacker, defender, _backrow) =
+        // re-aimed attack, so no attack is cancelled, the canceller stays set and the allies still
+        // fight.
+        let (mut state, attacker, defender, backrow) =
             swing("redirect-skip", &[redirector().id, canceller().id]);
         let neighbour = card_at(&state, slot(P2, Units, 2)).cloned().unwrap();
         let mut sink = sink_for(&mut state);
@@ -1117,8 +1167,10 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
         assert_eq!(events_of_type(&sink.events, GameEventType::Redirected).len(), 1);
         assert!(events_of_type(&sink.events, GameEventType::AttackCancelled).is_empty());
-        assert_eq!(live(sink.state, &neighbour).damage, 3);
-        assert_eq!(live(sink.state, &defender).damage, 0);
+        let canceller = live(sink.state, &backrow[1]);
+        assert_eq!(canceller.zone.z(), ZoneName::Field);
+        assert_ne!(canceller.face_up, Some(true));
+        assert_allies_fought(&sink, &attacker, &defender, &neighbour);
     }
 
     #[test]
@@ -1153,16 +1205,18 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
         let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
 
-        // The copy stands for P1, fresh: no damage on it, a new id, the victim in the graveyard.
+        // The copy stands for P1, fresh: no damage on it, a new id, the victim in the graveyard. P1's
+        // own 3/3, the attack's first target, is not the copy.
         let copies: Vec<CardInstance> = active_units_of(sink.state, P1)
             .into_iter()
-            .filter(|unit| unit.def_id == plain.id)
+            .filter(|unit| unit.def_id == plain.id && unit.id != defender.id)
             .cloned()
             .collect();
         assert_eq!(copies.len(), 1);
         assert_ne!(copies[0].id, neighbour.id);
         assert_eq!(copies[0].damage, 0);
         assert!(!copies[0].radiant);
+        assert_eq!(live(sink.state, &neighbour).zone.z(), ZoneName::Graveyard);
         assert_eq!(events_of_type(&sink.events, GameEventType::Summoned).len(), 1);
         assert_eq!(live(sink.state, &defender).damage, 0);
     }

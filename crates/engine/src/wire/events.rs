@@ -1054,7 +1054,8 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 68);
+        // Meditative added `emoted` (R1127), `translated` (R1301) and `jadeChanged` (R961) to the 66.
+        assert_eq!(GAME_EVENT_TYPES.len(), 69);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
