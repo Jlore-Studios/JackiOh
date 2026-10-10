@@ -4422,6 +4422,7 @@
     "637": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-10T15:53:37Z",
         "family": "claude",
@@ -4438,7 +4439,9 @@
       "planned_at": "2026-10-10T13:42:31Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 646,
       "provider": "claude-3",
+      "question": "",
       "run_id": "38065488953",
       "started_at": "2026-10-10T15:55:00Z",
       "stop_requested": false,
