@@ -5861,10 +5861,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-10T04:30:00Z",
-          "utilization": 0.4
+          "utilization": 1.02
         },
-        "observed_at": "2026-10-09T23:43:08Z",
-        "status": "allowed"
+        "observed_at": "2026-10-10T02:04:08Z",
+        "rejected_resets_at": "2026-10-10T04:30:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
