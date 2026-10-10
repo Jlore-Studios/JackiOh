@@ -6388,16 +6388,19 @@
         {
           "at": "2026-10-09T19:26:36Z",
           "minutes": 13.9
+        },
+        {
+          "at": "2026-10-10T00:41:17Z",
+          "minutes": 13.9
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T00:10:00Z",
-          "utilization": 1.03
+          "resets_at": "2026-10-10T05:10:00Z",
+          "utilization": 0.47
         },
-        "observed_at": "2026-10-09T19:26:36Z",
-        "rejected_resets_at": "2026-10-10T00:10:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-10T00:41:17Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
