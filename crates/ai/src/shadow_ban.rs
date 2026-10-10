@@ -59,6 +59,13 @@
 /// and both passes — its generation-0 `neverPlayed` row measured 4 affordable turns, far under the
 /// flag's bar — and pass 2 watched the AI cast it 145 times at easy for +2.2 mean eval delta. Two
 /// mana for three cards is exactly the card advantage the mirror's tempo race runs on.
+///
+/// Generation 3 removed `core-094` (Genn's Greed): the sweep of record cleared it — its
+/// `neverPlayed` row measured a card whose draw-and-exile read as pure loss to the eval that
+/// priced it, not a misplay. The eval already counts what the cast moves: the drawn two-costs land
+/// in hand (`hand_card`), the exiled odd-costs leave library and hand (`library_card`,
+/// `hand_card`), so a determinized world shows the whole trade and the beam casts it only when the
+/// dealt deck's two-cost density makes it pay.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-042",
@@ -75,10 +82,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-078",
         "neverPlayed: easy: affordable in hand on 31 turns, never played",
-    ),
-    (
-        "core-094",
-        "neverPlayed: hard: affordable in hand on 13 turns, never played",
     ),
     (
         "core-099",
@@ -382,8 +385,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
 /// the records show the AI losing the games it casts Fauci in, so it deals at
 /// its measured weight like any other card. `core-057` joins them in
 /// generation 2 on the sweep's numbers (played 145 times at easy, +2.2 mean
-/// eval delta) — card advantage is what the tempo mirror rewards.
-pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093"];
+/// eval delta) — card advantage is what the tempo mirror rewards. `core-094`
+/// joins them in generation 3: the sweep cleared it, and the AI meets the card
+/// the table now teaches.
+pub const UNBANNED_PREFER: &[&str] = &["core-051", "core-057", "core-082", "core-093", "core-094"];
 pub const UNBANNED_PREFER_BY: f64 = 3.0;
 
 /// `DEALT_Q` is measured against this: the candidate's share of the records the
