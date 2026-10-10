@@ -340,8 +340,30 @@ pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;
 pub const RANK_CONVERGENCE_PIPS: i32 = 1;
 /// R608: Jlorious is the top this-many Mythic Grape players by hidden rating.
 pub const JLORIOUS_SIZE: usize = 100;
-/// R612: characters in a player's public tag, from the invite-code alphabet (30 bits).
-pub const PLAYER_TAG_LENGTH: usize = 6;
+
+// ---------------------------------------------------------------------------------------------
+// Usernames (SPEC §9.4, R1432–R1435). The checks are `src/username/`.
+// ---------------------------------------------------------------------------------------------
+
+/// R1432: the fewest user-perceived characters (extended grapheme clusters) a base name may have.
+/// Two, so that two-character Chinese, Japanese and Korean names fit. The `#n` tag never counts.
+pub const USERNAME_MIN_LENGTH: usize = 2;
+/// R1432: the most user-perceived characters a base name may have.
+pub const USERNAME_MAX_LENGTH: usize = 16;
+/// R1432: the most combining marks in a row after a letter, enough for the scripts that write
+/// vowels and tones as marks (Devanagari, Thai) and too few for stacked "Zalgo" text.
+pub const USERNAME_MAX_MARKS: usize = 3;
+/// R1432: raw input longer than this many characters (code points) is refused as too long without
+/// being normalised, so a huge query string costs nothing to refuse. Far above any real name
+/// `USERNAME_MAX_LENGTH` allows: one user-perceived character can hold many code points, a letter
+/// with its marks or an Indic conjunct (`स्त्री` is six), so sixteen of them can run past 64.
+pub const USERNAME_INPUT_MAX_CHARS: usize = 256;
+/// R1435: how long after a change of username the next one is allowed (24 hours).
+pub const USERNAME_CHANGE_COOLDOWN_SECONDS: i64 = 86_400;
+/// R1435: how long the client waits after the last keystroke before it asks for a preview.
+pub const USERNAME_PREVIEW_DEBOUNCE_MS: i64 = 400;
+/// R1434: the base name of every new account's default, `Player#n`, always tagged.
+pub const USERNAME_DEFAULT_BASE: &str = "Player";
 
 // ---------------------------------------------------------------------------------------------
 // Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
@@ -377,6 +399,18 @@ pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// reconnects; ten leaves room for several players behind one home or campus address. Past it the
 /// upgrade is refused with 429 before the handshake is read.
 pub const WS_MAX_CONNECTIONS_PER_ADDRESS: usize = 10;
+/// SPEC §11 R1441: how often the server pings a match socket that is attached. Fifteen seconds is well
+/// under the 60-second idle limit common proxies hold a quiet connection to, so the ping also keeps
+/// the path open. Pings run only while a socket is attached, so an idle server still sleeps.
+pub const WS_PING_INTERVAL_SECONDS: i64 = 15;
+/// R1441: how long a match socket may send no frame of any kind (a pong counts) before the server
+/// drops it, which is a disconnect and starts the seat's grace (§9.5, R79). Three ping intervals, so
+/// a slow mobile link that loses a pong or two is not dropped.
+pub const WS_IDLE_TIMEOUT_SECONDS: i64 = 45;
+/// R1441, §9.8: how many frames a match socket's outgoing queue holds before the socket is closed
+/// for not reading. Views are full snapshots, so a reconnect loses nothing, and a reader that keeps
+/// up holds only a few.
+pub const WS_OUTBOX_MAX_FRAMES: usize = 256;
 
 // ---------------------------------------------------------------------------------------------
 // The reaper (§9.5).
@@ -395,6 +429,14 @@ pub const MATCH_REAPER_INTERVAL_SECONDS: i64 = 30;
 /// if the winner rolled back, lands this one. Three losses in a row is a storm, not a race worth
 /// waiting out (the same bound R263 gives a series transition's compare-and-set).
 pub const RESULT_WRITE_ATTEMPTS: usize = 3;
+/// SPEC §11 R1437: how many times the match actor tries to write a finished game's result
+/// (`api::results::record_result`) before it lets go of the match. Each try is the whole
+/// transaction, so one that fails leaves the match as it was: `live`, both players still in it.
+/// Three tries outlast a blip in the store; the rebuild R1437 falls back on outlasts an outage.
+pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
+/// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
+/// try after it (250 ms, then 500 ms).
+pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -600,3 +642,5 @@ pub const MULLIGAN_CLOCK_MS: i64 = MULLIGAN_CLOCK_SECONDS * 1000;
 pub const DISCONNECT_GRACE_MS: i64 = DISCONNECT_GRACE_SECONDS * 1000;
 /// R79: `MATCH_CEILING_MINUTES` in milliseconds.
 pub const MATCH_CEILING_MS: i64 = MATCH_CEILING_MINUTES * 60 * 1000;
+/// R1435: `USERNAME_CHANGE_COOLDOWN_SECONDS` in milliseconds.
+pub const USERNAME_CHANGE_COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_SECONDS * 1000;

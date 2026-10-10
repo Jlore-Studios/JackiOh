@@ -94,7 +94,7 @@ use jackioh_engine::wire::stats::{
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START,
+    RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
     BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FavouriteCard, FunStats,
@@ -104,11 +104,12 @@ use crate::db::store::{
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
     ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
     SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
 use crate::ranked::season::{ResetChange, ResetPlayer};
+use crate::username::username_key;
 
 // ---------------------------------------------------------------------------
 // The tables
@@ -316,11 +317,29 @@ impl FakeData {
             .collect()
     }
 
+    /// The fixed username an end-to-end fixture account carries (R1435): `base` bare, the prompt
+    /// answered and no cooldown running, as `seed-accounts` names its accounts in Postgres. False
+    /// when there is no such profile.
+    pub fn name_fixture(&mut self, profile_id: &str, base: &str) -> bool {
+        let Some(row) = profile_of(&mut self.tables, profile_id) else {
+            return false;
+        };
+        row.username_base = base.to_string();
+        row.username_key = username_key(base);
+        row.username_tag = None;
+        row.username_changed_at = None;
+        row.username_prompted = true;
+        true
+    }
+
     /// Seeds a profile without going through the API (TS `MemoryStore.seedProfile`, which took
     /// `Partial<Profile> & { id }`): `input` is that object literal as JSON, every field but `id`
     /// optional, camelCase as TS wrote it. Defaults: user `user-<id>`, email `<id>@example.test`,
-    /// no display name, `active`, a new player's rating, deviation and volatility, in no match,
-    /// created at 0.
+    /// `active`, a new player's rating, deviation and volatility, in no match, created at 0, and
+    /// the username a new account gets, the lowest free `Player#n`, its prompt not yet answered
+    /// (R1434). `username` names a base instead (stored as given, so a caller passes a stored
+    /// form), with `usernameTag` as its tag or else the tag a claim of it would carry now;
+    /// `usernamePrompted` and `usernameChangedAt` set the rest.
     pub fn seed_profile(&mut self, input: Value) -> Profile {
         let id = input
             .get("id")
@@ -333,11 +352,29 @@ impl FakeData {
             .get("status")
             .map(|value| serde_json::from_value::<ProfileStatus>(value.clone()).expect("a profile status"))
             .unwrap_or(ProfileStatus::Active);
+        let (username_base, key, tag) = match text("username") {
+            Some(base) => {
+                let key = username_key(&base);
+                let tag = match input.get("usernameTag").and_then(Value::as_i64) {
+                    Some(tag) => Some(tag),
+                    None => username_tag_for(&self.tables.profiles, &id, &key),
+                };
+                (base, key, tag)
+            }
+            None => default_username(&self.tables.profiles),
+        };
         let profile = Profile {
             id: id.clone(),
             user_id: text("userId").unwrap_or_else(|| format!("user-{id}")),
             email: text("email").unwrap_or_else(|| format!("{id}@example.test")),
-            display_name: text("displayName").map(Some),
+            username_base,
+            username_key: key,
+            username_tag: tag,
+            username_changed_at: input.get("usernameChangedAt").and_then(Value::as_i64),
+            username_prompted: input
+                .get("usernamePrompted")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             status,
             rating: number("rating").unwrap_or(RATING_START),
             rating_deviation: number("ratingDeviation").unwrap_or(RATING_DEVIATION_START),
@@ -621,6 +658,33 @@ fn profile_of<'t>(tables: &'t mut FakeTables, profile_id: &str) -> Option<&'t mu
     tables.profiles.iter_mut().find(|row| row.id == profile_id)
 }
 
+/// R1434: the lowest tag from 1 that no profile but `profile_id` holds under `key`.
+fn lowest_free_tag(profiles: &[Profile], profile_id: &str, key: &str) -> i64 {
+    let held: IndexSet<i64> = profiles
+        .iter()
+        .filter(|profile| profile.id != profile_id && profile.username_key == key)
+        .filter_map(|profile| profile.username_tag)
+        .collect();
+    (1..).find(|tag| !held.contains(tag)).unwrap_or(1)
+}
+
+/// R1434: the tag a claim of `key` by `profile_id` would carry: none while no other profile holds
+/// the bare name, else the lowest free tag. Migration 0028's `USERNAME_TAG_FOR_SQL` in pg.rs.
+fn username_tag_for(profiles: &[Profile], profile_id: &str, key: &str) -> Option<i64> {
+    let bare_taken = profiles.iter().any(|profile| {
+        profile.id != profile_id && profile.username_key == key && profile.username_tag.is_none()
+    });
+    bare_taken.then(|| lowest_free_tag(profiles, profile_id, key))
+}
+
+/// R1434: a new account's username, the lowest free `Player#n`, always tagged: migration 0028's
+/// `app.assign_default_username`. The new row is not among `profiles` yet.
+fn default_username(profiles: &[Profile]) -> (String, String, Option<i64>) {
+    let key = username_key(USERNAME_DEFAULT_BASE);
+    let tag = lowest_free_tag(profiles, "", &key);
+    (USERNAME_DEFAULT_BASE.to_string(), key, Some(tag))
+}
+
 /// TS `collectionRow`.
 fn collection_row<'t>(
     tables: &'t mut FakeTables,
@@ -744,11 +808,16 @@ pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result
     // §9.4: an account exists the moment auth says so and stays pending until a code is
     // redeemed, which is what `resolve_caller` in http.rs relies on.
     let n = f.guard.next_profile;
+    let (username_base, key, tag) = default_username(&f.tables().profiles);
     let profile = Profile {
         id: format!("profile-{n}"),
         user_id: input.user_id.clone(),
         email: input.email.clone(),
-        display_name: input.display_name.clone(),
+        username_base,
+        username_key: key,
+        username_tag: tag,
+        username_changed_at: None,
+        username_prompted: false,
         status: ProfileStatus::Pending,
         rating: input.rating,
         rating_deviation: RATING_DEVIATION_START,
@@ -793,16 +862,52 @@ pub fn profiles_set_glicko(f: &mut FakeTx<'_>, profile_id: &str, glicko: &Glicko
 
 // TS `setRating` (no caller) is not ported (SURFACE §11.2).
 
-pub fn profiles_set_display_name(
+pub fn profiles_username_tag_for(
     f: &mut FakeTx<'_>,
     profile_id: &str,
-    display_name: Option<&str>,
-) -> Result<(), StoreError> {
-    call(f, "profiles.setDisplayName")?;
+    key: &str,
+) -> Result<Option<i64>, StoreError> {
+    call(f, "profiles.usernameTagFor")?;
+    Ok(username_tag_for(&f.tables().profiles, profile_id, key))
+}
+
+/// R1434, R1435. The store's one lock is the lock on the key Postgres takes.
+pub fn profiles_claim_username(
+    f: &mut FakeTx<'_>,
+    claim: &UsernameClaim,
+) -> Result<UsernameClaimOutcome, StoreError> {
+    call(f, "profiles.claimUsername")?;
+    let profile_id = claim.profile_id.as_str();
+    let Some(row) = f.tables().profiles.iter().find(|row| row.id == profile_id) else {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    };
+    if let Some(changed_at) = row.username_changed_at {
+        let next_change_at = changed_at + claim.cooldown_ms;
+        if next_change_at > claim.at {
+            return Ok(UsernameClaimOutcome::Cooldown { next_change_at });
+        }
+    }
+    let tag = username_tag_for(&f.tables().profiles, profile_id, &claim.key);
+    if tag != claim.expected_tag {
+        return Ok(UsernameClaimOutcome::Changed { tag });
+    }
     let Some(row) = profile_of(f.tables(), profile_id) else {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     };
-    row.display_name = Some(display_name.map(str::to_string));
+    row.username_base = claim.base.clone();
+    row.username_key = claim.key.clone();
+    row.username_tag = tag;
+    row.username_changed_at = Some(claim.at);
+    row.username_prompted = true;
+    Ok(UsernameClaimOutcome::Claimed { tag })
+}
+
+pub fn profiles_answer_username_prompt(f: &mut FakeTx<'_>, profile_id: &str) -> Result<(), StoreError> {
+    call(f, "profiles.answerUsernamePrompt")?;
+    let Some(row) = profile_of(f.tables(), profile_id) else {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    };
+    row.username_prompted = true;
     Ok(())
 }
 
@@ -1931,7 +2036,7 @@ fn object_entries(value: Option<&Value>) -> Vec<(String, &Value)> {
 /// A profile's public summary, read off its stats bag (R654).
 pub fn to_public_player_summary(
     profile_id: &str,
-    display_name: Option<&str>,
+    username: &str,
     stats: &IndexMap<String, Value>,
     updated_at: i64,
 ) -> PublicPlayerSummary {
@@ -1980,7 +2085,7 @@ pub fn to_public_player_summary(
 
     PublicPlayerSummary {
         profile_id: profile_id.to_string(),
-        display_name: display_name.map(str::to_string),
+        username: username.to_string(),
         games,
         wins,
         losses,
@@ -2046,24 +2151,29 @@ pub fn player_stats_list_public(
     options: &PlayerStatsListOptions,
 ) -> Result<Vec<PublicPlayerSummary>, StoreError> {
     call(f, "playerStats.listPublic")?;
-    let term = options.search.clone().unwrap_or_default().trim().to_lowercase();
+    // R1436: matched by the key a name clashes on (R1434) plus its tag, as pg.rs matches it.
+    let term = username_key(options.search.clone().unwrap_or_default().trim());
     let all = f.tables();
-    let profile_map: IndexMap<&str, Option<&str>> = all
+    // Each profile's username as shown, and what a search reads of it.
+    let profile_map: IndexMap<&str, (String, String)> = all
         .profiles
         .iter()
-        .map(|p| (p.id.as_str(), p.display_name.as_ref().and_then(Option::as_deref)))
+        .map(|p| {
+            let searched = match p.username_tag {
+                Some(tag) => format!("{}#{tag}", p.username_key),
+                None => p.username_key.clone(),
+            };
+            (p.id.as_str(), (p.username(), searched))
+        })
         .collect();
 
-    let mut public_rows: Vec<(&PlayerStatsTableRow, Option<&str>)> = all
+    let mut public_rows: Vec<(&PlayerStatsTableRow, &str)> = all
         .player_stats
         .iter()
         .filter(|r| !r.is_private)
-        .map(|r| (r, profile_map.get(r.profile_id.as_str()).copied().flatten()))
-        .filter(|(_, display_name)| {
-            if term.is_empty() {
-                return true;
-            }
-            display_name.is_some_and(|name| name.to_lowercase().contains(&term))
+        .filter_map(|r| {
+            let (username, searched) = profile_map.get(r.profile_id.as_str())?;
+            (term.is_empty() || searched.contains(&term)).then_some((r, username.as_str()))
         })
         .collect();
 
@@ -2080,8 +2190,8 @@ pub fn player_stats_list_public(
         .into_iter()
         .skip(usize::try_from(options.offset).unwrap_or(usize::MAX))
         .take(usize::try_from(options.limit).unwrap_or(0))
-        .map(|(row, display_name)| {
-            to_public_player_summary(&row.profile_id, display_name, &row.stats, row.updated_at)
+        .map(|(row, username)| {
+            to_public_player_summary(&row.profile_id, username, &row.stats, row.updated_at)
         })
         .collect())
 }

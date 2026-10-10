@@ -1,8 +1,5 @@
-// The landing page (docs/polish/5-sign-in.md, B37, B38): `/` renders `LandingRoute`, its CTAs are
-// real links that navigate in place on a plain left click, and the corner slot follows the account.
-//
-// Layout (no horizontal overflow at 360-1280 px, B39) needs a layout engine, so it is the Cypress
-// component spec's job (e2e/cypress/component/landing-and-code-field.cy.tsx), not this file's.
+// B37/B38: `/` renders `LandingRoute`; its CTA links navigate in place and the corner follows the account.
+// B39 layout belongs to the Cypress component spec, not jsdom.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -33,9 +30,7 @@ const FAN_CARDS = 5;
 /** A stubbed round trip can outrun the 1 s default under load. */
 const SLOW = { timeout: 5_000 } as const;
 
-// ---------------------------------------------------------------------------------------------
-// the stubbed server
-// ---------------------------------------------------------------------------------------------
+// Stubbed server
 
 type MeAnswer = "active" | "unauthorized" | "hang";
 
@@ -86,11 +81,7 @@ function signedIn(): void {
   window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
 }
 
-/**
- * jsdom 30 ships `PointerEvent`, but if the window a node lives in ever lacks it, testing-library
- * falls back to a plain `Event` and drops `pointerType`, which would make every touch look like a
- * mouse. This installs a `MouseEvent` subclass that keeps it, only when the probe shows it is lost.
- */
+/** jsdom's fallback drops `pointerType`; install this subclass only when the probe detects that loss. */
 function ensurePointerEvent(): void {
   const win = document.defaultView;
   if (win === null) return;
@@ -125,7 +116,6 @@ function landing(): HTMLElement {
   return screen.getByTestId(landingTestid.root);
 }
 
-/** The exit goes to `path`: a link whose href is that path, or a control that moves the URL there. */
 async function expectLeadsTo(element: HTMLElement, path: string): Promise<void> {
   const link = element.closest("a");
   if (link !== null && link.hasAttribute("href")) {
@@ -153,9 +143,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
-// B37: the route and its CTAs
-// ---------------------------------------------------------------------------------------------
+// B37: route and CTAs
 
 const CTAS = [
   ["Play vs AI", landingTestid.playAi, paths.practice],
@@ -185,7 +173,6 @@ describe("B37 the landing route", () => {
     const notPrevented = fireEvent.click(cta, { button: 0 });
 
     expect(window.location.pathname).toBe(path);
-    // Handled in the page: the browser's own full load is cancelled.
     expect(notPrevented).toBe(false);
   });
 
@@ -216,9 +203,7 @@ describe("R661 the statistics are not a call to action", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B37: the corner slot
-// ---------------------------------------------------------------------------------------------
+// B37: corner slot
 
 describe("B37 the corner slot", () => {
   it("B37 anonymous: shows landing-sign-in, which leads to /login, and no landing-account", async () => {
@@ -246,7 +231,6 @@ describe("B37 the corner slot", () => {
     render(<LandingRoute />);
 
     expect(landing()).toHaveAttribute("data-account", "loading");
-    // Give the read every chance to (wrongly) settle before looking.
     await new Promise((resolve) => {
       setTimeout(resolve, 50);
     });
@@ -265,7 +249,6 @@ describe("B37 the corner slot", () => {
     await waitFor(() => {
       expect(landing()).toHaveAttribute("data-account", "anonymous");
     }, SLOW);
-    // The landing is not gated: it stays put rather than sending anyone to /login.
     expect(window.location.pathname).toBe(paths.landing);
   });
 
@@ -277,13 +260,11 @@ describe("B37 the corner slot", () => {
     await waitFor(() => {
       expect(landing()).toHaveAttribute("data-account", "signed-in");
     }, SLOW);
-    // The account screen is where sign-out is; a sign-in would replace (and revoke) this session.
     expect(screen.getByTestId(landingTestid.account)).toBeInTheDocument();
     expect(screen.queryByTestId(landingTestid.signIn)).toBeNull();
   });
 
   it("B37 a device with no session is offered sign-in when /api/auth/me cannot be reached", async () => {
-    // With no session there is nothing to read, so the landing never even asks the server.
     vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
     render(<LandingRoute />);
 
@@ -302,16 +283,15 @@ describe("B37 the corner slot", () => {
     render(<LandingRoute />);
     const note = within(landing()).getByTestId(landingTestid.inviteOnly);
     expect(note.textContent).toMatch(/invite code/);
-    // des-9: the note under "Play vs AI" says it, so the invite note no longer repeats it.
+    // des-9: the Play vs AI note already says no account is needed.
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
     expect(within(ctas).getByText(/No account needed/)).toBeInTheDocument();
     expect(note.textContent).not.toMatch(/needs no account/);
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B38: the hero
-// ---------------------------------------------------------------------------------------------
+// B38: hero
+// R374: a seeded source must yield the same fan hand.
 
 describe("B38 the hero", () => {
   it("B38 shows the JackiOh wordmark", () => {
@@ -341,7 +321,6 @@ describe("B38 the hero", () => {
     render(<LandingRoute random={seeded(38)} />);
     const fan = within(landing()).getByTestId(landingTestid.fan);
     const faces = [0, 1, 2, 3].map((index) => within(fan).getByTestId(landingFanCardTestid(index)));
-    // The page deals from the source it is given (R374), so the same seed names the same hand.
     const hand = dealLandingFan(seeded(38));
 
     for (const [index, face] of faces.entries()) {
@@ -364,11 +343,9 @@ describe("B38 the hero", () => {
     const first = render(<LandingRoute random={seeded(1)} />);
     const hand = shown();
     expect(hand).toEqual(dealLandingFan(seeded(1)).map(({ def }) => def.id));
-    // A re-render is the same visit: the deal is not drawn again.
     first.rerender(<LandingRoute random={seeded(2)} />);
     expect(shown()).toEqual(hand);
     first.unmount();
-    // The next visit is a new deal.
     render(<LandingRoute random={seeded(2)} />);
     expect(shown()).toEqual(dealLandingFan(seeded(2)).map(({ def }) => def.id));
     expect(shown()).not.toEqual(hand);
@@ -394,8 +371,7 @@ describe("B38 the hero", () => {
     expect(landing()).toHaveAttribute("data-motion", "reduced");
   });
 
-  // Integration: the settings panel's "Reduce motion" (task 7) stops the landing as the media query
-  // does, and a change applies to the page already showing.
+  // A settings change applies to the page already showing.
   it("B38 data-motion is reduced under the settings panel's Reduce motion, live", () => {
     render(<LandingRoute />);
     expect(landing()).toHaveAttribute("data-motion", "full");
@@ -415,13 +391,8 @@ describe("B38 the hero", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R639: the fan rotates through every set once the device has logged enough games, a face opens at
-// full size, and the device's statistics are shown. R704: the fan swaps from the first visit,
-// among Core's cards below the threshold, with a fizzle and an apparition.
-// ---------------------------------------------------------------------------------------------
+// R639/R704: fan rotation, full-size detail, statistics, and below-threshold Core-card swaps.
 
-/** A device with this many logged games (the store's own shape, read back as the page would). */
 function withGames(games: number, cards: Record<string, Record<string, number>> = {}): void {
   window.localStorage.setItem(
     PLAYER_STATS_KEY,
@@ -445,7 +416,6 @@ describe("R639 the homescreen rotation", () => {
     withGames(ROTATION_MIN_GAMES - 1);
     render(<LandingRoute random={seeded(5)} />);
 
-    // The same source, the same draws: the deal, then the swaps the page makes, among Core's cards.
     const mirror = seeded(5);
     let expected = dealLandingFan(mirror);
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
@@ -458,7 +428,6 @@ describe("R639 the homescreen rotation", () => {
       expected = rotateFan(expected, slot, mirror, FAN_POOL, EVEN);
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
-      // One card moved, in the slot due, and it is a Core card of the same rarity the fan was not showing.
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
       expect(after[slot]).not.toBe(before[slot]);
       expect(new Set(after).size).toBe(after.length);
@@ -474,7 +443,6 @@ describe("R639 the homescreen rotation", () => {
     act(() => {
       vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
     });
-    // The card going out stays as a ghost: the old id, hidden from assistive tech, no control.
     const ghost = screen.getByTestId(landingTestid.fanLeaving);
     expect(ghost).toHaveAttribute("data-def-id", before[0]);
     expect(ghost).toHaveAttribute("aria-hidden", "true");
@@ -500,7 +468,6 @@ describe("R639 the homescreen rotation", () => {
     for (const index of [1, 2, 3]) {
       expect(screen.getByTestId(landingFanCardTestid(index))).toHaveAttribute("data-entry", "deal");
     }
-    // The ghost has gone, and the card is not dealt again.
     act(() => {
       vi.advanceTimersByTime(ROTATION_SWAP_MS);
     });
@@ -524,7 +491,6 @@ describe("R639 the homescreen rotation", () => {
     withGames(ROTATION_MIN_GAMES);
     render(<LandingRoute random={seeded(5)} />);
 
-    // The same source, the same draws: the deal, then the swaps the page makes.
     const mirror = seeded(5);
     let expected = dealLandingFan(mirror, ROTATION_POOL, featureWeight);
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
@@ -537,7 +503,6 @@ describe("R639 the homescreen rotation", () => {
       expected = rotateFan(expected, slot, mirror);
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
-      // One card moved, in the slot due, and it is a card of the same rarity the fan was not showing.
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
       expect(after[slot]).not.toBe(before[slot]);
       expect(new Set(after).size).toBe(after.length);
@@ -632,7 +597,6 @@ describe("#165 a touch hold on a fan card", () => {
       fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
       expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
 
-      // The click the lift ends in is swallowed, so no detail dialog opens; a real tap still does.
       fireEvent.click(face);
       await act(async () => {
         await vi.dynamicImportSettled();
@@ -666,12 +630,9 @@ describe("R639 your table", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R765: the way back into a live online game, at the top of the main menu
-// ---------------------------------------------------------------------------------------------
+// R765: rejoin a live online game from the main menu
 
 describe("R765 the main menu's live-game banner", () => {
-  /** `/api/auth/me` for an active account in `currentMatchId` (or a series between its games). */
   function serveInGame(currentMatchId: string | null, currentSeriesId: string | null = null): void {
     vi.stubGlobal(
       "fetch",
@@ -703,7 +664,6 @@ describe("R765 the main menu's live-game banner", () => {
     expect(banner).toHaveAttribute("data-kind", "match");
     expect(banner).toHaveTextContent("You're in a game");
     const rejoin = within(banner).getByTestId(gameBannerTestid.rejoin);
-    // At the top: before the wordmark and the calls to action.
     const title = screen.getByRole("heading", { level: 1, name: "JackiOh" });
     expect(banner.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await expectLeadsTo(rejoin, paths.match("m-3"));

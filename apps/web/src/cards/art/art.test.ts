@@ -1,9 +1,7 @@
 // Polish 6, slice A: the procedural art module, tested pure (docs/polish/6-cards.md, Surface A,
 // behaviours B1–B5). Nothing here renders; `CardArt.test.tsx` covers the DOM (B6).
-//
-// Every expectation comes from the design doc's Surface and Behaviors. Where the doc names a
-// published algorithm (FNV-1a, mulberry32) the reference outputs of that algorithm are pinned,
-// because "hashId is FNV-1a" is a claim a wrong hash can pass only if nothing checks a vector.
+// Where the doc names a published algorithm (FNV-1a, mulberry32) its reference outputs are pinned,
+// since a wrong hash passes any test that checks no vector.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -60,7 +58,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/* ------------------------------------------------------------------------------------------ B1 */
+// B1
 
 describe("B1: artSpec is pure and deterministic", () => {
   it("B1 equal arguments give deep-equal specs for every catalog card, and Math.random is never called", () => {
@@ -144,7 +142,7 @@ describe("B1: artSpec is pure and deterministic", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B2 */
+// B2
 
 describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
   it("B2 base and radiant share composition, every ridge path, and the emblem's glyph and position", () => {
@@ -206,18 +204,10 @@ describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------- per-card variety */
-
-// A tribe or a type must not print one picture a hundred times: a theme only sets the palette and
-// the kind of picture. Within a theme every card draws its own layout, backdrop, sky and emblem,
-// and its name's motif (R503), and no two catalog cards of one theme share all five, so neighbours
-// in a tribe (or two plain Spells side by side in the deck builder) always differ in something seen
-// at a glance, not just in hash noise that makes their URIs differ.
-//
-// The catalog of v0.2.0 (Core, Classic and Classic+, 317 entries) mixes compositions inside a theme
-// (a Human Field Trap, a Pancake Field Spell), so the layout rule reads per theme and composition:
-// every such group of eight or more cards uses every layout of its composition. The smaller groups
-// (the families' figures and sigils, two to seven cards each) still spread under the per-theme rule.
+// A theme only sets the palette and the kind of picture: within a theme every card draws its own
+// layout, backdrop, sky, emblem and name's motif (R503), and no two share all five, so neighbours
+// in a tribe always differ at a glance. The layout rule reads per theme and composition, since the
+// catalog mixes compositions inside a theme (a Human Field Trap, a Pancake Field Spell).
 
 describe("per-card variety within a theme", () => {
   function signature(spec: ArtSpec): string {
@@ -281,7 +271,7 @@ describe("per-card variety within a theme", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B3 */
+// B3
 
 describe("B3: artDataUri draws a clean, self-contained SVG for every card", () => {
   it("B3 every catalog id, both variants: a data:image/svg+xml URI with no NaN, undefined, <text or <title", () => {
@@ -345,7 +335,7 @@ describe("B3: artDataUri draws a clean, self-contained SVG for every card", () =
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B4 */
+// B4
 
 /** Surface A's priority list, first match wins, with v0.2.0's three families in their places (R503). */
 const PRIORITY: readonly (readonly [Tag, ArtThemeId])[] = [
@@ -452,7 +442,7 @@ describe("B4: themeFor and compositionFor", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B5 */
+// B5
 
 describe("B5: artUrl and the manifest", () => {
   const base = import.meta.env.BASE_URL;

@@ -811,6 +811,10 @@ declare
     -- 0018: the one write path for a player's settings (R633, R634), DEFINER and service_role's
     -- alone for the same reason (02's R633 block asserts a client cannot call it).
     ['merge_player_settings',       'definer'],
+    -- 0028, R1434: the BEFORE INSERT trigger that names a new profile the lowest free Player#n,
+    -- DEFINER for handle_new_user's reason: it reads every profile's username whichever role
+    -- inserts the row (15 CHECK 8 asserts no client role may attach it to a table of its own).
+    ['assign_default_username',     'definer'],
     ['catalog_version',             'invoker'],
     ['current_profile_id',          'invoker'],
     ['deny_row_mutation',           'invoker'],
@@ -872,7 +876,7 @@ end $$;
 \echo '### R1411: cards_tags_check admits Wincon and a Meditative row as seed-catalog writes it ###'
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
 -- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), 0020 with the
--- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, and 0028 with
+-- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, and 0029 with
 -- the Meditative set's Wincon (R1411). Each probe row is removed before the next, and each probe
 -- runs in a block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$

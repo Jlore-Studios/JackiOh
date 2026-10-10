@@ -8,7 +8,7 @@
 //! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
 //! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
 //! from 0020, Catalyst, Prime and Acclaimed from 0026 and the Meditative set's Wincon (R1411) from
-//! 0028. The seed runs in one transaction, so one such row fails the whole catalog. The first half
+//! 0029. The seed runs in one transaction, so one such row fails the whole catalog. The first half
 //! compares the tags with the migrations' text; the second checks that the database really accepts
 //! them. Both count the catalog of the sets that ship (`SHIPPED_SETS`), so they hold before and after
 //! the patch that ships the Meditative set (R1420).
@@ -269,8 +269,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0028_meditative_set.sql",
-            "0028 re-adds the check with Wincon (R1411)"
+            file, "0029_meditative_set.sql",
+            "0029 re-adds the check with Wincon (R1411)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -312,7 +312,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0028_meditative_set.sql");
+        assert_eq!(file, "0029_meditative_set.sql");
         assert!(tags.iter().any(|tag| tag == "Wincon"), "{tags:?}");
         assert_eq!(
             tags,
@@ -483,7 +483,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), 2 + meditative(theirs), "{tag}");
         }
-        // R1411: Wincon, the tag 0028 admits, is on the Meditative set's #8 and #20 alone.
+        // R1411: Wincon, the tag 0029 admits, is on the Meditative set's #8 and #20 alone.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
         assert_eq!(tagged("Wincon"), meditative(2));
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.

@@ -1,17 +1,11 @@
-// The one hook `Game` calls for sound (SPEC §10.11). It feeds the director every view, tells it
-// (and the engine) when the animation runner starts an entry or goes idle, installs the gesture
-// unlock, the UI ticks and the debug handle for the component's lifetime, and preloads the voice
-// lines the view makes likely. It also gives the board the music (R631): a music director that
-// hears every view, every event the sound director resolves, and each idle, for as long as the
-// board is mounted. The same events reach the haptics (R669), so a buzz lands with its sound.
+// Game's audio hook (SPEC §10.11): feeds views, entry starts and idles to the sound director;
+// installs the gesture unlock, UI ticks and debug handle; preloads likely voice lines; and shares
+// events with music (R631) and haptics (R669).
 //
-// ORDER MATTERS. `Game` calls this directly after `const runner = queue.current;`, before its own
-// layout effects, so the director's `onView` runs before Game's enqueue layout effect: the events
-// of a view are owed by the time the runner starts their first entry, and a reduced-motion burst
-// (which drains inside `enqueue`) is flushed with the view that carried it.
+// ORDER MATTERS: call after `const runner = queue.current;` but before Game's layout effects, so
+// cues are owed by the runner's first entry and a reduced-motion burst flushes with its own view.
 //
-// It never throws. With no AudioContext (jsdom) every call inside it is a no-op, and a failure in
-// the sound path is swallowed rather than taking the board down with it.
+// No AudioContext (jsdom) or sound failure is a no-op.
 
 import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
@@ -40,10 +34,7 @@ function quietly(run: () => void): void {
   }
 }
 
-/**
- * The catalog facts a cue may use, from the board's lookup (base face; "hidden" never reaches it):
- * type, tags, rarity and, for a token that prints one, its printed rarity (B2.5, R506).
- */
+/** Cue facts from the public base face, including printed token rarity (B2.5, R506). */
 export function cueCard(lookup: CardLookup | null, defId: string): CueCard | undefined {
   const info = lookup?.(defId, false);
   if (info === undefined) return undefined;
@@ -56,21 +47,18 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
 }
 
 export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
-  // 0. The public catalog the board renders with (routes put `CatalogContext` above Game), read
-  //    through a ref so the director made once still sees a catalog that arrives later.
+  // Use a ref so the persistent director sees a catalog that arrives after it.
   const lookup = useContext(CatalogContext);
   const lookupRef = useRef(lookup);
   lookupRef.current = lookup;
   const viewRef = useRef(view);
   viewRef.current = view;
 
-  // 1. The music director (R631), made when the board mounts (effect 7) and dropped when it leaves;
-  //    the sound director below reaches it through the ref, so it only ever hears this board's.
+  // The board's music director (R631), reached through this ref by the sound director.
   const musicRef = useRef<MusicDirector | null>(null);
   const crowdRef = useRef<CrowdDirector | null>(null);
 
-  // 1b. The sound director, created once per mounted Game against the singleton engine, and the
-  //     haptics (R669), which hear every event it resolves in the same step as its cues.
+  // Haptics (R669) hear each event when the singleton sound director resolves its cues.
   const hapticsRef = useRef<Haptics | null>(null);
   hapticsRef.current ??= createHaptics();
   const haptics = hapticsRef.current;
@@ -83,24 +71,21 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       quietly(() => musicRef.current?.onEvent(event, planned));
       quietly(() => haptics.onEvent(event, planned));
       if (event.type === "damage") quietly(() => crowdRef.current?.observeDamage(event.amount));
-      // #185: a landing Unit's crowd reaction, through the same quiet period as a hit's, at the tier
-      // the board slams it at (the newest view, as the queue reads it).
+      // A Unit lands at the queue's newest-view slam tier, under a hit's same quiet period.
       const landing = landingOf(event);
       if (landing !== null) quietly(() => crowdRef.current?.observeSlam(slamTierFor(landing, viewRef.current, lookupRef.current)));
     },
   );
   const director = directorRef.current;
 
-  // 2. Every view, before Game's enqueue layout effect sees it.
+  // Every view, before Game's enqueue layout effect.
   useLayoutEffect(() => {
     quietly(() => director.onView(view));
     quietly(() => musicRef.current?.onView(view));
   }, [director, view]);
 
-  // 3. Entry starts and idles, straight from the runner's notifications. The engine is busy while
-  //    an entry is in flight, so no background voice work competes with the runner's timers (B58):
-  //    busy before the entry's cues, free after the idle flush's, so a line the flush asks for is
-  //    fetched ahead of the held preload and the prefetch. A Game unmounted mid-burst frees it.
+  // Keep engine and music busy during entries (B58), so the idle flush preempts preload/prefetch.
+  // Clear both if Game unmounts mid-burst.
   useLayoutEffect(() => {
     const engine = getAudioEngine();
     const music = getMusicPlayer();
@@ -128,7 +113,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     };
   }, [director, runner]);
 
-  // 4. After every layout effect: covers a view that produced no entry the runner could start.
+  // Cover a view for which the runner starts no entry.
   useEffect(() => {
     if (runner.idle()) {
       quietly(() => director.onIdle());
@@ -136,8 +121,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     }
   }, [director, view, runner]);
 
-  // 5. Gesture unlock and UI ticks (shared with the app root, appAudio.ts) and the debug handle,
-  //    for the component's lifetime.
+  // Keep app-level gesture unlock, UI ticks and debug handle for this component's lifetime.
   useEffect(() => {
     const engine = getAudioEngine();
     const removers = [retainAppAudio(), exposeAudioDebug(engine)];
@@ -146,8 +130,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     };
   }, []);
 
-  // The crowd belongs to this mounted match, not the page-level menu audio. It connects as soon as
-  // Web Audio is unlocked, falls silent on an ordinary match end, and is released on route leave.
+  // Crowd audio belongs to this match, not menu audio; release it on route leave.
   useEffect(() => {
     const crowd = createCrowdDirector({ engine: getAudioEngine() });
     crowdRef.current = crowd;
@@ -162,8 +145,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     if (view.result !== null) crowdRef.current?.end();
   }, [view.result]);
 
-  // 7. The board's music: entered on mount, with the view it mounted on, and handed back to the menu
-  //    on unmount. A layout effect, so the first view reaches it before anything is drawn.
+  // Enter board music before the first draw, then return control to the menu on unmount.
   useLayoutEffect(() => {
     let leave: (() => void) | null = null;
     quietly(() => {
@@ -179,8 +161,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
     };
   }, []);
 
-  // 6. Preload the lines this view makes likely, once the context runs. A view that starts a burst
-  //    reaches here with the engine already busy, so the engine holds it until the burst is over.
+  // Busy bursts hold preloads until the context runs and the burst ends.
   useEffect(() => {
     quietly(() => {
       const engine = getAudioEngine();

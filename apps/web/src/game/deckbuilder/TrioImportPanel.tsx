@@ -1,17 +1,13 @@
 // The trio import panel: paste a trio code, see what it holds, and make it three new decks and a
 // trio (SPEC §9.4, R339–R341).
 //
-// Like a deck import it never overwrites work: every deck the code carries becomes a NEW deck, and
-// the trio a new trio naming them. The preview is live and says everything the decoder did, deck by
-// deck: the name, the count, what it had to leave out and why, and the cards the player does not
-// own, which are KEPT and only flagged (judged at queue, R253). Cards two of the decks share are
-// allowed too — a trio is a draft (R252) — and the preview says so; the trio editor marks each one.
+// Like a deck import it never overwrites work: every deck becomes a NEW deck, the trio a new trio.
+// Unowned cards are KEPT and flagged (judged at queue, R253), and so are cards two decks share, since
+// a trio is a draft (R252); the trio editor marks each one.
 //
-// THE CAPS (R340). The shared validator's `checkImportRoom` says, before anything is sent, how many
-// deck and trio slots the import needs and how many the player has; short of either, Import is off
-// with that sentence beside it and nothing is made. The server checks the same again and writes
-// the decks and the trio in one transaction, so an import is all or nothing (R341). A refusal is
-// shown in the server's words, and the pasted code stays in the box.
+// THE CAPS (R340). `checkImportRoom` says before anything is sent how many deck and trio slots the
+// import needs; short of either, Import is off with that sentence beside it. The server checks again
+// and writes the decks and the trio in one transaction, so an import is all or nothing (R341).
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 

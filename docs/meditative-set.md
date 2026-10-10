@@ -4964,7 +4964,7 @@ differently is corrected in its note, not here.
 These came with MB27 (issue #571), after the blocks were reserved, so they take the next free numbers
 (M10).
 
-- **MD-G1** (#101 Gachaholic; R1437): A Luck-based card is a non-token card that prints Lucky on either
+- **MD-G1** (#101 Gachaholic; R1442): A Luck-based card is a non-token card that prints Lucky on either
   face or whose text says "Flip a coin", read off the definition, so a given Lucky never makes a card
   Luck-based. The pool names no set (R1420); tokens are out (§5.1), and #40 Feng Shui, which makes no
   roll of its own, is not in it. The card arrives on its base face at its printed cost, hidden from the
@@ -5101,7 +5101,7 @@ R780–R799 up to MB26 R1280–R1299; MS01 R1300–R1319; MN01–MN09 ten each, 
 R1400–R1409; MR R1410–R1419; the foundation (MF) R1420–R1429, the top block, so that once it is on `main`
 the next free number (`spec/INDEX.md`'s last row plus one) is above every block and work outside #496
 never lands in one. A part that needs more than its block takes the next free number on `main`, and
-so does MB27, which came after the blocks were reserved and has none: it took R1437–R1440. The
+so does MB27, which came after the blocks were reserved and has none: it took R1442–R1440. The
 blocks are listed in docs/issues-and-patches.md, Ruling numbers, so other work can see they are held;
 should a number of a block be on `main` anyway, the part renumbers per that section.
 

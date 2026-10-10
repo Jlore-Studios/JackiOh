@@ -22,10 +22,9 @@ export const FIT_MIN = 0.55;
 export const FIT_STEPS = 6;
 
 /**
- * The rules text's reading floor, in CSS pixels. Rules text that would have to shrink below it to
- * fit first takes the long layout (`data-long` on the face: a shorter art window and a taller rules
- * box), and if it still does not fit at this size there, it clamps with an ellipsis at this size
- * instead of shrinking further. The detail view and the hover preview print it whole.
+ * The rules text's reading floor, in CSS pixels. Text that would shrink below it first takes the
+ * long layout (`data-long` on the face), then clamps with an ellipsis at this size instead of
+ * shrinking further. The detail view and the hover preview print it whole.
  */
 export const FIT_FLOOR_PX = 9;
 
@@ -42,21 +41,16 @@ export const REF_TOOLTIP_HEIGHT_PX = 300;
 export const REF_PANEL_FACE_HEIGHT_PX = 190;
 
 /**
- * Patch v0.2.0's state rail (CardStates.tsx): on a small face (below FACE_TEXT_MIN_HEIGHT_PX, a hand
- * card) this many badges show and the rest fold into a "+n" chip. Mirrored in cardstate.css.
+ * The state rail (CardStates.tsx): on a small face (below FACE_TEXT_MIN_HEIGHT_PX, a hand card)
+ * this many badges show and the rest fold into a "+n" chip. Mirrored in cardstate.css.
  */
 export const STATE_BADGES_SMALL_MAX = 2;
 
-/**
- * A grid's lazy art (CardArt `lazy`) is drawn once its window is within this many px of the
- * scrolling box it sits in, so a card is drawn before it scrolls into view and a long grid draws
- * only the first screens at load.
- */
+/** A grid's lazy art (CardArt `lazy`) is drawn once its window is within this many px of its scrolling box. */
 export const ART_NEAR_MARGIN_PX = 600;
 
 /**
  * How long a lazy art window must stay near the screen before it draws (art/near.ts). A card
- * flicked straight past never dwells this long, so it never parses its picture; the first
- * screen's windows wait it too, so it stays short.
+ * flicked straight past never dwells this long; the first screen waits it too, so it stays short.
  */
 export const ART_DWELL_MS = 150;

@@ -108,6 +108,23 @@ function signInThroughForm(email: string): void {
     expect(SUPABASE_URL, "supabaseUrl env").to.not.eq("");
     expect(SERVER, "serverUrl env").to.not.eq("");
     expect(PASSWORD, "testPassword env").to.not.eq("");
+    // R1435: an account `seed-accounts` made before migration 0028 owes the username prompt, which
+    // would stand in front of every gated screen below. "Skip for now" answers it, and answering it
+    // again changes nothing.
+    for (const email of [P1, P2]) {
+      tokenFor(email).then((token) =>
+        cy
+          .request({
+            method: "POST",
+            url: `${SERVER}/api/username/skip`,
+            headers: { Authorization: `Bearer ${token}` },
+            body: {},
+          })
+          .then((res) => {
+            expect(res.status, `${email} has answered the username prompt`).to.eq(200);
+          }),
+      );
+    }
   });
 
   it("serves the client and the deep links the SPA router needs", () => {

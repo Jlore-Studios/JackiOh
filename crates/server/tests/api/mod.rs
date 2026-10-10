@@ -29,3 +29,4 @@ pub mod series_rules;
 pub mod settings;
 pub mod stats;
 pub mod tutorial;
+pub mod username;

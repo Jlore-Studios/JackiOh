@@ -156,6 +156,12 @@ on this list during Waves 1–3.
 | thiserror | 2.0.21 | — | server |
 | clap | 4.6.7 | derive | server (main), tools |
 | rayon | 1.12.0 | — | tools (parallel games) |
+| caseless | 0.2.2 | — | server (username checks, R1432–R1434) |
+| unicode-normalization | 0.1.25 | — | server (username checks, R1432–R1434) |
+| unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
+| unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
+| unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
+| mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
 
@@ -167,6 +173,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -881,7 +888,8 @@ impl Tx<'_> {
     pub async fn commit(self) -> Result<(), StoreError>;
     // one method per TS Store method, named <substore>_<method> snake_cased, TS's argument order:
     //   profiles_get_by_id, profiles_get_by_user_id, profiles_get_many, profiles_create, profiles_set_status,
-    //   profiles_set_glicko, profiles_set_display_name, profiles_set_in_match, profiles_remove,
+    //   profiles_set_glicko, profiles_set_in_match, profiles_remove,
+    //   profiles_username_tag_for, profiles_claim_username, profiles_answer_username_prompt (R1434, R1435),
     //   codes_insert, codes_find_by_hash, codes_claim, codes_log_attempt, …,
     //   matches_create, matches_get, matches_append_actions, matches_actions, matches_set_clocks, matches_finish,
     //   matches_live, matches_mode_of, matches_discard_open, matches_forget_voided, …,

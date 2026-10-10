@@ -1,10 +1,4 @@
-// B37 of docs/polish/3-ai.md: where the practice core runs.
-//
-// With a `Worker` constructor present, `createPracticeHost()` builds a module worker and talks to
-// it by message; jsdom has none, so a spy class stands in for it and plays the worker's side of
-// the conversation. Without one (or with `forceInThread`), the host runs the core in this thread,
-// and it must answer a request sequence exactly as `createPracticeCore(...).handle` does — the
-// same core, the same env, the same answers, only the ids are the host's own.
+// B37: Worker mode uses the module worker; the in-thread host must match `createPracticeCore(...).handle`.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -24,9 +18,7 @@ const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET }
 
 const CONFIG: PracticeStartConfig = { seed: "host-b37", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } };
 
-// ---------------------------------------------------------------------------------------------
-// the spy Worker
-// ---------------------------------------------------------------------------------------------
+// Spy Worker
 
 type Listener = (event: MessageEvent) => void;
 
@@ -65,7 +57,6 @@ class SpyWorker {
     this.listeners.get(type)?.delete(listener);
   }
 
-  /** Play the worker's side: post `data` back to the page, however the host listens. */
   emit(data: unknown): void {
     const event = { data } as MessageEvent;
     this.onmessage?.(event);
@@ -73,7 +64,6 @@ class SpyWorker {
   }
 }
 
-/** Let the host's promise callbacks run. */
 async function flush(): Promise<void> {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
 }
@@ -90,9 +80,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// ---------------------------------------------------------------------------------------------
-// the worker host
-// ---------------------------------------------------------------------------------------------
+// Worker host
 
 describe("B37 with a Worker constructor, the host is a module worker", () => {
   it("B37 builds exactly one module Worker from practice.worker", () => {
@@ -110,15 +98,12 @@ describe("B37 with a Worker constructor, the host is a module worker", () => {
     const host = createPracticeHost();
     const worker = onlyWorker();
 
-    // Whether the host posts the second request at once or only after the first is answered is its
-    // own business; either way each goes out as `{ id, ...body }` and gets its own answer back.
     const first = host.request({ type: "start", config: CONFIG });
     const second = host.request({ type: "debug" });
     await flush();
     expect(worker.posted[0]).toEqual({ id: expect.any(Number), type: "start", config: CONFIG });
     const a = worker.posted[0] as PracticeRequest;
 
-    // The worker answers strictly in order, as the core does.
     const failed: PracticeResponse = { id: a.id, type: "failed", message: "deck 2 holds 3 cards" };
     worker.emit(failed);
     await expect(first).resolves.toEqual(failed);
@@ -147,7 +132,7 @@ describe("B37 with a Worker constructor, the host is a module worker", () => {
     crashed.dispose();
     SpyWorker.instances = [];
 
-    // A script that never loaded fires a plain Event: no message, so never "undefined".
+    // A plain Event has no message; avoid rendering "undefined".
     const unloaded = createPracticeHost();
     const first = unloaded.request({ type: "debug" });
     await flush();
@@ -180,18 +165,15 @@ describe("B37 with a Worker constructor, the host is a module worker", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the in-thread host
-// ---------------------------------------------------------------------------------------------
+// In-thread host
 
-/** A response without its id, which is the only field the host and the direct core may differ in. */
+/** The only allowed difference between host and direct-core responses. */
 function withoutId(response: PracticeResponse): Record<string, unknown> {
   const copy: Record<string, unknown> = { ...response };
   delete copy.id;
   return copy;
 }
 
-/** Answers from the core itself, one request after another, for `bodies`. */
 function direct(bodies: readonly PracticeRequestBody[]): PracticeResponse[] {
   const core = createPracticeCore(ENV);
   return bodies.map((body, index) => core.handle({ id: index + 1, ...body } as PracticeRequest));
@@ -210,8 +192,7 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
   it("B37 a request sequence gets the same answers, in the same order, as createPracticeCore(...).handle", { timeout: 120_000 }, async () => {
     vi.stubGlobal("Worker", undefined);
 
-    // Found once from the core itself: the human's (p1's) mulligan, kept whole (R9), so the sequence
-    // has a real act and a real AI step in it. Both mulligans are open at once (R265).
+    // R9 keeps the human mulligan whole; R265 opens both mulligans at once.
     const probe = createPracticeCore(ENV).handle({ id: 1, type: "start", config: CONFIG });
     if (probe.type !== "started") throw new Error(`the core refused to start: ${JSON.stringify(probe)}`);
     const pending = probe.snapshot.view.pending;
@@ -230,7 +211,6 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
 
     const host = createPracticeHost({ forceInThread: true, env: ENV });
     const order: number[] = [];
-    // Sent back to back without waiting: the host answers strictly in order.
     const answers = await Promise.all(
       bodies.map((body, index) =>
         host.request(body).then((response) => {
@@ -246,7 +226,6 @@ describe("B37 without a Worker, the host answers exactly as the core does", () =
     expect(answers.map(withoutId)).toEqual(expected.map(withoutId));
     expect(new Set(answers.map((response) => response.id)).size).toBe(bodies.length);
 
-    // The sequence is the one the comments claim, so the comparison above covers each kind.
     expect(answers.map((response) => response.type)).toEqual([
       "failed",
       "started",

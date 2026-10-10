@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0028: the Meditative set ships (SPEC §5, §8.8, R1411, R1420)
+-- Migration 0029: the Meditative set ships (SPEC §5, §8.8, R1411, R1420)
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and the patch that ships the Meditative set (issue
 -- #553, the last part of #496): its 102 cards and 30 tokens join the catalog
@@ -29,7 +29,7 @@
 -- account through 0016's grant when `seed-catalog` stamps the catalog version
 -- that adds them (R481).
 --
--- Apply order: 0002 (`public.cards`) -> ... -> 0026 -> 0027 -> 0028 (this
+-- Apply order: 0002 (`public.cards`) -> ... -> 0026 -> 0027 -> 0028 -> 0029 (this
 -- file). Safe to re-apply: drop-constraint-if-exists-then-add, as 0026 does.
 -- ============================================================================
 
@@ -50,7 +50,7 @@ comment on constraint cards_tags_check on public.cards is
   KY, CN, Fruit, 'Call to Chaos', Quickdraw, Jlockeed, Book, Pancake, AI,
   Plague, Catalyst, Prime, Acclaimed, Wincon, Token. First defined in 0002;
   0010 re-added it with Jlockeed, 0015 with Book, Pancake and AI, 0020 with
-  Plague, 0026 with Catalyst, Prime and Acclaimed, 0028 with Wincon.$$;
+  Plague, 0026 with Catalyst, Prime and Acclaimed, 0029 with Wincon.$$;
 
 comment on column public.cards.set_id is
   $$SPEC §5 "Set": Core, Classic, Classic+ and Meditative ship (R380, patch

@@ -43,6 +43,7 @@ import {
   type SocketFactory,
 } from "../game/net.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
+import Username from "../auth/Username.tsx";
 import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { rankWords } from "../rank/rank.ts";
@@ -161,8 +162,9 @@ function asMatchRanks(value: unknown): MatchRanksResponse | null {
   for (const side of ["p1", "p2"] as const) {
     const seat = (seats as Record<string, unknown>)[side];
     if (typeof seat !== "object" || seat === null) return null;
-    const { tag, rank } = seat as { tag?: unknown; rank?: unknown };
-    if (typeof tag !== "string" || typeof rank !== "object" || rank === null) return null;
+    const { profileId, username, rank } = seat as { profileId?: unknown; username?: unknown; rank?: unknown };
+    if (typeof profileId !== "string" || typeof username !== "string") return null;
+    if (typeof rank !== "object" || rank === null) return null;
     if (typeof (rank as { tier?: unknown }).tier !== "string") return null;
   }
   return value as MatchRanksResponse;
@@ -170,8 +172,9 @@ function asMatchRanks(value: unknown): MatchRanksResponse | null {
 
 /**
  * Both seats' ranks for the match bar (R604, R612): whether this game moves the rating, and each
- * seat's visible rank. Read once: a promotion mid-match shows on the next one. An answer that is
- * not a ranks body — or no answer — leaves no banner rather than breaking the board.
+ * seat's visible rank beside its username, never its profile id (R1436). Read once: a promotion
+ * mid-match shows on the next one. An answer that is not a ranks body — or no answer — leaves no
+ * banner rather than breaking the board.
  */
 function useMatchRanks(token: string, matchId: string): MatchRanksResponse | null {
   const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);
@@ -415,8 +418,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
-              {ranks.ranked ? "Ranked match" : "Unranked match"} · {ranks.seats.p1.tag}
-              {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs {ranks.seats.p2.tag}
+              {ranks.ranked ? "Ranked match" : "Unranked match"} · <Username name={ranks.seats.p1.username} />
+              {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs{" "}
+              <Username name={ranks.seats.p2.username} />
               {ranks.seats.p2.you ? " (you)" : ""} {rankWords(ranks.seats.p2.rank)}
             </p>
           ) : null}

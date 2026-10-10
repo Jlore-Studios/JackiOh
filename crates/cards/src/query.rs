@@ -91,7 +91,7 @@ pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
     query(&with_own)
 }
 
-/// MD-G1, R1437: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
+/// MD-G1, R1442: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
 /// prints Lucky on either face or flips a coin (`jackioh_engine::catalog::is_luck_based`), from the
 /// sets that ship (R1420).
 pub fn luck_based() -> CardQuery {

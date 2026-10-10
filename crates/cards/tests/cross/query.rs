@@ -746,7 +746,7 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     }
 }
 
-mod r1437_the_luck_based_pool_meditative_101_gachaholic {
+mod r1442_the_luck_based_pool_meditative_101_gachaholic {
     use super::*;
     use jackioh_cards::query::luck_based;
     use jackioh_engine::testkit::preview_sets;
@@ -763,7 +763,7 @@ mod r1437_the_luck_based_pool_meditative_101_gachaholic {
     }
 
     #[test]
-    fn r1437_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+    fn r1442_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
         register();
         // The query a card script writes: `query::luck_based()`, which names no set (R1420).
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
