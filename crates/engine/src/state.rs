@@ -22,7 +22,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
     PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, Selection, Tag, Tuning, Zone,
-    ZoneRef,
+    ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -466,6 +466,12 @@ pub enum ModifierKind {
     /// `nextTurnOf` the opponent), so it is gone when this player's next turn begins.
     HeroArmor {
         amount: i32,
+    },
+    /// R848 (Meditative #20): a chosen alternative win condition, held for the rest of the game
+    /// (expiry `never`, R458). Several stack, each its own modifier, and any one met wins.
+    AltWin {
+        condition: AltWinCondition,
+        threshold: i32,
     },
 }
 
@@ -941,6 +947,37 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R844 (Meditative #18, #19): the `turns_started` index through which this player's refresh
+    /// gives 0 mana. Absent while no loss covers a future refresh, so a game that never loses one
+    /// hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub lost_refresh_through: Option<i32>,
+    /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
+    /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
+    /// hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub extra_turns: Option<i32>,
+    /// R847 (Meditative #19.1): once-a-game Temporal Rift flag — set when a Rift grants this player
+    /// an extra turn, so a later Rift grants none. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub rift_extra_turn: Option<bool>,
+    /// R850 (Meditative #8, #20): set when an effect wins the game for this player outright
+    /// (`win_game`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub won_by_effect: Option<bool>,
+}
+
+string_union! {
+    /// R848 (Meditative #20): which measure a chosen alternative win condition reads.
+    pub enum AltWinCondition {
+        Health = "health",
+        Graveyard = "graveyard",
+        Board = "board",
+    }
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
@@ -1433,6 +1470,10 @@ pub fn create_player_state() -> PlayerState {
         draws: None,
         hand_cap: None,
         jade: None,
+        lost_refresh_through: None,
+        extra_turns: None,
+        rift_extra_turn: None,
+        won_by_effect: None,
     }
 }
 

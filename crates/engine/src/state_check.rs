@@ -729,6 +729,15 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     for card in &read {
         crate::zones::remove_from_field(sink.state, &card.unit, Default::default());
     }
+    // R823 (Meditative #10 Double Counting): a Death hook runs again for each extra run its card's
+    // controller's multiplier gives, back to back on the same snapshot (R89), the multiplier read once
+    // the collected cards are off the field (R463), so one dying in this pass doubles nothing.
+    let mut extra: IndexMap<PlayerId, usize> = IndexMap::new();
+    for player in PLAYER_IDS {
+        let runs =
+            crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::CryAndDeath);
+        extra.insert(player, runs.max(0) as usize);
+    }
 
     for mut card in read {
         let landed = crate::zones::move_to_zone(
@@ -744,6 +753,16 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             continue;
         }
         pass.owed.push(card.snapshot.clone());
+        let runs = extra.get(&card.snapshot.controller).copied().unwrap_or(0);
+        if runs > 0
+            && crate::scripts::script_of(sink.state, &card.snapshot)
+                .death
+                .is_some()
+        {
+            for _ in 0..runs {
+                pass.owed.push(card.snapshot.clone());
+            }
+        }
         pass.collected.push(CollectedEntry {
             id: card.unit.id.clone(),
             def_id: card.unit.def_id.clone(),
@@ -1020,7 +1039,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         if dying.is_empty() {
-            if hero_check(sink) {
+            // R850: the settled game-end point — a hero at 0 loses first, then a held win wins.
+            if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.

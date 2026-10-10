@@ -791,8 +791,9 @@ const lunge: Recipe = (event, p) => {
 };
 
 const fizzle: Recipe = (event, p) => {
-  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck.
-  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited") return [];
+  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck;
+  // R800: a discard a discard guard stopped fizzles over the hand.
+  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited" && event.type !== "discardPrevented") return [];
   if (event.type === "countered") return counteredCues(p);
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
 };
@@ -819,6 +820,13 @@ const turnBanner: Recipe = (event, p) => {
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
   if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
   if (event.type !== "turnStarted") return [];
+  // R845: an extra turn's banner says so.
+  if (event.extra === true) {
+    if (event.player === p.view.viewer) {
+      return [banner(p.D, FX_TEXT.yourExtraTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];
+    }
+    return [banner(p.D, FX_TEXT.opponentExtraTurn, "opponent")];
+  }
   if (event.player === p.view.viewer) {
     return [banner(p.D, FX_TEXT.yourTurn, "you"), rays(p.D, "victory", viewportCenter(), 0)];
   }

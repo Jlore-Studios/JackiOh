@@ -55,6 +55,7 @@ use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
 use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost};
 use crate::modifiers::remove_modifier;
+use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, in_declared_order, interceptor_fits_decl, legal_selections_for,
@@ -462,6 +463,12 @@ pub struct PlayRun {
         deserialize_with = "present"
     )]
     pub copied: Option<Option<PlayRecord>>,
+    // ---- Meditative (ME-TRIG) ----
+    /// R822, R823: the extra runs of the card's Cry still owed under a Cry multiplier (Meditative #10
+    /// Double Counting), read as step 5 runs the Cry the first time. Absent with none owed, so a play no
+    /// multiplier touches records nothing new (docs/meditative-set.md D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra_cries: Option<u32>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -510,6 +517,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         copied: None,
+        extra_cries: None,
     }
 }
 
@@ -1937,22 +1945,64 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);
-                run_hook_resumable(
-                    sink,
-                    &face,
-                    "cry",
-                    HookResumableOptions {
-                        controller: Some(run.player),
-                        targets: Some(standing_targets(run)),
-                        modes: Some(run.modes.clone()),
-                        data: Some(cry_data(run)),
-                        // R174: the choices are aimed at the stays step 1 checked them on (a cast's, once made).
-                        exits_from: run.exits_from,
-                    },
-                );
+                // R822, R823: a permanent's Cry runs again under its player's Cry multiplier, read now; a
+                // Spell's resolution is no Cry, though it runs from the same hook.
+                if is_permanent(sink.state, &card)
+                    && crate::scripts::script_of(sink.state, &face).cry.is_some()
+                {
+                    let extra = extra_runs(sink.state, run.player, Multiplied::CryAndDeath);
+                    if extra > 0 {
+                        run.extra_cries = Some(extra as u32);
+                    }
+                }
+                run_script_cry(sink, run, &face);
             }
         }
 
+        if paused(sink) {
+            return;
+        }
+    }
+    resolve_extra_cries(sink, run);
+}
+
+/// Step 5's run of the card's own Cry or spell script, with the play's choices.
+fn run_script_cry(sink: &mut EngineSink<'_>, run: &PlayRun, face: &CardInstance) {
+    run_hook_resumable(
+        sink,
+        face,
+        "cry",
+        HookResumableOptions {
+            controller: Some(run.player),
+            targets: Some(standing_targets(run)),
+            modes: Some(run.modes.clone()),
+            data: Some(cry_data(run)),
+            // R174: the choices are aimed at the stays step 1 checked them on (a cast's, once made).
+            exits_from: run.exits_from,
+        },
+    );
+}
+
+/// R822, R823 (Meditative #10 Double Counting): the extra runs of a permanent's Cry, one after
+/// another behind the first, each a whole effect list the state check closes (R59) before the next
+/// begins. Each reuses the play's declared targets and modes, a target gone since fizzling that part
+/// (R174), and asks again whatever its list asks. They end once the card has left the stay step 4 put
+/// it on, as the Cry itself would be lost (R118). The count owed is the run's own (`extra_cries`), so a
+/// prompt inside one parks the play at this step, behind that run's own tail (R113, R117), and the
+/// answer comes back here for the rest. An Echo repeat (step 6) is a new resolution, never multiplied.
+fn resolve_extra_cries(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    while let Some(left) = run.extra_cries {
+        state_check(sink);
+        if paused(sink) {
+            return;
+        }
+        let Some(card) = still_resolving(sink.state, run) else {
+            run.extra_cries = None;
+            return;
+        };
+        run.extra_cries = if left > 1 { Some(left - 1) } else { None };
+        let face = text_face_of(sink.state, &card);
+        run_script_cry(sink, run, &face);
         if paused(sink) {
             return;
         }

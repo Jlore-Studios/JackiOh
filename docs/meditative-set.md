@@ -822,7 +822,7 @@ percentile's 24.
   {draw} cards.
   You can take only one extra turn from Temporal Rift each game.
 - **Engine:** ME-TURN (extra turns). A new verb, `take_extra_turn`, adds 1 to the caster's
-  `extraTurns` count unless their `gameLog.riftExtraTurn` is set, then sets the flag (public, on the
+  `extraTurns` count unless their `riftExtraTurn` is set, then sets the flag (public, on the
   view). `turn::end_of_turn_cleanup_settle` checks the turn cap, then calls `start_turn(player)` again
   in place of `start_turn(opponent_of(player))` while the player who just ended has an extra turn
   owed, and spends one. Radiant: `gain_mana`, `next_turn_mana` (Core #24's rider) and `draw`.
@@ -1047,8 +1047,9 @@ percentile's 24.
     would.
   - Multipliers don't stack; the highest holds.
 - **ME-TURN** (#18, #19, #19.1; #15, #22 and #22.1 read its "next turn").
-  - **Lost refreshes:** `mana.lostThrough`, a `turnsStarted` index through which the refresh gives 0
-    and spends the next-turn rider. Mana gained later in the turn still counts.
+  - **Lost refreshes:** `lostRefreshThrough` on the player (MB04's name for it, beside the
+    mana), a `turnsStarted` index through which the refresh gives 0 and spends the next-turn rider.
+    Mana gained later in the turn still counts.
   - **Extra turns:** a per-player owed count, spent at the end of that player's turn by starting
     their turn again, so the whole §2.2 turn runs and the turn cap counts it. Next to it is a
     per-player once-a-game Rift flag. Both are public on the view, with an "Extra turn" banner in
@@ -5154,3 +5155,8 @@ that lets the server seed the new tag; deck and trio codes that know the set's n
 re-blessed once and every seed-pinned test re-pinned for the bigger pools; the fuzz tool at 1,000 seeds,
 the AI's gates and the arena result of MN08 green; `cargo jackioh catalog check` holding Meditative to
 every count; REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`.
+
+MB04's note for that migration (issue #520): it must also admit `alt-win` and `won-by-effect` in
+`results_reason_check` (0004) and `rated_games_reason_check` (0022), and `won-by-effect` joins
+`pg.rs`'s `DECISIVE_REASONS`. No server game can reach either reason before the gate opens (R1420),
+so no migration ships before MR.

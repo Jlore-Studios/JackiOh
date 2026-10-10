@@ -1252,6 +1252,9 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-001": { // Disruptive Disruptor
+      cast: { voice: "sapi-bureaucrat", text: "Objection. Nobody touches that hand." },
+    },
     "meditative-002": { // Rampaging Rhino
       play: { voice: "brute", text: "Out of my way, little ones!" },
       death: { voice: "brute", text: "Even rhinos get tired." },
@@ -1259,6 +1262,41 @@
     "meditative-003": { // Jlockwork Machine
       play: { voice: "robot", text: "Tick tock. I am watching you." },
       death: { voice: "robot", text: "Gears grinding to a halt." },
+    },
+    "meditative-004": { // Juicy Kumquat Melon
+      cast: { voice: "sapi-fruit", text: "Sweet, sour, and sorted by price." },
+    },
+    "meditative-005": { // Death by 1000 cuts
+      cast: { voice: "whisper", text: "One little cut. Then another." },
+    },
+    "meditative-006": { // Me no Likey
+      cast: { voice: "kid", text: "Me no likey. You keep it." },
+    },
+    "meditative-007": { // Introspection
+      cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
+    },
+    "meditative-008": { // Reach the Summit
+      cast: { voice: "announcer", text: "One step closer to the summit!" },
+    },
+    "meditative-009": { // Joint Filing
+      cast: { voice: "sapi-bureaucrat", text: "Filed twice, just to be sure." },
+    },
+    "meditative-010": { // Double Counting
+      cast: { voice: "sapi-bureaucrat", text: "One, two, and one, two again." },
+    },
+    "meditative-011": { // Double Header
+      cast: { voice: "announcer", text: "Two games, one ticket!" },
+    },
+    "meditative-012": { // Fear Mongerer
+      play: { voice: "hustler", text: "Be afraid. The end is near." },
+      death: { voice: "hustler", text: "Nothing to fear after all." },
+    },
+    "meditative-013": { // Gatling Pea
+      play: { voice: "kid", text: "Pea shooter, locked and loaded!" },
+      death: { voice: "kid", text: "Out of peas..." },
+    },
+    "meditative-014": { // Prime Time
+      cast: { voice: "prof", text: "Two, three, five, seven. Indivisible." },
     },
     "meditative-015": { // Smelly Steven
       play: { voice: "goof", text: "Do you smell that? It's me!" },
@@ -1270,6 +1308,21 @@
     },
     "meditative-017": { // True Craft a Card
       cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
+    "meditative-018": { // Expedition12
+      cast: { voice: "prof", text: "Sacrifice now, shine later." },
+    },
+    "meditative-019": { // Expedition1234
+      cast: { voice: "prof", text: "The long road it is." },
+    },
+    "meditative-019-1": { // Temporal Rift
+      cast: { voice: "alien", text: "Again. Once more. Again." },
+    },
+    "meditative-020": { // Aestheticize the Game
+      cast: { voice: "announcer", text: "A win, but make it beautiful." },
+    },
+    "meditative-021": { // API Key Fishing
+      cast: { voice: "hustler", text: "Just click the link, friend." },
     },
     "meditative-023": { // Golly Bob Howdy
       play: { voice: "elder", text: "Well golly bob howdy, neighbors!" },

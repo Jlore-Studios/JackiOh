@@ -37,11 +37,52 @@ pub const NEXT_REFRESH_MODIFIER_ID: &str = "nextTurnMana";
 pub fn refresh_mana(side: &mut PlayerState) {
     let max = max_mana_for(side);
     side.mana.max = max;
-    side.mana.current = (max + side.mana.next_turn_mod).max(0);
+    side.mana.current = refreshed_mana(side, max);
     side.mana.next_turn_mod = 0;
     // R1224: ME-TURN's repayment schedule — the next instalment comes off the refresh, after any
     // rider. A lost refresh forgives the instalment: there is nothing to take it from.
     crate::credit::take_instalment(side);
+}
+
+/// R844 (Meditative #18, #19): the id "lose all mana next N turns" travels under — one badge per
+/// player, which `modifierChanged` names as it appears and as it goes, and which the view lists
+/// while a loss covers a future refresh (R169).
+pub const LOST_REFRESH_MODIFIER_ID: &str = "lostRefresh";
+
+/// R844: whether this player's refresh is lost — their `lost_refresh_through` covers the turn they
+/// have started (`turns_started`).
+pub fn refresh_is_lost(side: &PlayerState) -> bool {
+    side.lost_refresh_through
+        .is_some_and(|through| side.turns_started <= through)
+}
+
+/// R844: what a refresh gives. A lost refresh gives 0 and spends the rider with it; otherwise max
+/// plus the rider, floored at 0. MB09's zeroed-refresh aura (#26) and MB23's repayment schedule
+/// (#89) extend this branch.
+pub fn refreshed_mana(side: &PlayerState, max: i32) -> i32 {
+    if refresh_is_lost(side) {
+        0
+    } else {
+        (max + side.mana.next_turn_mod).max(0)
+    }
+}
+
+/// R844: how many lost refreshes this player still has past this one — `through − turns_started`,
+/// never below 0.
+pub fn lost_refreshes_left(side: &PlayerState) -> i32 {
+    side.lost_refresh_through
+        .map(|through| (through - side.turns_started).max(0))
+        .unwrap_or(0)
+}
+
+/// R844: clear a spent loss once no lost refresh is left. Returns true when the field was set and
+/// is now gone, so the turn can report the badge going with it.
+pub fn spend_lost_refresh(side: &mut PlayerState) -> bool {
+    if side.lost_refresh_through.is_some() && lost_refreshes_left(side) == 0 {
+        side.lost_refresh_through = None;
+        return true;
+    }
+    false
 }
 
 /// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh

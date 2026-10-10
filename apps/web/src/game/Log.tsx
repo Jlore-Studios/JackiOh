@@ -312,7 +312,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "manaChanged":
       return `${name.seat(event.player)} ${name.seat(event.player) === "You" ? "have" : "has"} ${event.current}/${event.max} mana`;
     case "turnStarted":
-      return `Turn ${event.turn}: ${name.seat(event.player)}`;
+      // R845: an extra turn's line says so.
+      return `Turn ${event.turn}: ${name.seat(event.player)}${event.extra === true ? " (extra turn)" : ""}`;
     case "turnEnded":
       return `${name.seat(event.player)} ended turn ${event.turn} with ${event.unspentMana} mana unspent`;
     case "turnAutoEnded":
@@ -388,6 +389,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return capitalised(`${name.card(event.instanceId, event.defId)} flickered`);
     case "drawLimited":
       return `${name.seat(event.player)} could not draw more this turn`;
+    case "discardPrevented":
+      return `${name.seat(event.player)} could not be made to discard`;
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "glitched":

@@ -215,6 +215,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
+  // R800: a discard a discard guard stopped.
+  discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   // Patch v0.3.X (MN05).
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   // Patch v0.3.X (Meditative #39.2, R961).
@@ -291,6 +293,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   marked: "brand",
   glitched: "whoosh",
   translated: null,
+  // R800: a discard a discard guard stopped sounds a soft cancel.
+  discardPrevented: "cancel",
   // Patch v0.3.X (MN05).
   damageAbsorbed: "armorRing",
   // Patch v0.3.X (Meditative #39.2, R961).
@@ -336,6 +340,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "flickered",
   "drawLimited",
   "marked",
+  "discardPrevented",
   "damageAbsorbed",
 ];
 

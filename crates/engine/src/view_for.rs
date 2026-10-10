@@ -737,7 +737,7 @@ fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
 /// `sourceId` (#79 Twinspell's instance) is deliberately not read here: it is a card id, and the view
 /// must not hand either seat an identity through a badge. `echo` is the grant as it stands
 /// (`echo::echo_grant_of`), a number read off the permanent's current face (R209, §5.2).
-fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> String {
+fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier, echo: i32) -> String {
     match &modifier.kind {
         ModifierKind::CostDiscount {
             amount,
@@ -786,6 +786,10 @@ fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> St
                 if *radiant { "a Radiant " } else { "a " }
             )
         }
+        // R848: a held alternative win, shown with its progress.
+        ModifierKind::AltWin { condition, threshold } => {
+            crate::win_conditions::alt_win_label(state, player, *condition, *threshold)
+        }
     }
 }
 
@@ -805,7 +809,7 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
         .mods
         .iter()
         .map(|modifier| {
-            let label = modifier_label(state, modifier, echo_grant_of(state, player, modifier));
+            let label = modifier_label(state, player, modifier, echo_grant_of(state, player, modifier));
             ModifierView {
                 id: modifier.id.clone(),
                 label: if modifier_is_live(state, modifier) {
@@ -827,6 +831,27 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
                 if rider > 0 { "+" } else { "−" },
                 rider.abs()
             ),
+        });
+    }
+    // R844: a lost refresh is a modifier too, one badge under the id `modifierChanged` names for it,
+    // while a loss covers a future refresh (R169).
+    if state.players[player].lost_refresh_through.is_some() {
+        let total = crate::mana::lost_refreshes_left(&state.players[player]);
+        views.push(ModifierView {
+            id: crate::mana::LOST_REFRESH_MODIFIER_ID.to_string(),
+            label: if total == 1 {
+                "Your next refresh gives 0 mana".to_string()
+            } else {
+                format!("Your next {total} refreshes give 0 mana")
+            },
+        });
+    }
+    // R846: owed extra turns are a modifier too, one badge under the id `modifierChanged` names for
+    // them, while any is owed (R169).
+    if let Some(owed) = state.players[player].extra_turns {
+        views.push(ModifierView {
+            id: crate::turn::EXTRA_TURN_MODIFIER_ID.to_string(),
+            label: format!("Extra turns owed: {owed}"),
         });
     }
     views
@@ -988,6 +1013,9 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
+        // R846, R847: owed extra turns and the Rift flag, public on both seats.
+        extra_turns: side.extra_turns,
+        rift_extra_turn: side.rift_extra_turn,
     }
 }
 
@@ -1933,7 +1961,8 @@ fn redact_event(
         | GameEventType::HealthSet
         | GameEventType::RolledBack
         | GameEventType::Glitched
-        | GameEventType::DrawLimited => {
+        | GameEventType::DrawLimited
+        | GameEventType::DiscardPrevented => {
             let source_hidden = event.event_type() == GameEventType::HealthSet
                 && nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source));
             if !source_hidden {

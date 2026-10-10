@@ -105,6 +105,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   marked: 400,
   glitched: 600,
   translated: 400,
+  // R800: a discard a discard guard stopped shakes the hand once.
+  discardPrevented: 300,
   // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
   // Patch v0.3.X (Meditative #39.2, R961).
@@ -204,6 +206,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
+  discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
 };
@@ -276,7 +279,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(69);
+    expect(rows).toHaveLength(70);
   });
 
   it("gives every row an animation name and a testid template", () => {

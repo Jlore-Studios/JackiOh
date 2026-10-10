@@ -17,7 +17,9 @@
 //!
 //! ONLY CHOICES THAT WOULD DO SOMETHING are offered, read as each question is asked: "discard" while
 //! their hand holds a card, "exile" while their deck does, and "you draw" always — a draw from an
-//! empty deck is fatigue (§2.4), which still does something. The options name no card.
+//! empty deck is fatigue (§2.4), which still does something. The options name no card. R800: "discard"
+//! is not offered against a guarded hand (Meditative #1 Disruptive Disruptor) — the guard would stop
+//! the discard, so the choice would do nothing.
 //!
 //! "DISCARD" is random from their hand (R682: no "of your choice"), so no prompt opens and the next
 //! question follows at once. You read only the discard events, never the cards (R177).
@@ -132,7 +134,9 @@ fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effe
     let enemy = opponent_of(ctx.controller);
     let state: &GameState = &*ctx.state;
     let mut options: Vec<&str> = Vec::new();
-    if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0 {
+    if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0
+        && !jackioh_engine::draw::discard_guarded(state, enemy)
+    {
         options.push(DISCARD);
     }
     if zone_count(state, enemy, OffFieldZone::Library) - pending.deck_loss.unwrap_or(0) > 0 {
@@ -643,6 +647,22 @@ mod tests {
                 s.answer(json!("draw"));
                 s.answer(json!("draw"));
                 assert!(s.state().pending.is_none());
+            }
+
+            #[test]
+            fn r800_offers_no_discard_against_a_guarded_hand() {
+                crate::register_all();
+                // p2's Disruptor guards p2's side while p1 is active: the discard would do nothing.
+                let mut s = scenario(json!({
+                    "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
+                    "p2": {
+                        "hand": THEIR_HAND.to_vec(),
+                        "library": THEIR_DECK.to_vec(),
+                        "backrow": [{ "def": "meditative-001", "faceUp": true, "lane": 1 }],
+                    },
+                }));
+                s.play(PICKLE, json!({}));
+                assert_eq!(modes(&s), vec!["exile", "draw"]);
             }
         }
 

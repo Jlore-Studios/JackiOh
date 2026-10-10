@@ -605,6 +605,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
   translated: silent("a translation changes only the language a card is shown in (R1301)"),
 
+  // R800: a discard a discard guard stopped: nothing moved, so a soft cancel.
+  discardPrevented: { sfx: "cancel", cues: () => [sfx("cancel")] },
+
   // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centred).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },

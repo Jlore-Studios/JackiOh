@@ -10816,6 +10816,46 @@
       "text": "End of turn: Buff 2 random cards in your hand."
     }
   },
+  "meditative-001": {
+    "id": "meditative-001",
+    "index": "1",
+    "name": "Disruptive Disruptor",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 21,
+    "base": {
+      "keywords": [],
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards} and gain {mana} mana."
+    }
+  },
   "meditative-002": {
     "id": "meditative-002",
     "index": "2",
@@ -10890,6 +10930,447 @@
         }
       ],
       "text": "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+    }
+  },
+  "meditative-004": {
+    "id": "meditative-004",
+    "index": "4",
+    "name": "Juicy Kumquat Melon",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 69,
+    "base": {
+      "keywords": [],
+      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card. They cost ({discount}) less."
+    }
+  },
+  "meditative-005": {
+    "id": "meditative-005",
+    "index": "5",
+    "name": "Death by 1000 cuts",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "echo",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 21,
+    "base": {
+      "keywords": [],
+      "text": "Echo X\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lifesteal"
+        }
+      ],
+      "text": "Echo X, Lifesteal\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+    }
+  },
+  "meditative-006": {
+    "id": "meditative-006",
+    "index": "6",
+    "name": "Me no Likey",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "multiple",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 39,
+    "base": {
+      "keywords": [],
+      "text": "Give one of your Units to your opponent. If you do, gain mana equal to its cost."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give one of your Units to your opponent. If you do, gain mana equal to {multiple|time|times} its cost."
+    }
+  },
+  "meditative-007": {
+    "id": "meditative-007",
+    "index": "7",
+    "name": "Introspection",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "heal",
+        "base": 3,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 49,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+    }
+  },
+  "meditative-008": {
+    "id": "meditative-008",
+    "index": "8",
+    "name": "Reach the Summit",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw",
+      "Wincon"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "heal",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discards",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "exiles",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "adds",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 114,
+    "base": {
+      "keywords": [],
+      "text": "Ascent level: starts at 0. This costs (Ascent level).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Ascent level: starts at 0. This costs (Ascent level - 1), never less than (0).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+    }
+  },
+  "meditative-009": {
+    "id": "meditative-009",
+    "index": "9",
+    "name": "Joint Filing",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "extra",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+    }
+  },
+  "meditative-010": {
+    "id": "meditative-010",
+    "index": "10",
+    "name": "Double Counting",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "extra",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+    }
+  },
+  "meditative-011": {
+    "id": "meditative-011",
+    "index": "11",
+    "name": "Double Header",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 53,
+    "base": {
+      "keywords": [],
+      "text": "The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+    }
+  },
+  "meditative-012": {
+    "id": "meditative-012",
+    "index": "12",
+    "name": "Fear Mongerer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 15,
+    "base": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Trigger your End of turn effects."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Trigger your End of turn effects {times|time|times}."
+    }
+  },
+  "meditative-013": {
+    "id": "meditative-013",
+    "index": "13",
+    "name": "Gatling Pea",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "growth",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 2
+        }
+      ],
+      "text": "Armor 2\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 4
+        }
+      ],
+      "text": "Armor 4\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
+    }
+  },
+  "meditative-014": {
+    "id": "meditative-014",
+    "index": "14",
+    "name": "Prime Time",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "draws",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      }
+    ],
+    "loc": 52,
+    "base": {
+      "keywords": [],
+      "text": "Draw {draws|card|cards} with a prime index from your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw every card with a prime index from your deck."
     }
   },
   "meditative-015": {
@@ -10980,6 +11461,222 @@
     "radiant": {
       "keywords": [],
       "text": "Craft a Radiant card and add it to your hand."
+    }
+  },
+  "meditative-018": {
+    "id": "meditative-018",
+    "index": "18",
+    "name": "Expedition12",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "loc": 39,
+    "base": {
+      "keywords": [],
+      "text": "Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Echo 1\nLose all mana next turn. Choose a card in your hand. It becomes Radiant."
+    }
+  },
+  "meditative-019": {
+    "id": "meditative-019",
+    "index": "19",
+    "name": "Expedition1234",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-019-1"
+    ],
+    "params": [
+      {
+        "key": "turns",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 20,
+    "base": {
+      "keywords": [],
+      "text": "Lose all mana for your next {turns|turn|turns}. Add a Temporal Rift to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Lose all mana for your next {turns|turn|turns}. Add a Radiant Temporal Rift to your hand."
+    }
+  },
+  "meditative-019-1": {
+    "id": "meditative-019-1",
+    "index": "19.1",
+    "name": "Temporal Rift",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 2,
+    "refs": [
+      "meditative-019-1"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "nextMana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Take an extra turn after this one.\nYou can take only one extra turn from Temporal Rift each game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw|card|cards}.\nYou can take only one extra turn from Temporal Rift each game."
+    }
+  },
+  "meditative-020": {
+    "id": "meditative-020",
+    "index": "20",
+    "name": "Aestheticize the Game",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw",
+      "Wincon"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "health",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "graveyard",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "board",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 38,
+    "base": {
+      "keywords": [],
+      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total.\nDraw {draw|card|cards}."
+    }
+  },
+  "meditative-021": {
+    "id": "meditative-021",
+    "index": "21",
+    "name": "API Key Fishing",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": {
+      "base": 0,
+      "embiggen": 1
+    },
+    "refs": [
+      "meditative-021"
+    ],
+    "params": [
+      {
+        "key": "chance",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "max": 100
+      },
+      {
+        "key": "paidChance",
+        "base": 5,
+        "radiant": 12,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 37,
+    "base": {
+      "keywords": [],
+      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     }
   },
   "meditative-023": {
