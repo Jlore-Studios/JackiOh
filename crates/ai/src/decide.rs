@@ -1,24 +1,15 @@
-//! The AI's one entry point (SPEC §9.9). The order below is the contract:
-//!
+//! The AI's one entry point (SPEC §9.9; SURFACE §9), in this order:
 //!   1. ai_to_act / redact — the only two reads of the true state (R185).
 //!   2. an unanswered draw offer is declined at once (R188).
 //!   3. the mulligan keeps the cheap cards.
-//!   4. a single candidate is played with no search: listed on a throwaway determinization, since
-//!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
+//!   4. a single candidate is played with no search, listed on a throwaway determinization.
 //!   5. the exact lethal solver, verified on every determinization.
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
-//!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
-//!      and the best mean wins.
+//!      (reply.rs), the best first actions re-scored on the other determinizations, best mean wins.
 //!   7. a fallback when nothing could be scored.
 //!
-//! Only the first action of the chosen line is played; the caller asks again after it, so the AI
-//! re-plans after every action and a plan that only one sampled world liked never gets past step one.
-//! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors.
-//!
-//! Port of `packages/ai/src/decide.ts` (SURFACE §9). TS's `try`/`catch` is `catch_unwind` (an engine
-//! invariant is a panic in Rust, SURFACE §4.4.9). TS made the node counter after the determinizations;
-//! here it is made first, so the counter outlives the guarded body. Nothing differs: a counter is only
-//! read through `take()`, which nothing calls before the lethal solver, so its stats are the same.
+//! Only the first action of the chosen line is played; the caller asks again after it, so a plan
+//! that only one sampled world liked never gets past step one.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -114,7 +105,7 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
             }
         }
     }
-    // The map keeps first-seen order (TS's `order` list).
+    // The map keeps first-seen order.
     let mut entries: Vec<Scored<'a>> = best.into_values().collect();
     // Stable, so equal scores keep the beam's order.
     entries.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
@@ -136,7 +127,7 @@ enum Plan {
     },
 }
 
-/// What the guarded body leaves behind for the fallback when it panics (TS's outer `let`s).
+/// What the guarded body leaves behind for the fallback when it panics.
 struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
@@ -223,7 +214,7 @@ fn plan(
         + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
-    // node through the slice afterwards, so it is the reason TS read off it at the end.
+    // node through the slice afterwards.
     let (found, beam_stopped_by) = {
         let beam_counter = create_sub_counter(counter, remaining - reserve);
         let found = beam_search(det0, seat, &beam_counter, budget);
@@ -348,7 +339,8 @@ fn plan(
     }
 }
 
-/// The AI's one entry point. `None` when !ai_to_act(state, seat). Never panics out.
+/// The AI's one entry point. `None` when !ai_to_act(state, seat). Never panics out: an engine
+/// invariant is a panic (SURFACE §4.4.9), and every internal failure becomes a fallback counted in simErrors.
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision> {
     match catch_unwind(AssertUnwindSafe(|| ai_to_act(state, seat))) {
         Ok(true) => {}
