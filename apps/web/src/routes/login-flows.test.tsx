@@ -340,7 +340,8 @@ describe("B24 validation", () => {
   it("B24 sign-in judges neither format nor length: that is the provider's to refuse", async () => {
     const calls = provider({ "/auth/v1/token": { status: 400, body: { error_code: "invalid_credentials" } } });
     render(<LoginRoute />);
-    setField(loginTestid.email, "not-an-email");
+    // R1443: with an @ it is an address, the provider's to refuse; without one it is a username.
+    setField(loginTestid.email, "not-an-email@");
     setField(loginTestid.password, "x");
     submitForm();
     await waitFor(() => {

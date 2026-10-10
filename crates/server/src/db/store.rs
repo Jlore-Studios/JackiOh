@@ -1192,6 +1192,16 @@ impl Tx<'_> {
         dispatch!(self, profiles_get_many(profile_ids))
     }
 
+    /// R1443: the one profile whose username has this key (`username::username_key` of its base)
+    /// and tag, the pair R1434 holds unique, or none. A sign-in by username reads it for the address.
+    pub async fn profiles_get_by_username(
+        &mut self,
+        key: &str,
+        tag: Option<i64>,
+    ) -> StoreResult<Option<Profile>> {
+        dispatch!(self, profiles_get_by_username(key, tag))
+    }
+
     /// A new profile, at `rating` with a new player's deviation and volatility (R603).
     pub async fn profiles_create(&mut self, input: &ProfileCreateInput) -> StoreResult<Profile> {
         dispatch!(self, profiles_create(input))

@@ -1017,6 +1017,31 @@ mod r1434_usernames {
         assert!(call!(harness, t => t.profiles_answer_username_prompt(&id())).is_err());
     }
 
+    /// R1443: a sign-in by username reads the one profile holding the key and tag, with the address
+    /// it signs in with; any other pair names nobody.
+    async fn r1443_reads_a_profile_back_by_its_username(harness: &StoreHarness) {
+        let a_email = format!("{}@example.test", id());
+        let a = active_profile(harness, Some(&a_email)).await;
+        let b = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", harness.now()).await, None);
+        assert_eq!(claim(harness, &b.id, "Max", harness.now()).await, Some(1));
+
+        let found = q!(harness, t => t.profiles_get_by_username("max", None));
+        let found = must(found, "Max");
+        assert_eq!(found.id, a.id, "{}", harness.name);
+        assert_eq!(
+            found.email, a_email,
+            "{}: the address it signs in with",
+            harness.name
+        );
+        let found = q!(harness, t => t.profiles_get_by_username("max", Some(1)));
+        assert_eq!(must(found, "Max#1").id, b.id, "{}", harness.name);
+        for (key, tag) in [("max", Some(2)), ("player", None), ("max", Some(i64::MAX))] {
+            let found = q!(harness, t => t.profiles_get_by_username(key, tag));
+            assert_eq!(found, None, "{}: {key} {tag:?}", harness.name);
+        }
+    }
+
     both_stores!(
         r1434_new_accounts_are_player_1_2_3_in_order,
         r1434_a_freed_default_tag_goes_to_the_next_new_account,
@@ -1028,6 +1053,7 @@ mod r1434_usernames {
         r1434_two_concurrent_new_accounts_get_different_tags,
         r1435_a_second_change_inside_the_cooldown_is_refused,
         r1435_skipping_answers_the_prompt_and_keeps_the_name,
+        r1443_reads_a_profile_back_by_its_username,
     );
 }
 

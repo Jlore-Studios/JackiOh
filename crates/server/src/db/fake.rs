@@ -792,6 +792,19 @@ pub fn profiles_get_many(f: &mut FakeTx<'_>, profile_ids: &[String]) -> Result<V
         .collect())
 }
 
+pub fn profiles_get_by_username(
+    f: &mut FakeTx<'_>,
+    key: &str,
+    tag: Option<i64>,
+) -> Result<Option<Profile>, StoreError> {
+    call(f, "profiles.getByUsername")?;
+    Ok(f.tables()
+        .profiles
+        .iter()
+        .find(|profile| profile.username_key == key && profile.username_tag == tag)
+        .cloned())
+}
+
 /// A new profile, at `rating` with a new player's deviation and volatility (R603).
 pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result<Profile, StoreError> {
     call(f, "profiles.create")?;

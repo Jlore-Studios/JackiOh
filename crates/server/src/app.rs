@@ -49,6 +49,9 @@ pub struct App {
     /// §9.8's per-account rate limit at the API (R109, R157), one per app: a fresh app starts with an
     /// empty window, so one test's flood cannot leak into the next.
     pub limiter: api::http::RateLimiter,
+    /// R1443: sign-ins by username, counted per address and, apart, per username. One per app, for
+    /// the limiter's reason.
+    pub sign_in_limiter: api::http::RateLimiter,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
     /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter
@@ -208,6 +211,12 @@ pub static ROUTES: &[Route] = &[
         "/api/auth/signin",
         AuthLevel::None,
         h!(api::auth::sign_in),
+    ),
+    (
+        "POST",
+        "/api/auth/username-signin",
+        AuthLevel::None,
+        h!(api::auth::username_sign_in),
     ),
     (
         "GET",
@@ -499,6 +508,10 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         limiter: api::http::create_rate_limiter(
             crate::config::API_REQUESTS_PER_MINUTE as _,
             API_RATE_WINDOW_MS as _,
+        ),
+        sign_in_limiter: api::http::create_rate_limiter(
+            crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
+            crate::config::USERNAME_SIGN_IN_WINDOW_MS,
         ),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),

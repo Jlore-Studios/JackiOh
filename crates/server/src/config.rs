@@ -366,6 +366,16 @@ pub const USERNAME_PREVIEW_DEBOUNCE_MS: i64 = 400;
 pub const USERNAME_DEFAULT_BASE: &str = "Player";
 
 // ---------------------------------------------------------------------------------------------
+// Username sign-in (SPEC §9.4, R1443). The route is `src/api/auth.rs`'s `username_sign_in`.
+// ---------------------------------------------------------------------------------------------
+
+/// R1443: how many username sign-ins one address may try in a window, and, counted apart, how many
+/// may be tried at one username.
+pub const USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW: usize = 10;
+/// R1443: the window `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` counts in (5 minutes).
+pub const USERNAME_SIGN_IN_WINDOW_SECONDS: i64 = 300;
+
+// ---------------------------------------------------------------------------------------------
 // Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
 // ---------------------------------------------------------------------------------------------
 
@@ -638,3 +648,5 @@ pub const DISCONNECT_GRACE_MS: i64 = DISCONNECT_GRACE_SECONDS * 1000;
 pub const MATCH_CEILING_MS: i64 = MATCH_CEILING_MINUTES * 60 * 1000;
 /// R1435: `USERNAME_CHANGE_COOLDOWN_SECONDS` in milliseconds.
 pub const USERNAME_CHANGE_COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_SECONDS * 1000;
+/// R1443: `USERNAME_SIGN_IN_WINDOW_SECONDS` in milliseconds.
+pub const USERNAME_SIGN_IN_WINDOW_MS: i64 = USERNAME_SIGN_IN_WINDOW_SECONDS * 1000;

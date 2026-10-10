@@ -1820,6 +1820,33 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
         .collect()
 }
 
+/// R1443: read on migration 0028's unique index, `(username_key, coalesce(username_tag, 0))`. A tag
+/// too large for `profiles.username_tag` names nobody.
+pub async fn profiles_get_by_username(
+    t: &mut PgTx<'_>,
+    key: &str,
+    tag: Option<i64>,
+) -> Result<Option<Profile>, StoreError> {
+    let Ok(tag) = i32::try_from(tag.unwrap_or(0)) else {
+        return Ok(None);
+    };
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        profile_columns!(),
+        " ",
+        profile_from!(),
+        " where p.username_key = $1::text and coalesce(p.username_tag, 0) = $2::int"
+    ))
+    .bind(key)
+    .bind(tag)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| ProfileRow::read(&row).and_then(to_profile))
+        .transpose()
+}
+
 /// §9.4: "the account exists the moment auth says so and stays pending until a code is
 /// redeemed" (`resolve_caller` in http.rs). In a real Supabase project migration 0001's
 /// `on_auth_user_created` trigger has usually made this row already, in which case
