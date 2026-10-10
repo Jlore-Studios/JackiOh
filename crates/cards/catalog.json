@@ -11196,13 +11196,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [],
     "loc": 26,
     "base": {
       "attack": 12,
       "health": 9,
       "keywords": [
-        "Immune to tribal tag based hate"
+        {
+          "kind": "Immune to tribal tag based hate"
+        }
       ],
       "text": "Tribute 2, Immune to tribal tag based hate"
     },
@@ -11210,8 +11211,12 @@
       "attack": 24,
       "health": 18,
       "keywords": [
-        "Immutable",
-        "Immune to tribal tag based hate"
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Immune to tribal tag based hate"
+        }
       ],
       "text": "Tribute 2, Immutable, Immune to tribal tag based hate"
     }
@@ -11229,7 +11234,6 @@
     "refs": [
       "core-006"
     ],
-    "params": [],
     "loc": 40,
     "base": {
       "keywords": [],
@@ -11470,13 +11474,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
-    "params": [],
     "loc": 62,
     "base": {
       "attack": 7,
       "health": 9,
       "keywords": [
-        "Deft"
+        {
+          "kind": "Deft"
+        }
       ],
       "text": "Deft\nCry: Draw every Created card in your deck."
     },
@@ -11484,7 +11489,9 @@
       "attack": 14,
       "health": 18,
       "keywords": [
-        "Deft"
+        {
+          "kind": "Deft"
+        }
       ],
       "text": "Deft\nCry: Shuffle a random Prime card into your deck. Then draw every Created card in your deck."
     }
@@ -13365,7 +13372,6 @@
     "refs": [
       "classicplus-071"
     ],
-    "params": [],
     "loc": 154,
     "base": {
       "keywords": [],
