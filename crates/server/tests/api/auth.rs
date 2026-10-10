@@ -15,8 +15,9 @@
 //!
 //! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
 //! `127.0.0.1` answering the five endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
-//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS is empty, so tier 1 fails
-//! *locally*; the cache clock is [`Clock`], a manual one, through the provider's `now` seam.
+//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS is
+//! empty, so tier 1 fails *locally*; the cache clock is [`Clock`], a manual one, through the
+//! provider's `now` seam.
 //!
 //! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
 //! They carry an `exp` far in the future, so the expiry check passes without the test reading a clock.
@@ -306,7 +307,11 @@ async fn token(
             .into_response(),
         GrantReply::RateLimited => (
             StatusCode::TOO_MANY_REQUESTS,
-            Json(json!({ "code": 429, "error_code": "over_request_rate_limit", "msg": "Request rate limit reached" })),
+            Json(json!({
+                "code": 429,
+                "error_code": "over_request_rate_limit",
+                "msg": "Request rate limit reached",
+            })),
         )
             .into_response(),
         GrantReply::Unavailable => (
