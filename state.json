@@ -4321,6 +4321,13 @@
     "622": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-10T04:38:48Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "a new ruling (R1437) plus changes in crates/server, apps/web and spec/ fail the easy rule's lines 2 and 3 outright; nothing touches crates/engine or the AI, so it is not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
