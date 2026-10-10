@@ -1,19 +1,7 @@
-// `/dev/hotseat` (BUILD M5-T3), the route the twelve Cypress specs drive.
-//
-// `apps/web/src/game/hotseat.test.ts` covers the SESSION — nonces, the log, the seat, the
-// subscription — against a scripted port. This file covers the ROUTE, which is everything the
-// session is not: the URL parameters, the deck injection Cypress parks in `localStorage`, the
-// seat-switch button, the seat that follows a prompt into the browser's DOM, the two failure
-// panels, and `window.__jackioh`.
-//
-// The load-bearing test is the last pair. Every spec reaches the game through `cy.jackioh()`, so
-// the handle's presence outside a production build and its ABSENCE inside one is the difference
-// between twelve green specs and twelve specs that fail on their first command. BUILD M5-T3 states
-// it as a condition on `import.meta.env.MODE`, and `apps/web/package.json` builds the e2e bundle
-// with `--mode development` because of it, so `MODE` is what this file manipulates.
-//
-// Nothing here is a rule (CLAUDE.md rule 7): the port is a fake, and what is asserted is what the
-// route asked it for and what it drew from the `PlayerView` it got back.
+// `/dev/hotseat` route tests (BUILD M5-T3).
+// The session tests fake-port behavior; this route tests URL, deck injection, browser rendering, and `window.__jackioh`.
+// `apps/web/package.json` builds E2E in development: the handle exists there and never in production.
+// The fake port proves route requests and drawing only (CLAUDE.md rule 7).
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -35,21 +23,19 @@ import {
   readParams,
 } from "./hotseat.tsx";
 
-/* ------------------------------------------------------------------------------------------- *
- * a fake engine and a fake catalog
- * ------------------------------------------------------------------------------------------- */
+// Fake engine and catalog
 
 type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null };
 
 type Fake = {
   port: EnginePort;
   createGameArgs: CreateGameArgs[];
-  /** Every action the route handed to `reduce`. */
+  /** Actions the route handed to `reduce`. */
   actions: Action[];
   viewedBy: PlayerId[];
-  /** Whose prompt the NEXT accepted `reduce` leaves open. Consumed once. */
+  /** Next accepted `reduce` leaves this prompt open; consumed once. */
   pendingAfterNext: PlayerId | null;
-  /** Whose prompt is open the moment the game begins (the §2.1 mulligan belongs to one seat). */
+  /** Opening prompt owner (§2.1 mulligan). */
   pendingAfterBegin: PlayerId | null;
 };
 
@@ -63,8 +49,7 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
     tags: [],
     rarity: "Common",
     token: false,
-    // Not monotonic in the index, so `first20` and `cheap20` resolve to DIFFERENT lists and a
-    // route that read `?a=` twice could not pass.
+    // Non-monotonic costs ensure `first20` and `cheap20` differ.
     cost: (index * 3) % 7,
     base: { attack: 1, health: 1, keywords: [], text: "" },
     radiant: { attack: 2, health: 2, keywords: [], text: "" },
@@ -141,9 +126,7 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
   return fake;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * mounting
- * ------------------------------------------------------------------------------------------- */
+// Mounting
 
 function at(search: string): void {
   window.history.replaceState({}, "", `/dev/hotseat${search}`);
@@ -158,7 +141,7 @@ async function mount(search = "?seed=42&a=first20&b=cheap20"): Promise<void> {
 }
 
 afterEach(() => {
-  // `globals: false`, so @testing-library/react registers no cleanup of its own.
+  // `globals: false`, so @testing-library/react registers no cleanup.
   cleanup();
   setEnginePort(null);
   delete window.__jackioh;
@@ -169,9 +152,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * the URL
- * ------------------------------------------------------------------------------------------- */
+// URL
 
 describe("readParams", () => {
   it("reads ?seed=&a=&b= as BUILD M5-T3 writes them", () => {
@@ -206,7 +187,7 @@ describe("readInjectedDecks (ASSUMPTION A1: cy.seedGame's fixture decks)", () =>
   });
 });
 
-/** A handicap shaped like the engine's (R180): spec 25's 4-card fatigue library. */
+/** R180 fixture: spec 25's 4-card fatigue library. */
 const FOUR_CARDS = { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 };
 
 describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () => {
@@ -234,7 +215,6 @@ describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () 
     window.__jackiohE2E = {
       decks: {},
       handicaps: {
-        // A field missing, a field that is not a number, a heroHealth that is not a number.
         p1: { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0 },
         p2: { ...FOUR_CARDS, deckSize: "60", heroHealth: 20 },
         p3: FOUR_CARDS,
@@ -250,15 +230,13 @@ describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () 
   });
 
   it("leaves the numbers to the engine: a shape with an illegal value is passed on for createGame to refuse", () => {
-    // R184 is `validateHandicap`'s: the route would only be a second copy of the rule.
+    // R184 belongs to `validateHandicap`; the route must not duplicate it.
     window.__jackiohE2E = { decks: {}, handicaps: { p1: { ...FOUR_CARDS, deckSize: 61, manaBonus: -1 } } };
     expect(readInjectedHandicaps()).toEqual({ p1: { ...FOUR_CARDS, deckSize: 61, manaBonus: -1 } });
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * starting the game
- * ------------------------------------------------------------------------------------------- */
+// Starting the game
 
 describe("the route starts one game from the URL", () => {
   it("hands the engine the seed and the two decks the a= and b= ids resolve to", async () => {
@@ -271,13 +249,10 @@ describe("the route starts one game from the URL", () => {
     expect(args?.seed).toBe("seed-7");
     expect(args?.decks[0]).toHaveLength(20);
     expect(args?.decks[1]).toHaveLength(20);
-    // Two different deck ids resolve to two different libraries: `b=` is read as itself.
     expect(args?.decks[0]).not.toEqual(args?.decks[1]);
     expect(args?.decks[0]?.[0]).toBe("core-001");
-    // The catalog the port registered is the one the game is created with (no second source).
     expect(args?.catalog).toBe(fake.port.catalog?.());
 
-    // The bar names the seed and the seat the device is on, and the board is drawn.
     const bar = document.querySelector(".hotseat-bar");
     expect(bar?.textContent).toContain("seed-7");
     expect(bar?.textContent).toContain("p1");
@@ -320,7 +295,7 @@ describe("the route starts one game from the URL", () => {
   });
 
   it("refuses a deck its seat's handicap does not size, before the engine is asked", async () => {
-    // The 4-card deck is on p2 now, whose seat has no handicap: §2.6's 20 rules there.
+    // p2 has no handicap, so §2.6's 20-card rule applies.
     window.__jackiohE2E = { decks: { tiny: ["core-001", "core-002", "core-003", "core-004"] }, handicaps: { p1: FOUR_CARDS } };
     const fake = makeEngine();
     setEnginePort(fake.port);
@@ -328,7 +303,6 @@ describe("the route starts one game from the URL", () => {
 
     expect(screen.queryByTestId(testid.board)).toBeNull();
     expect(fake.createGameArgs).toHaveLength(0);
-    // p1's handicap wants 4 cards, and first20 holds 20: that is the first refusal the route prints.
     expect(screen.getByText(/its seat's handicap wants exactly 4 \(R184\)/)).toBeInTheDocument();
   });
 
@@ -360,10 +334,8 @@ describe("the route starts one game from the URL", () => {
   });
 
   it("renders the missing exports when the engine cannot be loaded, and draws no board", async () => {
-    // The route refuses to invent a `viewFor` of its own (CLAUDE.md rule 7, SPEC §10.8), so an
-    // engine it cannot load is a panel, not a stubbed game. `loadEnginePort` only rejects when the
-    // real dynamic import fails, which no injected port can simulate — hence the module mock and
-    // the re-import, the same lever the production-build test below uses.
+    // CLAUDE.md rule 7 / §10.8: an unavailable port shows its failure, never a stubbed game.
+    // The dynamic import needs the module mock and re-import.
     vi.resetModules();
     vi.doMock("../../game/engine.ts", async () => {
       const actual = await vi.importActual<typeof import("../../game/engine.ts")>("../../game/engine.ts");
@@ -381,7 +353,6 @@ describe("the route starts one game from the URL", () => {
       });
 
       expect(screen.queryByTestId(testid.board)).toBeNull();
-      // Both halves of the panel: the missing exports, and the engine's own message.
       expect(screen.getAllByText(/viewFor, hashState/).length).toBeGreaterThan(0);
       expect(screen.getByText(/waiting on M3/)).toBeInTheDocument();
     } finally {
@@ -391,9 +362,7 @@ describe("the route starts one game from the URL", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * the seat
- * ------------------------------------------------------------------------------------------- */
+// Seat
 
 describe("a way back (integration: every screen has one)", () => {
   it("the hotseat bar's Back goes to the landing page", async () => {
@@ -432,7 +401,6 @@ describe("the seat", () => {
     await mount();
     expect(window.__jackioh?.seat).toBe("p1");
 
-    // The engine answers the next action with a prompt for p2. Nobody presses the button.
     fake.pendingAfterNext = "p2";
     await act(async () => {
       window.__jackioh?.dispatch({ type: "endTurn" });
@@ -456,16 +424,11 @@ describe("the seat", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * window.__jackioh — what all twelve specs reach through
- * ------------------------------------------------------------------------------------------- */
+// window.__jackioh
 
-/* ------------------------------------------------------------------------------------------- *
- * R1341: the emote hands the seed deals
- * ------------------------------------------------------------------------------------------- */
+// R1341 emote hands
 
 describe("R1341 the hotseat's emote hands", () => {
-  /** The menu items your portrait's picker offers, by emote id. */
   function offered(): (string | undefined)[] {
     fireEvent.click(screen.getByTestId("hero-you"));
     const menu = screen.getByTestId("emote-menu");
@@ -533,7 +496,6 @@ describe("window.__jackioh outside a production build", () => {
       handle?.dispatch({ type: "endTurn" });
     });
 
-    // The same handle object, not a re-read of `window.__jackioh`: the fields are getters.
     expect(handle?.hash()).not.toBe(before);
     expect(handle?.log.map((action) => action.nonce)).toEqual(["n0"]);
     expect(handle?.log.map((action) => action.type)).toEqual(["endTurn"]);
@@ -550,7 +512,6 @@ describe("window.__jackioh outside a production build", () => {
     });
 
     expect(window.__jackioh?.seat).toBe("p2");
-    // `createHotseat` stamps the action with the seat it switched to — p2 acts as p2.
     expect(fake.actions.map((action) => action.playerId)).toEqual(["p2"]);
   });
 
@@ -572,13 +533,7 @@ describe("window.__jackioh outside a production build", () => {
 });
 
 describe("window.__jackioh in a production build", () => {
-  /**
-   * The defect this test exists for: a production bundle that still published the handle, or a
-   * development bundle that did not. `apps/web/package.json` builds the e2e client with
-   * `vite build --mode development` for exactly this reason, and `main.tsx` serves NotFound for
-   * `/dev/hotseat` under the same condition. Here `MODE` is stubbed and the module re-imported, so
-   * the module-level `DEV_ONLY` is evaluated again.
-   */
+  /** The E2E build uses development mode for the handle; production must never publish it. */
   it("publishes nothing: MODE=production removes the handle the twelve specs drive", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();
@@ -596,10 +551,9 @@ describe("window.__jackioh in a production build", () => {
       render(<route.HotseatRoute />);
     });
 
-    // The game still runs — the route is not disabled, only the dev handle is withheld.
     expect(screen.getByTestId(testid.board)).toBeInTheDocument();
     expect(window.__jackioh).toBeUndefined();
-    // And the E2E deck injection is withheld with it, handicaps included (R180: never outside dev).
+    // E2E injection, including R180 handicaps, is dev-only.
     window.__jackiohE2E = { decks: { fixture: ["core-001"] }, handicaps: { p1: FOUR_CARDS } };
     expect(route.readInjectedDecks()).toBeUndefined();
     expect(route.readInjectedHandicaps()).toBeUndefined();

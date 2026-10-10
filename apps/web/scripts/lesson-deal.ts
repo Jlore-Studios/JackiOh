@@ -1,19 +1,12 @@
-// Prints a tutorial lesson's deal (SPEC §9.10): both opening hands and both libraries top down, as
-// the lesson's seed shuffles them. A lesson's seed is picked with this, so the coach can name the
-// cards the seed deals. Writes nothing.
+// Prints a tutorial lesson's deal (SPEC §9.10); writes nothing.
 //
 //   sh scripts/build-wasm.sh                     # from the repository root, once: src/wasm/pkg
 //   pnpm --dir apps/web exec tsx scripts/lesson-deal.ts <lessonId> [seed]
 //   pnpm --dir apps/web exec tsx scripts/lesson-deal.ts <lessonId> --scan <prefix> <from> <to> [top]
 //
-// `--scan` prints one line per seed `<prefix><n>`: the human's opening hand and the first `top`
-// (default 6) cards of the human's library, then the AI's opening hand and its first `top`, so a
-// shell `grep` can pick a seed with the curve a lesson wants.
+// `--scan` prints hands and the first `top` library cards so `grep` can choose a seed by its curve.
 //
-// The engine is the Rust one, compiled to WebAssembly (docs/v0.3.0/SURFACE.md §10.3), reached through
-// `src/wasm/` as the page reaches it. Node has no fetch of a file URL, so the module's bytes are read
-// from disk and instantiated before the first call, as the web's tests do (`src/test/setup.ts`); its
-// `init` registers the catalog and the card scripts, which TypeScript's `registerAll()` did.
+// Node reads and instantiates the WebAssembly module from disk (§10.3), as the web's tests do.
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

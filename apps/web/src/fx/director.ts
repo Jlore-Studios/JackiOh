@@ -1,28 +1,5 @@
-// The effects director (docs/polish/1-animations.md, S8): one frame loop that turns planned cues into
-// particles, canvas strokes, DOM flourishes and board shake.
-//
-// R200 is the reason for its shape. The runner owns every duration the client waits on; the
-// director only decorates. So it never sets a timer and never tells the runner anything: cues are
-// scheduled against `now()` when `play` is called, fired on the first frame at or after their due
-// time, and everything they start is bounded by the planner's durations (which already fit inside
-// the entry plus FX_MAX_TAIL_MS) and by FX_MAX_PARTICLE_LIFE_MS. Anchors are measured when a cue
-// fires, not when it is planned, because the board has usually moved in between.
-//
-// A DOM effect expires at `due + durationMs`, where `due` is the time the cue was scheduled to fire
-// (playTime + delayMs). A frame lands a few milliseconds after that at worst, and counting from the
-// frame instead would let a splat outlive R200's bound by that much.
-//
-// Frame work, in the order S8 fixes:
-//   1. fire due cues (measuring anchors now; a null box skips the cue),
-//   2. move particles, canvas effects and the shake by dt, and age them by the real time that
-//      passed, so a stalled frame never keeps an effect alive past its wall-clock end (R200),
-//   3. push the shake to the sink, or clear the sink on the frame it goes idle,
-//   4. clear the surface and draw (skipped once the canvas is empty and already clear),
-//   5. remove expired DOM effects, expire stage effects, and move a stand-in only when the board
-//      under it moved (a shake, a scroll, a resize),
-//   6. adapt the particle cap to slow frames,
-//   7. keep the loop running while anything is pending, alive or shaking. A parked stage effect
-//      (a stand-in waiting in its zone, a hidden card) needs no frame, so it does not keep it going.
+// S8 effects director. R200: it only decorates; every visual stays within planned duration, FX_MAX_TAIL_MS and FX_MAX_PARTICLE_LIFE_MS.
+// Cues measure anchors when firing and expire from scheduled due time; frames fire, update, shake, draw, expire/track, adapt, then loop only while active work remains.
 
 import { createCanvasFx } from "./canvasFx.ts";
 import {
@@ -59,7 +36,6 @@ import type {
   FxVisibility,
 } from "./types.ts";
 
-/** < FX_MOBILE_WIDTH ? FX_PARTICLE_CAP_MOBILE : FX_PARTICLE_CAP */
 export function capacityFor(viewportWidth: number): number {
   return viewportWidth < FX_MOBILE_WIDTH ? FX_PARTICLE_CAP_MOBILE : FX_PARTICLE_CAP;
 }
@@ -74,39 +50,28 @@ export type FxDirectorOptions = {
   shakeSink: FxShakeSink;
   seed: number;
   capacity: number;
-  /** The board element a stage cue acts on, by testid. Defaults to a `document` query. */
+  /** Stage-cue target lookup; defaults to a `document` query. */
   element?: (testid: string) => HTMLElement | null;
-  /**
-   * Tells the director the page scrolled or resized, so a parked stand-in follows its zone. Defaults
-   * to the window's `scroll` (capture) and `resize` events.
-   */
+  /** Scroll/resize subscription for tracking parked stand-ins; defaults to window events. */
   viewport?: FxViewportEvents;
 };
 
-/** Scroll and resize, as one subscription; returns its own unsubscribe. */
 export type FxViewportEvents = { subscribe(listener: () => void): () => void };
 
 export type FxDirector = {
-  /** Schedules cues relative to now(); each fires on the first frame where now() ≥ playTime + delayMs. Dropped while hidden. */
+  /** Schedules cues for their first due frame; drops them while hidden. */
   play(cues: readonly FxCue[]): void;
-  /** Removes every pending cue, DOM effect, particle, projectile, crack and ring; resets the shake and calls shakeSink.clear(). */
+  /** Removes all effects and resets the shake sink. */
   clear(): void;
-  /**
-   * The player has started acting (a pointer went down, a prompt opened): the turn banner and the
-   * rays behind it go at once instead of fading over the zones and pickers for a second or two.
-   * Everything else plays on. Nothing happens unless a banner is up or due.
-   */
+  /** Removes a pending or active turn banner and its rays once the player acts. */
   dismissBanner(): void;
-  /**
-   * The board now shows a newer view: removes every stand-in and un-hides every concealed card and
-   * every aimed lunge (B46–B48), and leaves everything else to finish.
-   */
+  /** Clears stand-ins, concealment and lunges for a newer board view (B46–B48). */
   release(): void;
-  /** Freezes visual time for a short hit-stop without changing the animation queue or game clock. */
+  /** Freezes visual time without changing the animation queue or game clock. */
   pause(): void;
   /** Resumes a hit-stop, shifting visual deadlines by the frozen span. */
   resume(): void;
-  /** Pending cues + mounted DOM effects + canvasFx.alive() + (shake active ? 1 : 0). */
+  /** Pending, DOM, canvas and shake activity. */
   active(): number;
   particles(): number;
   capacity(): number;
@@ -115,10 +80,7 @@ export type FxDirector = {
 
 type PendingCue = { cue: FxCue; due: number };
 type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string };
-/**
- * A stage effect: undone by release(), clear() or its own expiry. `track` moves a stand-in after its
- * zone, and runs only on frames where the board under it moved.
- */
+/** Stage effect cleanup and optional movement tracking. */
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {
@@ -139,12 +101,7 @@ function defaultViewport(): FxViewportEvents {
 const sameBox = (a: FxBox, b: FxBox): boolean =>
   a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 
-/**
- * The board writes `data-animating` on the card a stand-in carries (a Cry that buffs or transforms
- * the unit just played targets its hand card). That card is hidden, so its keyframes would play on
- * nothing: the stand-in plays them instead. `cardPlayed` stays on the hand card, which the stand-in
- * has already left.
- */
+/** Mirror a hidden source card's animation onto its stand-in; `cardPlayed` remains on the source. */
 function mirrorAnimating(source: Element, copy: Element): () => void {
   const sync = (): void => {
     const value = source.getAttribute("data-animating");
@@ -167,7 +124,6 @@ function defaultElement(testid: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-testid="${testid.replace(/["\\]/g, "\\$&")}"]`);
 }
 
-/** The card a stand-in copies: the element itself when it is a card, else the last card inside it (a hand of backs). */
 function cardIn(element: HTMLElement | null): HTMLElement | null {
   if (element === null) return null;
   if (element.classList.contains("card")) return element;
@@ -185,7 +141,6 @@ function isCanvasCue(cue: FxCue): boolean {
   return cue.kind === "burst" || cue.kind === "projectile" || cue.kind === "crack" || cue.kind === "ring";
 }
 
-/** The point inside an anchor's box an emission aims at: a testid anchor may name one. */
 function atOf(anchor: FxAnchor): FxPoint | undefined {
   return anchor.kind === "testid" ? anchor.at : undefined;
 }
@@ -194,11 +149,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   const { surface, domRoot, now, frames, visibility, shakeSink, seed } = options;
   const element = options.element ?? defaultElement;
 
-  /**
-   * Cards a stand-in is carrying, by the testid they had: while one flies or waits in its new zone,
-   * effects aimed at the card (a Cry's buff on the unit just played, a hit on the one just stolen)
-   * land on the stand-in, not on the empty place the card was concealed in.
-   */
+  // Effects aimed at a carried card must target its stand-in, not the concealed source.
   const carried = new Map<string, HTMLElement>();
   const measure = (anchor: FxAnchor): FxBox | null => {
     if (anchor.kind === "testid") {
@@ -218,18 +169,12 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   let staged: StagedEffect[] = [];
   let shaking = false;
   let disposed = false;
-  /** The canvas still shows something from an earlier frame, so it must be cleared once more. */
   let painted = false;
-  /** The page scrolled or resized since the last frame: parked stand-ins re-measure their zone. */
   let layoutDirty = false;
   let pausedAt: number | null = null;
 
-  // Adaptive quality (B34). The cap halves when frames run slow and doubles back once they are
-  // healthy again. "Slow" is judged against the display's own refresh, learned as the shortest
-  // steady interval seen, so a 30 Hz display (a phone in low-power mode) is not mistaken for load:
-  // a window is slow once its frames take longer than FX_ADAPT_WINDOW frames at
-  // max(FX_ADAPT_SLOW_MS, FX_ADAPT_SLOW_FACTOR × refresh). The check runs every frame, so a stall of
-  // a few long frames trips it at once instead of after a whole window.
+  // B34: compare each raw-frame window with learned display refresh so 30 Hz is not mistaken for load.
+  // Check accumulated time every frame so a stall lowers capacity promptly.
   const initialCap = cap;
   let displayMs = Number.POSITIVE_INFINITY;
   let windowCount = 0;
@@ -248,7 +193,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   };
 
   const adapt = (frame: FxFrame): void => {
-    // The first frame after a wake is timed from the wake, not from a frame: it says nothing.
+    // A wake-to-first-frame interval reveals no display refresh.
     if (frame.first) return;
     const raw = Math.max(0, frame.raw);
     if (raw >= FX_ADAPT_MIN_INTERVAL_MS) displayMs = Math.min(displayMs, raw);
@@ -273,7 +218,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
 
   const mountDom = (cue: FxDomCue, due: number, at: number): void => {
     const expiresAt = due + cue.durationMs;
-    // A cue whose whole life passed while no frame ran (a stalled tab) is not worth a mount.
+    // Do not mount an effect whose lifetime passed in a stalled tab.
     if (expiresAt <= at) return;
     let boxes: DomEffectBoxes = {};
     switch (cue.kind) {
@@ -305,9 +250,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         boxes = { from, to };
         break;
       }
-      // banner, result and chaos need no box: CSS places them on the viewport.
+      // Viewport effects need no anchor.
     }
-    // One banner at a time: a new one replaces any still fading, so two never read over each other.
+    // Never overlap fading banners.
     if (cue.kind === "banner") {
       mounted = mounted.filter((item) => {
         if (item.kind !== "banner") return true;
@@ -319,7 +264,6 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     if (effect !== null) mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}) });
   };
 
-  /** Holds, conceals and lunges act on the board's own elements (stage.ts). */
   const stage = (cue: FxStageCue, due: number, at: number): void => {
     const expiresAt = due + cue.durationMs;
     if (expiresAt <= at) return;
@@ -330,13 +274,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const source = cue.from !== null && cue.from.kind === "testid" ? cardIn(element(cue.from.testid)) : null;
         const sourceBox = source !== null ? boxOfElement(source) : null;
         const copied = sourceBox !== null ? source : null;
-        // R502: a `from` with no card to copy in it (a Deck pile a card was cast out of as it was
-        // drawn) still says where the stand-in, then a card-shaped light, sets out from.
+        // R502: an empty `from` still supplies the stand-in's origin.
         const from = sourceBox ?? (source === null && cue.from !== null ? measure(cue.from) : null);
         const parent = copied?.parentElement ?? null;
         const font = parent !== null ? (parent.ownerDocument.defaultView?.getComputedStyle(parent).fontSize ?? null) : null;
-        // Placed once, here. After that it moves only when the board under it does (a shake, a
-        // scroll), and then by `translate`, which needs no layout; a new size (a resize) re-places it.
+        // Track only board movement; translate same-size stand-ins without layout.
         let placed = landingBox(zone, sourceBox);
         let shown = placed;
         const hold = mountHold(domRoot, cue, { source: copied, from, land: placed, font });
@@ -393,8 +335,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const dy = b.y + b.height / 2 - (a.y + a.height / 2);
         const distance = Math.hypot(dx, dy);
         if (!(distance > 0)) return;
-        // How far each box reaches from its centre along the line between them, so the attacker
-        // stops just into the target whichever way it comes at it.
+        // Stop at the target's near edge.
         const ux = Math.abs(dx) / distance;
         const uy = Math.abs(dy) / distance;
         const extents = (ux * (a.width + b.width) + uy * (a.height + b.height)) / 2;
@@ -419,7 +360,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     for (const item of undone) item.undo();
   };
 
-  /** Undoes every stage effect whose safety cap has passed (FX_HOLD_MAX_MS, R200). */
+  /** R200 safety expiry for staged effects. */
   const expireStaged = (at: number): void => {
     if (staged.length === 0) return;
     const kept: StagedEffect[] = [];
@@ -447,7 +388,6 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           power: cue.power,
           ...(cue.scale === undefined ? {} : { scale: cue.scale }),
         });
-        // A preset with a `flash` blooms where it bursts (presets.ts); the rest paint nothing here.
         canvasFx.flash(cue.preset, origin, box, cue.count);
         return;
       }
@@ -492,7 +432,6 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     if (pausedAt !== null) return false;
     const at = frame.now;
 
-    // 1. Fire due cues, in the order they were played.
     if (pending.length > 0) {
       const due: PendingCue[] = [];
       const later: PendingCue[] = [];
@@ -501,14 +440,12 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       for (const item of due) fire(item.cue, item.due, at);
     }
 
-    // 2. Move everything by the clamped frame time and age it by the real one.
     const age = Math.max(0, frame.raw);
     particles.step(frame.dt, age);
     canvasFx.step(frame.dt, age);
     shake.step(age);
 
-    // 3. The shake reaches the page only through the sink. The board moved this frame if it shook
-    //    now or shook last frame (this frame puts it back).
+    // A final shake clear also moves the board back for stand-in tracking.
     const boardMoved = shake.active() || shaking;
     if (shake.active()) {
       shakeSink.apply(shake.sample(at));
@@ -518,7 +455,6 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       shaking = false;
     }
 
-    // 4. Redraw the canvas, while anything is on it.
     if (surface !== null) {
       const live = particles.alive() > 0 || canvasFx.alive() > 0;
       if (live || painted) {
@@ -529,7 +465,6 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       }
     }
 
-    // 5. Expire DOM and stage effects. A stand-in follows its zone only when the board moved.
     if (mounted.length > 0) {
       const kept: MountedEffect[] = [];
       for (const item of mounted) {
@@ -542,10 +477,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     if (boardMoved || layoutDirty) for (const item of staged) item.track?.();
     layoutDirty = false;
 
-    // 6. Adaptive quality on the raw (unclamped) frame time.
     adapt(frame);
 
-    // 7. Keep going while there is anything left to do.
     return hasWork();
   };
 
@@ -568,8 +501,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     visibility,
     now,
     onFrame,
-    // A page that was hidden has missed every frame its cues were due on; replaying them late
-    // would stack a backlog of flourishes over a board that has long moved on.
+    // Drop stale hidden-tab cues rather than replay a visual backlog.
     onResume: clear,
   });
 
@@ -588,9 +520,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       let added = 0;
       for (const cue of cues) {
         if (surface === null && isCanvasCue(cue)) continue;
-        // A stage cue due now acts at once, against the board as it is in this very task: the hand
-        // card a stand-in replaces and the stand-in itself change in the same paint, and a lunge is
-        // aimed before its keyframes' first frame.
+        // Due-now stage cues must see this task's board state.
         if (isStageCue(cue) && cue.delayMs <= 0) stage(cue, playTime, playTime);
         else pending.push({ cue, due: playTime + cue.delayMs });
         added += 1;
@@ -601,8 +531,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     dismissBanner(): void {
       pending = pending.filter((item) => item.cue.kind !== "banner");
       if (!mounted.some((item) => item.kind === "banner")) return;
-      // The turn banner's rays are the viewport-centred "victory" ones planned with it; the result
-      // sequence has no banner, so its rays are never taken here.
+      // Only turn-banner rays share its `victory` tone.
       mounted = mounted.filter((item) => {
         const goes = item.kind === "banner" || (item.kind === "rays" && item.tone === "victory");
         if (goes) item.effect.remove();

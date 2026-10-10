@@ -1,16 +1,11 @@
-// BUILD M5-T3, tested against a scripted `EnginePort` — and, at the end, against the real one for
-// the questions that move the device: the concurrent mulligan (R265) and a draw offer (R36).
+// BUILD M5-T3, tested against a scripted `EnginePort` and, at the end, the real one for the questions
+// that move the device: the concurrent mulligan (R265) and a draw offer (R36).
 //
-// What this file owns is the LOOP — nonces, the log, the seat, the subscription — not the rules,
-// so the port below is a fake: a turn counter with a settable pending choice. Every assertion is
-// about what the session did with the port, which is the whole contract between the client and the
-// engine (CLAUDE.md rule 7). (The real engine runs here too, as WebAssembly, so the fake is a choice
-// rather than the workaround it started as.)
-//
-// Because the port is a fake, NOTHING here can speak to the engine's determinism. The other half of
-// M5-T3's acceptance — the same seed and actions reaching the same final state hash — is folded
-// with the real engine in `crates/engine/tests/golden.rs`, and checked against the
-// browser in `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`.
+// This file owns the LOOP (nonces, the log, the seat, the subscription), not the rules, so the port is
+// a fake: a turn counter with a settable pending choice. Every assertion is about what the session did
+// with the port, the whole contract between client and engine (CLAUDE.md rule 7). Nothing here speaks
+// to the engine's determinism: that half of M5-T3 is folded in `crates/engine/tests/golden.rs` and
+// checked in `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`.
 
 import { describe, expect, it } from "vitest";
 
@@ -23,9 +18,7 @@ import { enginePort, type CreateGameArgs, type EnginePort, type EngineState, typ
 import { createHotseat } from "./hotseat.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the scripted engine
-// ---------------------------------------------------------------------------------------------
 
 /** What the fake keeps. Not an `EngineState`: the session may not read it, so it is cast at the seam. */
 type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null; drawOfferBy?: PlayerId | null };
@@ -157,9 +150,7 @@ function session(fake: FakeEngine, over: { seed?: string; catalog?: CardDefs } =
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // the session
-// ---------------------------------------------------------------------------------------------
 
 describe("createHotseat", () => {
   it("calls createGame then beginGame, with the seed and both decks", () => {
@@ -244,16 +235,10 @@ describe("nonces", () => {
     expect(custom.log()[0]?.nonce).toBe("x0");
   });
 
-  // NOT the M5-T3 replay acceptance, and it must not be read as one. The port here is scripted, so
-  // all this can show is that the SESSION is a pure function of (seed, the bodies dispatched): same
-  // nonces, same log, same call sequence. It would pass against an arbitrarily nondeterministic
-  // engine, because the engine is a turn counter.
-  //
-  // "the same seed and actions reproduce the same final state hash in the browser and in vitest" is
-  // proved by two things that use the real engine: `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`
-  // (browser hash vs a Node fold of the recorded log) and
-  // `crates/engine/tests/golden.rs` (that same recorded log folded by the Rust engine with the
-  // real catalog and the card scripts, against a written-down hash).
+  // NOT the M5-T3 replay acceptance: the port is scripted, so this shows only that the SESSION is a pure
+  // function of (seed, the bodies dispatched). It would pass against a nondeterministic engine. The
+  // real proof is `e2e/cypress/e2e/01-hotseat-full-game.cy.ts` (browser hash vs a Node fold of the
+  // log) and `crates/engine/tests/golden.rs` (the same log folded by the Rust engine).
   it("two sessions with the same seed and the same actions agree on hash() and log()", () => {
     const bodies: ActionBody[] = [
       { type: "endTurn" },
@@ -525,9 +510,7 @@ describe("state()", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the real engine: the concurrent mulligan (R265) in either order, and a draw offer
-// ---------------------------------------------------------------------------------------------
 
 describe("with the real engine", () => {
   const port = enginePort();
@@ -663,9 +646,7 @@ describe("with the real engine", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // decks
-// ---------------------------------------------------------------------------------------------
 
 function def(index: number, over: Partial<CardDef> = {}): CardDef {
   return {

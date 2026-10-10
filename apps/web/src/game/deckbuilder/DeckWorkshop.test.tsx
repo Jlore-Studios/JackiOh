@@ -1,11 +1,7 @@
-// The deck workshop (SPEC §9.4, R250–R256): the list of decks and trios, making, renaming, filling
-// and deleting a deck, comparing it with other decks (R251), the trio editor and its verdict
-// (R252, R253), import and copy of deck codes (R255) and of trio codes (R339–R341), and the autosave
-// the player sees (R256).
+// Deck workshop: decks and trios, comparison (R251, R252, R253), codes (R255, R339–R341), and autosave
+// (R256) (SPEC §9.4, R250–R256).
 //
-// The pool browser, the filters and the tiles are browse.test.tsx's; the store's own rules are
-// sync.test.ts's. Every validator sentence here is computed with the validator, never typed
-// (messages.test.ts fails any client source that spells one out).
+// Validator sentences are computed, never copied (messages.test.ts).
 
 import type { CardDef } from "@jackioh/shared";
 import { checkImportRoom, validateDeck, validateTrio, type Collection } from "@jackioh/validator";
@@ -95,7 +91,6 @@ const [ONE = [], TWO = [], THREE = []] = legalDecks();
 type Mounted = {
   server: ReturnType<typeof fakeDeckServer>;
   storage: ReturnType<typeof memoryStorage>;
-  /** Advances the store's clock by `ms` and lets every save it starts settle. */
   tick: (ms: number) => Promise<void>;
 };
 
@@ -156,9 +151,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
 // The list
-// ---------------------------------------------------------------------------------------------
 
 describe("the rail", () => {
   it("R250 lists every saved deck with its count and status chip, and the caps", () => {
@@ -211,9 +204,7 @@ describe("the rail", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Making and editing a deck
-// ---------------------------------------------------------------------------------------------
 
 describe("a deck", () => {
   it("R256 New deck makes a named deck, opens it, and saves it after the debounce", async () => {
@@ -317,9 +308,7 @@ describe("a deck", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Comparing (R251)
-// ---------------------------------------------------------------------------------------------
 
 describe("comparing a deck with others (R251)", () => {
   const clash = TWO[0] ?? "";
@@ -339,7 +328,6 @@ describe("comparing a deck with others (R251)", () => {
     expect(held).toHaveAttribute("data-held-by", "Control");
     expect(held).toHaveAttribute("data-legal", "false");
     expect(held.querySelector(".db-held")).toHaveTextContent("In Control");
-    // A card no compared deck holds is untouched.
     expect(screen.getByTestId(poolCardId(THREE[0] ?? ""))).not.toHaveAttribute("data-unavailable");
 
     fireEvent.click(screen.getByTestId(addPoolId(clash)));
@@ -347,7 +335,6 @@ describe("comparing a deck with others (R251)", () => {
     expect(screen.getByTestId(DECK_STATUS)).toHaveTextContent(`${nameOf(clash)} is in Control.`);
     expect(held).toHaveAttribute("data-refused", "true");
 
-    // Stopping the comparison makes it available again.
     fireEvent.click(screen.getByTestId(deckCompareChipId("c")));
     expect(screen.getByTestId(poolCardId(clash))).not.toHaveAttribute("data-unavailable");
     fireEvent.click(screen.getByTestId(addPoolId(clash)));
@@ -386,9 +373,7 @@ describe("comparing a deck with others (R251)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Trios (R252, R253)
-// ---------------------------------------------------------------------------------------------
 
 describe("a trio", () => {
   const full = [savedDeck("a", "Aggro", ONE, 1), savedDeck("c", "Control", TWO, 2), savedDeck("m", "Midrange", THREE, 3)];
@@ -492,9 +477,7 @@ describe("a trio", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Deck codes (R255)
-// ---------------------------------------------------------------------------------------------
 
 describe("deck codes (R255)", () => {
   function stubClipboard(writeText: (text: string) => Promise<void>): void {
@@ -604,9 +587,7 @@ describe("deck codes (R255)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Trio codes (R339–R341)
-// ---------------------------------------------------------------------------------------------
 
 describe("trio codes (R339–R341)", () => {
   function stubClipboard(writeText: (text: string) => Promise<void>): void {
@@ -672,7 +653,6 @@ describe("trio codes (R339–R341)", () => {
     expect(screen.getByTestId(TRIO_NAME_INPUT)).toHaveValue("Friend's trio");
     expect(screen.getByTestId(trioRowId("new-1"))).toBeInTheDocument();
     expect(server.decks.get("new-2")).toMatchObject({ name: "Tempo", cards: TWO.slice(0, 8) });
-    // The shared cards are marked in the trio editor, as any trio's are (R251).
     expect(screen.getByTestId(trioCardId(1, shared[0] ?? ""))).toHaveAttribute("data-conflict", "true");
     expect(screen.getByTestId(deckRowId("a")), "what was there is untouched").toHaveAttribute("data-count", String(DECK_SIZE));
   });
@@ -736,9 +716,7 @@ describe("trio codes (R339–R341)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The save status (R256)
-// ---------------------------------------------------------------------------------------------
 
 describe("the save status (R256)", () => {
   it("R256 offline, the edit is kept on this device, and the next visit restores it and saves it", async () => {
@@ -754,7 +732,6 @@ describe("the save status (R256)", () => {
     expect(storage.data.get(mirrorKey(TEST_PROFILE))).toContain(ONE[5] ?? "");
     cleanup();
 
-    // The next visit: the server still has the old copy, and is reachable again.
     server.state.offline = false;
     const second = mount({ decks, server, storage, initialOpen: { kind: "deck", id: "a" } });
     expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", "3");

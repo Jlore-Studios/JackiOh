@@ -1,21 +1,6 @@
-// The state rail (cardState.ts): the badges a face in play wears for its Brittle count (R385), its
-// tuned mark (R386), its enchantments (B5 E39) and, on a hover preview of a card standing as a Unit,
-// its animated mark (R383). One rail serves every face that shows a card's states — the tall card in
-// a hand or an inspect overlay, a face-up backrow card, the board minion — and the stylesheet places it
-// by layout (cardstate.css).
-//
-// Each badge is a glyph by shape (a cracked pane with the count, ▲ ▼ ◆, a return arrow, a spark, a
-// crosshair, a cog), with its words as the tooltip and the accessible name, so nothing rests on colour.
-// Spans and imgs only, so a face can still sit inside a button (B12). Nothing moves: the rail is the
-// same under reduced motion.
-//
-// The board minion already draws Brittle's cracks and count and the Animated cog over its portrait
-// (keywordVisuals.ts, R438), so it passes those kinds in `omit` and the rail does not draw them twice.
-//
-// `PileDepth` is a backrow pile's depth (E21), which game/Backrow.tsx draws beside the card.
-//
-// On a small face (a hand card) the rail keeps its first STATE_BADGES_SMALL_MAX badges and folds the
-// rest into a "+n" chip (shown only there); its hover preview prints every one in words.
+// State badges: Brittle (R385), tuned (R386), enchantments (B5 E39), and Animated (R383).
+// The board minion draws Brittle and Animated itself (keywordVisuals.ts, R438); `PileDepth` shows E21.
+// Shape plus accessible words, not colour, lets faces fit inside buttons (B12).
 
 import { useState, type ReactElement } from "react";
 
@@ -69,11 +54,8 @@ export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement
   );
 }
 
-/**
- * B5 E21: a pile's depth — the face-down, dormant cards under the top one — beside the card in its
- * zone, a backrow pile's as a unit pile's (`UnitView.buried`, game/Card.tsx). Nothing at none. A
- * press opens the pile as a wheel (cards/wheel), the top with its face and every buried card as a
- * back, so what is above and below what is obvious.
+/** B5 E21: show a backrow pile's buried depth without naming a face-down top card.
+ * A press opens the pile wheel so stacking order is clear.
  */
 export function PileDepth({
   buried,
@@ -81,7 +63,6 @@ export function PileDepth({
   className = "buried-badge backrow-pile",
 }: {
   buried: number;
-  /** The pile's top card with its face; null for a back on top (a face-down pile names nothing). */
   top?: FaceModel | null;
   className?: string;
 }): ReactElement | null {

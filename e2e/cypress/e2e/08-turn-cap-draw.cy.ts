@@ -1,56 +1,21 @@
-// BUILD M8 `08-turn-cap-draw.cy.ts` — "Two decks that never fatigue (both seats hold #75 Infinite
-// Reserves) or a game seeded near the cap, no lethal".
-//
-// Key assertions (BUILD M8's table, verbatim):
-//
-//   "after the 60th player-turn, 30 each, the overlay says Draw (R2, R389)"
-//
-// R389 doubled R2's cap: "60 player-turns, 30 each". So the assertion is not "some number of turns
-// happened" but both halves of it — thirty turns started by each seat, sixty player-turns in all —
-// and then §2.5's "End of the 60th turn → Draw" on the overlay. Both heroes are still at
-// `HERO_HEALTH` when it appears, which is what makes it the cap's draw and not §2.5's "both heroes
-// at 0 or less in the same check".
-//
-// Why Infinite Reserves: R389's own engine test (crates/engine/tests/rules/turn_cap.rs) shows that
-// two do-nothing 20-card decks now fatigue out before the cap — the second seat's eighth fatigue
-// draw kills it at player-turn 48 — so the old do-nothing decks can no longer reach it. The
-// 08-reserves decks are 08-do-nothing-a and -b with #100 Ceaseless Void swapped for #75 Infinite
-// Reserves, a (0) Field Spell: "Drawing from an empty deck gives you a Rush Token card instead of
-// fatigue." Each seat plays it as soon as it holds it, and nothing else. With this spec's seed both
-// seats hold it in their opening hands (checked below, so a seed that does not is a loud failure,
-// not a fatigue loss), so both libraries run dry into Rush Tokens rather than fatigue, a full hand
-// burns them (§2.4), and no hero loses a point of health.
-//
-// R82 is the other ruling here: "A turn ends by itself when the active player's only legal
-// actions are ending the turn, conceding and offering a draw; the engine emits `turnAutoEnded`
-// and ends the turn." Every other card in both decks costs 3 or more, and max mana is
-// min(turns you have started, 4) (§2.3), so once a seat has played its Infinite Reserves on its
-// first turn it has nothing left to do and the engine ends that turn itself — a turn this spec
-// never clicks. That is asserted by counting the clicks: fewer presses than player-turns.
-//
-// House rules (BUILD M8): the seed is set here and overridable with `--expose seed=…`; there is
-// no fixed `cy.wait(ms)` — every wait is `cy.settled()` or a retried assertion; every selector
-// comes from `e2e/support/testids.ts`.
+// BUILD M8: R389 doubles R2's cap to 60 player-turns, 30 per seat; §2.5 makes it a draw.
+// #75 Infinite Reserves replaces fatigue with Rush Tokens; both opening hands hold it (§2.4).
+// #100 Ceaseless Void stays unaffordable while the fixture advances no-action turns.
+// R82 auto-ends no-action turns after Reserves; max mana stays below the other cards' costs (§2.3).
 
 import { constants, seedFor } from "../../support/config.ts";
 import { END_TURN, ts } from "../../support/testids.ts";
 import type { GameStateLike, PlayerId } from "../../support/types.ts";
 
-/**
- * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. This one deals #75 Infinite
- * Reserves into both opening hands, which the engine's own run of the same game confirms: a draw at
- * the end of player-turn 60 with both heroes untouched.
- */
+/** BUILD M8 seed: both seats open #75 Infinite Reserves; `--expose seed=…` overrides it. */
 const SEED = seedFor("08-turn-cap-26");
 
-/** §2.5 / R2 / R389: 60 player-turns, 30 each. `support/config.ts` keeps the number. */
 const CAP = constants.TURN_CAP_PLAYER_TURNS;
 const TURNS_EACH = CAP / 2;
 
-/** #75, the card each seat plays and the only one. */
 const INFINITE_RESERVES = "core-075";
 
-/** One iteration per player-turn and per Infinite Reserves, and slack, so a stuck loop fails instead of hanging. */
+/** Bounds the recursion so a stalled game fails. */
 const STEP_BUDGET = CAP + 6;
 
 type SidePeek = {
@@ -68,7 +33,7 @@ function holdsReserves(state: GameStateLike, player: PlayerId): boolean {
   return (peek(state, player).hand ?? []).some((card) => card.defId === INFINITE_RESERVES);
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: move the hotseat device to the acting player. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
@@ -80,9 +45,6 @@ describe("BUILD M8 08 — two decks that never fatigue run out the turn cap as a
   it("R389 ends the game as a draw after the 60th player-turn, and R82 ends the dead turns itself", () => {
     cy.seedGame({ seed: SEED, a: "08-reserves-a", b: "08-reserves-b" });
 
-    // Nothing has happened yet but the opening draws: neither deck holds a Cast-on-draw card, a
-    // Quickdraw card or a hand trigger, so no card can resolve unless this spec plays one, and the
-    // only one it plays is Infinite Reserves.
     cy.gameState().then((opening) => {
       expect(opening.result, "the game is live after setup").to.eq(null);
       for (const player of ["p1", "p2"] as const) {
@@ -93,11 +55,7 @@ describe("BUILD M8 08 — two decks that never fatigue run out the turn cap as a
       }
     });
 
-    // Whoever is to act plays Infinite Reserves if they hold it and otherwise presses `end-turn`,
-    // until the engine hands back a result. Every turn this loop sees belongs to a player who has a
-    // legal action, because R82 means the engine has already ended any turn that does not — which
-    // is why `end-turn` must be live here, and a disabled one is a real failure rather than
-    // something to skip.
+    // R82 already ended any no-action turn, so a disabled end-turn is a failure.
     let pressed = 0;
     let played = 0;
     const runOut = (left: number): void => {
@@ -118,26 +76,20 @@ describe("BUILD M8 08 — two decks that never fatigue run out the turn cap as a
     };
     runOut(STEP_BUDGET);
 
-    // "after the 60th player-turn, 30 each": R389's own arithmetic, both halves of it.
     cy.gameState().then((state) => {
       expect(played, "each seat played its Infinite Reserves").to.eq(2);
       expect(peek(state, "p1").turnsStarted, "R389: seat 1 started 30 turns").to.eq(TURNS_EACH);
       expect(peek(state, "p2").turnsStarted, "R389: seat 2 started 30 turns").to.eq(TURNS_EACH);
       expect(state.turn, "R389: the player-turn counter reached the cap").to.be.at.least(CAP);
 
-      // "the overlay says Draw", and it is the cap's draw: §2.5's other draw is two heroes at 0
-      // or less in the same check, and neither hero has lost a point of health in sixty turns.
       expect(state.result?.winner, "§2.5: the turn cap is a draw").to.eq("draw");
       expect(peek(state, "p1").hero?.health, "seat 1 never took damage").to.eq(constants.HERO_HEALTH);
       expect(peek(state, "p2").hero?.health, "seat 2 never took damage").to.eq(constants.HERO_HEALTH);
 
-      // R82: some of those sixty player-turns ended without anybody pressing anything — each seat's
-      // first, once Infinite Reserves is down and everything left in hand costs 3 or more.
       expect(pressed, "R82: the engine ended at least one dead turn itself").to.be.lessThan(CAP);
     });
 
-    // BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw". A draw is the one result that
-    // reads the same from both seats, so it is asserted from both (§10.8 orients the view).
+    // BUILD M5-T4: §10.8 requires checking the draw from both seats.
     cy.expectResult("Draw");
     cy.handOver();
     cy.expectResult("Draw");

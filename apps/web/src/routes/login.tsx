@@ -1,107 +1,11 @@
-// `/login` — sign in, create an account, or ask for a password reset, against the auth provider
-// directly (SPEC §9.2's first arrow out of the browser). `net/auth.ts` is the only thing here that
-// talks to it; this file is the form.
-//
-// WHAT IT DOES NOT DECIDE. Nothing here judges whether a password is wrong, whether an email is
-// verified, or whether the account is pending: `net/auth.ts` reduces every refusal to one of its own
-// sentences (R160, R192), `/api/auth/me` answers the status, and the gate in `main.tsx` acts on it.
-// Signing in sends the player to the main menu, whichever screen sent them here (issue #479); from
-// there the gate sends a pending account on to `/invite` from any gated screen. A sign-in that fails
-// stays here, with its sentence above the form and the form as the player left it.
-// The checks in `auth/validation.ts` only save a round trip; the provider still has the last word.
-//
-// HOW THE SCREEN CAN BE OPENED.
-//   - Plainly, from the landing page or the gate.
-//   - `/login?reason=expired`: the gate's renewal was refused (R194), so say why the player is here.
-//   - `/login?mode=forgot`: straight onto the forgot-password form (the reset screen's way back).
-//   - From an emailed link (R193). `main.tsx` reads the tokens and scrubs them from the address bar
-//     at boot, before anything renders, and sends a link that landed on any other path here;
-//     `consumeAuthRedirect` hands this screen the cached reading. A link comes back with a one-time
-//     PKCE code (R323), which this screen exchanges for the link's session with the verifier this
-//     browser kept when it asked for the link, and then treats exactly as an implicit-flow link's
-//     session (below), which a link mailed before the switch still is (R324). A code this browser
-//     holds no verifier for was asked for on another device or browser: the provider confirmed the
-//     address before it sent the player here, so the screen says so and asks for a sign-in, never
-//     an error (R324).
-//
-// A LINK'S ADDRESS IS CHECKED BEFORE IT IS TRUSTED. The address in a link's token is only a claim:
-// its payload is readable, not verified, and anyone can write a link whose token names any address
-// next to a real refresh token of their own. So before a link's address decides anything, the
-// server is asked who the token belongs to (`GET /api/auth/me`, which verifies every token it is
-// given), and only that answer is compared. Then:
-//   - A CONFIRMATION link never signs this browser in: the address is confirmed, and the player
-//     signs in with the password they chose. Accepting a token from any link would let an attacker
-//     sign a victim into the attacker's pending account (login CSRF). And even the link for the
-//     sign-up this browser started is not proof of the password: the provider leaves an existing
-//     unconfirmed account's password alone when the same address signs up again, so an attacker
-//     who registered the victim's address first would keep their own password on the account the
-//     victim confirmed and activated. Signing in by hand exposes that (the victim's password is
-//     refused, and the reset that follows replaces the attacker's).
-//   - A RECOVERY link is held (for this tab only, for `/reset-password`) for an address this
-//     browser asked to reset (`pendingReset`). A reset asked for on another device, or in another
-//     browser, is the common case, so any other recovery link asks the player to type their
-//     account's address first, and is held only when that matches the checked address. Someone sent
-//     another person's link types their own address, which does not match, so the guard against
-//     being signed into someone else's account stands without a dead end for the owner. Nothing is
-//     held until then, and leaving the question revokes the link.
-//   - An INVITE sent from the provider's dashboard is for an account with no password yet, so it
-//     opens the forgot-password form, never "sign in".
-//   - A token the server refuses is a spent or broken link. One that could not be checked at all
-//     (the server unreachable) decides nothing and says so; a recovery link is kept, for this
-//     screen only, so "Try again" can check it once the server answers, since it works only once.
-//     A check that runs past `GATE_SLOW_NOTICE_SECONDS` says why (a sleeping server) and asks the
-//     player to wait for it.
-// NOTHING FROM A LINK IS FILLED IN. Not even the checked address: a link can be anyone's, and a
-// mailer form holding an address the player never typed arms this browser's guard with it at one
-// click ("Send reset link" remembers the address as the reset this browser asked for), after which
-// the same person's next link would be accepted. The player types their own address.
-// A LINK IS RENEWED AS SOON AS IT IS READ. Its tokens came in a URL, and the browser's history keeps
-// the URL a page loaded with, so the link's refresh token is spent (renewed once) before anything
-// else, the server's check included: the copy in history is then worth nothing after the provider's
-// reuse interval, whatever this tab does next (a tab closed while "Checking your link…" included).
-// Everything after that (the check, holding, revoking) uses the renewal. A renewal the provider
-// refuses means the link was opened before; one that cannot reach the provider leaves the link's
-// own session in use, and a later "Try again" renews it then.
-// A LINK'S SESSION THAT IS NOT KEPT IS REVOKED. A link this screen does not hold (every
-// confirmation, someone else's reset, an invite, one the player moved on from, a confirmation that
-// could not be checked, an unchecked or unclaimed reset the player left) is revoked at the
-// provider, renewed first if its access token has run out (R194), since the provider refuses to
-// revoke with an expired one.
-// NOTHING IS PREFILLED FROM STORAGE either: `/login?mode=forgot` is a public link, and a reset
-// address another person left on a shared computer is not this player's to see.
-// ANOTHER ACCOUNT ON THIS BROWSER. Signing in replaces (and revokes) whatever session the browser
-// holds, so the screen says which account that is, with its account screen and sign-out beside it.
-// A failed link shows our own sentence and the two ways forward (resend, reset) right beside it,
-// since mail scanners spend one-time links.
-// The query is read BEFORE the scrub, and no destination is ever read from it (B35): every
-// navigation out of this screen goes to a `paths` value.
-//
-// THE OTHER WAYS IN (issue #267). Each ends where a password sign-in does, at the gate in `main.tsx`,
-// with an account the server gates exactly the same (§9.4): none of them makes an account active.
-//   - AN EMAIL CODE (R664): "Sign in with an email code instead" mails a link and a code to a
-//     confirmed account (`requestEmailSignIn`, one neutral sentence whatever the provider answered).
-//     The code, typed here, signs in. The link comes back with a PKCE code and signs in only the
-//     browser that asked: its code exchanges only with this browser's `magiclink` verifier. That is
-//     the one way a link's session is kept, and it is not R193's case: R193 refuses a session from
-//     a link because anyone can send one, while a PKCE sign-in link can only finish where it began.
-//   - AN OAUTH PROVIDER (R666): one button per provider the build names (`oauthProviders`). It leaves
-//     for the provider with a PKCE challenge, and the code it comes back with is exchanged, and kept,
-//     the same way; a provider that sends the player back with an error says so in our words.
-//   - TWO-STEP SIGN-IN (R665): whatever the way in, a session for an account with an authenticator
-//     app is held here, in memory, until its code is typed (`mode: "mfa"`), and only the `aal2`
-//     session that comes back is kept; cancelling revokes the held one. A recovery link for such an
-//     account asks for the code too, before the server is asked whose it is (it refuses `aal1`).
-//
-// NO DEAD ENDS. `BackLink` is on the screen in every mode, the forgot form has its own way back,
-// and the resend and reset mailers answer the same neutral sentence whether or not the address has
-// an account (R192), then wait out the provider's per-address interval before offering again. That
-// interval belongs to the ADDRESS: a sign-up starts it for the confirmation resend, and a corrected
-// address can be sent to at once. It is counted on the clock from when the address was mailed
-// (`auth/cooldown.ts`), so a reload, or a tab the phone put to sleep, neither restarts nor stalls it.
-//
-// WHAT HAPPENED IS SAID FIRST. The notice and the error sit above the form, and a sign-up that
-// succeeded moves focus to its notice (the form it leaves behind reads "Sign in", which is the step
-// after the inbox). A refused field takes focus. A sign-in goes to the main menu.
+// `/login` presents provider-auth forms; `net/auth.ts` and the server decide account state and use
+// neutral failures (SPEC §9.2; R160, R192).
+// Scrub redirect links before rendering and exchange a PKCE code only with its originating browser (R323, R324).
+// Check each link token's account at `/api/auth/me`, never trust its readable address claim; confirmation links
+// never sign in (R193). Hold recovery links only after the player types the checked address; never prefill it.
+// Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
+// Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
+// Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 

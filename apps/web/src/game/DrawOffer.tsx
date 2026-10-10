@@ -4,25 +4,21 @@
 // both seats' views, as `PlayerView.drawOffer` until it is answered or lapses at the end of the
 // offerer's turn; what became of it is in the view's event window (`drawAnswered`). So:
 //
-//  - the offerer, while its offer stands: "Draw offered — waiting for reply" (`draw-offer-status`);
+//  - the offerer, while it stands: "Draw offered — waiting for reply" (`draw-offer-status`);
 //  - the other seat, while it stands: "Your opponent offers a draw" with Accept and Decline
-//    (`draw-offer`, `draw-accept`, `draw-decline`), a notice beside the board rather than a modal
-//    over it, since the game goes on around it. The buttons are live exactly when `legal` lists
-//    the matching `answerDraw` (the engine withholds it while a prompt is open), and each sends
-//    that listed body: no rule is applied here (CLAUDE.md rule 7);
+//    (`draw-offer`, `draw-accept`, `draw-decline`), a notice beside the board rather than a modal.
+//    The buttons are live exactly when `legal` lists the matching `answerDraw`, and each sends that
+//    listed body: no rule is applied here (CLAUDE.md rule 7);
 //  - afterwards, for the rest of that turn: "You declined the draw" / "Your opponent declined the
-//    draw", or "Draw accepted" (the result panel then says "Game drawn by agreement"); and an offer
-//    that lapsed unanswered reads "The draw offer expired" through the turn after it (`draw-outcome`,
-//    `data-outcome`).
+//    draw", or "Draw accepted"; an offer that lapsed unanswered reads "The draw offer expired"
+//    through the turn after it (`draw-outcome`, `data-outcome`).
 //
-// All of it sits in one element, `draw-toast`, which is the element the animation table's
-// `drawOffered` and `drawAnswered` rows play on (animations.ts). It is drawn from the NEWEST view
-// rather than the one the board is still showing: an offer moves nothing on the board, and the
-// entry that animates its arrival needs the element there to animate. It sits in a live region that
-// is always in the tree, so each notice is read out as it arrives.
+// All of it sits in one element, `draw-toast`, which the animation table's `drawOffered` and
+// `drawAnswered` rows play on (animations.ts). It is drawn from the NEWEST view, not the one the
+// board still shows, so the entry that animates its arrival has the element there. It sits in a
+// live region that is always in the tree, so each notice is read out as it arrives.
 //
-// `view.drawOffer` alone says an offer stands (R269): every view carries it, and it is gone once
-// the offer is answered, lapses, or the game ends. The event stream only says what became of one.
+// `view.drawOffer` alone says an offer stands (R269); the event stream only says what became of one.
 
 import { useId, type ReactElement } from "react";
 
@@ -43,14 +39,14 @@ export type DrawNotice =
 
 export type DrawOutcome = "declined" | "accepted" | "expired";
 
-/** How many turns an unanswered offer's "expired" note outlives it: the turn right after it lapsed. */
+/** How many turns an "expired" note outlives its offer. */
 const EXPIRED_NOTE_TURNS = 1;
 
 function isDrawEvent(event: GameEvent): event is Extract<GameEvent, { type: "drawOffered" | "drawAnswered" }> {
   return event.type === "drawOffered" || event.type === "drawAnswered";
 }
 
-/** What the viewer is shown about the draw offer, read off the view alone; null when nothing. */
+/** What the viewer is shown about the draw offer, read off the view alone. */
 export function drawNoticeFor(view: PlayerView): DrawNotice | null {
   const standing = view.drawOffer;
   if (standing !== undefined) return standing.by === view.viewer ? { kind: "waiting" } : { kind: "offered" };
@@ -78,7 +74,6 @@ export function drawNoticeFor(view: PlayerView): DrawNotice | null {
   return turnsSince >= 1 && turnsSince <= EXPIRED_NOTE_TURNS ? { kind: "expired" } : null;
 }
 
-/** The words each notice says, as the screen and the live region both say them. */
 export const DRAW_TEXT = {
   waiting: "Draw offered — waiting for reply",
   offered: "Your opponent offers a draw",
@@ -103,7 +98,7 @@ export function drawNoticeText(notice: DrawNotice): string {
   }
 }
 
-/** The engine's own `answerDraw` body for this answer, when `legal` lists it. */
+/** The engine's own `answerDraw` body, when `legal` lists it. */
 function answerFor(legal: readonly ActionBody[], accept: boolean): ActionBody | undefined {
   return legal.find((body) => body.type === "answerDraw" && body.accept === accept);
 }
@@ -126,8 +121,7 @@ export default function DrawOfferNotice({ view, legal, animating, onAction }: Dr
   const decline = answerFor(legal, false);
 
   return (
-    // A live region that is always in the tree, so a notice arriving in it is read out; the notice
-    // itself carries no role of its own, so nothing is said twice.
+    // Always in the tree so an arriving notice is read out; the notice has no role, so nothing is said twice.
     <div className="draw-notices" aria-live="assertive">
       {notice === null ? null : (
         <div

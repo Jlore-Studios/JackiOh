@@ -1,16 +1,10 @@
 // "More cards from the newest set" (R1372, R1373): the switch beside every random deck a player is
-// dealt, All Random's in the lobby and the rematch, and practice's Random deck.
+// dealt (All Random's in the lobby and the rematch, practice's Random deck). It deals nothing
+// (CLAUDE.md rule 7): on, the dealer leans on the newest set that ships, at least `AI_DECK.leanMinShare`
+// of the deck (R1370). The set is named from `newestShippedSet()` (R1371), the share read from WASM (rule 9).
 //
-// IT DEALS NOTHING (CLAUDE.md rule 7). On, it asks the dealer for a deck that leans on the newest set
-// that ships: at least `AI_DECK.leanMinShare` of it (R1370), the rest dealt as without it. The server
-// deals All Random's decks from the `leanNewest` the lobby and the rematch send; the practice worker
-// deals practice's. The set is named here from `newestShippedSet()` (R1371) and never written down,
-// so the words move on by themselves when the next set ships, and the share is the deck builder's own
-// number, read from the WebAssembly module (rule 9).
-//
-// The online pick is kept on this device (`PLAY_LEAN_NEWEST_KEY`), for the lobby and the rematch
-// alike, in try/catch'd `localStorage` like the lobby's other picks: a private window or blocked
-// storage only means it starts off. Practice keeps its own beside its setup (`routes/practice.tsx`).
+// The online pick is kept in try/catch'd `localStorage` (`PLAY_LEAN_NEWEST_KEY`): blocked storage only
+// means it starts off. Practice keeps its own (`routes/practice.tsx`).
 
 import { useId, type ReactElement } from "react";
 

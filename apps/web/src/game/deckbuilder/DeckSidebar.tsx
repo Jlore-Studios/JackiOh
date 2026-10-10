@@ -1,24 +1,13 @@
-// The open deck's sidebar: its head (the name field, passed in), the deck's count and meter, its
-// mana curve, a Hearthstone-style list of tiles, and (as children) the comparison, the verdict and
-// the actions (docs/polish/6-cards.md, Surface D; SPEC §9.4, R250–R251).
+// Open deck sidebar: count, curve, tiles, comparison, verdict and actions (docs/polish/6-cards.md,
+// Surface D; SPEC §9.4, R250–R251).
 //
-// One deck is open at a time in the workshop, so nothing here carries a deck number: the region is
-// `deck-drop`, the list `deck-cards`, a tile `deck-card-<id>`, and a click on a tile still takes the
-// card out. Tiles are drawn in `deckListOrder` (cost, then name), which is display only: the deck's
-// own order is what a save sends.
+// Tile order is display-only; the deck's order is saved.
 //
-// A CARD A COMPARED DECK ALSO HOLDS (R251) keeps its tile and wears a mark: `data-conflict="true"`,
-// `data-conflict-with="<deck name>"` and a small flag. It is never taken out on the player's
-// behalf; the comparison says what clashes and the player decides.
+// R251 conflicts are marked, never removed for the player.
 //
-// ON A PHONE the curve and tiles fold behind a "Show list" toggle in the head (closed at first), so
-// a full deck's 560 px of sidebar no longer pushes the whole pool below the fold; the name, the
-// count, the meter and the rest stay. deckbuilder.css shows the toggle and applies the fold only in
-// the one-column layout, so every tile stays mounted, and visible elsewhere.
+// On phones the list folds but stays mounted (deckbuilder.css).
 //
-// A tile says what a click does ("Remove Bigot from Aggro"). Hovering it previews the card, a touch
-// long-press opens the inspect sheet, and a right-click, the I key, the context-menu key or
-// Shift+F10 open the card's detail view, so a keyboard can inspect a card in the list too.
+// Tiles support preview, inspect, and keyboard detail view (I, the context-menu key or Shift+F10).
 
 import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 
@@ -33,35 +22,23 @@ import { DB_SIDEBAR, DECK_CARDS, DECK_COUNT, DECK_DROP, DECK_FOLD, deckCardId } 
 import type { Holder } from "./workshop.ts";
 
 type DeckSidebarProps = {
-  /** The open deck's name as it is saved, for the tiles' labels. */
   deckName: string;
   cards: readonly string[];
   catalog: CatalogSnapshot;
-  /** Card id → the compared deck that also holds it (R251): marked, never removed. */
   conflicts: ReadonlyMap<string, Holder>;
-  /** The name field and anything else drawn above the deck's count. */
   head: ReactNode;
-  /** A card dropped on the deck. */
   onDropCard: (event: DragEvent<HTMLElement>) => void;
   onRemove: (cardId: string) => void;
-  /** Opens card `cardId`'s detail view. */
   onInspect: (cardId: string) => void;
-  /** The comparison, the verdict and the actions, drawn under the deck. */
   children?: ReactNode;
 };
 
-/** The meter's width is a share of a full deck, as a CSS percentage. */
 const FULL_PERCENT = 100;
 
-/** Scroll within this many pixels of an end and the list counts as being at that end. */
 const EDGE_SLACK_PX = 1;
 
 /**
- * Marks the deck list with `data-more` ("top", "bottom", "both" or "none"): which of its ends has
- * tiles scrolled out of sight past it. deckbuilder.css fades those ends, so a list that scrolls
- * says so, where before its last tile was simply cut off. A hidden panel measures zero and reads
- * "none" until it opens, which the ResizeObserver sees. jsdom has no layout, so it is always "none"
- * there.
+ * Marks hidden deck-list ends for CSS fades. Hidden panels and jsdom report `none`.
  */
 function useScrollEdges(ref: RefObject<HTMLElement | null>, count: number): void {
   useLayoutEffect(() => {
@@ -86,9 +63,7 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>, count: number): void
 }
 
 /**
- * A key per tile that survives the list changing around it: the id and which copy of it this is
- * (an illegal draft can hold one twice). A key by list position re-mounted every tile after an
- * insertion, so each of them replayed the entrance that only the new tile should play.
+ * Duplicate-safe keys keep existing tiles mounted so only inserted tiles replay their entrance.
  */
 function tileKeys(ordered: readonly string[]): [string, string][] {
   const seen = new Map<string, number>();
@@ -99,17 +74,16 @@ function tileKeys(ordered: readonly string[]): [string, string][] {
   });
 }
 
-/** A drop target has to say so, or the browser never fires `drop`. */
+/** `preventDefault` marks a drop target, enabling the browser's `drop` event. */
 function allowDrop(event: DragEvent<HTMLElement>): void {
   event.preventDefault();
   try {
     event.dataTransfer.dropEffect = "move";
   } catch {
-    // Synthesised events carry no DataTransfer; `preventDefault` is the part that matters.
+    // Synthesised events lack DataTransfer; `preventDefault` enables drops.
   }
 }
 
-/** The tile's gem: the printed price, and an embiggen card's base price, as its full face shows. */
 function tileCost(cost: CardCost | undefined): string {
   if (cost === undefined) return "";
   if (typeof cost === "number") return String(cost);
@@ -126,7 +100,6 @@ type DeckTileProps = {
   onInspect: (cardId: string) => void;
 };
 
-/** The keys that open a tile's detail view: I, the context-menu key, and Shift+F10 (cards/inspect/keys.ts). */
 export { isInspectKey };
 
 function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: DeckTileProps): ReactElement {
@@ -135,8 +108,6 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
     () => (def === undefined ? null : faceModel({ defId: cardId, def, radiant: false })),
     [cardId, def],
   );
-  // Hover shows the whole card and a touch long-press opens the inspect sheet; a right-click opens
-  // the detail view; a click still removes the card, as it always has.
   const inspect = useInspectTrigger(face === null ? null : { key: deckCardId(cardId), face }, {
     onContextMenu: () => {
       onInspect(cardId);
@@ -189,7 +160,6 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
   const { deckName, cards, catalog, conflicts, head, onDropCard, onRemove, onInspect, children } = props;
-  // Layout, not state of the deck: the phone's fold, closed at first.
   const [listOpen, setListOpen] = useState(false);
   const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog]);
   const full = cards.length >= DECK_SIZE;
