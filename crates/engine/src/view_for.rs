@@ -1493,10 +1493,13 @@ fn redact_event(
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
             if hidden(&instance) {
-                // ME-ALTPLAY, R1046: a hidden set card shows neither its `x` nor its `embiggened`.
+                // ME-ALTPLAY, R1046: a card set face-down by a permission shows neither its `x` nor its
+                // `embiggened`. Any other hidden play keeps both, as it always has (D14).
+                if find_instance(state, &instance).is_some_and(|card| card.set_as.is_some()) {
+                    shown.remove("x");
+                    shown.remove("embiggened");
+                }
                 shown.remove("formerId");
-                shown.remove("x");
-                shown.remove("embiggened");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             rebuild(shown)
