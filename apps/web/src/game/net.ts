@@ -160,14 +160,14 @@ const VOIDED_CLOSE_CODE = 4410;
 const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
 /**
- * R1437: each backoff gains up to this fraction of itself, drawn at random, so every client a
+ * R1441: each backoff gains up to this fraction of itself, drawn at random, so every client a
  * server restart or a network blip dropped at once does not come back on the same beat. It only
  * adds time, so the first retry never comes before its 250 ms.
  */
 const RECONNECT_JITTER = 0.25;
 
 /**
- * R1437: how long a socket may have said nothing before a woken page (the tab turned visible, the
+ * R1441: how long a socket may have said nothing before a woken page (the tab turned visible, the
  * network came back) doubts it: the server's ping interval, since the server pings that often and
  * the browser answers without telling the page. A socket that is still there but quiet (a long
  * turn) is no reason to drop it; this is only the point past which it is worth asking.
@@ -175,7 +175,7 @@ const RECONNECT_JITTER = 0.25;
 const SILENT_SOCKET_MS = WS_PING_INTERVAL_SECONDS * 1000;
 
 /**
- * R1437: how long a woken page waits for the answer to its probe (a `hello`, which the actor
+ * R1441: how long a woken page waits for the answer to its probe (a `hello`, which the actor
  * answers with a full view) before it replaces the socket.
  */
 const WAKE_PROBE_MS = 5000;
@@ -193,7 +193,7 @@ const defaultTimers: Timers = {
 };
 
 /**
- * R1437: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
+ * R1441: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
  * network comes back (as `settings/accountSync.ts` listens for). Returns the function that stops
  * listening.
  */
@@ -462,11 +462,11 @@ export type MatchClientOptions = {
   /** Test seam for the monotonic reading stamped on every `clock` frame. */
   monotonic?: () => number;
   /**
-   * Test seam for what wakes a sleeping page (R1437): takes the handler, returns the function that
+   * Test seam for what wakes a sleeping page (R1441): takes the handler, returns the function that
    * stops listening. Defaults to the tab turning visible and the `online` event.
    */
   wake?: (handler: () => void) => () => void;
-  /** Test seam for the reconnect jitter (R1437), a draw in [0, 1). Defaults to `Math.random`. */
+  /** Test seam for the reconnect jitter (R1441), a draw in [0, 1). Defaults to `Math.random`. */
   random?: () => number;
 };
 
@@ -521,17 +521,17 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let socket: SocketLike | null = null;
   let retry = 0;
   let pendingRetry: unknown = null;
-  /** R1437: the monotonic reading at which the open socket was created or last heard from. */
+  /** R1441: the monotonic reading at which the open socket was created or last heard from. */
   let heardAt = 0;
   /**
-   * R1437: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
+   * R1441: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
    * out on most platforms, so a socket heard just before a laptop slept would read as recent on
    * waking; the wall clock keeps counting.
    */
   let heardWall = 0;
-  /** R1437: the timer of a wake probe still waiting for its answer. */
+  /** R1441: the timer of a wake probe still waiting for its answer. */
   let probe: unknown = null;
-  /** R1437: stops listening for the page waking; null while it is not. */
+  /** R1441: stops listening for the page waking; null while it is not. */
   let unwake: (() => void) | null = null;
   /** Set by `close()`; cleared by `connect()`. Keeps a deliberate close from reconnecting. */
   let stopped = false;
@@ -683,7 +683,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   }
 
   /**
-   * R1437: lets go of `live` without waiting for it (a dead peer never answers a close) and opens
+   * R1441: lets go of `live` without waiting for it (a dead peer never answers a close) and opens
    * its successor, which sends `hello` as any new socket does. The new socket opens before the old
    * one is closed, so the server meets the successor first when both reach it.
    */
@@ -714,7 +714,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   }
 
   /**
-   * R1437: the page woke (its tab turned visible, the network came back). A phone that changed
+   * R1441: the page woke (its tab turned visible, the network came back). A phone that changed
    * networks or a laptop that slept can leave a socket that never reports its own end, and the
    * browser answers the server's pings without telling the page, so a quiet socket looks the same as
    * a dead one. A socket heard from lately is left alone. One that is not is asked for a full view

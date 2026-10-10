@@ -24,7 +24,7 @@ use tokio::sync::mpsc;
 const SETTLE_YIELDS: usize = 64;
 
 /// How many frames a fake socket's outgoing queue holds. Far past `WS_OUTBOX_MAX_FRAMES`: a test reads
-/// frames when it chooses, so the actor tests never meet the cap; R1437's is proved on
+/// frames when it chooses, so the actor tests never meet the cap; R1441's is proved on
 /// `Socket::channel()` (`actor/heartbeat.rs`).
 const FAKE_OUTBOX_FRAMES: usize = 1 << 16;
 

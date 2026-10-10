@@ -12,7 +12,7 @@
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
 //! them for the lobby's room links (R767), the four `USERNAME_*` hints for the username field
 //! (R1432, R1435), and the three `WS_*` heartbeat numbers for the match client's wake probe and the
-//! tests that read them (R1437).
+//! tests that read them (R1441).
 
 use serde_json::{Value, json};
 
@@ -193,7 +193,7 @@ fn every_name_is_listed_once() {
     assert_eq!(
         listed, 58,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
-         four USERNAME_* hints (R1432, R1435) and the three WS_* heartbeat numbers (R1437)"
+         four USERNAME_* hints (R1432, R1435) and the three WS_* heartbeat numbers (R1441)"
     );
 }
 

@@ -79,7 +79,7 @@ type Harness = {
   /** Every delay a timer was set for, in order. */
   delays: () => number[];
   now: (value: number) => void;
-  /** R1437: the page wakes (its tab turns visible, the network comes back). */
+  /** R1441: the page wakes (its tab turns visible, the network comes back). */
   wake: () => void;
 };
 
@@ -92,7 +92,7 @@ type HarnessOptions = {
   pageEvents?: boolean;
 };
 
-/** How long a socket must have said nothing before a woken page doubts it (R1437). */
+/** How long a socket must have said nothing before a woken page doubts it (R1441). */
 const SILENCE_MS = WS_PING_INTERVAL_SECONDS * 1000;
 
 function harness(options: HarnessOptions = {}): Harness {
@@ -548,7 +548,7 @@ describe("reconnect", () => {
     expect(notified).toBe(1);
   });
 
-  it("R1437 a reconnect waits its backoff plus up to a quarter more", () => {
+  it("R1441 a reconnect waits its backoff plus up to a quarter more", () => {
     const h = connected({ random: () => 0.5 });
     h.socket().drop(1006);
     h.runTimers();
@@ -559,13 +559,13 @@ describe("reconnect", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// a socket that went quiet (R1437)
+// a socket that went quiet (R1441)
 // ---------------------------------------------------------------------------------------------
 
 const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
 
 describe("a silent socket", () => {
-  it("R1437 a silent socket is replaced when the tab turns visible, and the new socket sends hello", () => {
+  it("R1441 a silent socket is replaced when the tab turns visible, and the new socket sends hello", () => {
     const h = connected();
     const old = h.socket();
     h.now(SILENCE_MS + 1);
@@ -591,7 +591,7 @@ describe("a silent socket", () => {
     expect(h.client.snapshot().view?.turn).toBe(3);
   });
 
-  it("R1437 a quiet socket that answers the probe is kept", () => {
+  it("R1441 a quiet socket that answers the probe is kept", () => {
     const h = connected();
     const live = h.socket();
     h.now(SILENCE_MS + 1);
@@ -610,7 +610,7 @@ describe("a silent socket", () => {
     expect(live.frames()).toEqual([HELLO, HELLO]);
   });
 
-  it("R1437 a socket whose monotonic clock stood still through a sleep is still probed", () => {
+  it("R1441 a socket whose monotonic clock stood still through a sleep is still probed", () => {
     const h = connected();
     // `performance.now()` leaves a sleeping machine's time out; the wall clock does not.
     const wall = vi.spyOn(Date, "now").mockReturnValue(Date.now() + SILENCE_MS + 1);
@@ -622,7 +622,7 @@ describe("a silent socket", () => {
     }
   });
 
-  it("R1437 a socket heard within the ping interval is not probed", () => {
+  it("R1441 a socket heard within the ping interval is not probed", () => {
     const h = connected();
     h.now(SILENCE_MS);
     h.wake();
@@ -630,7 +630,7 @@ describe("a silent socket", () => {
     expect(h.pending()).toBe(0);
   });
 
-  it("R1437 a socket that never opened is replaced at once when the page wakes", () => {
+  it("R1441 a socket that never opened is replaced at once when the page wakes", () => {
     const h = harness();
     h.client.connect();
     const stuck = h.socket();
@@ -640,7 +640,7 @@ describe("a silent socket", () => {
     expect(h.sockets).toHaveLength(2);
   });
 
-  it("R1437 by default the tab turning visible and the network coming back wake it", () => {
+  it("R1441 by default the tab turning visible and the network coming back wake it", () => {
     const h = connected({ pageEvents: true });
     const live = h.socket();
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");

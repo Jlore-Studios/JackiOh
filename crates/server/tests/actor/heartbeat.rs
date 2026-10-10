@@ -1,4 +1,4 @@
-//! R1437 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that
+//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that
 //! stops reading is let go.
 //!
 //!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame of any kind
@@ -11,7 +11,7 @@
 //! TCP races a paused clock (the header of `actor/ws_server.rs`), so the connection is an in-memory
 //! pipe (`MemoryListener`): `axum::serve` accepts the server end of a `tokio::io::duplex`, and the
 //! test is the client on the other. Every duration is read from `config.rs`, so these tests state
-//! R1437's numbers nowhere.
+//! R1441's numbers nowhere.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -198,7 +198,7 @@ impl Client {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1437_drops_a_socket_that_answers_no_ping_after_the_idle_timeout_and_shows_the_opponent_its_grace() {
+async fn r1441_drops_a_socket_that_answers_no_ping_after_the_idle_timeout_and_shows_the_opponent_its_grace() {
     let served = served().await;
     let opponent = served.attach_opponent().await;
     let mut p1 = served.connect_p1().await;
@@ -238,7 +238,7 @@ async fn r1437_drops_a_socket_that_answers_no_ping_after_the_idle_timeout_and_sh
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1437_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout() {
+async fn r1441_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout() {
     const { assert!(WS_IDLE_TIMEOUT_SECONDS >= 3 * WS_PING_INTERVAL_SECONDS) };
     let served = served().await;
     let _opponent = served.attach_opponent().await;
@@ -270,7 +270,7 @@ async fn r1437_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout(
 }
 
 #[test]
-fn r1437_overflowing_the_outbox_closes_the_socket_instead_of_growing_the_queue() {
+fn r1441_overflowing_the_outbox_closes_the_socket_instead_of_growing_the_queue() {
     let (socket, mut frames) = Socket::channel();
     let closed = Arc::new(AtomicUsize::new(0));
     let counted = Arc::clone(&closed);

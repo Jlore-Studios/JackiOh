@@ -9,7 +9,7 @@
 //! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that stops answering is found and dropped: the
 //! pump pings every `WS_PING_INTERVAL_SECONDS` and drops a connection that has sent nothing for
 //! `WS_IDLE_TIMEOUT_SECONDS`, and a socket's outgoing queue holds at most `WS_OUTBOX_MAX_FRAMES`
-//! frames (SPEC §9.5, §9.8, R1437), so a dead or unread peer starts its seat's grace and cannot grow
+//! frames (SPEC §9.5, §9.8, R1441), so a dead or unread peer starts its seat's grace and cannot grow
 //! the server's memory without limit.
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from `?token=`
@@ -73,10 +73,10 @@ const CLOSE_NORMAL: u16 = 1000;
 /// the connection is dropped.
 const CLOSE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// R1437: how often the pump pings its peer.
+/// R1441: how often the pump pings its peer.
 const PING_INTERVAL: Duration = Duration::from_secs(WS_PING_INTERVAL_SECONDS as u64);
 
-/// R1437: how long the pump waits for any frame from its peer, and for the peer to take a frame
+/// R1441: how long the pump waits for any frame from its peer, and for the peer to take a frame
 /// the pump is sending, before it drops the connection.
 const IDLE_TIMEOUT: Duration = Duration::from_secs(WS_IDLE_TIMEOUT_SECONDS as u64);
 
@@ -91,7 +91,7 @@ pub enum SocketFrame {
 
 struct SocketInner {
     /// The transport's queue, bounded by `WS_OUTBOX_MAX_FRAMES`. `None` once it overflowed and was
-    /// let go (R1437): the transport drains what it holds, then ends.
+    /// let go (R1441): the transport drains what it holds, then ends.
     out: Mutex<Option<mpsc::Sender<SocketFrame>>>,
     open: AtomicBool,
     /// The close handler has run; it runs once, whichever side closed.
@@ -140,7 +140,7 @@ impl Socket {
     }
 
     /// A detached socket and the receiving end of its frames, for a transport (or a test) to drain.
-    /// The queue holds `WS_OUTBOX_MAX_FRAMES` frames (§9.8, R1437).
+    /// The queue holds `WS_OUTBOX_MAX_FRAMES` frames (§9.8, R1441).
     pub fn channel() -> (Socket, mpsc::Receiver<SocketFrame>) {
         let (out, frames) = mpsc::channel(WS_OUTBOX_MAX_FRAMES);
         (Socket::detached(out), frames)
@@ -151,7 +151,7 @@ impl Socket {
     }
 
     /// Sends one text frame. A frame sent after the socket closed goes nowhere. A frame that finds the
-    /// outbox full closes the socket (§9.8, R1437): the peer is not reading, and views are full
+    /// outbox full closes the socket (§9.8, R1441): the peer is not reading, and views are full
     /// snapshots, so its reconnect loses nothing.
     pub fn send(&self, text: impl Into<String>) {
         if !self.is_open() {
@@ -165,7 +165,7 @@ impl Socket {
         }
     }
 
-    /// Queues one frame for the transport. False when the outbox is full (§9.8, R1437): it is let go,
+    /// Queues one frame for the transport. False when the outbox is full (§9.8, R1441): it is let go,
     /// so the transport sends what it holds and ends the connection. A transport already gone counts
     /// as queued; its own close reports it.
     fn queue(&self, frame: SocketFrame) -> bool {
@@ -265,7 +265,7 @@ pub fn socket_from_ws(ws: WebSocket) -> (Socket, tokio::task::JoinHandle<()>) {
     (socket, pump)
 }
 
-/// One frame out, or false when it failed or the peer has not taken it by `by` (R1437): a peer that
+/// One frame out, or false when it failed or the peer has not taken it by `by` (R1441): a peer that
 /// stops reading would otherwise hold the pump, and its address slot, until TCP gives up.
 async fn send_by(ws: &mut WebSocket, message: Message, by: tokio::time::Instant) -> bool {
     matches!(tokio::time::timeout_at(by, ws.send(message)).await, Ok(Ok(())))
@@ -299,7 +299,7 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
                         }
                     }
                     // tungstenite answers a ping itself, and a pong, like any frame, is what `heard`
-                    // reads (R1437): the idle timer runs on what the peer sent.
+                    // reads (R1441): the idle timer runs on what the peer sent.
                     Some(Ok(Message::Ping(_) | Message::Pong(_))) => {}
                     // The peer's half of the closing handshake; the stream ends next.
                     Some(Ok(Message::Close(_))) => {}
@@ -331,7 +331,7 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
             },
             () = tokio::time::sleep_until(wake_at) => {
                 if tokio::time::Instant::now() >= idle_at {
-                    // §9.5, R1437: nothing heard for the idle timeout. The peer is gone: it is dropped
+                    // §9.5, R1441: nothing heard for the idle timeout. The peer is gone: it is dropped
                     // with no closing handshake it could not answer, and `transport_closed` below
                     // starts its grace.
                     tracing::info!(event = "ws.socket.idle");
