@@ -6315,15 +6315,19 @@
         {
           "at": "2026-10-10T01:32:25Z",
           "minutes": 23.8
+        },
+        {
+          "at": "2026-10-10T05:46:40Z",
+          "minutes": 11.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-10T05:10:00Z",
-          "utilization": 0.95
+          "resets_at": "2026-10-10T10:10:00Z",
+          "utilization": 0.1
         },
-        "observed_at": "2026-10-10T01:32:25Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-10-10T05:46:40Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
