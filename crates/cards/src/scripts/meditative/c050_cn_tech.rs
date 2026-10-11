@@ -127,11 +127,12 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "cn-tech-burn",
                 "p1": {
-                    "hand": [{ "def": TECH }, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
+                    "hand": [{ "def": TECH }, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
                     "library": filler(4),
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
+            // Eleven in hand, ten once CN Tech is cast: the hand is full (HAND_CAP) as the card arrives.
             s.play(TECH, json!({}));
             assert_eq!(s.hand(PlayerId::P1).len(), 10);
             let burned: Vec<&CardInstance> = s
