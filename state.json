@@ -8808,17 +8808,21 @@
         {
           "at": "2026-10-09T11:09:34Z",
           "minutes": 121.5
+        },
+        {
+          "at": "2026-10-11T23:57:59Z",
+          "minutes": 2.1
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T13:54:00Z",
-          "utilization": 0.39
+          "resets_at": "2026-10-12T04:55:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-10-09T11:09:34Z",
+        "observed_at": "2026-10-11T23:57:59Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 1.0
+          "utilization": 0.25
         },
         "status": "allowed"
       }
