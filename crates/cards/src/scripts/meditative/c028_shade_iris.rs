@@ -104,10 +104,11 @@ mod tests {
                 let s = played("iris-r311", false);
 
                 // The play was public and its text names the card, so p2 knows what went in; never
-                // where.
+                // where. The curse is a Created card, marked so on the list (R943).
                 let own = crate::js(&s.view(Some(P2)).you.own_library);
                 let cards = own["cards"].as_array().cloned().unwrap_or_default();
-                assert!(cards.contains(&json!({ "defId": CURSE, "radiant": false, "count": 1 })));
+                let curse = json!({ "defId": CURSE, "radiant": false, "created": true, "count": 1 });
+                assert!(cards.contains(&curse));
                 assert_eq!(own["unknown"], json!(0));
                 // The caster reads p2's library as a count and nothing else.
                 assert!(s.view(Some(P1)).opponent.own_library.is_none());
