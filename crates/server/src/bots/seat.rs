@@ -1,4 +1,4 @@
-//! The bot seat (SPEC §9.12, R1446): what the match actor runs when a ladder bot owes the match a
+//! The bot seat (SPEC §9.12, R1447): what the match actor runs when a ladder bot owes the match a
 //! move. The bot decides on the AI's `decide_styled` at its strength (its budget and style, on the
 //! spec's resources), off the blocking pool so the actor's runtime never waits on a search, then
 //! waits out a human-paced think time before the move is sent: the delay drawn from the think-time
@@ -52,7 +52,7 @@ pub struct BotMove {
     pub timing_cursor: u32,
 }
 
-/// R1446: decides, draws the think time, and waits whatever of it the decision did not take.
+/// R1447: decides, draws the think time, and waits whatever of it the decision did not take.
 pub async fn play(job: BotJob) -> BotMove {
     let started = tokio::time::Instant::now();
     let BotJob {
@@ -102,7 +102,7 @@ pub async fn play(job: BotJob) -> BotMove {
     }
 }
 
-/// R1446: how long a decision may search, in ms: `BOT_DECISION_DEADLINE_MS`, and never so long that
+/// R1447: how long a decision may search, in ms: `BOT_DECISION_DEADLINE_MS`, and never so long that
 /// less than `BOT_CLOCK_MARGIN_MS` is left on the acting clock, so a search never runs the bot's own
 /// clock out. At 0 the search stops at its first node and the AI answers with what it has.
 pub fn decision_deadline_ms(clock_left_ms: Option<i64>) -> i64 {
@@ -112,7 +112,7 @@ pub fn decision_deadline_ms(clock_left_ms: Option<i64>) -> i64 {
     }
 }
 
-/// R1446: one think time, in ms. The log-normal is the first `THINK_TIME_FITS` row for this action
+/// R1447: one think time, in ms. The log-normal is the first `THINK_TIME_FITS` row for this action
 /// kind and first-or-later move of the turn, else the hand-set prior; one draw of it (Box–Muller,
 /// two draws of `rng`) is scaled by the bot's speed and kept inside `BOT_THINK_MIN_MS` and
 /// `BOT_THINK_MAX_MS`, and inside the acting clock less `BOT_CLOCK_MARGIN_MS`, so a bot never runs its

@@ -53,7 +53,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval,<br/>two medium ones, or (easy) a weak and a medium one"]
     D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, else a medium one,<br/>else (easy) a weak one"]
     X -- "approved" --> CI
-    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:approved goes to triage"]
+    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:build approves one"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -65,12 +65,9 @@ flowchart TD
 Any of these queues an issue for the next run a free subscription can take (the reply says
 when that is):
 
-- add the **`method:use-bot`** label: two minutes later triage queues it, assigns the bot and gives
-  it a priority ([Triage](#triage)); **`method:manual`** hands it to people instead. On one of the
-  bot's suggestions (`bot:suggestion`) add **`bot:approved`**, which triage takes as
-  `method:use-bot`: a suggestion is built only once a person approves it, so `bot:build`, an
-  assignment or `/harness build` on one gets a reply asking for `bot:approved` instead;
-- add the **`bot:build`** label;
+- add the **`bot:build`** label (an issue form's Who does it puts it on for you); `human` hands
+  it to people instead ([Triage](#triage)). On one of the bot's suggestions (`bot:suggestion`) any
+  of these is your yes to it, and the queue takes `bot:suggestion` off;
 - **assign** `@jgoetzmann-bot`;
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
   of the request.
@@ -227,7 +224,8 @@ Every way of asking either gets an answer at once, or is found again later:
   - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
   - a label the bot uses (`config.LABELS`) that the repository does not have. It checks each
     time that list changes, so a new label exists within ten minutes of its merge, without
-    `harness setup` (`method:manual` and `method:use-bot` shipped in #328 without existing).
+    `harness setup` (the method labels shipped in #328 without existing); and one it retired
+    (`config.RETIRED_LABELS`, #664), which it deletes, so nobody puts on a label that does nothing.
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
   nothing is answered twice. Last, it starts a night run when one should be going and none is:
@@ -350,99 +348,48 @@ in place of the `bot:*` ones.
 | `bot:stuck` | beside `bot:blocked`: a build or revision used every review round (`max_review_cycles`, 10) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; add `bot:approved` to have it built, close it to say no. The queue never builds one without that approval |
-| `bot:approved` | a person's yes to a suggestion: two minutes later triage treats it as `method:use-bot`, so it gets its type labels (`patch`), a conventional title, a priority, `bot:build` and the bot, and the planner rates its difficulty; then triage takes `bot:approved` and `bot:suggestion` off ([Triage](#triage)) |
-| `bot:needs-review` | a bot pull request that touches a review-only path; a person merges it |
+| `bot:suggestion` | an improvement the bot proposes; add `bot:build` (or assign the bot, or `/harness build`) to have it built, which takes this label off; close it to say no |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
-| `human` | people do it; the bot never queues, plans, builds or labels it |
-| `method:manual`, `method:use-bot` | a person's choice of who does an issue: two minutes after one goes on, triage makes the issue `human` and assigns both people (`method:manual`), or queues it and assigns the bot (`method:use-bot`; `bot:approved` counts as it), then takes the method label off and comments that it classified the issue. Triage takes no issue without one unless a person calls it ([Triage](#triage)) |
-| `Info` | for the record, nothing to build: migrations, statistics, the night bot's status |
+| `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
 
 ## Triage
 
-`triage.yml` labels, assigns, titles, types and links an issue once a person hands it on with a
-method label, and every pull request someone trusted opens, from a Muse call (`triage.py`, #307).
-To run it on a thread again: `gh workflow run triage.yml -f number=<n>` (or **Run workflow** on
-the triage workflow's Actions page). Called that way it classifies an issue with no method label
-too (its labels, type, title and links), without queueing or assigning it.
+`triage.yml` gives a new issue or pull request what it needs from fixed rules, with no model, in
+one job on GitHub's runner (`triage.py`, #664). To run it on a thread again: `gh workflow run
+triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions page).
 
-An issue a trusted person opens through a form (`.github/ISSUE_TEMPLATE/`) needs no label by hand:
-its Difficulty, Priority and Who does it answers become `difficulty:*`, `priority:*` and the method
-label as it opens (the `form` job, `triage.form_labels`), the method last, and the job then
-dispatches triage on it, since labels the workflow's own token puts on start no workflow. The forms
-set no issue type and never `human`, so triage types the issue and a method always reaches it.
-
-- **Afterwards:** once everything else is done, triage takes off the labels that asked for it:
-  the method label, `bot:approved`, the `bot:suggestion` of a suggestion a person decided on
-  (so an approved one is built as any queued issue), and for `method:manual` the bot's queue
-  labels (`bot:build`, `bot:needs-plan`; never a run's `bot:working` or `bot:pr-open`). If any
-  change failed it keeps them, so a run again can finish. Then it comments on the thread that it
-  classified it: the method, and what it changed (account names without `@`, so it pings
-  nobody). Every thread it classifies, issue or pull request, gets that comment.
-
-- **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
-  the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
-  the machine. An issue of the bot's goes when it is its own suggestion (`bot:suggestion`) once a
-  person approves it, or when a person put the method label on it (the event's sender), so a
-  suggestion whose `bot:suggestion` a person swapped for `method:use-bot` goes too: its text is the
-  bot's, and only someone with triage access can label it. A method label the bot or an app put on
-  never does.
-- **When:** an issue is triaged only once it carries exactly one of `method:manual` and
-  `method:use-bot` (`bot:approved`, a person's yes to a suggestion, counts as `method:use-bot`),
-  two minutes after the label goes on (`triage.METHOD_WAIT`): the issue is read
-  again then, so a difficulty or a priority a person set in the meantime counts. Any other label
-  starts a run of its own that ends at once, so it never cancels the method run; a newer method
-  label cancels an older run and the wait starts again. An issue labelled `human` never goes to the
-  bot. A pull request is triaged when it is opened, as before.
-- **Three jobs:**
-  - **`gate`**, on GitHub's runner, decides whether to triage: the method label (issues), the
-    author, and Muse switched on. A pull request with type labels and assignees already is
-    skipped unless a person called triage on it.
-  - **`classify`**, on Muse's runner (`night-vm-muse`; it ran on Devin's until #317), reads the
-    title and body through the API with a read-only token. It fences them as data in a prompt and
-    runs Muse in an empty directory with no web tools and none of the job's secrets.
-  - **`apply`**, on GitHub's runner, holds the write token and runs no model.
-- **What `apply` changes:**
-  - **The method:** `method:manual` adds `human`, assigns MaxGoetzmann and jgoetzmann, and
-    unassigns the bot; `method:use-bot` adds `bot:build` (unless the queue has it already),
-    assigns the bot and unassigns both people. These need no model, so they apply even when Muse
-    gave no answer.
-  - **Labels:** only the repository's own, never a `bot:` one, a `method:` one or a difficulty
-    (the planner rates that, [below](#rating-strikes-and-the-step-up)). A `method:use-bot` issue
-    always gets a priority; a `method:manual` one gets none of the model's labels, since people
-    choose them.
-  - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
-    doesn't already, and only if every version number survives. A pull request keeps its title,
-    which becomes the squash commit's subject, and is never assigned to the bot. The `pr title`
-    check (`pr-title.yml`, #187) holds a pull request's title to the same pattern, `CONVENTION`,
-    plus the titles tools give their own (`AUTOMATED_PULL`, `pull_title_ok`); the bots' pull
-    requests take their builder's title when it passes, else their issue's (`pull_title`).
-  - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
-    the org, or those three when the token can't read them) if it has none. A pull request has no
-    type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
-  - **Dependencies** (issues only), as GitHub issue dependencies, which hold the night bot's build
-    while the blocker is open ([Dependencies](#priority-and-human)):
-    - **blocked by** each open issue its text names ("Blocked by #125", "Depends on #12", "Do not
-      start until #125 has merged"), each earlier part of its patch that is still open (same name
-      and same "of m"), and each open issue the model says must come first;
-    - **blocking** each open issue the model says waits for it;
-    - **a sub-issue of** its patch's open tracker, for a "part n of m" title with no parent yet,
-      when the model names it and the tracker shares its version.
-
-    Only open issues, never the issue itself, never one linked already either way, at most five of
-    each. The links from the issue's own text and title are made even when Muse gave no answer.
+- **A new issue** a trusted person opens (an owner, member or collaborator, or someone on
+  `.harness/trust.txt`; the bot and apps label their own) gets:
+  - **its form's answers** (`.github/ISSUE_TEMPLATE/`, `triage.form_labels`): Difficulty and
+    Priority become `difficulty:*` and `priority:*`, and Who does it becomes `bot:build` (the bot
+    queues it) or `human`. "Decide later" leaves that to you. The labels the job's own token puts
+    on start no workflow, but the queue reads `bot:build` by label, so the next run sees it;
+  - **its type label** from its title's prefix (`triage.type_label`), when it has none: `Patch v…`
+    is `patch`, `vX.Y.0` `major version`, `Night bot:` `night bot`, `Architecture:` and `CI:`
+    `architecture`;
+  - **an issue type**, Task, Bug or Feature, when it has none (`triage.fallback_type`, read from
+    the title and labels: a failure is a Bug; tooling, CI, the bot and trackers a Task; something
+    new a Feature). GitHub drops a type it won't take without an error, so triage reads it back.
+- **`human`**, put on by a person (on any issue, whoever opened it; or chosen in a form), hands the
+  issue to people: both MaxGoetzmann and jgoetzmann are assigned, the bot is unassigned, and the
+  bot's queue labels (`bot:build`, `bot:needs-plan`) come off. A run's `bot:working` and an open
+  pull request's `bot:pr-open` stay.
+- **A new pull request** a trusted person opens gets its type label from its title. It keeps its
+  title, which becomes the squash commit's subject: the `pr title` check (`pr-title.yml`, #187)
+  holds it to `CONVENTION`, plus the titles tools give their own (`AUTOMATED_PULL`,
+  `pull_title_ok`), and the bots' pull requests take their builder's title when it passes, else
+  their issue's (`pull_title`).
+- **It adds, and moves only what `human` moves.** A person's labels, assignees and type stay. It
+  links nothing: the queue holds a build that waits for another issue by itself, from a "Blocked
+  by #n" line, GitHub's own blocked-by links and the earlier parts of a patch
+  ([Dependencies](#priority-and-human)). It retitles nothing either, so the bot's suggestions are
+  asked for titles that follow the conventions (`prompts/suggest.md`).
 - **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every
-  open issue still without one: a bot's (the CI-duration alerts, the status issue), which never
-  reaches triage, at once; anyone else's after three hours, so triage, which can wait that long
-  for a free Muse runner, goes first. It reads the title and labels (`triage.fallback_type`):
-  a failure is a Bug; tooling, CI, the bot and trackers a Task; something new a Feature.
-- **It adds, and moves only what a method label moves.** A person's labels, conventional title,
-  type and links stay. A priority or a model tier a person chose gets no second one.
-- **When it can't:** a failure, or Muse switched off, skips quietly.
-- **Waiting:** `classify` shares `night-vm-muse` with Muse's bot jobs, so it waits while both of
-  Muse's lanes are busy.
+  open issue still without one, with the same `triage.fallback_type`: a bot's (the CI-duration
+  alerts, the status issue), which never reaches triage, and any triage missed.
+- **When it can't:** a failure skips quietly. It leaves no comment.
 
 ## Subscriptions
 
@@ -986,9 +933,9 @@ account.
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
 - **Some changes always wait for a person.** A change that touches a review-only path
-  (`review_paths`) still becomes a pull request, but it is labelled `bot:needs-review`, you are
-  asked to review it, and auto-merge stays off. Once the reviews approve it, it is labelled
-  `ready for merge` too, and the bot @-mentions you to merge it. The review-only paths are the files that define
+  (`review_paths`) still becomes a pull request, but you are asked to review it and auto-merge
+  stays off. Once the reviews approve it, it is labelled `ready for merge`, and the bot
+  @-mentions you to merge it. The review-only paths are the files that define
   what the checks do or how the game deploys: every `package.json` and `Cargo.toml`, the
   lockfiles, `rust-toolchain.toml`, `rustfmt.toml` and `.cargo/`, the crates' `clippy.toml`
   (the pure crates' purity) and build scripts, the vitest, vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`,
@@ -1083,8 +1030,8 @@ days.
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([the easy rule](#the-easy-rule)) |
-| hand an issue to people or to the bot | label it `method:manual` or `method:use-bot` ([Triage](#triage)) |
-| build one of the bot's suggestions | label it `bot:approved`; triage queues it as it does `method:use-bot` |
+| hand an issue to people or to the bot | label it `human` or `bot:build` ([Triage](#triage)) |
+| build one of the bot's suggestions | label it `bot:build`, as any issue |
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |
@@ -1188,7 +1135,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, assigns, titles, types and links (blocked by, blocks, parent) an issue with a method label, a new pull request, or one a person calls it on, from a Muse call (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
+| `triage.py` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
 | `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |

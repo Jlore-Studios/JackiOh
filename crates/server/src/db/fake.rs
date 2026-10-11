@@ -147,7 +147,7 @@ pub struct PlayerStatsTableRow {
     pub updated_at: i64,
 }
 
-/// One row of `public.bots` (migration 0032, R1446–R1448): a ladder bot beside its profile.
+/// One row of `public.bots` (migration 0032, R1447–R1449): a ladder bot beside its profile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BotTableRow {
     pub profile_id: String,
@@ -2747,10 +2747,10 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1446–R1449, migration 0032)
+// The ladder bots (R1447–R1450, migration 0032)
 // ---------------------------------------------------------------------------
 
-/// R1448: every bot, its profile's `created_at` and match and its R610 rating beside its row,
+/// R1449: every bot, its profile's `created_at` and match and its R610 rating beside its row,
 /// oldest profile first (ties on id).
 pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     call(f, "bots.list")?;
@@ -2789,7 +2789,7 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     Ok(rows)
 }
 
-/// R1448: the bot's profile (kind `bot`, `active`, the default username, no auth user), its row and
+/// R1449: the bot's profile (kind `bot`, `active`, the default username, no auth user), its row and
 /// its R610 rating, in one write; an id that is taken is refused, as the primary key would.
 pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
     call(f, "bots.create")?;
@@ -2875,7 +2875,7 @@ pub fn bots_set_decks(
     Ok(())
 }
 
-/// R1447: single-shot, as `tickets_claim_pair`: the bot free and the ticket open, or nothing changes.
+/// R1448: single-shot, as `tickets_claim_pair`: the bot free and the ticket open, or nothing changes.
 /// The fake writes no `open` skeleton (`matches_discard_open`), so the bot points at the reserved id.
 pub fn tickets_claim_for_bot(
     f: &mut FakeTx<'_>,
@@ -2915,7 +2915,7 @@ pub fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R1448: a bot claimed before `before` whose match the fake never created (no `matches` row: the
+/// R1449: a bot claimed before `before` whose match the fake never created (no `matches` row: the
 /// start never ran) is let go, with the ticket's owner, as deleting the skeleton lets both go.
 pub fn bots_release_stale_starts(f: &mut FakeTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
     call(f, "bots.releaseStaleStarts")?;
@@ -2949,7 +2949,7 @@ pub fn bots_release_stale_starts(f: &mut FakeTx<'_>, before: i64) -> Result<Vec<
     Ok(stale.into_iter().map(|(bot_id, _)| bot_id).collect())
 }
 
-/// R1447: the other seat of the profile's last `limit` results, newest first (ties on match id).
+/// R1448: the other seat of the profile's last `limit` results, newest first (ties on match id).
 pub fn results_recent_opponents(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -2980,7 +2980,7 @@ pub fn results_recent_opponents(
         .collect())
 }
 
-/// R1448: the distinct people (no bot, no deleted account) on a result that ended at or after `since`.
+/// R1449: the distinct people (no bot, no deleted account) on a result that ended at or after `since`.
 pub fn results_count_active_humans(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
     call(f, "results.countActiveHumans")?;
     let tables = f.tables();

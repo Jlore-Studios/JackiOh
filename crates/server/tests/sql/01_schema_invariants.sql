@@ -58,7 +58,7 @@ declare
   -- series (0009, R263), tutorial_progress (0011, R320), game_records (0014, R376), last_boards
   -- (0017, R565), player_settings (0018, R633), player_stats (0021, R654), the ranked ladder's
   -- seasons/season_ranks/bot_ratings/rated_games (0022, R603-R612) and the play telemetry's
-  -- action_timings/emote_events/match_signals (0029, R1442) and the ladder bots' bots (0032, R1448).
+  -- action_timings/emote_events/match_signals (0029, R1442) and the ladder bots' bots (0032, R1449).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028
   -- and 0030 add no table. The three loadout tables stay after 0007, unread and unwritten (R254), so
   -- they are still expected here.
@@ -818,7 +818,7 @@ declare
     -- DEFINER for handle_new_user's reason: it reads every profile's username whichever role
     -- inserts the row (15 CHECK 8 asserts no client role may attach it to a table of its own).
     ['assign_default_username',     'definer'],
-    -- 0032, R1446: the two triggers that stand in for the foreign key to auth.users a bot's
+    -- 0032, R1447: the two triggers that stand in for the foreign key to auth.users a bot's
     -- profile cannot have, DEFINER for handle_new_user's reason: the role deleting from auth.users
     -- does not own public.profiles, and the role inserting a profile need not read auth.users.
     ['forget_auth_user',            'definer'],

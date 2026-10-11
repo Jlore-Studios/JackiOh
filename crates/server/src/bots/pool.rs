@@ -1,4 +1,4 @@
-//! The bot pool (SPEC §9.12, R1448): how many ladder bots there are, who they are and what they play.
+//! The bot pool (SPEC §9.12, R1449): how many ladder bots there are, who they are and what they play.
 //!
 //! The pool holds `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people,
 //! BOT_POOL_MAX)` active bots, sized again every `BOT_POOL_REFRESH_INTERVAL_SECONDS` and once as the
@@ -12,7 +12,7 @@
 //! account age, and a username drawn from two word lists or, for `BOT_DEFAULT_USERNAME_SHARE` of them,
 //! the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
 //! people took into live Best-of-1 games, shuffled, then random decks dealt as a player's All Random
-//! deck is (`deal_random_deck`: no shadow ban, no soft gate, R1447), each kept only when it is legal
+//! deck is (`deal_random_deck`: no shadow ban, no soft gate, R1448), each kept only when it is legal
 //! (`validate_deck`, against a collection of its own cards: a bot owns nothing and needs nothing),
 //! and dealt again whenever the catalog version changes.
 //!
@@ -50,14 +50,14 @@ const MS_PER_DAY: i64 = 86_400_000;
 /// Unit conversion, not configuration: a second in milliseconds.
 const MS_PER_SECOND: i64 = 1000;
 
-/// R1448: the pool's size for `weekly` people who finished a live game in the last
+/// R1449: the pool's size for `weekly` people who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`.
 pub fn pool_target(weekly: i64) -> usize {
     let wanted = (weekly.max(0) as f64 * BOT_POOL_PER_WEEKLY_ACTIVE).round() as usize;
     wanted.clamp(BOT_POOL_MIN, BOT_POOL_MAX)
 }
 
-/// R1448: what a refresh does to the pool.
+/// R1449: what a refresh does to the pool.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PoolChange {
     /// Active bots to retire, the youngest accounts first.
@@ -68,7 +68,7 @@ pub struct PoolChange {
     pub create: usize,
 }
 
-/// R1448: the change that brings the pool's active bots to `target`.
+/// R1449: the change that brings the pool's active bots to `target`.
 pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
     let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
     let mut retired: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_some()).collect();
@@ -110,7 +110,7 @@ fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
     low + i64::from(rng.int(i32::try_from(high - low + 1).unwrap_or(1)))
 }
 
-/// R1448: a new bot drawn from `seed` (its profile id `profile_id`, made at `now`), and the username
+/// R1449: a new bot drawn from `seed` (its profile id `profile_id`, made at `now`), and the username
 /// it claims, or none to keep the `Player#n` the store gives it. Its decks are dealt after
 /// (`draw_decks`).
 pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<String>) {
@@ -154,7 +154,7 @@ pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<S
     )
 }
 
-/// R1448: whether `cards` is a deck a player could queue for Best of 1 on this catalog (§9.4's L2,
+/// R1449: whether `cards` is a deck a player could queue for Best of 1 on this catalog (§9.4's L2,
 /// L3, L5 and L6), against a collection of the deck's own cards.
 fn deck_is_legal(input: &mut DeckInput, cards: &[String]) -> bool {
     let mut owned: IndexMap<String, i32> = IndexMap::new();
@@ -169,7 +169,7 @@ fn deck_is_legal(input: &mut DeckInput, cards: &[String]) -> bool {
     validator::validate_deck(input).ok
 }
 
-/// R1448: the patch's distinct decklists people took into live Best-of-1 games, in the records'
+/// R1449: the patch's distinct decklists people took into live Best-of-1 games, in the records'
 /// order (sorted copies compared, so a reordering is the same list).
 fn human_bo1_decklists(records: &[GameRecord]) -> Vec<Vec<String>> {
     let mut seen: IndexSet<Vec<String>> = IndexSet::new();
@@ -193,9 +193,9 @@ fn human_bo1_decklists(records: &[GameRecord]) -> Vec<Vec<String>> {
     lists
 }
 
-/// R1448: two or three legal Best-of-1 decks for the bot seeded `seed`: the patch's human decklists
+/// R1449: two or three legal Best-of-1 decks for the bot seeded `seed`: the patch's human decklists
 /// first (shuffled from the seed), then random decks dealt as a player's are (All Random's deal, with
-/// no shadow ban and no soft gate, R1447), trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with
+/// no shadow ban and no soft gate, R1448), trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with
 /// a portrait dealt from the seed.
 pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<BotDeck> {
     jackioh_cards::register_all();
@@ -250,7 +250,7 @@ pub struct PoolRefresh {
     pub dealt: usize,
 }
 
-/// R1448: claims `name` for the new bot as the username route claims one. A name the checks refuse,
+/// R1449: claims `name` for the new bot as the username route claims one. A name the checks refuse,
 /// or a claim the store refuses, leaves the bot its `Player#n`.
 async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result<(), StoreError> {
     let Ok(base) = normalize_username(name) else {
@@ -275,7 +275,7 @@ async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result
     Ok(())
 }
 
-/// R1448: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
+/// R1449: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
 /// the claim, and that match's player with it: a start a crash or a restart cut off. The queue's
 /// sweeper runs it every sweep whatever `LADDER_BOTS` says (`run_matchmaker`), so neither is held
 /// out of the queue for longer than about that. Answers how many bots it let go.
@@ -291,7 +291,7 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
     Ok(released.len())
 }
 
-/// R1448: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and
+/// R1449: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and
 /// deals decks to every active bot that holds none for this catalog. `seed` seeds the new bots.
 pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh, StoreError> {
     let mut tx = app.db.begin(None).await?;
@@ -359,7 +359,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     })
 }
 
-/// R1448: refreshes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
+/// R1449: refreshes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
 /// after; a failed refresh is logged and the next one tries again. `app.rs` spawns it only when
 /// `LADDER_BOTS=on`, and aborting the task stops it.
 pub async fn run_bot_pool(app: Arc<App>) {

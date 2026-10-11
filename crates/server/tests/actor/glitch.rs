@@ -508,7 +508,7 @@ mod glitchs_swap {
     }
 
     #[tokio::test]
-    async fn r1449_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in() {
+    async fn r1450_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in() {
         let w = world(WorldOptions::default()).await;
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
         frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;

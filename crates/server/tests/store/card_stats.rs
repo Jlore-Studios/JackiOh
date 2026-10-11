@@ -106,7 +106,7 @@ mod stats_cards_options {
     }
 
     #[test]
-    fn r378_r1449_reads_the_people_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
+    fn r378_r1450_reads_the_people_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
         let options = parse_card_stats_args(&args(&[])).expect("no arguments parse");
         assert_eq!(
             filter_json(&options),

@@ -281,6 +281,70 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             strings(&["31", "51"])
         );
     }
+
+    #[test]
+    fn s5_1_pool_adds_the_caller_s_id_to_an_exclude_def_id_list_and_to_one_that_already_holds_it() {
+        register();
+        assert_eq!(
+            core_indices(pool(
+                "core-082",
+                &q(json!({ "tags": ["KY"], "excludeDefId": ["core-057", "core-031"] }))
+            )),
+            strings(&["51"])
+        );
+        // The caller's own id already excluded, as one string or in a list: the same pool.
+        assert_eq!(
+            core_indices(pool(
+                "core-057",
+                &q(json!({ "tags": ["KY"], "excludeDefId": "core-057" }))
+            )),
+            strings(&["31", "51", "82"])
+        );
+        assert_eq!(
+            core_indices(pool(
+                "core-057",
+                &q(json!({ "tags": ["KY"], "excludeDefId": ["core-031", "core-057"] }))
+            )),
+            strings(&["51", "82"])
+        );
+    }
+
+    #[test]
+    fn s5_1_pool_own_id_args_is_query_with_own_id_excluded_and_every_other_argument_kept() {
+        register();
+        // The pools the card scripts ask `pool` for, and one per remaining filter, each beside the
+        // `query` a script would write with its own id excluded by hand.
+        let cases = [
+            ("core-057", json!({ "tags": ["KY"] })),
+            ("core-083", json!({ "rarity": "Legendary" })),
+            ("core-096", json!({ "rarity": "Mythic" })),
+            ("core-067", json!({ "type": TRAP_TYPES })),
+            (
+                "core-054",
+                json!({ "type": "Unit", "costRange": { "min": 3, "max": 4 } }),
+            ),
+            ("core-031", json!({ "cost": 1, "tags": ["KY"] })),
+            ("core-059", json!({})),
+            (
+                "core-001",
+                json!({ "set": ["Core", "Classic"], "notTags": ["KY"] }),
+            ),
+            ("classicplus-058", json!({ "tags": ["Fruit"] })),
+            ("classicplus-023", json!({ "withTokens": true })),
+            ("meditative-101", json!({ "luckBased": true })),
+        ];
+        for (own_id, args) in cases {
+            let mut by_hand = args.clone();
+            by_hand["excludeDefId"] = json!(own_id);
+            let pooled = ids(pool(own_id, &q(args)));
+            assert_eq!(pooled, ids(query(&q(by_hand))), "pool({own_id:?}, …)");
+            assert!(!pooled.is_empty(), "pool({own_id:?}, …) is empty");
+            assert!(
+                !pooled.contains(&own_id.to_string()),
+                "pool({own_id:?}, …) offers {own_id}"
+            );
+        }
+    }
 }
 
 mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative_34_38_45_79_87_build_m4_t4_row_57_b2_6 {

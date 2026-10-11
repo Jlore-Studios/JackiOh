@@ -6,7 +6,7 @@
 //!  - the match's mode (R257), read off its series, room or queue tickets (`matches_mode_of`);
 //!  - the patch the build's cards are (R388, `jackioh_cards::catalog_version()`);
 //!  - each seat's pilot: `human` for a person, even when the clock answered a prompt for one (R79's
-//!    `timeout`), and `ai` for a ladder bot (R1446, R1449), each on the seat its account plays as the
+//!    `timeout`), and `ai` for a ladder bot (R1447, R1450), each on the seat its account plays as the
 //!    game ends (R677);
 //!  - `source: "live"`, apart from the AI's development runs (R378).
 //!
@@ -90,7 +90,7 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     };
 
     let log = tx.matches_actions(match_id).await.map_err(message_of)?;
-    // R376, R1449: a person's seat is `human`; a ladder bot's is `ai`, so no human figure reads it
+    // R376, R1450: a person's seat is `human`; a ladder bot's is `ai`, so no human figure reads it
     // unasked.
     let profiles = tx
         .profiles_get_many(&[row.players.0.clone(), row.players.1.clone()])
@@ -120,7 +120,7 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);
         return Ok(None);
     };
-    // R677, R1449: each seat is filed under the account that plays it as the game ends, as the
+    // R677, R1450: each seat is filed under the account that plays it as the game ends, as the
     // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
     // game with a bot in it can tell, so only it folds the log again to read the swap.
     let swapped = began.0 != began.1 && engine::snapshot(&engine::fold(&args).state).seats_swapped;

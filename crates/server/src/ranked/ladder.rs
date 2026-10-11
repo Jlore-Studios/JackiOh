@@ -562,7 +562,7 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
     }
 }
 
-/// R1446: the rank a ladder bot's rating calls for among the season's placed players' ratings
+/// R1447: the rank a ladder bot's rating calls for among the season's placed players' ratings
 /// (`others`), which the match screen shows for a bot in place of the ladder rank it never holds
 /// (R610): R606's target, read as a Grape place on its own tier's floor, where a placed player's
 /// rank always stands (`apply_ranked_game` raises the floor to every tier reached and never lets the

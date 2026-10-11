@@ -409,7 +409,7 @@ declare
   -- ranked tables (0022, R603–R612): hidden ratings, which R612 says no client read may ever carry —
   -- the client gets its rank through the API, never a row. The three play telemetry tables (0029,
   -- R1442): how each person paced, emoted and gave up, which the server alone reads and writes.
-  -- `bots` (0032, R1448): which profiles are ladder bots, which R1446 says no client read tells.
+  -- `bots` (0032, R1449): which profiles are ladder bots, which R1447 says no client read tells.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                                      'action_timings', 'emote_events', 'match_signals', 'bots'];

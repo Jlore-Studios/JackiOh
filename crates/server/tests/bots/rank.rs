@@ -1,4 +1,4 @@
-//! R1446 (SPEC §9.12): the rank the match screen shows for a ladder bot's seat, the one its rating
+//! R1447 (SPEC §9.12): the rank the match screen shows for a ladder bot's seat, the one its rating
 //! calls for among the placed players' (R606), on its own tier's floor as a placed player's always
 //! stands, never Jlorious, and never Mythic Grape unless more players stand in Mythic than Jlorious
 //! holds (`JLORIOUS_SIZE`), since until then every one of them is Jlorious (R608).
@@ -10,7 +10,7 @@ use jackioh_server::ranked::ladder::{
 };
 
 #[test]
-fn r1446_a_bots_rank_stands_on_its_own_tiers_floor() {
+fn r1447_a_bots_rank_stands_on_its_own_tiers_floor() {
     let others: Vec<f64> = (0..40).map(|at| 900.0 + f64::from(at) * 5.0).collect();
     let mut tiers = Vec::new();
     for rating in [600.0, 950.0, 1000.0, 1050.0, 1100.0] {
@@ -33,7 +33,7 @@ fn r1446_a_bots_rank_stands_on_its_own_tiers_floor() {
 }
 
 #[test]
-fn r1446_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
+fn r1447_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
     // Rated above all 200 placed players: R606's target is in Mythic.
     let others: Vec<f64> = (0..200).map(|at| 800.0 + f64::from(at)).collect();
     let target = place_of(target_ladder(&percentile_of(1500.0, &others)));

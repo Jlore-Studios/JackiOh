@@ -229,7 +229,7 @@ async fn write_once(
         RATING_START
     };
 
-    // R610, R1446: a ladder bot's side is rated as the bot it is, on its own `bot_ratings` row.
+    // R610, R1447: a ladder bot's side is rated as the bot it is, on its own `bot_ratings` row.
     let side_of = |seat: &MatchSeat| -> RankedSideInput {
         let profile_id = seat.profile_id.clone();
         match by_id.get(&seat.profile_id).map(|profile| profile.kind) {

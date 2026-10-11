@@ -303,23 +303,24 @@ if __name__ == "__main__":
 
 
 class IssueTypeTests(Base):
-    """Every open issue gets a type: triage types the ones people open, and the sweep the rest."""
+    """Every open issue gets a type: triage types the ones people open as they open, and the
+    sweep the rest, at once."""
 
     def type_of(self, number):
         return self.gh.threads[number].get("type")
 
-    def test_a_bots_issue_is_typed_at_once_and_a_persons_after_triage_had_its_chance(self):
+    def test_every_untyped_issue_is_typed_at_once(self):
         alert = self.gh.add_issue(20, "CI: a job ran over 7 minutes",
                                   user={"login": "github-actions[bot]", "id": 41898282})
         alert["created_at"] = JUST_NOW
         fresh = self.gh.add_issue(21, "Patch v0.2.X: the Almanac crashes on a phone")
-        fresh["created_at"] = JUST_NOW  # triage may still type it
+        fresh["created_at"] = JUST_NOW  # one triage missed: the same rules type it
         self.gh.add_issue(22, "Patch v0.2.X: a public card and player stats page")
         self.gh.add_issue(23, "Patch v0.2.X: Animated pass on Field Spells").update(type={"name": "Task"})
         self.gh.add_issue(24, "Easter egg: Glitch", labels=("bot:pr",)).update(pull_request={})
         notes = sweep.sweep(self.ctx)
         self.assertEqual(self.type_of(20), "Task")
-        self.assertIsNone(self.type_of(21))
+        self.assertEqual(self.type_of(21), "Bug")
         self.assertEqual(self.type_of(22), "Feature")
         self.assertEqual(self.type_of(23), {"name": "Task"})  # a type someone set stays
         self.assertNotIn("type", {k for k, v in self.gh.threads[24].items() if v})  # a PR has none
@@ -327,9 +328,6 @@ class IssueTypeTests(Base):
         self.gh.add_issue(25, "Make the Coin shiny")
         sweep.sweep(self.ctx)
         self.assertEqual(self.type_of(25), "Task")  # nothing else fits
-        self.ctx = make_ctx(self.gh, at=DAY + timedelta(hours=4), trust_text=TRUST)
-        sweep.sweep(self.ctx)
-        self.assertEqual(self.type_of(21), "Bug")
 
     def test_the_fallback_rules(self):
         from harness import triage
@@ -347,34 +345,42 @@ class IssueTypeTests(Base):
 
 
 class LabelTests(unittest.TestCase):
-    """The sweep creates the labels the bot uses that the repository lacks: `method:manual` and
-    `method:use-bot` (#307) shipped in #328 without existing, waiting for a person to run
-    `python3 -m harness setup`, so no issue could be triaged."""
+    """The sweep creates the labels the bot uses that the repository lacks (the method labels,
+    #307, shipped in #328 without existing, waiting for a person to run `python3 -m harness
+    setup`, so no issue could be triaged) and deletes the ones it retired (#664)."""
 
     def test_missing_labels_are_created_once_per_change_to_the_list(self):
         gh = FakeGitHub()
-        gh.labels = {name: {"name": name} for name in LABELS
-                     if name not in ("method:manual", "method:use-bot", "Info")}
+        gh.labels = {name: {"name": name} for name in LABELS if name not in ("human", "bot:build")}
         ctx = make_ctx(gh, at=DAY)
         notes = sweep._labels(ctx, DAY)
-        self.assertEqual(sorted(notes), ["created the label `Info`",
-                                         "created the label `method:manual`",
-                                         "created the label `method:use-bot`"])
-        self.assertEqual(gh.labels["method:use-bot"]["color"], LABELS["method:use-bot"][0])
-        self.assertIn("after two minutes", gh.labels["method:manual"]["description"])
+        self.assertEqual(sorted(notes), ["created the label `bot:build`",
+                                         "created the label `human`"])
+        self.assertEqual(gh.labels["human"]["color"], LABELS["human"][0])
         # The list has not changed since: the next tick reads nothing.
         calls = []
         gh.ensure_label = lambda *a: calls.append(a) or False
+        gh.delete_label = lambda *a: calls.append(a) or False
         self.assertEqual(sweep._labels(ctx, DAY), [])
         self.assertEqual(calls, [])
+
+    def test_a_retired_label_is_deleted_from_every_thread(self):
+        gh = FakeGitHub()
+        gh.labels = {name: {"name": name} for name in (*LABELS, "method:use-bot", "large patch")}
+        gh.add_issue(647, labels=("method:use-bot", "priority:low"))
+        notes = sweep._labels(make_ctx(gh, at=DAY), DAY)
+        self.assertEqual(sorted(notes), ["deleted the retired label `large patch`",
+                                         "deleted the retired label `method:use-bot`"])
+        self.assertNotIn("method:use-bot", gh.labels)
+        self.assertEqual(gh.label_names(647), {"priority:low"})
 
     def test_every_sweep_runs_it(self):
         gh = FakeGitHub()
         ctx = make_ctx(gh, at=DAY)
         ctx.store.update(lambda s: s.update(last_sweep={"at": iso(DAY), "since": iso(DAY)}))
         notes = sweep.sweep(ctx)
-        self.assertIn("created the label `method:manual`", notes)
-        self.assertIn("method:use-bot", gh.labels)
+        self.assertIn("created the label `human`", notes)
+        self.assertIn("bot:build", gh.labels)
 
     def test_every_description_fits_githubs_limit(self):
         """GitHub refuses a longer one, so the label could never be created (#307's two)."""
@@ -388,16 +394,16 @@ class LabelTests(unittest.TestCase):
         real = gh.ensure_label
 
         def refusing(name, color, description):
-            if name == "method:manual":
+            if name == "human":
                 raise GitHubError("422 description is too long", 422)
             return real(name, color, description)
         gh.ensure_label = refusing
         ctx = make_ctx(gh, at=DAY)
         notes = sweep._labels(ctx, DAY)
-        self.assertIn("method:use-bot", gh.labels)
-        self.assertTrue(any("could not create the label `method:manual`" in n for n in notes))
+        self.assertIn("bot:build", gh.labels)
+        self.assertTrue(any("could not create the label `human`" in n for n in notes))
         self.assertNotIn("labels_synced", ctx.store.load())  # so the next tick tries again
         gh.ensure_label = real
         sweep._labels(ctx, DAY)
-        self.assertIn("method:manual", gh.labels)
+        self.assertIn("human", gh.labels)
         self.assertIn("labels_synced", ctx.store.load())

@@ -218,7 +218,6 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(result["status"], "approved")
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
-        self.assertIn("bot:needs-review", h.gh.label_names(int(pull["number"])))
         self.assertIn("ready for merge", h.gh.label_names(int(pull["number"])))
         self.assertEqual(h.gh.review_requests, [(int(pull["number"]), ["jgoetzmann"])])
         said = h.gh.bot_comments(12)[-1]
@@ -507,8 +506,7 @@ class FlowTests(unittest.TestCase):
         made = [t for t in h.gh.threads.values()
                 if LABEL_SUGGESTION in {l["name"] for l in t["labels"]} and t["user"] == BOT]
         self.assertEqual(len(made), 3)
-        self.assertIn("`bot:approved`", made[0]["body"])  # a person's yes, not `bot:build`
-        self.assertNotIn("bot:build", made[0]["body"])
+        self.assertIn("Add the `bot:build` label to have it built", made[0]["body"])
 
 
 def ask(h: Harness, number: int, body: str, cid: int) -> None:

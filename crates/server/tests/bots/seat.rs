@@ -1,4 +1,4 @@
-//! R1446 (SPEC §9.12): the bot seat's own rules, apart from the actor. A think time stays inside
+//! R1447 (SPEC §9.12): the bot seat's own rules, apart from the actor. A think time stays inside
 //! `BOT_THINK_MIN_MS`..`BOT_THINK_MAX_MS` and leaves `BOT_CLOCK_MARGIN_MS` on the acting clock, and
 //! so does the search's deadline; R188's guard names the concession and both draws; the fallback
 //! move ends the turn when it can and never concedes.
@@ -26,7 +26,7 @@ fn decks() -> (Vec<String>, Vec<String>) {
 }
 
 #[test]
-fn r1446_a_think_time_stays_inside_its_bounds_and_the_clock() {
+fn r1447_a_think_time_stays_inside_its_bounds_and_the_clock() {
     let mut rng = Rng::new("think-bounds", 0);
     for at in 0..400 {
         let first = at % 2 == 0;
@@ -90,7 +90,7 @@ fn r1446_a_think_time_stays_inside_its_bounds_and_the_clock() {
 }
 
 #[test]
-fn r1446_the_decision_deadline_leaves_the_clock_margin() {
+fn r1447_the_decision_deadline_leaves_the_clock_margin() {
     assert_eq!(decision_deadline_ms(None), BOT_DECISION_DEADLINE_MS);
     assert_eq!(
         decision_deadline_ms(Some(BOT_CLOCK_MARGIN_MS + BOT_DECISION_DEADLINE_MS * 10)),
@@ -105,7 +105,7 @@ fn r1446_the_decision_deadline_leaves_the_clock_margin() {
 }
 
 #[test]
-fn r1446_r188_forbids_a_concession_a_draw_offer_an_accepted_draw_and_an_emote() {
+fn r1447_r188_forbids_a_concession_a_draw_offer_an_accepted_draw_and_an_emote() {
     for body in [
         ActionBody::Concede,
         ActionBody::OfferDraw,
@@ -127,7 +127,7 @@ fn r1446_r188_forbids_a_concession_a_draw_offer_an_accepted_draw_and_an_emote() 
 }
 
 #[test]
-fn r1446_the_fallback_move_answers_the_mulligan_ends_the_turn_and_never_concedes() {
+fn r1447_the_fallback_move_answers_the_mulligan_ends_the_turn_and_never_concedes() {
     let decks = decks();
     let mut state = begin_game(&create_game(&create_game_args(
         "seed-fallback",

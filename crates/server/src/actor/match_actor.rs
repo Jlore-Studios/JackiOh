@@ -15,7 +15,7 @@
 //!  - The results row lives behind `crate::api::results::record_result` (§9.5, M7-T2).
 //!  - The only per-player payload is `engine::view_for(state, player)` (§9.1, §10.8). No socket
 //!    ever sees a state, the other hand, library order, or the other seat's view.
-//!  - R1446: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
+//!  - R1447: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
 //!    decided and paced in `bots::seat`, off the queue, and comes back as a server action through the
 //!    same path a client's takes; its persona (`bots::persona`) reads the bot seat's own view and its
 //!    emotes are relayed as a player's are.
@@ -84,7 +84,7 @@ pub struct MatchActorInput {
     /// R1442: the play telemetry a rebuild replayed from `log` (`telemetry::replay`). `None`, the
     /// actor starts recording from the match's creation.
     pub telemetry: Option<Recorder>,
-    /// R1446: the ladder bot at each home seat, which the actor plays itself; `None` for a person.
+    /// R1447: the ladder bot at each home seat, which the actor plays itself; `None` for a person.
     pub bots: PerPlayer<Option<BotRow>>,
 }
 
@@ -128,7 +128,7 @@ enum Task {
     },
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
-    /// R1446: the move a bot home's `seat::play` came back with, decided on the state as it stood
+    /// R1447: the move a bot home's `seat::play` came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     BotMove {
         home: PlayerId,
@@ -224,12 +224,12 @@ struct Core {
     /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
     /// telemetry's rank bucket; `None` until then, or when it could not be read.
     tiers: Option<PerPlayer<RankTier>>,
-    /// R1446: whether each bot home's move is being decided now (`seat::play` in flight), by home.
+    /// R1447: whether each bot home's move is being decided now (`seat::play` in flight), by home.
     bot_thinking: PerPlayer<bool>,
-    /// R1446: where each bot home's two streams stand: the search's and the think time's. A rebuilt
+    /// R1447: where each bot home's two streams stand: the search's and the think time's. A rebuilt
     /// actor starts both again, which nothing replays.
     bot_cursors: PerPlayer<(u32, u32)>,
-    /// R1446: the turn each bot home last moved in, so a think time knows a turn's first move.
+    /// R1447: the turn each bot home last moved in, so a think time knows a turn's first move.
     bot_moved_turn: PerPlayer<Option<i32>>,
     /// R645, R1344: each bot home's persona, reading the bot seat's own view.
     personas: PerPlayer<Option<EmotePersona>>,
@@ -253,7 +253,7 @@ struct Shared {
     clock: MatchClock,
     inbox: mpsc::UnboundedSender<Task>,
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
-    /// R1446: the ladder bot at each home seat, played by this actor; `None` for a person.
+    /// R1447: the ladder bot at each home seat, played by this actor; `None` for a person.
     bots: PerPlayer<Option<BotRow>>,
     core: Mutex<Core>,
 }
@@ -417,7 +417,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         next_seq,
         acks,
         sockets: PerPlayer::new(None, None),
-        // R1446: a bot's seat is never away, so R744's grace never starts for it.
+        // R1447: a bot's seat is never away, so R744's grace never starts for it.
         attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
         recent_actions: PerPlayer::new(VecDeque::new(), VecDeque::new()),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
@@ -498,7 +498,7 @@ impl MatchActor {
             Task::Arm => {
                 let snapshot = engine::snapshot(&self.lock().state);
                 self.shared.clock.sync(&clock_view_for(&snapshot));
-                // R744, R1446: a bot's seat is here from the start, as an opponent whose socket has
+                // R744, R1447: a bot's seat is here from the start, as an opponent whose socket has
                 // attached, so a person who has not opened the match yet is away from now.
                 if snapshot.result.is_none() && PLAYERS.iter().any(|home| self.shared.bots[*home].is_some()) {
                     let mut core = self.lock();
@@ -515,7 +515,7 @@ impl MatchActor {
                 if snapshot.result.is_some() {
                     self.on_terminal(&snapshot).await;
                 } else {
-                    // R1446: a bot that owes the match a move, as it opens or after a restart, makes it.
+                    // R1447: a bot that owes the match a move, as it opens or after a restart, makes it.
                     {
                         let mut core = self.lock();
                         for home in PLAYERS {
@@ -866,7 +866,7 @@ impl MatchActor {
     /// other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
     /// it plays now (restarted there: the clock keeps one deadline per seat, not per account).
     fn on_seats_swapped(&self, core: &mut Core, now: bool) {
-        // R1446: a bot has no socket and is never away.
+        // R1447: a bot has no socket and is never away.
         let away: Vec<PlayerId> = PLAYERS
             .into_iter()
             .filter(|home| core.sockets[*home].is_none() && self.shared.bots[*home].is_none())
@@ -986,7 +986,7 @@ impl MatchActor {
             return;
         }
         // R1442: the play telemetry goes after the result, so its write can never cost it.
-        // R1446: a bot home's rows are the AI's, so no human figure reads them unasked.
+        // R1447: a bot home's rows are the AI's, so no human figure reads them unasked.
         let pilot = |home: PlayerId| {
             if self.shared.bots[home].is_some() {
                 Pilot::Ai
@@ -1119,10 +1119,10 @@ impl MatchActor {
     }
 
     // ---------------------------------------------------------------------
-    // The bot seat (R1446)
+    // The bot seat (R1447)
     // ---------------------------------------------------------------------
 
-    /// R1446: starts the move of every bot home whose seat owes the match one (R677: the engine seat
+    /// R1447: starts the move of every bot home whose seat owes the match one (R677: the engine seat
     /// it plays now) and is not already deciding. `seat::play` decides and waits out the think time
     /// off the queue, then queues the move as `Task::BotMove`; the queue goes on meanwhile, so a
     /// clock that runs out first still times the bot out as it would a person.
@@ -1175,7 +1175,7 @@ impl MatchActor {
         }
     }
 
-    /// R1446: plays the move a bot home decided, as a server action (R270's prefix, so no client can
+    /// R1447: plays the move a bot home decided, as a server action (R270's prefix, so no client can
     /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
     /// the seat it plays now. R188: a bot never concedes or offers or takes a draw.
     ///
@@ -1368,7 +1368,7 @@ impl MatchActor {
         }
         // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that hears it
         // answers it in turn order behind every action queued ahead of it. A bot's emote is minted
-        // like a person's (R1446): a hearing card answers either.
+        // like a person's (R1447): a hearing card answers either.
         self.enqueue(Task::Emote { home, emote });
         if self.shared.bots[home].is_some() {
             return;
@@ -1539,7 +1539,7 @@ impl MatchActor {
     /// or the player never opened the match) is disconnected, so its grace starts with the first
     /// socket that does attach, on the seat it plays (R677): at the deadline stored on the match when
     /// there is one, else a fresh window. A bot's seat is attached from the start, so in a match with
-    /// a bot it starts as the actor arms (R1446). Nothing starts at boot, so a match no socket returns
+    /// a bot it starts as the actor arms (R1447). Nothing starts at boot, so a match no socket returns
     /// to stays the reaper's draw (R112) and nobody loses by seat order. Safe to repeat: a running
     /// grace keeps its deadline (R147).
     fn start_absent_grace(&self, core: &mut Core) {
@@ -1709,7 +1709,7 @@ impl MatchActor {
 
     /// R672: which seats hold an open socket right now. The registry's `presence_of` reads this, so a
     /// rematch offer learns whether the opponent is still on the match. A seat is present while it
-    /// holds a socket that is still open. R1446: a bot's seat holds none, and is present until the
+    /// holds a socket that is still open. R1447: a bot's seat holds none, and is present until the
     /// game ends, as a person playing it would be; after that it reads as gone.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();

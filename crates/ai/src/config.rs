@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::{AiStyle, SearchBudget};
 
-/// The style that always plays the best line it found and never passes over lethal (R1446):
+/// The style that always plays the best line it found and never passes over lethal (R1447):
 /// `decide`'s own, which takes no draw for it. The ladder bots set their own (the server's
 /// `BOT_STRENGTHS`).
 pub const AI_STYLE_EXACT: AiStyle = AiStyle {
@@ -153,6 +153,10 @@ pub struct EvalWeights {
     pub enemy_health: f64,
     /// Share of a printed Taunt and a point of Armor that Defense Position's grants are worth (§4.1).
     pub position_grants: f64,
+    /// Whether Defense Position's discount (`position_grants`) leaves a unit's own Taunt alone and
+    /// takes its Armor off only when Armor is on the body. Off, it takes a Taunt unit's Taunt and a
+    /// point of Armor off whatever the Taunt's source, as the frozen baseline did.
+    pub defense_own_taunt_kept: bool,
     /// Per point of heroArmorOf.
     pub hero_armor: f64,
     /// Per point of unitView.attack.
@@ -229,6 +233,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hero_health: 1.0,
     enemy_health: 1.0,
     position_grants: 0.0,
+    defense_own_taunt_kept: true,
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
@@ -292,6 +297,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hero_health: 1.0,
     enemy_health: 1.0,
     position_grants: 0.0,
+    // The baseline is frozen: it discounted a Taunt unit's own Taunt in Defense Position, as it did.
+    defense_own_taunt_kept: false,
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
