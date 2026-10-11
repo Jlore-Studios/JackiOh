@@ -81,7 +81,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const INTROSPECTION: &str = "meditative-007";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
+    // A plain 14/14 with no text: Midrange Menace heals itself to full at the same end of turn, which
+    // would hide the heal.
+    const GENN: &str = "classic-086";
     const FODDER: &str = "core-015"; // (1) 1/1 Unit.
     const FILLER: &str = "core-005"; // (1) Spell.
     const VANILLA: &str = "core-008"; // (1) Unit.
@@ -96,7 +98,7 @@ mod tests {
                 "p1": {
                     "health": 20,
                     "hand": [FILLER, VANILLA],
-                    "field": [{ "def": MENACE, "damage": 4 }],
+                    "field": [{ "def": GENN, "damage": 4 }],
                     "backrow": [{ "def": INTROSPECTION, "radiant": radiant, "faceUp": true, "lane": 1 }],
                     "library": [CHEAP, FILLER, FILLER],
                 },
@@ -111,9 +113,9 @@ mod tests {
 
             s.end_turn();
 
-            // Heal 3: the hero from 20, the Menace from 5.
+            // Heal 3: the hero from 20, Genn from 10.
             s.expect_health(P1, 23);
-            s.expect_stats(MENACE, json!({ "health": 8 }));
+            s.expect_stats(GENN, json!({ "health": 13 }));
             // Draw 1, then discount 1 on the whole hand, the drawn card included.
             assert_eq!(s.hand(P1).len(), 3);
             for card in s.hand(P1) {
@@ -137,10 +139,19 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
             }));
 
+            // p1's own Stockpile, by its id: once p2 is active, its Stockpile would answer first.
+            let filler = s.card(FILLER).id.clone();
+            s.end_turn();
+            assert_eq!(s.card(&filler).cost_mod, -1);
             s.end_turn();
 
-            assert_eq!(s.card(DIVIDEND).cost_mod, 0);
-            assert_eq!(s.card(FILLER).cost_mod, -1);
+            // R65: an X card ignores the discount — played for 2 on p1's next turn, it costs exactly 2.
+            s.state_mut().players.p1.mana.current = 4;
+            s.play(
+                DIVIDEND,
+                json!({ "x": 2, "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }),
+            );
+            s.expect_mana(P1, 2);
         }
 
         #[test]
@@ -190,8 +201,8 @@ mod tests {
             s.end_turn();
 
             s.expect_health(P1, 28);
-            // The Menace's 4 damage is healed past full, capped at 9.
-            s.expect_stats(MENACE, json!({ "health": 9 }));
+            // Genn's 4 damage is healed past full, capped at 14.
+            s.expect_stats(GENN, json!({ "health": 14 }));
             assert_eq!(s.hand(P1).len(), 3);
             for card in s.hand(P1) {
                 assert_eq!(card.cost_mod, -2);
