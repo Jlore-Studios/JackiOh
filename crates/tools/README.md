@@ -43,9 +43,10 @@ cargo jackioh golden check
 cargo test -p jackioh-tools                    # the tools' own tests
 ```
 
-`spec check` holds four rules: every ruling note's `id` matches its file name and is unique; every
+`spec check` holds six rules: every ruling note's `id` matches its file name and is unique; every
 `proven_in` path exists and holds a proof (a Rust `fn` or `mod` whose name has the `_`-delimited token
 `r<n>`, a TypeScript `it(`, `test(` or `describe(` whose title has `R<n>` as a word, or an SQL
 script's `\echo '### R<n>: … ###'` heading); every `r<n>` test token and every `R<n>` cited in
-`crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in `spec/` resolves. It reads
+`crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in `spec/` resolves; every note's
+`title` and `cards` are filled in; `spec/INDEX.md` is what `spec index` writes from the notes. It reads
 ids, file names and test names, never wording.

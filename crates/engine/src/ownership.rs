@@ -85,7 +85,7 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
 /// R466: the players who can read a card where it lies (§9.1, §10.8): a hand is its holder's, a library
 /// nobody's, a face-down backrow card its controller's (R33), and a face-up card, a graveyard, an exile
 /// pile and the resolving zone everyone's (a play is public, R98).
-fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
+pub(crate) fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
         Zone::Hand { player } => vec![player],
         Zone::Library { .. } => Vec::new(),
