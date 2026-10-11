@@ -405,9 +405,11 @@ const RECORDED: &str = concat!(
 ///
 /// The exception is a change to what the state RECORDS about the same game, which leaves the log as it
 /// is and moves the hash alone: R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and
-/// R457 (§6.2; B5 E4). A change to the game itself re-records the log (R244, R275, R276, R360–R366).
+/// R457 (§6.2; B5 E4), and R943's Created mark and R982's last element, which the Meditative set's
+/// release (R1420, v0.3.5) began to record: the same log, both stripped, still folds to the old
+/// `a798906b`. A change to the game itself re-records the log (R244, R275, R276, R360–R366).
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
-const EXPECTED_HASH: &str = "a798906b";
+const EXPECTED_HASH: &str = "5c3d578c";
 
 /// What the recorded game ends in — a second anchor, so the hash is not the only witness.
 const EXPECTED_RESULT: GameResult = GameResult {
