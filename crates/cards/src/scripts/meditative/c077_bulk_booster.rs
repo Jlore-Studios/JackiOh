@@ -100,7 +100,10 @@ mod tests {
                 s.play(ID, json!({}));
                 let added = added(&s, 0);
                 assert_eq!(added.len() as i32, HAND_CAP);
-                assert!(added.iter().all(|card| crate::card_def(&card.def_id).set != SetName::Meditative));
+                assert!(added.iter().all(|card| SHIPPED_SETS.contains(&crate::card_def(&card.def_id).set)));
+                // The Meditative set ships, so its Commons are in the pool unpreviewed: this seed
+                // draws at least one (re-pinned for v0.3.5: the Meditative set joins the pool).
+                assert!(added.iter().any(|card| crate::card_def(&card.def_id).set == SetName::Meditative));
             }
 
             #[test]

@@ -193,13 +193,14 @@ mod tests {
                 );
                 s.expect_in_zone(ID, "graveyard");
 
-                // R311: the shuffle-in is open, so p1's list names it; never where it went.
+                // R311: the shuffle-in is open, so p1's list names it, marked Created (R943); never
+                // where it went.
                 assert_eq!(
                     js(&s.view(P1).you.own_library),
                     json!({
                         "cards": [
                             { "defId": FILLER, "radiant": false, "count": 3 },
-                            { "defId": JOURNEY_COMPLETE, "radiant": false, "count": 1 },
+                            { "defId": JOURNEY_COMPLETE, "radiant": false, "created": true, "count": 1 },
                         ],
                         "unknown": 0,
                     })

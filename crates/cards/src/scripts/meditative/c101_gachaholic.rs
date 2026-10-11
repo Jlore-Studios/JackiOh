@@ -65,8 +65,11 @@ mod tests {
     const FILLER: &str = "core-016";
     const PEPTIDES: &str = "meditative-036";
 
-    /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin.
-    const SHIPPED_POOL: [&str; 8] = [
+    /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
+    /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #65 Keymaster Keenus
+    /// (Lucky 1 is one of the keywords it prints, SPEC §8.8 row 65), #86 Mayor Medinamogger and #102
+    /// Catboy Maid SSR+.
+    const SHIPPED_POOL: [&str; 12] = [
         "core-004",
         "core-023",
         "core-042",
@@ -75,6 +78,10 @@ mod tests {
         "classicplus-053",
         "classicplus-065",
         "classicplus-066",
+        "meditative-036",
+        "meditative-065",
+        "meditative-086",
+        "meditative-102",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.
