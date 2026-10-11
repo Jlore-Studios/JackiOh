@@ -76,10 +76,11 @@ jobs:
           python-version: "3.13"
 
       # Trusted author (owner, member, collaborator or .harness/trust.txt), not the bot itself
-      # unless it is the bot's suggestion a person approved, an issue with exactly one method
-      # label (bot:approved counts as method:use-bot; never `human` with it), and Muse switched
-      # on (providers.json). A method label waits two minutes and reads the issue again;
-      # a dispatch names the thread, which the gate reads read-only.
+      # unless it is the bot's suggestion a person approved or a person put the method label on
+      # (the event's sender), an issue with exactly one method label (bot:approved counts as
+      # method:use-bot; never `human` with it), and Muse switched on (providers.json). A method
+      # label waits two minutes and reads the issue again; a dispatch names the thread, which the
+      # gate reads read-only.
       - name: Should this be triaged?
         id: gate
         working-directory: bot
