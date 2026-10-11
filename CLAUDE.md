@@ -35,7 +35,7 @@ Rust 1.97.0 for `crates/` (`rust-toolchain.toml`, with rustfmt, clippy and the `
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint on engine, cards and ai
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
-cargo jackioh catalog check        # catalog.json's shape and census: 268 cards and 50 tokens across Core, Classic, Classic+, rarity and tag counts per set; a set the catalog holds before it ships (Meditative, R1420) is held to its shape alone
+cargo jackioh catalog check        # catalog.json's shape and census: 370 cards and 80 tokens across Core, Classic, Classic+ and Meditative, rarity and tag counts per set; a set the catalog holds before it ships (R1420) is held to its shape alone
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; no flag plays seeds 1–1000, --handicap the wave with one seat handicapped
