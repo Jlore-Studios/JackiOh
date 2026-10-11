@@ -4660,6 +4660,13 @@
     "653": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T04:21:56Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 2 (one place) fails: crates/server's Dockerfile and rehearsal script plus a test in apps/web, and the timing itself is proved only by CI after a person edits ci.yml"
+      },
       "handoff": {
         "at": "2026-10-11T03:54:06Z",
         "family": "claude",
