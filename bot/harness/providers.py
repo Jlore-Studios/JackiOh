@@ -169,6 +169,9 @@ class Provider:
     #: ends, say. On that day the planner also opens one issue asking a person to decide.
     off_from: date | None = None
     off_reason: str = ""
+    #: When its plan last changed: a usage reading taken before it is the old plan's, so no cap
+    #: holds on it (`current_usage`), and the next run reads the new plan's usage afresh.
+    usage_since: datetime | None = None
     #: How many items it may work on at once. On the machine each needs a runner of its own
     #: with its `runs_on` label (`register-runners.sh` registers that many).
     lanes: int = 1
@@ -391,7 +394,7 @@ def _limits(raw: Any, where: str) -> Limits:
 
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
-                  "self_check", "extra_models", "off_from", "off_reason",
+                  "self_check", "extra_models", "off_from", "off_reason", "usage_since",
                   "lanes", "build_last", "easy_first", "off_hours", "fix_effort"}
 
 
@@ -508,6 +511,7 @@ def _provider(name: str, raw: Any) -> Provider:
         runs_on=runs_on,
         off_from=_off_from(raw.get("off_from"), f"{where}.off_from"),
         off_reason=str(raw.get("off_reason") or ""),
+        usage_since=_usage_since(raw.get("usage_since"), f"{where}.usage_since"),
         lanes=_lanes(raw.get("lanes", 1), f"{where}.lanes"),
         self_check=bool(raw.get("self_check", False)),
         build_last=bool(raw.get("build_last", False)),
@@ -728,8 +732,8 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         return f"it refused a call; its limit resets at {iso(until)}"
-    usage = entry.get("usage") or {}
-    observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
+    usage = current_usage(provider, entry)
+    observed = parse_iso(usage.get("observed_at"))
     caps = provider.caps_at(at, zone_name)
     outside = caps != dict(provider.limits.stops)
     for window, cap in caps.items():
@@ -773,7 +777,7 @@ def frees_at(provider: Provider, entry: Mapping[str, Any], at: datetime,
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > at:
         times.add(until)
-    usage = entry.get("usage") if isinstance(entry.get("usage"), Mapping) else {}
+    usage = current_usage(provider, entry)
     observed = parse_iso(usage.get("observed_at"))
     for window, span in WINDOWS.items():
         reading = usage.get(window)
@@ -880,6 +884,27 @@ def _off_from(raw: Any, where: str) -> date | None:
         return date.fromisoformat(str(raw))
     except ValueError as exc:
         raise ConfigError(f"{where}: {raw!r} is not a date (YYYY-MM-DD)") from exc
+
+
+def _usage_since(raw: Any, where: str) -> datetime | None:
+    if raw in (None, ""):
+        return None
+    when = parse_iso(str(raw))
+    if when is None:
+        raise ConfigError(f"{where}: {raw!r} is not a time (YYYY-MM-DDTHH:MM:SSZ)")
+    return when
+
+
+def current_usage(provider: Provider, entry: Mapping[str, Any]) -> Mapping[str, Any]:
+    """`entry`'s last usage reading, or {} when there is none or it was taken before the
+    subscription's plan changed (`usage_since`), so the old plan's usage holds nothing back."""
+    usage = entry.get("usage")
+    if not isinstance(usage, Mapping):
+        return {}
+    observed = parse_iso(usage.get("observed_at"))
+    if provider.usage_since is not None and (observed is None or observed < provider.usage_since):
+        return {}
+    return usage
 
 
 def switched_off_by_date(provider: Provider, at: datetime, zone_name: str) -> bool:

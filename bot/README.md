@@ -484,6 +484,11 @@ prints each one and whether it could start now, and `/harness status` does the s
 - `off_from` (a date) and `off_reason`: from that day, in the bot's time zone, it takes no new
   work, and the planner opens one issue with the reason, asking a person what it should do now.
   Devin's is 2026-11-02, when the Devin plan that came with Windsurf runs out.
+- `usage_since` (a UTC time): when its plan last changed. A usage reading taken before it is the
+  old plan's, so no cap holds on it, and the next run reads the new plan's usage afresh. Without
+  it, a subscription the old plan had used up keeps waiting for that plan's reset, and since only
+  a run reads its usage again, nothing refreshes the reading first. Muse's is 2026-10-11, when it
+  moved to the $50 plan (its last reading, from the $15 plan, said 100% of the week).
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners (11, the Claude
 accounts' lanes added up, so it holds none of them back), `machine_parallel` how many run at once
@@ -547,11 +552,11 @@ may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #3
 no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
-Muse first (the most reliable builder, #305), then agy; then Codex, weak, which builds an easy item
-only when everyone before it is busy; then claude-2, kept back mostly for planning and reviewing;
-then Devin, last. For building alone, claude-2 is `build_last`: it
-builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
-it may build only easy items, so it takes them ahead of everyone while it has a free lane, and
+Muse first (the most reliable builder, #305), then agy; then Codex, weak; then claude-2, kept back
+mostly for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
+builds only when no other subscription that may is free, Devin included. Codex and Devin, the weak
+models, are `easy_first`: they may build only easy items, so they take them ahead of everyone while
+they have a free lane, Codex before Devin (its place in the usage order), and
 the stronger models keep the medium and hard items only they may build. A fullsend part, once
 planned, goes first to the medium subscriptions (Muse first), which may build it whatever its
 difficulty ([Fullsend](#fullsend)). (There is no training
