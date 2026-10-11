@@ -30,7 +30,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
-use jackioh_engine::{PlayerId, newest_shipped_set};
+use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
@@ -933,6 +933,85 @@ mod rematch_presence {
 
         app.matches.stop(match_id).await;
         assert!(app.matches.presence_of(match_id).is_none());
+    }
+
+    /// The reaper drops a finished actor only once its rematch window has passed and no seat holds an
+    /// open socket, which is when `opponentHere` already read false: the status and the offers read the
+    /// same before and after.
+    #[tokio::test(start_paused = true)]
+    async fn the_status_reads_the_same_before_and_after_the_reaper_drops_the_finished_actor() {
+        let app = test_app().await;
+        let (a, b, finished) = names("presence-reaped");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        start_live(&app, &finished, &a, &b).await;
+        let (p1, _p1_frames) = Socket::channel();
+        let (p2, _p2_frames) = Socket::channel();
+        app.matches
+            .attach(&app, &finished, &a, p1.clone())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(&app, &finished, &b, p2.clone())
+            .await
+            .expect("B attaches");
+        settle().await;
+
+        // The game ends through the actor, which records its result and so finishes the match's row.
+        let actor = app
+            .matches
+            .actor_for(&app, &finished)
+            .await
+            .expect("the live actor");
+        let reply = actor
+            .submit(
+                PlayerId::P1,
+                "presence-reaped-concede".to_string(),
+                ActionBody::Concede,
+            )
+            .await;
+        assert_eq!(to_json(&reply)["type"], "ack");
+        actor.idle().await;
+        let window_end = actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        drop(actor);
+        assert_eq!(match_row(&app, &finished).await["status"], "finished");
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+
+        // Within the window, with both sockets open, nothing changes.
+        assert!(app.matches.reap_finished(window_end).await.is_empty());
+        assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
+
+        // Past it, an open socket still holds the actor, and so the opponent's presence.
+        assert!(app.matches.reap_finished(window_end + 1).await.is_empty());
+        assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
+        assert!(p1.is_open() && p2.is_open());
+
+        // The sockets close, and the status already reads nobody here with A's offer standing.
+        p1.transport_closed();
+        p2.transport_closed();
+        settle().await;
+        let before = (
+            status(&app, &token_a, &finished).await.1,
+            status(&app, &token_b, &finished).await.1,
+        );
+        assert_eq!(before.0["opponentHere"], false);
+        assert_eq!(before.1["opponentOffer"], json!(STAKE_NORMAL));
+
+        // The reaper drops the actor, and the status is the one it already was.
+        assert_eq!(
+            app.matches.reap_finished(window_end + 1).await,
+            vec![finished.clone()]
+        );
+        assert!(app.matches.presence_of(&finished).is_none());
+        let after = (
+            status(&app, &token_a, &finished).await.1,
+            status(&app, &token_b, &finished).await.1,
+        );
+        assert_eq!(after, before);
+
+        // The offers outlive the actor: B's matching offer still creates the rematch.
+        let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_ne!(created["matchId"], Value::Null);
     }
 }
 

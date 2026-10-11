@@ -900,7 +900,7 @@ impl Tx<'_> {
 // TS's ProfileStore.setRating (no caller) is not ported.
 
 // actor/registry.rs (part 19)
-pub struct Registry { /* live actors by match id; finished actors stay until the reaper or a restart */ }
+pub struct Registry { /* live actors by match id; a finished one stays until reap_finished drops it after its rematch window, or a restart */ }
 impl Registry {
     pub fn new() -> Registry;
     pub async fn start(&self, app: &std::sync::Arc<App>, input: StartMatchInput) -> Result<(), api::http::ApiError>;
@@ -908,6 +908,7 @@ impl Registry {
     pub fn has(&self, match_id: &str) -> bool;
     pub async fn stop(&self, match_id: &str);
     pub fn presence_of(&self, match_id: &str) -> Option<PerPlayer<bool>>;
+    pub async fn reap_finished(&self, now: i64) -> Vec<String>;
 }
 // actor/ws_server.rs (part 19)
 pub async fn handle(app: std::sync::Arc<App>, req: axum::extract::Request) -> axum::response::Response;  // the /ws/match upgrade
@@ -976,7 +977,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   deals none and shows its default hand (`apps/web/src/emotes/hand.ts`); hotseat and practice deal
   both seats through the `deal_emote_hand` binding.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
-  rematch offers held in memory, finished actors kept in memory, the `vanilla` portrait default for
+  rematch offers held in memory, finished actors kept in memory through their rematch window (`Registry::reap_finished`), the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
