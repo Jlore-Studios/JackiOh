@@ -7,7 +7,7 @@
 //        `M4A ` at byte 8; the manifest lists exactly those keys with each file's size and its
 //        recomputed voiceHash; the directory holds nothing else.
 //        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501).
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501, 12 MiB since R1448).
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
@@ -451,8 +451,8 @@ describe("the committed voice files (B35)", () => {
 // ------------------------------------------------------------------------------------ B36 ---
 
 describe("the voice budget (B36)", () => {
-  it("B36 R501 fits the whole set into VOICE_BUDGET_BYTES (6 MiB), counted in 4 KiB blocks", () => {
-    expect(VOICE_BUDGET_BYTES, "the budget R501 fixes").toBe(6 * 1024 * 1024);
+  it("B36 R501 R1448 fits the whole set into VOICE_BUDGET_BYTES (12 MiB), counted in 4 KiB blocks", () => {
+    expect(VOICE_BUDGET_BYTES, "the budget R1448 fixes").toBe(12 * 1024 * 1024);
     const sizes = EXPECTED_KEYS.map((key) => sizeOnDisk(key));
     expect(sizes.filter((size) => size === null), "every expected file exists to be measured").toEqual([]);
     const onDisk = sizes.reduce<number>((sum, size) => sum + Math.ceil((size ?? 0) / BLOCK) * BLOCK, 0);

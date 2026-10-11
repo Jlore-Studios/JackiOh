@@ -225,7 +225,8 @@ No escalation step.
 
 Every card needs its voice lines **rendered**: `apps/web/src/audio/voice-assets.test.ts` (B35, B36, B37, R501) expects an `.m4a` per line in
 `apps/web/public/audio/voice/` and a manifest entry. `pnpm --filter @jackioh/web gen:voice` renders them with macOS `say` and `afconvert` or
-Windows SAPI and ffmpeg, and has no Linux backend, so a card added from Linux or CI fails about twenty tests there until a person renders them.
-`node apps/web/scripts/gen-voice.mjs --check` lists what is missing. Write the `card-audio.json5` entry (the text needs no tool) and say in the
-PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
+Windows SAPI and ffmpeg, and has no Linux backend. From Linux, write the `card-audio.json5` entry (the text needs no tool; a Unit has a play,
+an attack and a death line, R1448) and push a commit whose message holds `[gen:voice]`: the `voice` workflow renders the lines on GitHub's
+macOS and Windows runners, commits them back to the branch, and runs `node apps/web/scripts/gen-voice.mjs --check` (R1448). Its commits start
+no CI, so push once more afterwards. Without it, say in the PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
 on a pull request.

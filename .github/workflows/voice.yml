@@ -1,0 +1,130 @@
+# Renders the voice lines `gen:voice` owes (apps/web/scripts/gen-voice.mjs; SPEC §10.11, R501,
+# R1448) on GitHub's own machines, so nobody needs a Mac or a Windows PC to land a line:
+#
+#   1. `say`:   a macOS runner renders the lines whose voice is a macOS `say` voice, and commits the
+#               files and the manifest back to the branch;
+#   2. `sapi`:  a Windows runner, on top of that commit, renders the lines whose voice is a Windows
+#               SAPI one (with ffmpeg), and commits them;
+#   3. `check`: a Linux job runs `gen-voice --check` on the branch as it now stands, which names any
+#               key still missing, stale, too long or over the budget.
+#
+# Each runner renders only what is missing or stale for its own backend (the voiceHash of the voice
+# and the text, or a file of the wrong size) and leaves the other backend's keys alone, so the two
+# render steps exit 1 on purpose and only `check` decides.
+#
+# Opt-in: a push whose head commit's message holds `[gen:voice]`, or a manual run (Actions → voice →
+# Run workflow) on any branch. Never on `main` or `production`, whose lines arrive rendered by the pull
+# request that changed them. The commits this pushes are the GITHUB_TOKEN's, which start no workflow
+# of their own (GitHub's rule, so this never loops), so a pull request's CI runs again on the next
+# push a person makes.
+name: voice
+
+on:
+  push:
+    branches-ignore: [main, production]
+  workflow_dispatch:
+
+# One render at a time per branch: the second waits, then renders whatever the first left.
+concurrency:
+  group: voice-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # The workspace install would otherwise download Cypress on both runners.
+  CYPRESS_INSTALL_BINARY: "0"
+
+jobs:
+  say:
+    name: render the say lines (macOS)
+    if: >-
+      github.ref_name != 'main' && github.ref_name != 'production' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[gen:voice]'))
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - name: the voices this Mac has
+        run: say -v '?' | sort
+      - name: render
+        # Exit 1 is expected: the SAPI lines are the next job's.
+        run: node apps/web/scripts/gen-voice.mjs || true
+      - name: commit and push what rendered
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A apps/web/public/audio/voice apps/web/src/audio/voice-manifest.json
+          if git diff --cached --quiet; then
+            echo "nothing for say to render"
+            exit 0
+          fi
+          git commit -q -m "Voice: the lines macOS say renders (the voice workflow, R1448)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  sapi:
+    name: render the SAPI lines (Windows)
+    needs: say
+    if: >-
+      !cancelled() && github.ref_name != 'main' && github.ref_name != 'production' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[gen:voice]'))
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The manifest and the json5 are compared byte for byte; keep them as committed.
+      - name: keep line endings as committed
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - name: ffmpeg
+        run: choco install ffmpeg -y --no-progress
+      - name: the voices this PC has
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Speech
+          (New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
+      - name: render
+        # Exit 1 is expected when a say line is still missing; `check` reports it by name.
+        run: node apps/web/scripts/gen-voice.mjs || true
+      - name: commit and push what rendered
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A apps/web/public/audio/voice apps/web/src/audio/voice-manifest.json
+          if git diff --cached --quiet; then
+            echo "nothing for SAPI to render"
+            exit 0
+          fi
+          git commit -q -m "Voice: the lines Windows SAPI renders (the voice workflow, R1448)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  check:
+    name: gen-voice --check
+    needs: [say, sapi]
+    if: >-
+      !cancelled() && github.ref_name != 'main' && github.ref_name != 'production' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[gen:voice]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - name: every line rendered, current, within 4 s and under the budget
+        run: node apps/web/scripts/gen-voice.mjs --check

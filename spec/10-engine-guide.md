@@ -250,11 +250,14 @@ than the screen does ([[R203]]).
   dips the effects for its span, and the effects and voice lines share one light reverb.
 - **Haptics** ([[R669]]). On a phone that can vibrate, a short tick for the viewer's own card landing, a
   hit and the viewer's turn start, behind a Vibration switch and never under Reduce Motion.
-- **Voice lines.** Every Unit, tokens included, has a play line and a death line. Every Spell,
-  Field Spell, Trap and Field Trap has a cast line. [[R204]] fixes the moment each is spoken. The lines
-  are flavour and never restate rules text. They are pre-rendered to mono AAC at about 32 kbps under a total size cap that `gen:voice --check`
-  holds (raised for patch v0.2.0's 206 new cards and tokens), and a missing file falls back to the
-  browser's speech synthesis. One line speaks at a time, for its audible length only: a death line or a firing
+- **Voice lines.** Every Unit, tokens included, has a play line and a death line, and since #103 an
+  attack line of four words at most, spoken as its controller picks it up to attack ([[R1448]]). Every
+  Spell, Field Spell, Trap and Field Trap has a cast line. [[R204]] fixes the moment each is spoken. The
+  lines are flavour and never restate rules text. They are pre-rendered to mono AAC at about 32 kbps
+  under a total size cap that `gen:voice --check` holds (raised for patch v0.2.0's 206 new cards and
+  tokens, and again for the Meditative set and the attack lines, [[R1448]]), on a Mac or a Windows PC
+  or by the `voice` workflow on GitHub's own, and a missing file falls back to the browser's speech
+  synthesis. One line speaks at a time, for its audible length only: a death line or a firing
   trap's line cuts in on a play or cast line, and any other line waits briefly for its turn ([[R204]]).
   Beside them sit the emote lines ([[R643]], [[R644]]): each hero portrait has its own Greetings, Well
   Played, Oops, Thanks and Threaten, rendered by the same pipeline as `emote-<portrait>-<line>` files

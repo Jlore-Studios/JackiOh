@@ -227,6 +227,8 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R1446]] is the perfect cards' pool (issue #577, patch v0.3.6, 2026-10-11)**: #97 Zephyrs and C+ #27 Zephrys Zealotism draw on every non-token card of every set that ships but their own, the designer's decision in the issue against the source notes' set limits, so a set joins both the day it ships. It takes the next number after [[R1445]]. It edits [[§5]], [[§8]], [[§10.7]], [[R29]], [[R380]], [[R387]] and [[R416]].
 
+**[[R1448]] is the voice lines' update (issue #103, 2026-10-11)**: every Unit, tokens included, gets an attack line of four words at most, spoken where [[R655]] already plays the attack hook; three lines that repeated another card's are rewritten; the voice budget rises from [[R501]]'s 6 MiB to 12 MiB for the Meditative set and the attack lines; and the `voice` workflow renders the set on GitHub's macOS and Windows runners, so nobody needs either machine. It takes R1448, held beside [[R1447]]. It edits [[§10.11]] and [[R501]].
+
 **[[R1450]] is the reaper's sweep of open rows (issue #666, 2026-10-11)**: a room or a reserved match id still `open` five minutes past its `ceiling_at` (a room's expiry, a reservation's claim) is deleted, which frees the room code and both players, so a failed start whose cleanup failed too no longer locks two players out for good. It takes R1450, the first number free on `main` and on the open branches: issue #638's branch holds R1447 to R1449. It edits [[§9.5]].
 
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.
