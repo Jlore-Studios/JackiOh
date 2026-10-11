@@ -4406,13 +4406,21 @@
       }
     },
     "670": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-11T16:43:09Z",
       "issue": 648,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-11T17:23:39Z",
+      "run_id": "38159472150",
       "self_check_findings": [],
+      "started_at": "2026-10-11T17:24:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "gemini"
@@ -4475,9 +4483,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-11T16:54:27Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38157346883",
-    "what": "suggestions on devin"
+    "at": "2026-10-11T17:24:38Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38159472150",
+    "what": "review #670 on agy"
   },
   "last_sweep": {
     "at": "2026-10-11T17:20:20Z",
