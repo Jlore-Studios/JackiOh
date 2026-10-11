@@ -4550,6 +4550,14 @@
         }
       }
     },
+    "674": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-11T17:52:30Z",
+      "issue": 577,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "75": {
       "action": "build",
       "died": 0,
