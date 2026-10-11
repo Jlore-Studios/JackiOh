@@ -1527,6 +1527,15 @@ impl Tx<'_> {
         dispatch!(self, matches_forget_voided(match_id))
     }
 
+    /// R1450: the reaper's open-row sweep. Deletes every `open` row whose `ceiling_at` is before
+    /// `before` (a room past its expiry, claimed or not, and a queue pairing's reservation claimed before
+    /// it) whose match never started, freeing its room code (R110) and letting go of the in-match flags
+    /// and ticket links that pointed at it. Never touches a live or finished match. Answers how many rows
+    /// went.
+    pub async fn matches_reap_open(&mut self, before: i64) -> StoreResult<u64> {
+        dispatch!(self, matches_reap_open(before))
+    }
+
     // rooms
 
     /// False when the code is already taken.
