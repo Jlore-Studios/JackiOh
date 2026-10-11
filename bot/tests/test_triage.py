@@ -100,6 +100,31 @@ class GateTests(unittest.TestCase):
         self.assertTrue(triage.starts_triage(MANUAL))
         self.assertFalse(triage.starts_triage(SUGGESTION))
 
+    def test_a_persons_method_label_hands_on_an_issue_the_bot_opened(self):
+        """#647–#650: a person swapped a suggestion's `bot:suggestion` for `method:use-bot`, and
+        the gate stopped it as the bot labelling its own. Only someone with triage access can
+        label, so a person's method label goes whoever opened the issue."""
+        def mine(*labels, sender=None):
+            payload = event(login=BOT, user_id=1, association="MEMBER", labels=labels)
+            return {**payload, "sender": sender} if sender is not None else payload
+        person = {"login": "MaxGoetzmann", "id": 87041877}
+        self.assertEqual(self.go(mine(USE_BOT, sender=person)), (True, f"#40 by @{BOT}"))
+        self.assertTrue(self.go(mine(MANUAL, sender=person))[0])
+        self.assertEqual(self.go(mine(USE_BOT, "human", sender=person)),
+                         (False, "labelled human, so the bot leaves it alone"))
+        self.assertEqual(self.go(mine(USE_BOT, MANUAL, sender=person)),
+                         (False, "both method:manual and method:use-bot: a person keeps one"))
+        # The bot's own label, an app's, or none known, still stops.
+        stopped = (False, f"opened by {BOT}, which labels its own")
+        self.assertEqual(self.go(mine(USE_BOT)), stopped)
+        self.assertEqual(self.go(mine(USE_BOT, sender={"login": BOT})), stopped)
+        self.assertEqual(self.go(mine(USE_BOT, sender={"login": "github-actions[bot]"})), stopped)
+        # Only the bot's own issue: an app's issue, and the bot's pull request, still stop.
+        app = event(login="github-actions[bot]", association="NONE", labels=(USE_BOT,))
+        self.assertFalse(self.go({**app, "sender": person})[0])
+        pull = event(login=BOT, association="MEMBER", pr=True)
+        self.assertFalse(self.go({**pull, "sender": person})[0])
+
     def test_a_full_issue_with_a_method_label_still_goes_and_a_full_pr_skips(self):
         done = event(title="Night bot: a thing", labels=("night bot", USE_BOT),
                      assignees=("jgoetzmann",), issue_type="Task")
@@ -636,6 +661,29 @@ class CommandTests(unittest.TestCase):
         sleep.assert_called_once_with(120.0)
         self.assertIn("go=true", written)
         self.assertIn("number=349", written)
+
+    def test_a_persons_method_label_on_the_bots_issue_waits_two_minutes_and_goes(self):
+        """The issue is read again after the wait; who put the label on is the event's, and
+        stays."""
+        import harness.__main__ as main_mod
+        gh = FakeGitHub()
+        gh.add_issue(650, "Prevent worker thread hitching", labels=(USE_BOT,),
+                     user={"login": BOT, "id": 1})
+        gh.threads[650]["author_association"] = "MEMBER"
+        payload = Path(tempfile.mkdtemp()) / "event.json"
+        labeled = {"action": "labeled", "label": {"name": USE_BOT},
+                   "issue": {"number": 650, "labels": []}}
+        sleep = mock.Mock()
+        with mock.patch.object(main_mod.time, "sleep", sleep), \
+                mock.patch.object(triage, "classifier_off", lambda *a: ""):
+            payload.write_text(json.dumps({**labeled, "sender": {"login": "MaxGoetzmann"}}))
+            _, written = self.run_step(gh, "gate", payload=str(payload))
+            self.assertIn("go=true", written)
+            self.assertIn("number=650", written)
+            payload.write_text(json.dumps({**labeled, "sender": {"login": BOT}}))
+            printed, written = self.run_step(gh, "gate", payload=str(payload))
+        self.assertIn("go=false", written)
+        self.assertIn("which labels its own", printed)
 
 
 FAKE_MUSE = textwrap.dedent('''\

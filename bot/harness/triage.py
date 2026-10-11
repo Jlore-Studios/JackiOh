@@ -12,9 +12,10 @@ to it and counts as `method:use-bot`: the same wait, labels, title, priority and
 
 Three steps, each its own job, so the model never holds a GitHub write token:
 
-1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted (or is it the
-   bot's own suggestion, which only a person with triage access can label `bot:approved`), is there
-   a method label, is the classifier on? A stranger's text never reaches the machine.
+1. `gate` (GitHub's runner, read-only) reads the event: is the author trusted (or is it the bot's
+   own issue, a suggestion or one a person put the method label on: only a person with triage
+   access can label it), is there a method label, is the classifier on? A stranger's text never
+   reaches the machine.
 2. `classify` (Muse's runner on the machine, `night-vm-muse`, read-only) fetches the thread's
    title and body through the API, fences them as data in a prompt, runs Muse in an empty
    directory, and writes its answer to a file. (It ran on Devin until #317: Devin failed every
@@ -282,25 +283,28 @@ def classifier_model(root: Path) -> tuple[str, str]:
 def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, root: Path, at: datetime,
          zone_name: str, *, asked: bool = False) -> tuple[bool, str]:
     """Whether to classify this thread, and why not when not. An issue goes only with exactly one
-    method label, and never to the bot when it is labelled `human` (#307). The bot's own
-    suggestion goes too: its text is the bot's, and only a person with triage access can put the
-    method label on it. `asked`: a person with write access called triage on it, so it goes
-    whoever opened it, an issue goes with no method label (it is classified without one: triage
-    takes the label off once it has answered it), and a pull request goes even when it has
-    everything already."""
+    method label, and never to the bot when it is labelled `human` (#307). The bot's own issue
+    goes too when it is a suggestion, or when a person put the method label on it (the event's
+    `sender`): its text is the bot's, and only a person with triage access can label it. A person
+    who swaps a suggestion's `bot:suggestion` for `method:use-bot` hands it on all the same.
+    `asked`: a person with write access called triage on it, so it goes whoever opened it, an
+    issue goes with no method label (it is classified without one: triage takes the label off
+    once it has answered it), and a pull request goes even when it has everything already."""
     thread, is_pr = thread_of(payload)
     if not thread.get("number"):
         return False, "no issue or pull request in the event"
     user = thread.get("user") or {}
     login = str(user.get("login") or "")
     labels = {str(label.get("name")) for label in thread.get("labels") or []}
-    suggestion = (not is_pr and login.lower() == bot_login.lower()
-                  and config_mod.LABEL_SUGGESTION in labels)
-    if not (suggestion or asked) and (login.lower() == bot_login.lower()
-                                      or login.endswith("[bot]")):
+    labeller = str((payload.get("sender") or {}).get("login") or "")
+    by_person = (bool(labeller) and labeller.lower() != bot_login.lower()
+                 and not labeller.endswith("[bot]"))
+    mine = (not is_pr and login.lower() == bot_login.lower()
+            and (config_mod.LABEL_SUGGESTION in labels or by_person))
+    if not (mine or asked) and (login.lower() == bot_login.lower() or login.endswith("[bot]")):
         return False, f"opened by {login}, which labels its own"
     association = str(thread.get("author_association") or "").upper()
-    if not (suggestion or asked) and association not in TRUSTED_ASSOCIATIONS and trust.level(
+    if not (mine or asked) and association not in TRUSTED_ASSOCIATIONS and trust.level(
             login, user.get("id"), association) < 1:
         return False, f"@{login} is not trusted ({association or 'no association'})"
     if not is_pr:
