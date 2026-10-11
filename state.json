@@ -5769,17 +5769,21 @@
         {
           "at": "2026-10-11T14:46:58Z",
           "minutes": 11.5
+        },
+        {
+          "at": "2026-10-11T14:49:45Z",
+          "minutes": 26.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-11T15:50:00Z",
-          "utilization": 0.9
+          "utilization": 0.92
         },
-        "observed_at": "2026-10-11T14:46:58Z",
+        "observed_at": "2026-10-11T14:49:45Z",
         "seven_day": {
           "resets_at": "2026-10-17T05:00:00Z",
-          "utilization": 0.39
+          "utilization": 0.4
         },
         "status": "allowed_warning"
       }
