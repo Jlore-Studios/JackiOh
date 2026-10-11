@@ -86,7 +86,18 @@ mod tests {
 
     #[test]
     fn r941_while_it_acts_each_refresh_gives_only_the_rider() {
-        let mut s = casting("fate-aura", false);
+        // Each side also holds a (0) Coin: with no mana, a (1) filler is no legal play, and a turn
+        // with nothing but ending it would end by itself (R82), on and on until a deck ran out.
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "fate-aura",
+            "p1": {
+                "mana": 10,
+                "hand": [{ "def": FATE }, COIN, FILLER],
+                "library": library(),
+            },
+            "p2": { "hand": [COIN, FILLER], "library": library() },
+        }));
         // Lock every backrow zone but Fate's own: no Well is summoned, so the refresh reads alone.
         {
             let state = s.state_mut();
@@ -167,6 +178,7 @@ mod tests {
         assert_eq!(
             backrow_defs(&s, P1),
             vec![
+                (1, FATE.to_string(), false),
                 (2, WELL.to_string(), false),
                 (3, WELL.to_string(), false),
                 (4, WELL.to_string(), false),

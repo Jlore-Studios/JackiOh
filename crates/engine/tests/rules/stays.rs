@@ -121,6 +121,82 @@ mod stays_moves_in_r212 {
     }
 }
 
+mod stays_the_landing_of_a_move_is_that_move_r212 {
+    use super::*;
+
+    fn discarded(id: &str) -> GameEvent {
+        GameEvent::Discarded {
+            instance_id: id.into(),
+            def_id: "fx".into(),
+            owner: PlayerId::P1,
+        }
+    }
+
+    fn entered_graveyard(id: &str) -> GameEvent {
+        GameEvent::EnteredGraveyard {
+            instance_id: id.into(),
+            def_id: "fx".into(),
+            owner: PlayerId::P1,
+        }
+    }
+
+    fn added_to_hand(id: &str) -> GameEvent {
+        GameEvent::AddedToHand {
+            player: PlayerId::P1,
+            instance_id: id.into(),
+            def_id: "fx".into(),
+        }
+    }
+
+    #[test]
+    fn r212_a_card_sent_toward_a_graveyard_stands_where_the_report_of_its_landing_says() {
+        // The landing report is the discard's own move (B5 E5): `moves_in` names the card, yet it
+        // stands on the stay the discard began, so its graveyard trigger answers the discard (R862).
+        let later = [entered_graveyard("c1"), damage("c2")];
+        assert!(moves_in(&later, None).moved.contains("c1"));
+        assert!(stands_where_it_landed(&discarded("c1"), &later, "c1", None));
+        // A death and its landing read the same way.
+        assert!(stands_where_it_landed(&destroyed("c1"), &later, "c1", None));
+        // With no later move at all, it stands there too.
+        assert!(stands_where_it_landed(
+            &discarded("c1"),
+            &[damage("c2")],
+            "c1",
+            None
+        ));
+    }
+
+    #[test]
+    fn r212_a_card_moved_again_after_its_landing_or_by_anything_but_a_landing_does_not() {
+        // Back in the hand after the landing: a later stay, which did not see the discard.
+        let returned = [entered_graveyard("c1"), added_to_hand("c1")];
+        assert!(!stands_where_it_landed(&discarded("c1"), &returned, "c1", None));
+        // A Reborn body: the death's first later move is a summon, not a landing.
+        assert!(!stands_where_it_landed(
+            &destroyed("c1"),
+            &[summoned("c1")],
+            "c1",
+            None
+        ));
+        // Another card's landing is not this card's.
+        let theirs = [entered_graveyard("c2"), added_to_hand("c1")];
+        assert!(!stands_where_it_landed(&discarded("c1"), &theirs, "c1", None));
+        // An event that sent no card toward a graveyard leaves `moves_in`'s answer as it is.
+        assert!(!stands_where_it_landed(
+            &summoned("c1"),
+            &[entered_graveyard("c1")],
+            "c1",
+            None
+        ));
+        assert!(!stands_where_it_landed(
+            &discarded("c2"),
+            &[entered_graveyard("c1")],
+            "c1",
+            None
+        ));
+    }
+}
+
 mod stays_a_stack_note_belongs_to_one_removal_r212_s3_2 {
     use super::*;
 

@@ -895,7 +895,16 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
         let moves = later.get_or_insert_with(|| {
             crate::stays::moves_in(&events_after_dispatched(&*sink, at), Some(&*sink.state))
         });
-        if moves.moved.contains(&holder.card.id) {
+        // R862: a card the event itself sent toward a graveyard is on the stay that move began, the
+        // report of where it landed being that same move (`stays::stands_where_it_landed`).
+        if moves.moved.contains(&holder.card.id)
+            && !crate::stays::stands_where_it_landed(
+                event,
+                &events_after_dispatched(&*sink, at),
+                &holder.card.id,
+                Some(&*sink.state),
+            )
+        {
             continue;
         }
         // §3.2, R153: nor does the card the event's own removal uncovered in its Stack pile — dormant

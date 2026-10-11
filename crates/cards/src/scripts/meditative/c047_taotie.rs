@@ -151,8 +151,11 @@ mod tests {
                 assert_eq!(s.pile(P2, "library").len(), 1);
                 let after = s.unit(P1, 1).expect("taotie");
                 assert_eq!(after.id, before.id);
-                // 16 + 3 (field) + 3 (deck): both fusions summed their stats (R77).
-                s.expect_stats(&after, json!({ "attack": 22, "health": 24 }));
+                // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
+                // the fusion's radiant form, the sum of the radiant forms: 16 + 6 + 6 attack and
+                // 16 + 9 + 9 health (a Radiant Duplicating Felinors is 6/9).
+                assert!(after.radiant);
+                s.expect_stats(&after, json!({ "attack": 28, "health": 34 }));
             }
         }
     }

@@ -146,7 +146,8 @@ mod tests {
             "p1": { "hand": hand, "field": [{ "def": GIANT, "lane": 1, "radiant": true }] },
             "p2": { "hand": [FILLER] },
         }));
-        step_param(s.card_mut(GIANT), "buff", 2);
+        // One step on `buff`, whose declared step is 2 (catalog `step`, B3.4 rule 5): +10/+10.
+        step_param(s.card_mut(GIANT), "buff", 1);
         s.end_turn();
         s.expect_stats(GIANT, json!({ "attack": 26, "maxHealth": 26 }));
     }

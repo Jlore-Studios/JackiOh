@@ -35,6 +35,7 @@ mod tests {
     const PARTY: &str = "meditative-056";
     const DEFENDER: &str = "core-003";
     const TIMMY: &str = "core-011";
+    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
     const FILLER: &str = "core-005";
 
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
@@ -76,18 +77,34 @@ mod tests {
     #[test]
     fn radiant_the_defenders_are_radiant_and_one_dying_summons_a_base_defender() {
         crate::register_all();
+        // Timmy holds lane 5, so the Party fills lanes 1–4; a Hit Job then clears lane 5, the one
+        // zone a defender's Death can summon into.
         let mut s = scenario(json!({
-            "p1": { "hand": [{ "def": PARTY, "radiant": true }, "core-016", FILLER], "mana": 10 },
+            "p1": {
+                "hand": [{ "def": PARTY, "radiant": true }, HIT_JOB, HIT_JOB, FILLER],
+                "field": [{ "def": TIMMY, "lane": 5 }],
+                "mana": 10,
+            },
             "p2": { "hand": [FILLER] },
         }));
         s.play(PARTY, json!({}));
-        let first = s.unit(PlayerId::P1, 1).expect("a radiant defender");
-        assert_eq!(first.def_id, DEFENDER);
-        assert!(first.radiant);
-        let victim = first.id.clone();
-        s.play("core-016", json!({ "targets": [{ "pick": "instance", "instanceId": victim }] }));
-        let back = s.unit(PlayerId::P1, 1).expect("the replacement defender");
-        assert_eq!(back.def_id, DEFENDER);
-        assert!(!back.radiant);
+        for lane in 1..=4 {
+            let defender = s.unit(PlayerId::P1, lane).expect("a radiant defender");
+            assert_eq!(defender.def_id, DEFENDER);
+            assert!(defender.radiant);
+        }
+        let timmy = s.unit(PlayerId::P1, 5).expect("Timmy").id.clone();
+        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
+        assert!(s.unit(PlayerId::P1, 5).is_none());
+        let victim = s.unit(PlayerId::P1, 1).expect("a radiant defender").id.clone();
+        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": victim }] }));
+        // Reborn brings the Radiant one back into its own zone, held for it (R64, core #3); its
+        // Death summons a base defender into the open lane 5.
+        let reborn = s.unit(PlayerId::P1, 1).expect("the reborn defender");
+        assert_eq!(reborn.id, victim);
+        assert!(reborn.radiant);
+        let summoned = s.unit(PlayerId::P1, 5).expect("the summoned defender");
+        assert_eq!(summoned.def_id, DEFENDER);
+        assert!(!summoned.radiant);
     }
 }

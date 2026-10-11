@@ -92,10 +92,12 @@ mod tests {
     const ECLIPSE: &str = "core-035";
     /// Cast on draw: heals 7, then waits in the graveyard.
     const BOMB: &str = "meditative-030-1";
-    const FILLER: &str = "core-005";
+    /// (3) Field Spell, inert in hand and library. Never Stockpile: the returned Stockpile must be
+    /// the only one in hand, and Stockpile's own draws must not look like it.
+    const FILLER: &str = "core-006";
 
     fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
+        json!(vec![FILLER; count])
     }
 
     fn def_ids(cards: &[CardInstance]) -> Vec<String> {
@@ -192,9 +194,14 @@ mod tests {
                 let defender = s.card(DEFENDER).id.clone();
                 s.play(ECLIPSE, json!({ "targets": [{ "pick": "instance", "instanceId": defender }] }));
                 s.end_turn();
+                // p1's hand is Critikal, the filler and the turn's draw: Critikal leaves it and
+                // nothing comes back.
+                let mut before = def_ids(&s.hand(P1));
+                before.retain(|id| id != CRITIKAL);
                 s.play(CRITIKAL, json!({}));
 
-                assert_eq!(def_ids(&s.hand(P1)), vec![FILLER.to_string()]);
+                assert_eq!(def_ids(&s.hand(P1)), before);
+                assert!(!def_ids(&s.hand(P1)).contains(&DEFENDER.to_string()));
             }
         }
 

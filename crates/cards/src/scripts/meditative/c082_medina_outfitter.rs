@@ -46,10 +46,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Human Unit, no text.
     const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2.
     const MENACE: &str = "core-019"; // Radiant: Immutable.
-    const FILLER: &str = "core-005";
+    /// (3) Field Spell, none of the hand cards above: p2's own hand shows in p2's view, so a filler
+    /// that were Stockpile would put its id there and hide the leak the view check looks for.
+    const FILLER: &str = "core-006";
 
     fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
+        json!(vec![FILLER; count])
     }
 
     fn upgraded_for(events: &[GameEvent], id: &str) -> Vec<GameEvent> {
