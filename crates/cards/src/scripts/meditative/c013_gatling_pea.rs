@@ -179,20 +179,23 @@ mod tests {
             s.end_turn();
             s.expect_health(P2, 29);
             assert_eq!(number(&s, ID, "damage"), 2);
+            // Back to p1's turn, with the mana for the Flood (4) and the replay (2).
+            s.end_turn();
+            s.state_mut().players.p1.mana.current = 10;
             s.play(FLOOD, json!({}));
             s.expect_in_zone(ID, "hand");
             assert_eq!(number(&s, ID, "damage"), 2);
             // The replay shuffles three copies at damage 2 and keeps 2 itself.
             s.play(ID, json!({}));
             assert_eq!(number(&s, ID, "damage"), 2);
-            // Three copies went in; at most the turn's one draw took one out.
+            // Three copies went in, after the turn's draw.
             let grown = s
                 .pile("p1", "library")
                 .into_iter()
                 .filter(|card| card.def_id == ID)
                 .filter(|card| tuned(&s, card, "damage") == 2)
                 .count();
-            assert!(grown >= 2, "the replay's copies keep damage 2, found {grown}");
+            assert_eq!(grown, 3, "the replay's copies keep damage 2, found {grown}");
             s.end_turn();
             s.expect_health(P2, 27);
             assert_eq!(number(&s, ID, "damage"), 3);

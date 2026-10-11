@@ -211,8 +211,10 @@ mod tests {
                 "p2": side(json!({})),
             }));
             // The draw casts the Jelly Bean free (R70): the turn's first card, though never in hand.
+            // Its id is taken first: by its definition the copy in hand would answer.
+            let jelly = s.card(JELLY).id.clone();
             s.start_turn();
-            s.expect_in_zone(JELLY, "graveyard");
+            s.expect_in_zone(&jelly, "graveyard");
             s.expect_health(P1, 25);
             let copies = copies(&s, P1);
             assert_eq!(copies.len(), 1);
@@ -300,7 +302,7 @@ mod tests {
             let mut hand = vec![json!(STOCKPILE)];
             hand.extend([SPARE; 8].iter().map(|id| json!(id)));
             let mut s = scenario(json!({
-                "p1": side(json!({ "hand": hand, "library": [VANILLA, VANILLA, VANILLA] })),
+                "p1": side(json!({ "backrow": [ID], "hand": hand, "library": [VANILLA, VANILLA, VANILLA] })),
                 "p2": side(json!({})),
             }));
             // Nine cards in hand: the play leaves eight, the two draws fill it to ten, and the
