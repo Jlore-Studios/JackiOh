@@ -25,3 +25,19 @@ export const EMOTE_MENU_EDGE_PX = 8;
  */
 export const SAPI_BASELINE_WPM = 180;
 export const FELINORS_ECHO_TAIL_MS = 120;
+
+/** The board portrait's reaction to opening its inspect view: the squash and the glint (R1331). */
+export const PORTRAIT_REACT_MS = 320;
+
+/** How many motes drift over each portrait's oval (R1332). */
+export const PORTRAIT_MOTE_COUNT = 6;
+/** One mote's drift, from rising out of the oval's lower half to fading at its top (R1332). */
+export const PORTRAIT_MOTE_DRIFT_MS = 6000;
+/** One breath of a portrait's light, dim to bright (R1332). */
+export const PORTRAIT_BREATH_MS = 4200;
+/** A mote starts at least this many percent of the oval inside its edge, on each axis (R1332). */
+export const PORTRAIT_MOTE_EDGE_PCT = 14;
+/** The smallest mote, in percent of the oval's width (R1332). */
+export const PORTRAIT_MOTE_MIN_PCT = 5;
+/** The largest mote, in percent of the oval's width (R1332). */
+export const PORTRAIT_MOTE_MAX_PCT = 10;

@@ -20,6 +20,12 @@
 # rustup only where there is none; a shell that installed it in an earlier step but never re-read
 # its profile is covered by sourcing ~/.cargo/env below.
 
+# JACKIOH_WASM_PREVIEW: 1 (the default) builds the module with crates/wasm's `preview` feature, R1420's
+# `previewSets` (the engine's testkit), which the hotseat route's E2E injection uses to play a set
+# before it ships (#552); 0 builds it without, as apps/web's `prebuild` does for the production
+# bundle, so a module a player loads can preview nothing. Cargo keeps both builds, so switching costs
+# one compile each the first time only.
+
 set -eu
 
 WASM_BINDGEN_VERSION="0.2.129"
@@ -82,7 +88,14 @@ if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
   fi
 fi
 
-cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
+case "${JACKIOH_WASM_PREVIEW:-1}" in
+  1) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features preview ;;
+  0) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
+    exit 1
+    ;;
+esac
 mkdir -p "$OUT_DIR"
 "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
 echo "build-wasm: wrote $OUT_DIR"

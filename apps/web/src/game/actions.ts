@@ -51,10 +51,12 @@ import type {
   PendingView,
   PlayerId,
   PlayerView,
+  RevealAt,
   Row,
   Selection,
   ZoneChoice,
 } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 
 import {
   LANES,
@@ -82,16 +84,26 @@ export type PlagueSpend = NonNullable<PlayBody["plague"]>;
 /** A plague payment as the player picks it: tokens off a card, or none (the whole price in mana). */
 export type PlagueChoice = PlagueSpend | "none";
 
+/**
+ * ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or face-down as a Trap revealing
+ * at the chosen timing.
+ */
+export type FaceDownChoice = RevealAt | "up";
+
 /** The R81 play-time choices (and an activation's), as the client accumulates them. */
 export type PlayBuild = {
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
+  /** R1086: a Magnetic play onto the zone's host Unit. */
+  magnetic?: boolean;
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
   /** B5 E11, E19: how a graveyard play's price is paid in Plague Counters. */
   plague?: PlagueChoice;
+  /** ME-ALTPLAY: face-up, or the reveal timing it is set with. */
+  faceDown?: FaceDownChoice;
 };
 
 type Playing = { stage: "playing"; instanceId: string; candidates: ActionBody[]; picked: Partial<PlayBuild> };
@@ -121,9 +133,11 @@ export function isBuilding(interaction: Interaction): interaction is Building {
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
+  | { kind: "faceDown"; min: number; max: number; options: FaceDownChoice[] }
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
   | { kind: "embiggen"; min: number; max: number; values: boolean[] }
+  | { kind: "magnetic"; min: number; max: number; values: boolean[] }
   | { kind: "plague"; min: number; max: number; options: PlagueChoice[] }
   | { kind: "tribute"; min: number; max: number; instanceIds: string[] }
   | { kind: "target"; min: number; max: number; selections: Selection[] }
@@ -157,6 +171,8 @@ export function selectionKey(selection: Selection): string {
       return `zone:${selection.player}:${selection.row}:${selection.lane}`;
     case "mode":
       return `mode:${selection.option}`;
+    case "craft":
+      return `craft:${JSON.stringify(selection.recipe)}`;
     case "none":
       return "none";
   }
@@ -257,6 +273,7 @@ export function selectionTestid(view: PlayerView, selection: Selection): string 
     case "zone":
       return testid.zone(sideOf(view, selection.player), selection.row, selection.lane);
     case "mode":
+    case "craft":
     case "none":
       return null;
   }
@@ -322,10 +339,13 @@ type BuildFields = {
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
+  magnetic?: boolean;
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
   plague?: PlagueSpend;
+  /** ME-ALTPLAY: the reveal timing a set play carries, absent face-up. */
+  faceDown?: RevealAt;
 };
 
 function fieldsOf(body: BuildBody): BuildFields {
@@ -344,15 +364,25 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
  */
 function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   const fixed = fieldsOf(candidate);
-  if (picked.zone !== undefined && fixed.zone !== undefined) {
-    if (zoneKey(fixed.zone) !== zoneKey(picked.zone)) return false;
+  // ME-ALTPLAY: face-up is the absence of a timing, compared strictly.
+  if (picked.faceDown !== undefined && (fixed.faceDown ?? "up") !== picked.faceDown) return false;
+  // A picked zone excludes a candidate that fixes none: a board click never carries through.
+  if (picked.zone !== undefined) {
+    if (fixed.zone === undefined || zoneKey(fixed.zone) !== zoneKey(picked.zone)) return false;
   }
   if (picked.x !== undefined && fixed.x !== undefined && fixed.x !== picked.x) return false;
   if (picked.embiggen !== undefined && fixed.embiggen !== undefined && fixed.embiggen !== picked.embiggen) {
     return false;
   }
+  // R1086: a picked Magnetic answer keeps only the plays that fuse, and a plain answer only those
+  // that do not. A play with `magnetic: false` is a plain play.
+  if (picked.magnetic !== undefined && (fixed.magnetic === true) !== picked.magnetic) return false;
   if (picked.tributes !== undefined && fixed.tributes !== undefined) {
     if (!containsAll(fixed.tributes, picked.tributes)) return false;
+  }
+  // ME-ALTPLAY: a set play declares nothing, so a picked target or mode drops it.
+  if (fixed.faceDown !== undefined && (picked.targets !== undefined || picked.modes !== undefined)) {
+    return false;
   }
   if (picked.targets !== undefined && fixed.targets !== undefined) {
     if (!containsAll(fixed.targets.map(selectionKey), picked.targets.map(selectionKey))) return false;
@@ -381,12 +411,15 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
     case "play": {
       const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
       const body: PlayBody = { ...rest };
-      const zone = candidate.zone ?? picked.zone;
+      // ME-ALTPLAY: a picked zone is never added to a candidate that fixes none.
+      const zone = candidate.zone;
       const x = candidate.x ?? picked.x;
       const embiggen = candidate.embiggen ?? picked.embiggen;
+      const magnetic = candidate.magnetic ?? picked.magnetic;
       if (zone !== undefined) body.zone = zone;
       if (x !== undefined) body.x = x;
       if (embiggen !== undefined) body.embiggen = embiggen;
+      if (magnetic !== undefined) body.magnetic = magnetic;
       if (tributes !== undefined) body.tributes = tributes;
       if (targets !== undefined) body.targets = targets;
       if (modes !== undefined) body.modes = modes;
@@ -434,6 +467,16 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
   const fields = remaining.map(fieldsOf);
+
+  // ME-ALTPLAY: how it is played is asked before anything else, face-up first.
+  if (interaction.picked.faceDown === undefined) {
+    const options = distinctBy(
+      fields.map((c): FaceDownChoice => c.faceDown ?? "up"),
+      (choice) => choice,
+    );
+    options.sort((a, b) => (a === "up" ? -1 : b === "up" ? 1 : 0));
+    if (options.length > 1) return { kind: "faceDown", min: 1, max: 1, options };
+  }
 
   if (interaction.picked.x === undefined) {
     const values = [...new Set(fields.flatMap((c) => (c.x === undefined ? [] : [c.x])))].sort((a, b) => a - b);
@@ -522,6 +565,15 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
     zoneKey,
   );
   if (zones.length > 1) return { kind: "zone", min: 1, max: 1, zones };
+
+  // R1086: one zone with both a plain and a Magnetic play asks which — Magnetic first.
+  if (interaction.picked.magnetic === undefined) {
+    const values = [...new Set(fields.map((c) => c.magnetic === true))];
+    if (values.length > 1) {
+      values.sort((a, b) => Number(b) - Number(a));
+      return { kind: "magnetic", min: 1, max: 1, values };
+    }
+  }
 
   return null;
 }
@@ -720,7 +772,17 @@ export function highlightFor(
       legalIds.add(where);
       glow.add(where);
     }
-    return { legal: legalIds, selected, glow: withinLegal(glow, legalIds) };
+    // MD-D5, R1121: the attacker's `conditionTargets` inside the glow read yellow too — the drag
+    // layer paints them while the attack is dragged or selected. Anything outside the glow is a
+    // target the modifier would not apply to, so it stays green-or-dark as the engine listed it.
+    const attacker = view.you.units.find((unit) => unit?.instanceId === interaction.attackerId);
+    const condition = new Set<string>();
+    for (const id of attacker?.conditionTargets ?? []) {
+      const where = testid.card(id);
+      if (glow.has(where)) condition.add(where);
+    }
+    const kept = withinLegal(glow, legalIds);
+    return { legal: legalIds, selected, glow: kept, condition: withinLegal(condition, kept) };
   }
 
   let canAct = false;
@@ -893,6 +955,9 @@ export function onClickTarget(
       }
       const candidates = attacksBy(legal, target.instanceId);
       if (candidates.length === 0) return { interaction };
+      // R1200: while a Mayor acts the attack names no target, so the click sends it at once.
+      const only = candidates.length === 1 ? candidates[0] : undefined;
+      if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
       return { interaction: { stage: "attacking", attackerId: target.instanceId, candidates } };
     }
 
@@ -946,7 +1011,7 @@ export function onControl(legal: readonly ActionBody[], control: BoardControl): 
 // ---------------------------------------------------------------------------------------------
 
 /** The `<pick>:` prefixes the engine puts on an option key (`crates/engine/src/effects/choose.rs`). */
-const KEY_PREFIXES = ["instance:", "hero:", "zone:", "mode:"] as const;
+const KEY_PREFIXES = ["instance:", "hero:", "zone:", "mode:", "craft:"] as const;
 
 function withoutPickPrefix(key: string): string {
   for (const prefix of KEY_PREFIXES) if (key.startsWith(prefix)) return key.slice(prefix.length);
@@ -964,6 +1029,8 @@ function withoutPickPrefix(key: string): string {
  * the `Selection` verbatim in `PendingOption` would delete this function.
  */
 export function selectionForOption(option: PendingOption): Selection {
+  // ME-CRAFT (Meditative #17, R880): a craft preset carries its recipe; nothing else sets it.
+  if (option.recipe !== undefined) return { pick: "craft", recipe: option.recipe };
   if (option.row !== undefined && option.lane !== undefined && option.player !== undefined) {
     return { pick: "zone", player: option.player, row: option.row, lane: option.lane };
   }

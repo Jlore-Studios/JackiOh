@@ -168,10 +168,12 @@ fn backrow_hidden_from(state: &GameState, card: &CardInstance, seat: PlayerId) -
     if card.controller == seat || card.face_up == Some(true) {
         return false;
     }
-    let Some(def) = find_def(Some(state), &card.def_id) else {
+    let Some(_def) = find_def(Some(state), &card.def_id) else {
         return true;
     };
-    def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap
+    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
+    let face = jackioh_engine::faces::card_type_of(state, card);
+    face == CardType::Trap || face == CardType::FieldTrap
 }
 
 /// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every
@@ -252,6 +254,12 @@ fn to_placeholder(card: &mut CardInstance) {
     card.memory = Default::default();
     card.counters = Counters::default();
     card.granted_keywords = Vec::new();
+    // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+    card.granted_tags = None;
+    // ME-ALTPLAY, R1046: a placeholder names no face-down form.
+    card.set_as = None;
+    // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
+    card.created = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -295,6 +303,12 @@ fn to_placeholder_json(card: &mut Value) {
         "tuning",
         "brittle",
         "enchantments",
+        // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+        "grantedTags",
+        // ME-ALTPLAY, R1046: a placeholder names no face-down form.
+        "setAs",
+        // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
+        "created",
     ] {
         object.remove(key);
     }
@@ -426,6 +440,15 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
     next.opening = None;
     next.glitch_boards = None;
+    // R865: the opponent's unrevealed secret choices are no seat's to read either — the seat's own
+    // stay, and a revealed choice is public history both seats watched happen.
+    if let Some(secrets) = next.secrets.as_mut() {
+        for secret in secrets.iter_mut() {
+            if secret.owner == opp && secret.revealed != Some(true) {
+                secret.choice = None;
+            }
+        }
+    }
 
     // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
     // to both players, so its placeholder keeps that number as its price, and whatever trap
@@ -472,6 +495,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
+        // R865: an in-flight play of a `secret_modes` card carries its modes in the run the queue
+        // holds; the other seat reads none of them.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
 
     let mut cursor = next.work_cursor as i64;
@@ -486,6 +512,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         scrub_resume(&mut item.resume, &hidden);
         scrub_owed_mulligan(&mut item.resume, opp);
         without_answer_key(&mut item.resume);
+        // R865: as above, for the owed play the work queue holds.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut item.resume, seat);
         kept_work.push(item);
     }
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
@@ -498,6 +526,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     for entry in next.delayed.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
+        // R865: as above, for a delayed continuation.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
     for entry in next.dispatch.iter_mut() {
         entry.event = scrub_event(&entry.event, &hidden);
@@ -505,6 +535,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     if let Some(pending) = next.pending.as_mut() {
         scrub_resume(&mut pending.resume, &hidden);
         without_answer_key(&mut pending.resume);
+        // R865: as above, for the open prompt's continuation.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut pending.resume, seat);
     }
 
     // Step 6: a transient definition only a hidden card uses would name that card.

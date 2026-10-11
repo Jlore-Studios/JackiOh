@@ -40,11 +40,12 @@ use serde_json::Value;
 
 use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
+use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{
     ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, PlagueSpend, PlayerId,
-    PromptKind, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
+    PromptKind, RevealAt, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::ZoneSlot;
 
@@ -62,12 +63,16 @@ pub struct PlayAction {
     pub zone: Option<ZoneChoice>,
     pub x: Option<i32>,
     pub embiggen: Option<bool>,
+    /// R1086: play this Magnetic card onto the zone's host Unit (ME-MAGNETIC).
+    pub magnetic: Option<bool>,
     /// Units sacrificed to pay a Tribute cost (§6.3).
     pub tributes: Option<Vec<String>>,
     pub targets: Option<Vec<Selection>>,
     pub modes: Option<Vec<String>>,
     /// B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard.
     pub plague: Option<PlagueSpend>,
+    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    pub face_down: Option<RevealAt>,
 }
 
 impl PlayAction {
@@ -89,10 +94,12 @@ impl From<PlayAction> for ActionBody {
             zone: action.zone,
             x: action.x,
             embiggen: action.embiggen,
+            magnetic: action.magnetic,
             tributes: action.tributes,
             targets: action.targets,
             modes: action.modes,
             plague: action.plague,
+            face_down: action.face_down,
         }
     }
 }
@@ -107,19 +114,23 @@ impl TryFrom<ActionBody> for PlayAction {
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,
                 plague,
+                face_down,
             } => Ok(PlayAction {
                 instance_id,
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,
                 plague,
+                face_down,
             }),
             other => Err(format!("not a play action: {}", other.action_type())),
         }
@@ -282,7 +293,8 @@ pub fn resolving_face(
 /// controller's (§8 Conventions), a Vanilla one has none (`flags_of`), and it never catches its own
 /// play: step 3 runs before step 4 puts it on the field (R119).
 pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    let tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
+    // MD-B15, R923: a granted tag counts for the play's tags too.
+    let tags: Vec<Tag> = crate::query::tags_of(state, card);
     if tags.is_empty() {
         return false;
     }
@@ -298,10 +310,13 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
 }
 
 /// §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
-/// card (R213) or a tag rule's (Classic+ #68). Step 1 reads it to know the face the play's choices
-/// answer (R214), and step 3 applies it.
+/// card (R213), a tag rule's (Classic+ #68), or Meditative #40 Feng Shui's reward for an auspicious
+/// play (R983). Step 1 reads it to know the face the play's choices answer (R214), and step 3
+/// applies it.
 pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> bool {
-    gifted_makes_radiant(state, player, cost_paid) || tagged_play_radiant(state, player, card)
+    gifted_makes_radiant(state, player, cost_paid)
+        || tagged_play_radiant(state, player, card)
+        || crate::subsystems::feng_shui::rewards(state, player, card)
 }
 
 /// What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as
@@ -354,6 +369,10 @@ pub fn needs_zone(state: &GameState, card: &CardInstance) -> bool {
 /// ones an aura gives the cards in a hand (a "Your cards have Stack" aura). A backrow
 /// card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
 pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
+    // ME-ALTPLAY: a face-down play goes into an open backrow zone, never onto a Stack.
+    if card.set_as.is_some() {
+        return false;
+    }
     if !needs_zone(state, card) {
         return false;
     }
@@ -366,6 +385,75 @@ pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
 /// (R64) — and a backrow zone carrying a Unit takes nothing more (R446). `zones::accepts_stack_card`.
 fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
+}
+
+/// MD-F12, R1281: whether this Unit may be played onto a stack base.
+fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slot: &ZoneSlot) -> bool {
+    card.set_as.is_none()
+        && row_for_card(state, card) == Row::Units
+        && crate::zones::stack_base_at(state, player, slot)
+}
+
+/// R1086 (ME-MAGNETIC): whether this card may be played as Magnetic — a Unit with the Magnetic
+/// keyword that needs a zone. Read off the card's keywords as they stand where it is (§10.4), as
+/// `plays_on_stack` is.
+pub fn plays_magnetic(state: &GameState, card: &CardInstance) -> bool {
+    if !needs_zone(state, card) {
+        return false;
+    }
+    if row_for_card(state, card) != Row::Units {
+        return false;
+    }
+    crate::layers::unit_has(state, card, KeywordKind::Magnetic)
+}
+
+/// R1086: the host a Magnetic play onto `slot` fuses into — the top card of the zone when it is a
+/// Unit its controller acts with that is not Immutable (R23), and not one this same play tributes.
+/// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
+pub fn magnetic_host_at(
+    state: &GameState,
+    player: PlayerId,
+    slot: &ZoneSlot,
+    tributes: &[String],
+) -> Option<String> {
+    if !crate::zones::accepts_stack_card(state, slot, Default::default()) {
+        return None;
+    }
+    let top = crate::zones::card_at(state, slot)?;
+    if crate::faces::card_type_of(state, top) != CardType::Unit {
+        return None;
+    }
+    if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+        return None;
+    }
+    if top.controller != player {
+        return None;
+    }
+    if tributes.contains(&top.id) {
+        return None;
+    }
+    Some(top.id.clone())
+}
+
+/// R1086: the unit-row zones that hold a host for a Magnetic play, in lane order. Empty unless the
+/// card plays Magnetic at all.
+pub fn legal_magnetic_zones_for(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    tributes: &[String],
+) -> Vec<ZoneChoice> {
+    if !plays_magnetic(state, card) {
+        return Vec::new();
+    }
+    crate::zones::slots_of(player, Row::Units)
+        .iter()
+        .filter(|slot| magnetic_host_at(state, player, slot, tributes).is_some())
+        .map(|slot| ZoneChoice {
+            row: slot.row,
+            lane: slot.lane,
+        })
+        .collect()
 }
 
 /// §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
@@ -393,7 +481,9 @@ pub fn legal_zones_for(
             if stack {
                 accepts_stack(state, slot)
             } else {
-                crate::zones::is_open(state, slot) || freed_by_tribute(state, slot, tributes)
+                crate::zones::is_open(state, slot)
+                    || freed_by_tribute(state, slot, tributes)
+                    || onto_stack_base(state, player, card, slot)
             }
         })
         .collect();
@@ -489,7 +579,8 @@ pub fn why_x_refused(
     value: i32,
     most: Option<i32>,
 ) -> Result<(), EngineError> {
-    let mana = state.players[player].mana.current;
+    // R1223: an X may be chosen out of borrowed mana too.
+    let mana = crate::credit::spendable_mana(state, player);
     let most = most.unwrap_or(mana);
     // TS also refused an X that is not a whole number ("X must be a whole number"); an `i32` always is.
     if value < 0 {
@@ -511,7 +602,8 @@ pub fn why_x_refused(
 /// The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
 /// copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
-    let mana = state.players[player].mana.current;
+    // R1223: an X may be chosen out of borrowed mana too.
+    let mana = crate::credit::spendable_mana(state, player);
     if !crate::subsystems::copied_text::copies_text(card) {
         return mana;
     }
@@ -599,7 +691,8 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
     }
 }
 
-/// §6.3: your own units, plus the enemy's for a card that says so (#55). Dormant cards never.
+/// §6.3, R1282: your own units, plus the enemy's for a card that says so (#55), plus cheap permanents
+/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Dormant cards never.
 pub fn legal_tribute_units<'a>(
     state: &'a GameState,
     player: PlayerId,
@@ -613,8 +706,36 @@ pub fn legal_tribute_units<'a>(
     let mut out: Vec<&'a CardInstance> = Vec::new();
     for side in sides {
         for unit in crate::zones::active_units_of(state, side) {
-            if unit.id != card.id {
+            // R1220: no Tribute cost may take an Untributable card.
+            if unit.id != card.id && !crate::query::is_untributable(state, unit) {
                 out.push(unit);
+            }
+        }
+    }
+    // R1282's wide Tribute; R1220: never an Untributable card here either.
+    if let Some(printed) = crate::scripts::script_of(state, card).flags().tribute_cheap {
+        let cheap = crate::params::declared_or(state, card, "cheap", printed);
+        for side in [player, opponent_of(player)] {
+            if side == opponent_of(player) {
+                for unit in crate::zones::active_units_of(state, side) {
+                    if unit.id != card.id
+                        && !out.iter().any(|c| c.id == unit.id)
+                        && !crate::query::is_untributable(state, unit)
+                        && crate::mana::cost_now(state, unit) <= cheap
+                    {
+                        out.push(unit);
+                    }
+                }
+            }
+            for slot in crate::zones::slots_of(side, Row::Backrow) {
+                if let Some(c) = crate::zones::card_at(state, slot)
+                    && c.id != card.id
+                    && !out.iter().any(|existing| existing.id == c.id)
+                    && !crate::query::is_untributable(state, c)
+                    && crate::mana::cost_now(state, c) <= cheap
+                {
+                    out.push(c);
+                }
             }
         }
     }
@@ -628,13 +749,13 @@ fn tribute_total(state: &GameState, units: &[&CardInstance]) -> i32 {
 /// Every set of units that pays the Tribute exactly: enough to meet the cost, and minimal, so no unit
 /// in the set could be dropped and still pay it. The Sheep Token's 2 is why a set may overshoot.
 ///
-/// R90: every one of them, with no cut. The Tribute is what the play costs, and a set left off the
+/// R90, R1282: every one of them, with no cut. The Tribute is what the play costs, and a set left off the
 /// list is a price the player can never pay: the client builds a play only out of the plays
 /// `legal_actions` lists (CLAUDE.md rule 7), and the §10.7 policy draws from the same list. Cut at
 /// `MAX_CHOICE_COMBINATIONS` with the player's own units first, a Lava Golem beside four of its own
 /// units and five enemy ones was never offered #55's defining play, three enemy units (R101). The
 /// count is the board's to bound: at most ten units stand, so Core's largest Tribute, #55's 3, has at
-/// most 120 minimal sets.
+/// most 120 minimal sets; a wide Tribute (R1282) on a full board can have C(20,5) = 15,504 sets.
 pub fn legal_tribute_sets(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Vec<String>> {
     let need = tribute_cost_of(state, card);
     if need == 0 {
@@ -688,6 +809,8 @@ fn selection_key(selection: &Selection) -> String {
         Selection::Hero { player } => format!("hero:{player}"),
         Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
         Selection::Mode { option } => format!("mode:{option}"),
+        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
         Selection::None => "none".to_string(),
     }
 }
@@ -767,8 +890,22 @@ fn card_allowed(
     if filter.and_then(|filter| filter.exclude_self) == Some(true) && held.id == self_.id {
         return false;
     }
-    let tags: Vec<Tag> = crate::catalog::def_of(Some(state), &held.def_id).tags.clone();
-    if !type_allows(filter, crate::faces::card_type_of(state, held)) || !tags_allow(filter, &tags) {
+    // MD-B15, R923: a granted tag is part of the card for a declaration too. MD-B16, R924: a
+    // face-down backrow card its chooser cannot read is a legal pick whatever its tags, so the
+    // picks reveal nothing — no shipped declaration filters the backrow by tag, so only the tag
+    // check is skipped for one.
+    let tags: Vec<Tag> = crate::query::tags_of(state, held);
+    let unreadable_backrow = matches!(
+        held.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && crate::preview::is_face_down(state, held)
+        && held.controller != player;
+    if !type_allows(filter, crate::faces::card_type_of(state, held))
+        || (!unreadable_backrow && !tags_allow(filter, &tags))
+    {
         return false;
     }
     // §10.6, B5: the v0.2.0 filter fields. The cost is R65's where the card is now (a hand card at its
@@ -863,10 +1000,21 @@ fn reachable(
     candidate: &CardInstance,
 ) -> bool {
     if decl.kind == PromptKind::Tribute {
-        return true;
+        // R1220: a declared Tribute never offers an Untributable card.
+        return !crate::query::is_untributable(state, candidate);
     }
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
+    }
+    // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
+    if crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm {
+        let (tags, not_tags) = match decl.filter.as_ref() {
+            Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+            None => (None, None),
+        };
+        if crate::restrictions::tribal_hate_cannot_reach(state, candidate, tags, not_tags) {
+            return false;
+        }
     }
     decl.kind != PromptKind::Target
         || crate::targeting::can_pay_to_target(state, player, candidate, Some(card.id.as_str()))
@@ -1083,6 +1231,15 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
+        // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
+        && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
+            && {
+                let (tags, not_tags) = match decl.filter.as_ref() {
+                    Some(filter) => (filter.tags.as_deref(), filter.not_tags.as_deref()),
+                    None => (None, None),
+                };
+                crate::restrictions::tribal_hate_cannot_reach(state, &probe, tags, not_tags)
+            })
 }
 
 // ---------------------------------------------------------------------------
@@ -1099,7 +1256,7 @@ fn take_for(decl: &TargetDecl, offered: usize) -> usize {
 
 /// R703: a declaration the play needs (`required`) that the board cannot satisfy. The play is then
 /// neither offered (`subsets_for`) nor accepted (`refuse_targets`), instead of fizzling as R90 has it.
-fn unmet_requirement(decl: &TargetDecl, offered: usize) -> bool {
+pub(crate) fn unmet_requirement(decl: &TargetDecl, offered: usize) -> bool {
     decl.required == Some(true) && (offered as i64) < i64::from(decl.min)
 }
 
@@ -1530,14 +1687,82 @@ pub fn play_choice_combinations(
 /// Every `play` action this card could legally produce: R81's five choice kinds crossed, skipping the
 /// prices the player cannot pay. This is what `legal_actions` lists for a card in hand.
 pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
-    let mana = state.players[player].mana.current;
-    priced_play_actions(state, player, card, |cost| {
+    // R1223: a card affordable on borrowed mana is listed.
+    let mana = crate::credit::spendable_mana(state, player);
+    let mut out = priced_play_actions(state, player, card, |cost| {
         if cost <= mana {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
         }
-    })
+    });
+    out.extend(face_down_play_actions(state, player, card, false, |cost| {
+        if cost <= mana {
+            vec![PlayPayment::default()]
+        } else {
+            Vec::new()
+        }
+    }));
+    out
+}
+
+/// ME-ALTPLAY, R1040, R1044: every face-down `play` this card could legally produce — one per timing,
+/// price, payment, tribute set and open backrow zone. No targets or modes are declared when set.
+fn face_down_play_actions(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    from_graveyard: bool,
+    payments: impl Fn(i32) -> Vec<PlayPayment>,
+) -> Vec<PlayAction> {
+    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PlayAction> = Vec::new();
+    for reveal in crate::alt_play::timings(kind) {
+        let probe = CardInstance {
+            set_as: Some(crate::state::SetAs {
+                reveal,
+                set_turn: state.turn,
+                echo: None,
+                revealing: None,
+            }),
+            ..card.clone()
+        };
+        for price in play_prices(state, player, &probe) {
+            let paid = payments(price.cost);
+            if paid.is_empty() {
+                continue;
+            }
+            let tribute_sets: Vec<Vec<String>> = match kind {
+                crate::alt_play::SetKind::Unit => legal_tribute_sets(state, player, &probe),
+                crate::alt_play::SetKind::Spell => vec![Vec::new()],
+            };
+            for tributes in &tribute_sets {
+                for zone in crate::alt_play::open_backrow_zones(state, player) {
+                    for payment in &paid {
+                        out.push(PlayAction {
+                            instance_id: card.id.clone(),
+                            zone: Some(zone),
+                            x: price.x,
+                            embiggen: price.embiggen,
+                            magnetic: None,
+                            tributes: if tributes.is_empty() {
+                                None
+                            } else {
+                                Some(tributes.clone())
+                            },
+                            targets: None,
+                            modes: None,
+                            plague: payment.plague.clone(),
+                            face_down: Some(reveal),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    out
 }
 
 /// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard — R81's
@@ -1551,9 +1776,13 @@ pub fn graveyard_play_actions_for(
     if !crate::graveyard_play::playable_from_graveyard(state, card) || card.zone.player() != player {
         return Vec::new();
     }
-    priced_play_actions(state, player, card, |price| {
+    let mut out = priced_play_actions(state, player, card, |price| {
         crate::graveyard_play::graveyard_payments_for(state, player, card, price)
-    })
+    });
+    out.extend(face_down_play_actions(state, player, card, true, |price| {
+        crate::graveyard_play::graveyard_payments_for(state, player, card, price)
+    }));
+    out
 }
 
 /// One price a card's X and embiggen choices come to now (R65): the choices, the probe stamped with
@@ -1618,6 +1847,107 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
         .collect()
 }
 
+/// R1200 (ME-RANDOMTARGETS): the face §10.5 step 1 reads a play's choices against — the one
+/// `why_choices_refused` computes (`resolving_face` with the action's own prices).
+pub fn face_for_action(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    action: &PlayAction,
+) -> CardInstance {
+    resolving_face(
+        state,
+        player,
+        card,
+        cost_with(state, card, action.x, action.embiggen),
+    )
+}
+
+/// R1200 (ME-RANDOMTARGETS): a play's picks with every `target` declaration's slice left out —
+/// what `legal_actions` offers while a Mayor acts, so the client asks for no target. The slices
+/// are `split_selections`' own, so the draw below inverts them exactly. An empty remainder is
+/// `None`, the same as no picks at all.
+pub fn without_target_picks(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    decls: &[TargetDecl],
+    targets: &[Selection],
+    modes: &[String],
+) -> Option<Vec<Selection>> {
+    let active = active_target_decls(decls, modes);
+    let offered: Vec<Vec<Selection>> = active
+        .iter()
+        .map(|decl| legal_selections_for(state, player, card, decl))
+        .collect();
+    let kept: Vec<Selection> = split_selections(&active, &offered, targets)
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| active[*index].kind != PromptKind::Target)
+        .flat_map(|(_, slice)| slice)
+        .collect();
+    if kept.is_empty() { None } else { Some(kept) }
+}
+
+/// R1200 (ME-RANDOMTARGETS): rebuild a stripped play's full target list, drawing each `target`
+/// declaration's picks at random (`random_targets::draw_picks`) with `subsets_for`'s own bounds —
+/// `take_for` picks off the list for every declaration but the last, which takes the rest — so the
+/// full list splits again exactly as `legal_actions` split it. Any other declaration takes its
+/// slice of the picks the action carried. Picks left over refuse the play: a named target is no
+/// play while a Mayor acts.
+pub fn with_drawn_target_picks(
+    state: &GameState,
+    rng: &mut Rng,
+    player: PlayerId,
+    card: &CardInstance,
+    decls: &[TargetDecl],
+    given: &[Selection],
+    modes: &[String],
+) -> Result<Vec<Selection>, EngineError> {
+    let active = active_target_decls(decls, modes);
+    let offered: Vec<Vec<Selection>> = active
+        .iter()
+        .map(|decl| legal_selections_for(state, player, card, decl))
+        .collect();
+    let mut out: Vec<Selection> = Vec::new();
+    let mut at = 0usize;
+    for (index, decl) in active.iter().enumerate() {
+        let is_last = index + 1 == active.len();
+        if decl.kind == PromptKind::Target {
+            let options = &offered[index];
+            let low = take_for(decl, options.len()) as i32;
+            let high = if is_last {
+                at_most(decl.max, options.len()) as i32
+            } else {
+                low
+            };
+            out.extend(crate::random_targets::draw_picks(
+                state,
+                rng,
+                player,
+                options,
+                low,
+                high,
+                crate::targeting::target_aim(decl),
+            ));
+            continue;
+        }
+        let rest = &given[at.min(given.len())..];
+        if is_last {
+            out.extend_from_slice(rest);
+            at = given.len();
+            continue;
+        }
+        let take = take_for(decl, offered[index].len()).min(rest.len());
+        out.extend_from_slice(&rest[..take]);
+        at += take;
+    }
+    if at != given.len() {
+        return Err(EngineError::new("targets are drawn at random while a Mayor acts"));
+    }
+    Ok(out)
+}
+
 /// R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
 /// choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
 /// `{}` for a price paid in mana alone. A hand card pays in mana (`play_actions_for`); a card a permission
@@ -1647,15 +1977,24 @@ pub fn priced_play_actions(
         let face = resolving_face(state, player, card, cost);
         let bound = declares_bound_tribute(state, &face);
         for tributes in &tribute_sets {
-            let zones: Vec<Option<ZoneChoice>> = if needs_zone(state, card) {
-                legal_zones_for(state, player, card, tributes)
-                    .into_iter()
-                    .map(Some)
-                    .collect()
+            // R1086: the plain zones first, then the Magnetic host zones after them (D14: a game that
+            // never plays Magnetic lists what it listed before).
+            let zones: Vec<(Option<ZoneChoice>, Option<bool>)> = if needs_zone(state, card) {
+                let mut paired: Vec<(Option<ZoneChoice>, Option<bool>)> =
+                    legal_zones_for(state, player, card, tributes)
+                        .into_iter()
+                        .map(|zone| (Some(zone), None))
+                        .collect();
+                paired.extend(
+                    legal_magnetic_zones_for(state, player, card, tributes)
+                        .into_iter()
+                        .map(|zone| (Some(zone), Some(true))),
+                );
+                paired
             } else {
-                vec![None]
+                vec![(None, None)]
             };
-            for zone in &zones {
+            for (zone, magnetic) in &zones {
                 for choices in play_choice_combinations(state, player, &face, None) {
                     let targets: &[Selection] = choices.targets.as_deref().unwrap_or(&[]);
                     let modes: &[String] = choices.modes.as_deref().unwrap_or(&[]);
@@ -1677,11 +2016,12 @@ pub fn priced_play_actions(
                         continue;
                     }
                     for payment in &paid {
-                        out.push(PlayAction {
+                        let mut pushed = PlayAction {
                             instance_id: card.id.clone(),
                             zone: *zone,
                             x,
                             embiggen,
+                            magnetic: *magnetic,
                             tributes: if tributes.is_empty() {
                                 None
                             } else {
@@ -1690,7 +2030,25 @@ pub fn priced_play_actions(
                             targets: choices.targets.clone(),
                             modes: choices.modes.clone(),
                             plague: payment.plague.clone(),
-                        });
+                            face_down: None,
+                        };
+                        // R1200: while a Mayor acts the play carries no declared targets — the
+                        // reducer draws them — so collapsed choices list one action, not one per
+                        // target set.
+                        if crate::random_targets::targets_random(state) {
+                            pushed.targets = without_target_picks(
+                                state,
+                                player,
+                                &face,
+                                &declared_targets(state, &face),
+                                targets,
+                                modes,
+                            );
+                            if out.contains(&pushed) {
+                                continue;
+                            }
+                        }
+                        out.push(pushed);
                     }
                 }
             }
@@ -1713,6 +2071,40 @@ fn plural(count: i32, one: &str) -> String {
 
 fn refuse(message: String) -> Result<(), EngineError> {
     Err(EngineError::new(message))
+}
+
+/// R1086: the refusal for a Magnetic play. A play with `magnetic: false` is a plain play. The
+/// card must play Magnetic at all, the zone must name a unit-row lane in range, and that zone must
+/// hold a host — read off `magnetic_host_at`, the same function the listing uses.
+fn refuse_magnetic(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    zone: Option<&ZoneChoice>,
+    tributes: &[String],
+) -> Result<(), EngineError> {
+    let name = name_of(state, &card.def_id);
+    if !plays_magnetic(state, card) {
+        return refuse(format!("{name} is not Magnetic"));
+    }
+    let Some(zone) = zone else {
+        return refuse(format!("{name} played as Magnetic takes a zone"));
+    };
+    if zone.row != Row::Units {
+        return refuse(format!("{name} played as Magnetic goes in the units row"));
+    }
+    if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
+        return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
+    }
+    let slot = crate::zones::ZoneSlot {
+        player,
+        row: zone.row,
+        lane: zone.lane,
+    };
+    if magnetic_host_at(state, player, &slot, tributes).is_none() {
+        return refuse(format!("that units zone holds no Unit for {name}"));
+    }
+    Ok(())
 }
 
 fn refuse_zone(
@@ -1778,7 +2170,9 @@ fn refuse_zone(
     let takes_it = if plays_on_stack(state, card) {
         accepts_stack(state, &slot)
     } else {
-        crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes)
+        crate::zones::is_open(state, slot)
+            || freed_by_tribute(state, &slot, tributes)
+            || onto_stack_base(state, player, card, &slot)
     };
     if !takes_it {
         return refuse(format!("that {row} zone is not open"));
@@ -2005,6 +2399,64 @@ fn refuse_modes(
     Ok(())
 }
 
+/// ME-ALTPLAY, R1040, R1044: refusal for a face-down play — no kind, a timing outside its
+/// timings, a named zone outside the open backrow zones, or any target or mode. X, embiggen and
+/// tributes are still checked.
+fn why_face_down_refused(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    action: &PlayAction,
+) -> Result<(), EngineError> {
+    let Some(reveal) = action.face_down else {
+        return refuse("no face-down timing".to_string());
+    };
+    let from_graveyard = matches!(card.zone, crate::wire::Zone::Graveyard { .. });
+    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+        return refuse(format!(
+            "{} cannot be played face-down",
+            name_of(state, &card.def_id)
+        ));
+    };
+    if !crate::alt_play::timings(kind).contains(&reveal) {
+        return refuse(format!(
+            "{} cannot reveal at that time",
+            name_of(state, &card.def_id)
+        ));
+    }
+    if let Some(zone) = action.zone.as_ref() {
+        let open = crate::alt_play::open_backrow_zones(state, player);
+        if !open.contains(zone) {
+            return refuse("no free backrow zone".to_string());
+        }
+    }
+    if action.targets.is_some() || action.modes.is_some() {
+        return refuse(format!(
+            "{} declares no targets or modes face-down",
+            name_of(state, &card.def_id)
+        ));
+    }
+    // R1086 beside R1044: a face-down play goes into an open backrow zone, never onto a host.
+    if action.magnetic == Some(true) {
+        return refuse(format!(
+            "{} is not played Magnetic face-down",
+            name_of(state, &card.def_id)
+        ));
+    }
+    refuse_x(state, player, card, action.x)?;
+    refuse_embiggen(state, card, action.embiggen)?;
+    refuse_tributes(state, player, card, action.tributes.as_deref())?;
+    // B5 E5 discards still apply to a face-down play.
+    let face = resolving_face(
+        state,
+        player,
+        card,
+        cost_with(state, card, action.x, action.embiggen),
+    );
+    let required = targeting_discards_required(state, player, &face, &[], &[], None);
+    crate::targeting::why_targeting_discards_unpayable(state, player, required, &play_uses(card, &[]))
+}
+
 /// §10.5 step 1, R90: every choice the play carried, checked against what the card declared and what
 /// the board allows. Returns `Ok` when the play's choices are legal, and the refusal otherwise —
 /// `reduce` returns that message and leaves the state untouched (§9.3).
@@ -2016,8 +2468,15 @@ pub fn why_choices_refused(
     card: &CardInstance,
     action: &PlayAction,
 ) -> Result<(), EngineError> {
+    if action.face_down.is_some() {
+        return why_face_down_refused(state, player, card, action);
+    }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
-    refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+    if action.magnetic == Some(true) {
+        refuse_magnetic(state, player, card, action.zone.as_ref(), tributes)?;
+    } else {
+        refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+    }
     refuse_x(state, player, card, action.x)?;
     refuse_embiggen(state, card, action.embiggen)?;
     refuse_tributes(state, player, card, action.tributes.as_deref())?;

@@ -19,7 +19,7 @@ import type { CatalogSnapshot } from "@jackioh/validator";
 import { CardDefsProvider, closeInspect } from "../cards/index.ts";
 import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
 import {
-  ALMANAC_TAGS,
+  ALMANAC_CHIP_TAGS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
   almanacPool,
@@ -115,7 +115,7 @@ export default function AlmanacRoute(): ReactElement {
             sort={sort}
             onSort={setSort}
             ownedControl={false}
-            tags={ALMANAC_TAGS}
+            tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}
             detail={
               detailCardId === null || detailDef === undefined

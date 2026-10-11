@@ -361,8 +361,10 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edited by hand, whose
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
-comment beside its id, where each hook (`play`, `attack`, `death`, `cast`; `CARD_HOOKS` in
-`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both. `voiceData.ts` checks it
+comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`; `CARD_HOOKS` in
+`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both — a `trigger` (R1088)
+gives a voice and a non-empty `lines` list instead, one of which plays when the runner starts the
+`summoned` entry the card caused. `voiceData.ts` checks it
 at load and names the path of any mistake. The voice files are generated from its lines and
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
@@ -401,7 +403,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
   `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
   `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
-  `@jackioh/cards/catalog.json` and `flavour.json` the files in `crates/cards`.
+  `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
+  `crates/cards`.
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.

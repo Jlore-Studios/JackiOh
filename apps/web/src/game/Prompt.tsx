@@ -23,6 +23,8 @@
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
 // the game shows it. An option that names no card is its label; a Discover of numbers (#82 KY's
 // Trial, R247) offers exactly that, and each number is drawn on a card back, with no face to read.
+// A card the view says is Chinese (the option's or the listed card's `chinese`, ME-CN, R1301) is
+// named and drawn in the Chinese table's words.
 //
 // #492: one card picker (`CardChoice`) holds every picker whose options are cards, in the middle of
 // the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
@@ -83,13 +85,17 @@ import {
   zoneKey,
   zonesInBoardOrder,
   parseZoneKey,
+  type FaceDownChoice,
   type Interaction,
   type PlagueChoice,
   type PlayBuild,
   type PlayNeed,
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { chineseName } from "../cards/chinese.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
+import { CraftEditor } from "./craft/CraftEditor.tsx";
+import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
@@ -142,6 +148,8 @@ type PickerItem = {
   /** Set when the option names a card, so the picker can show its real name (`catalog.ts`). */
   defId?: string;
   radiant?: boolean;
+  /** R1301: the option says the card is shown in Chinese (`PendingOption.chinese`). */
+  chinese?: boolean;
   /** The card's cost as the view carries it (`CardView.cost`), for its face's gem. */
   cost?: number;
   /** The card as the view lists it, when it lists it: its face is then the card as it stands. */
@@ -283,6 +291,8 @@ function selectionLabel(view: PlayerView, selection: Selection): string {
       return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} ${zoneLabel(selection.row, selection.lane)}`;
     case "mode":
       return selection.option;
+    case "craft":
+      return `${selection.recipe.adjective} ${selection.recipe.noun}`;
     case "none":
       return "Nothing";
   }
@@ -303,6 +313,7 @@ function pickerForPending(
     // B5 E17, E18: a card the view lists nowhere (the opponent's hand, C #11) is drawn from the
     // option itself, Radiant and at its cost where the option says so.
     if (option.radiant === true) base.radiant = true;
+    if (option.chinese === true) base.chinese = true;
     if (option.cost !== undefined) base.cost = option.cost;
     if (option.row !== undefined) base.group = option.row;
     // R514: a `cell` is a zone of either side, so its list groups by side and row, lane by lane.
@@ -479,6 +490,18 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
+    case "magnetic":
+      // R1086: one zone with both a plain and a Magnetic play asks which.
+      return {
+        ...common,
+        chrome: "mode",
+        title: "Magnetic or Stack?",
+        items: need.values.map((value) => ({
+          key: String(value),
+          label: value ? "Magnetic" : "Stack",
+        })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
+      };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand
@@ -529,6 +552,26 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         submit: (keys) => {
           const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
           return choice === undefined ? {} : play({ plague: choice });
+        },
+      };
+    }
+    case "faceDown": {
+      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
+      const labels: Record<FaceDownChoice, string> = {
+        up: "Play it face-up",
+        endOfThisTurn: "Set face-down: reveal at the end of this turn",
+        startOfNextTurn: "Set face-down: reveal at the start of your next turn",
+        endOfNextTurn: "Set face-down: reveal at the end of your next turn",
+      };
+      return {
+        ...common,
+        chrome: "mode",
+        title: "Play it how?",
+        items: need.options.map((option) => ({ key: option, label: labels[option] })),
+        submit: (keys) => {
+          const choice: FaceDownChoice | undefined =
+            keys[0] === undefined ? undefined : (keys[0] as FaceDownChoice);
+          return choice === undefined || !Object.hasOwn(labels, choice) ? {} : play({ faceDown: choice });
         },
       };
     }
@@ -600,6 +643,16 @@ function priceLine(face: FaceModel): string {
   return face.cost.text === UNKNOWN_PRICE ? "Pay the embiggen price" : `Pay (${face.cost.text})`;
 }
 
+/** R1301: the option's card is shown in Chinese, by the option or by the card the view lists. */
+function isChinese(item: PickerItem): boolean {
+  return item.chinese === true || item.card?.chinese === true;
+}
+
+/** A card option's name: the catalog's, or the Chinese table's for a Chinese card (R1301). */
+function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: boolean): string {
+  return chinese ? chineseName(defId, info.name, info.def) : info.name;
+}
+
 // Polish 6 (a minimal edit to task 7's file, flagged in the PR): a card option draws the card's face,
 // the one the hand and the deck builder draw, with the same hover preview and long-press sheet, in
 // whatever box prompt.css gives it. An option that names no card keeps its name and text.
@@ -615,7 +668,8 @@ function CardOption(props: {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
-  const name = props.item.defId === undefined ? props.item.label : info.name;
+  const chinese = isChinese(props.item);
+  const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, chinese);
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
   // The card in play: as the view lists it when it does, else a definition as the game shows it.
@@ -632,6 +686,7 @@ function CardOption(props: {
             def: info.def,
             name: info.name,
             radiant,
+            chinese,
             ...(cost === undefined ? {} : { liveCost: cost }),
             inPlay: {},
           });
@@ -711,7 +766,9 @@ function CardOption(props: {
 function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => void }) {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const name =
-    props.item.defId === undefined ? props.item.label : `${info.name} — ${props.item.where ?? props.item.label}`;
+    props.item.defId === undefined
+      ? props.item.label
+      : `${nameOf(props.item.defId, info, isChinese(props.item))} — ${props.item.where ?? props.item.label}`;
   return (
     <li>
       <button
@@ -1301,6 +1358,29 @@ export default function Prompt(props: PromptProps) {
   // R243: an option naming a match-made card (a crafted card in a hand pick) reads its definition
   // from the view, and a Heroic Power on the field its power.
   if (pending !== null) {
+    // ME-CRAFT (Meditative #17, R880): a craft prompt opens the block editor, not the picker.
+    if (pending.kind === "craft") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <CraftEditor key={pending.choiceId} pending={pending} onAction={props.onAction} />
+        </MatchCardsProvider>
+      );
+    }
+    // ME-MARKET (Meditative #42, R1000): a night market opens its stall, not the picker.
+    if (pending.kind === "market") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <MarketPrompt
+            key={pending.choiceId}
+            view={props.view}
+            pending={pending}
+            legal={props.legal ?? []}
+            onAction={props.onAction}
+            {...(props.animating === undefined ? {} : { animating: props.animating })}
+          />
+        </MatchCardsProvider>
+      );
+    }
     return (
       <MatchCardsProvider view={props.view}>
         <PromptModal

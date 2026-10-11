@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import { opponentOf, pickPortrait, portraitOrDefault } from "@jackioh/shared";
 import { createEmotePersona, pickPersona, type AiEmote, type EmotePersona } from "@jackioh/ai";
 import { AI_EMOTE } from "@jackioh/ai/config";
@@ -59,10 +59,20 @@ function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly
  * controller hands `state.config` back verbatim). Returns the `GameEmotes` Game.tsx takes;
  * undefined until the AI's seat is known (it arrives with the first snapshot).
  */
+/**
+ * MD-D29, R1127: the page's side of the `Emote` action — the player's sends. The player's emote
+ * becomes an action only while the view hears emotes. The persona's emotes stay cosmetic (R643):
+ * they are no AI decision, so they never reach the game.
+ */
+export type PracticeEmotePort = {
+  act(action: ActionBody): void;
+};
+
 export function usePracticeEmotes(
   config: PracticeStartConfig | null,
   snapshot: PracticeSnapshot | null,
   aiSeat: PlayerId | null,
+  port?: PracticeEmotePort | null,
 ): EmotesApi {
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
   const view = snapshot?.view ?? null;
@@ -94,6 +104,8 @@ export function usePracticeEmotes(
   // that scheduled them; a new game clears whatever the old one left pending.
   const timers = useRef<number[]>([]);
   const emotesRef = useRef<EmotesApi | null>(null);
+  const portRef = useRef(port);
+  portRef.current = port;
   const schedule = useCallback((intent: AiEmote, seat: PlayerId) => {
     const timer = window.setTimeout(() => {
       timers.current = timers.current.filter((held) => held !== timer);
@@ -113,6 +125,8 @@ export function usePracticeEmotes(
   // answer the player, and "the AI never replies to a reply" is the module's own shape.
   const onPlayerEmote = useCallback(
     (emote: EmoteId) => {
+      // MD-D29, R1127: the player's emote becomes an action only while the view hears emotes.
+      if (view?.emotesHeard === true) portRef.current?.act({ type: "emote", emote });
       const current = dealRef.current;
       if (current === null || current.config !== config) return;
       const seat = opponentOf(config?.humanSeat ?? "p1");
@@ -120,7 +134,7 @@ export function usePracticeEmotes(
         schedule(intent, seat);
       }
     },
-    [config, schedule],
+    [config, schedule, view],
   );
 
   const emotes = useEmotes({

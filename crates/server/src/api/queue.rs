@@ -11,7 +11,7 @@
 //! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
 //! first game waits for both players to pick (`series.rs`).
 //!
-//! R1445 adds the empty-queue fallback: with `LADDER_BOTS=on`, a Best-of-1 or All Random ticket that
+//! R1447 adds the empty-queue fallback: with `LADDER_BOTS=on`, a Best-of-1 or All Random ticket that
 //! has waited past its fallback time with no person to pair with is paired with a ladder bot, after
 //! every pair of people the sweep could make (`pair_with_bots`, `bots::fallback`).
 //!
@@ -542,7 +542,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     open.sort_by(|x, y| x.enqueued_at.cmp(&y.enqueued_at).then_with(|| x.id.cmp(&y.id)));
-    // R1445: one ticket alone can still pair, with a bot.
+    // R1447: one ticket alone can still pair, with a bot.
     if open.is_empty() {
         tx.commit()
             .await
@@ -644,7 +644,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         }
     }
 
-    // R1445: only after every pair of people this sweep could make, so a person inside the window
+    // R1447: only after every pair of people this sweep could make, so a person inside the window
     // always comes before a bot.
     if app.env.ladder_bots {
         made += pair_with_bots(app, &open, &mut taken, now).await?;
@@ -653,7 +653,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
     Ok(made)
 }
 
-/// R1445: pairs each ticket still open and past its fallback time, oldest first, with the bot
+/// R1447: pairs each ticket still open and past its fallback time, oldest first, with the bot
 /// `choose_bot` names for it, claimed in one statement as a pair of tickets is
 /// (`tickets_claim_for_bot`). A claim that loses (the ticket went, or the bot was taken) is not an
 /// error: that ticket waits for the next sweep. Answers how many matches it made.
@@ -731,7 +731,7 @@ async fn pair_with_bots(
     Ok(made)
 }
 
-/// R1445: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
+/// R1447: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
 /// pair's. The seed is the server's (or R143's end-to-end one); the bot's seat is a coin from it
 /// (`{seed}:bot-seat`), so it goes first as often as a person would. Best of 1 plays the ticket's
 /// frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`), with its
@@ -766,7 +766,7 @@ async fn start_bot_match(
         },
     };
     // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
-    // in the match, and nothing else reaps an `open` skeleton but the pool's sizing (R1446).
+    // in the match, and nothing else reaps an `open` skeleton but the pool's sizing (R1448).
     let started = async {
         let bot_seat = if random {
             MatchSeat {
@@ -867,7 +867,7 @@ async fn start_bot_match(
 pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
-        // R1446: a bot (and its player) a cut-off start still holds is let go before the sweep.
+        // R1448: a bot (and its player) a cut-off start still holds is let go before the sweep.
         if app.env.ladder_bots
             && let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await
         {

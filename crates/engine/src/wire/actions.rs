@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::catalog_types::{PlayerId, Row};
+use crate::wire::craft::CraftRecipe;
+use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
 /// Where a permanent is being played (§3.2: the player picks the zone).
@@ -29,10 +31,24 @@ pub struct ZoneChoice {
 )]
 #[serde(tag = "pick", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Selection {
-    Instance { instance_id: String },
-    Hero { player: PlayerId },
-    Zone { player: PlayerId, row: Row, lane: i32 },
-    Mode { option: String },
+    Instance {
+        instance_id: String,
+    },
+    Hero {
+        player: PlayerId,
+    },
+    Zone {
+        player: PlayerId,
+        row: Row,
+        lane: i32,
+    },
+    Mode {
+        option: String,
+    },
+    /// ME-CRAFT (Meditative #17, R880): the recipe a `craft` prompt's answer carries.
+    Craft {
+        recipe: CraftRecipe,
+    },
     None,
 }
 
@@ -49,6 +65,32 @@ pub enum Selection {
 pub struct PlagueSpend {
     pub from: String,
     pub tokens: i32,
+}
+
+/// ME-ALTPLAY, R1040, R1044: when a card played face-down as a Trap reveals — the end of the turn it
+/// was set in, the start of its controller's next turn, or the end of their next turn. A Unit set
+/// under Knowledge Breaker's Aura reveals at the start of the next turn only (R1041); a Spell set
+/// under Paranoia's at any of the three, chosen as it is played.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum RevealAt {
+    EndOfThisTurn,
+    StartOfNextTurn,
+    EndOfNextTurn,
+}
+
+impl RevealAt {
+    /// Every timing, in the order a turn meets them.
+    pub const ALL: [RevealAt; 3] = [
+        RevealAt::EndOfThisTurn,
+        RevealAt::StartOfNextTurn,
+        RevealAt::EndOfNextTurn,
+    ];
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -73,6 +115,10 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         embiggen: Option<bool>,
+        /// R1086: play this Magnetic card onto one of its controller's Units (ME-MAGNETIC).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        magnetic: Option<bool>,
         /// Units sacrificed to pay a Tribute cost (§6.3).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -88,6 +134,12 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         plague: Option<PlagueSpend>,
+        /// ME-ALTPLAY, R1040, R1044: play the card face-down into the backrow as a Trap that reveals
+        /// at this timing — a Unit under Knowledge Breaker's Aura, a Spell under Paranoia's. Absent,
+        /// the card is played as it is printed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        face_down: Option<RevealAt>,
     },
     Attack {
         attacker_id: String,
@@ -129,6 +181,11 @@ pub enum ActionBody {
     AnswerDraw {
         accept: bool,
     },
+    /// MD-D29, R1127: an emote as a move — legal only while a card hears it (`query::emotes_heard`),
+    /// so other games never list it and `reduce` refuses it there.
+    Emote {
+        emote: EmoteId,
+    },
     Concede,
     EndTurn,
     /// R345: the sender's own preference for R82's automatic turn end. A setting, not a move: it is
@@ -157,6 +214,7 @@ string_union! {
         Answer = "answer",
         OfferDraw = "offerDraw",
         AnswerDraw = "answerDraw",
+        Emote = "emote",
         Concede = "concede",
         EndTurn = "endTurn",
         SetAutoEndTurn = "setAutoEndTurn",
@@ -179,6 +237,7 @@ impl ActionBody {
             ActionBody::Answer { .. } => ActionType::Answer,
             ActionBody::OfferDraw => ActionType::OfferDraw,
             ActionBody::AnswerDraw { .. } => ActionType::AnswerDraw,
+            ActionBody::Emote { .. } => ActionType::Emote,
             ActionBody::Concede => ActionType::Concede,
             ActionBody::EndTurn => ActionType::EndTurn,
             ActionBody::SetAutoEndTurn { .. } => ActionType::SetAutoEndTurn,
@@ -250,6 +309,8 @@ pub const NON_ACTIVE_ACTION_TYPES: &[ActionType] = &[
     ActionType::Answer,
     ActionType::Concede,
     ActionType::AnswerDraw,
+    // MD-D29, R1127: either seat may emote while a card hears it.
+    ActionType::Emote,
     ActionType::SetAutoEndTurn,
     ActionType::DisconnectExpired,
     ActionType::Timeout,
@@ -282,10 +343,12 @@ mod tests {
                 }),
                 x: None,
                 embiggen: None,
+                magnetic: None,
                 tributes: None,
                 targets: Some(vec![Selection::Hero { player: PlayerId::P2 }, Selection::None]),
                 modes: None,
                 plague: None,
+                face_down: None,
             },
             PlayerId::P1,
             "n1",
@@ -302,5 +365,14 @@ mod tests {
         assert_eq!(serde_json::from_value::<Action>(json).unwrap(), action);
         let end: Action = serde_json::from_str(r#"{"type":"endTurn","playerId":"p2","nonce":"x"}"#).unwrap();
         assert_eq!(end.action_type(), ActionType::EndTurn);
+        // MD-D29, R1127: the emote action rides the wire as `{"type":"emote","emote":…}`.
+        let emote: Action =
+            serde_json::from_str(r#"{"type":"emote","emote":"greetings","playerId":"p1","nonce":"e"}"#)
+                .unwrap();
+        assert_eq!(emote.action_type(), ActionType::Emote);
+        assert_eq!(
+            serde_json::to_value(&emote).unwrap(),
+            serde_json::json!({"type":"emote","emote":"greetings","playerId":"p1","nonce":"e"})
+        );
     }
 }

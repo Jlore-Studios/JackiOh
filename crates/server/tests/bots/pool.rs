@@ -1,4 +1,4 @@
-//! R1446 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
+//! R1448 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
 //! weekly active people, BOT_POOL_MAX)`; an excess retires the newest active bots and a shortfall puts
 //! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
 //! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
@@ -93,7 +93,7 @@ fn record(id: &str, source: &str, mode: &str, pilot: &str, deck: &[String], patc
 }
 
 #[test]
-fn r1446_pool_target_clamps() {
+fn r1448_pool_target_clamps() {
     assert_eq!(pool_target(0), BOT_POOL_MIN);
     assert_eq!(pool_target(-5), BOT_POOL_MIN);
     assert_eq!(pool_target(i64::from(u32::MAX)), BOT_POOL_MAX);
@@ -107,7 +107,7 @@ fn r1446_pool_target_clamps() {
 }
 
 #[test]
-fn r1446_plan_pool_retires_newest_reinstates_first() {
+fn r1448_plan_pool_retires_newest_reinstates_first() {
     let bots = vec![
         bot("a", 1_000, None),
         bot("b", 3_000, None),
@@ -148,7 +148,7 @@ fn r1446_plan_pool_retires_newest_reinstates_first() {
 }
 
 #[test]
-fn r1446_drawn_bots_in_range_valid_names() {
+fn r1448_drawn_bots_in_range_valid_names() {
     let now = 1_800_000_000_000;
     let mut named = 0;
     let mut defaults = 0;
@@ -196,7 +196,7 @@ fn r1446_drawn_bots_in_range_valid_names() {
 }
 
 #[tokio::test]
-async fn r1446_decks_prefer_human_bo1_lists_legal() {
+async fn r1448_decks_prefer_human_bo1_lists_legal() {
     let app = empty_test_app().await;
     let pool = playable();
     let size = deck_size();
@@ -253,7 +253,7 @@ async fn r1446_decks_prefer_human_bo1_lists_legal() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1446_refresh_seeds_ratings_no_collection() {
+async fn r1448_refresh_seeds_ratings_no_collection() {
     let app = empty_test_app().await;
     let now = now_ms();
     let done = refresh_pool(&app, "refresh", now).await.expect("a refresh");
@@ -291,7 +291,7 @@ async fn r1446_refresh_seeds_ratings_no_collection() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1446_new_catalog_redraws_decks() {
+async fn r1448_new_catalog_redraws_decks() {
     let app = empty_test_app().await;
     let now = now_ms();
     refresh_pool(&app, "catalog", now).await.expect("a refresh");
@@ -315,7 +315,7 @@ async fn r1446_new_catalog_redraws_decks() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1446_a_bot_whose_start_was_cut_off_is_let_go() {
+async fn r1448_a_bot_whose_start_was_cut_off_is_let_go() {
     let app = empty_test_app().await;
     let now = now_ms();
     refresh_pool(&app, "cut", now).await.expect("a refresh");

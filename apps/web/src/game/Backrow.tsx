@@ -49,7 +49,11 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   const top =
     entry.faceDown || buried <= 0
       ? null
-      : { ...faceModel({ defId: entry.defId, def: info.def, name: info.name, radiant: entry.radiant }), type: entry.type };
+      : {
+          // R1301: a Chinese pile top is drawn in Chinese on the wheel too.
+          ...faceModel({ defId: entry.defId, def: info.def, name: info.name, radiant: entry.radiant, chinese: entry.chinese === true }),
+          type: entry.type,
+        };
 
   if (entry.faceDown) {
     // R370: read defensively, so a view without the cost draws the back as it always did.
@@ -84,6 +88,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         controller={entry.controller}
         counters={entry.counters}
         unrevealed={entry.unrevealed === true}
+        revealAt={entry.revealAt}
         className="card-backrow"
         touchHold={props.touchHold}
         target={{ on: "backrow", instanceId: entry.instanceId, side: props.side, lane: props.lane }}

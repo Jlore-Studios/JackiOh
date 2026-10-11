@@ -72,6 +72,8 @@ pub const GAME_OVER_REASONS: &[GameOverReason] = &[
     GameOverReason::Disconnect,
     GameOverReason::MatchCeiling,
     GameOverReason::Voided,
+    GameOverReason::AltWin,
+    GameOverReason::WonByEffect,
 ];
 
 /// R376: what one seat's cards did in one game, as catalog ids.

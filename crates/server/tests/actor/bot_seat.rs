@@ -1,4 +1,4 @@
-//! R1444 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
+//! R1446 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
 //! itself, deciding off the queue and moving at a human pace inside its clock, with server nonces
 //! (`srv-bot-…`, R270). It gets no disconnect grace (R744), never concedes or takes a draw (R188),
 //! emotes through its persona (R645), is rated as R610 rates a bot, and its match replays from
@@ -6,7 +6,8 @@
 //!
 //! These run the real engine and the real cards (`jackioh_cards::register_all`), not the testkit's
 //! scripted ones: the bot decides on the blocking pool, whose threads do not see a test's
-//! thread-local card override. Time is tokio's paused clock, which does not move on its own while a
+//! thread-local card override. The one exception puts a single testkit card in the person's hand and
+//! never lets the bot decide while it is in play. Time is tokio's paused clock, which does not move on its own while a
 //! decision is running there, so the think times cost no real time and the decisions only theirs.
 
 use std::sync::Arc;
@@ -26,6 +27,7 @@ use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, NewBot, StoreError};
 
 use crate::support::deps::{TestAppOptions, test_app_with};
+use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-bot-seat";
@@ -91,6 +93,18 @@ impl BotMatch {
 /// A match between a person in `person` and a ladder bot of `persona` in the other seat, started as
 /// the queue starts one, with the person's socket attached and the bot's never.
 async fn bot_match(seed: &str, person: PlayerId, persona: PersonaName, ranked: bool) -> BotMatch {
+    bot_match_with(seed, person, persona, ranked, &[]).await
+}
+
+/// `bot_match`, with `extra` cards first in the person's deck (the testkit's, which the caller
+/// installed: each has Quickdraw, so the opening deal puts it in the person's hand).
+async fn bot_match_with(
+    seed: &str,
+    person: PlayerId,
+    persona: PersonaName,
+    ranked: bool,
+    extra: &[&str],
+) -> BotMatch {
     let app = test_app_with(TestAppOptions {
         skip_fixtures: true,
         ..TestAppOptions::default()
@@ -114,7 +128,10 @@ async fn bot_match(seed: &str, person: PlayerId, persona: PersonaName, ranked: b
     }));
     q!(app, bots_create(&bot));
 
-    let (person_deck, bot_deck) = decks();
+    let (mut person_deck, bot_deck) = decks();
+    for (at, id) in extra.iter().enumerate() {
+        person_deck[at] = (*id).to_string();
+    }
     let seat = |profile: &str, player: PlayerId, deck: &[String]| json!({ "profileId": profile, "player": player.as_str(), "deck": deck });
     let seats = if person == PlayerId::P1 {
         [
@@ -244,7 +261,7 @@ async fn concede(m: &BotMatch) {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_bot_mulligans_and_plays_without_a_socket() {
+async fn r1446_bot_mulligans_and_plays_without_a_socket() {
     let m = bot_match("seed-bot-plays", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     // The person ends their turn; the bot plays its turn and it comes back.
@@ -285,7 +302,7 @@ async fn r1444_bot_mulligans_and_plays_without_a_socket() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fallback() {
+async fn r1446_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fallback() {
     let m = bot_match("seed-bot-write", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-write", json!({ "type": "endTurn" })).await;
@@ -327,7 +344,7 @@ async fn r1444_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fal
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_the_persons_actions_never_hold_the_bots_move_back() {
+async fn r1446_the_persons_actions_never_hold_the_bots_move_back() {
     let m = bot_match("seed-bot-stale", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-stale", json!({ "type": "endTurn" })).await;
@@ -365,7 +382,7 @@ async fn r1444_the_persons_actions_never_hold_the_bots_move_back() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_bot_seat_never_gets_a_grace() {
+async fn r1446_bot_seat_never_gets_a_grace() {
     let m = bot_match("seed-bot-grace", PlayerId::P2, PersonaName::Silent, false).await;
     // The person attached; the bot never will. No grace runs for either seat.
     for _ in 0..8 {
@@ -382,7 +399,7 @@ async fn r1444_bot_seat_never_gets_a_grace() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_r610_bot_match_rated_by_r610() {
+async fn r1446_r610_bot_match_rated_by_r610() {
     let m = bot_match("seed-bot-rated", PlayerId::P1, PersonaName::Silent, true).await;
     to_the_persons_turn(&m).await;
     concede(&m).await;
@@ -408,7 +425,7 @@ async fn r1444_r610_bot_match_rated_by_r610() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_bot_match_replays_from_seed_and_log() {
+async fn r1446_bot_match_replays_from_seed_and_log() {
     let m = bot_match("seed-bot-replay", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-1", json!({ "type": "endTurn" })).await;
@@ -439,7 +456,7 @@ async fn r1444_bot_match_replays_from_seed_and_log() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_restart_resumes_the_bot_seat() {
+async fn r1446_restart_resumes_the_bot_seat() {
     let m = bot_match("seed-bot-restart", PlayerId::P1, PersonaName::Silent, false).await;
     // The restart comes before the bot's mulligan lands: the move it was deciding is dropped.
     m.app.matches.stop(MATCH_ID).await;
@@ -474,7 +491,7 @@ async fn r1444_restart_resumes_the_bot_seat() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_bot_declines_a_draw_offer() {
+async fn r1446_bot_declines_a_draw_offer() {
     let m = bot_match("seed-bot-draw", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-offer", json!({ "type": "offerDraw" })).await;
@@ -506,7 +523,7 @@ async fn r1444_bot_declines_a_draw_offer() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_persona_greets_through_the_relay() {
+async fn r1446_persona_greets_through_the_relay() {
     // Balanced greets at the end of the mulligan every time (R645), from its pool within its dealt
     // hand (R1344): a seed whose hand holds one of the pool.
     let balanced = AI_PERSONAS
@@ -548,7 +565,85 @@ async fn r1444_persona_greets_through_the_relay() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1444_bot_telemetry_is_ai() {
+async fn r1446_r1127_a_card_that_hears_emotes_hears_the_bots() {
+    // The person holds the testkit's Field Spell that hears emotes. Its card is the only test card
+    // in the match, and the person plays it on their own turn, which they never end, so the bot
+    // never decides while it is in play (the blocking pool's threads do not see the testkit).
+    install_test_cards();
+    let balanced = AI_PERSONAS
+        .iter()
+        .find(|(name, _)| *name == PersonaName::Balanced)
+        .map(|(_, spec)| spec)
+        .expect("the balanced persona");
+    let greeting = balanced
+        .triggers
+        .iter()
+        .find(|(trigger, _)| *trigger == EmoteTrigger::MulliganEnd)
+        .map(|(_, row)| row)
+        .expect("a mulligan-end row");
+    let seed = (0..200)
+        .map(|k| format!("seed-bot-heard-{k}"))
+        .find(|seed| {
+            let hand = deal_emote_hand(seed, PlayerId::P2);
+            greeting.pool.iter().any(|emote| hand.contains(emote))
+        })
+        .expect("a seed whose bot holds a greeting");
+
+    let m = bot_match_with(
+        &seed,
+        PlayerId::P1,
+        PersonaName::Balanced,
+        false,
+        &[TEST_HEARS_EMOTES],
+    )
+    .await;
+    to_the_persons_turn(&m).await;
+    // The bot's greeting is still on its delay (R645) when the card goes down.
+    assert!(
+        m.socket.of_type("emote").is_empty(),
+        "PREMISE: the bot greeted already"
+    );
+    submit(
+        &m,
+        "person-stay",
+        json!({ "type": "setAutoEndTurn", "enabled": false }),
+    )
+    .await;
+    let card = to_json(&m.actor.view_for(m.person))["you"]["hand"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .find(|card| card["defId"] == TEST_HEARS_EMOTES)
+        .map(|card| card["instanceId"].clone())
+        .expect("the hearing card is in the person's hand");
+    submit(&m, "person-hear", json!({ "type": "play", "instanceId": card })).await;
+
+    let bot = m.bot().as_str().to_string();
+    let minted = |log: &[(String, String, String)]| {
+        log.iter()
+            .filter(|(seat, nonce, kind)| {
+                *seat == bot && nonce.starts_with(&format!("{SERVER_NONCE_PREFIX}emote-")) && kind == "emote"
+            })
+            .count()
+    };
+    for _ in 0..WAIT_STEPS {
+        m.actor.idle().await;
+        if minted(&log_of(&m.app).await) > 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    // The greeting went to the person as a person's would, then ran as the bot's `Emote` action.
+    let relayed = m.socket.of_type("emote");
+    assert_eq!(relayed.len(), 1, "{relayed:?}");
+    assert_eq!(relayed[0]["from"], bot.as_str());
+    let log = log_of(&m.app).await;
+    assert_eq!(minted(&log), 1, "{log:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1446_bot_telemetry_is_ai() {
     let m = bot_match("seed-bot-telemetry", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     concede(&m).await;

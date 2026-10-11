@@ -299,6 +299,62 @@ fn moved_by(event: &GameEvent) -> Vec<String> {
     }
 }
 
+/// B5 E5: whether `event` sends the card `id` toward a graveyard, a move whose landing
+/// `zones::report_graveyard_landing` reports in an event of its own after it.
+fn sends_toward_graveyard(event: &GameEvent, id: &str) -> bool {
+    matches!(
+        event,
+        GameEvent::Discarded { instance_id, .. }
+        | GameEvent::Burned { instance_id, .. }
+        | GameEvent::Destroyed { instance_id, .. }
+        if instance_id == id
+    )
+}
+
+/// B5 E5: whether `event` reports where a move toward a graveyard landed the card `id` — its
+/// graveyard, or the exile or library bottom a replacement sent it to (`report_graveyard_landing`).
+fn is_landing_report(event: &GameEvent, id: &str) -> bool {
+    matches!(
+        event,
+        GameEvent::EnteredGraveyard { instance_id, .. }
+        | GameEvent::Exiled { instance_id, .. }
+        | GameEvent::ShuffledIn { instance_id, .. }
+        if instance_id == id
+    )
+}
+
+/// R212, R862: whether the card `id`, which `event` itself sent toward a graveyard, still stands
+/// where that move landed it, read off `later`, the events after `event`. The report of where it
+/// landed (B5 E5) is that same move, not a later one, so the card is on the stay `event` began and
+/// answers `event` from there — Meditative #22.1's discard clause answers its own `discarded` from
+/// the graveyard (R862) — unless something moved it again after the landing. `false` whenever
+/// `event` did not move the card toward a graveyard: `moves_in`'s answer then stands as it is.
+pub fn stands_where_it_landed(
+    event: &GameEvent,
+    later: &[GameEvent],
+    id: &str,
+    state: Option<&GameState>,
+) -> bool {
+    if !sends_toward_graveyard(event, id) {
+        return false;
+    }
+    let first_move = later
+        .iter()
+        .position(|after| moved_by(after).iter().any(|moved| moved == id));
+    let Some(first_move) = first_move else {
+        return true;
+    };
+    if !is_landing_report(&later[first_move], id) {
+        return false;
+    }
+    let since_landing = later
+        .iter()
+        .enumerate()
+        .filter(|(at, _)| *at != first_move)
+        .map(|(_, after)| after);
+    !moves_in(since_landing, state).moved.contains(id)
+}
+
 /// R212: read the events that followed an event, oldest first. With `state`, a card that resumed as a
 /// Stack pile's top because a card the events report leaving it (`uncovered_by`) counts as moved too:
 /// it was dormant when the event happened, registering nothing (§3.2, R153), and it comes back into

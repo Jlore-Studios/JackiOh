@@ -4,4 +4,8 @@ import type { CardType } from "./CardType";
 /**
  * B5 E4: a face-up play's record, with the type it was played as (B2.7). (TS `PlayRecord & { type }`.)
  */
-export type FaceUpRecord = { defId: string, radiant: boolean, type: CardType, };
+export type FaceUpRecord = { defId: string, radiant: boolean, type: CardType, 
+/**
+ * R1300: the played card was Chinese (T-AI-5's copy is too). Only ever `Some(true)`.
+ */
+chinese?: true, };

@@ -225,6 +225,7 @@ pub fn schedule_delayed(
         not_before,
         resume,
         watch,
+        hand_watch: None,
     };
     sink.state.next_seq += 1;
     sink.state.delayed.push(effect.clone());
@@ -332,6 +333,29 @@ pub fn cut_turn_short(
             by_instance_id,
         },
     );
+}
+
+/// MD-B22, R946: Showdown's turn watcher — a `thisTurn` modifier on `player` that answers a card
+/// of theirs entering one of their zones in `lane` (Meditative #98, Radiant face).
+pub fn add_lane_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    lane: i32,
+    resume: Resume,
+    label: &str,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::ThisTurn {
+            turn: sink.state.turn,
+        },
+        ModifierKind::LaneWatch {
+            lane,
+            resume,
+            label: label.to_string(),
+        },
+    )
 }
 
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on

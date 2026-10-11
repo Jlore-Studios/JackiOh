@@ -6,7 +6,7 @@
 //!  - the match's mode (R257), read off its series, room or queue tickets (`matches_mode_of`);
 //!  - the patch the build's cards are (R388, `jackioh_cards::catalog_version()`);
 //!  - each seat's pilot: `human` for a person, even when the clock answered a prompt for one (R79's
-//!    `timeout`), and `ai` for a ladder bot (R1444, R1447), whose id is the match row's profile for
+//!    `timeout`), and `ai` for a ladder bot (R1446, R1449), whose id is the match row's profile for
 //!    that seat;
 //!  - `source: "live"`, apart from the AI's development runs (R378).
 //!
@@ -89,7 +89,7 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     };
 
     let log = tx.matches_actions(match_id).await.map_err(message_of)?;
-    // R376, R1447: a person's seat is `human`; a ladder bot's is `ai`, so no human figure reads it
+    // R376, R1449: a person's seat is `human`; a ladder bot's is `ai`, so no human figure reads it
     // unasked.
     let profiles = tx
         .profiles_get_many(&[row.players.0.clone(), row.players.1.clone()])

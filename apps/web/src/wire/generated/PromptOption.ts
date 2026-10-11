@@ -3,7 +3,8 @@ import type { Selection } from "./Selection";
 
 export type PromptOption = { key: string, label: string, selection: Selection, 
 /**
- * B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies).
+ * B5 E18: what this option counts against the prompt's `budget`: a `pick` option's R65 cost, a
+ * `market` lot's price, a barter's yuan written negative (R1000, R1001).
  */
 cost?: number, 
 /**

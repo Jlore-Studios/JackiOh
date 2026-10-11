@@ -32,11 +32,12 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
-use crate::layers::unit_has;
-use crate::script::{EffectContext, FlagOrCount};
+use crate::layers::{face_of, unit_has};
+use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
-use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
+use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
 
 /// A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
@@ -125,6 +126,13 @@ pub fn zone_cards(state: &GameState, player: PlayerId, zone: OffFieldZone) -> Ve
 /// How many cards are in one of a player's off-field piles (§3).
 pub fn zone_count(state: &GameState, player: PlayerId, zone: OffFieldZone) -> i32 {
     pile_of(state, player, zone).len() as i32
+}
+
+/// §2.4, R4, R1143: the most cards this player's hand holds before a card arriving is burned —
+/// `HAND_CAP`, or the hand size an effect set for the rest of the game (Meditative #79). Every rule
+/// that reads the hand cap reads it here: draws, adds, steals, "fill your hand". Public (§10.8).
+pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].hand_cap.unwrap_or(HAND_CAP)
 }
 
 /// The mana this player holds now and has not spent: `turnEnded.unspentMana` is this number as the
@@ -288,6 +296,52 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
         .sum()
 }
 
+/// MD-B15, R923: every tag a card instance carries — its definition's tags, then each granted tag
+/// (`CardInstance.granted_tags`, Meditative #35) it lacks, in order. Every instance-level tag read
+/// goes through this; catalog pools read definitions and never see granted tags.
+pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
+    let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
+    if let Some(granted) = card.granted_tags.as_deref() {
+        for tag in granted {
+            if !tags.contains(tag) {
+                tags.push(*tag);
+            }
+        }
+    }
+    tags
+}
+
+/// §6.1, R1438: the Lucky X a card instance has — the Lucky its running face prints, as a Degrade or
+/// an Upgrade has moved it (B3.4), plus every Lucky it was given (a granted keyword, B5 E38) — or 0.
+/// Every luck-based roll a card makes reads its Lucky here, so given Lucky counts wherever printed
+/// Lucky does. The auras of the field are the unit's (`unit_view`), not the card's.
+pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
+    crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Lucky).unwrap_or(0)
+}
+
+/// §6.1, R1438: only the Lucky a card instance was given (granted keywords, B5 E38), never its
+/// printed Lucky. A shipped card whose roll always counted a fixed printed Lucky (#23 Reoccurring
+/// Dream, #42 Eugenics) adds this to that fixed number, so tuning still never reaches its roll (D14).
+pub fn given_lucky_on(card: &CardInstance) -> i32 {
+    crate::tuning::numbered_sum(&card.granted_keywords, KeywordKind::Lucky).unwrap_or(0)
+}
+
+/// MD-B6, R943: whether the card is Created — minted after the decks were built.
+pub fn is_created(card: &CardInstance) -> bool {
+    card.created == Some(true)
+}
+
+/// MD-B6, R943: the ids of the Created cards in the player's library, in order (index 0 is the
+/// top, the next card drawn).
+pub fn created_in_library(state: &GameState, player: PlayerId) -> Vec<String> {
+    state.players[player]
+        .library
+        .iter()
+        .filter(|card| is_created(card))
+        .map(|card| card.id.clone())
+        .collect()
+}
+
 /// B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
 /// countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
 pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) -> i32 {
@@ -330,6 +384,21 @@ pub fn play_still_announced(state: &GameState, instance_id: &str) -> bool {
 /// max mana is 4 or more" (SPEC §8.6 row 36). Mana is public (§10.8), so a `conditionMet` may read it.
 pub fn max_mana_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.max
+}
+
+/// R1064: every point of Armor on the field: each acting Unit's on both sides through the §10.4 layers (printed,
+/// Defense Position's +1, auras) and both heroes' as §4.4 step 2 reads it (`hero_armor_of`, R124). Public (§10.8).
+pub fn armor_on_field(state: &GameState) -> i32 {
+    crate::wire::PLAYER_IDS
+        .iter()
+        .map(|&player| {
+            crate::damage::hero_armor_of(state, player)
+                + active_units_of(state, player)
+                    .into_iter()
+                    .map(|unit| crate::layers::unit_view(state, unit).armor)
+                    .sum::<i32>()
+        })
+        .sum()
 }
 
 // ---------------------------------------------------------------------------
@@ -399,6 +468,23 @@ pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInsta
         .collect()
 }
 
+/// R987, Meditative #40 Feng Shui: the player's Luck — the sum of the "You have Luck X" auras
+/// acting on their side (§3.2), each read through the card's declared number `luck` where it
+/// declares one (R386's shape, as `damage::hero_armor_of` reads `armor`). 0 with no Feng Shui, so
+/// every roll draws as before (D14).
+pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
+    let mut sum = 0;
+    for card in crate::damage::acting_texts_of(state, player) {
+        for text in crate::scripts::texts_of(state, &card) {
+            let Some(printed) = text.flags.luck else {
+                continue;
+            };
+            sum += crate::params::declared_or(state, &card, "luck", printed);
+        }
+    }
+    sum
+}
+
 /// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
 /// permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
 /// (R23). The types are the trap's to match when a permanent is played.
@@ -407,4 +493,92 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
         .into_iter()
         .filter(|held| Some(held.id.as_str()) != except && !unit_has(state, held, KeywordKind::Immutable))
         .collect()
+}
+
+/// Whether any card acting for this player carries the picked static flag — the active units and
+/// the face-up backrow tops, as `damage.rs`'s `acting_texts_of` walks them (a face-down Trap's text
+/// is in nobody's use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28,
+/// MD-D29, R1125, R1127).
+pub fn acting_with_flag(state: &GameState, player: PlayerId, pick: fn(&StaticFlags) -> Option<bool>) -> bool {
+    let mut acting: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
+    for slot in slots_of(player, Row::Backrow) {
+        let Some(card) = card_at(state, slot) else {
+            continue;
+        };
+        let card_type = crate::faces::card_type_of(state, card);
+        let face_down =
+            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
+        if !face_down {
+            acting.push(card.clone());
+        }
+    }
+    acting
+        .iter()
+        .any(|card| pick(&crate::scripts::flags_of(state, card)) == Some(true))
+}
+
+/// MD-D29, R1127: whether an acting card of the opponent hears emotes, so an `Emote` action is legal.
+pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
+    acting_with_flag(state, opponent_of(player), |flags| flags.hears_emotes)
+}
+
+/// MD-D19, R1122: the acting Units adjacent to the attacker on its own side that it may attack, in
+/// lane order — the neighbours a redirect may re-aim the attack at. Taunt is ignored: the target
+/// must pass §4.2 step 2's restrictions, never step 3's wall.
+pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
+    let Some(at) = slot_of(state, attacker) else {
+        return Vec::new();
+    };
+    crate::zones::adjacent(at)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .filter(|unit| {
+            crate::zones::acts_on_field(state, unit)
+                && !crate::zones::is_carried(state, unit)
+                && crate::restrictions::attack_restriction(
+                    state,
+                    attacker,
+                    &DamageTarget::Unit {
+                        instance: unit.clone(),
+                    },
+                )
+                .is_ok()
+        })
+        .collect()
+}
+
+/// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest cost
+/// among the permanents acting for this player, the tops of their unit piles and their backrow (R13),
+/// each read at R396's `cost_now`: an X card at the X it was played for, 0 without one, any other at
+/// its cost as it stands. A face-down card is never an X card, so it counts at `effective_cost`, the
+/// cost R351's view shows both players. `None` when the side holds no permanent.
+pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32> {
+    permanents_held_by(state, player)
+        .iter()
+        .map(|held| crate::mana::cost_now(state, held))
+        .max()
+}
+
+/// R1181 (Meditative #94's "base stats"): §10.4 layer 1, the running face's `statsOverride` as that face
+/// wears it (R349), else its X or printed stats. No buffs, tuning (layer 4), auras or damage: it is
+/// `face_of` with the tuning taken back off.
+pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
+    let face = face_of(state, card);
+    let tuning = card.tuning.as_ref();
+    AttackHealth {
+        attack: face.attack - tuning.and_then(|tuning| tuning.attack).unwrap_or(0),
+        health: face.health - tuning.and_then(|tuning| tuning.health).unwrap_or(0),
+    }
+}
+
+/// R1220: whether this card carries Untributable — no Tribute cost may take it, and every Sacrifice
+/// of it does nothing. Read through the layers so auras apply, as the sacrifice sites do.
+pub fn is_untributable(state: &GameState, card: &CardInstance) -> bool {
+    crate::layers::unit_has(state, card, KeywordKind::Untributable)
+}
+
+/// R1225: whether this player borrowed mana this turn — at least one spend went past their current
+/// mana. Jlarna's base face reads it at the end of its controller's turn.
+pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
+    state.players[player].turn_log.mana_borrowed.unwrap_or(0) > 0
 }

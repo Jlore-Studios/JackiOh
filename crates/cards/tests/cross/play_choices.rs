@@ -496,6 +496,7 @@ fn first_pick_key(action: &ActionBody) -> String {
         Some(Selection::Instance { instance_id }) => instance_id.clone(),
         Some(Selection::Zone { .. }) => "zone".to_string(),
         Some(Selection::Mode { .. }) => "mode".to_string(),
+        Some(Selection::Craft { .. }) => "craft".to_string(),
         Some(Selection::None) => "none".to_string(),
     }
 }

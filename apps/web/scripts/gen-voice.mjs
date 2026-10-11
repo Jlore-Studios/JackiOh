@@ -220,18 +220,28 @@ function expectedKeys(table, problems) {
         problems.push(`${key}: voice ${assignment.voice} cannot render`);
         continue;
       }
-      const text = assignment.text;
-      if (typeof text !== "string" || text.trim() === "") {
-        problems.push(`${key}: no text for its voice`);
-        continue;
-      }
+      // R1088: a trigger lists its lines: one expected `${defId}-trigger${n}` key per line.
+      const spoken =
+        hook === "trigger"
+          ? (Array.isArray(assignment.lines) ? assignment.lines : []).map((text, i) => ({
+              key: `${defId}-trigger${i + 1}`,
+              line: `trigger${i + 1}`,
+              text,
+            }))
+          : [{ key, line: hook, text: assignment.text }];
       const backend = backendOf(voice);
-      if (backend === "say") {
-        const values = { say: voice.say, rate: voice.rate, pbas: voice.pbas, pmod: voice.pmod, text };
-        expected.set(key, { defId, line: hook, backend, ...values, hash: voiceHash(values) });
-      } else {
-        const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
-        expected.set(key, { defId, line: hook, backend, ...values, hash: sapiHash(values) });
+      for (const { key: lineKey, line: lineName, text } of spoken) {
+        if (typeof text !== "string" || text.trim() === "") {
+          problems.push(`${lineKey}: no text for its voice`);
+          continue;
+        }
+        if (backend === "say") {
+          const values = { say: voice.say, rate: voice.rate, pbas: voice.pbas, pmod: voice.pmod, text };
+          expected.set(lineKey, { defId, line: lineName, backend, ...values, hash: voiceHash(values) });
+        } else {
+          const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
+          expected.set(lineKey, { defId, line: lineName, backend, ...values, hash: sapiHash(values) });
+        }
       }
     }
   }

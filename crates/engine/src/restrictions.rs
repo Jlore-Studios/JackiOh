@@ -81,6 +81,31 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
         && immune_to_spells(ctx.sink.state, card)
 }
 
+/// MD-B1, R940: whether the card holds the tribal-hate immunity now (a keyword, so layered:
+/// printed, granted, aura). It protects the card only while the card acts on the field.
+pub fn immune_to_tribal_hate(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { .. }) && unit_has(state, card, KeywordKind::ImmuneToTribalHate)
+}
+
+/// MD-B1, R940: whether a harmful effect whose card filter names a tribal tag (in `tags` or
+/// `not_tags`) can neither pick `card` nor reach it. True when either list holds a tag in
+/// `TRIBAL_TAGS` and the card holds the immunity. A scope with no tribal tag still reaches it,
+/// and so does a helpful effect (the caller passes the aim).
+pub fn tribal_hate_cannot_reach(
+    state: &GameState,
+    card: &CardInstance,
+    tags: Option<&[crate::wire::Tag]>,
+    not_tags: Option<&[crate::wire::Tag]>,
+) -> bool {
+    if !immune_to_tribal_hate(state, card) {
+        return false;
+    }
+    let names_tribal = |list: Option<&[crate::wire::Tag]>| {
+        list.is_some_and(|list| list.iter().any(|tag| crate::config::TRIBAL_TAGS.contains(tag)))
+    };
+    names_tribal(tags) || names_tribal(not_tags)
+}
+
 // ---------------------------------------------------------------------------
 // The attack restrictions
 // ---------------------------------------------------------------------------

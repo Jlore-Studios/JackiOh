@@ -248,6 +248,7 @@ mod r451_the_last_spell_played_game_wide_classic_c57 {
                 def_id: PA.bolt.id.clone(),
                 radiant: true,
                 type_: CardType::Spell,
+                chinese: None,
             })
         );
         // With nothing to copy, it records nothing.
@@ -264,6 +265,7 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
             def_id: def_id.to_string(),
             radiant: false,
             type_,
+            chinese: None,
         })
     }
 

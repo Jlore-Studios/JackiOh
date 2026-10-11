@@ -529,3 +529,119 @@ mod the_classic_c1_c45_reads_max_mana_c_c36_burn {
         assert_eq!(max_mana_of(&state, P2), 0);
     }
 }
+
+/// R901: the highest cost among the permanents acting for a side (Meditative #30 Fickle E-Kitten)
+mod r901_highest_permanent_cost_meditative_30 {
+    use super::*;
+    use crate::rules::fixtures::combat::big_body;
+    use crate::rules::fixtures::generation::{plain_trap, register_generation, x_unit};
+
+    #[test]
+    fn r901_highest_permanent_cost_is_none_for_a_side_with_no_permanent() {
+        let mut state = board("highest-none");
+        assert_eq!(highest_permanent_cost(&state, P1), None);
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), None);
+        assert_eq!(highest_permanent_cost(&state, P2), Some(1));
+    }
+
+    #[test]
+    fn r901_reads_every_unit_top_and_backrow_card_at_its_cost_now_cost_mod_included() {
+        let mut state = board("highest-reads");
+        register_generation();
+        let unit = put(&mut state, &big_body.id, slot(P1, Row::Units, 2), json!({}));
+        let trap = put(&mut state, &plain_trap.id, slot(P1, Row::Backrow, 4), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), Some(3));
+        // A face-down Trap counts at the cost R351's view shows both players: its override here.
+        must(find_instance_mut(&mut state, &trap.id), "the trap").cost_override = Some(5);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(5));
+        must(find_instance_mut(&mut state, &unit.id), "the unit").cost_mod = 4;
+        assert_eq!(highest_permanent_cost(&state, P1), Some(7));
+        // The other side's cards never count toward this one.
+        let big = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
+        must(find_instance_mut(&mut state, &big.id), "p2's unit").cost_override = Some(9);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(7));
+        assert_eq!(highest_permanent_cost(&state, P2), Some(9));
+    }
+
+    #[test]
+    fn r901_r396_an_x_card_counts_at_the_x_it_was_played_for_and_0_without_one() {
+        let mut state = board("highest-x");
+        register_generation();
+        let card = put(&mut state, &x_unit.id, slot(P1, Row::Units, 1), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), Some(0));
+        must(find_instance_mut(&mut state, &card.id), "the X unit").x = Some(4);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(4));
+    }
+}
+
+/// R1181: a card's §10.4 layer-1 stats (Meditative #94 Shrinking Felinor)
+mod r1181_base_stats_of_meditative_94 {
+    use super::*;
+
+    #[test]
+    fn r1181_base_stats_of_is_the_printed_face_the_card_wears() {
+        let mut state = board("base-stats-printed");
+        let base = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let radiant = put(
+            &mut state,
+            &plain.id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        assert_eq!(
+            base_stats_of(&state, &base),
+            AttackHealth { attack: 3, health: 3 }
+        );
+        assert_eq!(
+            base_stats_of(&state, &radiant),
+            AttackHealth { attack: 6, health: 6 }
+        );
+    }
+
+    #[test]
+    fn r1181_a_stats_override_is_layer_1_and_buffs_damage_and_tuning_are_not() {
+        let mut state = board("base-stats-override");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let card = must(find_instance_mut(&mut state, &unit.id), "the unit");
+        card.stats_override = Some(AttackHealth { attack: 2, health: 5 });
+        card.buffs = AttackHealth { attack: 4, health: 4 };
+        card.damage = 1;
+        card.tuning = Some(Tuning {
+            attack: Some(1),
+            health: Some(1),
+            ..Tuning::default()
+        });
+        let card = must(find_instance(&state, &unit.id), "the unit").clone();
+        assert_eq!(
+            base_stats_of(&state, &card),
+            AttackHealth { attack: 2, health: 5 }
+        );
+        // Layer 4's tuning rides on `face_of`, which is why `base_stats_of` takes it back off.
+        assert_eq!(face_of(&state, &card).attack, 3);
+        assert_eq!(face_of(&state, &card).health, 6);
+    }
+}
+
+/// R1064: every point of Armor on the field, Units through §10.4 and both heroes (Meditative #73).
+mod r1064_armor_on_field {
+    use super::*;
+    use crate::rules::fixtures::combat::armoured;
+
+    #[test]
+    fn r1064_sums_every_acting_unit_s_armor_through_the_layers_and_both_heroes() {
+        let mut state = board("r1064-armor");
+        state.players.p1.hero.armor = 2;
+        state.players.p2.hero.armor = 1;
+        put(&mut state, &armoured.id, slot(P2, Row::Units, 1), json!({}));
+        let plain_card = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
+        must(find_instance_mut(&mut state, &plain_card.id), "the plain unit").position = Some(Position::Def);
+        assert_eq!(armor_on_field(&state), 11);
+    }
+
+    #[test]
+    fn r1064_an_empty_board_has_none() {
+        let state = board("r1064-empty");
+        assert_eq!(armor_on_field(&state), 0);
+    }
+}

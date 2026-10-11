@@ -12,13 +12,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::combat::{enter_new_side, is_active_on_field};
 use crate::damage::DamageTarget;
+use crate::effects::destroy::{DestroyArgs, destroy};
 use crate::effects::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_on_field, remove_from_field,
-    slot_of, slots_of,
+    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_beneath_top, place_on_field,
+    remove_from_field, slot_of, slots_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -31,6 +32,17 @@ pub struct StealTarget {
     pub target: Option<TargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub otherwise: Option<StealOtherwise>,
+}
+
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): what a steal does when the card cannot be
+/// taken because its new side has no free zone.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum StealOtherwise {
+    /// An ordinary destroy (§6.3), so Death and Reborn apply and an Indestructible card stays (R46).
+    Destroy,
 }
 
 fn instance_of(ctx: &EffectContext<'_>, args: &StealTarget) -> Option<CardInstance> {
@@ -129,7 +141,24 @@ pub fn steal(args: StealTarget) -> Effect {
         let Some(card) = instance_of(ctx, &args) else {
             return;
         };
-        take_control(ctx, &card);
+        if take_control(ctx, &card) {
+            return;
+        }
+        // R963, MD-C4: with no open zone on the taker's side, `otherwise: destroy` destroys it
+        // instead — but only a card still standing on the field under the other player (`instance_of`
+        // already narrowed it to the stay the run began on, R174): a card the taker already controls
+        // is neither stolen nor destroyed (R76). Anything else the steal refused — off the field,
+        // dormant — fizzles in `destroy`'s own resolution, so only the taker's own card is guarded.
+        if args.otherwise != Some(StealOtherwise::Destroy) {
+            return;
+        }
+        if card.controller == ctx.controller {
+            return;
+        }
+        let target = TargetSpec::Instance {
+            instance_id: card.id.clone(),
+        };
+        (destroy(DestroyArgs { target }).apply)(ctx);
     })
 }
 
@@ -170,5 +199,57 @@ pub fn steal_all(args: StealAllArgs) -> Effect {
             };
             take_control(ctx, &card);
         }
+    })
+}
+
+/// MD-F16, R1284: capture an opponent's card, moving it dormant beneath the holder under the holder's controller.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureArgs {
+    pub instance_id: String,
+}
+
+pub fn capture(args: CaptureArgs) -> Effect {
+    Effect::new("capture", move |ctx| {
+        let Some(holder_live) = ctx.self_.as_ref().and_then(|c| find_instance(ctx.state, &c.id)) else {
+            return;
+        };
+        let Some(holder_slot) = slot_of(ctx.state, holder_live) else {
+            return;
+        };
+        if holder_slot.row != Row::Units || !is_active_on_field(ctx.state, holder_live) {
+            return;
+        }
+        let Some(target_card) = instance_on_its_stay(ctx, &args.instance_id) else {
+            return;
+        };
+        let Some(target_slot) = slot_of(ctx.state, &target_card) else {
+            return;
+        };
+        if target_slot.row != Row::Units || !is_active_on_field(ctx.state, &target_card) {
+            return;
+        }
+        if target_card.id == holder_live.id || target_card.controller == holder_live.controller {
+            return;
+        }
+
+        let previous = target_card.controller;
+        let mut moving = target_card.clone();
+        remove_from_field(ctx.state, &moving, Default::default());
+        if !place_beneath_top(ctx.state, &mut moving, holder_slot) {
+            return;
+        }
+
+        let placed = find_instance(ctx.state, &moving.id).cloned().unwrap_or(moving);
+        enter_new_side(ctx, &placed, previous);
+
+        ctx.events.push(GameEvent::ControlChanged {
+            instance_id: placed.id.clone(),
+            controller: holder_slot.player,
+            row: Row::Units,
+            lane: holder_slot.lane,
+            former_id: None,
+            how: Some(ControlHow::Steal),
+        });
     })
 }

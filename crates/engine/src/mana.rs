@@ -5,13 +5,13 @@
 use crate::catalog::def_of;
 use crate::config::GLITCH_DEF_ID;
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
-use crate::faces::card_type_of;
 use crate::graveyard_play::playable_from_graveyard;
-use crate::script::CostArgs;
+use crate::script::{CostArgs, EngineSink};
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
-use crate::wire::{CardCost, GameEvent, PlayerId, Zone};
+use crate::triggers::{TriggerZone, holders_answering};
+use crate::wire::{CardCost, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -36,10 +36,81 @@ pub const NEXT_REFRESH_MODIFIER_ID: &str = "nextTurnMana";
 /// "adds to current mana and can exceed 4", exactly as #6 Mana Well's gain does, and #21 Hinder
 /// "subtracts from the opponent's next refresh". Current mana never goes below 0 (§2.3).
 pub fn refresh_mana(side: &mut PlayerState) {
+    refresh_mana_with(side, true);
+}
+
+/// `refresh_mana` with the natural generation named: under MD-B2's aura (`natural: false`) the
+/// refresh sets max mana as usual but current mana to the next-turn rider only. A lost refresh
+/// still gives 0 first (MB04's `refresh_is_lost` reads here once it lands).
+pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
     let max = max_mana_for(side);
     side.mana.max = max;
-    side.mana.current = (max + side.mana.next_turn_mod).max(0);
+    side.mana.current = refreshed_mana(side, max, natural);
     side.mana.next_turn_mod = 0;
+    // R1224: ME-TURN's repayment schedule — the next instalment comes off the refresh, after any
+    // rider. A lost refresh forgives the instalment: there is nothing to take it from.
+    crate::credit::take_instalment(side);
+}
+
+/// R844 (Meditative #18, #19): the id "lose all mana next N turns" travels under — one badge per
+/// player, which `modifierChanged` names as it appears and as it goes, and which the view lists
+/// while a loss covers a future refresh (R169).
+pub const LOST_REFRESH_MODIFIER_ID: &str = "lostRefresh";
+
+/// R844: whether this player's refresh is lost — their `lost_refresh_through` covers the turn they
+/// have started (`turns_started`).
+pub fn refresh_is_lost(side: &PlayerState) -> bool {
+    side.lost_refresh_through
+        .is_some_and(|through| side.turns_started <= through)
+}
+
+/// R844, R941: what a refresh gives. A lost refresh gives 0 and spends the rider with it; without
+/// natural generation (MD-B2) it gives the rider alone; otherwise max plus the rider. Never below 0.
+/// MB23's repayment schedule (#89) comes off afterwards (`credit::take_instalment`).
+pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
+    if refresh_is_lost(side) {
+        0
+    } else if natural {
+        (max + side.mana.next_turn_mod).max(0)
+    } else {
+        side.mana.next_turn_mod.max(0)
+    }
+}
+
+/// R844: how many lost refreshes this player still has past this one — `through − turns_started`,
+/// never below 0.
+pub fn lost_refreshes_left(side: &PlayerState) -> i32 {
+    side.lost_refresh_through
+        .map(|through| (through - side.turns_started).max(0))
+        .unwrap_or(0)
+}
+
+/// R844: clear a spent loss once no lost refresh is left. Returns true when the field was set and
+/// is now gone, so the turn can report the badge going with it.
+pub fn spend_lost_refresh(side: &mut PlayerState) -> bool {
+    if side.lost_refresh_through.is_some() && lost_refreshes_left(side) == 0 {
+        side.lost_refresh_through = None;
+        return true;
+    }
+    false
+}
+
+/// MD-B2, R941: whether any player generates mana naturally now — false while a card holding
+/// `no_natural_mana` acts on the field (face-up, top of its pile), on either side and in either row.
+pub fn natural_mana_on(state: &GameState) -> bool {
+    for player in PLAYER_IDS {
+        for row in [Row::Units, Row::Backrow] {
+            for slot in crate::zones::slots_of(player, row) {
+                if let Some(card) = crate::zones::card_at(state, slot)
+                    && !crate::preview::is_face_down(state, card)
+                    && crate::scripts::flags_of(state, card).no_natural_mana == Some(true)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+    true
 }
 
 /// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh
@@ -68,6 +139,25 @@ pub fn mana_event(player: PlayerId, side: &PlayerState) -> GameEvent {
         current: side.mana.current,
         max: side.mana.max,
     }
+}
+
+/// MD-D26: whether a `manaSpent` would be heard — some card answers it that is not a trap and sits
+/// on the field or in the backrow. Those cards are public, and a trigger on a public card is
+/// public, so asking costs a listener nothing hidden.
+pub fn mana_spent_heard(state: &GameState) -> bool {
+    holders_answering(state, GameEventType::ManaSpent)
+        .iter()
+        .any(|holder| !holder.is_trap && matches!(holder.zone, TriggerZone::Field | TriggerZone::Backrow))
+}
+
+/// MD-D26: report mana `player` spent, for a play's price or an activation's — but only while
+/// something answers it, so a game with no listener keeps its events, and its `next_seq` hashes,
+/// exactly as before (D14). Nothing is emitted for an amount below 1.
+pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32, for_: ManaSpentFor) {
+    if amount <= 0 || !mana_spent_heard(sink.state) {
+        return;
+    }
+    sink.events.push(GameEvent::ManaSpent { player, amount, for_ });
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
@@ -101,7 +191,11 @@ pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
 /// at the cleanup of that player's next turn, which is why this is a separate question from expiry.
 pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
     // R757: Armor Up's Armor holds from the moment it is gained until its expiry's cleanup removes it.
-    if matches!(modifier.kind, ModifierKind::HeroArmor { .. }) {
+    // MD-C21: Tranquility's immunity holds the same way.
+    if matches!(
+        modifier.kind,
+        ModifierKind::HeroArmor { .. } | ModifierKind::HeroImmune
+    ) {
         return true;
     }
     match modifier.expiry {
@@ -208,7 +302,7 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
             used_rules: Vec::new(),
         };
     }
-    let type_ = card_type_of(state, instance);
+    let type_ = crate::alt_play::priced_type_of(state, instance);
 
     for modifier in &side.mods {
         let ModifierKind::CostDiscount {
@@ -270,7 +364,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
 }
 
 pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    effective_cost(state, instance, CostOptions::default()) <= state.players[instance.controller].mana.current
+    // R1223: affordability reads the one function — current mana plus the credit line's offer.
+    effective_cost(state, instance, CostOptions::default())
+        <= crate::credit::spendable_mana(state, instance.controller)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —

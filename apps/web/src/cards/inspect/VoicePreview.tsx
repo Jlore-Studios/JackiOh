@@ -40,6 +40,8 @@ const LINE_LABELS: Record<VoiceLineKind, string> = {
   attack: "Attack",
   death: "Death",
   cast: "Cast",
+  // R1088: the trigger's numbered lines (`trigger<n>`) preview through `playVoice` like the rest.
+  trigger: "Trigger",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {

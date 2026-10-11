@@ -39,6 +39,11 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
 
+/// R846 (Meditative #19.1): the id owed extra turns travel under — one badge per player, which
+/// `modifierChanged` names as turns are owed and as the last one is taken, and which the view
+/// lists while any is owed (R169).
+pub const EXTRA_TURN_MODIFIER_ID: &str = "extraTurns";
+
 /// `prompts.runResume(sink, resume, { controller })`.
 fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) {
     let _ = crate::prompts::run_resume(
@@ -178,15 +183,16 @@ fn run_due_entry(sink: &mut EngineSink, player: PlayerId, entry: &DueEntry) -> b
             // steal kills a second steal's target, and `zones::forget_watchers` drops the entry aimed at it
             // even if Reborn brings the card straight back. The list was read before either ran, so an
             // entry is run only while `state.delayed` still holds it.
-            if !sink.state.delayed.iter().any(|due| due.id == effect.id) {
+            // R1140: and it runs as it stands now, a hand watch with the cards it still watches.
+            let Some(live) = sink.state.delayed.iter().find(|due| due.id == effect.id).cloned() else {
                 return false;
-            }
+            };
             // `modifiers.dropDelayed(state, effect.id)`.
             sink.state.delayed.retain(|due| due.id != effect.id);
             // B5 E27: the engine's own delayed kinds (a destroy, a hand discarded) run as verbs; every other
             // entry re-enters its card's step (R126).
-            if !crate::effects::delay::run_engine_delayed(sink, effect) {
-                run_resume_for(sink, &effect.resume, effect.owner);
+            if !crate::effects::delay::run_engine_delayed(sink, &live) {
+                run_resume_for(sink, &crate::effects::delay::due_resume(&live), live.owner);
             }
             true
         }
@@ -345,6 +351,12 @@ fn due_before_of(data: &IndexMap<String, Value>) -> u32 {
 /// trigger's prompt open with the turn's draw landing *inside* it, where R62 puts the draw after the
 /// triggers — the same bug the end of turn had.
 pub fn start_turn(sink: &mut EngineSink, player: PlayerId) {
+    begin_turn(sink, player, false);
+}
+
+/// R845 (Meditative #19.1): one turn's start, extra or not. An extra turn is a whole §2.2 turn —
+/// the count grows, the refresh runs (lost or not), and every stage after it follows.
+fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
     sink.state.active = player;
     sink.state.turn += 1;
     sink.state.phase = Phase::Start;
@@ -378,16 +390,31 @@ pub fn start_turn(sink: &mut EngineSink, player: PlayerId) {
     reset_exertion(sink, player);
 
     let turn = sink.state.turn;
-    sink.events.push(GameEvent::TurnStarted { player, turn });
+    sink.events.push(GameEvent::TurnStarted {
+        player,
+        turn,
+        extra: extra.then_some(true),
+    });
+    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
+    let natural = crate::mana::natural_mana_on(sink.state);
     let side = &mut sink.state.players[player];
     let rider = side.mana.next_turn_mod;
-    crate::mana::refresh_mana(side);
+    crate::mana::refresh_mana_with(side, natural);
+    let lost_spent = crate::mana::spend_lost_refresh(side);
     sink.events.push(crate::mana::mana_event(player, side));
     // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.
     if rider != 0 {
         sink.events.push(GameEvent::ModifierChanged {
             player,
             modifier_id: crate::mana::NEXT_REFRESH_MODIFIER_ID.to_string(),
+            added: false,
+        });
+    }
+    // R844: a spent loss's badge goes with it.
+    if lost_spent {
+        sink.events.push(GameEvent::ModifierChanged {
+            player,
+            modifier_id: crate::mana::LOST_REFRESH_MODIFIER_ID.to_string(),
             added: false,
         });
     }
@@ -826,6 +853,26 @@ fn end_of_turn_delayed_settle(sink: &mut EngineSink, player: PlayerId) {
 /// check and the next turn (R62's order: cleanup, then the cap, then the opponent's turn). Left to the
 /// next turn's first loop, a trigger answering them resolved after that turn had begun, and at the
 /// cap the game was drawn before it could.
+/// R846 (Meditative #19.1): spend one owed extra turn of the player whose turn just ended.
+/// Returns true when one was owed, so the cleanup starts their turn again instead of the
+/// opponent's. The count is `None` at 0, so a game without one hashes as before.
+fn take_owed_extra_turn(sink: &mut EngineSink, player: PlayerId) -> bool {
+    let owed = sink.state.players[player].extra_turns.unwrap_or(0);
+    if owed <= 0 {
+        return false;
+    }
+    let left = owed - 1;
+    sink.state.players[player].extra_turns = if left == 0 { None } else { Some(left) };
+    if left == 0 {
+        sink.events.push(GameEvent::ModifierChanged {
+            player,
+            modifier_id: EXTRA_TURN_MODIFIER_ID.to_string(),
+            added: false,
+        });
+    }
+    true
+}
+
 fn end_of_turn_cleanup_settle(sink: &mut EngineSink, player: PlayerId) {
     crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
@@ -845,6 +892,12 @@ fn end_of_turn_cleanup_settle(sink: &mut EngineSink, player: PlayerId) {
 
     if sink.state.turn >= TURN_CAP_PLAYER_TURNS {
         end_game(sink, Winner::Draw, GameOverReason::TurnCap);
+        return;
+    }
+
+    // R846: an owed extra turn starts the same player's turn again, counting toward the cap above.
+    if take_owed_extra_turn(sink, player) {
+        begin_turn(sink, player, true);
         return;
     }
 

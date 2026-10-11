@@ -638,6 +638,11 @@ fn activation_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
 /// `resume.step` is the step. The effect-list hooks are `Script::hook_named`'s, and the one object of
 /// steps is `resume`; no continuation names any other key.
 pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
+    // R1241: Meditative #95's rest-of-game effect is the engine's own step, whatever script it names: a
+    // start-of-turn effect re-enters through here and never reaches `run_engine_delayed`.
+    if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
+        return Some(crate::subsystems::eternal_step());
+    }
     if let Some(step) = script.hook_named(&resume.hook) {
         return Some(step.clone());
     }
@@ -671,13 +676,19 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@drawChain",
     "@drawCount",
     "@attackWindow",
+    "@attackSummon",
+    "@combatCopies",
     "@forcedRun",
     "@forcedRandom",
     "@afterAttack",
+    "@combatCopies",
+    "@afterAttacked",
     "@startOfTurn",
     "@endOfTurn",
     "@activate",
     "@aiTurn",
+    "@setRepeat",
+    "@extraCry",
 ];
 
 /// Whether anything at all knows how to resume this item (R113).
@@ -707,13 +718,18 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@drawChain" => crate::draw::run_owed_draw_chain(sink, item),
         "@drawCount" => crate::draw::run_owed_draw_count(sink, item),
         "@attackWindow" => crate::combat::run_owed_attack(sink, item),
+        "@attackSummon" => crate::attack_summon::run_owed(sink, item),
         "@forcedRun" => crate::combat::run_owed_forced_run(sink, item),
         "@forcedRandom" => crate::combat::run_owed_forced_random(sink, item),
         "@afterAttack" => crate::combat::run_owed_after_attack(sink, item),
+        "@combatCopies" => crate::combat::run_owed_combat_copies(sink, item),
+        "@afterAttacked" => crate::combat::run_owed_after_attacked(sink, item),
         "@startOfTurn" => crate::turn::run_owed_start_of_turn(sink, item),
         "@endOfTurn" => crate::turn::run_owed_end_of_turn(sink, item),
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
+        "@setRepeat" => crate::cry_trigger::run_owed_repeat(sink, item),
+        "@extraCry" => crate::cry_trigger::run_owed_extra_cries(sink, item),
         _ => {
             // A sequence a test made (`testkit::seams::register_work_handler`): TS's handler map, read
             // before its default handler.

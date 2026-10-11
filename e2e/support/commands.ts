@@ -75,6 +75,14 @@ export type SeedGameOptions = {
    * the page's storage before the app boots (spec 25 slows the effects down for its screenshots).
    */
   onBeforeLoad?: (win: Cypress.AUTWindow) => void;
+  /**
+   * Decks given inline, by the ids `a` and `b` name, instead of read from `e2e/fixtures/decks/`: spec
+   * 36 builds its decks from the catalog at run time, so a card a later part adds is dealt the day it
+   * lands with no fixture to edit. Each is checked exactly as a fixture is (A9).
+   */
+  decks?: Readonly<Record<string, Pick<FixtureDeck, "cards" | "handicap"> & Partial<FixtureDeck>>>;
+  /** R1420: the sets the hotseat engine previews before it creates the game (spec 36: `["Meditative"]`). */
+  preview?: string[];
 };
 
 export type PromptStep = PromptAnswer & { kind?: PromptKind };
@@ -436,10 +444,17 @@ Cypress.Commands.add("playByName", (name: string, options: PlayCardOptions = {})
 
 Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
   const { seed, a, b, mulligan = "keep" } = options;
+  /** A deck given inline (spec 36), else its fixture file. */
+  const deckFor = (id: string): Cypress.Chainable<unknown> => {
+    const inline = options.decks?.[id];
+    if (inline === undefined) return cy.fixture(`decks/${id}.json`);
+    const deck: unknown = { id, spec: id, description: "", ...inline };
+    return cy.wrap(deck, { log: false });
+  };
 
   deckableIds().then((known) => {
-    cy.fixture(`decks/${a}.json`).then((rawA) => {
-      cy.fixture(`decks/${b}.json`).then((rawB) => {
+    deckFor(a).then((rawA) => {
+      deckFor(b).then((rawB) => {
         const deckA = asDeck(rawA, a, known);
         const deckB = asDeck(rawB, b, known);
         const decks = {
@@ -455,6 +470,7 @@ Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
           seed,
           decks,
           ...(Object.keys(handicaps).length === 0 ? {} : { handicaps }),
+          ...(options.preview === undefined ? {} : { preview: options.preview }),
         };
         cy.visit(hotseatUrl(seed, a, b), {
           onBeforeLoad(win) {

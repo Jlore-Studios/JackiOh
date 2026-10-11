@@ -21,6 +21,7 @@
 // Pure: no DOM, no React, no state of its own.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 
 import {
   IDLE,
@@ -99,11 +100,12 @@ function planPlay(
   const dropTestids = dropSetFor(view, legal, lifted);
   const freeDrop = dropTestids.size === 0 || outstandingNeed(lifted) === null;
 
-  // Nothing is picked yet, so every candidate is a remaining one.
+  // Nothing is picked yet, so every candidate is a remaining one. ME-ALTPLAY: a free drop casts
+  // face-up, so the set plays never make a drop free nor draw its arrow.
   let anyZone = false;
   let anyTargets = false;
   for (const candidate of candidates) {
-    if (candidate.type !== "play") continue;
+    if (candidate.type !== "play" || candidate.faceDown !== undefined) continue;
     if (candidate.zone !== undefined) anyZone = true;
     if (candidate.targets !== undefined && candidate.targets.length > 0) anyTargets = true;
   }
@@ -128,9 +130,14 @@ function planAttack(
   if (source.side !== "you") return null;
   // While a play or an activation is in flight a press on your own unit is a tribute or target click.
   if (isBuilding(interaction)) return null;
-  const candidates = legal.filter((body) => body.type === "attack" && body.attackerId === source.instanceId);
+  const candidates = legal.filter(
+    (body): body is Extract<ActionBody, { type: "attack" }> =>
+      body.type === "attack" && body.attackerId === source.instanceId,
+  );
   // R384: a unit with nothing to attack with lifts its Activate ability instead, when it has one.
   if (candidates.length === 0) return planCardActivation(view, legal, source);
+  // R1200: while a Mayor acts the attack names no target, so there is nothing to drag it to.
+  if (candidates.length === 1 && candidates[0]?.targetId === RANDOM_ATTACK_TARGET) return null;
 
   const lifted: Attacking = { stage: "attacking", attackerId: source.instanceId, candidates };
   return {
@@ -298,6 +305,8 @@ export function resolveDrop(
     if (result.action !== undefined || result.interaction !== plan.lifted) return result;
     return { interaction: plan.missed ?? IDLE };
   }
-  if (spot.at === "board" && plan.freeDrop) return pickInPlay(plan.lifted, {});
+  // ME-ALTPLAY: a free drop casts face-up; setting asks its timing through the picker.
+  if (spot.at === "board" && plan.freeDrop)
+    return pickInPlay(plan.lifted, plan.kind === "play" ? { faceDown: "up" } : {});
   return { interaction: plan.missed ?? IDLE };
 }

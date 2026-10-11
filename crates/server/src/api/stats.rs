@@ -204,8 +204,8 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
     Ok(records)
 }
 
-/// R1447: the seats of a record the public figures count: a live game's people only, so a ladder
-/// bot's side (`ai`, R1444) is read only by a query that asks for it, and both seats of an AI
+/// R1449: the seats of a record the public figures count: a live game's people only, so a ladder
+/// bot's side (`ai`, R1446) is read only by a query that asks for it, and both seats of an AI
 /// development game (R378).
 fn counted_pilot(source: GameSource) -> PilotFilter {
     match source {
@@ -222,7 +222,7 @@ fn sum_tally(a: &Tally, b: &Tally) -> Tally {
     }
 }
 
-/// R1447: the public report over `records` for `source`: the live records' report counting their
+/// R1449: the public report over `records` for `source`: the live records' report counting their
 /// people (`counted_pilot`) and the development records' counting both seats, summed card by card,
 /// in catalog-id order as `card_stats` lists them.
 fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> CardStatsReport {
@@ -278,7 +278,7 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
 
 /// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
-/// R1447: a ladder bot's game counts toward the gate like any live game, and its people's side
+/// R1449: a ladder bot's game counts toward the gate like any live game, and its people's side
 /// toward the figures; the bot's side never does (`public_report`).
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
@@ -546,7 +546,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
     for record in &records_to_count {
         for seat in PLAYER_IDS {
-            // R1447: as `public_report` counts them, a live game's people only.
+            // R1449: as `public_report` counts them, a live game's people only.
             if counted_pilot(record.source) == PilotFilter::Human && record.pilots[seat] != Pilot::Human {
                 continue;
             }

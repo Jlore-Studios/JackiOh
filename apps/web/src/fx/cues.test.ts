@@ -1459,6 +1459,18 @@ describe("B20 turn banners", () => {
       rays("victory", CENTER, 0, 600),
     ]);
   });
+
+  it("B20 an extra turnStarted plans the extra turn banner", () => {
+    forDs("turnStarted", (D) => {
+      expectCues(plan([{ type: "turnStarted", player: "p1", turn: 5, extra: true }], D), [
+        banner("Your extra turn", "you", D + FX_BANNER_TAIL_MS),
+        rays("victory", CENTER, 0, D),
+      ]);
+      expectCues(plan([{ type: "turnStarted", player: "p2", turn: 6, extra: true }], D), [
+        banner("Opponent's extra turn", "opponent", D + FX_BANNER_TAIL_MS),
+      ]);
+    });
+  });
 });
 
 /* ------------------------------------------------------------------------------------------- *

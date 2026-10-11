@@ -1,0 +1,347 @@
+/* The hero portraits' vivid art, their reaction and the hero's inspect view (issue #544, R1330–R1332).
+
+   `.portrait-art` is `PortraitArt.tsx`'s oval: the `CardArt` oval under a ground of the portrait's
+   own, a light that breathes, a few drifting motes and a rim light. The colours are inline custom
+   properties from `portraitLook.ts`; the idle's timings are `config.ts`'s. Reduce Motion stills the
+   idle and the reaction, by the media query and by the app's `data-reduce-motion` root flag, as
+   emotes.css does for the emotes. */
+
+/* ---- the oval and its layers (R1332) --------------------------------------------------------- */
+
+.portrait-art {
+  position: relative;
+  display: block;
+  border-radius: 50%;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  background: radial-gradient(circle at 32% 26%, var(--portrait-ground-1), var(--portrait-ground-2) 78%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--portrait-rim) 45%, transparent),
+    0 0 10px -2px var(--portrait-rim);
+}
+
+/* The board's oval fills the 44px frame emotes.css sets; the class that places it wins over the
+   order the two sheets load in. */
+.portrait-art.hero-portrait-art {
+  position: absolute;
+  inset: 0;
+}
+
+/* The picture itself, more saturated. */
+.portrait-art > .cf-art.cf-art--oval {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: saturate(1.45) contrast(1.06);
+}
+
+.portrait-art-light,
+.portrait-art-breath,
+.portrait-art-motes,
+.portrait-art-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* The ground's own light, washed over the picture from the upper left. */
+.portrait-art-light {
+  background:
+    radial-gradient(circle at 32% 26%, var(--portrait-light), transparent 58%),
+    linear-gradient(160deg, var(--portrait-ground-1), var(--portrait-ground-2));
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+}
+
+/* The idle's breathing light. */
+.portrait-art-breath {
+  background: radial-gradient(circle at 34% 28%, var(--portrait-light), transparent 52%);
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  animation: portrait-breathe var(--portrait-breath) ease-in-out infinite alternate;
+}
+
+.portrait-art-motes {
+  overflow: hidden;
+}
+
+/* A mote starts where it is placed and rises out of the oval's top; `--mote-delay` is negative, so
+   every mote is part-way through its drift the moment the portrait is drawn. */
+.portrait-art-mote {
+  position: absolute;
+  left: var(--mote-x);
+  top: var(--mote-y);
+  width: var(--mote-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--portrait-mote), transparent 70%);
+  opacity: 0.55;
+  animation: portrait-mote var(--portrait-drift) linear var(--mote-delay) infinite;
+}
+
+/* The rim light along the lit edge, and a shade along the other. */
+.portrait-art-rim {
+  box-shadow:
+    inset 2px 3px 4px -1px var(--portrait-rim),
+    inset -2px -3px 5px -2px rgb(0 0 0 / 55%);
+}
+
+.hero-inspect-portrait .portrait-art-rim {
+  box-shadow:
+    inset 6px 8px 12px -4px var(--portrait-rim),
+    inset -6px -8px 14px -6px rgb(0 0 0 / 55%);
+}
+
+@keyframes portrait-breathe {
+  from { opacity: 0.1; }
+  to { opacity: 0.38; }
+}
+
+@keyframes portrait-mote {
+  0% { opacity: 0; transform: translateY(40%); }
+  20% { opacity: 0.9; }
+  80% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-260%); }
+}
+
+/* ---- the deck builder's picker (R1332) ------------------------------------------------------ */
+
+.portrait-current .portrait-art {
+  width: 40px;
+  height: 44px;
+}
+
+.portrait-pick .portrait-art {
+  width: 52px;
+  height: 58px;
+}
+
+/* ---- the board portrait's reaction (R1331) -------------------------------------------------- */
+
+.hero-portrait[data-reacting="true"] > .portrait-art {
+  animation: portrait-squash var(--portrait-react) cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+@keyframes portrait-squash {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.12, 0.86); }
+  60% { transform: scale(0.94, 1.06); }
+  100% { transform: scale(1); }
+}
+
+.hero-portrait-glint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 80%) 48%, transparent 66%) no-repeat;
+  background-size: 260% 100%;
+  animation: portrait-glint var(--portrait-react) ease-out both;
+}
+
+@keyframes portrait-glint {
+  from { background-position: 120% 0; opacity: 1; }
+  to { background-position: -40% 0; opacity: 0; }
+}
+
+/* ---- the open button (R1330) ---------------------------------------------------------------- */
+
+/* The portrait's art is a button laid over the oval, so a keyboard and a screen reader reach it.
+   The hero's own `button` styling would otherwise draw it (board.css); each state is restated so
+   none of them paints a box over the art. */
+.hero .hero-portrait > button.hero-portrait-open,
+.hero .hero-portrait > button.hero-portrait-open:hover,
+.hero .hero-portrait > button.hero-portrait-open:active {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transform: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.hero .hero-portrait > button.hero-portrait-open:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 2px;
+}
+
+/* ---- the inspect view (R1330) --------------------------------------------------------------- */
+
+.hero-inspect {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 16px 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: 18px;
+  background: var(--bg-raised);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 55%);
+  color: var(--text);
+  text-align: center;
+  animation: hero-inspect-in 180ms ease-out;
+}
+
+@keyframes hero-inspect-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.hero-inspect-portrait {
+  display: block;
+  flex: none;
+  width: min(200px, 34vh);
+  height: min(200px, 34vh);
+}
+
+.hero-inspect-portrait .portrait-art {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-inspect-seat {
+  color: var(--text-dim);
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-inspect-name {
+  margin: 0;
+  font-size: 1.35em;
+}
+
+.hero-inspect-title,
+.hero-inspect-flavour {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.hero-inspect-title {
+  font-style: italic;
+}
+
+.hero-inspect-flavour {
+  max-width: 34ch;
+}
+
+.hero-inspect-stats {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+}
+
+.hero-inspect-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+}
+
+.hero-inspect-stat dt {
+  color: var(--text-dim);
+  font-size: 0.8em;
+}
+
+.hero-inspect-stat dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* A phone held sideways has no height for the portrait over the words: it stands beside them. */
+@media (max-height: 560px) and (min-width: 560px) {
+  .hero-inspect {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: 8px 16px;
+    width: min(720px, calc(100vw - 24px));
+  }
+
+  .hero-inspect > * {
+    grid-column: 2;
+  }
+
+  .hero-inspect-portrait {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    width: min(180px, 60vh);
+    height: min(180px, 60vh);
+  }
+}
+
+/* The emote menu and the mute item, drawn in the view's flow instead of hung off the 44px hero. */
+.emote-menu.emote-menu--inline {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  box-shadow: none;
+}
+
+.emote-menu--inline .emote-voice-arc,
+.emote-menu--inline .emote-emoji-row {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.emote-menu--inline .emote-voice-arc {
+  padding-bottom: 0;
+}
+
+.emote-menu.emote-menu--inline .emote-voice-arc > .emote-item.emote-voice {
+  transform: none;
+}
+
+/* ---- Reduce Motion: the idle and the reaction stand still ------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait-art-breath,
+  .portrait-art-mote,
+  .hero-portrait[data-reacting="true"] > .portrait-art,
+  .hero-inspect {
+    animation: none;
+  }
+
+  .hero-portrait-glint {
+    display: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .portrait-art-breath,
+:root[data-reduce-motion="true"] .portrait-art-mote,
+:root[data-reduce-motion="true"] .hero-portrait[data-reacting="true"] > .portrait-art,
+:root[data-reduce-motion="true"] .hero-inspect {
+  animation: none;
+}
+
+:root[data-reduce-motion="true"] .hero-portrait-glint {
+  display: none;
+}

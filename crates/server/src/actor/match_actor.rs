@@ -15,7 +15,7 @@
 //!  - The results row lives behind `crate::api::results::record_result` (§9.5, M7-T2).
 //!  - The only per-player payload is `engine::view_for(state, player)` (§9.1, §10.8). No socket
 //!    ever sees a state, the other hand, library order, or the other seat's view.
-//!  - R1444: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
+//!  - R1446: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
 //!    decided and paced in `bots::seat`, off the queue, and comes back as a server action through the
 //!    same path a client's takes; its persona (`bots::persona`) reads the bot seat's own view and its
 //!    emotes are relayed as a player's are.
@@ -84,7 +84,7 @@ pub struct MatchActorInput {
     /// R1442: the play telemetry a rebuild replayed from `log` (`telemetry::replay`). `None`, the
     /// actor starts recording from the match's creation.
     pub telemetry: Option<Recorder>,
-    /// R1444: the ladder bot at each home seat, which the actor plays itself; `None` for a person.
+    /// R1446: the ladder bot at each home seat, which the actor plays itself; `None` for a person.
     pub bots: PerPlayer<Option<BotRow>>,
 }
 
@@ -107,6 +107,12 @@ enum Task {
         nonce: String,
         body: ActionBody,
     },
+    /// MD-D29, R1127: an emote that passed the rate gate, to mint as an `Emote` action once it runs
+    /// — the seat resolved then, the legality read off the live state.
+    Emote {
+        home: PlayerId,
+        emote: EmoteId,
+    },
     Submit {
         player: PlayerId,
         nonce: String,
@@ -122,7 +128,7 @@ enum Task {
     },
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
-    /// R1444: the move a bot home's `seat::play` came back with, decided on the state as it stood
+    /// R1446: the move a bot home's `seat::play` came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     BotMove {
         home: PlayerId,
@@ -139,6 +145,7 @@ impl Task {
             Task::Arm => "arm".to_string(),
             Task::Hello { .. } => "hello".to_string(),
             Task::Action { body, .. } | Task::Submit { body, .. } => format!("action:{}", body.action_type()),
+            Task::Emote { .. } => "emote".to_string(),
             Task::Expire(expiry) => format!("expiry:{}", expiry.kind()),
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
@@ -217,12 +224,12 @@ struct Core {
     /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
     /// telemetry's rank bucket; `None` until then, or when it could not be read.
     tiers: Option<PerPlayer<RankTier>>,
-    /// R1444: whether each bot home's move is being decided now (`seat::play` in flight), by home.
+    /// R1446: whether each bot home's move is being decided now (`seat::play` in flight), by home.
     bot_thinking: PerPlayer<bool>,
-    /// R1444: where each bot home's two streams stand: the search's and the think time's. A rebuilt
+    /// R1446: where each bot home's two streams stand: the search's and the think time's. A rebuilt
     /// actor starts both again, which nothing replays.
     bot_cursors: PerPlayer<(u32, u32)>,
-    /// R1444: the turn each bot home last moved in, so a think time knows a turn's first move.
+    /// R1446: the turn each bot home last moved in, so a think time knows a turn's first move.
     bot_moved_turn: PerPlayer<Option<i32>>,
     /// R645, R1344: each bot home's persona, reading the bot seat's own view.
     personas: PerPlayer<Option<EmotePersona>>,
@@ -246,7 +253,7 @@ struct Shared {
     clock: MatchClock,
     inbox: mpsc::UnboundedSender<Task>,
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
-    /// R1444: the ladder bot at each home seat, played by this actor; `None` for a person.
+    /// R1446: the ladder bot at each home seat, played by this actor; `None` for a person.
     bots: PerPlayer<Option<BotRow>>,
     core: Mutex<Core>,
 }
@@ -410,7 +417,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         next_seq,
         acks,
         sockets: PerPlayer::new(None, None),
-        // R1444: a bot's seat is never away, so R744's grace never starts for it.
+        // R1446: a bot's seat is never away, so R744's grace never starts for it.
         attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
         recent_actions: PerPlayer::new(VecDeque::new(), VecDeque::new()),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
@@ -502,7 +509,7 @@ impl MatchActor {
                 if snapshot.result.is_some() {
                     self.on_terminal(&snapshot).await;
                 } else {
-                    // R1444: a bot that owes the match a move, as it opens or after a restart, makes it.
+                    // R1446: a bot that owes the match a move, as it opens or after a restart, makes it.
                     {
                         let mut core = self.lock();
                         for home in PLAYERS {
@@ -540,6 +547,25 @@ impl MatchActor {
             } => {
                 let answer = self.apply_action(player, nonce, body).await;
                 let _ = reply.send(answer);
+            }
+            Task::Emote { home, emote } => {
+                // MD-D29, R1127: the seat is the one this account plays when the emote runs, and the
+                // `Emote` action is minted only while a card hears it — otherwise the relay above is
+                // all the emote ever was (R643). The reply is discarded: the sender already showed
+                // the emote locally, and a rate-limited emote is silently dropped.
+                let player = playing(&self.lock(), home);
+                let wanted = ActionBody::Emote { emote };
+                let nonce = {
+                    let core = self.lock();
+                    if engine::legal_actions(&core.state, player).contains(&wanted) {
+                        Some(format!("{SERVER_NONCE_PREFIX}emote-{}", core.next_seq))
+                    } else {
+                        None
+                    }
+                };
+                if let Some(nonce) = nonce {
+                    let _ = self.apply_action(player, nonce, wanted).await;
+                }
             }
             Task::Expire(expiry) => self.on_expire(expiry).await,
             Task::Disconnect { home } => {
@@ -834,7 +860,7 @@ impl MatchActor {
     /// other seat. A disconnect grace belongs to the account, so one running moves with it to the seat
     /// it plays now (restarted there: the clock keeps one deadline per seat, not per account).
     fn on_seats_swapped(&self, core: &mut Core, now: bool) {
-        // R1444: a bot has no socket and is never away.
+        // R1446: a bot has no socket and is never away.
         let away: Vec<PlayerId> = PLAYERS
             .into_iter()
             .filter(|home| core.sockets[*home].is_none() && self.shared.bots[*home].is_none())
@@ -954,7 +980,7 @@ impl MatchActor {
             return;
         }
         // R1442: the play telemetry goes after the result, so its write can never cost it.
-        // R1444: a bot home's rows are the AI's, so no human figure reads them unasked.
+        // R1446: a bot home's rows are the AI's, so no human figure reads them unasked.
         let pilot = |home: PlayerId| {
             if self.shared.bots[home].is_some() {
                 Pilot::Ai
@@ -1087,10 +1113,10 @@ impl MatchActor {
     }
 
     // ---------------------------------------------------------------------
-    // The bot seat (R1444)
+    // The bot seat (R1446)
     // ---------------------------------------------------------------------
 
-    /// R1444: starts the move of every bot home whose seat owes the match one (R677: the engine seat
+    /// R1446: starts the move of every bot home whose seat owes the match one (R677: the engine seat
     /// it plays now) and is not already deciding. `seat::play` decides and waits out the think time
     /// off the queue, then queues the move as `Task::BotMove`; the queue goes on meanwhile, so a
     /// clock that runs out first still times the bot out as it would a person.
@@ -1143,7 +1169,7 @@ impl MatchActor {
         }
     }
 
-    /// R1444: plays the move a bot home decided, as a server action (R270's prefix, so no client can
+    /// R1446: plays the move a bot home decided, as a server action (R270's prefix, so no client can
     /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
     /// the seat it plays now. R188: a bot never concedes or offers or takes a draw.
     ///
@@ -1311,8 +1337,9 @@ impl MatchActor {
     /// rate-limited one and without spending the limit: the menu never offers it, so only a stale or
     /// a hand-made client sends one. Then the same gate the client ran: a fail is a silent drop (no
     /// error, no rejected-action log); a pass relays to the opponent only (the sender already showed
-    /// it locally). R645: a person's emote that goes out is offered to the opposing bot's persona,
-    /// which may answer it; a bot never answers a bot.
+    /// it locally), then runs as an `Emote` action while a card hears it (R1127). R645: a person's
+    /// emote that goes out is offered to the opposing bot's persona, which may answer it; a bot never
+    /// answers a bot.
     fn relay_emote(&self, core: &mut Core, home: PlayerId, emote: EmoteId) {
         let player = playing(core, home);
         if !hand_holds(&self.shared.emote_hands[home], emote) {
@@ -1333,6 +1360,10 @@ impl MatchActor {
             let turn = core.state.turn;
             core.telemetry.on_emote(home, emote, turn, now);
         }
+        // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that hears it
+        // answers it in turn order behind every action queued ahead of it. A bot's emote is minted
+        // like a person's (R1446): a hearing card answers either.
+        self.enqueue(Task::Emote { home, emote });
         if self.shared.bots[home].is_some() {
             return;
         }

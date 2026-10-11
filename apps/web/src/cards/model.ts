@@ -5,10 +5,11 @@
 // Two kinds of face come out of it (SPEC §10.10). A face with no `inPlay` is the card as printed:
 // the collection's, both faces of it in the catalog's words. A face with `inPlay` is the card as the
 // view says it stands in a game (R243): the cost the view gives it, the stats of a Unit in its
-// owner's hand with what it gained there (#89 Corpse Eater), the numbers and keywords of a unit on
-// the field, the Vanilla marker, and inPlay.ts's words where play and print part ways — a #98
-// Heroic Power's rolled power, "???" for Call to Chaos. A match-made definition (a Fuse's, R77) is
-// just the `def` the caller found in the view's `defs`, and prints its own name, text and stats.
+// owner's hand with what it gained there (#89 Corpse Eater), a hand card's keywords where the view
+// gives them (a Lucky given in hand, R1438), the numbers and keywords of a unit on the field, the
+// Vanilla marker, and inPlay.ts's words where play and print part ways — a #98 Heroic Power's rolled
+// power, "???" for Call to Chaos. A match-made definition (a Fuse's, R77) is just the `def` the
+// caller found in the view's `defs`, and prints its own name, text and stats.
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
 // already carry — the live cost against the printed price, the live stats against the printed
@@ -33,6 +34,13 @@
 // #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
 // with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
 // cost, type and art, and `copying` names the card it copies for the inspect notes.
+//
+// ME-CN, R1301: a card the view says is Chinese (`FaceSource.chinese`) prints its name and both
+// faces' texts from the Chinese table (chinese.ts), a copier's copied text and a fused card's
+// ingredients' included, filled with the same numbers; its preview labels are the table's too. A
+// Radiant face's gold diff compares the two Chinese faces (R1302). The English face's name and text
+// ride along (`englishName`, `englishText`), never printed: the art's motif and the glossary's terms
+// are read from them.
 
 import {
   fillParams,
@@ -52,6 +60,7 @@ import {
   type Tag,
   type Tuning,
 } from "@jackioh/shared";
+import { TRIBAL_TAGS } from "@jackioh/engine/config";
 
 import {
   HEROIC_POWER_ID,
@@ -61,6 +70,7 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
+import { chineseDef, chinesePreviewLabel } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
@@ -146,7 +156,10 @@ export type FaceModel = {
    * braces after its label. Always empty in the collection, and wherever play prints other words.
    */
   values: readonly PreviewValue[];
-  /** Live keywords when `live` was given, else the printed face's keywords. */
+  /**
+   * Live keywords when `live` was given, a hand card's as the view gives them (`InPlay.handKeywords`),
+   * else the printed face's keywords.
+   */
   keywords: readonly Keyword[];
   /** A face in a game (`FaceSource.inPlay` given) rather than the collection's. */
   inPlay: boolean;
@@ -154,10 +167,13 @@ export type FaceModel = {
   vanilla: boolean;
   /**
    * Keywords the card has now that its printed face does not print (a Plastic Surgery's, an aura's,
-   * Defense Position's Taunt, every keyword a Vanilla unit still has): the face prints them after
-   * its text, since the text no longer says them. Empty outside play.
+   * Defense Position's Taunt, every keyword a Vanilla unit still has, a Lucky given in hand): the
+   * face prints them after its text, since the text no longer says them. Lucky is one entry at its
+   * sum whenever the sum is not the printed one (R1438). Empty outside play.
    */
   gained: readonly Keyword[];
+  /** ME-GRANT, R1107: the Death abilities other cards granted the unit, each on its own line after the gained keywords. Empty outside play. */
+  grants: readonly string[];
   /**
    * The collection's text for this face, when the face in play prints something else — a Heroic
    * Power's rolled power, a Vanilla unit — so the inspect overlays can show both. Null when the two
@@ -169,6 +185,8 @@ export type FaceModel = {
    * null elsewhere, and on a card with none. Optional, as every field below is, for a face built by hand.
    */
   brittle?: number | null;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`); null otherwise. */
+  element?: string | null;
   /** B3.4, R386: in play, what Degrade, Upgrade and KY's Constant changed on the card; null when nothing did. */
   tuning?: FaceTuning | null;
   /** B5 E39: in play, the enchantments riding the card (`CardView.enchantments`). */
@@ -177,6 +195,8 @@ export type FaceModel = {
   animated?: { home?: number } | null;
   /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: boolean;
+  /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
+  created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
   /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
@@ -185,6 +205,12 @@ export type FaceModel = {
   quest?: QuestView | null;
   /** B5 E14, R511: in play, the Spell a copier's text is now (`CardView.copies`); null when it copies none. */
   copying?: { defId: string; name: string; radiant: boolean } | null;
+  /** ME-CN, R1301: the face prints its words in Chinese (`FaceSource.chinese`). Absent otherwise. */
+  chinese?: boolean;
+  /** R1301: on a Chinese face, the name the English face prints, which picks the art's motif (R503). */
+  englishName?: string;
+  /** R1301: on a Chinese face, the text the English face prints, whose terms the glossary explains. */
+  englishText?: string;
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -193,6 +219,11 @@ export type FaceModel = {
 export type InPlay = {
   /** R243: a Unit card's stats in its owner's hand, as they stand (`CardView.attack`, `.health`). */
   handStats?: { attack: number; health: number };
+  /**
+   * B5 E38, R1438: a hand card's keywords as the view gives them (`CardView.keywords`): its printed
+   * ones as Degrade and Upgrade left them, and those it was given in the hand or the deck (a Lucky).
+   */
+  handKeywords?: readonly Keyword[];
   /** R243: the unit's text is gone (`UnitView.vanilla`). */
   vanilla?: boolean;
   /** R43, R243: the power a #98 Heroic Power rolled (R752). */
@@ -206,6 +237,8 @@ export type InPlay = {
   params?: Readonly<Record<string, number>>;
   /** B3.3, R385: the card's Brittle count (`CardView.brittle`). */
   brittle?: number;
+  /** R980: the card's element, while a Feng Shui acts (`CardView.element`). */
+  element?: string;
   /** B3.4, R386: what Degrade and Upgrade changed on the card (`CardView.tuning`). */
   tuning?: Tuning;
   /** B5 E39: the enchantments riding the card (`CardView.enchantments`). */
@@ -214,12 +247,16 @@ export type InPlay = {
   animated?: { home?: number };
   /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: true;
+  /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
+  created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
   marks?: readonly CardMark[];
   /** B5 E33, R404: the card's quest line (`CardView.quest`). */
   quest?: QuestView;
   /** B5 E14, R399: the Spell a copier has the text of (`CardView.copies`), with its definition. */
   copies?: { def: CardDef; radiant: boolean; params?: Readonly<Record<string, number>> };
+  /** ME-GRANT, R1107: the Death abilities other cards granted the unit (`UnitView.grants`). */
+  grants?: readonly string[];
 };
 export type FaceSource = {
   defId: string;
@@ -234,6 +271,10 @@ export type FaceSource = {
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
   /** Set on every face drawn in a game, absent in the collection (see the header). */
   inPlay?: InPlay;
+  /** ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's. */
+  chinese?: boolean;
+  /** MD-B15, R923: the view's tags where they differ from the definition's (a granted tag). */
+  tags?: readonly Tag[];
 };
 
 /** The gem of a card nobody can name: no catalog, no live cost. */
@@ -245,7 +286,11 @@ const UNKNOWN_TYPE: CardType = "Unit";
 export function faceModel(source: FaceSource): FaceModel {
   // R102, B3.4: a fused definition declares no numbers of its own, and its text still writes its
   // ingredients' `{key}`s; in play the view's numbers fill them (and are, for it, the printed ones).
-  const def = withViewParams(source.def, source.inPlay?.params);
+  const filled = withViewParams(source.def, source.inPlay?.params);
+  // ME-CN, R1301: a Chinese card's name and texts are the table's; its numbers, keywords and all else
+  // stay the definition's.
+  const chinese = source.chinese === true;
+  const def = chinese && filled !== undefined ? chineseDef(filled) : filled;
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
   // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
   // the card's type is its face's (§5.2); in play the view's word for it comes first.
@@ -256,11 +301,14 @@ export function faceModel(source: FaceSource): FaceModel {
   const printedText = textOf(def, source.radiant);
   // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
   const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
-  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads.
-  const copies = inPlay?.copies;
+  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads
+  // (in Chinese on a Chinese copier, R1301).
+  const viewCopies = inPlay?.copies;
+  const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
-  const keywords = source.live?.keywords ?? printed?.keywords ?? [];
+  // B5 E38, R1438: a hand card's keywords are the view's where it gives them (a Lucky given in hand).
+  const keywords = source.live?.keywords ?? inPlay?.handKeywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
   // does not print (Vanilla, "???", a rolled power) has no value to show.
   const printsItsText = text.full === liveText.full;
@@ -268,13 +316,22 @@ export function faceModel(source: FaceSource): FaceModel {
   // line of keywords gained since printing leaves them out.
   const tuning = inPlay === undefined ? null : faceTuning(def, source.radiant, inPlay.tuning, inPlay.params);
   const tunedKeys = new Set((tuning?.added ?? []).map(keywordKey));
+  // R280, R1301: a Chinese card's preview labels are the table's, filled with the numbers its face is.
+  const preview = inPlay?.preview ?? [];
+  const values =
+    chinese && filled !== undefined
+      ? preview.map((entry) => ({ ...entry, label: chinesePreviewLabel(filled, source.radiant, entry.label, inPlay?.params) }))
+      : preview;
+  // R1301: the same card's English face, for what is read off its words and never printed.
+  const english = chinese ? faceModel({ ...source, chinese: false }) : null;
 
   return {
     defId: source.defId,
     known: def !== undefined,
     name: def?.name ?? source.name ?? source.defId,
     type,
-    tags: def?.tags ?? [],
+    // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
+    tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),
     rarity: def?.rarity ?? null,
     printedRarity: def?.printedRarity ?? null,
     index: def?.index ?? null,
@@ -286,25 +343,30 @@ export function faceModel(source: FaceSource): FaceModel {
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
     refs: [...(copies?.def.refs ?? []), ...(def?.refs ?? [])],
-    values: printsItsText ? (inPlay?.preview ?? []) : [],
+    values: printsItsText ? values : [],
     keywords,
     inPlay: inPlay !== undefined,
     vanilla,
     // A Vanilla unit prints no keyword of its own any more (§6.3), so every one it still has is gained.
     gained:
-      inPlay === undefined || source.live === undefined
+      inPlay === undefined || (source.live === undefined && inPlay.handKeywords === undefined)
         ? []
         : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
+    // ME-GRANT, R1107: the granted Death abilities, each on its own line after the gained keywords.
+    grants: inPlay?.grants ?? [],
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
     brittle: inPlay?.brittle ?? null,
+    element: inPlay?.element ?? null,
     tuning,
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     berserk: inPlay?.berserk === true,
+    created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+    ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),
   };
 }
 
@@ -354,18 +416,35 @@ function handLive(stats: InPlay["handStats"], printed: PrintedFace | undefined):
   return { attack: stats.attack, health: stats.health, maxHealth: stats.health, keywords: printed?.keywords ?? [] };
 }
 
-/** The keywords a card has now that its printed face does not print, each once, in the order it has them. */
+/**
+ * The keywords a card has now that its printed face does not print, each once, in the order it has
+ * them. Lucky X stacks, and the view keeps each entry for the sum (layers.rs), so Lucky is gained when
+ * its sum is not the printed sum, as one entry at the sum where its first entry stands: a Lucky 1 card
+ * given Lucky 1 has gained Lucky 2 (R1438).
+ */
 function gainedKeywords(live: readonly Keyword[], printed: readonly Keyword[]): Keyword[] {
   const printedKeys = new Set(printed.map(keywordKey));
+  const luck = luckOf(live);
+  let luckGained = luck !== luckOf(printed);
   const seen = new Set<string>();
   const gained: Keyword[] = [];
   for (const keyword of live) {
+    if (keyword.kind === "Lucky") {
+      if (luckGained) gained.push({ kind: "Lucky", n: luck });
+      luckGained = false;
+      continue;
+    }
     const key = keywordKey(keyword);
     if (printedKeys.has(key) || seen.has(key)) continue;
     seen.add(key);
     gained.push(keyword);
   }
   return gained;
+}
+
+/** Lucky X's sum over a list of keywords (§6.1: Lucky stacks). */
+function luckOf(keywords: readonly Keyword[]): number {
+  return keywords.reduce((sum, keyword) => (keyword.kind === "Lucky" ? sum + keyword.n : sum), 0);
 }
 
 function sameText(a: FaceText, b: FaceText): boolean {
@@ -423,6 +502,19 @@ function printedValues(def: CardDef, radiant: boolean): Record<string, number> {
  */
 export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
   return face.printedRarity ?? face.rarity;
+}
+
+/** R1382, R1162 (Meditative #87 Tatches the Totem): what the frame prints for a card with every tribal tag (R1424), in place of the five. */
+export const ALL_TRIBES = "All Tribes";
+
+/**
+ * R1382, R1162: the tags the frame prints. A card with every tribal tag (`TRIBAL_TAGS`, R1424) prints
+ * `ALL_TRIBES` in their place, then its non-tribal tags in order; any other card prints its tags.
+ * Read off the tags: no catalog field.
+ */
+export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
+  if (!TRIBAL_TAGS.every((tribe) => tags.includes(tribe))) return tags;
+  return [ALL_TRIBES, ...tags.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
 /**

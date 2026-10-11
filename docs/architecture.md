@@ -50,8 +50,8 @@ deployment decision that can be made later without touching the code.
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1445), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1446) |
-| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1444), the turn clock, the action log |
+| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1447), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1448) |
+| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1446), the turn clock, the action log |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
@@ -108,7 +108,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 
 | Table | Client read | Policy | Client write |
 | --- | --- | --- | --- |
-| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0030), which marks a ladder bot's profile, is in no client grant (R1444) |
+| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0031), which marks a ladder bot's profile, is in no client grant (R1446) |
 | `invite_codes` | **none** | no policy | none — a readable code row defeats the gate (§9.8) |
 | `code_attempts` | **none** | no policy | none |
 | `cards` | all rows | `true` | none — the catalog is static data (§9.4) |
@@ -129,7 +129,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
 | `match_signals` | **none** | no policy | none (R1442) |
-| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule and decks; a readable row would tell a bot's seat from a person's (R1444, R1446) |
+| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule and decks; a readable row would tell a bot's seat from a person's (R1446, R1448) |
 
 Three Supabase-specific traps this schema avoids on purpose:
 
@@ -478,7 +478,7 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `E2E` | no (`0`) | BUILD M8's test-server mode; refused when `NODE_ENV=production` | — |
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
-| `LADDER_BOTS` | no (`off`) | R1444–R1446: `on` seats a ladder bot, which this process plays itself, against a ranked Best of 1 or All Random ticket that waited past its fallback time with no person inside its window, and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
+| `LADDER_BOTS` | no (`off`) | R1446–R1448: `on` seats a ladder bot, which this process plays itself, against a ranked Best of 1 or All Random ticket that waited past its fallback time with no person inside its window, and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
 file), reports **every** missing or malformed variable in one error naming where to get each, and
@@ -494,7 +494,7 @@ Two things that are **not** env vars, deliberately:
 - **R79's lifecycle values and §9.12's ranked numbers** — turn clock, prompt clock, grace,
   ceiling, room-code length, the Glicko-2 start and the ladder's tier and season constants
   (R603–R609), and the ladder bots' strengths, fallback times, pool size and think times
-  (R1444–R1446); `LADDER_BOTS` only switches the bots on. They are gameplay, so they are named constants in `crates/server/src/config.rs` and
+  (R1446–R1448); `LADDER_BOTS` only switches the bots on. They are gameplay, so they are named constants in `crates/server/src/config.rs` and
   change only with a code change and a review. BUILD §2 requires exactly that.
 - **The code pepper in Postgres.** Hashing happens in the server, so the pepper never reaches the
   database and `invite_codes` only ever holds `code_hash`. A database dump therefore does not yield a
@@ -621,7 +621,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
-   `0029_play_telemetry.sql` → `0030_ladder_bots.sql` — and records them in `app.migrations`. Expected result: 29 tables
+   `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_ladder_bots.sql` — and records them in
+   `app.migrations`. Expected result: 29 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -656,13 +657,16 @@ step that is not yet implemented says which BUILD task delivers it.
    write: the retention purge gains a third cutoff that deletes a match's telemetry once
    `PLAY_TELEMETRY_RETENTION_DAYS` days have passed since it ended, and deleting an account deletes
    the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server
-   a deploy replaces. 0030 is the ladder bots (R1444–R1446): `profiles.kind`, `human` for every
-   existing profile and `bot` for a ladder bot's, which no client role may read; the server-only
-   `bots` table, one row per bot's profile, with RLS on and no policy or grant; and the profile's
-   foreign key to `auth.users` swapped for triggers, so inserting a person's profile still needs its
-   auth user and deleting an auth user still deletes its profile, while a bot's profile needs none.
-   It also limits the launch collection's backfill, which every catalog stamp runs (0016), to
-   people's profiles, since a bot owns no collection (R1446). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
+   a deploy replaces. 0030 comes with the patch that ships the
+   Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411). 0031 is the ladder bots
+   (R1446–R1448): `profiles.kind`, `human` for every existing profile and `bot` for a ladder bot's,
+   which no client role may read; the server-only `bots` table, one row per bot's profile, with RLS
+   on and no policy or grant; and the profile's foreign key to `auth.users` swapped for triggers, so
+   inserting a person's profile still needs its auth user and deleting an auth user still deletes
+   its profile, while a bot's profile needs none. It also limits the launch collection's backfill,
+   which every catalog stamp runs (0016), to people's profiles, since a bot owns no collection
+   (R1448). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -672,8 +676,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
-   (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 450
+   (370 cards + 80 tokens over Core, Classic, Classic+ and Meditative: patch v0.2.0, Glitch, issue #170,
+   and the Meditative set, issue #553) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts

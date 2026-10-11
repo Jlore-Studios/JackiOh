@@ -19,7 +19,7 @@
 
 use indexmap::{IndexMap, IndexSet};
 
-use crate::catalog::{def_of, fused_id_parts};
+use crate::catalog::fused_id_parts;
 use crate::config::LAST_FACE_UP_SKIPPED_TAGS;
 use crate::faces::card_type_of;
 use crate::script::HookArgs;
@@ -53,15 +53,21 @@ pub fn play_record_of(state: &GameState, card: &CardInstance) -> Option<PlayReco
 }
 
 /// A Trap or Field Trap is set face-down (§3.2, R33), so its play is never a face-up one (R451).
-fn played_face_down(type_: CardType) -> bool {
+pub(crate) fn played_face_down(type_: CardType) -> bool {
     type_ == CardType::Trap || type_ == CardType::FieldTrap
+}
+
+/// ME-ALTPLAY, MB11: Feng Shui judges no face-down play — the one test both systems agree on.
+pub fn is_face_down_play(state: &GameState, card: &CardInstance) -> bool {
+    played_face_down(card_type_of(state, card))
 }
 
 /// §10.5 step 4, B5 E4: count one play of `card` by `player`, read as the card is placed (its face and
 /// type as they stand after step 3 made it Radiant, if it did).
 pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance) {
     let type_ = card_type_of(state, card);
-    let tags: Vec<Tag> = def_of(Some(&*state), &card.def_id).tags.clone();
+    // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
+    let tags: Vec<Tag> = crate::query::tags_of(state, card);
 
     {
         let side = &mut state.players[player];
@@ -74,7 +80,7 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
             .as_ref()
             .map(|log| log.played_by_tag.clone())
             .unwrap_or_default();
-        // `new Set(def.tags)`: each tag once, in first-seen order.
+        // `new Set(tags)`: each tag once, in first-seen order.
         let distinct: IndexSet<Tag> = tags.iter().copied().collect();
         for tag in distinct {
             *by_tag.entry(tag).or_insert(0) += 1;
@@ -85,9 +91,13 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
                 .game_log
                 .as_ref()
                 .and_then(|log| log.last_face_up_play.clone()),
+            last_element: side.game_log.as_ref().and_then(|log| log.last_element),
         };
         side.game_log = Some(log);
     }
+    // R982: the last element, beside R451's records and before its skip, which the record ignores
+    // (MD-C7) — a face-down play is neither judged nor recorded, by `record_element` itself.
+    crate::subsystems::feng_shui::record_element(state, player, card);
 
     let Some(record) = play_record_of(state, card) else {
         return;
@@ -101,10 +111,18 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
         return;
     }
     if let Some(log) = state.players[player].game_log.as_mut() {
+        // R1300: a Chinese card's record is Chinese, so T-AI-5's copy of it is too; a card that
+        // records itself as another card's play (`records_play_as`) records that card as printed.
+        let chinese = if record.def_id == card.def_id {
+            card.chinese
+        } else {
+            None
+        };
         log.last_face_up_play = Some(FaceUpRecord {
             def_id: record.def_id,
             radiant: record.radiant,
             type_,
+            chinese,
         });
     }
 }

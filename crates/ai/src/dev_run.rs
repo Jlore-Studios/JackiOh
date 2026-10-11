@@ -59,7 +59,8 @@ pub struct DevRunOptions {
 pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let budget = budget.unwrap_or(AI_BUDGET);
-    // R258: All Random's deal, `build_ai_deck` with nothing banned, as `crates/server`'s engine port deals it.
+    // R258: All Random's deal, `build_ai_deck` with nothing banned, as `crates/server`'s engine port deals it,
+    // less the AI's soft gate (R1390): an AI pilots both seats, so neither deck holds a gated set's card.
     let deal = |seat: &str| -> Vec<String> {
         build_ai_deck(
             &mut Rng::new(&format!("{seed}:{seat}-deck"), 0),

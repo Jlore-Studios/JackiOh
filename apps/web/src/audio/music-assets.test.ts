@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips, type SetName } from "@jackioh/shared";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
@@ -112,13 +112,17 @@ describe("R631 the rendered music", () => {
 
 describe("R631 the cards that play music", () => {
   it("R631 gives every Mythic a unique theme, every Legendary a shared entrance theme, and names only real cards", () => {
-    const mythics = Object.entries(CATALOG).filter(([, c]) => c.rarity === "Mythic" && c.token !== true).map(([id]) => id);
+    // The sets that ship: a card of a set still being built gets its intro with the set's release
+    // (R1352, R1420, docs/ADDING_CARDS.md row 12).
+    const mythics = Object.entries(CATALOG)
+      .filter(([, c]) => c.rarity === "Mythic" && c.token !== true && setShips(c.set))
+      .map(([id]) => id);
     expect(mythics.length).toBeGreaterThan(0);
     for (const id of mythics) expect(MUSIC_CARDS[id]?.theme, id).toBeDefined();
     const mythicTracks = mythics.map((id) => MUSIC_CARDS[id]?.theme);
     expect(new Set(mythicTracks).size, "no two Mythics share a track").toBe(mythics.length);
     const legendaries = Object.entries(CATALOG)
-      .filter(([, c]) => c.rarity === "Legendary" && c.token !== true)
+      .filter(([, c]) => c.rarity === "Legendary" && c.token !== true && setShips(c.set))
       .map(([id]) => id);
     expect(legendaries.length).toBeGreaterThan(0);
     for (const id of legendaries) expect(MUSIC_CARDS[id]?.theme, id).toMatch(/^legendary-[12]$/);

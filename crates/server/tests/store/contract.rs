@@ -4525,7 +4525,7 @@ mod r1442_play_telemetry {
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1444–R1446, migration 0030)
+// The ladder bots (R1446–R1448, migration 0031)
 // ---------------------------------------------------------------------------
 
 mod bots {
@@ -4587,7 +4587,7 @@ mod bots {
         match_id
     }
 
-    async fn r1446_bots_create_and_list(harness: &StoreHarness) {
+    async fn r1448_bots_create_and_list(harness: &StoreHarness) {
         let now = harness.now();
         let older = new_bot(0, now - 3 * DAY, 800.0);
         let newer = new_bot(4, now - DAY, 1200.0);
@@ -4637,7 +4637,7 @@ mod bots {
         assert_eq!(person.kind, ProfileKind::Human);
     }
 
-    async fn r1446_retire_and_decks(harness: &StoreHarness) {
+    async fn r1448_retire_and_decks(harness: &StoreHarness) {
         let now = harness.now();
         let bot = new_bot(2, now - DAY, 1000.0);
         q!(harness, t => t.bots_create(&bot));
@@ -4658,7 +4658,7 @@ mod bots {
         assert!(call!(harness, t => t.bots_set_decks(&unknown, &decks, "core-9")).is_err());
     }
 
-    async fn r1445_claim_for_bot_is_single_shot(harness: &StoreHarness) {
+    async fn r1447_claim_for_bot_is_single_shot(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4696,7 +4696,7 @@ mod bots {
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
     }
 
-    async fn r1445_recent_opponents_newest_first(harness: &StoreHarness) {
+    async fn r1447_recent_opponents_newest_first(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4718,7 +4718,7 @@ mod bots {
         assert!(q!(harness, t => t.results_recent_opponents(&id(), 5)).is_empty());
     }
 
-    async fn r1446_active_humans_skip_bots(harness: &StoreHarness) {
+    async fn r1448_active_humans_skip_bots(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4732,7 +4732,7 @@ mod bots {
         assert_eq!(q!(harness, t => t.results_count_active_humans(now)), 0);
     }
 
-    async fn r1446_a_claim_that_never_started_is_released(harness: &StoreHarness) {
+    async fn r1448_a_claim_that_never_started_is_released(harness: &StoreHarness) {
         const MINUTE: i64 = 60_000;
         let now = harness.now();
         // Claimed two minutes ago, its player put in the match, and never started: a cut-off start.
@@ -4798,12 +4798,12 @@ mod bots {
     }
 
     both_stores!(
-        r1446_bots_create_and_list,
-        r1446_retire_and_decks,
-        r1445_claim_for_bot_is_single_shot,
-        r1445_recent_opponents_newest_first,
-        r1446_active_humans_skip_bots,
-        r1446_a_claim_that_never_started_is_released,
+        r1448_bots_create_and_list,
+        r1448_retire_and_decks,
+        r1447_claim_for_bot_is_single_shot,
+        r1447_recent_opponents_newest_first,
+        r1448_active_humans_skip_bots,
+        r1448_a_claim_that_never_started_is_released,
     );
 }
 

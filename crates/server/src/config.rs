@@ -484,14 +484,15 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
 /// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
-/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused.
+/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
+/// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
 /// SPEC §11 R255: the one older deck-code version still read. Every code minted before patch v0.2.0
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -500,15 +501,20 @@ pub struct CatalogNumberSetOffsets {
     pub classic: i32,
     #[serde(rename = "Classic+")]
     pub classic_plus: i32,
+    #[serde(rename = "Meditative")]
+    pub meditative: i32,
 }
 
-/// SPEC §11 R255, R339 (B2.2): a card's catalog number in a version 2 deck or trio code is its §5
-/// index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n — still written as
-/// LEB128. No set holds 1000 cards, so a number names one set and one card.
+/// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
+/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
+/// 3000 + n — still written as LEB128. No set holds 1000 cards, so a number names one set and one
+/// card. Meditative's offset is the next thousand in catalog order (R1420), and it moved no other
+/// set's, so a code minted before the set shipped reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
     classic_plus: 2000,
+    meditative: 3000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
@@ -662,11 +668,11 @@ pub struct ThinkTimeFit {
 pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1444–R1447; #638). Every value is hand-set until the offline
+// Ladder bots (SPEC §9.5, §9.12, R1446–R1449; #638). Every value is hand-set until the offline
 // calibration and the think-time fit (R1442's `THINK_TIME_FITS`) replace it.
 // ---------------------------------------------------------------------------------------------
 
-/// R1444: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
+/// R1446: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
 /// softmax temperature over the finalists, in evaluation points, and the chance it passes over a
 /// lethal it found) and the rating its `bot_ratings` row is seeded with (R610). Always on the spec's
 /// resources: a strength is never a practice handicap (R180).
@@ -678,7 +684,7 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R1444, R1446: the strengths a new bot is drawn from, weakest first. A bot keeps its index
+/// R1446, R1448: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
 pub const BOT_STRENGTHS: &[BotStrength] = &[
     BotStrength {
@@ -740,83 +746,83 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
     },
 ];
 
-/// R1446: the pool never holds fewer active bots than this, however few people play.
+/// R1448: the pool never holds fewer active bots than this, however few people play.
 pub const BOT_POOL_MIN: usize = 8;
-/// R1446: nor more than this, however many do.
+/// R1448: nor more than this, however many do.
 pub const BOT_POOL_MAX: usize = 200;
-/// R1446: active bots per person who finished a live game in the last
+/// R1448: active bots per person who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`, before the clamp.
 pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
-/// R1446: the window "weekly active" counts people over.
+/// R1448: the window "weekly active" counts people over.
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
-/// R1446: how often the server sizes the pool again (and once as it boots).
+/// R1448: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
-/// R1445: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
+/// R1447: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
-/// R1445: the longest; each ticket's wait is drawn from its id between the two, inclusive.
+/// R1447: the longest; each ticket's wait is drawn from its id between the two, inclusive.
 pub const BOT_FALLBACK_MAX_SECONDS: i64 = 40;
-/// R1445: a player is not paired with a bot they faced in this many of their last games.
+/// R1447: a player is not paired with a bot they faced in this many of their last games.
 pub const BOT_RECENT_OPPONENTS: usize = 5;
-/// R1446: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
+/// R1448: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
 pub const BOT_ACTIVE_HOURS_MIN: i32 = 8;
-/// R1446: the most hours a day a bot is on.
+/// R1448: the most hours a day a bot is on.
 pub const BOT_ACTIVE_HOURS_MAX: i32 = 16;
-/// R1446: hours in the day a bot's schedule wraps around (UTC).
+/// R1448: hours in the day a bot's schedule wraps around (UTC).
 pub const BOT_HOURS_PER_DAY: i32 = 24;
-/// R1444: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
+/// R1446: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
 pub const BOT_SPEED_MIN: f64 = 0.75;
-/// R1444: the slowest.
+/// R1446: the slowest.
 pub const BOT_SPEED_MAX: f64 = 1.35;
-/// R1446: the fewest Best-of-1 decks a bot carries.
+/// R1448: the fewest Best-of-1 decks a bot carries.
 pub const BOT_DECKS_MIN: usize = 2;
-/// R1446: the most.
+/// R1448: the most.
 pub const BOT_DECKS_MAX: usize = 3;
-/// R1446: how many decks the pool tries in all to find a bot's legal ones.
+/// R1448: how many decks the pool tries in all to find a bot's legal ones.
 pub const BOT_DECK_DRAW_ATTEMPTS: usize = 20;
-/// R1446: the youngest a bot's account reads (its profile's `created_at`), in days.
+/// R1448: the youngest a bot's account reads (its profile's `created_at`), in days.
 pub const BOT_ACCOUNT_AGE_MIN_DAYS: i64 = 1;
-/// R1446: the oldest.
+/// R1448: the oldest.
 pub const BOT_ACCOUNT_AGE_MAX_DAYS: i64 = 180;
-/// R1446: the share of bots that keep the `Player#n` name a new account is given, as people do
+/// R1448: the share of bots that keep the `Player#n` name a new account is given, as people do
 /// who skip the username prompt (R1435).
 pub const BOT_DEFAULT_USERNAME_SHARE: f64 = 0.3;
-/// R1446: the first halves of a bot's username, `{first}{second}`; each at most eight letters, so
+/// R1448: the first halves of a bot's username, `{first}{second}`; each at most eight letters, so
 /// every name fits `USERNAME_MAX_LENGTH`.
 pub const BOT_NAME_FIRST: &[&str] = &[
     "Quiet", "Brave", "Lucky", "Sly", "Mighty", "Silver", "Rusty", "Clever", "Swift", "Gentle", "Bold",
     "Sunny", "Misty", "Lazy", "Grumpy", "Jolly", "Cosmic", "Frosty", "Golden", "Hidden", "Little", "Shadow",
     "Velvet", "Wild",
 ];
-/// R1446: the second halves of a bot's username.
+/// R1448: the second halves of a bot's username.
 pub const BOT_NAME_SECOND: &[&str] = &[
     "Otter", "Falcon", "Badger", "Panda", "Comet", "Wizard", "Knight", "Pickle", "Turnip", "Mango", "Raven",
     "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle", "Dragon",
     "Muffin", "Noodle", "Sparrow",
 ];
-/// R1444: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
+/// R1446: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
 /// the mean of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_FIRST_MU: f64 = 8.7;
-/// R1444: the first move's prior, the standard deviation of `ln(think_ms)`.
+/// R1446: the first move's prior, the standard deviation of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_FIRST_SIGMA: f64 = 0.6;
-/// R1444: the prior for a bot's later moves of a turn: the mean of `ln(think_ms)`.
+/// R1446: the prior for a bot's later moves of a turn: the mean of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_LATER_MU: f64 = 7.8;
-/// R1444: the later moves' prior, the standard deviation of `ln(think_ms)`.
+/// R1446: the later moves' prior, the standard deviation of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_LATER_SIGMA: f64 = 0.7;
-/// R1444: the quickest a bot moves, decision included.
+/// R1446: the quickest a bot moves, decision included.
 pub const BOT_THINK_MIN_MS: i64 = 600;
-/// R1444: the longest it waits before a move.
+/// R1446: the longest it waits before a move.
 pub const BOT_THINK_MAX_MS: i64 = 30_000;
-/// R1444: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
+/// R1446: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
 /// out.
 pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
-/// R1444: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
+/// R1446: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
 /// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
-/// R1446: how old a match a bot was claimed for may be and still be `open` (claimed, never
+/// R1448: how old a match a bot was claimed for may be and still be `open` (claimed, never
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;
-/// R1444: how long a bot waits to decide again when its move could not be written to the log, so a
+/// R1446: how long a bot waits to decide again when its move could not be written to the log, so a
 /// store that keeps failing is retried at this pace, never in a loop.
 pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 

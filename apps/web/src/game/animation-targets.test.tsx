@@ -104,6 +104,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     // The row this file exists for: the badge list beside the hero (R169, BUILD M5-T4).
     modifierChanged: { type: "modifierChanged", player: "p1", modifierId: modifier, added: true },
     radiantSet: { type: "radiantSet", instanceId: unit, defId: "core-004", zone: { z: "field", player: "p1", row: "units", lane: 1 } },
+    deradianted: { type: "deradianted", instanceId: unit, defId: "core-004", zone: { z: "field", player: "p1", row: "units", lane: 1 } },
     transformed: { type: "transformed", instanceId: unit, fromDefId: "core-004", toDefId: "token-sheep", newInstanceId: "gone" },
     fused: { type: "fused", instanceIds: [unit, enemy], resultInstanceId: "gone", defId: "core-088" },
     positionSwitched: { type: "positionSwitched", instanceId: unit, position: "DEF" },
@@ -115,6 +116,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     attackDeclared: { type: "attackDeclared", attackerId: unit, targetId: enemy, forced: false },
     attackCancelled: { type: "attackCancelled", attackerId: unit, targetId: enemy, byInstanceId: trap },
     manaChanged: { type: "manaChanged", player: "p1", current: 2, max: 4 },
+    manaSpent: { type: "manaSpent", player: "p1", amount: 2, for: "play" },
     turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
     turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
     turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -122,6 +124,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
     drawOffered: { type: "drawOffered", player: "p2" },
     drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+    emoted: { type: "emoted", player: "p2", emote: "greetings" },
     gameOver: { type: "gameOver", winner: "p1", reason: "concede" },
     // Patch v0.2.0 (docs/classic-sets.md B3, B5).
     cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: hand, defId: "core-002", cardType: "Unit", costPaid: 1, targets: [] },
@@ -146,7 +149,14 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     turnCutShort: { type: "turnCutShort", player: "p1", byInstanceId: null },
     marked: { type: "marked", instanceId: enemy, mark: "steal", color: "purple", added: true },
     glitched: { type: "glitched", player: "p1", outcome: "swap" },
+    fengShui: { type: "fengShui", instanceId: unit, sourceId: "gone", player: "p1", outcome: "positive" },
+    translated: { type: "translated", instanceId: enemy },
+    discardPrevented: { type: "discardPrevented", player: "p1", count: 1 },
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
+    jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+    secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+    secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+    predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   };
 }
 

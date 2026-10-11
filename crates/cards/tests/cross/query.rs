@@ -51,10 +51,12 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
 
 /// Every token of every set (B2.1's census itself is catalog.rs's to prove).
 /// Every token a pool may name — all of them but Glitch, which is in none (R674).
+/// Every token of the sets that ship (R1420): like `non_token`, a pool that names no set reaches
+/// no other, so the token lists a pool answers hold no Meditative card until the set ships.
 fn token_ids() -> Vec<String> {
     CATALOG
         .values()
-        .filter(|def| def.token && def.id != GLITCH_DEF_ID)
+        .filter(|def| def.token && def.id != GLITCH_DEF_ID && set_is_open(def.set))
         .map(|def| def.id.clone())
         .collect()
 }
@@ -684,9 +686,11 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     fn r382_a_fruit_pool_is_every_non_token_fruit_card_and_the_five_grapes_the_generating_card_excluded() {
         register();
         // Core #47 Fig of Life, Classic+'s Fruit cards and the Grapes (each after the card that defines
-        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool.
+        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool. A set that has not
+        // shipped is in no pool (R1420), so Meditative #55 Dragon Fruit joins it as the set ships.
         let expected: Vec<String> = CATALOG
             .values()
+            .filter(|def| set_is_open(def.set))
             .filter(|def| def.tags.contains(&Tag::Fruit) && (!def.token || GRAPES.contains(&def.id.as_str())))
             .map(|def| def.id.clone())
             .filter(|id| id != "classicplus-058")
@@ -741,5 +745,118 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
         ]) {
             assert!(every.contains(&id.to_string()), "{id}");
         }
+    }
+}
+
+mod r1444_the_luck_based_pool_meditative_101_gachaholic {
+    use super::*;
+    use jackioh_cards::query::luck_based;
+    use jackioh_engine::testkit::preview_sets;
+    use jackioh_engine::{KeywordKind, has_keyword};
+
+    /// The test's own reading of MD-G1: a non-token card that prints Lucky on either face or whose
+    /// text says "Flip a coin" (any case).
+    fn reads_as_luck_based(def: &CardDef) -> bool {
+        !def.token
+            && [&def.base, &def.radiant].into_iter().any(|face| {
+                has_keyword(&face.keywords, KeywordKind::Lucky)
+                    || face.text.to_lowercase().contains("flip a coin")
+            })
+    }
+
+    #[test]
+    fn r1444_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+        register();
+        // The query a card script writes: `query::luck_based()`, which names no set (R1420).
+        assert_eq!(luck_based(), q(json!({ "luckBased": true })));
+        assert_eq!(
+            ids(query(&luck_based())),
+            strings(&[
+                "core-004",
+                "core-023",
+                "core-042",
+                "classic-065",
+                "classicplus-025",
+                "classicplus-053",
+                "classicplus-065",
+                "classicplus-066",
+            ])
+        );
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let expected: Vec<String> = ids(CATALOG.values().filter(|def| reads_as_luck_based(def)));
+        assert_eq!(sorted(ids(query(&luck_based()))), sorted(expected.clone()));
+        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
+        // makes no roll; #101 Gachaholic gives Lucky and prints none.
+        assert!(expected.contains(&"meditative-036".to_string()));
+        assert!(!expected.contains(&"meditative-040".to_string()));
+        assert!(!expected.contains(&"meditative-101".to_string()));
+    }
+}
+
+mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r1080 {
+    use super::*;
+    use jackioh_engine::testkit::preview_sets;
+
+    // THE ARGUMENTS A CARD SCRIPT PASSES:
+    //     catalog::query(&q(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })))
+    // `stats` reads the printed base face (R1080): a face that prints none never matches, so Spells
+    // and stat-less backrow cards are out whatever else they are. Tokens join through `withTokens`.
+    // A pool that names no set reaches every set that ships (R380, R1420), in `query`'s order: by
+    // set, then by index, a set's tokens after its cards.
+    const ONE_ONE_POOL: &[&str] = &[
+        "core-003",
+        "core-004",
+        "core-007",
+        "core-015",
+        "core-050",
+        "core-086",
+        "core-t-felinor",
+        "core-t-sheep",
+        "classic-027",
+        "classic-033",
+        "classic-082",
+        "classicplus-006",
+        "classicplus-076",
+    ];
+
+    /// The Meditative set's printed 1/1 Units, which the pool takes once the set is open (R1420).
+    const MEDITATIVE_ONE_ONES: &[&str] = &[
+        "meditative-051",
+        "meditative-065",
+        "meditative-067",
+        "meditative-082",
+        "meditative-088",
+        "meditative-091",
+        "meditative-093",
+        "meditative-101",
+    ];
+
+    #[test]
+    fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
+        register();
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            strings(ONE_ONE_POOL)
+        );
+    }
+
+    #[test]
+    fn r1080_r1420_previewing_meditative_adds_its_printed_1_1_units() {
+        register();
+        let _guard = preview_sets(&[SetName::Meditative]);
+        let mut expected = strings(ONE_ONE_POOL);
+        expected.extend(strings(MEDITATIVE_ONE_ONES));
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            expected
+        );
     }
 }

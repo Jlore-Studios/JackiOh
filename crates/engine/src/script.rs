@@ -350,7 +350,8 @@ impl std::fmt::Debug for TriggerDef {
 
 /// `{ state; self; radiant }`: the argument of every pure-read hook TS gave that object (`aura`,
 /// `setStat`, `costAura`, `graveyardPlay`, `targetingDiscards`, `recordsPlayAs`, `drawLimit`,
-/// `heroGuard`, `conditionalKeywords`, `plagueMultiplier`, `tributeWhen`, `ActivationDecl.has`).
+/// `heroGuard`, `conditionalKeywords`, `plagueMultiplier`, `tributeWhen`, `ActivationDecl.has`), and of
+/// the two the Meditative set adds, `discardGuard` (R800) and `echoX` (R802).
 #[derive(Clone, Copy)]
 pub struct HookArgs<'a> {
     pub state: &'a GameState,
@@ -397,6 +398,37 @@ pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send +
     Arc::new(f)
 }
 
+/// MD-D4, R1120: what one combat-only attack modifier adds to an attacker's strike in the combat it
+/// started against a Unit — attack on top of the layered value, and Poisonous on those hits (§4.4
+/// step 7). Never a layer: the shown attack and §4.2 step 1's "attack above 0" do not see it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+pub struct AttackMod {
+    pub attack: i32,
+    pub poisonous: bool,
+}
+
+/// `Script.attack_mods`' argument: `{ state; self; radiant }` with the combat's attacker and
+/// defender. A PURE READ, like `aura`'s: no writes, no rng.
+#[derive(Clone, Copy)]
+pub struct AttackModArgs<'a> {
+    pub state: &'a GameState,
+    pub self_: &'a CardInstance,
+    pub radiant: bool,
+    pub attacker: &'a CardInstance,
+    pub defender: &'a CardInstance,
+}
+
+/// MD-D4, R1120: a combat-only attack modifier — what this card adds to an attacker's strike while
+/// that attacker attacks a Unit. Read only inside a combat against a Unit (declared or forced).
+pub type AttackModHook = Arc<dyn for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync>;
+
+/// Builds an `AttackModHook`.
+pub fn attack_mod_hook(
+    f: impl for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync + 'static,
+) -> AttackModHook {
+    Arc::new(f)
+}
+
 /// `boolean | number`: a static flag a fused card may carry several times (R102).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(untagged)]
@@ -414,6 +446,18 @@ impl FlagOrCount {
             FlagOrCount::Count(n) => n,
         }
     }
+}
+
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs
+/// (`upgrade`) and Nerfs (`degrade`) are on this card. Each direction names its own multiplier;
+/// a direction no ingredient names is plain.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TuneMultiplier {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrade: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub degrade: Option<i32>,
 }
 
 /// A card's static flags. Data, so a card may write them as the TS object literal
@@ -532,6 +576,78 @@ pub struct StaticFlags {
     /// #22 Blood Moon's Radiant Field Trap, "From now on").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heal_to_damage: Option<bool>,
+    /// Meditative #86 Mayor Medinamogger (ME-RANDOMTARGETS, R1200): while this card acts on the
+    /// field, both players' declared targets, `target` prompts and attack targets are drawn at
+    /// random from the legal ones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_targets: Option<bool>,
+    /// Meditative #91 Windfast (ME-ATTACKSUMMON, R1202): when this would attack, a Unit summoned
+    /// from its controller's hand makes that attack instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_from_hand: Option<bool>,
+    /// Meditative #91 Windfast's base face (ME-ATTACKSUMMON, R1202): the summoned substitute is
+    /// bounced to its controller's hand after its combat if it is still on the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounce_attacker: Option<bool>,
+    /// Meditative #91.1 Windfurious Prime (ME-ATTACKSUMMON, R1203): when this attacks, summoned
+    /// joiners attack its target first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_joiners: Option<bool>,
+    /// MD-D28, R1125: while this card acts on the field, each `play` the opponent makes is judged
+    /// against their other playable cards (`subsystems::pareto`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub judges_plays: Option<bool>,
+    /// MD-D29, R1127: while this card acts on the field, the opponent's emotes reach the engine as
+    /// `Emote` actions (`GameEvent::Emoted`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hears_emotes: Option<bool>,
+    /// MD-D31, R1124: damage this card deals to a Unit marks it, and the next state check exiles it
+    /// ahead of deaths (§4.4 step 7, §4.5 step 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exiles_on_damage: Option<bool>,
+    /// MD-F12, R1281: its controller may play any Unit onto its zone as if it had Stack.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack_base: Option<bool>,
+    /// MD-F12, R1281: how many times the Unit is Upgraded as it lands, read through `buffs`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack_base_buffs: Option<i32>,
+    /// MD-F13, R1282: may tribute any permanent costing this or less on either side, read through `cheap`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute_cheap: Option<i32>,
+    /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lane_multiplier: Option<i32>,
+    /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs and
+    /// Nerfs are on this card, read off its running face in every zone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tune_multiplier: Option<TuneMultiplier>,
+    /// R1223: while this card acts on its controller's field, they may spend mana they don't have,
+    /// owing up to this much at once (Meditative #89 Jlarna's credit line).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_line: Option<i32>,
+    /// R1223: how many instalments a debt on this credit line is split into (Jlarna: 4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_instalments: Option<i32>,
+    /// R1225: this face carries the end-of-turn Tribute for an unused credit line (Jlarna's base
+    /// face). The view and the AI read it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_lapses: Option<bool>,
+    /// MD-B2, R941: while this card acts on the field — face-up, top of its pile — no player generates
+    /// mana naturally: each start-of-turn refresh sets max mana as usual but current mana to the
+    /// next-turn rider only (Meditative #26).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_natural_mana: Option<bool>,
+    // ---- Meditative ----
+    /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
+    /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
+    /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feng_shui: Option<bool>,
+    /// R987, Meditative #40 Feng Shui: "You have Luck X". While this card acts on the field, every roll
+    /// with a best that its controller's cards make rolls X more times (`query::luck_of`); X is the
+    /// card's declared number `luck` where it declares it, else this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub luck: Option<i32>,
 }
 
 string_union! {
@@ -667,6 +783,24 @@ pub struct GraveyardPlayPermission {
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
+/// ME-ALTPLAY, R1040, R1044: the permission this card gives its controller to play cards face-down
+/// as Traps — Units under Knowledge Breaker's Aura, Spells under Paranoia's. `echo` is the Echo a
+/// Radiant Paranoia adds to a set Spell (R1045), once per play.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FaceDownPlayPermission {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub units: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spells: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub echo: Option<i32>,
+}
+
+/// ME-ALTPLAY, R1040, R1044: the face-down play permissions this card grants while it acts.
+pub type FaceDownPlayHook =
+    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<FaceDownPlayPermission> + Send + Sync>;
+
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
@@ -691,6 +825,12 @@ pub type ConditionalKeywordsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<Keywo
 
 /// B5 E19, R471: what each Plague Counter placement onto this card is multiplied by.
 pub type PlagueMultiplierHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
+
+/// R802: a computed Echo X, the repeats the card's Echo makes as it is played.
+pub type EchoXHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
+
+/// ME-TRIG, R820: how many extra times this card makes its controller's hooks of one kind run.
+pub type TriggerExtraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
 /// Classic #88 Siphon Squad, R403: "When …, Tribute this".
 pub type TributeWhenHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
@@ -726,6 +866,9 @@ pub struct Script {
     pub death: Option<Hook>,
     /// After the mulligan, before turn 1: only Heroic Power uses it (§6.2, R43).
     pub start_of_game: Option<Hook>,
+    /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
+    /// on every hand arrival, after R151's start-of-game clause.
+    pub enters_hand: Option<Hook>,
     /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
@@ -734,6 +877,11 @@ pub struct Script {
     pub set_stat: Option<SetStatHook>,
     pub start_of_turn: Option<Hook>,
     pub end_of_turn: Option<Hook>,
+    /// ME-GRANT (MD-D13): the Death abilities this card grants, by key — `meditative-058#bookDeath`
+    /// grants face `bookDeath`. A grant names a hook here, so state stays plain data (a closure never
+    /// enters it, as `fuse.rs` explains). A fused card merges its ingredients' maps (R102): the keys
+    /// already name their definition, so they never collide.
+    pub grants: IndexMap<&'static str, Hook>,
     pub aura: Option<AuraHook>,
     pub triggers: Vec<TriggerDef>,
     pub on_play_hook: Option<Hook>,
@@ -742,6 +890,9 @@ pub struct Script {
     /// The play-time choices this card declares (R81).
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
+    /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
+    /// play's events, and blanked from an in-flight play the other seat reads.
+    pub secret_modes: bool,
     /// R195: the condition `view_for` surfaces as `conditionActive` (§10.8).
     pub condition_met: Option<ConditionHook>,
     /// R280: the numbers the card's formula comes to now, which `view_for` surfaces as `preview` (§10.8).
@@ -762,6 +913,9 @@ pub struct Script {
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
+    /// ME-ALTPLAY, R1040, R1044: the permissions this card gives its controller to play cards
+    /// face-down as Traps.
+    pub face_down_play: Option<FaceDownPlayHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
     /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
@@ -778,6 +932,11 @@ pub struct Script {
     /// more than 1 card each turn": Classic #4, #49). A pure read like an aura, so a card computes its
     /// number (a declared, tunable one included) from its own instance. The lowest limit on a player holds.
     pub draw_limit: Option<DrawLimitHook>,
+    /// R800: the players this card guards from an effect's discard while it acts on the field ("You
+    /// can't be forced to discard cards during your opponent's turn": Meditative #1), relative to its
+    /// controller, as a draw limit's are. A pure read like `draw_limit`; a guarded player's hand loses
+    /// no card to an effect's discard while it is not their turn (`draw::discard_guarded`).
+    pub discard_guard: Option<DiscardGuardHook>,
     // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
     /// B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
     /// on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
@@ -790,6 +949,9 @@ pub struct Script {
     /// Armor (several multiply, rounded up once, Classic #75 Argusland). A PURE READ, like `aura`; a
     /// list, so a fused card carries each ingredient's.
     pub hero_guard: Option<HeroGuardHook>,
+    /// MD-D4, R1120: the combat-only attack modifiers this card lays while it acts on the field. A
+    /// PURE READ, like `aura`; a fused card carries each ingredient's (`subsystems::fuse`).
+    pub attack_mods: Option<AttackModHook>,
     /// B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
     /// Strike "while it has a Plague Counter"), read in the layers with its printed keywords (§10.4), so a
     /// Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
@@ -802,12 +964,25 @@ pub struct Script {
     /// (R44). `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
     /// destroyedIds, survived, forced }`. A whole effect list, parkable like any (R113).
     pub after_attack: Option<Hook>,
+    /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
+    /// state check that closes each combat it was the target of has run, a declared attack's or a
+    /// forced one's, also when it died there — then on the snapshot it fought with, as a Death hook
+    /// reads its card (R78, R89). Not for a Cleave splash (no attack on it) nor for an attack on
+    /// the hero (MD-C26, R1026). `ctx.data` holds the combat's facts, read with
+    /// `combat::after_attacked_of`: `{ attackerId, forced, attackerSurvived }`. A whole effect
+    /// list, parkable like any (R113).
+    pub after_attacked: Option<Hook>,
     // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
     /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
     /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
     /// receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
     /// A fused card's multipliers multiply (`subsystems::fuse`).
     pub plague_multiplier: Option<PlagueMultiplierHook>,
+    /// R802: a computed Echo X ("Echo X … X is 2 times your max mana": Meditative #5), read once as the
+    /// card is played, when its Echo repeats are queued (§10.5 step 4), so X stays fixed while it
+    /// resolves. A pure read; the larger of it and `staticFlags.echo` is the card's printed Echo, which
+    /// its "Echo" tuning step and a Twinspell grant then add to (`echo::printed_echo`).
+    pub echo_x: Option<EchoXHook>,
     /// B5 E26, R464: triggers this card answers while it lies in its owner's library ("While this is in
     /// your deck: …", Classic+ #37 Wardrum). A library card is hidden (§9.1), so its queue entries take
     /// no number (R177), and within a side they come after the hand's and before the graveyard's, in the
@@ -837,23 +1012,36 @@ pub struct Script {
     /// the other side, queued right after the active player's at R62's start-of-turn trigger point, so
     /// R68's order (the active player's cards, then the opponent's) holds.
     pub start_of_opponent_turn: Option<Hook>,
+    // ---- Meditative (R1420) ----
+    /// ME-TRIG, R820, R821 (Meditative #9 Joint Filing): "Your Start of turn and End of turn effects
+    /// trigger N additional times" — N now, asked of the card acting on its controller's field as their
+    /// start-of-turn or end-of-turn hooks are queued (`multipliers::extra_runs`). A PURE READ, like
+    /// `aura`, so a Nerf or Buff of the declared number moves it; several cards do not add, the highest
+    /// holds.
+    pub turn_hook_extra: Option<TriggerExtraHook>,
+    /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): "Your Cry and Death effects trigger N
+    /// additional times" — N now, asked as a permanent's Cry runs for its controller and as the cards a
+    /// state check collects have left the field. A PURE READ; the highest holds.
+    pub cry_death_extra: Option<TriggerExtraHook>,
 }
 
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
-    /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "delayed",
-    /// "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn". `None` for any
-    /// other name or an absent hook.
+    /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
+    /// "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn".
+    /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
             "cry" => self.cry.as_ref(),
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
+            "entersHand" => self.enters_hand.as_ref(),
             "delayed" => self.delayed.as_ref(),
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),
             "onPlayHook" => self.on_play_hook.as_ref(),
             "afterAttack" => self.after_attack.as_ref(),
+            "afterAttacked" => self.after_attacked.as_ref(),
             "startOfOpponentTurn" => self.start_of_opponent_turn.as_ref(),
             _ => None,
         }
@@ -909,6 +1097,15 @@ pub struct ActivationCost {
     /// Turtinator, which cannot Tribute itself; R683).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tribute_excludes_self: Option<bool>,
+    /// MD-D9: either player may activate an ability with this cost (Meditative #54's shape, proved
+    /// with the engine fixture while #54 waits for #525's Jade). The non-controller activates in
+    /// their own main phase, paying from their own mana. Absent: the controller's alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub either_player: Option<bool>,
+    /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
+    /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
+    #[serde(skip)]
+    pub mana_param: Option<&'static str>,
 }
 
 /// B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"
@@ -992,6 +1189,9 @@ pub struct DrawLimit {
 
 pub type DrawLimitHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimit> + Send + Sync>;
 
+/// R800: the players a card guards from an effect's discard, each relative to its controller.
+pub type DiscardGuardHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimitPlayer> + Send + Sync>;
+
 /// §10.6: a card-specific target predicate's argument (`TargetFilter.check`). `candidate` is the card a
 /// declaration would offer (`None` for a hero or a zone), `self_` the card declaring it, `player` the
 /// chooser.
@@ -1064,11 +1264,15 @@ string_union! {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(tag = "moment", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ReplacedEvent {
-    /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero to 0 or less.
+    /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero — or, since
+    /// ME-LETHALGUARD (R1204), the Unit `instance_id` names — to 0 or less.
     LethalHit {
         player: PlayerId,
         amount: i32,
         source_id: Option<String>,
+        /// The Unit the hit would kill, when it is a Unit's hit. Absent for a hero's, as before.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        instance_id: Option<String>,
     },
     /// A heal of `amount` (its stated amount, R462) would land on `target`.
     Healed { target: HealedRef, amount: i32 },
@@ -1143,6 +1347,9 @@ string_union! {
     /// `instead.redirect` (on `lethalHit`).
     pub enum InsteadRedirect {
         EnemyHero = "enemyHero",
+        /// ME-LETHALGUARD (R1204): the hit goes to the replacing card itself, as a new instance
+        /// from the same source through its own pipeline (Meditative #92 Unan).
+        SelfCard = "self",
     }
 }
 
@@ -1205,6 +1412,9 @@ pub struct ReplacementInstead {
 /// One replacement a card makes. The moment fixes what `instead` may say:
 ///  - `lethalHit`: `redirect: "enemyHero"` — the hit moves to the enemy hero as a new instance from
 ///    the same source, through that hero's Armor and caps (E9). Answers only for its own hero.
+///    `redirect: "self"` — the hit moves to the replacing card itself as a new instance from the
+///    same source, through its own pipeline (ME-LETHALGUARD, R1204). Answers for its controller's
+///    hero and other Units, once each per hit.
 ///  - `healed`: `damage: "pierce"` — the heal becomes that much Pierce damage from this card (E8);
 ///    `lasting: "thisTurn"` also converts every later heal on its enemies this turn (a player
 ///    modifier). Answers only a heal on its controller's enemies.

@@ -2624,9 +2624,15 @@ mod spec_11_rulings_r43_r84_m3_gate {
     fn r84_keeps_concede_offerdraw_and_answerdraw_out_of_the_policy_so_a_random_game_ends_by_death_or_the_cap()
      {
         let state = playing("r84");
+        // MD-D29, R1127: the random policy never emotes either.
         assert_eq!(
             AI_SKIPPED_ACTIONS.to_vec(),
-            vec![ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw]
+            vec![
+                ActionType::Concede,
+                ActionType::OfferDraw,
+                ActionType::AnswerDraw,
+                ActionType::Emote
+            ]
         );
 
         let offered: Vec<ActionType> = legal_actions(&state, P1)

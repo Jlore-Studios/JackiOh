@@ -85,6 +85,9 @@ fn live(state: &GameState, card: &CardInstance) -> CardInstance {
 /// while it stands in a unit zone (`faces::card_type_of`, R383), but what its text *is* — a trap that
 /// fires, a Field Trap that stays — is its face's, and the trap machinery reads this.
 pub fn face_type_of(state: &GameState, card: &CardInstance) -> CardType {
+    if let Some(set) = crate::alt_play::set_type_of(state, card) {
+        return set;
+    }
     let def = def_of(Some(state), &card.def_id);
     let face = if card.radiant { &def.radiant } else { &def.base };
     face.type_.unwrap_or(def.type_)
@@ -124,7 +127,8 @@ fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneS
 }
 
 /// B3.1 rules 2, 4 and 5 (R383): animate a card acting in its controller's backrow — move it into a unit
-/// zone as a Unit, face-up, summoning sick, with a fresh exertion, in `position` (Attack unless the text
+/// zone as a Unit, face-up, summoning sick (an entry; the start-of-turn animation of an "Animated on your turn"
+/// card is none, R1062), with a fresh exertion, in `position` (Attack unless the text
 /// says otherwise), without leaving the field. An "Animated on your turn" card's backrow zone is held for
 /// its return (rule 6). Emits `animated`, never `summoned` (R445).
 ///
@@ -133,6 +137,22 @@ fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneS
 /// (dormant under a pile, a carried Unit, off the field) or no unit zone of its side is open (rule 2:
 /// it stays where it is).
 pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: AnimateOptions) -> bool {
+    step_into_units(sink, card, options, true)
+}
+
+/// R1062 revises R383 with the Meditative set (R1420): until the set opens, an "Animated on your turn"
+/// card's start-of-turn animation is an entry as before, so a shipped game plays as it did (D14).
+pub fn r1062_is_live() -> bool {
+    crate::catalog::set_is_open(crate::wire::SetName::Meditative)
+}
+
+/// B3.1 rules 2, 4 and 5 shared by `animate_card` (an entry) and `animate_at_turn_start` (none, R1062).
+fn step_into_units(
+    sink: &mut FieldSink<'_>,
+    card: &CardInstance,
+    options: AnimateOptions,
+    entry: bool,
+) -> bool {
     let card = live(sink.state, card);
     if is_animated(sink.state, &card) && acts_on_field(sink.state, &card) {
         return true;
@@ -155,7 +175,9 @@ pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: Anim
         return false;
     };
     animated.position = Some(options.position.unwrap_or(Position::Atk));
-    animated.summoned_turn = Some(turn);
+    if entry {
+        animated.summoned_turn = Some(turn);
+    }
     animated.exertion = Exertion {
         attacked: false,
         switched: false,
@@ -282,7 +304,7 @@ pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
         if animated_kind_of(sink.state, &card) != Some(AnimatedKind::AnimatedOnYourTurn) {
             continue;
         }
-        animate_card(sink, &card, AnimateOptions::default());
+        step_into_units(sink, &card, AnimateOptions::default(), !r1062_is_live());
     }
 }
 

@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0026) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0031) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -4512,7 +4512,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1444–R1447, migration 0030)
+// The ladder bots (R1446–R1449, migration 0031)
 // ---------------------------------------------------------------------------
 
 fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
@@ -4533,7 +4533,7 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
     })
 }
 
-/// R1446: every bot with its profile's `created_at` and match and its R610 rating.
+/// R1448: every bot with its profile's `created_at` and match and its R610 rating.
 pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -4556,7 +4556,7 @@ fn small(value: i64, what: &str) -> Result<i16, StoreError> {
     i16::try_from(value).map_err(|_| StoreError::from(format!("a bot's {what} is out of range: {value}")))
 }
 
-/// R1446: the bot's profile, its row and its R610 rating. Migration 0030's
+/// R1448: the bot's profile, its row and its R610 rating. Migration 0031's
 /// `profile_needs_auth_user` lets a profile of kind `bot` in with no auth user, and 0028's
 /// `profiles_assign_default_username` names it the lowest free `Player#n`, as any new profile.
 pub async fn bots_create(t: &mut PgTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
@@ -4655,7 +4655,7 @@ pub async fn bots_set_decks(
     Ok(())
 }
 
-/// R1445: the bot is locked first (free: in no match, not retired), then the ticket claimed
+/// R1447: the bot is locked first (free: in no match, not retired), then the ticket claimed
 /// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
 /// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
 /// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
@@ -4730,7 +4730,7 @@ pub async fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R1446: the `open` skeletons bots were claimed into before `before` and that no start completed,
+/// R1448: the `open` skeletons bots were claimed into before `before` and that no start completed,
 /// deleted; `profiles.current_match_id` and `tickets.match_id` are `on delete set null`, so the bot
 /// and the ticket's owner are let go with them, and the ticket stays claimed. A room is an `open`
 /// row too, but never a bot's.
@@ -4757,7 +4757,7 @@ pub async fn bots_release_stale_starts(t: &mut PgTx<'_>, before: i64) -> Result<
     rows.iter().map(|row| uuid_text(row, "bot_id")).collect()
 }
 
-/// R1445: the other seat of the profile's last `limit` results, newest first (ties on match id).
+/// R1447: the other seat of the profile's last `limit` results, newest first (ties on match id).
 pub async fn results_recent_opponents(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -4782,7 +4782,7 @@ pub async fn results_recent_opponents(
         .collect()
 }
 
-/// R1446: the distinct people (no bot, no deleted account) on a result that ended at or after `since`.
+/// R1448: the distinct people (no bot, no deleted account) on a result that ended at or after `since`.
 pub async fn results_count_active_humans(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(

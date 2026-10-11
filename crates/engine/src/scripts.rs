@@ -295,7 +295,10 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
     if let Some(entry) = registered_entry(def_id) {
         return Cow::Borrowed(entry);
     }
-    Cow::Owned(fused_scripts(state, def_id).unwrap_or_default())
+    if let Some(scripts) = fused_scripts(state, def_id) {
+        return Cow::Owned(scripts);
+    }
+    Cow::Owned(crafted_scripts(state, def_id).unwrap_or_default())
 }
 
 /// One face of a definition's scripts (`radiant` or base), borrowed as `scripts_ref` borrows.
@@ -303,7 +306,32 @@ pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
     if let Some(entry) = registered_entry(def_id) {
         return ScriptRef::Static(if radiant { &entry.radiant } else { &entry.base });
     }
-    fused_face(state, def_id, radiant).unwrap_or_else(|| ScriptRef::Static(shared_empty_script()))
+    if let Some(face) = fused_face(state, def_id, radiant) {
+        return face;
+    }
+    crafted_face(state, def_id, radiant).unwrap_or_else(|| ScriptRef::Static(shared_empty_script()))
+}
+
+/// R882 (ME-CRAFT): a crafted definition's two scripts — rebuilt from the def's recipe in any
+/// process, as a fused definition's rebuild from its ingredients. `None` for any other id. No
+/// cache is needed: composing is one walk over at most eight effects.
+fn crafted_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
+    if !def_id.starts_with(crate::config::CRAFT_ID_PREFIX) {
+        return None;
+    }
+    let def = state.transient_defs.get(def_id)?;
+    let recipe = def.craft.as_ref()?;
+    Some(crate::subsystems::craft::compile_crafted_scripts(recipe))
+}
+
+/// One face of `crafted_scripts(state, def_id)`: composed alone.
+fn crafted_face(state: &GameState, def_id: &str, radiant: bool) -> Option<ScriptRef> {
+    let scripts = crafted_scripts(state, def_id)?;
+    Some(ScriptRef::Composed(Arc::new(if radiant {
+        scripts.radiant
+    } else {
+        scripts.base
+    })))
 }
 
 /// TS `EMPTY_SCRIPT`, one shared instance: what a Vanilla card runs (immutable, like the registry).
@@ -324,7 +352,7 @@ fn shared_empty_script() -> &'static Script {
 /// Borrowed from the registry: nothing is copied for a registered card (a fused card's script is shared
 /// with the state's, or composed for the lookup).
 fn instance_script(state: &GameState, instance: &CardInstance) -> ScriptRef {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return ScriptRef::Static(shared_empty_script());
     }
     face_ref(state, &instance.def_id, instance.radiant)
@@ -374,7 +402,7 @@ pub fn script_of<K: ScriptKey>(state: &GameState, key: K) -> K::Scripts {
 
 /// The running face's static flags (`script.staticFlags ?? {}`); none for a Vanilla card.
 pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return StaticFlags::default();
     }
     if let Some(entry) = registered_entry(&instance.def_id) {
@@ -503,7 +531,7 @@ pub struct TextFlags {
 /// card that records no prices (a fused card's summed flags among them, all at its one price), one
 /// per ingredient for one that does (R102). A Vanilla card carries none (§6.3, R115).
 pub fn texts_of(state: &GameState, instance: &CardInstance) -> Vec<TextFlags> {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return Vec::new();
     }
     let Some(records) = ingredients_of(instance) else {

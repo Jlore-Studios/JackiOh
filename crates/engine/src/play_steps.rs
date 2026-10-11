@@ -42,7 +42,7 @@ use serde_json::{Value, json};
 use crate::animated::animate_on_entry;
 use crate::announce::{begin_announce, end_announce, is_announce_live};
 use crate::catalog::def_of;
-use crate::config::{MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
+use crate::config::{FENG_SHUI_BRITTLE, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
 use crate::cost_rules::why_play_banned;
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
 use crate::draw::{add_to_hand, draw};
@@ -53,12 +53,13 @@ use crate::echo::{
 };
 use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
-use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, spend_mana};
+use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent};
 use crate::modifiers::remove_modifier;
+use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, in_declared_order, interceptor_fits_decl, legal_selections_for,
-    play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
+    magnetic_host_at, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
     targeting_discards_required, targets_follow_modes, why_choices_refused,
 };
 use crate::play_counts::record_play;
@@ -80,6 +81,8 @@ use crate::state::{
 use crate::state_check::{sacrifice_together, state_check};
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::{copied_text_of, copies_text, fix_copied_text, text_face_of};
+use crate::subsystems::feng_shui::FengShuiVerdict;
+use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::subsystems::glitch::count_system_play;
 use crate::targeting::target_aim;
 use crate::targeting_point::{
@@ -90,8 +93,9 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind,
-    Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, CounterKind, Enchantment, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS,
+    PlagueSpend, PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone,
+    opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -243,7 +247,7 @@ pub const RESOLVE_PARTS: &[ResolvePart] = &[
 pub const PLAY_WORK_KIND: &str = "play";
 
 /// Where the run record sits inside `resume.data`, so the rest of `data` stays the card's own.
-const RUN_KEY: &str = "__play";
+pub(crate) const RUN_KEY: &str = "__play";
 
 /// `PlayRun.awaiting`: which bucket the answer to a prompt this pipeline opened fills.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -358,6 +362,12 @@ pub struct PlayRun {
     /// no step 1 (R70), so its step 3 reads the board.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gifted: Option<bool>,
+    /// R983: Meditative #40 Feng Shui's judgements of this play, fixed at step 1 as `gifted` is
+    /// (R214) so the two agree — a Tribute's Death at step 2 can have taken a judge off the field.
+    /// Step 3 applies this answer (a cast or a replaced card, with no step 1 of its own, reads the
+    /// board there instead). Plain JSON like the rest of the run (§10.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feng_shui: Option<Vec<FengShuiVerdict>>,
     /// Step 4 has placed the card and announced the play; what is left of it is its resolution loop,
     /// which a trap's question can pause (§10.3, R17), so the step is re-entered at that loop.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -451,6 +461,10 @@ pub struct PlayRun {
     /// cast has resolved, and its held `drawn` is released then (`draw_complete.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawn_as: Option<String>,
+    /// R1086: the host a Magnetic play fuses into at step 7 (ME-MAGNETIC), read at step 1. Absent for
+    /// every other play (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub magnetic_host: Option<String>,
     // ---- B5 E14 (Classic #57 Echo; R399, R546) ----
     /// The Spell text a copier's play resolves, fixed at step 1 as its choices are checked against it
     /// (null: nothing had been played), and written on the card as the announce moves it into the
@@ -462,6 +476,16 @@ pub struct PlayRun {
         deserialize_with = "present"
     )]
     pub copied: Option<Option<PlayRecord>>,
+    // ---- Meditative (ME-TRIG) ----
+    /// R822, R823: the extra runs of the card's Cry still owed under a Cry multiplier (Meditative #10
+    /// Double Counting), read as step 5 runs the Cry the first time. Absent with none owed, so a play no
+    /// multiplier touches records nothing new (docs/meditative-set.md D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra_cries: Option<u32>,
+    /// MD-B22, R946: an aimed cast's named first pick — the instance id the cast card's first target
+    /// declaration takes when it is a legal pick (Meditative #98's Book of Buff). Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim_at: Option<String>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -488,6 +512,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         cast: None,
         radiant: None,
         gifted: None,
+        feng_shui: None,
         placed: None,
         target_slices: None,
         exits_from: None,
@@ -510,6 +535,9 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         copied: None,
+        extra_cries: None,
+        aim_at: None,
+        magnetic_host: None,
     }
 }
 
@@ -633,6 +661,28 @@ pub fn validate_play(
         ));
     }
 
+    // R1200: while a Mayor acts the action carries no declared targets — `legal_actions`
+    // offered it stripped — so draw each one at random before anything is checked or paid, and the
+    // targeting point, the targeting costs and Joro's replacements meet the drawn target (MD-E9).
+    // A face-down play (ME-ALTPLAY, R1044) declares nothing, so it draws nothing.
+    let mut owned = action.clone();
+    if crate::random_targets::targets_random(sink.state) && owned.face_down.is_none() {
+        let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
+        let given = owned.targets.clone().unwrap_or_default();
+        let modes = owned.modes.clone().unwrap_or_default();
+        let decls = crate::play_choices::declared_targets(sink.state, &face);
+        let drawn = crate::play_choices::with_drawn_target_picks(
+            sink.state,
+            &mut *sink.rng,
+            player,
+            &face,
+            &decls,
+            &given,
+            &modes,
+        )?;
+        owned.targets = Some(drawn);
+    }
+    let action: &PlayAction = &owned;
     why_choices_refused(sink.state, player, &card, action)?;
 
     let chooses = chooses_x(sink.state, &card);
@@ -640,12 +690,36 @@ pub fn validate_play(
         def_of(Some(&*sink.state), &card.def_id).cost,
         CardCost::Embiggen { .. }
     );
+    // ME-ALTPLAY, R1040, R1044, R1045: stamp the face-down form before the price is read.
+    let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> = action.face_down.map(|reveal| {
+        let turn = sink.state.turn;
+        let echo = {
+            let grants = crate::alt_play::grants_of(sink.state, player);
+            if grants.echo > 0
+                && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant)
+                    != crate::wire::CardType::Unit
+            {
+                Some(grants.echo)
+            } else {
+                None
+            }
+        };
+        (reveal, turn, echo)
+    });
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
         }
         if embiggens {
             stamped.embiggened = Some(action.embiggen == Some(true));
+        }
+        if let Some((reveal, turn, echo)) = face_down_stamp {
+            stamped.set_as = Some(crate::state::SetAs {
+                reveal,
+                set_turn: turn,
+                echo,
+                revealing: None,
+            });
         }
     }
     let card = live(sink.state, &card);
@@ -656,7 +730,8 @@ pub fn validate_play(
     why_play_banned(state, player, &card, cost)?;
     if from == PlayFrom::Graveyard {
         why_graveyard_play_refused(state, player, &card, cost, action.plague.as_ref())?;
-    } else if cost > state.players[player].mana.current {
+    // R1223: the refusal reads the one affordability function, as `legal_actions` does.
+    } else if cost > crate::credit::spendable_mana(state, player) {
         return Err(EngineError::new(format!(
             "{} costs {cost}, more than your mana",
             def_of(Some(state), &card.def_id).name
@@ -691,6 +766,11 @@ pub fn validate_play(
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.cost_paid = cost;
     run.zone = zone;
+    // R1086: a Magnetic play names its host at step 1, off the same function the listing and the
+    // refusal read.
+    if action.magnetic == Some(true) {
+        run.magnetic_host = zone.and_then(|slot| magnetic_host_at(state, player, &slot, &tributes));
+    }
     // B5 E5, R450, R682: read against the picks as checked, before the step-1 interception moves
     // any of them — a cost the targeting owes whatever answers it.
     run.targeting_owed = targeting_discards_required(state, player, &face, &targets, &modes, None);
@@ -699,6 +779,9 @@ pub fn validate_play(
     run.tributes = tributes;
     run.at = 1;
     run.gifted = Some(play_made_radiant(state, player, &card, cost));
+    // R983: the Feng Shui verdicts, fixed here as `gifted` is (R214).
+    let fixed = crate::subsystems::feng_shui::verdicts(state, player, &card);
+    run.feng_shui = (!fixed.is_empty()).then_some(fixed);
     run.target_slices = slices_for(state, player, &card, cost, &run.targets, &run.modes);
     run.exits_from = Some(exit_mark(state));
     let begins = play_begins(state, player);
@@ -823,7 +906,7 @@ fn consume_used_discounts(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardI
     if is_x_cost(sink.state, &card) {
         return;
     }
-    let type_ = card_type_of(sink.state, &card);
+    let type_ = crate::alt_play::priced_type_of(sink.state, &card);
     let mods = sink.state.players[run.player].mods.clone();
     for modifier in &mods {
         let ModifierKind::CostDiscount {
@@ -863,10 +946,15 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     let spent_rules = cost_rules_spent_by(sink.state, &card);
 
     // R454: Plague Counters pay their part of the price, and the mana the rest.
+    // R1223: the rest may be borrowed past current mana, up to the credit limit, and counts as spent.
     let due = mana_due(run.cost_paid, run.plague.as_ref());
-    spend_mana(&mut sink.state.players[run.player], due);
+    let before = sink.state.players[run.player].mana.current;
+    let borrowed = crate::credit::pay_mana(sink.state, run.player, due);
     let changed = mana_event(run.player, &sink.state.players[run.player]);
     sink.events.push(changed);
+    // MD-D26: the mana actually taken, which answers `manaSpent` while something hears it.
+    let taken = before - sink.state.players[run.player].mana.current + borrowed;
+    push_mana_spent(sink, run.player, taken, ManaSpentFor::Play);
     if let Some(plague) = run.plague.clone()
         && let Some(holder) = snapshot(sink.state, &plague.from)
     {
@@ -917,6 +1005,8 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if run.hook_ids.is_none() {
         // R449: a replacement comes first, so what step 3 makes Radiant is the card that is played.
         replace_played_card(sink, run);
+        // R983: Feng Shui judges the card that is played, before it is made Radiant.
+        feng_shui_step(sink, run);
         gifted_program_step(sink, run);
         run.hook_ids = Some(
             trigger_holders_with_hook(sink.state, HookName::OnPlayHook, None)
@@ -982,6 +1072,52 @@ fn holder_with_on_play_hook(state: &GameState, id: Option<&str>, from: Option<u3
     } else {
         Some(holder)
     }
+}
+
+/// R983, Meditative #40 Feng Shui: judge the card that is played at §10.5 step 3, where Gifted
+/// Program's flag is read (R213, R214, R449) — after a replacement (R449), so the card judged is
+/// the card played, and before it is made Radiant. The verdicts are step 1's answer when it read
+/// one; a cast or a replaced card, with no step 1 of its own, is judged off the board now (R70),
+/// and the answer is stored back for step 7. Each verdict is a public `fengShui` event. A punished
+/// play is given Brittle 2 here, as `effects/brittle.rs` gives a count: on a copy, then written
+/// back to the live card with its `CounterChanged`.
+fn feng_shui_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    let Some(card) = snapshot(sink.state, &run.instance_id) else {
+        return;
+    };
+    let verdicts = match run.gifted {
+        Some(_) => run.feng_shui.clone().unwrap_or_default(),
+        None => crate::subsystems::feng_shui::verdicts(sink.state, run.player, &card),
+    };
+    if verdicts.is_empty() {
+        return;
+    }
+    run.feng_shui = Some(verdicts.clone());
+    for verdict in &verdicts {
+        sink.events.push(GameEvent::FengShui {
+            instance_id: card.id.clone(),
+            source_id: verdict.source_id.clone(),
+            player: run.player,
+            outcome: verdict.outcome,
+        });
+    }
+    if !verdicts
+        .iter()
+        .any(|verdict| verdict.outcome == FengShuiOutcome::Negative)
+    {
+        return;
+    }
+    let mut copy = card.clone();
+    crate::brittle_count::give_brittle_count(sink.state, &mut copy, FENG_SHUI_BRITTLE);
+    if let Some(live) = find_instance_mut(sink.state, &card.id) {
+        live.brittle = copy.brittle;
+    }
+    sink.events.push(GameEvent::CounterChanged {
+        instance_id: card.id.clone(),
+        counter: CounterKind::Brittle,
+        value: FENG_SHUI_BRITTLE,
+        placed: None,
+    });
 }
 
 /// §8 #64 Gifted Program: "the first card costing 1 or less you play each turn becomes Radiant as it
@@ -1099,6 +1235,8 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         run.cast_chosen = None;
         // R214: whether step 3 makes it Radiant is read for the card that is played, off the board now.
         run.gifted = None;
+        // R983: and so are the Feng Shui verdicts.
+        run.feng_shui = None;
     }
 }
 
@@ -1322,6 +1460,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
             row: zone.row,
             lane: zone.lane,
             former_id,
+            source_id: None,
             arrived_during: arrivals,
             exits_from: Some(exits_from),
         });
@@ -1486,6 +1625,17 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     {
         former_id = Some(fresh_face_down_id(sink.state, &mut card));
         run.instance_id = card.id.clone();
+        // MD-D28, R1125: the judgement names the play as the action named it; it follows the card to
+        // its fresh id, so the trigger reads it off the play's `cardResolved`.
+        if sink
+            .state
+            .play_judgement
+            .as_ref()
+            .is_some_and(|judgement| Some(&judgement.instance_id) == former_id.as_ref())
+            && let Some(judgement) = sink.state.play_judgement.as_mut()
+        {
+            judgement.instance_id = card.id.clone();
+        }
     }
 
     // §3.2/§6.2 Stack: step 1 already accepted an occupied unit zone for a Stack card, so the
@@ -1495,9 +1645,24 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // invariant rather than a game rule; should one ever happen, the card waits in `resolving` and
     // step 7 lands it in its graveyard, as R138 has a permanent with no zone do, rather than being
     // left in no pile at all (§10.1).
+    let base = if run.cast != Some(true) {
+        run.zone
+            .as_ref()
+            .filter(|zone| crate::zones::stack_base_at(sink.state, run.player, zone))
+            .and_then(|zone| card_at(sink.state, *zone).cloned())
+    } else {
+        None
+    };
+    let landing_buffs = base.as_ref().and_then(|b| {
+        crate::scripts::flags_of(sink.state, b)
+            .stack_base_buffs
+            .map(|n| crate::params::declared_or(sink.state, b, "buffs", n))
+    });
+
     let placed = match run.zone {
         Some(zone) => {
-            let stack = plays_on_stack(sink.state, &card);
+            // R1086: a Magnetic play lands on top of its host, as a Stack card lands on its pile.
+            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.magnetic_host.is_some();
             place_on_field(
                 sink.state,
                 &mut card,
@@ -1553,6 +1718,27 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    if placed
+        && let Some(times) = landing_buffs
+        && times > 0
+    {
+        let mut ctx = crate::resolve::make_context(
+            sink,
+            base.as_ref(),
+            crate::resolve::HookOptions {
+                controller: Some(run.player),
+                ..Default::default()
+            },
+        );
+        crate::resolve::apply_effects(
+            &[crate::effects::upgrade(crate::effects::TuneArgs {
+                instance_id: Some(card.id.clone()),
+                times: Some(times),
+                ..Default::default()
+            })],
+            &mut ctx,
+        );
+    }
     // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
     // turn, animates as it enters the field.
     animate_on_entry(sink, &card);
@@ -1593,6 +1779,8 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         return false;
     };
     side.hand.remove(at);
+    // R1140: a card played out of a hand has ended its stay there.
+    crate::zones::forget_hand_watch(state, &card.id);
     true
 }
 
@@ -1841,22 +2029,64 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);
-                run_hook_resumable(
-                    sink,
-                    &face,
-                    "cry",
-                    HookResumableOptions {
-                        controller: Some(run.player),
-                        targets: Some(standing_targets(run)),
-                        modes: Some(run.modes.clone()),
-                        data: Some(cry_data(run)),
-                        // R174: the choices are aimed at the stays step 1 checked them on (a cast's, once made).
-                        exits_from: run.exits_from,
-                    },
-                );
+                // R822, R823: a permanent's Cry runs again under its player's Cry multiplier, read now; a
+                // Spell's resolution is no Cry, though it runs from the same hook.
+                if is_permanent(sink.state, &card)
+                    && crate::scripts::script_of(sink.state, &face).cry.is_some()
+                {
+                    let extra = extra_runs(sink.state, run.player, Multiplied::CryAndDeath);
+                    if extra > 0 {
+                        run.extra_cries = Some(extra as u32);
+                    }
+                }
+                run_script_cry(sink, run, &face);
             }
         }
 
+        if paused(sink) {
+            return;
+        }
+    }
+    resolve_extra_cries(sink, run);
+}
+
+/// Step 5's run of the card's own Cry or spell script, with the play's choices.
+fn run_script_cry(sink: &mut EngineSink<'_>, run: &PlayRun, face: &CardInstance) {
+    run_hook_resumable(
+        sink,
+        face,
+        "cry",
+        HookResumableOptions {
+            controller: Some(run.player),
+            targets: Some(standing_targets(run)),
+            modes: Some(run.modes.clone()),
+            data: Some(cry_data(run)),
+            // R174: the choices are aimed at the stays step 1 checked them on (a cast's, once made).
+            exits_from: run.exits_from,
+        },
+    );
+}
+
+/// R822, R823 (Meditative #10 Double Counting): the extra runs of a permanent's Cry, one after
+/// another behind the first, each a whole effect list the state check closes (R59) before the next
+/// begins. Each reuses the play's declared targets and modes, a target gone since fizzling that part
+/// (R174), and asks again whatever its list asks. They end once the card has left the stay step 4 put
+/// it on, as the Cry itself would be lost (R118). The count owed is the run's own (`extra_cries`), so a
+/// prompt inside one parks the play at this step, behind that run's own tail (R113, R117), and the
+/// answer comes back here for the rest. An Echo repeat (step 6) is a new resolution, never multiplied.
+fn resolve_extra_cries(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
+    while let Some(left) = run.extra_cries {
+        state_check(sink);
+        if paused(sink) {
+            return;
+        }
+        let Some(card) = still_resolving(sink.state, run) else {
+            run.extra_cries = None;
+            return;
+        };
+        run.extra_cries = if left > 1 { Some(left - 1) } else { None };
+        let face = text_face_of(sink.state, &card);
+        run_script_cry(sink, run, &face);
         if paused(sink) {
             return;
         }
@@ -1994,6 +2224,8 @@ fn key_of(selection: &Selection) -> String {
         Selection::Hero { player } => format!("hero:{player}"),
         Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
         Selection::Mode { option } => format!("mode:{option}"),
+        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
         Selection::None => "none".to_string(),
     }
 }
@@ -2004,6 +2236,7 @@ fn label_of(selection: &Selection, chooser: PlayerId) -> String {
         Selection::Hero { player } => hero_option_label(*player, chooser),
         Selection::Zone { player, row, lane } => cell_option_label(*player, *row, *lane, chooser),
         Selection::Mode { option } => option.clone(),
+        Selection::Craft { recipe } => recipe.name(),
         Selection::None => "nothing".to_string(),
     }
 }
@@ -2115,6 +2348,35 @@ fn ask_repeat_targets(
         }
         let options = cast_target_options(sink.state, run, card, decl);
         if options.is_empty() {
+            continue;
+        }
+        // MD-B22, R946: an aimed cast takes the named legal pick for its first declaration.
+        if at == 0
+            && run.cast == Some(true)
+            && let Some(aimed) = run.aim_at.clone()
+            && let Some(pick) = options
+                .iter()
+                .find(|option| matches!(option, Selection::Instance { instance_id } if instance_id == &aimed))
+        {
+            if let Some(repeat) = run.repeat.as_mut() {
+                repeat.targets.push(pick.clone());
+            }
+            continue;
+        }
+        // R1200: while a Mayor acts a `target` repeat is drawn at random, and nobody is asked.
+        if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+            let picks = crate::random_targets::draw_picks(
+                sink.state,
+                &mut *sink.rng,
+                run.player,
+                &options,
+                decl.min,
+                decl.max,
+                crate::targeting::target_aim(decl),
+            );
+            if let Some(repeat) = run.repeat.as_mut() {
+                repeat.targets.extend(picks);
+            }
             continue;
         }
         // R452: a random cast makes this pick itself, at random, and asks nobody.
@@ -2397,6 +2659,70 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     }
     flag_return_to_hand_at_end_of_turn(sink.state, &run.instance_id);
     note_return_price(sink.state, &run.instance_id, played_at);
+    // R983: a punished play's hit, once it has resolved (`cardResolved` is out) — from the judge
+    // wherever it is now, through §4.4 on the playing player's hero.
+    for verdict in run.feng_shui.clone().unwrap_or_default() {
+        if verdict.outcome != FengShuiOutcome::Negative {
+            continue;
+        }
+        if sink.state.result.is_some() {
+            break;
+        }
+        deal_damage(
+            sink,
+            DamageArgs {
+                source: find_instance(sink.state, &verdict.source_id).cloned(),
+                target: DamageTarget::Hero { player: run.player },
+                amount: verdict.damage,
+                flags: None,
+            },
+        );
+    }
+    // R1086: a Magnetic play's card fuses into its host once the play has resolved (`cardResolved`
+    // above), not as a trigger.
+    fuse_magnetic(sink, run);
+}
+
+/// R1086 (ME-MAGNETIC): fuse the Magnetic card on top into its host, which the fusion keeps (zone,
+/// damage, exertion, the turn it arrived). The Magnetic card ceases to exist with no Death. When the
+/// host or the top card left the field first, nothing fuses, and the top card, if still there, stays
+/// the pile's top.
+fn fuse_magnetic(sink: &mut EngineSink<'_>, run: &PlayRun) {
+    let Some(host_id) = run.magnetic_host.clone() else {
+        return;
+    };
+    let top_id = run.instance_id.clone();
+    // R174: each card is judged from the stay the play put it on — the host from step 1's, the top
+    // card from the stay step 4 placed it on.
+    if run
+        .exits_from
+        .is_some_and(|from| left_field_after(sink.state, from, &host_id))
+    {
+        return;
+    }
+    if run
+        .placed_from
+        .is_some_and(|from| left_field_after(sink.state, from, &top_id))
+    {
+        return;
+    }
+    let (Some(host), Some(top)) = (
+        find_instance(sink.state, &host_id).cloned(),
+        find_instance(sink.state, &top_id).cloned(),
+    ) else {
+        return;
+    };
+    if !matches!(host.zone, Zone::Field { .. }) || !matches!(top.zone, Zone::Field { .. }) {
+        return;
+    }
+    fuse(
+        sink,
+        FuseArgs {
+            ingredients: vec![top],
+            target: Some(host),
+            ..FuseArgs::default()
+        },
+    );
 }
 
 /// E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to hand"): a Spell
@@ -2734,6 +3060,8 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     if target_enemies {
         run.target_enemies = Some(true);
     }
+    // MD-B22, R946: an aimed cast names its first pick.
+    run.aim_at = options.aim_at.clone();
     run.mana_before = Some(sink.state.players[player].mana.current);
     // A cast starts past the pay step, so it owes no targeting cost (as before: casts never paid one).
     run.targeting_owed = 0;

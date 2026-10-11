@@ -15,7 +15,7 @@ One note per top-level section, its subsections inside:
 - [[§5]] [05-card-types.md](05-card-types.md): card anatomy, the card types, Radiant, the catalog's data decisions.
 - [[§6]] [06-keywords.md](06-keywords.md): the keyword glossary: unit keywords, triggers and timing words, actions and verbs.
 - [[§7]] [07-tokens.md](07-tokens.md): the tokens.
-- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic and Classic+, and of Meditative, in the catalog before it ships ([[R1420]]).
+- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic, Classic+ and Meditative ([[R1420]]).
 - [[§9]] [09-architecture.md](09-architecture.md): trust, topology, accounts, matchmaking, abuse, the practice AI, the tutorial, card statistics, the ranked ladder.
 - [[§10]] [10-engine-guide.md](10-engine-guide.md): the engine: state, actions, events, layers, playing a card, prompts, randomness, the view, card scripts, the client's rendering and audio.
 - [[§11]] [11-rulings.md](11-rulings.md): where the rulings came from; the rulings themselves are the notes in [rulings/](rulings/).

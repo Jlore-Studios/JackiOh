@@ -5,16 +5,16 @@
 //!   3. the mulligan keeps the cheap cards.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, R1444).
+//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, R1446).
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
 //!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
-//!      and the best mean wins (a style with a temperature picks among them, R1444).
+//!      and the best mean wins (a style with a temperature picks among them, R1446).
 //!   7. a fallback when nothing could be scored.
 //!
 //! Only the first action of the chosen line is played; the caller asks again after it, so the AI
 //! re-plans after every action and a plan that only one sampled world liked never gets past step one.
 //! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors.
-//! `decide_styled` is the same with an `AiStyle` (R1444): `decide` is it at `AI_STYLE_EXACT`, which
+//! `decide_styled` is the same with an `AiStyle` (R1446): `decide` is it at `AI_STYLE_EXACT`, which
 //! takes no draw of its own, so `decide`'s decisions and cursor are what they were before styles.
 //!
 //! Port of `packages/ai/src/decide.ts` (SURFACE §9). TS's `try`/`catch` is `catch_unwind` (an engine
@@ -126,13 +126,13 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
     entries
 }
 
-/// R1444: whether this decision passes over the lethal line the solver found. A style that never
+/// R1446: whether this decision passes over the lethal line the solver found. A style that never
 /// misses takes no draw.
 fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
     style.missed_lethal_chance > 0.0 && rng.chance(style.missed_lethal_chance)
 }
 
-/// R1444: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
+/// R1446: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
 /// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
 /// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
 /// finalist whose running sum of weights passes it.
@@ -233,7 +233,7 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal, verified on every determinization, unless the style passes over it (R1444).
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1446).
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
         && !passes_over_lethal(style, rng)
@@ -392,7 +392,7 @@ pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Opt
     decide_styled(state, seat, options, &AI_STYLE_EXACT)
 }
 
-/// `decide` under `style` (R1444): the ladder bots' entry point. At `AI_STYLE_EXACT` it is
+/// `decide` under `style` (R1446): the ladder bots' entry point. At `AI_STYLE_EXACT` it is
 /// `decide`, draw for draw.
 pub fn decide_styled(
     state: &GameState,

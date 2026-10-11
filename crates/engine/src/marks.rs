@@ -92,8 +92,15 @@ pub fn sync_marks(sink: &mut EngineSink<'_>, delayed_id: &str, mark: &CardMark, 
     }
 }
 
+/// R1141: a mark of a hand watch's lasts while that card is still watched — its stay in the hand.
 fn waiting(state: &GameState, record: &MarkRecord) -> bool {
-    state.delayed.iter().any(|entry| entry.id == record.delayed_id)
+    state.delayed.iter().any(|entry| {
+        entry.id == record.delayed_id
+            && entry
+                .hand_watch
+                .as_ref()
+                .is_none_or(|ids| ids.contains(&record.instance_id))
+    })
 }
 
 /// R437: drop the marks whose delayed effect is no longer waiting — it resolved, fizzled, or was
