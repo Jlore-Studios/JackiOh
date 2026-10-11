@@ -799,7 +799,8 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     //     catalog::query(&q(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })))
     // `stats` reads the printed base face (R1080): a face that prints none never matches, so Spells
     // and stat-less backrow cards are out whatever else they are. Tokens join through `withTokens`.
-    // A pool that names no set reaches every set that ships (R380, R1420), in catalog order.
+    // A pool that names no set reaches every set that ships (R380, R1420), in `query`'s order: by
+    // set, then by index, a set's tokens after its cards.
     const ONE_ONE_POOL: &[&str] = &[
         "core-003",
         "core-004",
@@ -807,13 +808,25 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "core-015",
         "core-050",
         "core-086",
+        "core-t-felinor",
+        "core-t-sheep",
         "classic-027",
         "classic-033",
         "classic-082",
         "classicplus-006",
         "classicplus-076",
-        "core-t-felinor",
-        "core-t-sheep",
+    ];
+
+    /// The Meditative set's printed 1/1 Units, which the pool takes once the set is open (R1420).
+    const MEDITATIVE_ONE_ONES: &[&str] = &[
+        "meditative-051",
+        "meditative-065",
+        "meditative-067",
+        "meditative-082",
+        "meditative-088",
+        "meditative-091",
+        "meditative-093",
+        "meditative-101",
     ];
 
     #[test]
@@ -830,11 +843,11 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     }
 
     #[test]
-    fn r1080_r1420_previewing_meditative_adds_051_065_and_067() {
+    fn r1080_r1420_previewing_meditative_adds_its_printed_1_1_units() {
         register();
         let _guard = preview_sets(&[SetName::Meditative]);
         let mut expected = strings(ONE_ONE_POOL);
-        expected.extend(strings(&["meditative-051", "meditative-065", "meditative-067"]));
+        expected.extend(strings(MEDITATIVE_ONE_ONES));
         assert_eq!(
             ids(catalog.query(&q(json!({
                 "type": "Unit",

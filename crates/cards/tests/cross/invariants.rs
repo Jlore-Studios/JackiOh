@@ -659,6 +659,9 @@ mod r1062_fiery_waraxe_reanimated {
 
     #[test]
     fn r1062_i1_and_i4_stay_clean_as_fiery_waraxe_animates_again_and_attacks_the_hero() {
+        // R1062 is live only while the Meditative set is open (R1420), in the engine and in the
+        // monitor alike.
+        let _open = preview_sets(&[SetName::Meditative]);
         let mut g = scenario(json!({
             "p1": { "hand": ["meditative-066", "core-005"] },
             "p2": { "hand": ["core-005"] },

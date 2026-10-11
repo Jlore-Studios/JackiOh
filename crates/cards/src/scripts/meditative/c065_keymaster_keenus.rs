@@ -86,16 +86,20 @@ mod tests {
             #[test]
             fn r1084_prints_the_21_keywords() {
                 crate::register_all();
-                // Every engine keyword kind plus Magnetic, leaving out Can't attack, Brittle and
-                // Temporary (which only hurt) and Animated and Animated on your turn (a backrow
-                // meaning only). The print order is the brief's, not the enum's, so the
-                // whole-set comparison is order-insensitive.
+                // Every engine keyword kind plus Magnetic, leaving out Can't attack, Brittle,
+                // Temporary and Untributable (which only hurt, R1220), Animated and Animated on
+                // your turn (a backrow meaning only), and Immune to tribal tag based hate (R940),
+                // a keyword the 21 do not name: a later keyword joins only by a patch (R1084). The
+                // print order is the brief's, not the enum's, so the whole-set comparison is
+                // order-insensitive.
                 let excluded = [
                     KeywordKind::CantAttack,
                     KeywordKind::Brittle,
                     KeywordKind::Temporary,
+                    KeywordKind::Untributable,
                     KeywordKind::Animated,
                     KeywordKind::AnimatedOnYourTurn,
+                    KeywordKind::ImmuneToTribalHate,
                 ];
                 let expected: Vec<KeywordKind> = KEYWORD_KINDS
                     .iter()
@@ -144,7 +148,7 @@ mod tests {
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
                     "seed": "keenus-magnetic",
-                    "p1": { "hand": [VANILLA, KEENUS, FILLER], "library": filler(4) },
+                    "p1": { "mana": 10, "hand": [VANILLA, KEENUS, FILLER], "library": filler(4) },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 s.play(VANILLA, json!({}));
@@ -199,22 +203,50 @@ mod tests {
                 );
             }
 
+            /// The units the `keywordGranted` events since `mark` went to, each once, in order.
+            fn receivers_since(s: &Scenario, mark: usize) -> Vec<String> {
+                let mut out: Vec<String> = Vec::new();
+                for event in &s.events()[mark..] {
+                    if let GameEvent::KeywordGranted { instance_id, lost: None, .. } = event
+                        && !out.contains(instance_id)
+                    {
+                        out.push(instance_id.clone());
+                    }
+                }
+                out
+            }
+
+            /// The keywords Keenus has as it acts now: its 21 but Taunt, which R347 drops while
+            /// it is Indestructible.
+            fn acting_kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
+                keywords_of(s.state(), s.card(id)).iter().map(|keyword| keyword.kind()).collect()
+            }
+
             #[test]
             fn r1085_death_grants_every_keyword_to_another_random_unit() {
                 let mut s = death_board("keenus-death");
                 s.play(KEENUS, json!({}));
+                let keenus = s.card(KEENUS).id.clone();
+                let had = acting_kinds(&s, &keenus);
+                assert_eq!(had.len(), printed_kinds().len() - 1);
+                assert!(!had.contains(&KeywordKind::Taunt));
                 // Indestructible survives destroy, so the Death needs a Sacrifice: the Cube's Cry
-                // tributes Keenus. The Vanilla is the only other Unit, so it receives all 21.
+                // tributes Keenus. One other Unit of p1's (the Vanilla or the Cube) receives
+                // every keyword Keenus had as it died (R78): its 21 but Taunt (R347).
+                let mark = s.events().len();
                 cube_tribute(&mut s, KEENUS);
-                let vanilla = s.card(VANILLA);
-                let kinds: Vec<KeywordKind> = keywords_of(s.state(), vanilla)
-                    .iter()
-                    .map(|keyword| keyword.kind())
-                    .collect();
-                for kind in printed_kinds() {
-                    assert!(kinds.contains(&kind), "the Vanilla holds {kind:?}");
+                let receivers = receivers_since(&s, mark);
+                assert_eq!(receivers.len(), 1, "one random Unit receives");
+                let receiver = receivers[0].clone();
+                assert_ne!(receiver, keenus, "another Unit than Keenus");
+                assert_eq!(s.card(receiver.as_str()).controller, P1);
+                assert_eq!(granted_for(&s, &receiver), had.len());
+                let kinds = acting_kinds(&s, &receiver);
+                for kind in &had {
+                    assert!(kinds.contains(kind), "the receiver holds {kind:?}");
                 }
-                assert_eq!(granted_for(&s, &vanilla.id.clone()), 21);
+                // It is Indestructible now, so it has no Taunt either (R347).
+                assert!(!kinds.contains(&KeywordKind::Taunt));
                 // Reborn returns Keenus.
                 assert_eq!(s.card(KEENUS).def_id, KEENUS);
             }
@@ -223,12 +255,28 @@ mod tests {
             fn r1085_a_second_death_grants_again() {
                 let mut s = death_board("keenus-death-twice");
                 s.play(KEENUS, json!({}));
+                let first = acting_kinds(&s, KEENUS).len();
+                let mark = s.events().len();
                 cube_tribute(&mut s, KEENUS);
-                let vanilla = s.card(VANILLA).id.clone();
-                assert_eq!(granted_for(&s, &vanilla), 21);
-                // The returned Keenus dies again: its Death fires again.
+                let granted: usize = receivers_since(&s, mark)
+                    .iter()
+                    .map(|receiver| granted_for(&s, receiver))
+                    .sum();
+                assert_eq!(granted, first);
+                // The returned Keenus dies again: its Death fires again, granting every keyword
+                // the returned card had as it died to one other Unit of p1's.
+                let returned = s.card(KEENUS).id.clone();
+                let second = acting_kinds(&s, &returned);
+                let mark = s.events().len();
                 cube_tribute(&mut s, KEENUS);
-                assert_eq!(granted_for(&s, &vanilla), 42);
+                let receivers = receivers_since(&s, mark);
+                assert_eq!(receivers.len(), 1, "one random Unit receives again");
+                assert_ne!(receivers[0], returned);
+                let again = s.events()[mark..]
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::KeywordGranted { lost: None, .. }))
+                    .count();
+                assert_eq!(again, second.len());
             }
 
             #[test]

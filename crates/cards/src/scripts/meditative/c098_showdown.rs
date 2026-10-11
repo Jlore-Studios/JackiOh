@@ -176,6 +176,7 @@ mod tests {
     const BOOK: &str = "classicplus-071";
     const VANILLA: &str = "core-008"; // (1) 4/4 Human.
     const RECRUIT: &str = "core-069"; // (2) Spell: Recruit a 3-or-less Unit.
+    const FIENDER: &str = "core-092"; // (2) 5/7 Stack: played onto a taken unit zone.
     const FILLER: &str = "core-005";
 
     fn library() -> Value {
@@ -276,16 +277,31 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 2 }));
         let played = s.unit(P1, 2).expect("played");
         // The base Book Upgrades 5 times: five `upgraded` events on the played card.
-        let upgraded = s.events()[mark..]
+        let changes: Vec<TuningChange> = s.events()[mark..]
             .iter()
-            .filter(|event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == &played.id))
-            .count();
-        assert_eq!(upgraded, 5, "the Book is cast on the played card");
+            .filter_map(|event| match event {
+                GameEvent::Upgraded { instance_id, change, .. } if instance_id == &played.id => {
+                    Some(change.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(changes.len(), 5, "the Book is cast on the played card");
+        // Each Buff draws its row (§6.1: cost, stats or a keyword for a vanilla Unit); every stats
+        // Buff adds its 4 across attack and health, and each lands on the played card.
+        let stat_totals: Vec<i32> = changes
+            .iter()
+            .filter_map(|change| match change {
+                TuningChange::Stats { attack, health } => Some(attack + health),
+                _ => None,
+            })
+            .collect();
+        assert!(stat_totals.iter().all(|total| *total == TUNE_STAT_TOTAL));
         let grown = s.stats(&played.id);
         assert_eq!(
             grown.attack + grown.health,
-            4 + 4 + 5 * 4,
-            "five Buffs land (each +4 split across attack and health)"
+            4 + 4 + stat_totals.iter().sum::<i32>(),
+            "each stats Buff lands (+4 split across attack and health)"
         );
     }
 
@@ -321,7 +337,7 @@ mod tests {
             "seed": "showdown-watch-end",
             "p1": {
                 "mana": 10,
-                "hand": [{ "def": SHOWDOWN, "radiant": true }, { "def": VANILLA }, { "def": VANILLA }, FILLER],
+                "hand": [{ "def": SHOWDOWN, "radiant": true }, { "def": VANILLA }, { "def": FIENDER }, FILLER],
                 "library": library(),
             },
             "p2": { "hand": [FILLER], "library": self::library() },
@@ -331,10 +347,12 @@ mod tests {
         // Showdown plus the Book: two Spells played this turn, and the Book rests in the graveyard.
         assert_eq!(played_this_turn_of_type(s.state(), P1, &[CardType::Spell]), 2);
         assert_eq!(s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == BOOK).count(), 1);
-        // Next turn the lanes are open and the watch is gone: no more Books.
+        // Next turn the lanes are open and the watch is gone: a play into the lane (Stacked onto
+        // the Vanilla) casts no more Books.
         s.end_turn();
         s.end_turn();
-        s.play(VANILLA, json!({ "zone": 2 }));
+        s.play(FIENDER, json!({ "zone": 2 }));
+        assert_eq!(s.unit(P1, 2).expect("the pile's top").def_id, FIENDER);
         assert_eq!(s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == BOOK).count(), 1);
     }
 }

@@ -50,8 +50,9 @@ mod tests {
         s.play(DOOM, json!({ "zone": 1 }));
         let token = s.unit(PlayerId::P2, 1).expect("the opponent's Ready");
         assert_eq!(token.def_id, READY);
+        // R1066: it is theirs, owned and controlled as if they had summoned it.
         assert_eq!(token.controller, PlayerId::P2);
-        assert_eq!(token.owner, PlayerId::P1);
+        assert_eq!(token.owner, PlayerId::P2);
         assert!(!token.radiant);
     }
 
