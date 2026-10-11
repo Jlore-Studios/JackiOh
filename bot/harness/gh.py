@@ -337,6 +337,17 @@ class GitHub:
                      {"color": color, "description": description})
         return "updated"
 
+    def delete_label(self, name: str) -> bool:
+        """Delete the label from the repository, and so from every thread. True when it was
+        there."""
+        try:
+            self.request("DELETE", f"{self._r}/labels/{urllib.parse.quote(name, safe='')}")
+        except GitHubError as exc:
+            if exc.status != 404:
+                raise
+            return False
+        return True
+
     # ------------------------------------------------------------------ pull requests
 
     def get_pull(self, number: int) -> dict[str, Any]:

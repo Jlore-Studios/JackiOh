@@ -10,10 +10,9 @@ ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:spli
 Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
 patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks
 for what a builder needs. Its Difficulty, Priority and Who does it dropdowns become the
-`difficulty:*`, `priority:*` and `method:*` labels a person would set by hand (`triage.yml`'s `form`
-job), and a method starts triage at once, which gives the issue its type (Task, Bug or Feature), its
-labels, title and assignees, and queues a `method:use-bot` one for the night bot. "Decide later"
-leaves the method label to you, as before. A pull request starts from
+`difficulty:*` and `priority:*` labels and `bot:build` (the night bot) or `human` (people), as a
+person would set them by hand, and triage gives the issue its type (Task, Bug or Feature) as it
+opens (`triage.yml`). "Decide later" leaves who does it to you. A pull request starts from
 `.github/pull_request_template.md` ([Pull requests](#pull-requests)). `CONTRIBUTING.md` is the short
 version of this page for people and agents.
 
@@ -24,11 +23,9 @@ Every issue carries at least one type label:
 | Label | For |
 |---|---|
 | `patch` | A numbered release of the game: cards, rules, the client, the server's features |
-| `large patch` | A big patch, always with `patch`: a new expansion or set, or a change to many cards at once (a pass over every card's text or numbers) |
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
-| `Info` | For the record, nothing to build: migrations, statistics, the night bot's status |
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
@@ -36,22 +33,18 @@ patch whose work is all tooling (the codebase pass) is `patch` and `architecture
 `difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; `hard`
 is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
-labels (the bot's pickup order), the `method:*` labels and the `bot:*` labels are separate. Never
-add `bot:build` while retitling or relabelling, because it queues a build.
+labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
+retitling or relabelling, because it queues a build.
 
 Every label, with its colour and description, is listed once, in `bot/harness/config.py`'s
-`LABELS`: the sweep creates one the repository lacks, and `harness setup` also restores a changed one.
+`LABELS`: the sweep creates one the repository lacks and deletes one it retired
+(`RETIRED_LABELS`), and `harness setup` also restores a changed one.
 
-**Who does an issue: the method labels.** An issue is triaged only once a person labels it
-`method:manual` or `method:use-bot` (#307). Two minutes after the label goes on, so a person can
-set a difficulty and a priority first, triage reads it again: `method:manual` adds `human` and
-assigns MaxGoetzmann and jgoetzmann (unassigning the bot); `method:use-bot` adds `bot:build`, a
-priority and its type labels, and assigns the bot (unassigning both people). An issue labelled
-`human` never goes to the bot. A suggestion the bot opened (`bot:suggestion`) is approved with
-`bot:approved`, which triage treats as `method:use-bot`; the bot builds no suggestion without it.
-Once triage has done this it takes the method label off (with `bot:approved` and `bot:suggestion`,
-and for `method:manual` the bot's queue labels) and comments that it classified the issue, so the
-labels left say who does it and what it is, not how it was handed on.
+**Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
+so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
+assigns MaxGoetzmann and jgoetzmann, unassigns the bot and takes the bot's queue labels off, and
+the bot never touches it again (#664). A suggestion the bot opened (`bot:suggestion`) is approved
+the same way: queue it, and `bot:suggestion` comes off; close it to say no.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
@@ -92,7 +85,7 @@ A pull request has no type.
 A pull request takes the same titles ([Pull requests](#pull-requests)).
 Keep a version number as it was given; #290's renames (R743) were not carried into older titles.
 `ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
-suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you accept it.
+suggestions (`bot:suggestion`) are asked for conventional titles; retitle one that arrives without.
 
 ## Version numbers
 

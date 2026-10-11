@@ -17,9 +17,9 @@ For people and agents alike. This is a pointer page: the rules live in the files
 
 Open one through a form (**New issue**): Patch, Micro patch, Bug, Architecture or CI, Night bot.
 Each starts the title, puts on the type labels and sets the issue type (Task, Bug or Feature). When
-it is ready, label it `method:manual` (people do it) or `method:use-bot` (the night bot does);
-triage classifies it two minutes later. Work on `.github/`, `bot/`, `.harness/` or `.squishy/` is
-`human`: the bots may not change those paths.
+it is ready, label it `human` (people do it) or `bot:build` (the night bot does), or pick one in
+the form's Who does it. Work on `.github/`, `bot/`, `.harness/` or `.squishy/` is `human`: the bots
+may not change those paths.
 
 ## Titles
 
