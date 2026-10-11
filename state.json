@@ -4920,10 +4920,8 @@
     "what": "revise #684 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-11T21:24:58Z",
-    "notes": [
-      "started a night run, as a lane was free: #684 conflicts with main"
-    ],
+    "at": "2026-10-11T21:36:09Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
