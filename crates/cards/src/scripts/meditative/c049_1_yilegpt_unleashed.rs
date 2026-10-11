@@ -2,8 +2,8 @@
 //! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5).
 //!
 //! "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …" plus "Start of turn: Make
-//! [a random permanent / {radiants} random permanents] of yours Radiant" and "Whenever you end your
-//! turn with unspent mana, this costs that much less."
+//! [a random permanent / {radiants} random permanents] of yours Radiant" and "Whenever your turn
+//! ends with unspent mana, this costs that much less."
 //! Engine:
 //! - The discount is a hand trigger and a deck trigger (R464) on its owner's `turnEnded`: they read
 //!   the event's `unspentMana` (the number Bread and Butter reads) into a `costMod` of minus that
