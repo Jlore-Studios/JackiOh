@@ -380,20 +380,24 @@ def card_stats(
     source: str = "live",
     mode: str | None = None,
     patch: str | None = None,
-    pilot: str = "unified",
+    pilot: str | None = None,
 ) -> pd.DataFrame:
     """R377: every card's breakdowns over the records the arguments read, one row per card by catalog id.
 
     The arguments are `stats-cards`' flags and defaults (R378: live games unless `source` names `dev` or
-    `all`; `mode` and `patch` None read every mode and patch; `pilot` "unified" counts every seat). A game
-    is one deck in one game: a game in which both decks held a card counts once for each, and a draw is a
-    game not won. For each breakdown in `BREAKDOWNS` the frame has `<breakdown>_games`, `_wins`, `_draws`
-    and `_rate` (wins over games, NaN with no games); `played_delta` is the played win rate minus the
-    drawn-but-not-played win rate in percentage points, NaN while either has no games. The frame's
-    `attrs` hold `games` (records read with at least one seat counted) and `decks` (seats counted).
+    `all`; `mode` and `patch` None read every mode and patch; `pilot` None counts the human seats when
+    `source` is `live`, so a ladder bot's side of a live game is read only when asked for, and every seat
+    otherwise, R1449; "unified" counts every seat). A game is one deck in one game: a game in which both
+    decks held a card counts once for each, and a draw is a game not won. For each breakdown in
+    `BREAKDOWNS` the frame has `<breakdown>_games`, `_wins`, `_draws` and `_rate` (wins over games, NaN
+    with no games); `played_delta` is the played win rate minus the drawn-but-not-played win rate in
+    percentage points, NaN while either has no games. The frame's `attrs` hold `games` (records read with
+    at least one seat counted), `decks` (seats counted) and `filter` (the pilot it counted named).
     """
     _one_of("source", source, SOURCE_FILTERS)
     _one_of("mode", mode, MODES)
+    if pilot is None:
+        pilot = "human" if source == "live" else "unified"
     _one_of("pilot", pilot, PILOT_FILTERS)
 
     games = records.games

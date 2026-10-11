@@ -215,9 +215,34 @@ def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_sea
     assert (ai.attrs["games"], ai.attrs["decks"]) == (1, 1)
     assert list(ai["card"]) == ["z"]
     assert tally(ai, "z", "in_deck") == (1, 1, 0)
-    unified = card_stats(records)
+    unified = card_stats(records, pilot="unified")
     assert unified.attrs["decks"] == 8
     assert tally(unified, "a", "in_deck")[0] == 7
+
+
+def test_r1449_names_no_pilot_and_reads_a_live_games_human_seats_and_every_seat_of_the_rest(tmp_path):
+    path = write_records(
+        tmp_path / "bot.jsonl",
+        [
+            # A person (p1) against a ladder bot (p2, the `ai` pilot), and a development game.
+            record("m1", seat(["a", "b"]), seat(["z"]), winner="p2", pilots=("human", "ai")),
+            record("dev:v0.1.1:dev:1", seat(["a"]), seat(["z"]), source="dev", pilots=("ai", "ai")),
+        ],
+    )
+    records = load(path)
+
+    live = card_stats(records)
+    assert (live.attrs["games"], live.attrs["decks"]) == (1, 1)
+    assert live.attrs["filter"]["pilot"] == "human"
+    assert list(live["card"]) == ["a", "b"]
+    assert live.equals(card_stats(records, pilot="human"))
+    # The bot's side, asked for.
+    assert list(card_stats(records, pilot="ai")["card"]) == ["z"]
+    assert card_stats(records, pilot="unified").attrs["decks"] == 2
+    # Development data, alone or with the live games, counts every seat unless a pilot is named.
+    for source, decks in (("dev", 2), ("all", 4)):
+        read = card_stats(records, source=source)
+        assert (read.attrs["filter"]["pilot"], read.attrs["decks"]) == ("unified", decks)
 
 
 def test_refuses_a_filter_it_does_not_know_rather_than_reading_something_else(tmp_path):
