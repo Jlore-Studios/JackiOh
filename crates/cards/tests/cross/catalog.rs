@@ -5126,8 +5126,6 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("38.1", "Epic"),
             ("36.1", "Rare"),
             ("76.1", "Rare"),
-            ("95.1", "Legendary"),
-            ("96.1", "Rare"),
             ("65.1", "Common"),
             ("65.2", "Common"),
             ("65.3", "Rare"),
@@ -5343,7 +5341,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_97_and_97_9_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_87_97_and_97_9_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5360,6 +5358,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "classicplus-052",
                 "core-013",
                 "core-014",
+                "meditative-087",
                 "meditative-097",
                 "meditative-097-9",
             ]),
@@ -5367,15 +5366,20 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
         );
         // The tag follows the name: every entry whose name says Jlockeed, or the Classic+ spelling
         // Jlockheed, carries it — one faction under two spellings (B2.4) — plus Classic #4 Palantir,
-        // which the balance patch inducted without renaming it. M #97.9 Jlockheed's Headquarters is
-        // the Meditative set's, a token that fills the board with the faction's Units (§8.8).
+        // which the balance patch inducted without renaming it, and M #87 Tatches the Totem, which
+        // carries every tribal tag ("All Tribes", §8.8 row 87, R1424). M #97.9 Jlockheed's
+        // Headquarters is the Meditative set's, a token that fills the board with the faction's
+        // Units (§8.8).
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.contains("Jlockeed") || entry.name.contains("Jlockheed"))
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();
-        let expected: Vec<String> = tagged.into_iter().filter(|id| id != "classic-004").collect();
+        let expected: Vec<String> = tagged
+            .into_iter()
+            .filter(|id| id != "classic-004" && id != "meditative-087")
+            .collect();
         assert_eq!(named, expected, "entries whose name names Jlockeed or Jlockheed");
     }
 }
@@ -5476,10 +5480,20 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_80_boom_big_max_and_classic_plus_37_wardrum_acclaimed_and_no_other_entry() {
+    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_its_three_tokens_acclaimed_and_no_other_entry()
+     {
+        // §8.8 rows 49 to 49.3 print the tag on YileGPT Tamed, YileGPT Unleashed, Yile's Virus and
+        // AI Girlfriend (the designer's "Acclaimed").
         assert_eq!(
             tagged(Tag::Acclaimed),
-            strings(&["classic-080", "classicplus-037"])
+            strings(&[
+                "classic-080",
+                "classicplus-037",
+                "meditative-049",
+                "meditative-049-1",
+                "meditative-049-2",
+                "meditative-049-3",
+            ])
         );
     }
 }

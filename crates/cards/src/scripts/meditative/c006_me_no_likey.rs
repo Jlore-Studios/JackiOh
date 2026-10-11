@@ -154,7 +154,8 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE, FODDER] },
-                "p2": { "hand": [FILLER], "field": [MENACE] },
+                // No Taunt on their side: the gift is the Menace's to attack (§4.2 step 3).
+                "p2": { "hand": [FILLER] },
             }));
             let gift = s.card(FODDER).id.clone();
             let targets = at(&s, FODDER);

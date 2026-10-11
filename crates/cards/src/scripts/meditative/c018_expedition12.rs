@@ -70,10 +70,13 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
 
-    /// A board where p1 can play the expedition and neither side auto-ends its turn.
+    /// A board where p1 can play the expedition and neither side auto-ends its turn. It is p1's
+    /// first turn (the scenario's default is turn 9), so its later turns are 3 and 5, with max mana
+    /// 2 and 3.
     fn board(hand: Value) -> Scenario {
         scenario(json!({
             "seed": "expedition12",
+            "turn": 1,
             "p1": {
                 "hand": hand,
                 "field": [VANILLA],

@@ -49,9 +49,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
 
+    /// p1's first turn (the scenario's default is turn 9), so its later turns are 3, 5, 7 and 9, and
+    /// max mana reaches 4 on turn 9.
     fn board(hand: Value) -> Scenario {
         scenario(json!({
             "seed": "expedition1234",
+            "turn": 1,
             "p1": {
                 "hand": hand,
                 "field": [VANILLA],

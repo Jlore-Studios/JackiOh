@@ -391,6 +391,12 @@ fn ends_with_a_full_stop(line: &str) -> bool {
     line.ends_with('.') || line.ends_with(".\"") || line.ends_with(".\u{201d}")
 }
 
+/// R1443: whether the text before a label ends on an opening double quote (`“`, or a `"` that opens
+/// a quote: an odd one), so the label opens a quoted ability the card grants.
+fn opens_a_quote(before: &str) -> bool {
+    before.ends_with('\u{201c}') || (before.ends_with('"') && before.matches('"').count() % 2 == 1)
+}
+
 /// Every R366 check a face fails, by name; empty when it passes them all. A face printed in Chinese
 /// is read by Chinese punctuation instead (R1302).
 fn failures(face: &Face) -> Vec<String> {
@@ -498,7 +504,11 @@ fn failures(face: &Face) -> Vec<String> {
             out.push(format!("does not end the line \"{line}\" with a full stop"));
         }
         for label in LABELS {
-            if matches!(line.find(label), Some(index) if index > 0) {
+            // R1443: a label that opens a double-quoted ability the card grants stays in its sentence.
+            if line
+                .match_indices(label)
+                .any(|(index, _)| index > 0 && !opens_a_quote(&line[..index]))
+            {
                 out.push(format!("does not start \"{label}\" on a line of its own"));
             }
         }
@@ -830,6 +840,68 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             })
             .collect();
         assert_eq!(wrong, Vec::<String>::new());
+    }
+
+    #[test]
+    fn r1443_a_label_may_open_a_double_quoted_granted_ability_inside_a_line_and_only_the_granting_faces_quote_one()
+     {
+        let dummy_card = entries()[0];
+        let check = |text: &str| -> Vec<String> {
+            failures(&Face {
+                card: dummy_card,
+                face: FaceKind::Base,
+                text: text.to_string(),
+                keywords: Vec::new(),
+            })
+        };
+        let inside = "does not start \"Death:\" on a line of its own";
+        // Quoted in double quotes, the label first and the full stop inside: the granted card's text.
+        assert_eq!(
+            check("Cry: Summon a random (1) Unit. It gains \"Death: Add 1 random Book card to your hand.\""),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            check("Cry: Summon a Unit. It gains \u{201c}Death: Draw 1.\u{201d}"),
+            Vec::<String>::new()
+        );
+        // Unquoted, after a closing quote, or in single quotes, it is the card's own and starts a line.
+        assert!(
+            check("Cry: Summon a Unit. Death: Draw 1.")
+                .iter()
+                .any(|why| why == inside)
+        );
+        assert!(
+            check("Cry: Say \"hi.\"Death: Draw 1.")
+                .iter()
+                .any(|why| why == inside)
+        );
+        assert!(
+            check("Cry: Summon a Unit. It gains 'Death: Draw 1.'")
+                .iter()
+                .any(|why| why == inside)
+        );
+        // The faces that quote a label are the two that grant a Death (R1107), on both faces.
+        let quoting: Vec<String> = swept()
+            .iter()
+            .filter(|face| {
+                face.text.split('\n').any(|line| {
+                    LABELS.iter().any(|label| {
+                        line.match_indices(label)
+                            .any(|(index, _)| index > 0 && opens_a_quote(&line[..index]))
+                    })
+                })
+            })
+            .map(|face| format!("{} {}", face.card.id, face.face))
+            .collect();
+        assert_eq!(
+            sorted(quoting),
+            strings(&[
+                "meditative-058 base",
+                "meditative-058 radiant",
+                "meditative-059 base",
+                "meditative-059 radiant",
+            ])
+        );
     }
 
     #[test]

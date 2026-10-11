@@ -1,11 +1,9 @@
-//! M #69 The Maestro (SPEC §8.8 row 69): (4) Unit, Human, Rare, 4/4 → 8/8.
+//! M #69 The Maestro (SPEC §8.8 row 69): (4) Unit, Human, Plague, Rare, 4/4 → 8/8.
 //!
-//! Base:    "Whenever you spend mana, place 1 Plague Counter on this. Activate: Spend ({price})
-//! Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's
-//! field, hand, deck, and graveyard zones."
-//! Radiant: "Whenever you spend mana, place 1 Plague Counter on this. Activate: Spend ({price})
-//! Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's
-//! field, hand, deck, and graveyard zones."
+//! Base:    "Whenever you spend mana, place 1 Plague Counter on this.
+//!          Activate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy
+//!          cards} from each of the opponent's field, hand, deck, and graveyard zones."
+//! Radiant: the same text, two exiles per zone.
 //! Engine: the `manaSpent` event (MD-D26) — a field trigger answers the controller's own spending
 //! with one placement per mana (R212 already keeps the Maestro from answering its own play, and the
 //! opponent's spending is never its controller's); the Activate refuses below {price} Plague

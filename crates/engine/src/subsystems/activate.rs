@@ -46,7 +46,7 @@ use serde_json::{Value, json};
 use crate::config::ACTIVATE_UNLIMITED_CAP;
 use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
-use crate::mana::{mana_event, push_mana_spent, spend_mana};
+use crate::mana::{mana_event, push_mana_spent};
 use crate::params::{ParamValueOptions, param_decl_of, param_value};
 use crate::play_choices::{
     DeclaredChoices, in_declared_order, play_choice_combinations, targeting_discards_required,

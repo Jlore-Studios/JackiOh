@@ -78,4 +78,26 @@ handCap?: number,
  * ME-JADE, R961: this player's Jade Counter, public, which only rises (`effects::jade`). Absent until
  * it first rises, so a game without a Jade hashes as it did before this field existed (D14).
  */
-jade?: number, };
+jade?: number, 
+/**
+ * R844 (Meditative #18, #19): the `turns_started` index through which this player's refresh
+ * gives 0 mana. Absent while no loss covers a future refresh, so a game that never loses one
+ * hashes as it did before this field existed.
+ */
+lostRefreshThrough?: number, 
+/**
+ * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
+ * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
+ * hashes as it did before this field existed.
+ */
+extraTurns?: number, 
+/**
+ * R847 (Meditative #19.1): once-a-game Temporal Rift flag — set when a Rift grants this player
+ * an extra turn, so a later Rift grants none. Only ever `Some(true)`.
+ */
+riftExtraTurn?: true, 
+/**
+ * R850 (Meditative #8, #20): set when an effect wins the game for this player outright
+ * (`win_game`). Only ever `Some(true)`.
+ */
+wonByEffect?: true, };
