@@ -1,26 +1,14 @@
-//! C #64 Malzahar's Recycler (SPEC §8.6 row 64, BUILD M9 Classic row C 64). (2) Field Spell, Rare.
+//! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (2) Field Spell, Rare.
 //!   Base:    "End of turn: Discard 2 cards. / Whenever you discard cards, draw that many."
 //!   Radiant: "End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck."
-//!   Engine:  "The end-of-turn discard is 2 random cards (R682; fewer in hand: all of them). The draw
-//!            answers your `discarded` events one effect at a time: an effect that discards 2 draws 2.
-//!            Radiant: 'draw your deck' (R58, the deck's size as it starts) once per discarding effect.
-//!            Every discard of yours counts: your own, C #15 Nose Hunter's random one, C #8 Pickle's,
-//!            C #37 Last Hurrah's; a card crumbling from Brittle (§6.1, R385) is not a discard.
-//!            Tunes: none."
-//!
-//! Readings:
-//!   - The end-of-turn discard is §6.2's end-of-turn hook (its controller's turn, while it acts on the
-//!     field): 2 random cards of its controller's hand (R682), all of a smaller hand, nothing from an
-//!     empty one.
-//!   - "Whenever you discard cards" answers the `discarded` events of cards its controller owned in
-//!     hand as they went — whoever's effect discarded them (an opponent's C #8 Pickle makes you
-//!     discard), never the opponent's discards. The trigger answers each discarded card, one draw each,
-//!     so an effect that discards 2 draws 2, after that effect has finished (the draws are queued
-//!     triggers, §10.3); a Brittle crumble emits `crumbled`, not `discarded`, and is not answered.
-//!   - Radiant: each answer draws the deck as its size stands then (R58), so the first answer to a
-//!     discarding effect draws the whole deck and the rest of that effect's answers find it empty and
-//!     draw nothing — no fatigue (R87: an empty library draws nothing). Most of it burns at the hand cap
-//!     (§2.4); that is the card.
+//!   Engine:  The end-of-turn discard (§6.2's hook) is 2 random cards of the hand (R682), all of a
+//!            smaller one. "Whenever you discard cards" answers your own `discarded` events, one draw
+//!            each, once the discarding effect has finished (queued triggers, §10.3), so an effect
+//!            that discards 2 draws 2; whoever's effect made you discard counts, the opponent's own
+//!            discards never. A Brittle crumble (§6.1, R385) is not a discard.
+//!            Radiant: each answer draws the deck as its size stands then (R58), so the first answer
+//!            takes it all and the rest find it empty, no fatigue (R87); most of it burns at the hand
+//!            cap (§2.4), which is the card.
 
 use jackioh_engine::effects::{discard_random, draw};
 use jackioh_engine::prelude::*;
@@ -73,17 +61,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #64 Malzahar's Recycler — SPEC §8.6 row 64, BUILD M9 Classic row C 64: "End of your turn: discard
-// 2 cards at random (R682; fewer → all, none → nothing); whenever you discard, draw as many as that
-// effect discarded, one answer per discarding effect (its own end-of-turn discard draws 2); every
-// discard of yours counts (C #15, C #26, C #37, C #8 played against you), an opponent's discard does
-// not, and a Brittle crumble is no discard; the drawn cards are never named in the opponent's view;
-// radiant: each discarding effect draws your whole deck instead (R58); no tuned numbers".
-//
-// Every discard of yours is shown with the cards the row names — C #15 Nose Hunter's random one, C #26
-// Rapid Draw's random four, C #37 Last Hurrah's whole hand, C #8 Pickle's played against you — and with
-// Core #80 Zao Gao ("Discard 2 random cards"), Core #21 Hinder's cast-on-draw discard and C #89 Paul
-// Allen's Ghost's targeting cost.
+// Every discard of yours is shown: C #15 Nose Hunter, C #26 Rapid Draw, C #37 Last Hurrah, C #8 Pickle
+// played against you, Core #80 Zao Gao, Core #21 Hinder and C #89 Paul Allen's Ghost's targeting cost.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -123,7 +102,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `events.findIndex((event) => event.type === type_)`, which every caller expects to find.
+    /// The index of the first event of this type, which every caller expects to find.
     fn find_index(events: &[GameEvent], type_: &str) -> usize {
         events
             .iter()
@@ -150,7 +129,7 @@ mod tests {
     }
 
     /// p1's Recycler on the field; p1 to end its turn.
-    /// `opts`: `{ radiant?, hand, library? }`, as the TS helper's.
+    /// `opts`: `{ radiant?, hand, library? }`.
     fn recycling(opts: Value) -> Scenario {
         let radiant = opts["radiant"] == true;
         let library = if opts["library"].is_null() {
@@ -168,7 +147,7 @@ mod tests {
         }))
     }
 
-    /// TS `expect(pool).toEqual(expect.arrayContaining(found))`: every found def id is one of `pool`.
+    /// Whether every found def id is one of `pool`.
     fn all_among(found: &[Value], pool: &[&str]) -> bool {
         found.iter().all(|def_id| pool.iter().any(|id| *def_id == *id))
     }
@@ -441,7 +420,6 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": [VANILLA, VANILLA] },
                     "active": "p2",
                 }));
-                // TS writes through the live instance (`s.card(MENACE).brittle = …`).
                 let menace = s.card(MENACE).id.clone();
                 find_instance_mut(s.state_mut(), &menace).expect("the Menace is on the field").brittle =
                     Some(BrittleCounter { count: 1, since: 1, printed: None });

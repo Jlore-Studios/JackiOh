@@ -1,13 +1,10 @@
 //! C+ #47 Jogg's Box (SPEC §8.7 row 47). (4) Spell, Legendary.
-//!   Base:    "Cast {casts|random Spell|random Spells}." — casts 10
-//!   Radiant: "Echo 1. Cast {casts|random Spell|random Spells}."
 //!   Engine:  "Random casts (Cast, §6.3), one after another: each a random non-token card of the Spell
 //!            type (not Field Spell or Trap) of every set (R380) but Jogg's Box (R387), repeats allowed
 //!            (R60), cast from no zone. Every choice of a random cast is random, targets, modes and
 //!            Discover picks alike, as "Targets chosen randomly" (§6.2), and its X is your current mana,
 //!            at least 1; so nothing pauses for a prompt. Each cast is free and counts as a play (R70),
-//!            and each cast Spell goes to your graveyard when it resolves (R87). Echo 1 runs the ten
-//!            again (Hearthstone's Yogg-Saron). Tunes: casts 10 ↑ (step 2)."
+//!            and each cast Spell goes to your graveyard when it resolves (R87)."
 //!
 //! `castRandom` (B5 E12, R452) is the whole card: each cast draws its Spell as it begins, never this
 //! card's definition, and makes every choice from the match rng; a Call to Chaos it casts is the first
@@ -19,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-047";
 
-/// TS `castRandom({ query: { type: "Spell" }, count })`: `count` random Spells, cast one after another.
 fn cast_spells(count: i32) -> Effect {
     cast_random(CastRandomArgs {
         query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
@@ -47,13 +43,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #47 Jogg's Box — SPEC §8.7 row 47, BUILD M9 Classic+ row C+ 47: "Casts 10 random non-token Spells
-// of any set but Jogg's Box (R380, R387) one after another, every target, mode and Discover pick random
-// with X the current mana and at least 1, so it never opens a prompt; each cast is a play (R70); a cast
-// with no legal target fizzles and the next goes; a Call to Chaos among them counts against
-// `CALL_TO_CHAOS_CHAIN_CAP` (R28); a game that ends midway stops the rest; a fixed seed casts the same
-// ten; the cast count reads through `param()` (step 2); radiant Echo 1 runs ten more with fresh random
-// picks". The R28 count is proved again in packages/engine/test/effects-cast-chaos.test.ts.
+// C+ #47 Jogg's Box — SPEC §8.7 row 47, BUILD M9 Classic+ row C+ 47: casts 10 random non-token Spells
+// of any set but Jogg's Box (R380, R387), every choice random with X the current mana (at least 1), so
+// it never opens a prompt; each cast is a play (R70); a Call to Chaos among them counts against
+// `CALL_TO_CHAOS_CHAIN_CAP` (R28); radiant Echo 1 runs ten more with fresh random picks.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,7 +60,6 @@ mod tests {
     const VANILLA: &str = "core-008";
     const CALLS: [&str; 2] = ["core-095", "classicplus-073"];
 
-    /// TS `type Played = Extract<GameEvent, { type: "cardPlayed" }>`: the fields these tests read.
     #[derive(Clone, Debug)]
     struct Played {
         player: PlayerId,
@@ -76,7 +68,7 @@ mod tests {
         cost_paid: i32,
     }
 
-    /// TS `box({ seed, radiant?, empty?, health?, library? })`'s options (`box` is a Rust keyword).
+    /// `box_`'s options (`box` is a Rust keyword).
     #[derive(Default)]
     struct BoxOpts {
         seed: String,
@@ -148,7 +140,7 @@ mod tests {
         out
     }
 
-    /// A prompt's first options, at least one: `pending.options.slice(0, Math.max(1, pending.min))`.
+    /// A prompt's first options, at least one.
     fn first_picks(pending: &PendingChoice) -> Vec<Selection> {
         pending
             .options
@@ -195,7 +187,7 @@ mod tests {
         panic!("no quiet seed");
     }
 
-    /// TS `try { … } finally { … }`: runs its closure when dropped, on a panic too.
+    /// Runs its closure when dropped, on a panic too.
     struct Finally<F: FnOnce()>(Option<F>);
 
     impl<F: FnOnce()> Drop for Finally<F> {
@@ -215,7 +207,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `registerCatalog(…)` and the `finally` that puts the shipped catalog back.
+    /// Registers `defs`; the guard puts the shipped catalog back.
     fn with_catalog(defs: CardDefs) -> Finally<impl FnOnce()> {
         jackioh_engine::testkit::register_catalog_as(defs, crate::CATALOG_VERSION);
         Finally(Some(|| {
@@ -464,7 +456,7 @@ mod tests {
             for i in 0..80 {
                 let mut s = box_(seeded(format!("jogg-chaos-{i}")));
                 s.play(BOX, json!({}));
-                // TS `runs.length = 0` per seed: this seed's runs are the ones sent since the last drain.
+                // This seed's runs are the ones sent since the last drain.
                 let seed_runs: Vec<(String, i32)> = runs.try_iter().collect();
                 let played: IndexSet<String> = s
                     .last_events()

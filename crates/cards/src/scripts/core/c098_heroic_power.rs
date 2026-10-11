@@ -1,38 +1,15 @@
 //! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761).
-//! Field Spell, tags Quickdraw, cost (0), Mythic.
-//!   Base:    "Indestructible. Start of game: Gain one of 13 random powers, each 'Activate: Spend
-//!             (X)': (3) Expedition Map; (1) Life Tap; (1) Steady Shot; (2) Ranching; (1) Cat Cafe;
-//!             (1) Ping; (2) Witness Value; (2) Stitching; (1) Armor Up; (2) Die Insect; (2) KY
-//!             Brainstorm; (2) Pluck; (3) Terminus Tricks" — each power's words are its catalog line.
-//!   Radiant: every power's Radiant words, Armor Up named Tank Up (R757).
-//!
-//! THE THIRTEEN POWERS LIVE IN `subsystems/hero_power.rs`, NOT HERE. R43 makes this card a subsystem:
-//! `HERO_POWERS` is the table with each power's X, its names, its base words and its Radiant words;
-//! `roll_power` is the roll and `hero_power` the continuation a Discover comes back to. Since the Heroic
-//! Power patch (R752) each power is an Activate ability (R384) — `power_abilities` declares all
-//! thirteen, each paying its X in mana, declaring Ping's target and present only while the card rolled
-//! it — so this file is the wiring of the card's `Script` to them. Everything is on the instance
-//! (`memory.power`, Activate's `memory.activations`), never in a module variable (R43, §10.1), which
-//! keeps two Heroic Powers in one game independent.
-//!
-//! COST (R752). The card costs (0), printed in the catalog, and playing it uses nothing: it has no Cry.
-//! The power's X is the ability's mana price, paid as it is activated (R384's costs), so the play
-//! validator, `legal_actions` and the client read the printed (0) and the ability's price with no
-//! special case for this card.
-//!
-//! THE PROMPTED POWERS (§10.6). Witness Value, Stitching and Terminus Tricks Discover, and `hero_power`
-//! is the step they resume at, so the card exposes it under the key the subsystem names
-//! (`POWER_RESUME`). Ping's target is declared with the activation (R81), so it never prompts.
-//!
-//! WHAT THIS FILE DELIBERATELY DOES NOT SAY:
-//!   * Indestructible is a printed keyword on both catalog faces, so it is a §10.4 layer, not a
-//!     script. R46: "an Indestructible Field Spell (Heroic Power) simply stays".
-//!   * Quickdraw is `staticFlags.quickdraw`, which `setup.rs` step 2 reads to put the card in the
-//!     opening hand instead of a draw (§6.2). The catalog's Quickdraw *tag* is what a filter sees;
-//!     the flag is what setup sees.
-//!   * The roll on arrival (R151) is the engine's: `draw.rs`'s `run_arrival_hooks` fires this card's
-//!     `startOfGame` as it reaches a hand or library, and a summon onto the field does the same, so
-//!     the roll this file declares is the one that runs everywhere.
+//! Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Start of game: Gain one of 13
+//! random powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
+//! power's Radiant words, Armor Up named Tank Up (R757).
+//! The thirteen powers live in `subsystems/hero_power.rs` (R43): `HERO_POWERS` is the table, `roll_power`
+//! the roll, `hero_power` the Discover continuation, and `power_abilities` declares each as an Activate
+//! ability (R384, R752) present only while the card rolled it. This file only wires the `Script`; state is
+//! on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
+//! COST (R752): the card costs (0) and has no Cry; the power's X is the ability's mana price (R384).
+//! Witness Value, Stitching and Terminus Tricks Discover and resume at `hero_power` (`POWER_RESUME`, §10.6).
+//! Not said here: Indestructible is a printed keyword, a §10.4 layer (R46); Quickdraw is the flag `setup.rs`
+//! step 2 reads (§6.2); the arrival roll is the engine's (R151). Ping's target comes with the activation (R81).
 
 use jackioh_engine::prelude::*;
 
@@ -64,20 +41,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #98 Heroic Power — SPEC §8.5, §6.2 ("Start of Game", Quickdraw, Activate), §10.2, §10.6, §10.8;
-// R43, R46, R81, R103, R352, R752–R761 (the Heroic Power patch, issue #37).
-//
-// BUILD M4-T4 row 98: "In opening hand; costs (0) and playing it uses nothing; power chosen at start
-// of game from the seed; each power an Activate paying its X once per turn; Indestructible; each power
-// on both faces".
-//
-// HOW A POWER IS PINNED. R103 makes the power names state, so a test that wants a named one writes
-// that name into `memory.power` — which is exactly and only what `subsystems::ensure_power` writes, so
-// the state is one the engine produces. Every assertion below is then about what the card DID.
-//
-// What the harness cannot reach: `scenario()` skips §2.1, so `startOfGame` never runs and the
-// start-of-game roll has no card-level path; `crates/engine/tests/rules/hero_power.rs` covers the roll
-// by calling `finish_setup` directly, and the arrival roll (R151) with a bounce.
+// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761):
+// "In opening hand; costs (0) and playing it uses nothing; power chosen at start of game from the
+// seed; each power an Activate paying its X once per turn; Indestructible; each power on both faces".
+// A test pins a power by writing its name into `memory.power` (R103), all `subsystems::ensure_power`
+// writes, so the state is one the engine produces. `scenario()` skips §2.1, so `startOfGame` never
+// runs; `crates/engine/tests/rules/hero_power.rs` covers the roll, and the arrival roll (R151).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,7 +73,7 @@ mod tests {
 
     use crate::matches_object;
 
-    /// The keys TS's `Object.keys(script)` would list: every member the face sets.
+    /// Every member the face sets, by name.
     fn members(script: &Script) -> Vec<&'static str> {
         let mut keys = Vec::new();
         let mut note = |present: bool, key: &'static str| {
@@ -268,9 +237,7 @@ mod tests {
         js(&s.view(seat))
     }
 
-    // -------------------------------------------------------------------------------------------
     // The card: its data, its wiring and its keyword.
-    // -------------------------------------------------------------------------------------------
 
     mod n98_heroic_power_the_card_r752 {
         use super::*;
@@ -300,7 +267,7 @@ mod tests {
                 def["params"][0],
                 json!({ "key": "shot", "base": 2, "radiant": 4, "better": "up", "step": 2, "min": 1, "power": "burn" }),
             );
-            // #493: the other powers' numbers, each one a power's (`n98_heroic_power_the_numbers_r386`).
+            // The other powers' numbers, each one a power's (`n98_heroic_power_the_numbers_r386`).
             let keys: Vec<Value> = def["params"]
                 .as_array()
                 .cloned()
@@ -373,9 +340,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // Playing it, and using a power (R752).
-    // -------------------------------------------------------------------------------------------
 
     mod n98_heroic_power_costs_0_each_power_an_activate_r752 {
         use super::*;
@@ -440,9 +405,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // The thirteen powers, base face.
-    // -------------------------------------------------------------------------------------------
 
     mod n98_heroic_power_the_powers_r752_r761 {
         use super::*;
@@ -643,9 +606,7 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // The thirteen powers, Radiant face.
-    // -------------------------------------------------------------------------------------------
 
     mod n98_heroic_power_the_powers_radiant_r752_r761 {
         use super::*;
@@ -820,11 +781,9 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
-    // #493: each power's number is one the card declares (B3.4 rule 5, R386), so a Degrade, an
-    // Upgrade or KY's Constant moves it; the engine reads it as `crate::config` prints it, moved by
-    // the card's tuning (`subsystems::hero_power::power_number`).
-    // -------------------------------------------------------------------------------------------
+    // Each power's number is one the card declares (B3.4 rule 5, R386), so a Degrade, an Upgrade or KY's
+    // Constant moves it; the engine reads it as `crate::config` prints it, moved by the card's tuning
+    // (`subsystems::hero_power::power_number`).
 
     mod n98_heroic_power_the_numbers_r386 {
         use super::*;
@@ -1013,12 +972,10 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
     // R1430: each number is its power's (`Param.power`), so a Degrade, an Upgrade or KY's Constant
     // reaches only the numbers of the power the card has now, and a number of another power keeps its
     // tuning for when a reroll brings that power back. R1431: Life Tap's damage is printed on the base
     // face alone, so it is tuned there alone.
-    // -------------------------------------------------------------------------------------------
 
     mod n98_heroic_power_each_number_is_its_power_s_r1430_r1431 {
         use super::*;

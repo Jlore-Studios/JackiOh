@@ -56,15 +56,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #19.5 Bot Loser — SPEC §8.7 row 19.5, BUILD M9 Classic+ row C+ 19.5: "Rush, First Strike; whenever
-// it destroys a Unit (R42), a forced attack's kill included, it gets +5 Attack permanently; while
-// Berserk (set by Jungle Loser, lost on leaving the field, R78) it makes a forced attack (R53) on its
-// own controller's hero at the start and at the end of that player's turn, the hero never striking back
-// and that hero's Armor and caps applying; not Berserk, nothing; `conditionMet` on the field answers
-// whether it is Berserk (R195); the gain reads through `param()`; radiant Charge, First Strike, +10
-// Attack, and it can't go Berserk (R412): Jungle Loser's base face never sets the flag".
-//
-// R195's proofs for this card are in its own file (the `describe("R195 conditionMet …")` block).
+// SPEC §8.7 row 19.5: kills grant permanent Attack (R42); while Berserk (lost on leave, R78)
+// it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
+// radiant can't go Berserk (R412).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,7 +103,6 @@ mod tests {
         );
     }
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
     fn spread(defaults: Value, overrides: &Value) -> Value {
         let mut out = defaults;
         if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {

@@ -1,77 +1,16 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282, R437).
-//! Unit, cost 1, 1/1 → 2/2.
 //!   Base:    "Cry: choose an enemy permanent; at the start of your next turn, steal it"
 //!   Radiant: "Divine Shield; Cry: choose an enemy permanent; at the start of your next turn, steal
-//!            it; it becomes Radiant" — §8's cell "Divine Shield; same; the stolen permanent also
-//!            becomes Radiant" (R275: the keyword and the rider are the Radiant face's raise).
+//!            it; it becomes Radiant" (R275; "Divine Shield" is printed in `catalog.json`).
 //!
-//! Reading that cell (§8 Conventions): "Divine Shield" is a keyword list without "Plus", so it is
-//! the radiant form's complete keyword list; it is printed in `catalog.json` (`radiant.keywords`)
-//! and §10.4 reads it off the face, so no script grants it. "same" keeps the Cry and the delay; the
-//! radiant face differs only in the step the delay re-enters, which adds R282's rider.
-//!
-//! The choice is made at PLAY time, not during resolution, so it is a declared target travelling in
-//! the play action's `targets` (R81) rather than a `PendingChoice`. "Permanent" is §6.3's word — a
-//! Unit, Field Spell, Trap or Field Trap — so the declaration offers both enemy rows; R90 validates
-//! it, lets a face-down trap be named without being seen (§9.1) and offers only the top of a Stack
-//! pile (R13). An empty enemy board fizzles and the unit still enters (§8 Conventions).
-//!
-//! The delay is the §8.2 Engine cell: a `state.delayed` entry keyed to the TARGET's instance id.
-//! Keyed to the target and not to this unit is the point of R76 — "fires at your next start of turn
-//! even if K-Pop Fanatic has died" — so the continuation carries the id in its own `data` and does not
-//! reach back through `ctx.self_`, which may be `None` by then. `prompts::run_resume` re-enters the
-//! step this card names in its `resume` table (§10.6: a continuation is "script id + step + captured
-//! data", never a closure), which is why the id is read back out of `ctx.data` defensively: `data`
-//! is a `IndexMap<String, Value>` that survived JSON, so it is narrowed, never cast.
-//!
-//! R76's fizzles are the engine's, and deliberately not re-checked here: a target that has left the
-//! field has no slot (`slot_of` is `None`), one dormant under a Stack pile is not the top of it (R13),
-//! and one already under this player's control is refused, all by `effects/steal.rs`'s
-//! `take_control`; and a target that left the field and came back — bounced and replayed, or a Reborn
-//! body — has had this entry dropped as it left, because the delay `watch`es it (R174). R15 places
-//! the one that does land: the same lane on this side if free, else the first free zone of that row,
-//! and it stays with the opponent when the row is full.
-//!
-//! R62 fixes when it happens (refresh → start-of-turn delayed effects → start-of-turn triggers →
-//! draw), R68 the order among several (creation order), and `turn::run_delayed` owns both.
-//!
-//! THE RADIANT RIDER (R282). "It becomes Radiant" names the stolen permanent, so it lands only on a
-//! card the delayed steal actually took: not on a target that has left the field (R76, R174 — the
-//! delay is dropped then and never runs), one dormant under a Stack pile (R13), one already this
-//! player's, or one that stays with the opponent because the row is full (R15). Two reads decide it,
-//! both through the engine's read helpers and neither a write:
-//!   - before the steal, as the step builds its list: the card stands on top of its pile under the
-//!     OTHER player, so a steal could take it (`takeable`);
-//!   - after the steal, as the list reaches the rider: it now stands on top of its pile under THIS
-//!     player (`held_now`). That second read has to wait for the steal to have run, which is what a
-//!     lazy part of the list is for: `for_each_card` reads its set when the list reaches it, so the
-//!     rider's set is the stolen card or nothing (engine/src/effects/each.rs, `Effect.expand`).
-//!
-//! Together they are "the steal took it"; either alone is not (a card already this player's passes
-//! the second, a row-full refusal the first). So a Make Radiant never reaches a card off the field —
-//! one in a hand the controller may not read above all — and `set_radiant` by id is aimed at the stay
-//! the run began on besides (R174).
-//!
-//! The rider is the face the Cry ran, not the face K-Pop Fanatic shows when the steal comes due
-//! (R282): `delay` records the running face in its `Resume` (effects/delay.rs) and
-//! `turn::run_delayed` re-enters that face's `resume` table (work.rs, R126), so a base K-Pop Fanatic
-//! made Radiant after its Cry steals without the rider, and a Radiant one that has died since still
-//! applies it.
-//!
-//! THE MARK (R437). While the steal waits, its target carries the mark `{ mark: "steal", color:
-//! "purple" }` in both players' views — the client draws it as a purple corruption sparkle. The mark
-//! is the delayed effect's own (`delay`'s `mark`, engine/src/marks.rs), so it lasts exactly as long as
-//! the steal waits: it goes when the steal resolves or fizzles at the start of the next turn, and the
-//! moment the target leaves the field (R174), each with a `marked` event.
-//!
-//! THE VERB AND WHERE ITS CONTINUATION LIVES (R126, R127). `delay` stores a `Resume` naming this
-//! script, the hook key, the step and the captured data, and `turn::run_delayed` re-enters it through
-//! the one reader — `prompts::run_resume`, which resolves `resume.hook` against either a `Hook` on the
-//! script or a step table. So the step is registered ONCE, in the `resume` table, and `delay` is
-//! told so with `hook: RESUME_HOOK` (its default is the `delayed` hook). R126: "A card must never
-//! have to register one continuation under two keys." R127 is the other half and the reason this
-//! card carries the target id in `data`: the entry re-enters with `ctx.self_` `None` when K-Pop
-//! Fanatic has died in between, which is exactly R76's case.
+//! The choice is a declared target made at PLAY time (R81) over both enemy rows ("permanent", §6.3);
+//! R90 validates it, a face-down trap may be named unseen (§9.1), a Stack pile offers its top (R13).
+//! The delay (§8.2 Engine cell) is keyed to the TARGET, not this unit, so it fires even if K-Pop
+//! Fanatic died (R76, R127); R62 and R68 order it and `run_resume` re-enters it (§10.6), through the
+//! `resume` table alone, hence `hook: RESUME_HOOK` (R126). Its fizzles (R76, R174) and R15's
+//! placement are the engine's, not re-checked here.
+//! The rider (R282) lands only on a card the steal took: `takeable` before it, `held_now` after.
+//! THE MARK (R437): the pending steal's target carries a purple `steal` mark until it resolves.
 
 use jackioh_engine::prelude::*;
 
@@ -89,7 +28,7 @@ const STEAL_MARK: StealMark = StealMark {
     color: "purple",
 };
 
-/// TS's `{ mark, color } as const`: the mark's two strings, written into the `delay` literal.
+/// The mark's two strings, written into the `delay` literal.
 struct StealMark {
     mark: &'static str,
     color: &'static str,
@@ -152,9 +91,10 @@ fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![steal(json_as(json!({ "instanceId": target_id })))]
 }
 
-/// The radiant face's step: the same steal, then R282's rider — "it becomes Radiant" for the card the
-/// steal took and for nothing else. `takeable` is read as the list is built, before the steal runs;
-/// the rider's set is read when the list reaches it, after (see the header).
+/// The radiant face's step: the same steal, then R282's rider for the card the steal took and nothing
+/// else. `takeable` is read as the list is built, before the steal; `for_each_card` reads its set when
+/// the list reaches it, after, so the set is the stolen card or nothing. The face the Cry ran is the
+/// one stored with the delay, whatever the Fanatic shows when it fires.
 fn radiant_steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(target_id) = captured_target_id(ctx) else {
         return vec![];
@@ -218,29 +158,18 @@ pub fn script() -> CardScripts {
 }
 
 // #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
-// died (R76); fizzles if the target left; radiant Divine Shield". Patch v0.2.0 (R437): the pending
-// steal marks its target purple in both views while it waits. The polish-4 edge-case hunt, round 5
-// (lens "card by card"): a base #50 made Radiant on the field gains its radiant face's Divine Shield
-// at once, even after a granted one was spent (§5.2).
+// died (R76); fizzles if the target left; radiant Divine Shield". R437: the pending steal marks its
+// target purple in both views while it waits. A base #50 made Radiant on the field gains its radiant
+// face's Divine Shield at once, even after a granted one was spent (§5.2).
 //
-// Radiant (R275, R282): "…at the start of your next turn, steal it; it becomes Radiant". The rider
-// lands only on a card the delayed steal took — never on a target that left the field (died, or
-// bounced to a hand, R76, R174), lies dormant under a Stack pile (R13), was already this player's,
-// or stayed with the opponent because the row was full (R15). Each of those has an `R282` case below.
+// Radiant (R275, R282): the rider lands only on a card the delayed steal took, never on a target that
+// left the field (R76, R174), lies dormant under a Stack pile (R13), was already this player's, or
+// stayed with the opponent because the row was full (R15). Each has an `R282` case below.
 //
-// Every case here crosses a turn boundary, so both sides keep a card in hand, a unit on the board
-// and a few library cards: the engine auto-ends a turn with nothing meaningful left (R82, and the
-// harness header), and an empty library would add fatigue damage to the assertions.
-//
-// The sequence is always the same and is what R62 is about: `end_turn()` hands the turn to the
-// opponent, who really takes one, and the second `end_turn()` comes back to this player's own start
-// of turn, where `turn::run_delayed` resolves the entry before any start-of-turn trigger fires.
-//
-// Props with no script beyond printed keywords: #25 4-mana 7/7 (the steal target and the attacker
-// that kills a 1/1), #45 Deft Duelist (4/3 → 8/6, the target that dies into The Rock), #66 The Rock
-// (10/10 Indestructible, the wall), #16 Hit Job and #8 Mr. Vanilla as inert hand and library cards.
-// The R282 cases also use #17 Flood (bounce every unit), #33 Unstable Clone Machine (a Field Spell to
-// steal), #49 Snom Bunny Mind Control (a steal of its own) and #92 Felinor Fiender (a Stack card).
+// Every case crosses a turn boundary, so both sides keep a card in hand, a unit and library cards:
+// the engine auto-ends a turn with nothing left (R82) and an empty library adds fatigue. Two
+// `end_turn()`s return to this player's own start of turn, where `turn::run_delayed` resolves the
+// entry before any start-of-turn trigger fires (R62).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -256,7 +185,7 @@ mod tests {
     const MENACE: &str = "core-019";
     const LIBRARY: [&str; 3] = [SEVEN_SEVEN, "core-008", "core-020"];
 
-    /// The card's two faces, as the TS test imported `base` and `radiant` from the script.
+    /// The card's two faces.
     fn faces() -> CardScripts {
         super::script()
     }
@@ -271,12 +200,12 @@ mod tests {
         g.unit(player, lane).unwrap_or_else(|| panic!("{what}")).clone()
     }
 
-    /// The id of the unit on `player`'s lane, if any (TS `g.unit(p, lane)?.id`).
+    /// The id of the unit on `player`'s lane, if any.
     fn unit_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         g.unit(player, lane).map(|unit| unit.id.clone())
     }
 
-    /// The id of the backrow card on `player`'s lane, if any (TS `g.backrow(p, lane)?.id`).
+    /// The id of the backrow card on `player`'s lane, if any.
     fn backrow_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         g.backrow(player, lane).map(|card| card.id.clone())
     }
@@ -318,22 +247,19 @@ mod tests {
     const SAINTESS: &str = "core-081";
     const SURGERY: &str = "core-063";
 
-    // -----------------------------------------------------------------------------------------
     // R437: the pending steal marks its target purple, in both views, while it waits.
-    // -----------------------------------------------------------------------------------------
 
-    /// `{ mark: "steal", color: "purple" }`.
     fn steal_mark() -> Value {
         json!({ "mark": "steal", "color": "purple" })
     }
 
-    /// A `marked` event's JSON with the steal mark spread in (TS `{ type, instanceId, ...STEAL_MARK, added }`).
+    /// A `marked` event's JSON with the steal mark spread in.
     fn marked(instance_id: &str, added: bool) -> Value {
         json!({ "type": "marked", "instanceId": instance_id, "mark": "steal", "color": "purple", "added": added })
     }
 
     /// The marks a card's view carries, wherever the viewer sees it on the field: the marks JSON, `Null`
-    /// for a card on the field with none (TS `undefined`), or `"not on the field"`.
+    /// for a card on the field with none, or `"not on the field"`.
     fn marks_in(view: &PlayerView, instance_id: &str) -> Value {
         let view = serde_json::to_value(view).expect("a view serialises");
         for side in ["you", "opponent"] {
@@ -507,7 +433,7 @@ mod tests {
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             crate::register_all();
             let mut g = scenario(json!({
-                // K-Pop Fanatic (1) and Snom Bunny Mind Control, (4) since patch v0.2.0 (issue #40).
+                // K-Pop Fanatic costs 1 and Snom Bunny Mind Control 4.
                 "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 5 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
@@ -741,7 +667,7 @@ mod tests {
             crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
-                // The Coin pays for the replay: Flood costs (4) since patch v0.2.0 (issue #40).
+                // The Coin pays for the replay: Flood costs 4.
                 "p2": { "hand": [FLOOD, FILLER, "core-t-coin"], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = unit_at(&g, P2, 2, "setup: p2 should hold Mr. Vanilla in lane 2");
@@ -790,7 +716,7 @@ mod tests {
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             crate::register_all();
             let mut g = scenario(json!({
-                // K-Pop Fanatic (1) and Snom Bunny Mind Control, (4) since patch v0.2.0 (issue #40).
+                // K-Pop Fanatic costs 1 and Snom Bunny Mind Control 4.
                 "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 5 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
@@ -1025,7 +951,7 @@ mod tests {
             assert_eq!(p2_marks.first().map(|event| event["instanceId"].clone()), Some(json!(trap.id)));
         }
 
-        /// One action of the folded game: its nonce, `reduce`, and the log TS's `act` kept.
+        /// One action of the folded game: its nonce, `reduce`, and the log.
         fn act(log: &mut Vec<Action>, state: &GameState, body: Value) -> GameState {
             let mut action = body;
             action["nonce"] = json!(format!("kpop-mark-{}", log.len() + 1));

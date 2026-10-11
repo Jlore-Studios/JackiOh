@@ -2,7 +2,7 @@
 //!
 //! Base:    "Cry: Summon a random (4) Unit. It gains "Death: Fuse a random Book and AI card.""
 //! Radiant: "Cry: Summon a random Radiant (4) Unit. It gains "Death: Fuse a random Radiant Book and
-//! AI card."" (the granted Death quoted in its sentence, R1443)
+//! AI card."" (the granted Death quoted in its sentence, R1445)
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) plus multi-pool fusion (MD-D14) — the
 //! summoned Unit is granted `meditative-059#fusedBookDeath` as plain data; the hook fuses one pick
 //! from each pool, the Book first so the fused type falls back to it, into the controller's hand at

@@ -7,9 +7,6 @@
 //! This module imports nothing heavier than the catalog, so the modules every field arrival and every
 //! stat read pass through — `zones.rs` (`start_brittle_on_field`) and `layers.rs` (`active_brittle_count`)
 //! — can read it without pulling the destroy and state-check machinery the tick needs.
-//!
-//! Port of `packages/engine/src/brittleCount.ts`. The writers take the card they change as
-//! `&mut CardInstance` and the state as `&GameState` (TS read only `state.turn` and the catalog off it).
 
 use crate::faces::{card_type_of, running_face};
 use crate::state::{BrittleCounter, CardInstance, GameState};
@@ -39,17 +36,13 @@ pub fn active_brittle_count(card: &CardInstance) -> Option<i32> {
     Some(brittle.count)
 }
 
-/// B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field" — called where every
-/// field arrival passes (`zones::place_on_field`, `zones::replace_in_zone`). A card that already has a
-/// count keeps it (a count is kept in every zone, so a card that left the field and came back ticks on),
-/// and one that prints no Brittle starts nothing. `from_off_field` is a card that arrives from a hand, a
-/// deck, a graveyard or the resolving zone rather than from another field zone: a count it held
-/// there never ticked, so its turn cycle starts now, and its first tick waits for a whole round on the
-/// field (`BRITTLE_FIRST_TICK_TURNS`) however long it was held.
+/// B3.3 rule 1, R638: "a printed Brittle starts when the card enters the field", called where every
+/// field arrival passes (`zones::place_on_field`, `zones::replace_in_zone`). A card that has a count
+/// keeps it; with `from_off_field` (it arrives from a hand, a deck, a graveyard or the resolving zone)
+/// its turn cycle restarts now, so its first tick waits a whole round (`BRITTLE_FIRST_TICK_TURNS`).
 ///
-/// R687: a backrow Trap or Field Trap that enters face-down starts no count — there is no Brittle
-/// while it is unrevealed (Classic+ #74). The count starts when the card reveals: its own subsystem
-/// starts it with its first activation, and the `reveal` effect starts one for any card it shows.
+/// R687: a backrow Trap or Field Trap that enters face-down starts no count (Classic+ #74); the count
+/// starts when it reveals: with its first activation, or by the `reveal` effect.
 pub fn start_brittle_on_field(state: &GameState, card: &mut CardInstance, from_off_field: bool) {
     if let Some(brittle) = card.brittle {
         if from_off_field {

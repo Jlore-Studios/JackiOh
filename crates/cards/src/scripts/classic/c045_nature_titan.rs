@@ -1,24 +1,16 @@
 //! C #45 Nature Titan (SPEC §8.6 row 45). (2) Unit, Legendary, 6/6 → 12/12.
 //!   Base:    "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}." — 1, 3
 //!   Radiant: "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}." — 2, 6
-//!   Engine:  "A Tribute cost (§6.3, R101), which may pay for its own zone (§3.2, R391). One script for
-//!            the Cry and the attack trigger, as #22 Carnivorous Cube's Cry and Death share one; the
-//!            trigger answers `attackDeclared` for this unit, forced attacks included. Tunes: draw 1 ↑;
-//!            heal 3 ↑."
 //!
-//! Tribute 1 is the play validator's (`playChoices.ts`), read off `staticFlags.tribute` as #66 The
-//! Rock's is: the units travel in the play action's `tributes` (R81, R90), a Sheep Token pays it alone
-//! (R101), and a board with no Unit to Tribute refuses the play. Whether a full board may be played
-//! into the zone the Tribute empties (R391) is the validator's as well; nothing here names a zone.
-//! The 1 is the printed keyword's, not a declared number, so it is written here once.
+//! Tribute 1 (§6.3, R101) is the play validator's, read off `staticFlags.tribute` as #66 The Rock's
+//! is: the units travel in the play action's `tributes` (R81, R90), a Sheep Token pays it alone, and
+//! whether a full board may play into the zone the Tribute empties (§3.2, R391) is the validator's
+//! too. The 1 is the printed keyword's, not a declared number.
 //!
-//! "Cry and whenever this attacks" is one effect list, `titan` below, run by the Cry and by a trigger
-//! on `attackDeclared` whose attacker is this card. Every attack it makes emits one — declared by its
-//! controller or forced (R53, #9 Moths to the Flame) — and the trigger answers each; an attack on it
-//! names it as the target, not the attacker, so defending does nothing.
-//!
-//! "Heal your hero" is §6.3 Heal on a hero: no cap (§3). The two numbers are the declared `draw` and
-//! `heal` (R386), read through `param`; the faces differ only in them, so both run this one script.
+//! `titan` is one effect list for the Cry and for a trigger on `attackDeclared` whose attacker is this
+//! card, as #22 Carnivorous Cube's Cry and Death share one; forced attacks count (R53, #9 Moths to the
+//! Flame) and an attack on it names it the target, so defending does nothing. "Heal your hero" is §6.3
+//! Heal on a hero: no cap (§3); `draw` and `heal` are declared numbers read through `param` (R386).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -39,8 +31,8 @@ fn titan(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// "Whenever this attacks": every `attackDeclared` whose attacker is this card, forced ones included.
-/// The test is in `run`: a `when` is read for traps only (R99, `traps.ts`), and an ordinary trigger's
-/// `run` is its whole condition, as #32 Prem Panther's is.
+/// The test is in `run`: a `when` is read for traps only (R99), and an ordinary trigger's `run` is
+/// its whole condition, as #32 Prem Panther's is.
 fn on_attack() -> TriggerDef {
     TriggerDef::new("45-whenever-this-attacks", &[GameEventType::AttackDeclared], |ctx, event| {
         let GameEvent::AttackDeclared { attacker_id, .. } = event else {
@@ -72,12 +64,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: "Tribute 1 (§6.3, R101): with no
-// Unit to Tribute it can't be played; on a full board it may take the tributed Unit's zone when that
-// pile is the one card, without Reborn and not Locked (R391), never the top of a Stack pile; a Sheep
-// overpays (R101); Cry, and whenever it attacks (each `attackDeclared` for it, forced attacks
-// included): draw 1 and heal your hero 3 with no cap (§6.3 Heal); defending does nothing; radiant
-// 12/12: draw 2, heal 6; its tuned numbers (draw, heal) read through `param()` (R386)".
+// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: Tribute 1 (§6.3, R101), refused
+// with no Unit to Tribute; on a full board it takes the tributed Unit's zone unless Reborn, Locked or
+// a Stack pile's top (R391); a Sheep overpays; Cry and each attack, forced included: draw 1, heal 3,
+// no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal) via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -99,12 +89,10 @@ mod tests {
     const B: &str = "core-001";
     const C: &str = "core-045";
 
-    /// The TS default for `player` is "p1"; every caller passes it.
     fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
-    /// The TS default for `player` is "p1"; every caller passes it.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         [1, 2, 3, 4, 5].into_iter().map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
     }
@@ -118,7 +106,7 @@ mod tests {
             assert_eq!(registered_catalog()[ID].id, TITAN);
             let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.tribute), Some(1));
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script.
+            // The Radiant face is the same script.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(
@@ -190,7 +178,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [TEMPO] },
                 }));
 
-                // TS `toThrow(/tribute/i)`: "ribute" is in the message whichever case its first letter takes.
+                // "ribute" is in the message whichever case its first letter takes.
                 s.expect_refused_with(|s| s.play(TITAN, json!({ "tributes": [TEMPO] })), "ribute");
                 s.expect_in_zone(TITAN, "hand").expect_in_zone(TEMPO, "field");
             }

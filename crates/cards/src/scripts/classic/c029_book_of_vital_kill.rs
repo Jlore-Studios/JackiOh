@@ -3,32 +3,24 @@
 //!   Base:    "Set a hero's health to 13."
 //!   Radiant: "Set a hero's health to 13. Add a Book of Flame to your hand."
 //!   Engine:  "Set health (§6.3) on either hero, a declared target (R81): no pipeline, not damage and
-//!            not a heal, like R18's lose health. Radiant: adds C #16's base face (a card named without
-//!            "Radiant" is its base face); the hand cap applies. Tunes: none."
+//!            not a heal, like R18's lose health. Radiant adds C #16's base face; hand cap applies."
 //!
-//! THE TARGET is declared (R81): one hero, either side, so it travels in the play and `legalActions`
-//! offers both heroes. `setHealth` writes the number and emits `healthSet`; it runs no §4.4 step, so
-//! Armor, a hit cap, Lifesteal, a lethal-hit replacement and every "takes damage" or "is healed"
-//! trigger never see it, and the hero's Armor is left as it was.
-//!
-//! 13 is the card's own printed number, and the entry declares no `params` for it (a Degrade has
-//! nothing to move: 13 is good or bad depending on whose hero it is), so it is written here.
-//!
-//! THE RADIANT BOOK OF FLAME is C #16 named without "Radiant", so its base face: `addToHand` makes a
-//! fresh one (R57's radiant flag left off) through §2.4's pipeline, where a full hand burns it (R4,
-//! R317). Once in the hand it follows R97 like any hand card.
+//! The target is declared (R81): one hero, either side. `setHealth` emits `healthSet` and runs no §4.4
+//! step, so Armor, hit caps, Lifesteal and every "takes damage" or "is healed" trigger never see it.
+//! The entry declares no `params`: a Degrade has nothing to move, as 13 is good or bad depending on
+//! whose hero it is.
+//! The Radiant Book of Flame is C #16's base face (R57's radiant flag off), added through §2.4's
+//! pipeline: a full hand burns it (R4, R317); in hand it follows R97.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-029";
 
-/// The printed health the Book sets a hero to.
 const VITAL_HEALTH: i32 = 13;
 
 /// C #16 Book of Flame, which the Radiant face adds on its base face.
 const BOOK_OF_FLAME: &str = "classic-016";
 
-/// `setHealth({ to: { of: "chosen" }, value: VITAL_HEALTH })`.
 fn set_vital_health() -> Effect {
     set_health(json_as(json!({ "to": { "of": "chosen" }, "value": VITAL_HEALTH })))
 }
@@ -56,12 +48,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: "A declared hero target,
-// either side; its health becomes 13 from above or below, its Armor unchanged: not damage and not a
-// heal, so Armor, hit caps, C #75, Lifesteal, C #52's lethal window and Fed Fauci's tokens never see
-// it; a hero at 13 stays; `healthSet` is public; radiant: also add a Book of Flame (C #16, base face)
-// to your hand, burned at a full hand (R317) and never named in the opponent's view once there (R97);
-// no tuned numbers".
+// C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: a declared hero target, either
+// side, set to 13 from above or below with Armor unchanged: not damage and not a heal, so hit caps, C #75,
+// Lifesteal, C #52's lethal window and Fed Fauci's tokens never see it; `healthSet` is public; radiant:
+// also add a Book of Flame (C #16, base face), burned at a full hand (R317), unnamed to the opponent (R97).
 #[cfg(test)]
 mod tests {
     use super::*;

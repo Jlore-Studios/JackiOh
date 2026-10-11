@@ -76,8 +76,6 @@ fn next_play_summons(c: ConditionContext<'_>) -> bool {
         && first_free_zone(c.state, c.controller, Row::Units).is_some()
 }
 
-/// `castNew({ def })` with the definition read off the context as the effect applies (part 6.2's
-/// `CastNewArgs`: its `def` is `CastNewDef::Read`), cast with no special `how`.
 fn cast_new_read(read: impl Fn(&mut EffectContext<'_>) -> Option<CastDef> + Send + Sync + 'static) -> Effect {
     cast_new(CastNewArgs {
         def: CastNewDef::Read(Arc::new(read)),
@@ -140,18 +138,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #37 Wardrum — SPEC §8.7 row 37, BUILD M9 Classic+ row C+ 37: "Quickdraw; while in your hand or
-// deck, once your 3rd Spell, Field Spell or Trap play of a turn has resolved (casts count, R70; Units
-// don't; the 4th doesn't), it is summoned into your leftmost open unit zone with no Cry (R1), from the
-// deck too after a mulligan returned it; with no open zone it stays where it is; on the field, at the
-// end of your turn, it casts a copy (R70) of one random Spell, Field Spell or Trap you played this
-// turn, by definition and face, a Trap copy set face-down and fizzling to the graveyard with no open
-// backrow zone; none played, nothing; a Trap copy stays hidden from the opponent (R33, R97), and a
-// hand or deck trigger that does not fire shows the opponent nothing, the summon being the first they
-// see of it; `conditionMet` in hand answers whether your next such play would summon it (R195); the
-// threshold reads through `param()` and never drops below 2; radiant casts a copy of each".
-//
-// The R195 proofs live in this file (both answers, against the branch the play then takes).
+// C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1) once 3rd non-Unit resolves (casts count, R70).
+// At end of turn casts a copy of a played non-Unit; a Trap copy stays hidden (R33, R97).
+// `conditionMet` in hand answers whether next play summons it (R195).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -231,7 +220,7 @@ mod tests {
             .is_some_and(|card| card["conditionActive"] == true)
     }
 
-    /// TS `Array.prototype.indexOf`: the first position, or -1.
+    /// The first position, or -1.
     fn index_of(list: &[String], item: &str) -> i64 {
         list.iter().position(|entry| entry == item).map_or(-1, |at| at as i64)
     }

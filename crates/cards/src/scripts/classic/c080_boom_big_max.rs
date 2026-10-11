@@ -8,13 +8,13 @@
 //!
 //! The one thing the script carries is the Tribute cost, §6.3's `staticFlags.tribute` (as #66 The Rock
 //! carries its own): the play validator (`playChoices`) refuses the play when the board cannot pay 3
-//! (a Sheep Token plus one more pays, worth 2 + 1, R101) and pairs each zone with the paying sets that leave it open,
-//! so a full row's one-card pile it tributes is its zone (R391). The keywords are the catalog's:
+//! (a Sheep Token plus one more pays, worth 2 + 1, R101) and pairs each zone with the paying sets that
+//! leave it open, so a full row's one-card pile it tributes is its zone (R391). The keywords are the
+//! catalog's:
 //!   Rush / Charge   — §4.1: Rush attacks Units the turn it enters; the Radiant's Charge the hero too.
 //!   Trample         — §4.4 step 9, R63: the excess over the defender's health hits that side's hero.
 //!   Indestructible  — §4.4 step 4 (it takes no damage), §4.5 and R46 (a destroy knocks it into Attack
 //!                     Position), R347 (never Taunt), R69 (it still dies if its max health reaches 0).
-//! Its proof: `test/classic/080-boom-big-max.test.ts`.
 
 use jackioh_engine::prelude::*;
 
@@ -72,7 +72,6 @@ mod tests {
         }
     }
 
-    /// TS `const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": spare_library() })
     }
@@ -81,7 +80,6 @@ mod tests {
         json!([VANILLA, VANILLA])
     }
 
-    /// TS `{ ...side, ...SPARE }`: the side's keys, then SPARE's over them.
     fn with_spare(side: Value) -> Value {
         let mut merged = side;
         if let (Some(into), Value::Object(spare)) = (merged.as_object_mut(), spare()) {
@@ -102,13 +100,12 @@ mod tests {
             .collect()
     }
 
-    /// is tagged Acclaimed (SPEC §8.6 row 80, patch v0.2.Y)
+    /// is tagged Acclaimed (SPEC §8.6 row 80)
     #[test]
     fn is_tagged_acclaimed_spec_s8_6_row_80_patch_v0_2_y() {
         assert_eq!(js(&def().tags), json!(["Acclaimed"]));
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -243,7 +240,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 

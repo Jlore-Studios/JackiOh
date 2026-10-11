@@ -7,18 +7,10 @@
 //! The draws are §2.4's pipeline (`draw`): each its own cast-on-draw chain (R58), fatigue on an empty
 //! deck, the hand cap burning the overflow (R4, R317), a draw limit stopping the rest (R457).
 //!
-//! "Then discard": R682 makes it random, read during resolution over the hand the draws left. The hand
-//! is read as the list reaches the discard, not as the card is played — a draw that pauses (a
-//! cast-on-draw card's own prompt) resumes into the rest of the list, and the discard then reads the
-//! hand as it stands.
-//!
-//! "Fewer in hand, all of them": with no more cards in hand than the discard asks for the whole hand
-//! goes, in hand order and drawing no rng. That half reads the hand lazily (`forEachCard`, as the
-//! list reaches it); with more cards than that, the first half finds nothing to do and the random
-//! discard takes exactly that many.
-//!
-//! The two numbers are the declared `draw` and `discard` (R386), read through `param`; the Radiant
-//! face differs only in its `draw`, so both faces run this one script.
+//! "Then discard" (R682) is random and reads the hand as the list reaches it, after any draw that
+//! paused. With no more cards in hand than the discard asks for, `forEachCard` discards them all in
+//! hand order with no rng; with more it finds nothing and the random discard takes exactly that many.
+//! The numbers are the declared `draw` and `discard` (R386), read through `param`; both faces run this.
 
 use jackioh_engine::effects::{ForEachCardArgs, discard, discard_random, draw, for_each_card};
 use jackioh_engine::prelude::*;
@@ -60,9 +52,7 @@ pub fn script() -> CardScripts {
 // C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
 // draw limit), then discard 4 cards at random (R682; 4 or fewer in hand → all of them), with no prompt;
 // radiant: draw 5, discard 4; its tuned numbers (draw, discard) read through `param()` (R386)".
-//
-// The draw-limit case puts C #4 Palantir in the opponent's backrow ("Aura: Your opponent can't draw
-// more than 1 card each turn", B5 E3, R457).
+// The draw-limit case puts C #4 Palantir in the opponent's backrow (B5 E3, R457).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,7 +95,6 @@ mod tests {
         s.events().iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// TS `expect(actual).toEqual(expect.arrayContaining(expected))`.
     fn contains_all(actual: &[String], expected: &[&str]) -> bool {
         expected.iter().all(|wanted| actual.iter().any(|have| have == wanted))
     }
@@ -118,7 +107,7 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, RAPID);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
+            // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(
                 scripts.radiant.cry.as_ref().unwrap(),
                 scripts.base.cry.as_ref().unwrap()

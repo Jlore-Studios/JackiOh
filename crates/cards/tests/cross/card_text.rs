@@ -391,7 +391,7 @@ fn ends_with_a_full_stop(line: &str) -> bool {
     line.ends_with('.') || line.ends_with(".\"") || line.ends_with(".\u{201d}")
 }
 
-/// R1443: whether the text before a label ends on an opening double quote (`“`, or a `"` that opens
+/// R1445: whether the text before a label ends on an opening double quote (`“`, or a `"` that opens
 /// a quote: an odd one), so the label opens a quoted ability the card grants.
 fn opens_a_quote(before: &str) -> bool {
     before.ends_with('\u{201c}') || (before.ends_with('"') && before.matches('"').count() % 2 == 1)
@@ -504,7 +504,7 @@ fn failures(face: &Face) -> Vec<String> {
             out.push(format!("does not end the line \"{line}\" with a full stop"));
         }
         for label in LABELS {
-            // R1443: a label that opens a double-quoted ability the card grants stays in its sentence.
+            // R1445: a label that opens a double-quoted ability the card grants stays in its sentence.
             if line
                 .match_indices(label)
                 .any(|(index, _)| index > 0 && !opens_a_quote(&line[..index]))
@@ -843,7 +843,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r1443_a_label_may_open_a_double_quoted_granted_ability_inside_a_line_and_only_the_granting_faces_quote_one()
+    fn r1445_a_label_may_open_a_double_quoted_granted_ability_inside_a_line_and_only_the_granting_faces_quote_one()
      {
         let dummy_card = entries()[0];
         let check = |text: &str| -> Vec<String> {

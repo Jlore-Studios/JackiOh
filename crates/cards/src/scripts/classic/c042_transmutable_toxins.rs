@@ -4,32 +4,23 @@
 //!            −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each
 //!            of {tokens|random Unit|random Units}." (stats 1, tokens 2)
 //!   Radiant: the same words with stats 2.
-//!   Engine:  "An aura (§10.4 layer 5) reading each unit's `counters.plague`; −1/−1 lowers max health,
-//!            so an enemy can die of it at the state check (#46 Suppressive Aura's rule). Activate
-//!            (§6.2, R384, once per turn): one Plague Counter (§6.3) on each of two different random
-//!            units on the field, either side (R60: a random pick of N picks N different cards; with
-//!            one unit on the field, it gets one token); a C #27 Pestilent Slime multiplies its own.
-//!            Tunes: tokens 2 ↑; stats per token 1 ↑."
 //!
-//! THE AURA is §10.4's layer 5, recomputed on every read: for each unit on the field carrying Plague
-//! Tokens, one entry naming that unit with its stats per token (`param(ctx, "stats")`) times its
-//! tokens — up for its controller's own Units, down for the enemy's. Lowering max health is what kills
-//! an enemy at the state check when it reaches 0 (§4.5), an Indestructible one too (R69). A unit
-//! dormant under a Stack pile is not on the field (R13), so it is not read. The hook is a pure read of
-//! instance data: it never asks the layers for a stat, so it cannot recurse.
-//!
-//! THE ACTIVATE (B3.2, R384: once per turn, by its controller, while it acts on the field) is one
-//! placement of a single token on each of `param(ctx, "tokens")` different random units on the field,
-//! either side (`placePlagueRandom`, R60: fewer units, fewer placements; none, nothing). Each is a
-//! placement, so a C #27 Pestilent Slime's multiplier doubles the one it receives (B5 E19). It is not a
-//! play, so nothing that answers plays sees it.
+//! THE AURA is §10.4's layer 5, recomputed on every read: each unit on the field carrying Plague Tokens
+//! gets an entry of `param(ctx, "stats")` per token, up for its controller's Units, down for the enemy's.
+//! Lowering max health kills an enemy at the state check at 0 (§4.5), an Indestructible one too (R69). A
+//! unit dormant under a Stack pile is not on the field (R13). The hook is a pure read of instance data: it
+//! never asks the layers for a stat, so it cannot recurse.
+//! THE ACTIVATE (B3.2, R384: once per turn, by its controller, while it acts on the field) places one
+//! token on each of `param(ctx, "tokens")` different random units on the field, either side
+//! (`placePlagueRandom`, R60: fewer units, fewer placements; none, nothing). Each is a placement, so a
+//! C #27 Pestilent Slime's multiplier doubles the one it receives (B5 E19). It is not a play, so
+//! nothing that answers plays sees it.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::place_plague_random;
 
 pub const ID: &str = "classic-042";
 
-/// TS `const aura: AuraHook = ({ state, self, radiant }) => …`.
 fn aura<'a>(a: HookArgs<'a>) -> Vec<AuraEntry<'a>> {
     let per_token = param(&a, "stats");
     let mut entries = Vec::new();
@@ -86,13 +77,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42: "Aura (§10.4 layer 5):
-// your Units have +1/+1 for each Plague Counter on them and enemy Units −1/−1, recomputed on every
-// change, so a token placed later applies at once; the −1/−1 lowers max health and an enemy can die of
-// it at the state check, an Indestructible one too once its max health reaches 0 (R69); gone when it
-// leaves; Activate, once per turn (R384): one token on each of two different random Units on the field,
-// either side (R60: one Unit → one token; none → nothing); C #27 doubles its share; not a play;
-// radiant: +2/+2 and −2/−2; its tuned numbers (tokens, stats per token) read through `param()` (R386)".
+// C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42: your Units +1/+1 per Plague
+// Counter, enemy Units −1/−1, recomputed on every change; an enemy can die of it, an Indestructible one
+// too once its max health reaches 0 (R69); Activate, once per turn (R384): one token on each of two
+// different random Units on the field, either side (R60); C #27 doubles its share; not a play; radiant
+// ±2; its tuned numbers (tokens, stats per token) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -115,7 +104,7 @@ mod tests {
         s.unit(player, lane).and_then(|unit| unit.counters.plague).unwrap_or(0)
     }
 
-    /// `mine` and `theirs`: the TS helper's field lists, as JSON arrays.
+    /// `mine` and `theirs`: the field lists, as JSON arrays.
     fn with_toxins(radiant_face: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -143,8 +132,7 @@ mod tests {
             );
             let scripts = script();
             assert_eq!(scripts.base.activations.iter().map(|ability| js(&ability.uses)).collect::<Vec<Value>>(), vec![json!(1)]);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script — the same aura and
-            // the same one ability.
+            // The Radiant face is the same script: the same aura and the same one ability.
             assert_eq!(scripts.radiant.aura.is_some(), scripts.base.aura.is_some());
             assert_eq!(
                 scripts.radiant.activations.iter().map(|ability| (ability.id.clone(), ability.label.clone(), js(&ability.uses))).collect::<Vec<_>>(),

@@ -6,23 +6,19 @@
 //!            resolves, after the Radiant's own placement (N = 0 is no hit, R63). A `preview` (R280)
 //!            shows N. Tunes: Radiant tokens 2 ↑."
 //!
-//! The target is declared with the play (R81): a Unit — the top of a unit pile, either side — or a hero.
-//! N is every Plague Counter on the field, both sides, face-down cards included, as the Cry resolves. On the Radiant face the Cry first makes one placement of {tokens} on the Doctor itself
-//! (`placePlague`, multiplied by the Doctor's own multiplier, as a placement on any card is), and N
-//! counts those too. One hit of N on the target; N = 0 is no hit at all (R63).
+//! The target is declared with the play (R81): a Unit (the top of a unit pile, either side) or a hero. N
+//! is every Plague Counter on the field, both sides, face-down cards included, as the Cry resolves; on
+//! the Radiant face the Cry first places {tokens} on the Doctor itself (`placePlague`, times the Doctor's
+//! own multiplier), and N counts those too. One hit of N; N = 0 is no hit at all (R63).
 //!
 //! The Cry builds its list once, so N is read as it begins and the Radiant's own placement is added to
-//! it: `tokensItPlaces` is exactly what `placePlague` puts on the Doctor (the declared number times its
-//! multiplier, nothing when it is not on the field), and nothing else in the list moves a token between
-//! the placement and the hit — a trigger the placement wakes waits for the whole Cry.
+//! it (`tokensItPlaces`); nothing else in the list moves a token between the placement and the hit, and
+//! a trigger the placement wakes waits for the whole Cry.
 //!
-//! R280: the preview is N — `damageNow`, the same function the Cry deals with: the tokens on the field
-//! now plus, on the Radiant face, the ones its own placement would add. Plague Counters are public on
-//! every permanent, a face-down one's included (§10.8), so the number reveals nothing. The label is
-//! the phrase both faces print. Its proofs are in `test/preview.test.ts`.
-//!
-//! The number is the declared `tokens` (R386), read through `param`; the base face declares it too (the
-//! entry's params are per card) but never reads it.
+//! R280: the preview is N, from `damageNow`, the same function the Cry deals with. Plague Counters are
+//! public on every permanent, a face-down one's included (§10.8), so the number reveals nothing. The
+//! number is the declared `tokens` (R386), read through `param`; the base face declares it but never
+//! reads it.
 
 use jackioh_engine::effects::{damage, place_plague};
 use jackioh_engine::prelude::*;
@@ -37,9 +33,8 @@ fn targets() -> Vec<TargetDecl> {
     json_as(json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]))
 }
 
-/// The TS `Read` (`{ state, self, radiant, controller }`): what the Cry's `EffectContext` and the
-/// preview's `ConditionContext` both carry. `tokens` is `param(read, "tokens")` on the context it was
-/// taken off, called only where the TS calls it (it refuses a read with no card to read it on).
+/// What the Cry's `EffectContext` and the preview's `ConditionContext` both carry. `tokens` is called
+/// only where needed: it refuses a read with no card to read it on.
 pub struct Read<'a> {
     pub state: &'a GameState,
     pub self_: Option<&'a CardInstance>,
@@ -108,19 +103,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's placement is `ctx.radiant`'s branch, and its 2 is the declared
-    // `tokens`, which `param` reads off the running face.
+    // The Radiant face's placement is `ctx.radiant`'s branch; its 2 is the declared `tokens`.
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #59 Plague Doctor — SPEC §8.6 row 59, BUILD M9 Classic row C 59: "Cry: one hit of N on a declared
-// target (Unit or hero), N = every Plague Counter on the field, both sides and face-down cards included,
-// counted as it resolves; N = 0 → no hit (R63); its preview is N (R280); radiant 4/6: first place 2
-// tokens on itself, then count them too (its preview includes them); its tuned number (radiant tokens)
-// reads through `param()` (R386)".
-//
-// The preview's proofs — its value on both faces against what the Cry then deals, its label in each
-// face's text, and that it reads only public facts — are in `test/preview.test.ts`.
+// C #59 Plague Doctor, SPEC §8.6 row 59: N = 0 is no hit (R63); the preview is N (R280), which on the
+// Radiant face includes its own placement; its tuned number (radiant tokens) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -142,7 +130,6 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": card }])
     }
 
-    /// The TS `ENEMY_HERO` constant.
     fn enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
@@ -179,7 +166,7 @@ mod tests {
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
             assert_eq!(def["params"], json!([{ "key": "tokens", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }]));
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration and the same hooks.
+            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());
@@ -267,7 +254,7 @@ mod tests {
                     })
                     .collect();
 
-                // TS compares two `Set`s: a `BTreeSet` keeps the comparison order-free.
+                // A `BTreeSet` keeps the comparison order-free.
                 assert_eq!(
                     offered,
                     BTreeSet::from([

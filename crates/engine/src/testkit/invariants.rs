@@ -369,7 +369,7 @@ fn standing_of(
             // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
             // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
             let token = match lineage.gone_as.get(id) {
-                Some(def) => crate::catalog::def_of(Some(&*state), def).token,
+                Some(def) => crate::catalog::def_of(Some(state), def).token,
                 None => defs
                     .iter()
                     .all(|def| crate::catalog::def_of(Some(&*state), def).token),

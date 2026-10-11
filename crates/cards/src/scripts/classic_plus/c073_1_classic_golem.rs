@@ -4,24 +4,12 @@
 //!            this turn."
 //!   Radiant: "Rush, Trample, Divine Shield / After this attacks a Unit, it transforms into a random
 //!            Radiant Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack
-//!            again this turn." (balance patch 1: no First Strike, a Radiant transform)
-//!   Engine:  "R424: the transform comes after the combat of an attack the Golem declared on a Unit, so
-//!            the Golem's own stats fight (First Strike on the base face, Trample's excess to the hero,
-//!            §4.4); a Golem that left the field in that combat transforms into nothing. It is
-//!            transformed (Transform, §6.3) in place into a random non-token Unit of the Classic or
-//!            Classic+ set (the text names the sets, R380), on its base face — on its Radiant face for
-//!            the Radiant Golem (balance patch 1) — with no Cry (R1); a Transform on the field keeps the
-//!            type (R35), and an Immutable Golem is not transformed. If the Golem was the defender's killer
-//!            (R42), 'may attack again' passes to the new Unit: its exertion is fresh and it is not
-//!            summoning sick this turn. Tunes: none."
+//!            again this turn."
 //!
-//! The engine's "after this attacks" hook (`afterAttack`) runs once the check that closes the Golem's
-//! combat has run, with the combat's facts (`afterAttackOf`): the target, the Units whose lethal hit was
-//! the Golem's (R42), whether it survived, and whether the attack was forced (R53) — "an attack it
-//! declared" is not a forced one. E24's `transformRandom` draws the Unit (R129: no draw when it cannot
-//! land) and `readyToAttack` lifts the new body's sickness (its exertion is a new instance's, fresh). The
-//! keywords are the catalog's faces; each face runs its own script, differing only in the face the
-//! new Unit is transformed into.
+//! R424: the transform follows the combat of an attack the Golem declared on a Unit (not a forced one,
+//! R53), so its own stats fight (§4.4); a Golem that left the field transforms into nothing. The new
+//! Unit is a random non-token Classic or Classic+ one (R380; no rng draw when none can land, R129),
+//! transformed in place (§6.3) with no Cry (R1), type kept (R35); killing the defender (R42) readies it.
 
 use jackioh_engine::effects::transform_random;
 use jackioh_engine::prelude::*;
@@ -33,7 +21,7 @@ fn classic_units() -> Value {
     json!({ "type": "Unit", "set": ["Classic", "Classic+"] })
 }
 
-/// A hero target is `hero-<player>` in the combat's facts (`combat.targetIdOf`).
+/// A hero target is `hero-<player>` in the combat's facts.
 const HERO_TARGET: &str = "hero-";
 
 fn after_it_attacks(radiant: bool) -> Hook {
@@ -60,8 +48,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // "Rush, Trample, Divine Shield; a random Radiant Unit": the Radiant face transforms into a Radiant
-    // Unit (balance patch 1); its 20/20 and keywords are its catalog face.
+    // The Radiant face transforms into a Radiant Unit; its 20/20 and keywords are its catalog face.
     let radiant = Script {
         after_attack: Some(after_it_attacks(true)),
         ..Script::default()
@@ -70,14 +57,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #73.1 Classic Golem — SPEC §8.7 row 73.1, BUILD M9 Classic+ row C+ 73.1: "Rush, First Strike,
-// Trample; after the combat of an attack it declared on a Unit, if it survived, it is transformed (§6.3)
-// into a random non-token Unit of Classic or Classic+ (never Core; a Unit, R35), its own stats having
-// fought and its Trample excess landed first (R424); the new Unit fires no Cry (R1); if the Golem
-// destroyed the defender (R42) the new Unit has a fresh exertion and no summoning sickness this turn, so
-// it may attack again; a Golem that dies in the combat, or attacks the hero, transforms nothing; radiant
-// 20/20 with Divine Shield for First Strike, transforming into a random Radiant non-token Unit of
-// Classic or Classic+".
+// BUILD M9 Classic+ row C+ 73.1: after the combat of an attack it declared on a Unit (R424), if it
+// survived, it is transformed (§6.3) into a random non-token Classic or Classic+ Unit (a Unit, R35)
+// with no Cry (R1); if it destroyed the defender (R42) the new Unit may attack again; a Golem that dies,
+// or attacks the hero, transforms nothing; radiant 20/20 with Divine Shield for First Strike.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,7 +84,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `golem(defender, { radiantFace?, seed? })`.
     fn golem(defender: Option<Value>, radiant_face: bool, seed: Option<&str>) -> Scenario {
         let field: Vec<Value> = defender.into_iter().collect();
         let mut options = json!({
@@ -114,7 +96,6 @@ mod tests {
         scenario(options)
     }
 
-    /// One `transformed` event, as TS's `Extract<GameEvent, { type: "transformed" }>` reads it.
     struct Transformed {
         from_def_id: String,
         to_def_id: String,
@@ -135,7 +116,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `attackWith(s)`: the Golem attacks p2's lane-1 Unit, or the hero when there is none.
+    /// The Golem attacks p2's lane-1 Unit, or the hero when there is none.
     fn attack_with(s: &mut Scenario) {
         match s.unit(P2, 1) {
             Some(target) => s.attack(GOLEM, &target.id),
@@ -147,7 +128,7 @@ mod tests {
         s.events().iter().map(|event| event.event_type().as_str()).collect()
     }
 
-    /// TS `indexOf`/`lastIndexOf`: −1 when absent.
+    /// −1 when absent.
     fn index_of(order: &[&str], kind: &str) -> i64 {
         order.iter().position(|entry| *entry == kind).map_or(-1, |at| at as i64)
     }
@@ -230,7 +211,7 @@ mod tests {
             let mut s = golem(Some(json!(VANILLA)), false, None);
             attack_with(&mut s);
             let order = types_of(&s);
-            // TS `slice(findIndex(...))`: a missing transform (−1) slices from the last event.
+            // A missing transform slices from the last event.
             let from = match order.iter().position(|kind| *kind == "transformed") {
                 Some(at) => at,
                 None => order.len().saturating_sub(1),
@@ -263,7 +244,7 @@ mod tests {
         #[test]
         fn r424_the_fuzz_monitor_agrees_the_readied_new_unit_is_no_sick_attack_i1_and_its_missing_summonedturn_no_i4_mismatch() {
             crate::register_all();
-            // The cards-plus-d simulation found the monitor reading R424's lifted sickness as a lost entry.
+            // The monitor must not read R424's lifted sickness as a lost entry.
             let mut s = golem(Some(json!(VANILLA)), false, None);
             let mut monitor = create_invariant_monitor(s.state());
             let from = s.events().len();

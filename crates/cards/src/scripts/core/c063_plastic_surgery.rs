@@ -3,21 +3,18 @@
 //! Base: "Target unit gets +3/+3 and 1 random keyword". Radiant: "+6/+6 and 2 random keywords",
 //! which §8's Conventions read as changing only those numbers.
 //!
-//! §8.3's Engine cell is "Pool in 6.1", i.e. R21's eleven keywords (Taunt, Armor 1, Rush, Charge,
-//! First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave). R21 also fixes the
-//! two constraints on the draw: a unit never gets a keyword it already has, and one grant never
-//! repeats. `grant_random_keywords` is that verb and already enforces both — it recomputes the
-//! candidate list from `unit_view` before every draw, so the keyword just granted is out of the pool
-//! for the next one — which is why the pool is NOT restated here. A card file that carried its own
-//! copy of R21 would be a second source of truth (see #80 Zao Gao, the pool's other user).
+//! §8.3's Engine cell is "Pool in 6.1", i.e. R21's eleven keywords. R21 also fixes the two
+//! constraints on the draw: a unit never gets a keyword it already has, and one grant never repeats.
+//! `grant_random_keywords` enforces both, so the pool is NOT restated here: a copy would be a second
+//! source of truth (see #80 Zao Gao, the pool's other user).
 //!
-//! Both the buff (layer 4 of §10.4) and the grant (`granted_keywords`) are permanent on the instance
-//! and drop when the card leaves the field (R78).
+//! The buff (layer 4 of §10.4) and the grant are permanent on the instance and drop when the card
+//! leaves the field (R78).
 //!
-//! R81: the target travels in the `play` action, so resolution never pauses. R703 (patch v0.2.7,
-//! #126): the pick is `required`, so with no legal target on the board the card is not playable at
-//! all, where R90 would let it play and fizzle. A cast still fizzles (R70, a cast is never refused),
-//! which is why both effects resolve `{ of: "chosen" }` and do nothing when it is empty.
+//! R81: the target travels in the `play` action, so resolution never pauses. R703: the pick is
+//! `required`, so with no legal target the card is not playable at all, where R90 would let it play
+//! and fizzle. A cast still fizzles (R70, a cast is never refused), so both effects resolve
+//! `{ of: "chosen" }` and do nothing when it is empty.
 
 use jackioh_engine::effects::{buff, grant_random_keywords};
 use jackioh_engine::prelude::*;

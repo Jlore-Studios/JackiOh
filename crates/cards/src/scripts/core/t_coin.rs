@@ -3,18 +3,16 @@
 //!   Radiant: "Gain 2 mana this turn" — §8 Conventions: a cell that changes only a number changes
 //!            only that number, as #51.1's "Draw 2" does.
 //!
-//! No card generates it. §2.1 deals one to the seat going second once both mulligans are answered
-//! (R244), which is the engine's setup (`engine/src/setup.ts`, `dealCoins`), not this file: a card
-//! file owns what the card does when it is played and nothing about how it got into a hand.
+//! No card generates it: §2.1 deals one to the seat going second once both mulligans are answered
+//! (R244), which is the engine's setup (`dealCoins`), not this file.
 //!
-//! The mana is §2.3's temporary mana. `gainMana` (effects/mana.ts) adds to `mana.current` and never
-//! touches `max`, so it may go above the cap (4, or a handicapped seat's `manaCap`, R181) and the next
-//! refresh sets current back to max, which is all "this turn" means for mana. It lands on the caster,
-//! because `gainMana` defaults `player` to "self" (§6.3).
+//! The mana is §2.3's temporary mana: `gainMana` adds to `mana.current` and never touches `max`, so
+//! it may go above the cap (4, or a handicapped seat's `manaCap`, R181) and the next refresh sets
+//! current back to max. It lands on the caster, because `gainMana` defaults `player` to "self" (§6.3).
 //!
-//! Being a token is data, not script, exactly as for the other spell tokens (§7): `token: true` and the
-//! `Token` tag keep it out of every deck (§2.6, §9.4 L3, R184), every random pool and Discover (§5.1),
-//! and `isUnitToken` is false for a Spell, so it goes to the graveyard when it resolves (R11).
+//! Being a token is data, not script (§7): `token: true` and the `Token` tag keep it out of every
+//! deck (§2.6, §9.4 L3, R184), every random pool and Discover (§5.1); `isUnitToken` is false for a
+//! Spell, so it goes to the graveyard when it resolves (R11).
 
 use jackioh_engine::prelude::*;
 
@@ -38,12 +36,9 @@ pub fn script() -> CardScripts {
 
 // T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row: "0-cost Spell token dealt to
 // the seat going second after the mulligan; gain 1 mana this turn (radiant 2), may exceed the cap;
-// never in a deck or a random pool".
-//
-// Two halves, one file, because both are about this card: what the card does once played (R245,
-// through `scenario()` like every card test), and who is dealt it and when (R244). The second half
-// is §2.1's setup, which a `scenario()` skips, so it builds real games with `createGame` and
-// `beginGame` over the real catalog, the way setup-and-mulligan.test.ts does.
+// never in a deck or a random pool". Two halves: what the card does once played (R245, through
+// `scenario()`), and who is dealt it and when (R244: §2.1's setup, which a `scenario()` skips, so
+// real games built with `create_game` and `begin_game` over the real catalog).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,7 +76,6 @@ mod tests {
         run(31, 30)
     }
 
-    /// `OPENING_DRAW[seat] ?? 0`.
     fn opening_draw(seat: usize) -> usize {
         OPENING_DRAW.get(seat).copied().unwrap_or(0) as usize
     }
@@ -138,7 +132,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `step`: stamp the body with its player and the next nonce, reduce, and log it.
+    /// Stamp the body with its player and the next nonce, reduce, and log it.
     fn step(state: &mut GameState, log: &mut Vec<Action>, player_id: PlayerId, action: ActionBody) {
         let stamped = Action::new(action, player_id, format!("s{}", log.len()));
         let result = reduce(state, &stamped);
@@ -165,7 +159,6 @@ mod tests {
             // As printed: its declared `mana` filled in (R386, R482).
             assert_eq!(fill_params(&def, FaceKind::Base, None), "Gain 1 mana this turn.");
             assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Gain 2 mana this turn.");
-            // TS `expect(base).not.toBe(radiant)`: two scripts, two hooks.
             let scripts = script();
             assert!(!Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
@@ -504,7 +497,6 @@ mod tests {
             let game = through_mulligans(decks.clone(), Some(handicaps.clone()));
             let mut state = game.state;
             let mut log: Vec<Action> = game.log.clone();
-            // p1 ends turn 1; p2 plays The Coin on turn 2.
             step(&mut state, &mut log, P1, ActionBody::EndTurn);
             let coin = state.players.p2.hand.iter().find(|card| card.def_id == COIN_DEF_ID);
             assert!(coin.is_some());

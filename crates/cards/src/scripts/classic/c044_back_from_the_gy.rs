@@ -2,25 +2,13 @@
 //! cost 4, Legendary.
 //!   Base:    "Summon Units from your graveyard that cost ({budget}) or less in total. Exile this."
 //!   Radiant: "Summon every Unit from your graveyard. Exile this."
-//!   Engine:  "A `pick` prompt (§10.6) from your graveyard, budgeted by cost, costs per R65 out of play
-//!            (an X Unit counts 0, R396); then each is summoned (no Cry, R1) into your leftmost open
-//!            zones (R64); a full board leaves the rest. Radiant: every Unit, oldest first, until the
-//!            board is full. "Exile this" is the Spell's landing (§5.1, R178). Tunes: budget 5 ↑."
 //!
-//! THE BASE PICK is the engine's budgeted `choosePick` (B5 E18): every Unit in your graveyard is an
-//! option carrying its cost as R65 reads it there, out of play (its own cost, `costMod` and
-//! `costOverride` kept, R78; an X Unit 0), and the answer's costs may total no more than the card's
-//! budget (`param(ctx, "budget")`), any number of Units under it, none included. No Unit there asks
-//! nothing. Each pick is then summoned (§6.3 Summon: no Cry, R1) into your leftmost empty, unlocked,
-//! unreserved unit zone (R64); once the row is full a summon finds no zone and that card stays in the
-//! graveyard.
-//!
-//! THE RADIANT FACE asks nothing: every Unit in your graveyard, oldest first (the graveyard is
-//! chronological, §3), read once as the clause begins (`forEachCard`, R113), each summoned the same
-//! way until the row is full.
-//!
-//! "EXILE THIS" names where §10.5 step 7 sends the Spell (R178): it stays itself while it resolves and
-//! lands in exile rather than the graveyard, so it never summons or offers itself.
+//! Base: the engine's budgeted `choosePick` (B5 E18) offers every graveyard Unit at its R65 cost out of
+//! play (`costMod` and `costOverride` kept, R78; an X Unit 0, R396); picks totalling no more than
+//! `param(ctx, "budget")` are summoned, no Cry (R1, §6.3), into the leftmost open zones (R64); a full
+//! row leaves the rest. Radiant asks nothing: every graveyard Unit, oldest first (§3), read once as the
+//! clause begins (`forEachCard`, R113). "Exile this" is where §10.5 step 7 sends the Spell (§5.1,
+//! R178), so it never summons or offers itself.
 
 use jackioh_engine::effects::{ForEachCardArgs, choose_pick, exile, for_each_card, summon};
 use jackioh_engine::prelude::*;
@@ -88,12 +76,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #44 Back from the GY — SPEC §8.6 row 44, BUILD M9 Classic row C 44: "A budgeted pick from your
-// graveyard: Units whose costs (R65 out of play: an X Unit 0) total (5) or less, a pick over the
-// budget refused; each is summoned without a Cry into your leftmost open zones, a full board leaving
-// the rest in the graveyard; no Unit there → nothing; then this Spell is exiled, not sent to the
-// graveyard (§5.1); radiant: every Unit there, oldest first, until the board is full; its tuned number
-// (budget) reads through `param()` (R386)".
+// C #44 Back from the GY — SPEC §8.6 row 44, BUILD M9 Classic row C 44: a budgeted pick of graveyard
+// Units (R65 cost, an X Unit 0), a pick over the budget refused, each summoned without a Cry into the
+// leftmost open zones; no Unit there → nothing; this Spell is exiled (§5.1); radiant: every Unit,
+// oldest first; its tuned number (budget) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -126,8 +112,7 @@ mod tests {
         must(s.state().pending.as_ref(), "open prompt")
     }
 
-    /// `graveyard` entries are bare ids or `{ def, costMod? }` objects; `field` is the TS default `[]`
-    /// when empty.
+    /// `graveyard` entries are bare ids or `{ def, costMod? }` objects.
     fn back(radiant_face: bool, graveyard: Value, field: &[&str]) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": BACK, "radiant": radiant_face }, FILLER], "graveyard": graveyard, "field": field },

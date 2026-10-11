@@ -1,41 +1,23 @@
 //! #84 Going Long (SPEC §8.4 row 84): Field Spell, Quickdraw, cost 2 embiggen 4, Rare.
-//!   Base:    "Your hero has Armor 2 (paid 4: 5)"
-//!   Radiant: "Armor 4 (paid 4: 10)" — the cell changes only the two numbers (§8 Conventions).
+//!   Base:    "Your hero has Armor 2 (paid 4: 4)"
+//!   Radiant: "Armor 4 (paid 4: 8)" — the cell changes only the two numbers (§8 Conventions).
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
-//! So the card is four numbers on one axis (base/radiant) times another (the embiggen price paid):
-//!     paid 2 → 2   paid 4 → 5   |   radiant paid 2 → 4   radiant paid 4 → 10
-//! The embiggen choice is a play-time choice that lands on the instance (`reduce.ts` sets
-//! `card.embiggened`, R81), and the radiant face is the instance's flag, so both axes are readable
-//! off the card that is sitting in the backrow — and both are read there, by the engine, not here.
-//!
-//! QUICKDRAW is §6.2's `quickdraw` static flag: `setup.ts` moves every library card carrying it into
-//! the opening hand, where each one replaces one of the opening draws. Both faces declare it — a
-//! Radiant copy in a deck still starts in hand — and nothing else about the opening hand is this
-//! card's business.
-//!
-//! THE ARMOR is the `heroArmor` static flag, #73 Anti-oneshot Armor's shape exactly: a flag on the
-//! card in the backrow that the pipeline reads, never a write to the hero. `damage.ts`'s
-//! `heroArmorOf(state, player)` sums the hero's own Armor and every backrow `heroArmor` grant,
-//! each one taking the `HERO_ARMOR` value its instance's `radiant` and `embiggened` select (R124:
-//! hero Armor from several sources adds up, unlike step 3's cap, which takes the smallest).
-//! §4.4 step 2, `subsystems/lethal`, `subsystems/scorer` and §10.8's hero block all read that one
-//! function, so the projections and the client cannot disagree with the hit. Two consequences the
-//! flag gets for free, both of them tested: the Armor stops the moment the Field Spell leaves the
-//! backrow, because nothing was ever stored; and "Ignores armor" (True Strike) skips step 2 whole,
-//! because the flag is only ever consulted inside it.
-//!
-//! `flagsOf` resolves the face off the instance, so the radiant numbers need no card-side code —
-//! the same trick that makes #73's "Cap 3" free.
+//! Four numbers: paid 2 → 2, paid 4 → 4; radiant paid 2 → 4, radiant paid 4 → 8 (`config.HERO_ARMOR`). The embiggen choice
+//! lands on the instance (R81) and Radiant is its flag, so the engine reads both off the card in the
+//! backrow and no card-side code is needed. Quickdraw is §6.2's static flag: setup moves the card into
+//! the opening hand on either face. The Armor is the `heroArmor` static flag, #73's shape: the pipeline
+//! sums every backrow grant (R124: sources add, unlike step 3's cap), and §4.4 step 2, lethal, the
+//! scorer and §10.8's hero block all read that one function. Nothing is stored, so the Armor stops when
+//! the Field Spell leaves, and "Ignores armor" skips step 2 whole.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-084";
 
 /// Both faces are the same script: §6.2's Quickdraw flag and the `heroArmor` flag. The four values
-/// live in `config.HERO_ARMOR` and are selected by the instance's `radiant` and `embiggened`, not by
-/// this file — a Field Spell with no Cry, no trigger and no ability has nothing else to declare. The
-/// card declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
+/// live in `config.HERO_ARMOR`, selected by the instance's `radiant` and `embiggened`. The card
+/// declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
 /// `params::declared_or`, so a Degrade or an Upgrade moves the Armor the price selects.
 fn going_long() -> Script {
     Script {
@@ -55,32 +37,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #84 Going Long — SPEC §8.4 row 84 ("Your hero has Armor 2. Paid (4): Armor 4 instead." / radiant
-// "Armor 4. Paid (4): Armor 8", Engine cell "Hero armor in pipeline step 2"), BUILD M4-T4 row 84:
-// "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4 on the hero; radiant 4 / 8" (patch v0.1.1:
-// the paid-4 numbers were 5 and 10).
-//
-// The Armor is asserted where §4.4 reads it — through a real damage instance on the protected hero
-// — and not off any number this card declares. Two axes multiply, so there are four numbers:
-//
-//        paid 2      paid 4 (embiggen)
-//   base   2              4
-//   radiant 4             8
-//
-// A card sitting in the backrow from the setup was never embiggened, which is the "paid 2" column;
-// the "paid 4" column has to be PLAYED with `embiggen: true`, which is also where the price itself
-// is proved (`expectMana`).
-//
-// R63 is the floor: "a hit that is 0 after Armor and the cap emits no `damage` event and triggers
-// nothing" — it heals nothing either, so the hero's health is untouched and no `healed` event goes
-// out. §4.4 step 2's "Ignores armor (True Strike) skips this" and #73's "it must stop when the
-// Field Spell leaves the backrow" are the other two edges tested here.
-//
-// The attackers are placed by `field`, so no Cry of theirs ever fires (R1) and each attack is a
-// bare damage instance through the §4.4 pipeline:
-//   #2 Bigot        6/1, no keywords
-//   #20 Pointmaster 7/2, First Strike (irrelevant against a hero)
-//   #61 Postdoc     2/4, attack 2 — exactly the base Armor, so the hit floors at 0
+// #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4
+// on the hero; radiant 4 / 8" (patch v0.1.1: the paid-4 numbers were 5 and 10). The four numbers:
+//   base 2 / 4, radiant 4 / 8 (paid 2 / paid 4). The Armor is asserted through a real damage instance
+// on the protected hero (§4.4 step 2); attackers are placed by `field`, so no Cry fires (R1). A card placed by setup is
+// "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,8 +61,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const SCARAB: &str = "core-007"; // 1/1, no Taunt — a body of p1's so §2.5 never auto-ends the turn
 
-    /// TS `{ ...extra, ...SPARE }`: `SPARE = { hand: [STOCKPILE, TIMMY], library: [MENACE, TIMMY] }`
-    /// spread into a side's setup.
+    /// `extra` with the spare hand `[STOCKPILE, TIMMY]` and library `[MENACE, TIMMY]` set.
     fn spare(extra: Value) -> Value {
         let mut side = extra;
         if let Some(fields) = side.as_object_mut() {
@@ -163,10 +123,9 @@ mod tests {
         #[test]
         fn s6_2_quickdraw_the_engine_reads_the_flag_off_a_real_instance_of_either_face() {
             crate::register_all();
-            // `setup.ts` moves every library card carrying `quickdraw` into the opening hand, replacing one
-            // opening draw; that placement is the engine's own setup test. What this card owes is the flag,
-            // and `flagsOf` is the engine's reader — it resolves the script through the instance's face, so
-            // this asserts the radiant face carries it too rather than reading the script object.
+            // Setup moves every library card carrying `quickdraw` into the opening hand (the engine's own
+            // setup test). This card owes the flag; `flags_of` resolves it through the instance's face, so
+            // this asserts the radiant face carries it too.
             let s = scenario(json!({
                 "p1": { "library": [GOING_LONG, { "def": GOING_LONG, "radiant": true }] },
             }));

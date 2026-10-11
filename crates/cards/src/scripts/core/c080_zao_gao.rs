@@ -2,41 +2,21 @@
 //!   Base:    "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
 //!   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
 //!
-//! Patch v0.1.1 (issue #27) changed three things, and R354 records how they are read: the discard is
-//! random ("not of your choice", so R682's random default, never a prompt), the Radiant face's tokens
-//! gain a third keyword on top of being Radiant ("Modify": the change is added to the face the
-//! Radiant pass gave it, R276), and the card is tagged CN.
-//!
-//! The discard is `discardRandom`: each of the two cards is one uniform pick from the match rng over
-//! the hand as it then stands, so the two are different cards, and fewer than 2 in hand discards what
-//! there is (§8's Engine cell). A discarded card is the printed card again, keeping only its
-//! `costMod`, `costOverride` and radiant flag (R215), and a unit-token card among the discards ceases
-//! to exist instead of reaching the graveyard (R11) — `discard`'s rules. Nothing asks the player
-//! anything, so an Echo repeat discards at random again, and an empty hand simply summons.
-//!
-//! R21: each token rolls DISTINCT keywords from the pool (thirteen with R346's Pierce and R636's Windfury), and the two
-//! tokens roll independently. `grantRandomKeywords` is that rule already — it recomputes the pool per
-//! draw off the unit's §10.4 keywords, so it never repeats inside one grant and never offers a keyword
-//! the unit already has: a Rush Token (printed Rush, §7) draws its two from the other eleven, and a
-//! Radiant one (printed Rush and Cleave) its three from the other ten. §8's Engine cell puts the order
-//! in words: "each token is summoned Radiant and then rolls its keywords" — `summon` sets the flag as
-//! it creates the card and rolls only once it has landed, so the roll reads the Radiant face.
-//!
-//! R64: a summon with no named zone takes the leftmost empty, unlocked, unreserved unit zone and
-//! fizzles silently when the row has none, so a board with one free zone gets one token.
-//!
-//! The keywords are rolled by `summon` itself (`randomKeywords`), since `summon` returns nothing a
-//! script can reference and `TargetSpec` has no "last summoned" case: rolling inside the summon keeps
-//! the rng draws adjacent to the summon they belong to (replay parity, §9.3) and has no fizzle
-//! hazard. The discards come first, so their draws precede the tokens' in the rng stream.
+//! R354: the discard is random (so R682's default, never a prompt) and the Radiant tokens' third
+//! keyword is added on top of the face the Radiant pass gave them (R276). `discardRandom` picks off
+//! the match rng, and fewer than 2 in hand discards what there is (§8's Engine cell); a discarded
+//! card is the printed card again, keeping only `costMod`, `costOverride` and radiant (R215), and a
+//! unit-token card ceases to exist (R11). R21: each token rolls DISTINCT keywords from the pool
+//! (thirteen with R346's Pierce and R636's Windfury), never one it has (§10.4), and "each token is
+//! summoned Radiant and then rolls its keywords" (§8). R64: with no free zone a summon fizzles.
+//! `summon` rolls them (`randomKeywords`), after the discards and next to its own summon (§9.3).
 
 use jackioh_engine::effects::{discard_random, summon};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-080";
 
-/// §7: the token this card makes, taken from the catalog rather than restated (TS
-/// `cardDef("core-t-rush").id`, read once as the card's scripts are built).
+/// §7: the token this card makes, taken from the catalog rather than restated.
 fn rush_token_id() -> String {
     crate::card_def("core-t-rush").id
 }
@@ -86,17 +66,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #80 Zao Gao — SPEC §8.3, R11, R16, R21, R64, R215, R275, R276, R354, §5.2, §7, §9.3.
-//
-// BUILD M4-T4: "Discards 2 random cards; two Rush Tokens each with two distinct pool keywords;
-// radiant the tokens are Radiant 6/6 Rush, Cleave, roll three keywords, and roll no keyword they
-// have".
-//
-// Patch v0.1.1 (issue #27, R354): the discard is random, not the player's choice, so no prompt opens;
-// the Radiant face's Radiant Rush Tokens each roll a third keyword; and the card is tagged CN.
-// Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords." Each
-// token is summoned on its Radiant face (§7: 6/6, Rush, Cleave) and then rolls its three keywords,
-// which never repeat one it has (R21) — so neither Rush nor Cleave is ever one of them.
+// BUILD M4-T4's must-pass row: each Radiant token is summoned on its Radiant face (§7: 6/6, Rush,
+// Cleave) and then rolls three keywords that never repeat one it has (R21), so neither Rush nor
+// Cleave is ever one of them.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,7 +388,7 @@ mod tests {
 
         #[test]
         fn r276_the_radiant_face_is_its_own_script_not_the_base_object() {
-            // TS `expect(radiant).not.toBe(base)`: object identity, here the identity of each face's Cry.
+            // Identity of each face's Cry.
             let scripts = script();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");

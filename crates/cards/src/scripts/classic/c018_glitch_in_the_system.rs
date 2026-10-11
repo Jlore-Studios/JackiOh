@@ -5,25 +5,14 @@
 //!   Radiant: "Choose a number. Exile every card on your opponent's field, in their hand and in their
 //!            deck that costs that much."
 //!   Engine:  "A `number` choice (§10.6), declared with the play (R81) from a fixed list, 0 to 10
-//!            (`GLITCH_NUMBERS`), so the options reveal nothing. Costs read per R65 at resolution, as
-//!            R66 reads #94 Genn's Greed's: a hand card at its hand cost, a deck or field card at its
-//!            own; an X-cost card counts the X it was played for on the field and 0 anywhere else
-//!            (R396). The Spell itself is resolving, in no pile, and is spared. The base face reaches
-//!            the Field alone, the whole board (balance patch 1); the Radiant reaches the opponent's
-//!            field, hand and deck. Graveyards and exile are untouched. Tunes: none (the number is
-//!            chosen)."
+//!            (`GLITCH_NUMBERS`), so the options reveal nothing. Costs read per R65 at resolution:
+//!            a hand card at its hand cost, a deck or field card at its own (as R66 reads #94 Genn's
+//!            Greed's); an X-cost card counts its X on the field and 0 anywhere else (R396)."
 //!
-//! THE NUMBER is a play-time choice (R81), so it is declared — a `ModeDecl` of kind `number` whose
-//! options are the eleven numbers — and it travels in the `play` action's `modes`; `legalActions`
-//! offers each, and the options are the same whatever the board holds, so choosing reveals nothing.
-//!
-//! THE SWEEP is C #25 Lag in the System's with an exact cost: the set is read once as the Spell
-//! resolves (`forEachCard`, R66, R113), each card its own exile (R135). The zones are the field (the
-//! tops of the unit piles and every backrow card, face-down ones included, both sides in R68's walk;
-//! a card dormant under a Stack pile is not on the field, §3.2, R13), then each side's hand and deck,
-//! the Spell's controller first. The cost is `costNow` (R396): R65's cost as it stands at resolution,
-//! an X card its X on the field and 0 anywhere else or with none chosen. Graveyards and exile are never
-//! read, and the Spell itself is resolving, in none of those zones.
+//! The sweep is C #25 Lag in the System's: read once as the Spell resolves (`forEachCard`, R66, R113),
+//! each card its own exile (R135), in R68's walk. A card dormant under a Stack pile is not on the
+//! field (§3.2, R13). The Spell itself is resolving, in no pile, and is spared; graveyards and exile
+//! are untouched.
 
 use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
 use jackioh_engine::prelude::*;
@@ -42,7 +31,6 @@ fn number_choice() -> Vec<ModeDecl> {
     }]
 }
 
-/// TS `type Whose = "any" | "enemy"`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Whose {
     Any,
@@ -68,9 +56,8 @@ fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
     picked.parse::<i32>().ok()
 }
 
-/// Every card on the field and in the hands and decks of `whose` sides, in the order the header
-/// gives — or the field alone (the whole board) when `field_only`, which is the base face's scope
-/// (balance patch 1).
+/// Every card on the field and in the hands and decks of `whose` sides, the Spell's controller first,
+/// or the field alone (the whole board) when `field_only`, the base face's scope (balance patch 1).
 fn reachable(ctx: &EffectContext<'_>, whose: Whose, field_only: bool) -> Vec<CardInstance> {
     let scope: BoardScope = json_as(json!({ "side": whose.side(), "rows": ["units", "backrow"] }));
     let field = cards_in_scope(ctx, &scope);
@@ -127,19 +114,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #18 Glitch in the System — SPEC §8.6 row 18, BUILD M9 Classic row C 18: "The number is chosen
-// with the play (R81) from `GLITCH_NUMBERS`, the same eleven options every time, so they reveal
-// nothing; it exiles every card of that cost on the Field alone, both fields and nothing else
-// (balance patch 1), costs read per R65 at resolution (a field card at its own cost; an X card its X
-// on the field, 0 when it arrived without a chosen X, R396), face-down and Indestructible cards
-// included; graveyards and exile untouched; the Spell itself is resolving and spared; a number
-// nothing costs exiles nothing; the exiled cards are public; radiant: the opponent's field, hand and
-// deck, where a hand card is read at its hand cost and a deck card at its own (R65, R396);
-// no tuned numbers".
-//
-// An X card on the field "played for X": the test stands a C+ #69 Buff Billy on the field with its
-// stats given and records the X it was played for on the instance, as a play would (`CardInstance.x`,
-// §2.3).
+// C #18 Glitch in the System — SPEC §8.6 row 18, BUILD M9 Classic row C 18: the number is chosen with
+// the play (R81) from `GLITCH_NUMBERS`; the base face exiles that cost on the Field alone (balance
+// patch 1), the Radiant the opponent's field, hand and deck; costs read per R65 (R396). No tuned
+// numbers. An X card on the field was "played for X": a Buff Billy with `CardInstance.x` set (§2.3).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,7 +163,7 @@ mod tests {
         }))
     }
 
-    /// TS `felinorsIn`'s answer, compared whole as `toEqual` did.
+    /// One side's Felinors by zone, compared whole.
     #[derive(Debug, PartialEq, Eq)]
     struct Felinors {
         field: usize,
@@ -210,7 +188,7 @@ mod tests {
         }
     }
 
-    /// The `modes` of every `play` action `legalActions` offers for this instance (TS's flatMap).
+    /// The `modes` of every `play` action `legalActions` offers for this instance.
     fn offered_modes(s: &Scenario, instance_id: &str) -> Vec<Vec<String>> {
         legal_actions(s.state(), P1)
             .into_iter()

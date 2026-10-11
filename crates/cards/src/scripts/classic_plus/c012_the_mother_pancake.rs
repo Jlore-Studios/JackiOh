@@ -27,13 +27,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12 The Mother Pancake — SPEC §8.7 row 12, BUILD M9 Classic+ row C+ 12: "Taunt; at its
-// controller's end of turn adds 1 random card of exactly the eight Pancake tokens C+ #12.1–#12.8
-// (repeats allowed, R60), never Mother Pancake or Mommy Barker; not at the opponent's end; a full
-// hand burns it (R4); the opponent sees a card added under the sentinel (R97); the count reads through
-// `param()`; radiant adds 2".
+// C+ #12 The Mother Pancake (SPEC §8.7 row 12): at controller's end of turn adds 1 random
+// card of eight Pancake tokens C+ #12.1–#12.8 (repeats allowed, R60); not at opponent's
+// end; a full hand burns it (R4); opponent sees a card added under sentinel (R97); radiant
+// adds 2.
 
-/// `describe("C+ #12 The Mother Pancake")`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,17 +47,16 @@ mod tests {
 
     use crate::js;
 
-    /// TS `PANCAKE_TOKENS`: C+ #12.1 to #12.8.
+    /// C+ #12.1 to #12.8.
     fn pancake_tokens() -> Vec<String> {
         (1..=8).map(|k| format!("classicplus-012-{k}")).collect()
     }
 
-    /// TS `/classicplus-012-\d/`.
     fn names_a_pancake_token(text: &str) -> bool {
         (0..=9).any(|digit| text.contains(&format!("classicplus-012-{digit}")))
     }
 
-    /// TS `atEndOfTurn(radiant, { seed?, hand? })`: the scenario after p1's end of turn, and the def ids it added.
+    /// The scenario after p1's end of turn, and the def ids it added.
     fn at_end_of_turn(radiant: bool, seed: Option<String>, hand: Option<Vec<&str>>) -> (Scenario, Vec<String>) {
         let hand = hand.unwrap_or_else(|| vec![FILLER]);
         let mut opts = json!({
@@ -81,7 +78,6 @@ mod tests {
         (s, added)
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -176,7 +172,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

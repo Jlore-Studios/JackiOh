@@ -8,17 +8,15 @@
 //!
 //! R85: the damage carries its own Lifesteal (`lifesteal: true`), so §4.4 step 8 heals the caster's
 //! hero the amount actually dealt — after Armor, the anti-oneshot cap and R63's zero rule — and the
-//! heal is one heal however the Lifesteal is read: the face's printed keyword and the flag are one
-//! "has Lifesteal" test in `damage.ts`, never two heals.
+//! heal is one heal however the Lifesteal is read (printed keyword and flag), never two.
 //!
-//! The amount is the declared number `damage` (R386), 5 or 10, read through `param`; both faces run
-//! this one script.
+//! The amount is the declared number `damage` (R386), read through `param`; both faces run this script.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-012";
 
-/// "a Unit": units only, either side. (TS `const targets: TargetDecl[]`.)
+/// "a Unit": units only, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
 }
@@ -36,7 +34,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 10 is its declared `damage`, which `param` reads off the running face.
+    // Same script: `param` reads the Radiant face's 10 off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -98,7 +96,7 @@ mod tests {
             serde_json::to_value(&base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
         );
-        // TS `expect(radiant).toBe(base)`: one script, so one hook.
+        // One script, so one hook.
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(radiant.targets, base.targets);
     }

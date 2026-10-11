@@ -2,40 +2,15 @@
 //! Unit, Human, cost 1, 1/2 → 2/4.
 //!   Base:    "Cry: Summon a random Cost (1) Trap face-down into your backrow zone in this lane."
 //!   Radiant: "Cry: Summon a random Radiant Trap face-down into your backrow zone in this lane." —
-//!            §8's cell "A random Radiant Trap". The cell restates only which trap comes: any Trap,
-//!            summoned Radiant, which is the face's raise (R275). "Face-down" and "your backrow
-//!            zone in this lane" are the base clause's, kept (§8 Conventions).
-//!
-//! §3.1: "'This lane' (Zoomerbin Oomen) means the backrow zone in the same column as the unit", so
-//! the lane is the Cry's own unit's lane, read back with the engine's `slot_of`. `summon` derives the
-//! row from the def's type (`row_of`: everything but a Unit and a Spell goes to the backrow), so
-//! naming the lane is the whole placement.
-//!
-//! R47: a lane-targeted summon into an occupied zone fizzles, and §8's Conventions keep the unit on
-//! the field regardless — "the unit still enters". A Locked zone takes the summon since balance patch
-//! 1 (R688: a Lock refuses only plays; this card's text says nothing of Locks). `summon`'s
-//! `zone_for`/`can_place` already implements exactly that (reserved or occupied → no zone → nothing
-//! created; Locked → the trap lands), so this card needs no check of its own and must not grow one.
-//!
-//! §3.2 and R33: `summon_onto` leaves anything that is not a Field Spell face-down, and only the
-//! current controller may read a face-down trap. R1: a summon fires no Cry and pays nothing, so the
-//! trap arrives unpaid and dormant until its own trigger condition is met.
-//!
-//! THE POOL. The Engine cell: the base pool is the Cost (1) traps, #18, #41, #60, #71, #96 (patch
-//! v0.1.1 made #85 cost 2; balance patch 1 adds Classic #10 Exile at (1)), and the radiant face's is
-//! every Core trap, #85 included, summoned Radiant; zone occupied → fizzles. `TRAP_TYPES` is `["Trap", "Field Trap"]` because the
-//! filters match `def.type` exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61) —
-//! `test/query.test.ts` pins both pools. The radiant form drops the cost, keeps the types and sets the
-//! §5.2 flag on the trap it makes. §5.1 keeps tokens out
-//! of a pool that does not ask for them and orders the result by §5 index, so a seeded pick replays
-//! identically (§9.3, R60). A Radiant face-down trap is still a face-down trap: only its controller
-//! may read it, its face included (R33, R97, R177), which `view_for` owns.
-//!
-//! THE VERB. `summon_random({ query, player, lane, radiant })` (engine/src/effects/summon.rs) resolves
-//! the pool through `catalog::query`, draws one def with `ctx.rng.pick`, and hands the placement to
-//! the same code `summon` uses, so R47's fizzle and the face-down trap stay in one place. A card file
-//! must not pick the def itself: that would put randomness in `packages/cards` instead of the effects
-//! library (CLAUDE.md rules 4 and 5).
+//!            any Trap, summoned Radiant, the face's raise (R275); the rest is the base's.
+//! §3.1: "this lane" is the Cry's own unit's lane (`slot_of`); `summon` derives the row from the
+//! def's type, so naming the lane is the whole placement. R47: an occupied zone fizzles the summon
+//! and the unit still enters; a Locked zone takes it (R688). `summon`'s `zone_for`/`can_place`
+//! already does both, so this card must not grow a check. §3.2, R33: the trap is face-down; R1: a
+//! summon pays nothing. Pool: base is the Cost (1) traps, radiant every trap, #85 included, with
+//! §5.2's flag set. `TRAP_TYPES` is "Trap" and "Field Trap" because filters match `def.type`
+//! exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61). `summon_random` draws
+//! the def (§5 index order, §5.1, §9.3, R60); a card file never picks it (CLAUDE.md rules 4 and 5).
 
 use jackioh_engine::effects::summon_random;
 use jackioh_engine::prelude::*;
@@ -47,7 +22,7 @@ pub const ID: &str = "core-067";
 /// §8.3: the base text names 1-cost traps; §5.1's `cost` reads a def's cost out of play (R65).
 const TRAP_COST: i32 = 1;
 
-/// Both pools, as `test/query.test.ts` spells them: the five Cost (1) traps, and all six.
+/// Both pools: the Cost (1) traps, and every trap.
 fn one_cost_traps() -> CardQuery {
     json_as(json!({ "type": TRAP_TYPES, "cost": TRAP_COST }))
 }
@@ -63,7 +38,7 @@ fn any_trap() -> CardQuery {
 fn oomen(pool: CardQuery, radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // TS read the live `ctx.self`: its zone is what `slot_of` reads.
+            // The live `ctx.self`: its zone is what `slot_of` reads.
             let Some(self_) = ctx.live_self() else {
                 return vec![];
             };
@@ -92,16 +67,8 @@ pub fn script() -> CardScripts {
 
 // #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
 // backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
-//
-// §8.3's row: "Cry: summon a random Cost (1) Trap face-down into your backrow zone in this lane" →
-// "A random Radiant Trap" (R275). Patch v0.1.1 made #85 Unlicensed Experimentation cost 2, so the
-// base pool is #18, #41, #60, #71, #96 — and since patch v0.2.0's one format (R380) Classic+ #22 —
-// and the radiant face's is every trap of every set, #85 included, summoned Radiant; zone occupied or Locked → fizzles. A Radiant face-down trap is still hidden from the opponent, face and all (R33,
-// R97, R177).
-//
-// §3.1 fixes what "this lane" means: "the backrow zone in the same column as the unit". §8's
-// Conventions fix the fizzle: the Cry does nothing and "the unit still enters". R1 fixes the
-// unpaid, dormant arrival: a summon fires no Cry and pays no mana.
+// Base pool: #18, #41, #60, #71, #96 and Classic+ #22 (R380's one format); radiant: every trap of
+// every set, #85 included, summoned Radiant and hidden from the opponent, face and all (R33, R97, R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -120,7 +87,6 @@ mod tests {
     const TRAP_POOL: [&str; 7] =
         ["core-018", "core-041", "core-060", "core-071", "core-096", "classic-010", "classicplus-022"];
 
-    /// TS `catalog.query(args).map((def) => def.id)`.
     fn query_ids(args: Value) -> Vec<String> {
         crate::register_all();
         crate::query::query(&json_as::<CardQuery>(args)).iter().map(|def| def.id.clone()).collect()
@@ -131,13 +97,10 @@ mod tests {
         query_ids(json!({ "type": TRAP_TYPES }))
     }
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends by
-    /// itself, and `reduce` runs that check after EVERY action — so a play that empties the hand and
-    /// leaves no unit hands the turn over: the opponent draws (taking fatigue on an empty library),
-    /// start-of-turn triggers fire, and the numbers under test move underneath the assertion. Every
-    /// scenario below therefore keeps one free 0-cost Spell in p1's hand. It is never played; it only
-    /// keeps one legal action on the turn. (Reported as a harness gap: `scenario` could hold the turn
-    /// open by itself.)
+    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
+    /// `reduce` checks that after EVERY action, so a play that empties the hand and leaves no unit
+    /// would hand the turn over under the assertion. Each scenario keeps one free 0-cost Spell in
+    /// p1's hand, never played, so one legal action always remains.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
@@ -170,9 +133,7 @@ mod tests {
     mod zoomerbin_oomen {
         use super::*;
 
-        // -------------------------------------------------------------------------------------------
         // The pool (§5.1, R60)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
@@ -202,9 +163,7 @@ mod tests {
             assert!(scripts.radiant.cry.is_some());
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: the summon (§3.1, §3.2, R1, R33)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn s8_3_summons_a_trap_from_the_pool_into_the_units_own_lanes_backrow_zone() {
@@ -261,9 +220,7 @@ mod tests {
             assert_eq!(pick(), pick());
         }
 
-        // -------------------------------------------------------------------------------------------
         // Base: the fizzle (R47, §8 Conventions)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn r47_an_occupied_backrow_zone_fizzles_the_summon_and_the_unit_still_enters() {
@@ -278,9 +235,8 @@ mod tests {
         #[test]
         fn r688_a_locked_backrow_zone_takes_the_summon_a_lock_refuses_only_plays_and_this_text_names_none() {
             let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-            // §3.2 Lock is a zone flag. The harness exposes no way to lock a zone (reported as a harness
-            // gap: `SideSetup.locks` or `s.lock(player, row, lane)`), and #36 Magic Jammed only locks the
-            // zone of a backrow card it destroys, so the flag is set here directly — a test-only liberty.
+            // §3.2 Lock is a zone flag. The harness has no way to lock a zone, and #36 Magic Jammed only
+            // locks the zone of a backrow card it destroys, so the flag is set here directly.
             s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
             s.play(OOMEN, json!({ "zone": LANE }));
 
@@ -307,9 +263,7 @@ mod tests {
             assert_eq!(theirs, vec![None, None, None, None, None]);
         }
 
-        // -------------------------------------------------------------------------------------------
         // Radiant: "a random Radiant Trap" (§8 Conventions, R275)
-        // -------------------------------------------------------------------------------------------
 
         #[test]
         fn r275_the_radiant_face_is_2_4_and_summons_a_radiant_trap_into_its_own_lane_face_down() {
