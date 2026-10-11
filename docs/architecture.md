@@ -269,6 +269,7 @@ served `index.html` as JavaScript.
 | Mulligan clock | 45 s (`MULLIGAN_CLOCK_SECONDS`) | actor timer (`tokio::time`) | `prompt_deadline_at` (the prompt clock never runs at the same time) | both mulligans are open at once (R265), so one deadline covers both seats and both clients render it; on expiry every seat still owing is timed out (R268) |
 | Disconnect grace | 60 s (`DISCONNECT_GRACE_SECONDS`) | actor timer (`tokio::time`) | `grace_deadline_at` | SPEC §9.5: "the grace countdown is stored on the match so both clients show it" |
 | Match ceiling | 120 min (`MATCH_CEILING_MINUTES`) | actor + the DB reaper | `ceiling_at` | the reaper must be able to resolve a match whose actor died (§9.5) |
+| Open-row grace | 5 min (`OPEN_MATCH_REAP_GRACE_SECONDS`) | the reaper | `ceiling_at` (a room's expiry, a queue reservation's claim) | an `open` row nothing will start any more is deleted, freeing its room code and both players (R1450) |
 
 Expiry never mutates state directly. It submits an action — `timeout`, `disconnectExpired`,
 `ceilingReached` — through the same `reduce` as a player's click (R79, BUILD M7-T2); the mulligan

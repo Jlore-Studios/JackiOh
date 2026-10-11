@@ -8,6 +8,24 @@ while the AI still beats its predecessor, the AI on `main`, in at least 65 of 10
 §10.7's random policy in at least 90 of 100. A promotion needs strictly fewer shadow bans than the
 parent's. The lane is described in `training/README.md`; read it first.
 
+## First: is the lane done?
+
+Before anything else, open `crates/ai/src/shadow_ban.rs` and find `pub const SHADOW_BAN`. Generation
+8 (2026-10-10) removed its last entry. While it reads `pub const SHADOW_BAN: &[(&str, &str)] = &[];`
+the lane is done: no AI can keep strictly fewer cards out of its decks than none, so no promotion
+can pass, and `promote --lane unban` refuses to play its games. Then stop at once:
+
+1. Run nothing that builds or plays games: no `promote`, `arena`, `sweep`, `trace` or `cargo test`.
+2. Change nothing and commit nothing, so the session leaves no promotion. (The draft pull request
+   `loop.sh` opened before the session started stays a draft; only a person stopping the service
+   ends that.) Do not take up other work instead: `SHADOW_WATCH` is the sweep's (R390), and the
+   `improve` lane is another lane's.
+3. Append one entry to `~/training-out/unban/attempts.md`: the date and "lane done: `SHADOW_BAN` is
+   empty; nothing tried".
+4. End the session.
+
+Everything below is for a table that still has entries.
+
 ## What you may change
 
 1. You may change only `crates/ai/**`. The gate itself writes `crates/ai/generation.json` and
