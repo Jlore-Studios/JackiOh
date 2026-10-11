@@ -5276,17 +5276,21 @@
         {
           "at": "2026-10-11T15:46:16Z",
           "minutes": 13.2
+        },
+        {
+          "at": "2026-10-11T16:03:23Z",
+          "minutes": 15.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-11T20:32:47Z",
-          "utilization": 0.05
+          "utilization": 0.12
         },
-        "observed_at": "2026-10-11T15:46:16Z",
+        "observed_at": "2026-10-11T16:03:23Z",
         "seven_day": {
           "resets_at": "2026-10-16T17:47:52Z",
-          "utilization": 0.59
+          "utilization": 0.6
         },
         "status": "allowed"
       }
