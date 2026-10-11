@@ -3332,11 +3332,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Discover the \"perfect\" card from the Core set. Exile this."
+      "text": "Discover the \"perfect\" card. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover the \"perfect\" Radiant card from the Core set. Exile this."
+      "text": "Discover the \"perfect\" Radiant card. Exile this."
     }
   },
   "core-098": {
@@ -8291,11 +8291,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Replace your hand with the perfect hand of Classic and Classic+ cards. Refresh your mana."
+      "text": "Replace your hand with the perfect hand. Refresh your mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace your hand with the perfect Radiant hand of Classic and Classic+ cards. Refresh your mana."
+      "text": "Replace your hand with the perfect Radiant hand. Refresh your mana."
     }
   },
   "classicplus-028": {
