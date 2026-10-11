@@ -1102,6 +1102,10 @@
       "hash": "140817483a00af13",
       "bytes": 11869
     },
+    "core-001-attack": {
+      "hash": "68114222a0943423",
+      "bytes": 12179
+    },
     "core-001-death": {
       "hash": "1dd9ab5a4f74469a",
       "bytes": 11877
@@ -1109,6 +1113,10 @@
     "core-001-play": {
       "hash": "6377d53f4435e3a3",
       "bytes": 16329
+    },
+    "core-002-attack": {
+      "hash": "4b46a92b6b3b1b7d",
+      "bytes": 11256
     },
     "core-002-death": {
       "hash": "8941c095e28847eb",
@@ -1118,6 +1126,10 @@
       "hash": "b03c3d20cf7e358e",
       "bytes": 13711
     },
+    "core-003-attack": {
+      "hash": "93aebff6bb508cb5",
+      "bytes": 12366
+    },
     "core-003-death": {
       "hash": "ad5192627db122f8",
       "bytes": 9166
@@ -1125,6 +1137,10 @@
     "core-003-play": {
       "hash": "8642c56a61f8baa4",
       "bytes": 11306
+    },
+    "core-004-attack": {
+      "hash": "81646036fa81f75c",
+      "bytes": 5289
     },
     "core-004-death": {
       "hash": "2fb1be60afd92d5c",
@@ -1142,6 +1158,10 @@
       "hash": "7f04c89454dc90f3",
       "bytes": 8224
     },
+    "core-007-attack": {
+      "hash": "ac718f7bfee24f1d",
+      "bytes": 7849
+    },
     "core-007-death": {
       "hash": "8a526e588b311987",
       "bytes": 10548
@@ -1150,6 +1170,10 @@
       "hash": "b1ab40211af20028",
       "bytes": 9034
     },
+    "core-008-attack": {
+      "hash": "b9918389b493a9d4",
+      "bytes": 10865
+    },
     "core-008-death": {
       "hash": "ed932eb7b95df3f7",
       "bytes": 11046
@@ -1157,6 +1181,10 @@
     "core-008-play": {
       "hash": "fa1c84620e4a15e0",
       "bytes": 10786
+    },
+    "core-009-attack": {
+      "hash": "19ef16787f2d5ba4",
+      "bytes": 7835
     },
     "core-009-death": {
       "hash": "6f3d596ec06bb48b",
@@ -1170,6 +1198,10 @@
       "hash": "d8fb601d73ccdce6",
       "bytes": 13773
     },
+    "core-011-attack": {
+      "hash": "d13da8f4e2366b2f",
+      "bytes": 8375
+    },
     "core-011-death": {
       "hash": "1cbc768aa244614f",
       "bytes": 7015
@@ -1178,6 +1210,10 @@
       "hash": "a0aefdf7854d630c",
       "bytes": 9375
     },
+    "core-012-attack": {
+      "hash": "af68095be43b44e7",
+      "bytes": 7066
+    },
     "core-012-death": {
       "hash": "4679982c54211b88",
       "bytes": 6720
@@ -1185,6 +1221,10 @@
     "core-012-play": {
       "hash": "f59463c18f54609c",
       "bytes": 9379
+    },
+    "core-013-attack": {
+      "hash": "331d54688ace5405",
+      "bytes": 9338
     },
     "core-013-death": {
       "hash": "ee6e117e8b27bfa6",
@@ -1197,6 +1237,10 @@
     "core-014-cast": {
       "hash": "4a44ec0bdc8f2a96",
       "bytes": 11373
+    },
+    "core-015-attack": {
+      "hash": "9d584f26f6064d4e",
+      "bytes": 7072
     },
     "core-015-death": {
       "hash": "faafbaaba5fecde8",
@@ -1218,6 +1262,10 @@
       "hash": "bf37624944e61a10",
       "bytes": 10972
     },
+    "core-019-attack": {
+      "hash": "d5d9339d69347e92",
+      "bytes": 9910
+    },
     "core-019-death": {
       "hash": "f4ddbbed56ed3488",
       "bytes": 10302
@@ -1225,6 +1273,10 @@
     "core-019-play": {
       "hash": "569a0804fbf45f64",
       "bytes": 14454
+    },
+    "core-020-attack": {
+      "hash": "f40464cb854521ff",
+      "bytes": 6707
     },
     "core-020-death": {
       "hash": "d3399ec4d3f8d20e",
@@ -1237,6 +1289,10 @@
     "core-021-cast": {
       "hash": "390cafe4280f75b0",
       "bytes": 10284
+    },
+    "core-022-attack": {
+      "hash": "7b6976bb0edb87a3",
+      "bytes": 9406
     },
     "core-022-death": {
       "hash": "7b79169d77b14d88",
@@ -1253,6 +1309,10 @@
     "core-024-cast": {
       "hash": "b244afa7902fbdd7",
       "bytes": 8976
+    },
+    "core-025-attack": {
+      "hash": "9ea8c73d60b970c9",
+      "bytes": 8855
     },
     "core-025-death": {
       "hash": "30c7dab48fb39874",
@@ -1278,6 +1338,10 @@
       "hash": "dea17a0cab06b1d9",
       "bytes": 10964
     },
+    "core-030-attack": {
+      "hash": "8a37c09c72fdc98b",
+      "bytes": 11974
+    },
     "core-030-death": {
       "hash": "8463d210a82f2a5c",
       "bytes": 12178
@@ -1289,6 +1353,10 @@
     "core-031-cast": {
       "hash": "206386b014162c67",
       "bytes": 9080
+    },
+    "core-032-attack": {
+      "hash": "838f5fc0e1ee1f59",
+      "bytes": 7203
     },
     "core-032-death": {
       "hash": "7d6a9100af9bfc24",
@@ -1313,6 +1381,10 @@
     "core-036-cast": {
       "hash": "ed4f55d3ea53c84d",
       "bytes": 13021
+    },
+    "core-037-attack": {
+      "hash": "8981cd5cf693d8d4",
+      "bytes": 6917
     },
     "core-037-death": {
       "hash": "6e71f79633faca25",
@@ -1342,6 +1414,10 @@
       "hash": "2f3e7b8e30a62351",
       "bytes": 11865
     },
+    "core-043-attack": {
+      "hash": "9b5def43ad33eaed",
+      "bytes": 7442
+    },
     "core-043-death": {
       "hash": "de55d39434ff1371",
       "bytes": 8312
@@ -1353,6 +1429,10 @@
     "core-044-cast": {
       "hash": "50fd38bdf3f9f1c8",
       "bytes": 7837
+    },
+    "core-045-attack": {
+      "hash": "ba286c33e54a7b0e",
+      "bytes": 6043
     },
     "core-045-death": {
       "hash": "fb7d45d7eff2bbd4",
@@ -1378,6 +1458,10 @@
       "hash": "9583dd14e8c5b703",
       "bytes": 9596
     },
+    "core-050-attack": {
+      "hash": "045d0a6265db7770",
+      "bytes": 6554
+    },
     "core-050-death": {
       "hash": "0ff152a07f14d9b7",
       "bytes": 7807
@@ -1394,6 +1478,10 @@
       "hash": "988e0231a17603fd",
       "bytes": 13150
     },
+    "core-052-attack": {
+      "hash": "c75dd7a9503738e4",
+      "bytes": 6577
+    },
     "core-052-death": {
       "hash": "3211a33c1e26c5e2",
       "bytes": 7954
@@ -1401,6 +1489,10 @@
     "core-052-play": {
       "hash": "0b2232f1922d45cb",
       "bytes": 9401
+    },
+    "core-053-attack": {
+      "hash": "8259faa93f41a69a",
+      "bytes": 6122
     },
     "core-053-death": {
       "hash": "1b43eb371f926678",
@@ -1410,6 +1502,10 @@
       "hash": "68a550108a2575be",
       "bytes": 8662
     },
+    "core-054-attack": {
+      "hash": "52f52b21748f6f82",
+      "bytes": 9210
+    },
     "core-054-death": {
       "hash": "872c86828d987556",
       "bytes": 7735
@@ -1418,6 +1514,10 @@
       "hash": "5a6860df69da9388",
       "bytes": 12481
     },
+    "core-055-attack": {
+      "hash": "e004155647af2a58",
+      "bytes": 8290
+    },
     "core-055-death": {
       "hash": "251bde0b35e467c3",
       "bytes": 10296
@@ -1425,6 +1525,10 @@
     "core-055-play": {
       "hash": "046bc900befadc98",
       "bytes": 13055
+    },
+    "core-056-attack": {
+      "hash": "0d505b870a39db39",
+      "bytes": 8882
     },
     "core-056-death": {
       "hash": "e109cb831b4a32d0",
@@ -1450,6 +1554,10 @@
       "hash": "8a658c799fed6086",
       "bytes": 12677
     },
+    "core-061-attack": {
+      "hash": "941126c2451199f6",
+      "bytes": 10586
+    },
     "core-061-death": {
       "hash": "8e1b971bac3d6496",
       "bytes": 12077
@@ -1470,6 +1578,10 @@
       "hash": "01f0b411514e07fa",
       "bytes": 13153
     },
+    "core-065-1-attack": {
+      "hash": "c28db713d250751d",
+      "bytes": 7700
+    },
     "core-065-1-death": {
       "hash": "658ca3427fa7cddf",
       "bytes": 6160
@@ -1482,6 +1594,10 @@
       "hash": "c61bab0dc472814e",
       "bytes": 9574
     },
+    "core-066-attack": {
+      "hash": "d573a6f4eb6377ec",
+      "bytes": 9491
+    },
     "core-066-death": {
       "hash": "cb2605cdd58d262e",
       "bytes": 10042
@@ -1490,6 +1606,10 @@
       "hash": "f4480e6fa57ab5bb",
       "bytes": 13073
     },
+    "core-067-attack": {
+      "hash": "c22ae20b4305f37b",
+      "bytes": 7413
+    },
     "core-067-death": {
       "hash": "362da6a19d215831",
       "bytes": 7357
@@ -1497,6 +1617,10 @@
     "core-067-play": {
       "hash": "0bfc8402ba924977",
       "bytes": 9133
+    },
+    "core-068-attack": {
+      "hash": "d0b04ed4a331ec37",
+      "bytes": 6687
     },
     "core-068-death": {
       "hash": "ad958fe1c7751b3b",
@@ -1538,6 +1662,10 @@
       "hash": "7ea46c61b29b0fe8",
       "bytes": 8745
     },
+    "core-077-attack": {
+      "hash": "cc717fa4c0609321",
+      "bytes": 8040
+    },
     "core-077-death": {
       "hash": "91a22624ea2f4eae",
       "bytes": 11298
@@ -1557,6 +1685,10 @@
     "core-080-cast": {
       "hash": "0513cb68544d2b5d",
       "bytes": 10649
+    },
+    "core-081-attack": {
+      "hash": "aac72f57b6432df4",
+      "bytes": 9115
     },
     "core-081-death": {
       "hash": "9a6eb385d229b0ae",
@@ -1582,6 +1714,10 @@
       "hash": "06a8b72306cd18ca",
       "bytes": 13495
     },
+    "core-086-attack": {
+      "hash": "5ba00884bb4a5338",
+      "bytes": 6005
+    },
     "core-086-death": {
       "hash": "a2a8ed9e72ddc538",
       "bytes": 8172
@@ -1597,6 +1733,10 @@
     "core-088-cast": {
       "hash": "c50ff22cd102eaaa",
       "bytes": 12921
+    },
+    "core-089-attack": {
+      "hash": "a8f6128392c302ac",
+      "bytes": 8095
     },
     "core-089-death": {
       "hash": "d386ff828a8f8531",
@@ -1614,6 +1754,10 @@
       "hash": "013b13469dc2165f",
       "bytes": 9527
     },
+    "core-091-attack": {
+      "hash": "b84e50ecafe2264f",
+      "bytes": 8706
+    },
     "core-091-death": {
       "hash": "6e6bd42a828b8baa",
       "bytes": 7910
@@ -1621,6 +1765,10 @@
     "core-091-play": {
       "hash": "e732673b3b1f78ec",
       "bytes": 10930
+    },
+    "core-092-attack": {
+      "hash": "a0d02c228b611486",
+      "bytes": 8374
     },
     "core-092-death": {
       "hash": "d06597aebf97ab61",
@@ -1641,6 +1789,10 @@
     "core-094-cast": {
       "hash": "46eece58466eacf9",
       "bytes": 12115
+    },
+    "core-095-1-attack": {
+      "hash": "fc2b18d6fd863f89",
+      "bytes": 7928
     },
     "core-095-1-death": {
       "hash": "df4cc3ee43b52c4d",
@@ -1670,6 +1822,10 @@
       "hash": "587fe722a003ec3f",
       "bytes": 9265
     },
+    "core-100-attack": {
+      "hash": "3e0f00cf36316edd",
+      "bytes": 7920
+    },
     "core-100-death": {
       "hash": "36af11991e265c96",
       "bytes": 10981
@@ -1677,6 +1833,10 @@
     "core-100-play": {
       "hash": "5930ae3e48450fd6",
       "bytes": 13545
+    },
+    "core-t-bread-attack": {
+      "hash": "31349c07e8797dc3",
+      "bytes": 7706
     },
     "core-t-bread-death": {
       "hash": "ebba9e0a89cb4149",
@@ -1690,6 +1850,10 @@
       "hash": "8bef799e42ee75d7",
       "bytes": 8804
     },
+    "core-t-felinor-attack": {
+      "hash": "b6979d95fc7d5f8d",
+      "bytes": 7391
+    },
     "core-t-felinor-death": {
       "hash": "d130bf7b265869cc",
       "bytes": 5777
@@ -1697,6 +1861,10 @@
     "core-t-felinor-play": {
       "hash": "1606cec601ae711b",
       "bytes": 5188
+    },
+    "core-t-ghoul-attack": {
+      "hash": "be5218ccd39d0abb",
+      "bytes": 7724
     },
     "core-t-ghoul-death": {
       "hash": "27582e15cfa7da47",
@@ -1706,6 +1874,10 @@
       "hash": "b27857fe575b2c45",
       "bytes": 14770
     },
+    "core-t-rush-attack": {
+      "hash": "cb85bf682c2f5f3b",
+      "bytes": 6918
+    },
     "core-t-rush-death": {
       "hash": "0d3021cd90ab2e49",
       "bytes": 7764
@@ -1713,6 +1885,10 @@
     "core-t-rush-play": {
       "hash": "c8f356821e517867",
       "bytes": 7357
+    },
+    "core-t-sheep-attack": {
+      "hash": "166507107b194254",
+      "bytes": 6301
     },
     "core-t-sheep-death": {
       "hash": "430f87a5585b162f",
@@ -1722,73 +1898,9 @@
       "hash": "226cf61252f53e79",
       "bytes": 6062
     },
-    "emote-vanilla-greetings": {
-      "hash": "2002a04fe1033cce",
-      "bytes": 15720
-    },
-    "emote-vanilla-wellPlayed": {
-      "hash": "5524c2c25470f2a1",
-      "bytes": 10771
-    },
-    "emote-vanilla-oops": {
-      "hash": "1ba00196e5b82606",
-      "bytes": 14160
-    },
-    "emote-vanilla-thanks": {
-      "hash": "7ed660402b20316c",
-      "bytes": 12692
-    },
-    "emote-vanilla-threaten": {
-      "hash": "5d38684e62f63bcc",
-      "bytes": 17521
-    },
-    "emote-gary-greetings": {
-      "hash": "13879665a33a43a2",
-      "bytes": 12058
-    },
-    "emote-gary-wellPlayed": {
-      "hash": "0a554b6aa414f7a2",
-      "bytes": 13820
-    },
-    "emote-gary-oops": {
-      "hash": "4c73bbe74a5f962f",
-      "bytes": 15083
-    },
-    "emote-gary-thanks": {
-      "hash": "d865dcdcddf3ea55",
-      "bytes": 12981
-    },
-    "emote-gary-threaten": {
-      "hash": "5c9afb92bde9c5cd",
-      "bytes": 12351
-    },
-    "emote-timmy-greetings": {
-      "hash": "0d1a22a304648439",
-      "bytes": 9498
-    },
-    "emote-timmy-wellPlayed": {
-      "hash": "db5fd285b53379c9",
-      "bytes": 10445
-    },
-    "emote-timmy-oops": {
-      "hash": "ecbc7e52b50ddbea",
-      "bytes": 5940
-    },
-    "emote-timmy-thanks": {
-      "hash": "a904de8450d63d8f",
-      "bytes": 8631
-    },
-    "emote-timmy-threaten": {
-      "hash": "eaae06e89aa22440",
-      "bytes": 6223
-    },
     "emote-dfender-greetings": {
       "hash": "af0c8f6e0334c6b6",
       "bytes": 15527
-    },
-    "emote-dfender-wellPlayed": {
-      "hash": "d9ad179b89d5619f",
-      "bytes": 21115
     },
     "emote-dfender-oops": {
       "hash": "77b93b18061fcb44",
@@ -1802,13 +1914,13 @@
       "hash": "a755d42a715719fc",
       "bytes": 17009
     },
+    "emote-dfender-wellPlayed": {
+      "hash": "d9ad179b89d5619f",
+      "bytes": 21115
+    },
     "emote-felinors-greetings": {
       "hash": "7fa4ada1a578ee4a",
       "bytes": 9378
-    },
-    "emote-felinors-wellPlayed": {
-      "hash": "703248e9531a2fc5",
-      "bytes": 8510
     },
     "emote-felinors-oops": {
       "hash": "6be3a9302958a3ec",
@@ -1822,13 +1934,33 @@
       "hash": "052bc4462df5685f",
       "bytes": 7868
     },
+    "emote-felinors-wellPlayed": {
+      "hash": "703248e9531a2fc5",
+      "bytes": 8510
+    },
+    "emote-gary-greetings": {
+      "hash": "13879665a33a43a2",
+      "bytes": 12058
+    },
+    "emote-gary-oops": {
+      "hash": "4c73bbe74a5f962f",
+      "bytes": 15083
+    },
+    "emote-gary-thanks": {
+      "hash": "d865dcdcddf3ea55",
+      "bytes": 12981
+    },
+    "emote-gary-threaten": {
+      "hash": "5c9afb92bde9c5cd",
+      "bytes": 12351
+    },
+    "emote-gary-wellPlayed": {
+      "hash": "0a554b6aa414f7a2",
+      "bytes": 13820
+    },
     "emote-shredder-greetings": {
       "hash": "1b9e2bc8408acad7",
       "bytes": 9953
-    },
-    "emote-shredder-wellPlayed": {
-      "hash": "a9f977448cacadb9",
-      "bytes": 13174
     },
     "emote-shredder-oops": {
       "hash": "af977329682cf111",
@@ -1841,6 +1973,762 @@
     "emote-shredder-threaten": {
       "hash": "75477c3f98393d07",
       "bytes": 16030
+    },
+    "emote-shredder-wellPlayed": {
+      "hash": "a9f977448cacadb9",
+      "bytes": 13174
+    },
+    "emote-timmy-greetings": {
+      "hash": "0d1a22a304648439",
+      "bytes": 9498
+    },
+    "emote-timmy-oops": {
+      "hash": "ecbc7e52b50ddbea",
+      "bytes": 5940
+    },
+    "emote-timmy-thanks": {
+      "hash": "a904de8450d63d8f",
+      "bytes": 8631
+    },
+    "emote-timmy-threaten": {
+      "hash": "eaae06e89aa22440",
+      "bytes": 6223
+    },
+    "emote-timmy-wellPlayed": {
+      "hash": "db5fd285b53379c9",
+      "bytes": 10445
+    },
+    "emote-vanilla-greetings": {
+      "hash": "2002a04fe1033cce",
+      "bytes": 15720
+    },
+    "emote-vanilla-oops": {
+      "hash": "1ba00196e5b82606",
+      "bytes": 14160
+    },
+    "emote-vanilla-thanks": {
+      "hash": "7ed660402b20316c",
+      "bytes": 12692
+    },
+    "emote-vanilla-threaten": {
+      "hash": "5d38684e62f63bcc",
+      "bytes": 17521
+    },
+    "emote-vanilla-wellPlayed": {
+      "hash": "5524c2c25470f2a1",
+      "bytes": 10771
+    },
+    "meditative-002-attack": {
+      "hash": "5597bd912b5cde88",
+      "bytes": 7984
+    },
+    "meditative-002-death": {
+      "hash": "b083c39f85421476",
+      "bytes": 12462
+    },
+    "meditative-002-play": {
+      "hash": "ef81a03bfa0414c4",
+      "bytes": 13975
+    },
+    "meditative-003-attack": {
+      "hash": "ba076c8de9d53482",
+      "bytes": 12320
+    },
+    "meditative-003-death": {
+      "hash": "44867b4e93e2e3d4",
+      "bytes": 11047
+    },
+    "meditative-003-play": {
+      "hash": "910c23dfcfc56a7b",
+      "bytes": 12402
+    },
+    "meditative-005-cast": {
+      "hash": "e29184257c8527fe",
+      "bytes": 13413
+    },
+    "meditative-006-cast": {
+      "hash": "56f10831cf5b0efd",
+      "bytes": 9885
+    },
+    "meditative-008-cast": {
+      "hash": "7bef79a710dcd505",
+      "bytes": 11527
+    },
+    "meditative-011-cast": {
+      "hash": "3f04866c47e2c1d6",
+      "bytes": 11235
+    },
+    "meditative-012-attack": {
+      "hash": "5de5d152f5670460",
+      "bytes": 6405
+    },
+    "meditative-012-death": {
+      "hash": "1ccba4c130269214",
+      "bytes": 7827
+    },
+    "meditative-012-play": {
+      "hash": "d9df474155e2bb89",
+      "bytes": 8207
+    },
+    "meditative-013-attack": {
+      "hash": "0f0581de75ad6b8e",
+      "bytes": 7004
+    },
+    "meditative-013-death": {
+      "hash": "66616df9a2751531",
+      "bytes": 7132
+    },
+    "meditative-013-play": {
+      "hash": "484421f53ef4aecf",
+      "bytes": 10185
+    },
+    "meditative-014-cast": {
+      "hash": "84f568ac9f17cb6d",
+      "bytes": 19675
+    },
+    "meditative-015-attack": {
+      "hash": "7698e232facb9b47",
+      "bytes": 8476
+    },
+    "meditative-015-death": {
+      "hash": "0002f3c2a4df6a0b",
+      "bytes": 11936
+    },
+    "meditative-015-play": {
+      "hash": "17008bc73d6e6f82",
+      "bytes": 10768
+    },
+    "meditative-017-cast": {
+      "hash": "25037c37d5fd47ae",
+      "bytes": 9471
+    },
+    "meditative-018-cast": {
+      "hash": "3658ecdcc9ff75bb",
+      "bytes": 14014
+    },
+    "meditative-019-1-cast": {
+      "hash": "9aa9cb798765b345",
+      "bytes": 14381
+    },
+    "meditative-019-cast": {
+      "hash": "3c3d838dd85cdcea",
+      "bytes": 9720
+    },
+    "meditative-020-cast": {
+      "hash": "1bf4a63a7af942c4",
+      "bytes": 11534
+    },
+    "meditative-021-cast": {
+      "hash": "ebf6301c142a41d7",
+      "bytes": 8679
+    },
+    "meditative-023-attack": {
+      "hash": "9c341119e5aafe78",
+      "bytes": 6214
+    },
+    "meditative-023-death": {
+      "hash": "83a8557dc71b8509",
+      "bytes": 9372
+    },
+    "meditative-023-play": {
+      "hash": "bad659aa604e547b",
+      "bytes": 11928
+    },
+    "meditative-025-attack": {
+      "hash": "dd5fcbea6a6ae7aa",
+      "bytes": 8889
+    },
+    "meditative-025-death": {
+      "hash": "3714168f77a8471d",
+      "bytes": 8361
+    },
+    "meditative-025-play": {
+      "hash": "181eb332ff1c9e44",
+      "bytes": 9332
+    },
+    "meditative-027-attack": {
+      "hash": "041fbb420ae62c9c",
+      "bytes": 5617
+    },
+    "meditative-027-death": {
+      "hash": "55fe86e6934bfff4",
+      "bytes": 9465
+    },
+    "meditative-027-play": {
+      "hash": "ef4fcea297bbe083",
+      "bytes": 9557
+    },
+    "meditative-028-1-cast": {
+      "hash": "a17899b29ac58fe1",
+      "bytes": 11539
+    },
+    "meditative-028-attack": {
+      "hash": "32e79d0e521c71ec",
+      "bytes": 7476
+    },
+    "meditative-028-death": {
+      "hash": "bd35f96d3e62e481",
+      "bytes": 8932
+    },
+    "meditative-028-play": {
+      "hash": "bf3167b9abfd316e",
+      "bytes": 9598
+    },
+    "meditative-029-cast": {
+      "hash": "9d6433e998821fbd",
+      "bytes": 14922
+    },
+    "meditative-030-1-cast": {
+      "hash": "4abe53077f4d25c3",
+      "bytes": 12432
+    },
+    "meditative-030-attack": {
+      "hash": "022bb060f2fc7c1d",
+      "bytes": 7649
+    },
+    "meditative-030-death": {
+      "hash": "c3db6e9403c1ffef",
+      "bytes": 10374
+    },
+    "meditative-030-play": {
+      "hash": "4a278b152bc7f2a8",
+      "bytes": 11718
+    },
+    "meditative-031-attack": {
+      "hash": "47e090b941c45cef",
+      "bytes": 11559
+    },
+    "meditative-031-death": {
+      "hash": "de4f8d811154d375",
+      "bytes": 8585
+    },
+    "meditative-031-play": {
+      "hash": "08109d30c0bdca32",
+      "bytes": 12992
+    },
+    "meditative-032-cast": {
+      "hash": "891de05123a2e380",
+      "bytes": 15249
+    },
+    "meditative-033-cast": {
+      "hash": "86755a580cdc6af0",
+      "bytes": 13302
+    },
+    "meditative-034-cast": {
+      "hash": "4cbad50ca0a6c182",
+      "bytes": 16498
+    },
+    "meditative-035-cast": {
+      "hash": "d620deff5674b9ba",
+      "bytes": 11437
+    },
+    "meditative-036-cast": {
+      "hash": "98a3619448058460",
+      "bytes": 17617
+    },
+    "meditative-037-cast": {
+      "hash": "ff22f68ca9ba6a69",
+      "bytes": 14690
+    },
+    "meditative-038-cast": {
+      "hash": "bdd7c422e63015dc",
+      "bytes": 12502
+    },
+    "meditative-039-1-cast": {
+      "hash": "e4b78656b3733a1b",
+      "bytes": 11606
+    },
+    "meditative-039-2-cast": {
+      "hash": "1008f856f4c999c0",
+      "bytes": 9382
+    },
+    "meditative-039-3-cast": {
+      "hash": "37a350fa8da7d821",
+      "bytes": 11922
+    },
+    "meditative-039-4-cast": {
+      "hash": "acea9fcd3cface9f",
+      "bytes": 11981
+    },
+    "meditative-039-5-attack": {
+      "hash": "3af7230b590caf89",
+      "bytes": 9942
+    },
+    "meditative-039-5-death": {
+      "hash": "25a807a736736053",
+      "bytes": 9332
+    },
+    "meditative-039-5-play": {
+      "hash": "96d6608afdccb6c6",
+      "bytes": 13000
+    },
+    "meditative-039-attack": {
+      "hash": "a30a886de9a2c44f",
+      "bytes": 6681
+    },
+    "meditative-039-death": {
+      "hash": "f5af8632b3bf92c8",
+      "bytes": 6561
+    },
+    "meditative-039-play": {
+      "hash": "b5eaed66b9611f17",
+      "bytes": 9082
+    },
+    "meditative-040-cast": {
+      "hash": "573aa5c32ec4e19e",
+      "bytes": 16709
+    },
+    "meditative-041-attack": {
+      "hash": "71156375cb14e4ac",
+      "bytes": 6707
+    },
+    "meditative-041-death": {
+      "hash": "699a915673aaf30a",
+      "bytes": 6325
+    },
+    "meditative-041-play": {
+      "hash": "b4d3191d1cddb406",
+      "bytes": 8143
+    },
+    "meditative-042-cast": {
+      "hash": "1898abe8ecbfee58",
+      "bytes": 11718
+    },
+    "meditative-043-cast": {
+      "hash": "a41a328ff8f7a7dc",
+      "bytes": 10908
+    },
+    "meditative-044-cast": {
+      "hash": "ca2ad4d38c81923f",
+      "bytes": 9745
+    },
+    "meditative-046-cast": {
+      "hash": "84873349a789c4ba",
+      "bytes": 14759
+    },
+    "meditative-047-attack": {
+      "hash": "7a0602d3410a748d",
+      "bytes": 8606
+    },
+    "meditative-047-death": {
+      "hash": "78360e86afa8c0f5",
+      "bytes": 13802
+    },
+    "meditative-047-play": {
+      "hash": "ce29485a92ba3d77",
+      "bytes": 13696
+    },
+    "meditative-048-cast": {
+      "hash": "f39da59241a7dbd9",
+      "bytes": 14808
+    },
+    "meditative-049-2-attack": {
+      "hash": "5c364162c4796479",
+      "bytes": 7907
+    },
+    "meditative-049-2-death": {
+      "hash": "537878d43226bcb0",
+      "bytes": 15588
+    },
+    "meditative-049-2-play": {
+      "hash": "e7877bb94f2f10a6",
+      "bytes": 15991
+    },
+    "meditative-049-3-cast": {
+      "hash": "0fe47ba7fae7a8d0",
+      "bytes": 13263
+    },
+    "meditative-050-cast": {
+      "hash": "6da7405b97fafc2b",
+      "bytes": 14199
+    },
+    "meditative-051-attack": {
+      "hash": "60e7578fd1fe729f",
+      "bytes": 8668
+    },
+    "meditative-051-death": {
+      "hash": "38d28af49b32191b",
+      "bytes": 11652
+    },
+    "meditative-051-play": {
+      "hash": "cea70c5043b010a5",
+      "bytes": 12349
+    },
+    "meditative-053-cast": {
+      "hash": "1aa8ac8926c1da79",
+      "bytes": 13658
+    },
+    "meditative-054-cast": {
+      "hash": "57fc77fa0b06b01f",
+      "bytes": 11407
+    },
+    "meditative-055-cast": {
+      "hash": "501947495bbd6018",
+      "bytes": 14663
+    },
+    "meditative-056-cast": {
+      "hash": "819bcc58d3904461",
+      "bytes": 13135
+    },
+    "meditative-057-attack": {
+      "hash": "56669d5654c833ee",
+      "bytes": 5786
+    },
+    "meditative-057-death": {
+      "hash": "0c5b7aa095d231b0",
+      "bytes": 7517
+    },
+    "meditative-057-play": {
+      "hash": "9722c942a92c98b8",
+      "bytes": 7418
+    },
+    "meditative-058-attack": {
+      "hash": "c6c88b79f3a67797",
+      "bytes": 7055
+    },
+    "meditative-058-death": {
+      "hash": "d34b37ad00e344aa",
+      "bytes": 7796
+    },
+    "meditative-058-play": {
+      "hash": "4470acd72eb35ea8",
+      "bytes": 10265
+    },
+    "meditative-059-attack": {
+      "hash": "e1538d29adc03d72",
+      "bytes": 11067
+    },
+    "meditative-059-death": {
+      "hash": "cb71476370373cf9",
+      "bytes": 15852
+    },
+    "meditative-059-play": {
+      "hash": "1bc863fbfb4d7e99",
+      "bytes": 13297
+    },
+    "meditative-060-cast": {
+      "hash": "1347155bfb3109d0",
+      "bytes": 14150
+    },
+    "meditative-061-attack": {
+      "hash": "d1733ca6ddaa3075",
+      "bytes": 5444
+    },
+    "meditative-061-death": {
+      "hash": "37725368e1031d35",
+      "bytes": 6814
+    },
+    "meditative-061-play": {
+      "hash": "95c8b0d942afe54f",
+      "bytes": 7616
+    },
+    "meditative-062-cast": {
+      "hash": "9f28a01d431058fa",
+      "bytes": 15703
+    },
+    "meditative-063-cast": {
+      "hash": "a721195a84935cf4",
+      "bytes": 14157
+    },
+    "meditative-063-trigger1": {
+      "hash": "f264dc424f94bf18",
+      "bytes": 15240
+    },
+    "meditative-063-trigger2": {
+      "hash": "2c4fc44e4a1b4aad",
+      "bytes": 11378
+    },
+    "meditative-063-trigger3": {
+      "hash": "d707976327c56d7b",
+      "bytes": 11767
+    },
+    "meditative-065-attack": {
+      "hash": "5df9ff949c729b79",
+      "bytes": 10002
+    },
+    "meditative-065-death": {
+      "hash": "732c607333f9ba16",
+      "bytes": 12315
+    },
+    "meditative-065-play": {
+      "hash": "77cc99d7b92aef38",
+      "bytes": 18143
+    },
+    "meditative-066-cast": {
+      "hash": "cb73a6c39e1c1cc9",
+      "bytes": 9712
+    },
+    "meditative-067-attack": {
+      "hash": "e8d31b4e7cd7842e",
+      "bytes": 6571
+    },
+    "meditative-067-death": {
+      "hash": "06dee25cfaa720cd",
+      "bytes": 11333
+    },
+    "meditative-067-play": {
+      "hash": "806610889eec4e79",
+      "bytes": 10672
+    },
+    "meditative-068-cast": {
+      "hash": "f306511c09ddec11",
+      "bytes": 9994
+    },
+    "meditative-069-attack": {
+      "hash": "88a2530cf441c878",
+      "bytes": 6958
+    },
+    "meditative-069-death": {
+      "hash": "d0d9a440b644094c",
+      "bytes": 7863
+    },
+    "meditative-069-play": {
+      "hash": "a068f5bb46d85c3e",
+      "bytes": 9395
+    },
+    "meditative-070-1-attack": {
+      "hash": "292f830cd6d1b0a3",
+      "bytes": 7343
+    },
+    "meditative-070-1-death": {
+      "hash": "a9bd4fa32ae4a013",
+      "bytes": 7059
+    },
+    "meditative-070-1-play": {
+      "hash": "5854930b6c908852",
+      "bytes": 7024
+    },
+    "meditative-070-attack": {
+      "hash": "f3f0e5930fa02306",
+      "bytes": 8461
+    },
+    "meditative-070-death": {
+      "hash": "e37010c39af6e037",
+      "bytes": 10379
+    },
+    "meditative-070-play": {
+      "hash": "c403a8ff383541d4",
+      "bytes": 9485
+    },
+    "meditative-072-attack": {
+      "hash": "54dcba8acaec9d9f",
+      "bytes": 6905
+    },
+    "meditative-072-death": {
+      "hash": "3f2dfe4100aedf0b",
+      "bytes": 8020
+    },
+    "meditative-072-play": {
+      "hash": "ca7e2a78f9d4df8a",
+      "bytes": 8191
+    },
+    "meditative-073-attack": {
+      "hash": "a4780e467e88f351",
+      "bytes": 10271
+    },
+    "meditative-073-death": {
+      "hash": "7ba4d608fe67b73b",
+      "bytes": 11550
+    },
+    "meditative-073-play": {
+      "hash": "894c406067e369d7",
+      "bytes": 15568
+    },
+    "meditative-074-attack": {
+      "hash": "eb921da4066c85ad",
+      "bytes": 9486
+    },
+    "meditative-074-death": {
+      "hash": "971ac7eac03fccf2",
+      "bytes": 9117
+    },
+    "meditative-074-play": {
+      "hash": "350714818ff52c84",
+      "bytes": 9095
+    },
+    "meditative-075-cast": {
+      "hash": "63d8732683818109",
+      "bytes": 11179
+    },
+    "meditative-093-1-attack": {
+      "hash": "356212ab676f51d3",
+      "bytes": 7236
+    },
+    "meditative-093-1-death": {
+      "hash": "983c083d3b376da1",
+      "bytes": 9518
+    },
+    "meditative-093-1-play": {
+      "hash": "8ed9346a19488b64",
+      "bytes": 11567
+    },
+    "meditative-093-2-attack": {
+      "hash": "08debe0a68f63af6",
+      "bytes": 7452
+    },
+    "meditative-093-2-death": {
+      "hash": "d17fa584d2f8ef76",
+      "bytes": 8651
+    },
+    "meditative-093-2-play": {
+      "hash": "3463fc52d0b55099",
+      "bytes": 12436
+    },
+    "meditative-093-3-attack": {
+      "hash": "fc87a87fef1d9b0c",
+      "bytes": 6793
+    },
+    "meditative-093-3-death": {
+      "hash": "b1eb30037b8b971f",
+      "bytes": 8483
+    },
+    "meditative-093-3-play": {
+      "hash": "ab87df74c511f64c",
+      "bytes": 12001
+    },
+    "meditative-093-attack": {
+      "hash": "c51c18b073ed9271",
+      "bytes": 7596
+    },
+    "meditative-093-death": {
+      "hash": "19660b490c57af68",
+      "bytes": 10227
+    },
+    "meditative-093-play": {
+      "hash": "67418c4d33dd5dae",
+      "bytes": 9287
+    },
+    "meditative-094-attack": {
+      "hash": "4615013f82f9d3e5",
+      "bytes": 7434
+    },
+    "meditative-094-death": {
+      "hash": "80684f0e72d2e159",
+      "bytes": 9864
+    },
+    "meditative-094-play": {
+      "hash": "9377ee987e0bb6c9",
+      "bytes": 8690
+    },
+    "meditative-095-1-attack": {
+      "hash": "1b3fb8f3c2810613",
+      "bytes": 9411
+    },
+    "meditative-095-1-death": {
+      "hash": "0e9719e858eb6e24",
+      "bytes": 9926
+    },
+    "meditative-095-1-play": {
+      "hash": "0702e92f4912ac20",
+      "bytes": 14835
+    },
+    "meditative-095-cast": {
+      "hash": "0b19a947fc13e3c6",
+      "bytes": 11737
+    },
+    "meditative-096-1-cast": {
+      "hash": "71a85a2b11d9ffce",
+      "bytes": 13389
+    },
+    "meditative-096-cast": {
+      "hash": "733c922a7aa86649",
+      "bytes": 12591
+    },
+    "meditative-097-2-attack": {
+      "hash": "d5444a43f6ee1c33",
+      "bytes": 9448
+    },
+    "meditative-097-2-death": {
+      "hash": "7a7cf06524a513ad",
+      "bytes": 9927
+    },
+    "meditative-097-2-play": {
+      "hash": "41398ef002a6f987",
+      "bytes": 14833
+    },
+    "meditative-097-3-attack": {
+      "hash": "4b03d91f1c49116f",
+      "bytes": 8161
+    },
+    "meditative-097-3-death": {
+      "hash": "b7c45df1e95ed9dc",
+      "bytes": 11646
+    },
+    "meditative-097-3-play": {
+      "hash": "b0c060ea7dbcc900",
+      "bytes": 14256
+    },
+    "meditative-097-4-attack": {
+      "hash": "dc70c76b356630e3",
+      "bytes": 6090
+    },
+    "meditative-097-4-death": {
+      "hash": "913195aa7f4ed0d3",
+      "bytes": 10105
+    },
+    "meditative-097-4-play": {
+      "hash": "29b8ec7cc3ed4469",
+      "bytes": 11900
+    },
+    "meditative-097-5-attack": {
+      "hash": "85ea161200eade34",
+      "bytes": 10108
+    },
+    "meditative-097-5-death": {
+      "hash": "7f024423c763da63",
+      "bytes": 10503
+    },
+    "meditative-097-5-play": {
+      "hash": "1a9e0f7b99ae77b2",
+      "bytes": 11579
+    },
+    "meditative-097-6-attack": {
+      "hash": "2af2c9c57c16dd6b",
+      "bytes": 7813
+    },
+    "meditative-097-6-death": {
+      "hash": "1f8656433ef839f6",
+      "bytes": 9103
+    },
+    "meditative-097-6-play": {
+      "hash": "5ad2b02f03976ece",
+      "bytes": 13038
+    },
+    "meditative-097-7-attack": {
+      "hash": "c2941a0c2237b15b",
+      "bytes": 11365
+    },
+    "meditative-097-7-death": {
+      "hash": "c21bc1fb23044627",
+      "bytes": 11024
+    },
+    "meditative-097-7-play": {
+      "hash": "81ce2b9bd6e8852e",
+      "bytes": 18234
+    },
+    "meditative-097-8-attack": {
+      "hash": "afb5b1aa0bb4cbdd",
+      "bytes": 9121
+    },
+    "meditative-097-8-death": {
+      "hash": "8a2d02fbabd3f1ab",
+      "bytes": 9489
+    },
+    "meditative-097-8-play": {
+      "hash": "f934ed5cf561fd10",
+      "bytes": 9734
+    },
+    "meditative-097-9-attack": {
+      "hash": "888b1698c8354737",
+      "bytes": 11007
+    },
+    "meditative-097-9-death": {
+      "hash": "c12cbdaa4b36af4e",
+      "bytes": 10310
+    },
+    "meditative-097-9-play": {
+      "hash": "8a9767d439580337",
+      "bytes": 15399
     }
   }
 }
