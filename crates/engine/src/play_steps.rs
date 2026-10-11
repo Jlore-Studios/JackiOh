@@ -2354,16 +2354,14 @@ fn ask_repeat_targets(
         if at == 0
             && run.cast == Some(true)
             && let Some(aimed) = run.aim_at.clone()
-        {
-            if let Some(pick) = options
+            && let Some(pick) = options
                 .iter()
                 .find(|option| matches!(option, Selection::Instance { instance_id } if instance_id == &aimed))
-            {
-                if let Some(repeat) = run.repeat.as_mut() {
-                    repeat.targets.push(pick.clone());
-                }
-                continue;
+        {
+            if let Some(repeat) = run.repeat.as_mut() {
+                repeat.targets.push(pick.clone());
             }
+            continue;
         }
         // R1200: while a Mayor acts a `target` repeat is drawn at random, and nobody is asked.
         if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {

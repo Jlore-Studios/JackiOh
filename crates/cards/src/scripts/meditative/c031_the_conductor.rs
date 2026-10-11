@@ -14,8 +14,8 @@
 //!   (R58), R457's draw limit. An id gone from the library by its turn fizzles, and a card that
 //!   enters during the draws is not drawn (`for_each_card` reads the list once).
 //! - **The Radiant face** first shuffles in a random Prime card (`shuffle_random_from_catalog`
-///!   over `{ tags: [Prime] }` — every Prime card is a token, so Prime joins the pool's token tags,
-///!   R1421). That card is Created, so the same Cry draws it.
+//!   over `{ tags: [Prime] }` — every Prime card is a token, so Prime joins the pool's token tags,
+//!   R1421). That card is Created, so the same Cry draws it.
 
 use jackioh_engine::effects::{ForEachCardArgs, for_each_card, shuffle_random_from_catalog};
 use jackioh_engine::prelude::*;

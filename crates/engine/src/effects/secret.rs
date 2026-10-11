@@ -122,7 +122,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
 pub fn guess_secret(args: GuessSecretArgs) -> Effect {
     Effect::new("guessSecret", move |ctx| {
         let controller = ctx.controller;
-        let Some(record) = secret_of(&ctx.state, &args.secret_id) else {
+        let Some(record) = secret_of(ctx.state, &args.secret_id) else {
             return;
         };
         let (owner, choice) = (record.owner, record.choice);
@@ -167,7 +167,7 @@ pub fn guess_secret(args: GuessSecretArgs) -> Effect {
 /// Mind already did. A secret with no record is already gone: nothing happens.
 pub fn resolve_secret(args: ResolveSecretArgs) -> Effect {
     Effect::new("resolveSecret", move |ctx| {
-        let Some(record) = secret_of(&ctx.state, &args.secret_id) else {
+        let Some(record) = secret_of(ctx.state, &args.secret_id) else {
             return;
         };
         let (owner, choice, hidden) = (record.owner, record.choice, record.revealed != Some(true));
