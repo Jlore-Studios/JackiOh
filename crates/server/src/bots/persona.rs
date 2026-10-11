@@ -233,6 +233,12 @@ impl EmotePersona {
         self.persona
     }
 
+    /// R677: a Glitch's swap moved the bot to the other engine seat, which its triggers read from now.
+    /// The server's driver alone calls it; practice has no swap to follow.
+    pub fn set_seat(&mut self, seat: PlayerId) {
+        self.seat = seat;
+    }
+
     /// R645's caps and R643's shared limiter (TS `admit`); a blocked emote is dropped, never queued.
     fn admit(
         &mut self,

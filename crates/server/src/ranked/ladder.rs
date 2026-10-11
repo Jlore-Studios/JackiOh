@@ -562,6 +562,21 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
     }
 }
 
+/// R1444: the rank a ladder bot's rating calls for among the season's placed players' ratings
+/// (`others`), which the match screen shows for a bot in place of the ladder rank it never holds
+/// (R610): R606's target, read as a Grape place on the bottom floor. Never Jlorious, a place on the
+/// leaderboard a bot is kept off.
+pub fn called_for_rank(rating: f64, others: &[f64]) -> VisibleRank {
+    let place = place_of(target_ladder(&percentile_of(rating, others)));
+    VisibleRank::Grape {
+        tier: place.tier,
+        division: place.division,
+        pips: place.pips,
+        pips_per_division: RANK_PIPS_PER_DIVISION,
+        floor: grape_at(0, GrapeTier::Rotten),
+    }
+}
+
 /// A season's best, as the profile's badge shows it (R607): a Jlorious position or a Grape division.
 /// Serialised as `{ "seasonId", "tier": "jlorious", "position" }` or
 /// `{ "seasonId", "tier": <grape>, "division" }`.

@@ -34,7 +34,7 @@ use crate::db::store::{
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
-    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
+    VisibleRank, VisibleRankWire, apply_ranked_game, called_for_rank, fresh_rank, jlorious_order, peak_badge, percentile_of,
     place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
@@ -855,20 +855,34 @@ pub async fn match_ranks(
         .ranked_standings(&build_season_id(&SeasonDeps::current()))
         .await?;
     let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
+    // R1444: a ladder bot holds no season row (R610), so its seat shows the rank its rating calls
+    // for, as a player's would be shown: nothing on the screen tells the two apart.
+    let bots = (
+        tx.ranked_bot(&row.players.0).await?,
+        tx.ranked_bot(&row.players.1).await?,
+    );
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
-    let seat = |profile_id: &str| SeatRank {
+    let placed: Vec<f64> = standings
+        .iter()
+        .filter(|standing| standing.rank.ladder.is_some())
+        .map(|standing| standing.rating)
+        .collect();
+    let seat = |profile_id: &str, bot: &Option<BotRating>| SeatRank {
         profile_id: profile_id.to_string(),
         username: username_in(&usernames, profile_id),
-        rank: rank_in(&standings, &jlorious, profile_id),
+        rank: match bot {
+            Some(bot) => called_for_rank(bot.glicko.rating, &placed),
+            None => rank_in(&standings, &jlorious, profile_id),
+        },
         you: profile_id == viewer_id,
     };
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.
     Ok(Some(MatchRanksBody {
         ranked: row.ranked.unwrap_or(false),
         seats: PerPlayer {
-            p1: seat(&row.players.0),
-            p2: seat(&row.players.1),
+            p1: seat(&row.players.0, &bots.0),
+            p2: seat(&row.players.1, &bots.1),
         },
     }))
 }
