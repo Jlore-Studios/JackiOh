@@ -4386,6 +4386,16 @@
         }
       }
     },
+    "655": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-11T23:20:49Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
+    },
     "665": {
       "cleared": {
         "at": "2026-10-11T16:44:48Z",
