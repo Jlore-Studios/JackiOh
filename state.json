@@ -4457,6 +4457,13 @@
     "667": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T20:30:25Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Fails 'one place': docs/architecture.md and docs/v0.3.0/SURFACE.md sit outside crates/server; the server change itself is small and was prototyped green"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
