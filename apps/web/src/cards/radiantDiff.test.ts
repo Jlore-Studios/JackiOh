@@ -114,8 +114,18 @@ describe("R277 the word diff", () => {
     // (both modes, no choice). Balance patch 1 gives Classic #28 Second Wind's base face the same
     // minimum price as its Radiant face, so its Radiant face is its base text less the exile
     // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
-    // end-of-turn Tribute (R1225).
-    expect(silent).toEqual(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034", "meditative-089"]);
+    // end-of-turn Tribute (R1225). So are #22.1 Fortify Mind's (no penalty when discarded, R862) and
+    // #48 Tranquility's (it does not end the turn, R1021).
+    expect(silent).toEqual([
+      "core-055",
+      "classic-028",
+      "classic-060",
+      "classicplus-005",
+      "classicplus-034",
+      "meditative-022-1",
+      "meditative-048",
+      "meditative-089",
+    ]);
   });
 });
 
