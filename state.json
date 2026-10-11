@@ -163,26 +163,6 @@
     }
   },
   "items": {
-    "105": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T03:54:56Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "107": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T04:15:15Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
     "108": {
       "action": "build",
       "died": 0,
@@ -218,55 +198,6 @@
       "started_at": "2026-10-03T23:48:56Z",
       "stop_requested": false
     },
-    "115": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T05:54:47Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "117": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T06:21:32Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "118": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T19:54:35Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_tier": "medium",
-      "pr": 169,
-      "provider": "muse",
-      "queued_at": "2026-10-03T19:09:21Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37147970854",
-      "started_at": "2026-10-03T19:28:28Z",
-      "stop_requested": false
-    },
-    "123": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T07:00:33Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
     "124": {
       "died": 0,
       "failures": 0,
@@ -280,22 +211,6 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37118408088",
       "started_at": "2026-10-03T11:03:50Z",
-      "stop_requested": false
-    },
-    "125": {
-      "action": "build",
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T16:53:57Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "provider": "devin",
-      "queued_at": "2026-10-03T07:02:37Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37138634387",
-      "started_at": "2026-10-03T16:56:08Z",
       "stop_requested": false
     },
     "126": {
@@ -335,24 +250,6 @@
       "pending_request": false,
       "queued_at": "2026-10-03T07:54:57Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "136": {
-      "closed_at": "2026-10-03T10:21:36Z",
-      "died": 0,
-      "failures": 0,
-      "feedback_since": "2026-10-03T08:05:57Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 85,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-2",
-      "queued_at": "2026-10-03T08:05:51Z",
-      "run_id": "37108515379",
-      "source": "",
-      "started_at": "2026-10-03T08:05:57Z",
       "stop_requested": false
     },
     "141": {
@@ -476,17 +373,6 @@
       "started_at": "2026-10-04T16:04:47Z",
       "stop_requested": false
     },
-    "145": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "revise",
-      "pending_request": false,
-      "queued_at": "2026-10-03T14:43:56Z",
-      "requested_by": "MaxGoetzmann",
-      "source": "request",
-      "stop_requested": false
-    },
     "148": {
       "asks": [
         "c:5974504575"
@@ -514,16 +400,6 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37188262170",
       "started_at": "2026-10-04T08:15:57Z",
-      "stop_requested": false
-    },
-    "152": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T15:47:33Z",
-      "requested_by": "an assignment",
       "stop_requested": false
     },
     "153": {
@@ -672,22 +548,6 @@
       "started_at": "2026-10-04T06:49:01Z",
       "stop_requested": false
     },
-    "169": {
-      "action": "review",
-      "closed_at": "2026-10-03T22:36:36Z",
-      "difficulty": "medium",
-      "failures": 3,
-      "feedback_since": "2026-10-03T19:28:28Z",
-      "issue": 118,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-03T19:54:56Z",
-      "run_id": "37150013823",
-      "started_at": "2026-10-03T20:01:57Z",
-      "stop_requested": false
-    },
     "170": {
       "action": "build",
       "died": 0,
@@ -761,34 +621,6 @@
       "run_id": "37213576321",
       "source": "conflict",
       "started_at": "2026-10-04T15:38:46Z",
-      "stop_requested": false
-    },
-    "180": {
-      "action": "review",
-      "ci_fixes": 1,
-      "ci_reruns": {
-        "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7": 1
-      },
-      "ci_run_id": 37165297553,
-      "ci_sha": "fbe6f288c7758cc6e5ffb0cbdc573f800cf39ea7",
-      "closed_at": "2026-10-04T01:38:50Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T00:55:23Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 45,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-04T01:27:48Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37167697193",
-      "source": "",
-      "started_at": "2026-10-04T01:23:30Z",
       "stop_requested": false
     },
     "181": {
@@ -2483,40 +2315,6 @@
       "stop_requested": false,
       "strikes": 0
     },
-    "45": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T00:32:58Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_tier": "medium",
-      "pr": 180,
-      "provider": "muse",
-      "queued_at": "2026-10-03T19:11:19Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37157610135",
-      "started_at": "2026-10-03T22:13:10Z",
-      "stop_requested": false
-    },
-    "46": {
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-03T04:51:26Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "36806498901",
-      "started_at": "2026-10-01T02:45:28Z",
-      "stop_requested": true,
-      "stopped_at": "2026-10-03T04:51:43Z",
-      "stopped_by": "MaxGoetzmann"
-    },
     "49": {
       "action": "build",
       "died": 0,
@@ -2689,16 +2487,6 @@
       "stop_requested": false,
       "strikes": 0
     },
-    "51": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "queued_at": "2026-10-01T02:51:57Z",
-      "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
     "510": {
       "action": "build",
       "asks": [],
@@ -2855,20 +2643,6 @@
       "requested_by": "squishy-squooby",
       "run_id": "37839470208",
       "started_at": "2026-10-08T20:27:19Z",
-      "stop_requested": false
-    },
-    "52": {
-      "died": 1,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-03T05:54:02Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37088366492",
-      "started_at": "2026-10-03T02:02:52Z",
       "stop_requested": false
     },
     "520": {
@@ -3088,22 +2862,6 @@
       "run_id": "37875370274",
       "started_at": "2026-10-09T02:37:15Z",
       "stop_requested": false
-    },
-    "53": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 1,
-      "kind": "revise",
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-01T13:39:51Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "37062549920",
-      "source": "request",
-      "started_at": "2026-10-02T20:45:26Z",
-      "stop_requested": true,
-      "stopped_at": "2026-10-03T04:51:49Z",
-      "stopped_by": "MaxGoetzmann"
     },
     "530": {
       "action": "build",
@@ -3558,28 +3316,23 @@
     },
     "558": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T09:55:46Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 633,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-08T14:39:00Z",
       "requested_by": "squishy-squooby",
       "run_id": "38030905273",
       "started_at": "2026-10-10T06:26:37Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "559": {
       "action": "build",
@@ -3845,49 +3598,39 @@
     },
     "601": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T14:57:30Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 626,
       "provider": "agy",
-      "question": "",
       "run_id": "38024930294",
       "started_at": "2026-10-10T04:41:57Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "602": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T14:57:38Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 642,
       "provider": "agy",
-      "question": "",
       "run_id": "38055395433",
       "started_at": "2026-10-10T13:22:13Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "603": {
       "action": "plan",
@@ -4009,7 +3752,6 @@
     },
     "620": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T04:57:05Z",
@@ -4022,26 +3764,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T04:57:08Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 630,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-10T01:55:13Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38028687442",
       "started_at": "2026-10-10T05:48:02Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "621": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T05:21:40Z",
@@ -4054,26 +3791,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T05:21:42Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 629,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-10T01:54:05Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38028008563",
       "started_at": "2026-10-10T05:36:31Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "622": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T04:38:48Z",
@@ -4086,26 +3818,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T04:38:51Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 632,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-10T01:52:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38026639251",
       "started_at": "2026-10-10T05:11:58Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "623": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T04:15:31Z",
@@ -4118,26 +3845,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T04:15:34Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 628,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-10T01:51:55Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38026588728",
       "started_at": "2026-10-10T05:10:57Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "626": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T05:34:57Z",
         "by": "`gemini` (medium) twice",
@@ -4160,33 +3882,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38027331961",
-      "self_check_findings": [],
       "started_at": "2026-10-10T05:25:27Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38024930294",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38027331961",
-            "tier": "medium"
-          }
-        ],
-        "sha": "f247dfb180e251164a72bf861fec9a08a2769df8",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "628": {
       "cleared": {
@@ -4200,30 +3897,10 @@
       "feedback_since": "2026-10-10T05:10:57Z",
       "issue": 623,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38026588728",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f1a6d6eee43ca35996263455846d90060bdc524b",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "629": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T06:05:02Z",
         "by": "`gemini` (medium) twice",
@@ -4246,33 +3923,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38029187617",
-      "self_check_findings": [],
       "started_at": "2026-10-10T05:58:13Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38028008563",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38029187617",
-            "tier": "medium"
-          }
-        ],
-        "sha": "9d225969ab04c94271bb4ff2942c0d18a1078a67",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "63": {
       "died": 0,
@@ -4301,30 +3953,10 @@
       "feedback_since": "2026-10-10T05:48:02Z",
       "issue": 620,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38028687442",
-            "tier": "strong"
-          }
-        ],
-        "sha": "4449666beba78df665d3b69f3eb4ce827cc22080",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "632": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T07:44:12Z",
         "by": "`claude` (strong)",
@@ -4341,48 +3973,14 @@
       "interruptions": 0,
       "issue": 622,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-10T07:17:33Z",
       "run_id": "38034038037",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-10T07:20:13Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/game/net.test.ts",
-            "apps/web/src/game/net.ts",
-            "spec/09-architecture.md",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "42aa28b0b8d071a37d10591ac803fbbb95112ad5",
-          "main": "13b096c2eb6df8cd7e334386cd0215a737aa1ef1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38034038037",
-            "tier": "medium"
-          }
-        ],
-        "sha": "fa08b2cdc744464874041b4d692c9d5d6e27f0a4",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "633": {
       "cleared": {
@@ -4396,49 +3994,25 @@
       "feedback_since": "2026-10-10T06:26:37Z",
       "issue": 558,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38030905273",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c572f8addaf3f9a8a2fed9b8a1c7787996882710",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "637": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T13:42:31Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 646,
       "provider": "claude-3",
-      "question": "",
       "run_id": "38065488953",
       "started_at": "2026-10-10T15:55:00Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "638": {
       "action": "build",
@@ -4467,7 +4041,6 @@
     },
     "642": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T18:22:16Z",
         "by": "`gemini` (medium), `claude` (strong)",
@@ -4483,51 +4056,21 @@
       "interruptions": 0,
       "issue": 602,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_at": "2026-10-10T15:28:08Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-10T16:27:54Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38072995419",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-10T17:45:43Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini",
-          "claude"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38061748168",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "38072995419",
-            "tier": "strong"
-          }
-        ],
-        "sha": "907dd5f94ab6fb46e37786365f3cabb10bbb9370",
-        "tiers": {
-          "claude": "strong",
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "645": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-10T17:02:03Z",
@@ -4540,24 +4083,19 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-10T17:02:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 651,
       "provider": "claude-3",
-      "question": "",
       "run_id": "38087413077",
       "started_at": "2026-10-10T21:24:03Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "646": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-10T23:25:59Z",
         "by": "`claude` (strong)",
@@ -4574,45 +4112,14 @@
       "interruptions": 0,
       "issue": 637,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-10T22:40:26Z",
       "run_id": "38092264793",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-10T22:40:43Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "cb28a0fe158fe6ffc152111515e2e5cb15ab6e8f",
-          "main": "7e38e0ae749114d10556318efdbcbdce8457b4c0"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38092264793",
-            "tier": "strong"
-          }
-        ],
-        "sha": "edaeae4184628943b3d29958da05cef015d3d732",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "647": {
       "failures": 0,
@@ -4636,26 +4143,7 @@
       "feedback_since": "2026-10-10T21:24:03Z",
       "issue": 645,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38087413077",
-            "tier": "strong"
-          }
-        ],
-        "sha": "31f2a468bc9cd4c06853de785d508589bbeef2c1",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "653": {
       "action": "plan",
@@ -4687,23 +4175,6 @@
       "stop_requested": false,
       "taken_asks": []
     },
-    "68": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T16:59:04Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "provider": "devin",
-      "queued_at": "2026-10-03T18:32:16Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37145207692",
-      "started_at": "2026-10-03T18:43:18Z",
-      "stop_requested": false
-    },
     "75": {
       "action": "build",
       "died": 0,
@@ -4721,21 +4192,6 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37143921203",
       "started_at": "2026-10-03T18:22:45Z",
-      "stop_requested": false
-    },
-    "85": {
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 136,
-      "provider": "claude-2",
-      "queued_at": "2026-10-03T01:28:55Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37096515767",
-      "started_at": "2026-10-03T04:26:33Z",
       "stop_requested": false
     },
     "88": {
@@ -8484,9 +7940,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-10T04:01:36Z",
-    "dropped": 6,
-    "shed": 35
+    "at": "2026-10-11T04:22:43Z",
+    "dropped": 19,
+    "shed": 18
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
