@@ -50,6 +50,7 @@ mod tests {
     const RCTA: &str = "meditative-035"; // Give a non-CN permanent the CN tag (aim: help).
     const HIT_JOB: &str = "core-016"; // Destroy target unit, no tag filter.
     const VANILLA: &str = "core-008"; // Mr. Vanilla: (1) 4/4 Human, neither CN nor KY.
+    const MENACE: &str = "core-019"; // Midrange Menace: (3) 9/9 with no tag, so not Human.
     const FILLER: &str = "core-005";
     const TRIBUTE_A: &str = "core-011"; // Tempo Timmy: (1) 3/3, tribute fodder.
     const TRIBUTE_B: &str = "core-020"; // Pointmaster: (2) 7/1, tribute fodder.
@@ -113,8 +114,9 @@ mod tests {
         s.expect_refused(|s| {
             s.play(BIGOT, json!({ "targets": [{ "pick": "instance", "instanceId": felinor }] }))
         });
-        // Radiant Bigot's destroy_all over notTags [Human] passes it by, killing only the victim.
-        let mut s = hunting("felinor-bigot-r", BIGOT, true, json!([{ "def": VANILLA }]));
+        // Radiant Bigot's destroy_all over notTags [Human] passes it by, killing only the victim
+        // (untagged, so not Human: Mr. Vanilla is Human and Bigot spares it).
+        let mut s = hunting("felinor-bigot-r", BIGOT, true, json!([{ "def": MENACE }]));
         s.play(BIGOT, json!({}));
         assert!(s.unit(P2, 1).is_some(), "the Felinor stands");
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
@@ -157,21 +159,32 @@ mod tests {
         let after = s.unit(P2, 1).expect("stands");
         assert!(tags_of(s.state(), &after).contains(&Tag::Cn), "it is CN now");
         let before = s.stats(&felinor);
+        let cost_before = cost_now(s.state(), s.card(&felinor));
         let mark = s.events().len();
         s.play(GAOKAO, json!({}));
         // Gaokao's destroy (notTags [CN, KY], harm) still passes the CN Felinor by …
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
         assert!(s.unit(P2, 2).is_none(), "the Vanilla is destroyed");
         // … and Gaokao's Buffs (tags [CN, KY], help) still reach it.
-        let upgraded: Vec<_> = s.events()[mark..]
+        let upgraded: Vec<TuningChange> = s.events()[mark..]
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Upgraded { instance_id, .. } if instance_id == &felinor => Some(()),
+                GameEvent::Upgraded { instance_id, change, .. } if instance_id == &felinor => Some(change.clone()),
                 _ => None,
             })
             .collect();
         assert_eq!(upgraded.len(), 2, "two Buffs land on the CN Felinor");
-        assert!(s.stats(&felinor).attack > before.attack, "it grew");
+        // A Buff improves one row drawn at random (stats, cost or a keyword, B3.4), so each one
+        // changed something and the card grew, whichever rows the draws took.
+        assert!(upgraded.iter().all(|change| *change != TuningChange::None), "{upgraded:?}");
+        let after = s.stats(&felinor);
+        assert!(
+            after.attack > before.attack
+                || after.max_health > before.max_health
+                || after.keywords.len() > before.keywords.len()
+                || cost_now(s.state(), s.card(&felinor)) < cost_before,
+            "it grew: {before:?} → {after:?}"
+        );
     }
 
     #[test]
