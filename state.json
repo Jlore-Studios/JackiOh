@@ -4452,6 +4452,13 @@
     "668": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T19:56:25Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "'One place' fails: the guard is in crates/tools, the done state in training/ docs, and the stale comment the issue names is in crates/ai/src (rule 5)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
