@@ -69,6 +69,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::{ID, THEIR_LAST, YOUR_LAST};
     use crate::js;
+    use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
     use jackioh_engine::wire::PlayerId::{P1, P2};
 
