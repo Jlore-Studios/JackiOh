@@ -5,8 +5,14 @@
   "labels_synced": "8bef4e524ee56c5f",
   "last_run": null,
   "last_sweep": {
-    "at": "2026-10-11T18:48:52Z",
-    "notes": [],
+    "at": "2026-10-11T18:59:26Z",
+    "notes": [
+      "deleted the retired label `method:manual`",
+      "deleted the retired label `method:use-bot`",
+      "deleted the retired label `squishy:needs-review`",
+      "deleted the retired label `large patch`",
+      "deleted the retired label `Info`"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "providers": {},
