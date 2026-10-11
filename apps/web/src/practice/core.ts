@@ -28,10 +28,12 @@
 // Replays (R768). A free game that has just ended (not a tutorial lesson, and not one Glitch voided,
 // R679) is kept in the same store, the newest PRACTICE_REPLAYS_KEPT of them: its config, its log,
 // the catalog version, the final state's hash, the seat the human ended in and a summary for a list.
-// `replays` answers the summaries, newest first, each marked unavailable with part 1's reason when it
-// was played on another catalog or no longer folds to its hash; `replay` answers a page of the human's
-// steps, `viewFor` of the seat the human played at each step (R677), and the total. Both are refused
-// while a game is in progress. Like the save, a kept game never crosses to the page: a response holds
+// `replays` answers the summaries, newest first, and folds none of them, which would stall the worker
+// game after game: each is marked unavailable with part 1's reason when it was played on another
+// catalog, or when opening it has found it no longer folds to its hash; `replay` answers a page of the
+// human's steps, `viewFor` of the seat the human played at each step (R677), and the total, from a
+// fold the worker holds for the last PRACTICE_REPLAYS_CACHED games opened. Both are refused while a
+// game is in progress. Like the save, a kept game never crosses to the page: a response holds
 // summaries and views, never the log, the seed, the decks or a state.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
@@ -58,7 +60,7 @@ import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/e
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, newestShippedSet, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_KEPT } from "./config.ts";
+import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
@@ -360,8 +362,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
   let game: PracticeGame | null = null;
   /** R768: each kept game's verdict by number: null when it folds, else part 1's refusal. */
   const verdicts = new Map<number, ReplayRefusal | null>();
-  /** The kept game opened last, so paging through it folds it once. */
-  let opened: { game: number; open: ReplayOpen } | null = null;
+  /** The last PRACTICE_REPLAYS_CACHED kept games opened, by number, the one opened longest ago first. */
+  const opened = new Map<number, ReplayOpen>();
 
   function current(): PracticeGame {
     if (game === null) throw new Error("no practice game is running: send start first");
@@ -434,10 +436,16 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     saves.writeReplays([...kept, replay].slice(-PRACTICE_REPLAYS_KEPT));
   }
 
-  /** R768: a kept game folded once and checked against its catalog and hash; cached by its number. */
+  /** R768: a kept game folded once and checked against its catalog and hash; held by its number. */
   function openReplay(replay: PracticeReplay): ReplayOpen {
     const gameId = replay.summary.game;
-    if (opened?.game === gameId) return opened.open;
+    const held = opened.get(gameId);
+    if (held !== undefined) {
+      // Opened again: it moves to the newest end, so it is the last to be dropped.
+      opened.delete(gameId);
+      opened.set(gameId, held);
+      return held;
+    }
     let open: ReplayOpen;
     if (replay.catalog !== CATALOG_VERSION) {
       // Refused before any deck is dealt: another catalog may lack a preset the config names.
@@ -451,7 +459,12 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       }
     }
     verdicts.set(gameId, open.kind === "ready" ? null : open.reason);
-    opened = { game: gameId, open };
+    opened.set(gameId, open);
+    if (opened.size > PRACTICE_REPLAYS_CACHED) {
+      // A Map keeps insertion order, so its first key is the game opened longest ago.
+      const oldest = opened.keys().next().value;
+      if (oldest !== undefined) opened.delete(oldest);
+    }
     return open;
   }
 
@@ -459,13 +472,10 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     if (game !== null && game.state.result === null) throw new Error("replays are not available while a practice game is in progress");
   }
 
+  /** R768: no kept game is folded to be listed; one unopened is listed unavailable only for its catalog. */
   function listReplays(): PracticeReplayListing[] {
     return [...(env.saves?.readReplays() ?? [])].reverse().map((replay) => {
-      let verdict = verdicts.get(replay.summary.game);
-      if (verdict === undefined) {
-        const open = openReplay(replay);
-        verdict = open.kind === "ready" ? null : open.reason;
-      }
+      const verdict = replay.catalog === CATALOG_VERSION ? (verdicts.get(replay.summary.game) ?? null) : "earlier_patch";
       return {
         ...replay.summary,
         portraits: { ...replay.summary.portraits },
