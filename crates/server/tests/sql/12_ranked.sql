@@ -472,4 +472,38 @@ begin
 end $$;
 rollback;
 
+\echo '### R1412: alt-win and won-by-effect, the Meditative endings, are results and rated games (0031) ###'
+begin;
+insert into public.seasons (id, patch_version, started_at) values ('v0.1', 'v0.1.1', now());
+do $$
+declare
+  ending text;
+  results_check text;
+begin
+  -- Both endings (R850) are rated-game reasons of a match row.
+  foreach ending in array array['alt-win', 'won-by-effect'] loop
+    insert into public.rated_games (id, kind, season_id, patch_version, catalog_version,
+      p1_profile_id, p1_bot_id, p1_pilot, p1_before, p1_after, p1_rank_before, p1_rank_after,
+      p2_profile_id, p2_bot_id, p2_pilot, p2_before, p2_after, p2_rank_before, p2_rank_after,
+      winner_side, reason, ended_at)
+      values (gen_random_uuid(), 'match', 'v0.1', 'v0.3.5', 'v0.3.5',
+        '11111111-1111-1111-1111-111111111111', null, 'human',
+        '{}'::jsonb, '{}'::jsonb, null, null,
+        '22222222-2222-2222-2222-222222222222', null, 'human',
+        '{}'::jsonb, '{}'::jsonb, null, null,
+        0, ending, now());
+  end loop;
+  -- results_reason_check lists both, and still not `voided` (R679).
+  select pg_get_constraintdef(oid) into results_check
+    from pg_constraint where conname = 'results_reason_check';
+  if results_check not like '%alt-win%' or results_check not like '%won-by-effect%' then
+    raise exception 'FAIL (R1412): results_reason_check misses an ending: %', results_check;
+  end if;
+  if results_check like '%voided%' then
+    raise exception 'FAIL (R1412): results_reason_check admits voided: %', results_check;
+  end if;
+  raise notice 'OK (R1412): alt-win and won-by-effect are recorded, voided still is not';
+end $$;
+rollback;
+
 \echo '### ALL RANKED CHECKS RAN ###'

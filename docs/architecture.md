@@ -618,7 +618,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
-   `0029_play_telemetry.sql` → `0030_meditative_set.sql` — and records them in `app.migrations`. Expected
+   `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` — and records them in
+   `app.migrations`. Expected
    result: 28 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -656,7 +657,9 @@ step that is not yet implemented says which BUILD task delivers it.
    the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server
    a deploy replaces. 0030 comes with the patch that ships the
    Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
-   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411).
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411). 0031 puts the results' and the
+   rated games' reason checks back with the set's two endings, `alt-win` and `won-by-effect`, so a game the
+   set ends records its result (R1412).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
