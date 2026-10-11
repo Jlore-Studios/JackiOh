@@ -8321,9 +8321,9 @@
   "suggest": {
     "asks": [],
     "last_run": "2026-10-11T16:54:27Z",
-    "provider": "devin",
+    "provider": null,
     "requested": false,
-    "run_id": "38157346883",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
