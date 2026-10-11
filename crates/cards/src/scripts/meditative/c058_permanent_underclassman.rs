@@ -73,6 +73,8 @@ mod tests {
 
     const UNDERCLASSMAN: &str = "meditative-058";
     const FILLER: &str = "core-005";
+    /// (1) 4/4 Unit with no text: what fills the board.
+    const VANILLA: &str = "core-008";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])
@@ -113,11 +115,11 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
-    /// The granted lines on p1's lane-1 Unit, as the client reads them.
-    fn granted_lines(s: &Scenario) -> Vec<String> {
+    /// The granted lines on p1's Unit in `lane`, as the client reads them.
+    fn granted_lines(s: &Scenario, lane: usize) -> Vec<String> {
         let view: Value =
             serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
-        view["you"]["units"][0]["grants"]
+        view["you"]["units"][lane - 1]["grants"]
             .as_array()
             .cloned()
             .unwrap_or_default()
@@ -134,10 +136,13 @@ mod tests {
             crate::register_all();
             let mut s = casting("underclassman", false);
             s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
-            let summoned = s.unit("p1", 1).expect("the summoned Unit");
+            // The Underclassman stands in lane 1, so the summon takes the leftmost open zone (R64).
+            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UNDERCLASSMAN.to_string()));
+            assert!(granted_lines(&s, 1).is_empty(), "the Underclassman itself gains nothing");
+            let summoned = s.unit("p1", 2).expect("the summoned Unit");
             assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(1));
             assert!(!summoned.radiant);
-            let lines = granted_lines(&s);
+            let lines = granted_lines(&s, 2);
             assert_eq!(lines.len(), 1);
             assert!(lines[0].starts_with("Death:"), "{lines:?}");
             // One Book reaches the controller's hand when it dies.
@@ -150,9 +155,10 @@ mod tests {
             crate::register_all();
             let mut s = casting("underclassman-radiant", true);
             s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
-            let summoned = s.unit("p1", 1).expect("the summoned Unit");
+            let summoned = s.unit("p1", 2).expect("the summoned Unit");
+            assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(1));
             assert!(summoned.radiant);
-            let lines = granted_lines(&s);
+            let lines = granted_lines(&s, 2);
             assert_eq!(lines.len(), 1);
             kill(&mut s, &summoned);
             let added = books(&s);
@@ -167,14 +173,16 @@ mod tests {
                 "seed": "underclassman-full",
                 "p1": {
                     "hand": [{ "def": UNDERCLASSMAN }, FILLER],
-                    "field": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
+                    "field": [VANILLA, VANILLA, VANILLA, VANILLA],
                     "library": filler(4),
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
-            // Six units stand; the Underclassman takes the last lane and its summon fizzles.
-            s.play(UNDERCLASSMAN, json!({ "zone": 7 }));
-            assert_eq!(s.state().players.p1.units.iter().filter(|lane| lane.is_some()).count(), 7);
+            // Four units stand; the Underclassman takes the last lane and its summon fizzles.
+            s.play(UNDERCLASSMAN, json!({ "zone": UNIT_ZONES }));
+            let standing: Vec<String> =
+                (1..=UNIT_ZONES).filter_map(|lane| s.unit("p1", lane).map(|unit| unit.def_id)).collect();
+            assert_eq!(standing, [VANILLA, VANILLA, VANILLA, VANILLA, UNDERCLASSMAN].map(str::to_string));
             let view: Value =
                 serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
             let units = view["you"]["units"].as_array().cloned().unwrap_or_default();

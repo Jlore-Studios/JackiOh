@@ -108,11 +108,11 @@ mod tests {
         s.hand("p1").into_iter().filter(|card| card.def_id.starts_with("t-")).collect()
     }
 
-    /// The granted lines on p1's lane-1 Unit, as the client reads them.
-    fn granted_lines(s: &Scenario) -> Vec<String> {
+    /// The granted lines on p1's Unit in `lane`, as the client reads them.
+    fn granted_lines(s: &Scenario, lane: usize) -> Vec<String> {
         let view: Value =
             serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
-        view["you"]["units"][0]["grants"]
+        view["you"]["units"][lane - 1]["grants"]
             .as_array()
             .cloned()
             .unwrap_or_default()
@@ -129,14 +129,18 @@ mod tests {
             crate::register_all();
             let mut s = casting("upperclassman", false);
             s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
-            let summoned = s.unit("p1", 1).expect("the summoned Unit");
+            // The Upperclassman stands in lane 1, so the summon takes the leftmost open zone (R64).
+            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UPPERCLASSMAN.to_string()));
+            assert!(granted_lines(&s, 1).is_empty(), "the Upperclassman itself gains nothing");
+            let summoned = s.unit("p1", 2).expect("the summoned Unit");
             assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(4));
             assert!(!summoned.radiant);
-            assert_eq!(granted_lines(&s).len(), 1);
+            assert_eq!(granted_lines(&s, 2).len(), 1);
             kill(&mut s, &summoned);
             let made = fused(&s);
             assert_eq!(made.len(), 1);
-            let def = crate::card_def(&made[0].def_id);
+            // A fused definition is transient, held in the state, not the catalog (R77).
+            let def = def_of(Some(s.state()), &made[0].def_id).clone();
             assert!(!def.token, "the fused card is a non-token (R102)");
             assert_eq!(def.type_, CardType::Spell, "the Book comes first, so the fused type falls back to it");
             let ingredients: Vec<String> = def
@@ -158,7 +162,8 @@ mod tests {
             crate::register_all();
             let mut s = casting("upperclassman-radiant", true);
             s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
-            let summoned = s.unit("p1", 1).expect("the summoned Unit");
+            let summoned = s.unit("p1", 2).expect("the summoned Unit");
+            assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(4));
             assert!(summoned.radiant);
             kill(&mut s, &summoned);
             let made = fused(&s);
