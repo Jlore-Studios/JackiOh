@@ -5,15 +5,17 @@
 //!   3. the mulligan keeps the cheap cards.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//!   5. the exact lethal solver, verified on every determinization.
+//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, R1444).
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
 //!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
-//!      and the best mean wins.
+//!      and the best mean wins (a style with a temperature picks among them, R1444).
 //!   7. a fallback when nothing could be scored.
 //!
 //! Only the first action of the chosen line is played; the caller asks again after it, so the AI
 //! re-plans after every action and a plan that only one sampled world liked never gets past step one.
 //! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors.
+//! `decide_styled` is the same with an `AiStyle` (R1444): `decide` is it at `AI_STYLE_EXACT`, which
+//! takes no draw of its own, so `decide`'s decisions and cursor are what they were before styles.
 //!
 //! Port of `packages/ai/src/decide.ts` (SURFACE §9). TS's `try`/`catch` is `catch_unwind` (an engine
 //! invariant is a panic in Rust, SURFACE §4.4.9). TS made the node counter after the determinizations;
@@ -26,7 +28,7 @@ use indexmap::IndexMap;
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for};
 
 use crate::candidates::{action_key, candidate_actions};
-use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH};
+use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
 use crate::determinize::{DeterminizeOptions, determinize};
 use crate::lethal::find_lethal;
 use crate::mulligan::mulligan_keep_shaped;
@@ -34,7 +36,9 @@ use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
 use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter};
-use crate::types::{AiOptions, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy};
+use crate::types::{
+    AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
+};
 
 fn quiet_stats() -> SearchStats {
     SearchStats {
@@ -122,6 +126,42 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
     entries
 }
 
+/// R1444: whether this decision passes over the lethal line the solver found. A style that never
+/// misses takes no draw.
+fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
+    style.missed_lethal_chance > 0.0 && rng.chance(style.missed_lethal_chance)
+}
+
+/// R1444: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
+/// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
+/// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
+/// finalist whose running sum of weights passes it.
+pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
+    let mut best_index = 0usize;
+    for (index, mean) in means.iter().enumerate() {
+        if means.get(best_index).is_some_and(|best| mean > best) {
+            best_index = index;
+        }
+    }
+    if temperature <= 0.0 || means.len() < 2 {
+        return best_index;
+    }
+    let best = means.get(best_index).copied().unwrap_or(0.0);
+    let weights: Vec<f64> = means
+        .iter()
+        .map(|mean| ((mean - best) / temperature).exp())
+        .collect();
+    let draw = rng.next() * weights.iter().sum::<f64>();
+    let mut running = 0.0;
+    for (index, weight) in weights.iter().enumerate() {
+        running += weight;
+        if running > draw {
+            return index;
+        }
+    }
+    best_index
+}
+
 /// What the guarded body decided, before the stats are read off the counter.
 enum Plan {
     /// Answered at once, with quiet stats.
@@ -148,6 +188,7 @@ fn plan(
     state: &GameState,
     seat: PlayerId,
     budget: SearchBudget,
+    style: &AiStyle,
     rng: &mut Rng,
     counter: &dyn NodeCounter,
     scratch: &mut Scratch,
@@ -183,7 +224,8 @@ fn plan(
         return Plan::Immediate(only.clone(), DecisionReason::Forced);
     }
 
-    // The only draws decide ever takes from options.rng.
+    // The determinizations' draws: with a style's own two (passing over lethal, picking a
+    // finalist), the only draws decide ever takes from options.rng.
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
@@ -191,9 +233,10 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal, verified on every determinization.
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1444).
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
+        && !passes_over_lethal(style, rng)
     {
         return Plan::Searched {
             action: first_lethal,
@@ -302,17 +345,13 @@ fn plan(
         scored_on += 1;
     }
 
-    let mut best_index = 0usize;
-    let mut best_mean = totals.first().copied().unwrap_or(0.0) / f64::from(scored_on);
-    for index in 1..finalists.len() {
-        let mean = totals.get(index).copied().unwrap_or(0.0) / f64::from(scored_on);
-        if mean > best_mean {
-            best_mean = mean;
-            best_index = index;
-        }
-    }
+    let means: Vec<f64> = (0..finalists.len())
+        .map(|index| totals.get(index).copied().unwrap_or(0.0) / f64::from(scored_on))
+        .collect();
+    let chosen_index = pick_finalist(&means, style.temperature, rng);
+    let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
-    let chosen = finalists.get(best_index).map(|entry| entry.line);
+    let chosen = finalists.get(chosen_index).map(|entry| entry.line);
     let Some((chosen, action)) =
         chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
     else {
@@ -343,13 +382,24 @@ fn plan(
         action,
         reason,
         line: chosen.actions.clone(),
-        score: best_mean,
+        score: chosen_mean,
         stopped_by: Some(stopped_by),
     }
 }
 
 /// The AI's one entry point. `None` when !ai_to_act(state, seat). Never panics out.
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision> {
+    decide_styled(state, seat, options, &AI_STYLE_EXACT)
+}
+
+/// `decide` under `style` (R1444): the ladder bots' entry point. At `AI_STYLE_EXACT` it is
+/// `decide`, draw for draw.
+pub fn decide_styled(
+    state: &GameState,
+    seat: PlayerId,
+    options: &mut AiOptions,
+    style: &AiStyle,
+) -> Option<Decision> {
     match catch_unwind(AssertUnwindSafe(|| ai_to_act(state, seat))) {
         Ok(true) => {}
         _ => return None,
@@ -365,7 +415,7 @@ pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Opt
     let rng = &mut options.rng;
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        plan(state, seat, budget, rng, &counter, &mut scratch)
+        plan(state, seat, budget, style, rng, &counter, &mut scratch)
     }));
 
     let stats = |counter: &CountingNodeCounter, thrown: usize, score: f64, stopped_by: Option<StoppedBy>| {

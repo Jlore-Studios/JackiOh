@@ -31,7 +31,10 @@ use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
-use crate::db::store::{LastBoardKind, MatchClocks, MatchRow, MatchStatus, QueueMode, StartMatchInput};
+use crate::db::store::{
+    BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput, StoreError,
+    Tx,
+};
 
 /// Why `attach` could not hand the socket to a seat. `ws_server.rs` closes with 4404 for an
 /// `Api` error whose code is `not_found`, 4403 for any other `Api` error, and 1011 for `Internal`
@@ -121,6 +124,30 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     }
 }
 
+/// R1444: the ladder bot at each home seat of a match between `players` (seat order), or none for a
+/// person. The bots' rows are read only when a seat's profile is a bot's, inside the caller's
+/// transaction, so a match `start` makes and the same match `rebuild` folds read the same seats.
+async fn bots_of(t: &mut Tx<'_>, players: &(String, String)) -> Result<PerPlayer<Option<BotRow>>, StoreError> {
+    let profiles = t
+        .profiles_get_many(&[players.0.clone(), players.1.clone()])
+        .await?;
+    let is_bot = |id: &str| {
+        profiles
+            .iter()
+            .any(|profile| profile.id == id && profile.kind == ProfileKind::Bot)
+    };
+    if !is_bot(&players.0) && !is_bot(&players.1) {
+        return Ok(PerPlayer::new(None, None));
+    }
+    let bots = t.bots_list().await?;
+    let bot = |id: &str| {
+        is_bot(id)
+            .then(|| bots.iter().find(|bot| bot.profile_id == id).cloned())
+            .flatten()
+    };
+    Ok(PerPlayer::new(bot(&players.0), bot(&players.1)))
+}
+
 impl Registry {
     pub fn new() -> Registry {
         Registry {
@@ -149,7 +176,8 @@ impl Registry {
         let (first, second) = &input.seats;
         let now = now_ms();
         let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
-        let (boards, sampled, derived_mode) = one_tx!(app.db, |t| {
+        let players = (first.profile_id.clone(), second.profile_id.clone());
+        let (boards, sampled, derived_mode, bots) = one_tx!(app.db, |t| {
             // R417: each seat's last server-match board, frozen on the match as it starts.
             let boards = (
                 t.last_boards_get(&first.profile_id, LastBoardKind::Server)
@@ -173,7 +201,9 @@ impl Registry {
                 Some(mode) => Some(mode),
                 None => t.matches_mode_of(&input.match_id).await?,
             };
-            (boards, sampled, derived_mode)
+            // R1444: the ladder bot at either seat, which the actor plays.
+            let bots = bots_of(&mut t, &players).await?;
+            (boards, sampled, derived_mode, bots)
         })
         .map_err(|error| ApiError::internal(error.to_string()))?;
 
@@ -241,6 +271,7 @@ impl Registry {
                 log: Vec::new(),
                 on_voided: Some(Registry::on_voided(app, &match_id)),
                 telemetry: None,
+                bots,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -250,11 +281,16 @@ impl Registry {
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
-        let (match_row, log, mode) = one_tx!(app.db, |t| {
+        let (match_row, log, mode, bots) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
-            (match_row, log, mode)
+            // R1444: a restart resumes a bot's seat as it resumes the match.
+            let bots = match &match_row {
+                Some(row) => bots_of(&mut t, &row.players).await?,
+                None => PerPlayer::new(None, None),
+            };
+            (match_row, log, mode, bots)
         })
         .map_err(store)?;
         let Some(match_row) = match_row else {
@@ -303,6 +339,7 @@ impl Registry {
                 log,
                 on_voided: Some(Registry::on_voided(app, match_id)),
                 telemetry,
+                bots,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

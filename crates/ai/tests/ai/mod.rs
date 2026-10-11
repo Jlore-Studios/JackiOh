@@ -27,6 +27,7 @@ pub mod redact_twice;
 pub mod reply;
 pub mod search;
 pub mod shadow_ban;
+pub mod style;
 pub mod support;
 pub mod surface;
 pub mod tutorial_tier;

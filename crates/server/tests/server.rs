@@ -3,5 +3,6 @@
 
 mod actor;
 mod api;
+mod bots;
 mod store;
 mod support;
