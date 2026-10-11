@@ -4696,6 +4696,26 @@ mod bots {
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
     }
 
+    async fn r1447_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let ta = ticket(harness, &a.id);
+        let tb = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&ta));
+        q!(harness, t => t.tickets_insert(&tb));
+
+        // A sweep claimed `a` for the bot while another listed `a` and `b` as a pair.
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&ta.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_pair(&ta.id, &tb.id, &id(), now)));
+        let left = j(&must(q!(harness, t => t.tickets_get(&tb.id)), "ticket b"));
+        assert_eq!(left["status"], "open");
+        assert!(left["matchId"].is_null());
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
+    }
+
     async fn r1447_recent_opponents_newest_first(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
@@ -4801,6 +4821,7 @@ mod bots {
         r1448_bots_create_and_list,
         r1448_retire_and_decks,
         r1447_claim_for_bot_is_single_shot,
+        r1447_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued,
         r1447_recent_opponents_newest_first,
         r1448_active_humans_skip_bots,
         r1448_a_claim_that_never_started_is_released,

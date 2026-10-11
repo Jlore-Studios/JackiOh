@@ -534,6 +534,56 @@ async fn r1446_restart_resumes_the_bot_seat() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn r1446_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
+    let m = bot_match("seed-bot-restart-mid", PlayerId::P2, PersonaName::Silent, false).await;
+    to_the_persons_turn(&m).await;
+    let turn = m.actor.snapshot().turn;
+    m.app.matches.stop(MATCH_ID).await;
+    let before = log_of(&m.app).await.len();
+
+    let revived = m
+        .app
+        .matches
+        .actor_for(&m.app, MATCH_ID)
+        .await
+        .expect("the rebuilt actor");
+    let socket = create_fake_socket();
+    revived.attach(m.person, socket.socket());
+    revived.idle().await;
+    let reply = revived
+        .submit(
+            m.person,
+            "person-end-after-restart".to_string(),
+            from(json!({ "type": "endTurn" })),
+        )
+        .await;
+    assert_eq!(to_json(&reply)["type"], "ack", "{}", to_json(&reply));
+    let person = m.person;
+    wait_until(&revived, "the rebuilt bot's turn to end", |actor| {
+        let snapshot = actor.snapshot();
+        snapshot.active == person && snapshot.turn > turn
+    })
+    .await;
+
+    let log = log_of(&m.app).await;
+    let bot = m.bot().as_str().to_string();
+    assert!(
+        log[before..]
+            .iter()
+            .any(|(seat, nonce, kind)| *seat == bot && bot_nonce(nonce) && kind == "endTurn"),
+        "{log:?}"
+    );
+    let row = q!(m.app, matches_get(MATCH_ID)).expect("the match row");
+    let actions: Vec<_> = q!(m.app, matches_actions(MATCH_ID))
+        .into_iter()
+        .map(|entry| entry.action)
+        .collect();
+    let folded = fold(&fold_args(&m.seed, &row.decks, actions, None, None, None));
+    assert!(folded.errors.is_empty(), "{:?}", folded.errors);
+    assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));
+}
+
+#[tokio::test(start_paused = true)]
 async fn r1446_bot_declines_a_draw_offer() {
     let m = bot_match("seed-bot-draw", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;

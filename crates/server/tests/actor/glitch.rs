@@ -20,12 +20,13 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::PlayerId;
 use jackioh_engine::{CreateGameArgs, LastBoardEntry};
 use jackioh_server::actor::match_actor::MatchActor;
+use jackioh_server::api::game_records::record_live_game;
 use jackioh_server::api::results::void_match;
 use jackioh_server::api::series::start_series;
 use jackioh_server::app::App;
 use jackioh_server::config::{GLITCH_BOARDS_SAMPLED, MATCH_VOIDED_CLOSE_CODE};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{Db, ProfileKind, QueueMode};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -504,6 +505,31 @@ mod glitchs_swap {
             .expect("P1 attaches to the rebuilt actor");
         idle(&w).await;
         assert_eq!(last_view(&fresh)["viewer"], "p2");
+    }
+
+    #[tokio::test]
+    async fn r1449_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in() {
+        let w = world(WorldOptions::default()).await;
+        let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
+        frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;
+        let lethal = hand_card(&last_view(&w.b), "test-lethal");
+        frame(&w, &w.b, "n2", json!({ "type": "play", "instanceId": lethal })).await;
+        {
+            // P2, who began in p2 and ended in p1, is a ladder bot; the world's match came from no
+            // ticket, so it is given the Best-of-1 mode one would have filed it under.
+            let data = fake(&w.app);
+            let mut data = data.lock().await;
+            for profile in data.tables.profiles.iter_mut().filter(|profile| profile.id == P2) {
+                profile.kind = ProfileKind::Bot;
+            }
+            for row in data.tables.matches.iter_mut().filter(|row| row.id == MATCH_ID) {
+                row.mode = Some(QueueMode::Bo1);
+            }
+        }
+        let record = record_live_game(&w.app, MATCH_ID)
+            .await
+            .expect("the game is filed");
+        assert_eq!(to_json(&record.pilots), json!({ "p1": "ai", "p2": "human" }));
     }
 }
 

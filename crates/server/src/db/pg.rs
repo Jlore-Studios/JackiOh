@@ -3229,6 +3229,11 @@ pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>
 /// does not exist yet — `src/api/queue.rs` claims first and creates the match second. The skeleton
 /// row written here is the `open` row `matches_create` then completes (see its comment); it
 /// carries the two frozen decks the tickets already hold, so nothing is invented.
+///
+/// A claim that loses changes nothing, as the fake store's never does. The function flips
+/// whichever of the two is still queued before it answers false, so a pair that lost one ticket to
+/// another matcher, or to a bot's claim (R1447), would leave the other claimed with no match and
+/// out of every sweep. The savepoint takes that flip back.
 pub async fn tickets_claim_pair(
     t: &mut PgTx<'_>,
     a_id: &str,
@@ -3240,6 +3245,10 @@ pub async fn tickets_claim_pair(
         return Ok(false);
     }
     run_as(t, None).await?;
+    sqlx::query("savepoint claim_ticket_pair")
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
     let claimed = sqlx::query("select app.claim_ticket_pair($1::uuid, $2::uuid, null) as claimed")
         .bind(a_id)
         .bind(b_id)
@@ -3251,8 +3260,16 @@ pub async fn tickets_claim_pair(
         Some(row) => get(&row, "claimed")?,
     };
     if claimed != Some(true) {
+        sqlx::query("rollback to savepoint claim_ticket_pair")
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
         return Ok(false);
     }
+    sqlx::query("release savepoint claim_ticket_pair")
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
 
     sqlx::query(concat!(
         "insert into public.matches (
