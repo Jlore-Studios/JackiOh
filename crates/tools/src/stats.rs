@@ -113,7 +113,8 @@ pub enum Command {
 
 /// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]`:
 /// `jackioh-server stats-cards`' flags and defaults (R378: live games unless `--source` says
-/// otherwise), over record files instead of the database.
+/// otherwise; R1449: their human seats unless `--pilot` says otherwise), over record files instead
+/// of the database.
 #[derive(clap::Args, Debug, Clone, PartialEq)]
 pub struct ReportArgs {
     /// Record files, one GameRecord per line, read in the order named.
@@ -128,9 +129,10 @@ pub struct ReportArgs {
     /// One patch, as patches.json names it. Default: every patch.
     #[arg(long, value_name = "VERSION")]
     pub patch: Option<String>,
-    /// The seats counted: human, ai or unified (every seat).
-    #[arg(long, value_parser = pilot_filter, default_value_t = DEFAULT_CARD_STATS_FILTER.pilot)]
-    pub pilot: PilotFilter,
+    /// The seats counted: human, ai or unified (every seat). Default: human for live games, a
+    /// ladder bot's side left out; unified, every seat, with --source=dev or all (R1449).
+    #[arg(long, value_parser = pilot_filter)]
+    pub pilot: Option<PilotFilter>,
     /// One card's row only.
     #[arg(long, value_name = "ID")]
     pub card: Option<String>,
@@ -173,6 +175,17 @@ pub fn read_records(files: &[PathBuf]) -> Result<Vec<GameRecord>> {
     Ok(records)
 }
 
+/// R1449: the seats a report that names no `--pilot` counts, as `stats-cards` counts them: the
+/// human seats when it reads live games alone, so a ladder bot's side is read only when asked
+/// for, and every seat when it reads development data.
+pub fn default_pilot(source: SourceFilter) -> PilotFilter {
+    if source == SourceFilter::Live {
+        PilotFilter::Human
+    } else {
+        PilotFilter::Unified
+    }
+}
+
 /// R377: the report the arguments ask for, over the records of the files they name.
 pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     let records = read_records(&args.files)?;
@@ -182,7 +195,7 @@ pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
             source: args.source,
             mode: args.mode,
             patch: args.patch.clone(),
-            pilot: args.pilot,
+            pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
         },
     );
     if let Some(only) = &args.card {
@@ -394,7 +407,7 @@ mod tests {
                 source: SourceFilter::Live,
                 mode: None,
                 patch: None,
-                pilot: PilotFilter::Unified,
+                pilot: None,
                 card: None,
                 json: false,
             }
@@ -414,7 +427,7 @@ mod tests {
         assert_eq!(all.files, [PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")]);
         assert_eq!(
             (all.source, all.mode, all.pilot),
-            (SourceFilter::All, Some(GameMode::Random), PilotFilter::Ai)
+            (SourceFilter::All, Some(GameMode::Random), Some(PilotFilter::Ai))
         );
         assert_eq!(
             (all.patch.as_deref(), all.card.as_deref(), all.json),
@@ -434,14 +447,27 @@ mod tests {
         assert_eq!(parse(&["--games=3"]).unwrap().command, None);
     }
 
-    /// A game record as a line of JSON: the shape `--out` writes.
+    /// A game record as a line of JSON: the shape `--out` writes. A live game is two people's, a
+    /// development run's two AIs'.
     fn record_line(id: &str, source: &str, mode: &str, winner: &str, deck_p2: &[&str]) -> String {
+        let pilot = if source == "live" { "human" } else { "ai" };
+        record_line_piloted(id, source, mode, winner, deck_p2, [pilot, pilot])
+    }
+
+    fn record_line_piloted(
+        id: &str,
+        source: &str,
+        mode: &str,
+        winner: &str,
+        deck_p2: &[&str],
+        pilots: [&str; 2],
+    ) -> String {
         serde_json::json!({
             "id": id,
             "source": source,
             "mode": mode,
             "patch": "v0.2.5",
-            "pilots": { "p1": "ai", "p2": "ai" },
+            "pilots": { "p1": pilots[0], "p2": pilots[1] },
             "game": {
                 "first": "p1",
                 "winner": winner,
@@ -493,10 +519,14 @@ mod tests {
         ]);
         let records = parse_game_record_lines(&format!("{live}\n{dev_a}\n{dev_b}\n")).unwrap();
 
-        // Live games unless asked otherwise (R378).
+        // Live games unless asked otherwise (R378), their human seats (R1449).
         let (_, by_default) = report_of(&paths, &[]);
         assert_eq!(by_default.games, 1);
-        assert_eq!(by_default, card_stats(&records, &DEFAULT_CARD_STATS_FILTER));
+        let live_people = CardStatsFilter {
+            pilot: PilotFilter::Human,
+            ..DEFAULT_CARD_STATS_FILTER.clone()
+        };
+        assert_eq!(by_default, card_stats(&records, &live_people));
 
         let (_, everything) = report_of(&paths, &["--source=all"]);
         assert_eq!(everything.games, 3);
@@ -549,7 +579,7 @@ mod tests {
         assert_eq!(parsed, serde_json::to_value(&report).unwrap());
         assert_eq!(
             parsed["filter"],
-            serde_json::json!({ "source": "live", "mode": null, "patch": null, "pilot": "unified" })
+            serde_json::json!({ "source": "live", "mode": null, "patch": null, "pilot": "human" })
         );
         assert_eq!((&parsed["games"], &parsed["decks"]), (&1.into(), &2.into()));
         // core-001 is in p1's deck only: it is in the opening hand and played, a win going first.
@@ -568,10 +598,43 @@ mod tests {
         let table = render(&report, &ReportArgs { json: false, ..args }, |card| {
             (card == "core-001").then(|| "Alpha".to_string())
         });
-        assert!(table.starts_with(
-            "Card win rates: live games, every mode, every patch, human and AI pilots (unified)."
-        ));
+        assert!(table.starts_with("Card win rates: live games, every mode, every patch, human pilots."));
         assert!(table.contains("core-001 Alpha"));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r1449_report_reads_a_ladder_bots_side_of_a_live_game_only_when_asked() {
+        // p1 a person, p2 a ladder bot holding core-003; and a development game, both seats AIs.
+        let bot_game = record_line_piloted("m1", "live", "bo1", "p2", &["core-003"], ["human", "ai"]);
+        let dev = record_line("dev:v0.2.5:dev:1", "dev", "random", "p1", &["core-003"]);
+        let (dir, paths) = scratch(&[("a.jsonl", format!("{bot_game}\n{dev}\n"))]);
+        let held = |report: &CardStatsReport, card: &str| {
+            report
+                .cards
+                .iter()
+                .find(|stats| stats.card == card)
+                .map(|stats| stats.in_deck.games)
+        };
+
+        // With no --pilot: the person's side counts, the bot's does not.
+        let (_, by_default) = report_of(&paths, &[]);
+        assert_eq!((by_default.games, by_default.decks), (1, 1));
+        assert_eq!(by_default.filter.pilot, PilotFilter::Human);
+        assert_eq!(held(&by_default, "core-001"), Some(1));
+        assert_eq!(held(&by_default, "core-003"), None);
+        // Asked for, the bot's side is read.
+        let (_, bots) = report_of(&paths, &["--pilot=ai"]);
+        assert_eq!((bots.games, bots.decks), (1, 1));
+        assert_eq!(held(&bots, "core-003"), Some(1));
+        let (_, every) = report_of(&paths, &["--pilot=unified"]);
+        assert_eq!(every.decks, 2);
+        // Development data counts every seat unless told otherwise, as stats-cards does.
+        let (_, dev_default) = report_of(&paths, &["--source=dev"]);
+        assert_eq!(
+            (dev_default.filter.pilot, dev_default.decks),
+            (PilotFilter::Unified, 2)
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 
