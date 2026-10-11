@@ -288,14 +288,14 @@ describe("VoicePreview (R630)", () => {
       .map((option) => (option as HTMLOptionElement).value);
   }
 
-  it("R630 a unit offers its play and death lines, and choosing one plays it at the summon priority", () => {
+  it("R630 R1448 a unit offers its play, attack and death lines, and choosing one plays it at the summon priority", () => {
     const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
     setAudioEngineForTests(fakeEngine(playVoice));
     render(<CardDetail def={defOf("core-008")} onClose={() => undefined} />);
 
     const select = screen.getByTestId("voice-preview");
     expect(select.tagName).toBe("SELECT");
-    expect(optionsOf(select)).toEqual(["", "play", "death"]);
+    expect(optionsOf(select)).toEqual(["", "play", "attack", "death"]);
 
     fireEvent.change(select, { target: { value: "death" } });
     expect(playVoice).toHaveBeenCalledWith("core-008", "death", 0, VOICE_PRIORITY.summon);
