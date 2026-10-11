@@ -68,7 +68,16 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     attack: { label: "Guess Attack", detail: "Beats Greed; loses to Defend." },
     defend: { label: "Guess Defend", detail: "Beats Attack; loses to Greed." },
   },
+  // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
+  // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
+  "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
 };
+
+/** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */
+function lanes(detail: string): Record<string, ModeText> {
+  const where = ["on the left", "second from the left", "in the middle", "second from the right", "on the right"];
+  return Object.fromEntries(where.map((place, index) => [`lane-${String(index + 1)}`, { label: `Lane ${String(index + 1)}`, detail: `The lane ${place}. ${detail}` }]));
+}
 
 /**
  * The options whose words change on the card's Radiant face, keyed like `MODE_TEXT`. Any option
@@ -82,6 +91,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
   },
+  // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
+  "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
   // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 4X, or gain X mana next turn"
   // (§8 #24, R275), every mode doubled.
   "core-024": {

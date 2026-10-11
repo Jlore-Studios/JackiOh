@@ -710,6 +710,16 @@ describe("R1384: the glossary's rows for the Meditative cards' words", () => {
     expect(termsIn("Hand size 12")).toEqual(["Hand size"]);
   });
 
+  it("R1384 Lucky's row says what §6.1's does: a coin flip is a luck-based roll, and Lucky given to a card adds", () => {
+    expect(GLOSSARY.Lucky.rule).toContain("keep the best");
+    expect(GLOSSARY.Lucky.rule).toContain("coin flip");
+    expect(GLOSSARY.Lucky.rule).toContain("heads");
+    expect(GLOSSARY.Lucky.rule).toContain("given");
+    // Meditative #101 gives Lucky and #36 prints it: both find the row.
+    expect(termsIn(played("meditative-101"))).toContain("Lucky");
+    expect(termsIn(played("meditative-036", "radiant"))).toContain("Lucky");
+  });
+
   it("R1384 Grant tag is rules vocabulary: no glossary row, and no card text prints the row's name", () => {
     expect(Object.keys(GLOSSARY)).not.toContain("Grant tag");
     expect(PLAYED_TEXTS.filter(({ text }) => text.includes("Grant tag"))).toEqual([]);

@@ -283,6 +283,18 @@
   font-weight: 700;
 }
 
+/* #617: a "Choose one" names the card being played, and the name reads it: a hover preview, or a
+   long-press sheet on a phone (the chrome is click-through, so it takes pointer events back). */
+.prompt .prompt-title-source--inspect {
+  width: fit-content;
+  pointer-events: auto;
+  cursor: help;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 3px;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
 .prompt-title-ask {
   display: block;
   color: var(--text-dim);
