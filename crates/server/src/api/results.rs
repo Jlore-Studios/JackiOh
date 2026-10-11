@@ -483,7 +483,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// The reaper's loop (SURFACE §11.2: `api::results::run_reaper(app)`, every
 /// `MATCH_REAPER_INTERVAL_SECONDS`), as TS's `start()` in `src/index.ts` ran it: the first sweep one
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
-/// next sweep tried all the same. Runs until its task is aborted.
+/// next sweep tried all the same. Each sweep also drops the finished actors whose rematch window has
+/// passed (`Registry::reap_finished`). Runs until its task is aborted.
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -497,5 +498,6 @@ pub async fn run_reaper(app: Arc<App>) {
                 tracing::warn!(event = "matches.reaper_failed", message = %error.message);
             }
         }
+        app.matches.reap_finished(now_ms()).await;
     }
 }
