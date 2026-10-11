@@ -220,7 +220,7 @@ def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_sea
     assert tally(unified, "a", "in_deck")[0] == 7
 
 
-def test_r1450_names_no_pilot_and_reads_a_live_games_human_seats_and_every_seat_of_the_rest(tmp_path):
+def test_r1451_names_no_pilot_and_reads_a_live_games_human_seats_and_every_seat_of_the_rest(tmp_path):
     path = write_records(
         tmp_path / "bot.jsonl",
         [

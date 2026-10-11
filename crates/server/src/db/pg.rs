@@ -3001,6 +3001,23 @@ pub async fn matches_forget_voided(t: &mut PgTx<'_>, match_id: &str) -> Result<(
     Ok(())
 }
 
+/// R1450: `Tx::matches_reap_open`. One delete; `on delete set null` (0004) lets go of
+/// `profiles.current_match_id` and `tickets.match_id`, and the room code is free again (R110). An
+/// `open` row has no actions and no result. `before` is the server's clock less the grace, the clock
+/// `rooms_create` and `tickets_claim_pair` stamped `ceiling_at` with.
+pub async fn matches_reap_open(t: &mut PgTx<'_>, before: i64) -> Result<u64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "delete from public.matches where status = 'open' and ceiling_at < ",
+        ts!("$1")
+    ))
+    .bind(before)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected())
+}
+
 // ---------------------------------------------------------------------------
 // Rooms (SPEC §9.5's direct challenge)
 // ---------------------------------------------------------------------------
@@ -4531,7 +4548,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1447–R1450, migration 0032)
+// The ladder bots (R1447–R1449, R1451, migration 0032)
 // ---------------------------------------------------------------------------
 
 fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
@@ -5096,11 +5113,14 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 //    `Room.mode` and `Room.host_trio` are `room_mode` / `room_trio` (0008); a room row with no mode
 //    — written before 0008, or by 0004's `app.create_room` — reads as `bo1`, which is all a room
 //    could be then.
-//  * reserved match ids. In Postgres the id `tickets_claim_pair` or `rooms_claim` reserves is an
-//    `open` row, so `matches_discard_open` (R263) deletes a row: the claimed tickets' `match_id`
-//    goes back to null (`tickets.match_id` is `on delete set null`) and a claimed room's code is
-//    free again. The fake keeps no such row, and its `discard_open` changes nothing; there a
-//    matched ticket keeps the discarded id.
+//  * reserved match ids. In Postgres the id `tickets_claim_pair`, `tickets_claim_for_bot` or
+//    `rooms_claim` reserves is an `open` row, so `matches_discard_open` (R263) deletes a row: the
+//    claimed tickets' `match_id` goes back to null (`tickets.match_id` is `on delete set null`) and
+//    a claimed room's code is free again. The fake keeps no such row, only the time a pair or a
+//    bot was claimed (`FakeTables.reserved`, R1450, R1449), which its `discard_open` drops and
+//    nothing else; there a matched ticket keeps the discarded id. `matches_reap_open` (R1450)
+//    deletes the same rooms and reservations in both stores and lets go of what pointed at them,
+//    as the foreign keys do here.
 //  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches,
 //    results and series to NULL, and migration 0022 does the same on `rated_games`' sides while
 //    cascading its `season_ranks` away, so `matches_get`, `results_get_by_match`, `series_get` and

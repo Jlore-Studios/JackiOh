@@ -18,7 +18,8 @@
 //!
 //! `release_stale_starts`, which the queue's sweeper runs every sweep whatever `LADDER_BOTS` says,
 //! lets go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a
-//! start a crash or a restart cut off, which nothing else reaps.
+//! start a crash or a restart cut off. The reaper's open-row sweep (R1450) would delete that
+//! skeleton too, but only after `OPEN_MATCH_REAP_GRACE_SECONDS`, and a bot is not held that long.
 
 use std::sync::Arc;
 use std::time::Duration;

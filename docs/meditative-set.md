@@ -2477,7 +2477,7 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
   next to the catalog and handed to the engine inside the catalog's own `OnceLock`, so rule 4 still has
   two statics. It holds `{ patch, source: "live" | "provisional", cards: [{ id, wins, games }] }`.
   Its figures are R377's "in deck" breakdown for every mode, counting a live game's human seats and
-  both seats of a development game (R1450: a ladder bot's side moves nothing), with tutorial games
+  both seats of a development game (R1451: a ladder bot's side moves nothing), with tutorial games
   left out. That is the figure `GET /api/stats/cards` ranks by, taken for the newest *shipped*
   patch under R654's gate: live games only once the patch has `PUBLIC_STATS_MIN_LIVE_GAMES`, otherwise
   live plus dev. This way CN Tech agrees with `/stats`.

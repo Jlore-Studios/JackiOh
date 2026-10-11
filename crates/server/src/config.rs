@@ -436,6 +436,12 @@ pub const WS_OUTBOX_MAX_FRAMES: usize = 256;
 // SPEC §11 R108: 30 s. The ceiling itself is a 60-minute wall clock, so a half-minute reaper
 // sweep resolves a stuck match promptly without meaningfully scanning `matches` too often.
 pub const MATCH_REAPER_INTERVAL_SECONDS: i64 = 30;
+/// R1450: how long past its `ceiling_at` an `open` matches row stays before the reaper deletes it
+/// (`api::results::reap_open_matches`). A room's `ceiling_at` is its expiry and a queue reservation's
+/// its claim, so this is the time a start may still take after either. Five minutes outlasts a
+/// Conquest series' first game, which starts or is given up within `SERIES_PICK_SECONDS +
+/// SERIES_START_GIVE_UP_SECONDS` (three minutes) of its claim.
+pub const OPEN_MATCH_REAP_GRACE_SECONDS: i64 = 5 * 60;
 /// §9.5's "every ending records a result", under two first writers at once — a live actor and the
 /// reaper resolving the same match. The transaction's own `getByMatch` cannot see the other's
 /// uncommitted write, so the loser only learns of the race when its insert hits `results_pkey`,
@@ -668,7 +674,7 @@ pub struct ThinkTimeFit {
 pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1447–R1450; #638). Every value is hand-set until the offline
+// Ladder bots (SPEC §9.5, §9.12, R1447–R1449, R1451; #638). Every value is hand-set until the offline
 // calibration and the think-time fit (R1442's `THINK_TIME_FITS`) replace it.
 // ---------------------------------------------------------------------------------------------
 
@@ -848,6 +854,8 @@ pub const MATCH_CEILING_MS: i64 = MATCH_CEILING_MINUTES * 60 * 1000;
 pub const USERNAME_CHANGE_COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_SECONDS * 1000;
 /// R1443: `USERNAME_SIGN_IN_WINDOW_SECONDS` in milliseconds.
 pub const USERNAME_SIGN_IN_WINDOW_MS: i64 = USERNAME_SIGN_IN_WINDOW_SECONDS * 1000;
+/// R1450: `OPEN_MATCH_REAP_GRACE_SECONDS` in milliseconds.
+pub const OPEN_MATCH_REAP_GRACE_MS: i64 = OPEN_MATCH_REAP_GRACE_SECONDS * 1000;
 
 // ---------------------------------------------------------------------------------------------
 // Ladder bots' emote personas (SPEC §9.9, R645, R1344; #638). The rolls are `src/bots/persona.rs`,

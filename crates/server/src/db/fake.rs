@@ -159,9 +159,14 @@ pub struct BotTableRow {
     pub decks: Vec<BotDeck>,
     pub decks_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
-    /// When `tickets_claim_for_bot` last claimed it, the stand-in for the `open` skeleton's
-    /// `created_at`, which the fake does not write.
-    pub claimed_at: Option<i64>,
+}
+
+/// R1450: a match id a queue pairing reserved (`tickets_claim_pair`) and when it was claimed; in
+/// Postgres an `open` row whose `ceiling_at` is that time. Gone once the match is created.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReservedMatch {
+    pub match_id: String,
+    pub claimed_at: i64,
 }
 
 /// Every table, as both TS in-memory stores held them (TS `Tables`: the e2e store's own tables `&`
@@ -182,6 +187,8 @@ pub struct FakeTables {
     pub matches: Vec<MatchRow>,
     pub match_actions: Vec<MatchActionRow>,
     pub rooms: Vec<Room>,
+    // R1450: the reservations Postgres holds as open rows.
+    pub reserved: Vec<ReservedMatch>,
     pub tickets: Vec<Ticket>,
     pub results: Vec<ResultRow>,
     // TutorialTables: the table R320 adds (`public.tutorial_progress`, migration 0011): one row per profile.
@@ -1142,6 +1149,7 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
         return Err(StoreError::from(format!("matches.id is unique: {}", row.id)));
     }
     f.tables().matches.push(row.clone());
+    keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != row.id);
     Ok(())
 }
 
@@ -1223,9 +1231,10 @@ pub fn matches_mode_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<Queu
     Ok(match_mode_in(f.tables(), match_id))
 }
 
-/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263).
-pub fn matches_discard_open(f: &mut FakeTx<'_>, _match_id: &str) -> Result<(), StoreError> {
+/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263); discarding it forgets its claim time (R1450).
+pub fn matches_discard_open(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), StoreError> {
     call(f, "matches.discardOpen")?;
+    keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != match_id);
     Ok(())
 }
 
@@ -1234,6 +1243,50 @@ pub fn matches_forget_voided(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), S
     call(f, "matches.forgetVoided")?;
     forget_voided_rows(f.tables(), match_id);
     Ok(())
+}
+
+/// R1450: what Postgres's `matches_reap_open` deletes, as the fake holds it: every room expired
+/// before `before` whose match never started, claimed or not, and every reservation claimed before
+/// it whose match never started; then what `on delete set null` (0004) does there. Answers how many went.
+pub fn matches_reap_open(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreError> {
+    call(f, "matches.reapOpen")?;
+    let tables = f.tables();
+    let started: IndexSet<String> = tables.matches.iter().map(|row| row.id.clone()).collect();
+    let unstarted = |match_id: Option<&str>| match_id.is_none_or(|id| !started.contains(id));
+    let reaped_room = |room: &Room| room.expires_at < before && unstarted(room.match_id.as_deref());
+    let reaped_reservation = |reserved: &ReservedMatch| {
+        reserved.claimed_at < before && unstarted(Some(reserved.match_id.as_str()))
+    };
+    let released: Vec<String> = tables
+        .rooms
+        .iter()
+        .filter(|room| reaped_room(room))
+        .filter_map(|room| room.match_id.clone())
+        .chain(
+            tables
+                .reserved
+                .iter()
+                .filter(|reserved| reaped_reservation(reserved))
+                .map(|reserved| reserved.match_id.clone()),
+        )
+        .collect();
+    let reaped = keep_only(&mut tables.rooms, |room| !reaped_room(room))
+        + keep_only(&mut tables.reserved, |reserved| !reaped_reservation(reserved));
+    for profile in tables.profiles.iter_mut() {
+        if profile
+            .in_match_id
+            .as_ref()
+            .is_some_and(|id| released.contains(id))
+        {
+            profile.in_match_id = None;
+        }
+    }
+    for ticket in tables.tickets.iter_mut() {
+        if ticket.match_id.as_ref().is_some_and(|id| released.contains(id)) {
+            ticket.match_id = None;
+        }
+    }
+    Ok(reaped as u64)
 }
 
 // ---------------------------------------------------------------------------
@@ -1357,7 +1410,7 @@ pub fn tickets_claim_pair(
     a_id: &str,
     b_id: &str,
     match_id: &str,
-    _at: i64,
+    at: i64,
 ) -> Result<bool, StoreError> {
     call(f, "tickets.claimPair")?;
     if a_id == b_id {
@@ -1373,11 +1426,15 @@ pub fn tickets_claim_pair(
     if tables.tickets[a].status != TicketStatus::Open || tables.tickets[b].status != TicketStatus::Open {
         return Ok(false);
     }
-    for at in [a, b] {
-        let ticket = &mut tables.tickets[at];
+    for idx in [a, b] {
+        let ticket = &mut tables.tickets[idx];
         ticket.status = TicketStatus::Matched;
         ticket.match_id = Some(match_id.to_string());
     }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
     Ok(true)
 }
 
@@ -2747,7 +2804,7 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1447–R1450, migration 0032)
+// The ladder bots (R1447–R1449, R1451, migration 0032)
 // ---------------------------------------------------------------------------
 
 /// R1449: every bot, its profile's `created_at` and match and its R610 rating beside its row,
@@ -2829,7 +2886,6 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         decks: bot.decks.clone(),
         decks_catalog_version: bot.decks_catalog_version.clone(),
         retired_at: None,
-        claimed_at: None,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -2909,32 +2965,38 @@ pub fn tickets_claim_for_bot(
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
     }
-    if let Some(row) = tables.ladder_bots.iter_mut().find(|row| row.profile_id == bot_id) {
-        row.claimed_at = Some(at);
-    }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
     Ok(true)
 }
 
-/// R1449: a bot claimed before `before` whose match the fake never created (no `matches` row: the
-/// start never ran) is let go, with the ticket's owner, as deleting the skeleton lets both go.
+/// R1449: a bot whose claim (`tickets_claim_for_bot`, held in `reserved`) is from before `before`
+/// and whose match the fake never created (the start never ran) is let go, with the ticket's owner,
+/// and its reservation dropped, as deleting the skeleton does in Postgres.
 pub fn bots_release_stale_starts(f: &mut FakeTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
     call(f, "bots.releaseStaleStarts")?;
     let tables = f.tables();
     let stale: Vec<(String, String)> = tables
         .ladder_bots
         .iter()
-        .filter(|row| row.claimed_at.is_some_and(|at| at < before))
         .filter_map(|row| {
             let profile = tables
                 .profiles
                 .iter()
                 .find(|profile| profile.id == row.profile_id)?;
             let match_id = profile.in_match_id.clone()?;
+            let claimed_before = tables
+                .reserved
+                .iter()
+                .any(|reserved| reserved.match_id == match_id && reserved.claimed_at < before);
             let started = tables.matches.iter().any(|existing| existing.id == match_id);
-            (!started).then(|| (row.profile_id.clone(), match_id))
+            (claimed_before && !started).then(|| (row.profile_id.clone(), match_id))
         })
         .collect();
     for (_, match_id) in &stale {
+        keep_only(&mut tables.reserved, |reserved| &reserved.match_id != match_id);
         for profile in tables.profiles.iter_mut() {
             if profile.in_match_id.as_deref() == Some(match_id.as_str()) {
                 profile.in_match_id = None;

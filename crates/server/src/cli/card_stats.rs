@@ -12,7 +12,7 @@
 //! it reads the people's seats of live games of every mode and patch: a development run's records are
 //! read only with `--source=dev` or `--source=all` (R378), and a ladder bot's side of a live game
 //! only with `--pilot=ai` or `--pilot=unified`, or as `--source=dev` and `--source=all` count every
-//! seat by default (R1450). `--json` prints the report as data instead.
+//! seat by default (R1451). `--json` prints the report as data instead.
 //!
 //! The arithmetic is `card_stats` in `jackioh_engine::wire::stats` (TS `packages/shared/src/stats.ts`),
 //! the same the AI's development run prints its own games with, so a pre-release run and the live
@@ -119,7 +119,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         }
     }
 
-    // R1450: a ladder bot's side of a live game is read only when it is asked for.
+    // R1451: a ladder bot's side of a live game is read only when it is asked for.
     filter.pilot = pilot.unwrap_or(if filter.source == SourceFilter::Live {
         PilotFilter::Human
     } else {

@@ -1,4 +1,4 @@
-//! The ladder bots (SPEC §9.5, §9.12, R1447–R1450; #638): the opponents the queue seats in a ranked
+//! The ladder bots (SPEC §9.5, §9.12, R1447–R1449, R1451; #638): the opponents the queue seats in a ranked
 //! Best of 1 or All Random match when no person is there to pair with.
 //!
 //! - `persona`: their emotes, the server's port of the practice AI's R645 personas (R1344).

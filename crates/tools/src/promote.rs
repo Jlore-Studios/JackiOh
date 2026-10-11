@@ -27,6 +27,11 @@
 //! `generation.json`. The report (Markdown, the lane's pull request body) goes to stdout. Exit 0 on a
 //! pass, 1 on a failed gate.
 //!
+//! The unban lane is done once the parent keeps no card out of its decks (generation 8 lifted the
+//! last shadow ban, #668): no candidate has strictly fewer bans than none, so the gate cannot pass,
+//! and against such a parent `promote --lane unban` says so and exits 1, with any flag, before it
+//! plays a game or writes anything (`lane_done`).
+//!
 //! Because the seeds come from the committed AI, a promotion (and a verification) refuses to run on
 //! a `crates/ai/src` with uncommitted changes: they would be measured on another AI's seeds. A dry
 //! run measures them anyway, on HEAD's seeds, and says so.
@@ -66,7 +71,7 @@ pub enum Lane {
     /// Beat the parent: ≥ 75 of 100 against it and ≥ 90 of 100 against random.
     Improve,
     /// Play well with fewer shadow bans: strictly fewer than the parent's, ≥ 65 of 100 against it and
-    /// ≥ 90 of 100 against random.
+    /// ≥ 90 of 100 against random. Done once the parent has none (`lane_done`).
     Unban,
 }
 
@@ -136,6 +141,22 @@ pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
         ));
     }
     failures
+}
+
+/// The refusal to give when the lane is done, else `None`. The unban lane is done once its parent,
+/// the AI on `main`, keeps no card out of its own decks: no candidate has strictly fewer shadow bans
+/// than none, so its gate fails whatever the games say, and `run` plays none (#668). It reads the
+/// parent's list, not this build's `SHADOW_BAN`: a candidate with none against a parent with one is
+/// the promotion that emptied the table (generation 8's).
+pub(crate) fn lane_done(lane: Lane, parent: &Entrant) -> Option<String> {
+    (lane == Lane::Unban && parent.shadow_ban.is_empty()).then(|| {
+        format!(
+            "promote: the shadow ban list is empty, so the unban lane is done: the parent ({}) keeps no \
+             card out of its decks, no candidate can have strictly fewer bans than none, and the gate \
+             cannot pass. No game was played and nothing was written (training/unban.md).",
+            parent.label
+        )
+    })
 }
 
 /// The candidate's wins over games given as (result, the candidate's seat). A draw is not a win, and
@@ -332,6 +353,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         "promotion"
     };
 
+    let parent = arena::entrant(&AgentSpec::Bin(args.parent_bin.clone()))?;
+    if let Some(done) = lane_done(args.lane, &parent) {
+        bail!("{done}");
+    }
+
     if ai_source_dirty(&repo)? {
         if mode != "dry run" {
             bail!(
@@ -348,7 +374,6 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let tree = ai_tree(&repo)?;
     let candidate = arena::entrant(&AgentSpec::SelfAi)?;
     let random = arena::entrant(&AgentSpec::Random)?;
-    let parent = arena::entrant(&AgentSpec::Bin(args.parent_bin.clone()))?;
     let parent_generation = parent
         .generation
         .with_context(|| format!("promote: {} reported no generation", args.parent_bin.display()))?;
@@ -483,6 +508,30 @@ mod tests {
         assert!(!gate_failures(Lane::Improve, &counts(90, 65, 10, 11)).is_empty());
         assert_eq!(TRAINING_UNBAN.vs_random, 90);
         assert_eq!(TRAINING_UNBAN.vs_parent, 65);
+    }
+
+    /// A parent as `arena::entrant` readies a `bin:` one, keeping `shadow_ban` out of its decks.
+    fn parent_banning(shadow_ban: &[&str]) -> Entrant {
+        Entrant {
+            spec: AgentSpec::Bin(PathBuf::from("parent-jackioh")),
+            label: "bin-gen8".to_string(),
+            generation: Some(8),
+            lane: Some("unban".to_string()),
+            shadow_ban: shadow_ban.iter().map(|id| id.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn the_unban_lane_is_done_once_the_parents_shadow_ban_is_empty() {
+        let done = lane_done(Lane::Unban, &parent_banning(&[])).expect("an empty parent ban ends the lane");
+        assert!(done.contains("the unban lane is done"), "{done}");
+        assert!(done.contains("No game was played"), "{done}");
+        // Whatever the games would say, the gate cannot pass: strictly fewer bans than none.
+        assert!(!gate_failures(Lane::Unban, &counts(100, 100, 0, 0)).is_empty());
+        // Generation 8's own promotion, against a parent with one ban left, still plays its games.
+        assert_eq!(lane_done(Lane::Unban, &parent_banning(&["core-076"])), None);
+        // The improve lane has no ban rule: an empty ban list changes nothing for it.
+        assert_eq!(lane_done(Lane::Improve, &parent_banning(&[])), None);
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //! export or from JSONL game record files. The table is `{ patch, source, cards }` with R377's
 //! in-deck wins and games per card id, as `/api/stats/cards` ranks by; the build compiles it in and
 //! never reads it at run time (CLAUDE.md rule 4). Record files are counted as that endpoint counts
-//! them: a live game's human seats only, so a ladder bot's side moves nothing (R1450), and both
+//! them: a live game's human seats only, so a ladder bot's side moves nothing (R1451), and both
 //! seats of a development game (R378).
 //!
 //! The command does not apply R654's gate: the threshold lives in the server, and the exporter
@@ -32,7 +32,7 @@ pub struct Args {
     pub dry_run: bool,
 }
 
-/// One built table row: `table_from_report_reads_in_deck`, `r1450_table_from_records_counts_as_the_public_stats_do`
+/// One built table row: `table_from_report_reads_in_deck`, `r1451_table_from_records_counts_as_the_public_stats_do`
 /// and `rows_sorted_zero_games_dropped` pin it.
 fn row_of(card: &str, wins: i32, games: i32) -> Option<WinRateRow> {
     if games <= 0 {
@@ -68,7 +68,7 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
 }
 
 /// The table from JSONL game record files, counted on the patch as `/api/stats/cards` counts them
-/// (R1450): the live records under `{ source: Live, pilot: Human }`, so a ladder bot's side of a
+/// (R1451): the live records under `{ source: Live, pilot: Human }`, so a ladder bot's side of a
 /// live game is left out, and the development records under `{ source: Dev, pilot: Unified }`,
 /// every mode, in-deck figures summed card by card; `live` only when every record counted is live.
 fn table_from_records(texts: &[String], patch: &str) -> Result<WinRateTable> {
@@ -246,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn r1450_table_from_records_counts_as_the_public_stats_do() {
+    fn r1451_table_from_records_counts_as_the_public_stats_do() {
         use jackioh_engine::{
             GameMode, GameOverReason, GameRecord, GameSummary, PerPlayer, Pilot, PlayerId, SeatSummary,
             Winner,
@@ -299,7 +299,7 @@ mod tests {
             .collect();
         assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
 
-        // R1450: p2 a ladder bot (`ai` on a live record): its side moves nothing, as on /stats.
+        // R1451: p2 a ladder bot (`ai` on a live record): its side moves nothing, as on /stats.
         let bot_game = PerPlayer::new(Pilot::Human, Pilot::Ai);
         let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.3.3")
             .unwrap_or_else(|error| panic!("{error:?}"));

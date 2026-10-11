@@ -363,8 +363,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
     let series = match made {
         Ok(series) => series,
         Err(error) => {
-            // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton
-            // `tickets_claim_pair` wrote points at nothing and nothing reaps `open` rows, so delete it.
+            // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton `tickets_claim_pair` wrote points at nothing, so delete it now rather than leave it to the reaper's open-row sweep (R1450).
             if let Err(cleanup) = discard_open(app, match_id).await {
                 tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
             }
@@ -486,8 +485,9 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         .await;
     if let Err(error) = started {
         // The `set_in_match` transaction has committed, so a failed start leaves the `open` skeleton
-        // `tickets_claim_pair` wrote with both profiles pointing at it, and nothing reaps `open` rows:
-        // the players would stay locked out. Undo it before the error stands (the tickets stay claimed).
+        // `tickets_claim_pair` wrote with both profiles pointing at it: the players would stay locked
+        // out until the reaper's open-row sweep (R1450) deletes it. Undo it now, before the error
+        // stands (the tickets stay claimed).
         let cleanup = async {
             let mut tx = app
                 .db
@@ -763,8 +763,8 @@ async fn start_bot_match(
         },
     };
     // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
-    // in the match, and nothing else reaps an `open` skeleton but the sweeper's release of stale
-    // starts, `BOT_STALE_START_SECONDS` after the claim (R1449).
+    // in the match, and otherwise only the sweeper's release of stale starts would let them go,
+    // `BOT_STALE_START_SECONDS` after the claim (R1449), or the reaper's open-row sweep (R1450).
     let started = async {
         let bot_seat = if random {
             MatchSeat {

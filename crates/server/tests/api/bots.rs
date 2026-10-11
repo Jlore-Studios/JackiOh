@@ -4,7 +4,7 @@
 //! player faced in their last games. A player rated above every bot never gets one, Conquest never
 //! does, and a person inside the window always pairs first.
 //!
-//! R1450 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
+//! R1451 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
 //! gate like any live game; the bot's side is recorded as `ai` and read only when a query asks.
 //!
 //! R1447 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's; the match screen
@@ -569,7 +569,7 @@ async fn r1448_ladder_bots_off_seats_none() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1450_the_bot_side_is_ai_and_the_human_side_counts() {
+async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -598,7 +598,7 @@ async fn r1450_the_bot_side_is_ai_and_the_human_side_counts() {
 }
 
 #[tokio::test]
-async fn r1450_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
+async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
     let app = app_with_bots(true).await;
     let patch = jackioh_cards::catalog_version().to_string();
     let seat = |deck: &[&str]| json!({ "deck": deck, "opening": [], "drawn": deck, "played": deck, "playedTurns": [1, 2] });

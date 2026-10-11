@@ -387,7 +387,7 @@ def card_stats(
     The arguments are `stats-cards`' flags and defaults (R378: live games unless `source` names `dev` or
     `all`; `mode` and `patch` None read every mode and patch; `pilot` None counts the human seats when
     `source` is `live`, so a ladder bot's side of a live game is read only when asked for, and every seat
-    otherwise, R1450; "unified" counts every seat). A game is one deck in one game: a game in which both
+    otherwise, R1451; "unified" counts every seat). A game is one deck in one game: a game in which both
     decks held a card counts once for each, and a draw is a game not won. For each breakdown in
     `BREAKDOWNS` the frame has `<breakdown>_games`, `_wins`, `_draws` and `_rate` (wins over games, NaN
     with no games); `played_delta` is the played win rate minus the drawn-but-not-played win rate in

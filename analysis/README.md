@@ -43,7 +43,7 @@ catalog = load_catalog()  # id → name, set, rarity, cost, type, tags, off crat
 
 `card_stats` is R377 and takes `stats-cards`' flags with its defaults: live games unless `source` is `dev` or
 `all` (R378), every mode and patch unless named, and unless `pilot` names `human`, `ai` or `unified`, the human
-seats of live games (a ladder bot's side is read only when asked for) and every seat of the rest (R1450). Each
+seats of live games (a ladder bot's side is read only when asked for) and every seat of the rest (R1451). Each
 deck counts once per game, a draw is a game not won, and the played delta is the played win rate minus the
 drawn-but-not-played win rate in percentage points. It returns one row per card with `<breakdown>_games`, `_wins`, `_draws`
 and `_rate` for `in_deck`, `opening_hand`, `going_first`, `going_second`, `played` and `drawn_not_played`, and

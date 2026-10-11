@@ -4,7 +4,7 @@ The authority for everything that is not presentation: identity, usernames (R143
 invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
 (R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
 Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
-(R1447–R1450), and the match itself: one actor per match holding the
+(R1447–R1449, R1451), and the match itself: one actor per match holding the
 `GameState` in memory, one WebSocket per player, `reduce` on every action and `view_for` pushed to
 each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
 for the card statistics (§9.11, R376–R378).
@@ -206,7 +206,7 @@ cargo jackioh stats report live.jsonl --json                                # th
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
 counts the human seats when it reads live data alone and every seat when it reads development data,
 so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified`, or with `--source=all`,
-which counts every seat of both sources unless a pilot is named (R1450).
+which counts every seat of both sources unless a pilot is named (R1451).
 
 `stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
 one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
@@ -238,7 +238,7 @@ and first move of the turn, fits each bucket of at least `TIMING_FIT_MIN_SAMPLES
 and prints one `ThinkTimeFit` row per bucket, to paste by hand into `config.rs`'s
 `THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. Neither takes an option.
 
-## Ladder bots (§9.5, §9.12, R1447–R1450)
+## Ladder bots (§9.5, §9.12, R1447–R1449, R1451)
 
 With `LADDER_BOTS=on`, a ranked Best of 1 or All Random ticket that has waited past its fallback
 time (15–40 s, drawn from its id and a key the server keeps to itself) with no person inside its
@@ -276,7 +276,8 @@ is seated and the pool is never sized.
   again when the catalog version changes (R1449). The queue's sweeper lets go a bot whose claimed
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
-  `LADDER_BOTS` says, since a restart may have turned it off.
+  `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
+  open-row sweep (R1450) would delete the skeleton.
 
 Migration 0032 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
 it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,
@@ -290,7 +291,7 @@ pilot or a bot's nonces, and `GET /api/matches/:matchId/ranks` shows a bot's sea
 rating calls for among the placed players' ratings, on that tier's floor and below Mythic Grape
 unless more players stand in Mythic than Jlorious holds, since it has no season row (R1447). The human
 side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
-with its bot id in `rated_games`, and is read only when a query asks for it (R1450).
+with its bot id in `rated_games`, and is read only when a query asks for it (R1451).
 
 ## Tests
 

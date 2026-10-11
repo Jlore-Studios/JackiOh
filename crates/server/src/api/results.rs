@@ -43,7 +43,9 @@ use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
-use crate::config::{MATCH_REAPER_INTERVAL_SECONDS, RATING_START, RESULT_WRITE_ATTEMPTS};
+use crate::config::{
+    MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
+};
 use crate::db::store::{
     LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
     SeriesRow, SeriesStatus, StoreError, Tx,
@@ -464,6 +466,25 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
     Ok(resolved)
 }
 
+/// R1450: the reaper's second sweep. Every `open` row more than `OPEN_MATCH_REAP_GRACE_SECONDS` past
+/// its `ceiling_at` is deleted: a room nobody joined before it expired, a claimed room whose match never
+/// started, a queue pairing's reservation whose start failed and whose cleanup failed too
+/// (`queue.pair_cleanup_failed`). That frees its room code and both players. The grace outlasts any
+/// start in flight: a room is claimed only before its expiry, and a reservation is started straight
+/// after its claim or, for a Conquest series, within the pick clock and the start give-up.
+///
+/// Answers how many rows it deleted.
+pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
+    let before = now_ms() - OPEN_MATCH_REAP_GRACE_MS;
+    let mut tx = app.db.begin(None).await.map_err(failure)?;
+    let reaped = tx.matches_reap_open(before).await.map_err(failure)?;
+    tx.commit().await.map_err(failure)?;
+    if reaped > 0 {
+        tracing::warn!(event = "reaper.open_released", rows = reaped);
+    }
+    Ok(reaped)
+}
+
 /// Seat order is the match row's player order: index 0 is p1 (`MatchRow.players`).
 fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
     (
@@ -485,7 +506,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// The reaper's loop (SURFACE §11.2: `api::results::run_reaper(app)`, every
 /// `MATCH_REAPER_INTERVAL_SECONDS`), as TS's `start()` in `src/index.ts` ran it: the first sweep one
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
-/// next sweep tried all the same. Runs until its task is aborted.
+/// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
+/// matches, then deletes the `open` rows past their grace (R1450).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -498,6 +520,9 @@ pub async fn run_reaper(app: Arc<App>) {
             Err(error) => {
                 tracing::warn!(event = "matches.reaper_failed", message = %error.message);
             }
+        }
+        if let Err(error) = reap_open_matches(&app).await {
+            tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
         }
     }
 }

@@ -113,7 +113,7 @@ pub enum Command {
 
 /// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]`:
 /// `jackioh-server stats-cards`' flags and defaults (R378: live games unless `--source` says
-/// otherwise; R1450: their human seats unless `--pilot` says otherwise), over record files instead
+/// otherwise; R1451: their human seats unless `--pilot` says otherwise), over record files instead
 /// of the database.
 #[derive(clap::Args, Debug, Clone, PartialEq)]
 pub struct ReportArgs {
@@ -130,7 +130,7 @@ pub struct ReportArgs {
     #[arg(long, value_name = "VERSION")]
     pub patch: Option<String>,
     /// The seats counted: human, ai or unified (every seat). Default: human for live games, a
-    /// ladder bot's side left out; unified, every seat, with --source=dev or all (R1450).
+    /// ladder bot's side left out; unified, every seat, with --source=dev or all (R1451).
     #[arg(long, value_parser = pilot_filter)]
     pub pilot: Option<PilotFilter>,
     /// One card's row only.
@@ -175,7 +175,7 @@ pub fn read_records(files: &[PathBuf]) -> Result<Vec<GameRecord>> {
     Ok(records)
 }
 
-/// R1450: the seats a report that names no `--pilot` counts, as `stats-cards` counts them: the
+/// R1451: the seats a report that names no `--pilot` counts, as `stats-cards` counts them: the
 /// human seats when it reads live games alone, so a ladder bot's side is read only when asked
 /// for, and every seat when it reads development data.
 pub fn default_pilot(source: SourceFilter) -> PilotFilter {
@@ -519,7 +519,7 @@ mod tests {
         ]);
         let records = parse_game_record_lines(&format!("{live}\n{dev_a}\n{dev_b}\n")).unwrap();
 
-        // Live games unless asked otherwise (R378), their human seats (R1450).
+        // Live games unless asked otherwise (R378), their human seats (R1451).
         let (_, by_default) = report_of(&paths, &[]);
         assert_eq!(by_default.games, 1);
         let live_people = CardStatsFilter {
@@ -604,7 +604,7 @@ mod tests {
     }
 
     #[test]
-    fn r1450_report_reads_a_ladder_bots_side_of_a_live_game_only_when_asked() {
+    fn r1451_report_reads_a_ladder_bots_side_of_a_live_game_only_when_asked() {
         // p1 a person, p2 a ladder bot holding core-003; and a development game, both seats AIs.
         let bot_game = record_line_piloted("m1", "live", "bo1", "p2", &["core-003"], ["human", "ai"]);
         let dev = record_line("dev:v0.2.5:dev:1", "dev", "random", "p1", &["core-003"]);
