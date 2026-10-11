@@ -27,6 +27,9 @@
 --   * profiles_need_auth_user (profiles, before insert) refuses a profile of
 --     kind 'human' with no auth.users row, as the key did.
 --
+-- A bot owns no collection (R1446): 0002's app.grant_launch_collection_all,
+-- which 0016 runs on every catalog stamp, grants people only from here on.
+--
 -- TRUST BOUNDARY: public.bots is server-only, as public.bot_ratings is (0022):
 -- RLS on, NO policy, no grant to anon or authenticated. The server
 -- (service_role, BYPASSRLS) is the only reader and writer.
@@ -34,7 +37,7 @@
 -- Apply order: ... -> 0001 (`public.profiles`) -> ... -> 0022 (column grants,
 -- `public.bot_ratings`) -> ... -> 0028 -> 0029 -> 0030.
 -- Safe to re-apply: add-column-if-not-exists, drop-constraint-if-exists,
--- create-or-replace of both functions, drop-and-create of both triggers,
+-- create-or-replace of the three functions, drop-and-create of both triggers,
 -- create-if-not-exists, comment-on and revoke are all idempotent.
 -- ============================================================================
 
@@ -158,3 +161,42 @@ alter table public.bots enable row level security;
 -- anon, authenticated: nothing. service_role: BYPASSRLS covers it (0002's
 -- convention).
 revoke all on public.bots from public, anon, authenticated;
+
+
+-- ----------------------------------------------------------------------------
+-- 4. A bot owns no collection (R1446).
+-- ----------------------------------------------------------------------------
+-- 0002's backfill, as it was, but over people's active profiles only: a bot's
+-- profile is active from the start (it never redeems a code, so 0002's
+-- activation trigger never grants it either), and 0016 runs this on every
+-- catalog stamp.
+create or replace function app.grant_launch_collection_all()
+returns int
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_count    int := 0;
+  v_profile  record;
+begin
+  -- SPEC §9.6 build order step 3: "Collection ledger; grant everything to
+  -- everyone." Backfill for every currently active person's profile; safe to
+  -- run repeatedly because app.grant_launch_collection is itself idempotent.
+  -- R1446: a ladder bot (kind 'bot') owns nothing.
+  for v_profile in
+    select id from public.profiles where status = 'active' and kind = 'human'
+  loop
+    perform app.grant_launch_collection(v_profile.id);
+    v_count := v_count + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+comment on function app.grant_launch_collection_all() is
+  $$Backfill: calls app.grant_launch_collection for every active person's
+  profile (kind human; a ladder bot owns no collection, R1446). Returns the
+  number of profiles touched (visited), not the number that received new
+  grants -- a repeat run touches the same count safely.$$;

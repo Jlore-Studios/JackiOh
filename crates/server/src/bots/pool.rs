@@ -13,6 +13,10 @@
 //! people took into live Best-of-1 games, shuffled, then the AI's own decks (`build_ai_deck`), each
 //! kept only when it is legal (`validate_deck`, against a collection of its own cards: a bot owns
 //! nothing and needs nothing), and dealt again whenever the catalog version changes.
+//!
+//! `release_stale_starts`, which the queue's sweeper runs every sweep while `LADDER_BOTS=on`, lets
+//! go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a start
+//! a crash or a restart cut off, which nothing else reaps.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,7 +36,7 @@ use crate::config::{
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_HOURS_PER_DAY,
     BOT_NAME_FIRST, BOT_NAME_SECOND, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN,
     BOT_POOL_PER_WEEKLY_ACTIVE, BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN,
-    BOT_STRENGTHS, USERNAME_CHANGE_COOLDOWN_MS,
+    BOT_STALE_START_SECONDS, BOT_STRENGTHS, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
     BotDeck, BotRow, GameRecordQuery, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
@@ -41,6 +45,8 @@ use crate::username::{normalize_username, username_key};
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const MS_PER_DAY: i64 = 86_400_000;
+/// Unit conversion, not configuration: a second in milliseconds.
+const MS_PER_SECOND: i64 = 1000;
 
 /// R1446: the pool's size for `weekly` people who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`.
@@ -268,6 +274,22 @@ async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result
         tx.commit().await?;
     }
     Ok(())
+}
+
+/// R1446: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
+/// the claim, and that match's player with it: a start a crash or a restart cut off. The queue's
+/// sweeper runs it every sweep while `LADDER_BOTS=on` (`run_matchmaker`), so neither is held out of
+/// the queue for longer than about that. Answers how many bots it let go.
+pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreError> {
+    let mut tx = app.db.begin(None).await?;
+    let released = tx
+        .bots_release_stale_starts(now - BOT_STALE_START_SECONDS * MS_PER_SECOND)
+        .await?;
+    tx.commit().await?;
+    for bot_id in &released {
+        tracing::warn!(event = "bots.start.released", botId = %bot_id);
+    }
+    Ok(released.len())
 }
 
 /// R1446: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and

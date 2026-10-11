@@ -4730,6 +4730,33 @@ pub async fn tickets_claim_for_bot(
     Ok(true)
 }
 
+/// R1446: the `open` skeletons bots were claimed into before `before` and that no start completed,
+/// deleted; `profiles.current_match_id` and `tickets.match_id` are `on delete set null`, so the bot
+/// and the ticket's owner are let go with them, and the ticket stays claimed. A room is an `open`
+/// row too, but never a bot's.
+pub async fn bots_release_stale_starts(t: &mut PgTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "with stale as (
+           select m.id, p.id as bot_id
+             from public.matches m
+             join public.profiles p on p.current_match_id = m.id
+            where p.kind = 'bot' and m.status = 'open' and m.created_at < ",
+        ts!("$1"),
+        "
+            for update of m)
+         delete from public.matches m
+          using stale
+          where m.id = stale.id and m.status = 'open'
+          returning stale.bot_id"
+    ))
+    .bind(before)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "bot_id")).collect()
+}
+
 /// R1445: the other seat of the profile's last `limit` results, newest first (ties on match id).
 pub async fn results_recent_opponents(
     t: &mut PgTx<'_>,

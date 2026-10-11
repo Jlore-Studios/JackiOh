@@ -159,6 +159,9 @@ pub struct BotTableRow {
     pub decks: Vec<BotDeck>,
     pub decks_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
+    /// When `tickets_claim_for_bot` last claimed it, the stand-in for the `open` skeleton's
+    /// `created_at`, which the fake does not write.
+    pub claimed_at: Option<i64>,
 }
 
 /// Every table, as both TS in-memory stores held them (TS `Tables`: the e2e store's own tables `&`
@@ -2826,6 +2829,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         decks: bot.decks.clone(),
         decks_catalog_version: bot.decks_catalog_version.clone(),
         retired_at: None,
+        claimed_at: None,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -2878,7 +2882,7 @@ pub fn tickets_claim_for_bot(
     ticket_id: &str,
     bot_id: &str,
     match_id: &str,
-    _at: i64,
+    at: i64,
 ) -> Result<bool, StoreError> {
     call(f, "tickets.claimForBot")?;
     let tables = f.tables();
@@ -2905,7 +2909,44 @@ pub fn tickets_claim_for_bot(
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
     }
+    if let Some(row) = tables.ladder_bots.iter_mut().find(|row| row.profile_id == bot_id) {
+        row.claimed_at = Some(at);
+    }
     Ok(true)
+}
+
+/// R1446: a bot claimed before `before` whose match the fake never created (no `matches` row: the
+/// start never ran) is let go, with the ticket's owner, as deleting the skeleton lets both go.
+pub fn bots_release_stale_starts(f: &mut FakeTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
+    call(f, "bots.releaseStaleStarts")?;
+    let tables = f.tables();
+    let stale: Vec<(String, String)> = tables
+        .ladder_bots
+        .iter()
+        .filter(|row| row.claimed_at.is_some_and(|at| at < before))
+        .filter_map(|row| {
+            let profile = tables
+                .profiles
+                .iter()
+                .find(|profile| profile.id == row.profile_id)?;
+            let match_id = profile.in_match_id.clone()?;
+            let started = tables.matches.iter().any(|existing| existing.id == match_id);
+            (!started).then(|| (row.profile_id.clone(), match_id))
+        })
+        .collect();
+    for (_, match_id) in &stale {
+        for profile in tables.profiles.iter_mut() {
+            if profile.in_match_id.as_deref() == Some(match_id.as_str()) {
+                profile.in_match_id = None;
+            }
+        }
+        for ticket in tables.tickets.iter_mut() {
+            if ticket.match_id.as_deref() == Some(match_id.as_str()) {
+                ticket.match_id = None;
+            }
+        }
+    }
+    Ok(stale.into_iter().map(|(bot_id, _)| bot_id).collect())
 }
 
 /// R1445: the other seat of the profile's last `limit` results, newest first (ties on match id).

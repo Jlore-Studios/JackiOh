@@ -10,6 +10,7 @@
 //! decision is running there, so the think times cost no real time and the decisions only theirs.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -20,9 +21,9 @@ use jackioh_server::actor::engine::{fold, fold_args, hash_state};
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{AI_PERSONAS, EmoteTrigger, PersonaName};
+use jackioh_server::config::{AI_PERSONAS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, EmoteTrigger, PersonaName};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, NewBot};
+use jackioh_server::db::store::{Db, NewBot, StoreError};
 
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::socket::{FakeSocket, create_fake_socket};
@@ -273,6 +274,94 @@ async fn r1444_bot_mulligans_and_plays_without_a_socket() {
         assert_eq!(bot_nonce(nonce), *seat == bot, "{seat} {nonce}");
     }
     assert!(m.actor.snapshot().result.is_none());
+    // Nothing the person's socket carried tells the bot's seat from a person's: no bot nonce, no
+    // pilot.
+    let frames = m.socket.sent();
+    assert!(!frames.is_empty(), "the person was sent their views");
+    for frame in frames {
+        assert!(!frame.contains(&format!("{SERVER_NONCE_PREFIX}bot-")), "{frame}");
+        assert!(!frame.contains("\"pilot\""), "{frame}");
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1444_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fallback() {
+    let m = bot_match("seed-bot-write", PlayerId::P1, PersonaName::Silent, false).await;
+    to_the_persons_turn(&m).await;
+    submit(&m, "person-end-write", json!({ "type": "endTurn" })).await;
+    let before = log_of(&m.app).await.len();
+    // The bot's first write of its turn fails, as a store that blips would.
+    let refused = Arc::new(AtomicBool::new(false));
+    let once = Arc::clone(&refused);
+    fake(&m.app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+        if method == "matches.appendActions" && !once.swap(true, Ordering::SeqCst) {
+            return Err(StoreError::Other(format!("{method} refused by the test")));
+        }
+        Ok(())
+    }));
+    let bot = m.bot().as_str().to_string();
+    let app = Arc::clone(&m.app);
+    for _ in 0..WAIT_STEPS {
+        m.actor.idle().await;
+        if refused.load(Ordering::SeqCst)
+            && log_of(&app).await[before..]
+                .iter()
+                .any(|(seat, nonce, _)| *seat == bot && bot_nonce(nonce))
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    assert!(refused.load(Ordering::SeqCst), "the bot's write was refused");
+    let log = log_of(&m.app).await;
+    let moves: Vec<&(String, String, String)> = log[before..]
+        .iter()
+        .filter(|(seat, nonce, _)| *seat == bot && bot_nonce(nonce))
+        .collect();
+    assert!(!moves.is_empty(), "the bot moved after all: {log:?}");
+    // Decided again, not swapped for the fallback move (its `-r` retry).
+    assert!(
+        moves.iter().all(|(_, nonce, _)| !nonce.ends_with("-r")),
+        "{log:?}"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1444_the_persons_actions_never_hold_the_bots_move_back() {
+    let m = bot_match("seed-bot-stale", PlayerId::P1, PersonaName::Silent, false).await;
+    to_the_persons_turn(&m).await;
+    submit(&m, "person-end-stale", json!({ "type": "endTurn" })).await;
+    let turn_began = tokio::time::Instant::now();
+    let before = log_of(&m.app).await.len();
+    let bot = m.bot().as_str().to_string();
+    // Through the bot's turn the person flips their auto-end-turn switch faster than the bot's
+    // quickest move, so every move the bot decides arrives after the log has moved on.
+    let flip_ms = u64::try_from(BOT_THINK_MIN_MS / 3).expect("a wait");
+    let mut moved = false;
+    for at in 0..WAIT_STEPS {
+        let flip = json!({ "type": "setAutoEndTurn", "enabled": at % 2 == 1 });
+        submit(&m, &format!("person-flip-{at}"), flip).await;
+        let log = log_of(&m.app).await;
+        if log[before..]
+            .iter()
+            .any(|(seat, nonce, _)| *seat == bot && bot_nonce(nonce))
+        {
+            moved = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(flip_ms)).await;
+    }
+    let log = log_of(&m.app).await;
+    assert!(moved, "the bot never moved: {log:?}");
+    // Its first move went out after the think time it first drew, not only once its clock ran so
+    // low that its wait came in under the person's flips.
+    let waited = turn_began.elapsed();
+    let longest = Duration::from_millis(u64::try_from(BOT_THINK_MAX_MS).expect("a wait") + flip_ms);
+    assert!(waited <= longest, "the bot's first move took {waited:?}: {log:?}");
+    assert!(
+        !log[before..].iter().any(|(_, _, kind)| kind == "timeout"),
+        "the bot's clock ran out first: {log:?}"
+    );
 }
 
 #[tokio::test(start_paused = true)]

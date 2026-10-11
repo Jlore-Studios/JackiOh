@@ -66,12 +66,13 @@ pub async fn play(job: BotJob) -> BotMove {
         clock_left_ms,
     } = job;
     let fallback_cursor = ai_rng.cursor();
+    let deadline_ms = decision_deadline_ms(clock_left_ms);
     let decided = tokio::task::spawn_blocking(move || {
         // The blocking pool's thread has no card override: the registered catalog it reads is the
         // real one, as the match's own (`actor::engine`).
         jackioh_cards::register_all();
-        let deadline = std::time::Instant::now()
-            + Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
+        let deadline =
+            std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
         let should_stop = move || std::time::Instant::now() >= deadline;
         let mut options = AiOptions {
             rng: ai_rng,
@@ -98,6 +99,16 @@ pub async fn play(job: BotJob) -> BotMove {
         body,
         ai_cursor,
         timing_cursor: timing_rng.cursor(),
+    }
+}
+
+/// R1444: how long a decision may search, in ms: `BOT_DECISION_DEADLINE_MS`, and never so long that
+/// less than `BOT_CLOCK_MARGIN_MS` is left on the acting clock, so a search never runs the bot's own
+/// clock out. At 0 the search stops at its first node and the AI answers with what it has.
+pub fn decision_deadline_ms(clock_left_ms: Option<i64>) -> i64 {
+    match clock_left_ms {
+        Some(left) => BOT_DECISION_DEADLINE_MS.min(left - BOT_CLOCK_MARGIN_MS).max(0),
+        None => BOT_DECISION_DEADLINE_MS,
     }
 }
 

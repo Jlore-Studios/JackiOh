@@ -45,8 +45,8 @@ use jackioh_server::config::PersonaName;
 use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotDeck, BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
+    GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
     PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
     ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
@@ -4732,12 +4732,78 @@ mod bots {
         assert_eq!(q!(harness, t => t.results_count_active_humans(now)), 0);
     }
 
+    async fn r1446_a_claim_that_never_started_is_released(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        // Claimed two minutes ago, its player put in the match, and never started: a cut-off start.
+        let cut = new_bot(2, now - DAY, 1000.0);
+        let a = active_profile(harness, None).await;
+        // Claimed just now: a start still going on.
+        let going = new_bot(2, now - DAY, 1000.0);
+        let b = active_profile(harness, None).await;
+        // Claimed two minutes ago and started: a match in play.
+        let playing = new_bot(2, now - DAY, 1000.0);
+        let c = active_profile(harness, None).await;
+        let mut claims = Vec::new();
+        for (bot, person, at) in [
+            (&cut, &a, now - 2 * MINUTE),
+            (&going, &b, now),
+            (&playing, &c, now - 2 * MINUTE),
+        ] {
+            q!(harness, t => t.bots_create(bot));
+            let ticket = ticket(harness, &person.id);
+            q!(harness, t => t.tickets_insert(&ticket));
+            let match_id = id();
+            assert!(q!(harness, t => t.tickets_claim_for_bot(&ticket.id, &bot.profile_id, &match_id, at)));
+            q!(harness, t => t.profiles_set_in_match(&person.id, Some(&match_id)));
+            claims.push((ticket.id, match_id));
+        }
+        let started = &claims[2].1;
+        q!(harness, t => t.matches_create(&match_row(started, &c.id, &playing.profile_id, harness, now - 2 * MINUTE)));
+
+        assert_eq!(
+            q!(harness, t => t.bots_release_stale_starts(now - MINUTE)),
+            vec![cut.profile_id.clone()]
+        );
+        let in_match = |bots: &[BotRow], bot: &NewBot| {
+            bots.iter()
+                .find(|row| row.profile_id == bot.profile_id)
+                .and_then(|row| row.in_match_id.clone())
+        };
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!(in_match(&bots, &cut), None, "the cut-off start's bot is free");
+        assert_eq!(
+            in_match(&bots, &going),
+            Some(claims[1].1.clone()),
+            "a start going on keeps its bot"
+        );
+        assert_eq!(
+            in_match(&bots, &playing),
+            Some(started.clone()),
+            "a match in play keeps its bot"
+        );
+        let person = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "player a");
+        assert_eq!(person.in_match_id, None, "its player is let go with it");
+        let kept = must(q!(harness, t => t.profiles_get_by_id(&b.id)), "player b");
+        assert_eq!(kept.in_match_id, Some(claims[1].1.clone()));
+        let ticket = j(&must(
+            q!(harness, t => t.tickets_get(&claims[0].0)),
+            "the cut-off ticket",
+        ));
+        assert_eq!(ticket["status"], "matched", "the ticket stays claimed");
+        assert!(ticket["matchId"].is_null(), "{ticket}");
+
+        // Nothing is left to let go.
+        assert!(q!(harness, t => t.bots_release_stale_starts(now - MINUTE)).is_empty());
+    }
+
     both_stores!(
         r1446_bots_create_and_list,
         r1446_retire_and_decks,
         r1445_claim_for_bot_is_single_shot,
         r1445_recent_opponents_newest_first,
         r1446_active_humans_skip_bots,
+        r1446_a_claim_that_never_started_is_released,
     );
 }
 

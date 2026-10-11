@@ -661,7 +661,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `bots` table, one row per bot's profile, with RLS on and no policy or grant; and the profile's
    foreign key to `auth.users` swapped for triggers, so inserting a person's profile still needs its
    auth user and deleting an auth user still deletes its profile, while a bot's profile needs none.
-   It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
+   It also limits the launch collection's backfill, which every catalog stamp runs (0016), to
+   people's profiles, since a bot owns no collection (R1446). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

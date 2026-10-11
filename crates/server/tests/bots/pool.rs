@@ -3,7 +3,8 @@
 //! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
 //! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
 //! the default `Player#n`), and its Best-of-1 decks are the patch's human decklists first, then the
-//! AI's own, each legal, dealt again whenever the catalog version changes.
+//! AI's own, each legal, dealt again whenever the catalog version changes. A bot whose claimed match
+//! never started is let go (`release_stale_starts`, which the queue's sweeper runs).
 //!
 //! `jackioh_server::bots::pool`, against the fake store and the real catalog.
 
@@ -13,14 +14,14 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::GameRecord;
 use jackioh_server::app::now_ms;
 use jackioh_server::bots::pool::{
-    PoolChange, draw_decks, draw_new_bot, plan_pool, pool_target, refresh_pool,
+    PoolChange, draw_decks, draw_new_bot, plan_pool, pool_target, refresh_pool, release_stale_starts,
 };
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX,
-    BOT_SPEED_MIN, BOT_STRENGTHS, PersonaName,
+    BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, PersonaName,
 };
-use jackioh_server::db::store::BotRow;
+use jackioh_server::db::store::{BotRow, Ticket};
 use jackioh_server::username::normalize_username;
 
 use crate::support::deps::empty_test_app;
@@ -311,4 +312,53 @@ async fn r1446_new_catalog_redraws_decks() {
             Some(app.catalog.version.as_str())
         );
     }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1446_a_bot_whose_start_was_cut_off_is_let_go() {
+    let app = empty_test_app().await;
+    let now = now_ms();
+    refresh_pool(&app, "cut", now).await.expect("a refresh");
+    let bots = q!(app, bots_list());
+    let (cut, going) = (&bots[0], &bots[1]);
+    let stale_ms = BOT_STALE_START_SECONDS * 1000;
+    let later = now + stale_ms;
+    // Two claims whose matches never started: one a whole BOT_STALE_START_SECONDS ago (a start a
+    // restart cut off), one just now (a start still going on).
+    let mut claimed = Vec::new();
+    for (bot, at) in [(cut, now), (going, later)] {
+        let ticket: Ticket = serde_json::from_value(json!({
+            "id": format!("ticket-{}", bot.profile_id),
+            "profileId": format!("person-{}", bot.profile_id),
+            "rating": 1000,
+            "mode": "bo1",
+            "deck": [],
+            "portrait": null,
+            "trio": null,
+            "catalogVersion": app.catalog.version,
+            "enqueuedAt": at,
+            "status": "open",
+            "matchId": null,
+        }))
+        .expect("a ticket");
+        q!(app, tickets_insert(&ticket));
+        let match_id = format!("match-{}", bot.profile_id);
+        assert!(q!(
+            app,
+            tickets_claim_for_bot(&ticket.id, &bot.profile_id, &match_id, at)
+        ));
+        claimed.push(match_id);
+    }
+
+    assert_eq!(release_stale_starts(&app, later + 1).await.expect("a release"), 1);
+    let after = q!(app, bots_list());
+    let in_match = |id: &str| {
+        after
+            .iter()
+            .find(|bot| bot.profile_id == id)
+            .and_then(|bot| bot.in_match_id.clone())
+    };
+    assert_eq!(in_match(&cut.profile_id), None, "the cut-off start's bot is free");
+    assert_eq!(in_match(&going.profile_id), Some(claimed[1].clone()));
+    assert_eq!(release_stale_starts(&app, later + 1).await.expect("a release"), 0);
 }

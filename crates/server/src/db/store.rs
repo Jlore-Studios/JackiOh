@@ -1842,6 +1842,14 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
+    /// R1446: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
+    /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
+    /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`
+    /// lets a failed start's go; the ticket stays claimed. Answers the bots let go.
+    pub async fn bots_release_stale_starts(&mut self, before: i64) -> StoreResult<Vec<String>> {
+        dispatch!(self, bots_release_stale_starts(before))
+    }
+
     /// R1445: the profiles `profile_id` faced in its last `limit` finished matches, newest first.
     pub async fn results_recent_opponents(
         &mut self,

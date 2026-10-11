@@ -806,11 +806,19 @@ pub const BOT_THINK_PRIOR_LATER_SIGMA: f64 = 0.7;
 pub const BOT_THINK_MIN_MS: i64 = 600;
 /// R1444: the longest it waits before a move.
 pub const BOT_THINK_MAX_MS: i64 = 30_000;
-/// R1444: what a bot leaves on its acting clock (R79) when it waits, so it never times out.
+/// R1444: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
+/// out.
 pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
 /// R1444: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
-/// found so far.
+/// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
+/// R1446: how old a match a bot was claimed for may be and still be `open` (claimed, never
+/// started) before the queue's sweeper lets the bot and its player go and discards the match: a
+/// start that a crash or a restart cut off. A start that goes on takes milliseconds.
+pub const BOT_STALE_START_SECONDS: i64 = 60;
+/// R1444: how long a bot waits to decide again when its move could not be written to the log, so a
+/// store that keeps failing is retried at this pace, never in a loop.
+pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Derived millisecond helpers, since timers (`tokio::time`) take milliseconds.

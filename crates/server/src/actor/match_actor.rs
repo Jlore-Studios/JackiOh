@@ -59,8 +59,8 @@ use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
 use crate::bots::seat::{self, BotJob, BotMove, fallback_action, r188_forbidden};
 use crate::config::{
-    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_STRENGTHS, MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_STRENGTHS, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
 use crate::ranked::ladder::RankTier;
@@ -123,10 +123,11 @@ enum Task {
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
     /// R1444: the move a bot home's `seat::play` came back with, decided on the state as it stood
-    /// when the log's next seq was `version`.
+    /// when the log's next seq was `version`, in turn `turn`.
     BotMove {
         home: PlayerId,
         version: i64,
+        turn: i32,
         played: BotMove,
     },
 }
@@ -574,8 +575,9 @@ impl MatchActor {
             Task::BotMove {
                 home,
                 version,
+                turn,
                 played,
-            } => self.on_bot_move(home, version, played).await,
+            } => self.on_bot_move(home, version, turn, played).await,
         }
     }
 
@@ -844,11 +846,13 @@ impl MatchActor {
         for home in &away {
             self.shared.clock.start_grace(playing(core, *home), None);
         }
-        // R645: a bot's persona reads the seat its bot plays now.
+        // R645: a bot's persona reads the seat its bot plays now, from a fresh start: the view it read
+        // last is the other seat's, and no difference between the two is anything that happened.
         for home in PLAYERS {
             let seat = playing(core, home);
             if let Some(persona) = core.personas[home].as_mut() {
                 persona.set_seat(seat);
+                core.bot_views[home] = None;
             }
         }
         tracing::info!(event = "match.seats.swapped", matchId = %self.match_id_str(), swapped = core.swapped);
@@ -1123,6 +1127,7 @@ impl MatchActor {
             };
             core.bot_thinking[home] = true;
             let version = core.next_seq;
+            let turn = core.state.turn;
             let actor = Arc::downgrade(&self.shared);
             tokio::spawn(async move {
                 let played = seat::play(job).await;
@@ -1130,6 +1135,7 @@ impl MatchActor {
                     MatchActor { shared }.enqueue(Task::BotMove {
                         home,
                         version,
+                        turn,
                         played,
                     });
                 }
@@ -1138,48 +1144,90 @@ impl MatchActor {
     }
 
     /// R1444: plays the move a bot home decided, as a server action (R270's prefix, so no client can
-    /// pre-empt it and R1442 records no think time for it) stamped with the seat it plays now. A move
-    /// decided on a state the log has since moved past is dropped and decided again. R188: a bot never
-    /// concedes or offers or takes a draw, and a move the AI could not give, or the engine refused,
-    /// becomes `fallback_action`'s, tried once.
-    async fn on_bot_move(&self, home: PlayerId, version: i64, played: BotMove) {
-        let (player, body, previous_turn) = {
+    /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
+    /// the seat it plays now. R188: a bot never concedes or offers or takes a draw.
+    ///
+    /// A move decided on a state the log has since moved past (the other seat acted meanwhile: a
+    /// person's auto-end-turn switch, their side of the mulligan, an answer to a prompt) still goes,
+    /// its think time waited out, while it is the same turn and the engine takes it; else the bot
+    /// decides again. So no stream of the person's own actions can hold the bot's move back. A fresh
+    /// move the AI could not give, or the engine refused, becomes `fallback_action`'s, tried once;
+    /// one whose write failed is decided again `BOT_WRITE_RETRY_MS` later, never traded for the
+    /// fallback.
+    async fn on_bot_move(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
+        let (player, body, stale, previous_turn, nonce) = {
             let mut core = self.lock();
             core.bot_thinking[home] = false;
             core.bot_cursors[home] = (played.ai_cursor, played.timing_cursor);
             if core.finished || core.stopped {
                 return;
             }
-            if core.next_seq != version {
-                drop(core);
-                self.drive_bots();
-                return;
-            }
             let player = playing(&core, home);
-            let body = played
-                .body
-                .filter(|body| !r188_forbidden(body))
-                .or_else(|| fallback_action(&core.state, player));
+            let stale = core.next_seq != version;
+            let body = played.body.filter(|body| !r188_forbidden(body));
+            let body = if !stale {
+                body.or_else(|| fallback_action(&core.state, player))
+            } else if core.state.turn == turn {
+                body
+            } else {
+                None
+            };
+            let Some(body) = body else {
+                drop(core);
+                if stale {
+                    self.drive_bots();
+                }
+                return;
+            };
             // Set before the move goes, since the move's own push already starts the next one.
-            let turn = core.state.turn;
-            (player, body, core.bot_moved_turn[home].replace(turn))
+            let now_turn = core.state.turn;
+            let nonce = format!("{SERVER_NONCE_PREFIX}bot-{}", core.next_seq);
+            (
+                player,
+                body,
+                stale,
+                core.bot_moved_turn[home].replace(now_turn),
+                nonce,
+            )
         };
-        let Some(body) = body else {
-            self.lock().bot_moved_turn[home] = previous_turn;
-            return;
-        };
-        let nonce = format!("{SERVER_NONCE_PREFIX}bot-{version}");
         let mut reply = self.apply_action(player, nonce.clone(), body).await;
-        if !matches!(reply, ServerMessage::Ack { .. }) {
-            let retry = fallback_action(&self.lock().state, player);
-            if let Some(body) = retry {
-                reply = self.apply_action(player, format!("{nonce}-r"), body).await;
+        let refused = matches!(
+            &reply,
+            ServerMessage::Error {
+                code: SocketErrorCode::IllegalAction,
+                ..
             }
+        );
+        let retry = if refused && !stale {
+            fallback_action(&self.lock().state, player)
+        } else {
+            None
+        };
+        if let Some(body) = retry {
+            reply = self.apply_action(player, format!("{nonce}-r"), body).await;
         }
         if let ServerMessage::Error { code, message, .. } = &reply {
             self.lock().bot_moved_turn[home] = previous_turn;
             tracing::warn!(event = "bot.move.refused", matchId = %self.match_id_str(), player = %player, code = ?code, message = %message);
+            if *code != SocketErrorCode::IllegalAction {
+                self.drive_bots_after(BOT_WRITE_RETRY_MS);
+            } else if stale {
+                self.drive_bots();
+            }
         }
+    }
+
+    /// `drive_bots` once `ms` have passed: a bot whose move could not be written decides again at
+    /// that pace (`BOT_WRITE_RETRY_MS`).
+    fn drive_bots_after(&self, ms: i64) {
+        let actor = Arc::downgrade(&self.shared);
+        let wait = Duration::from_millis(u64::try_from(ms).unwrap_or(0));
+        tokio::spawn(async move {
+            tokio::time::sleep(wait).await;
+            if let Some(shared) = actor.upgrade() {
+                MatchActor { shared }.drive_bots();
+            }
+        });
     }
 
     /// R645: each bot's persona reads the change off its own seat's view: the newest `fresh` events

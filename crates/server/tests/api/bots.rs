@@ -15,7 +15,7 @@
 //! writes them (`bots_create`, `bots_set_decks`).
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
@@ -26,10 +26,15 @@ use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::app::{App, load_server_env, now_ms};
 use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, hour_of};
-use jackioh_server::config::{BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS};
+use jackioh_server::config::{
+    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, JLORIOUS_SIZE,
+    RANK_PLACEMENT_GAMES,
+};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{BotDeck, Db, NewBot, Ticket};
+use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError, Ticket};
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
+use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
+use jackioh_server::ranked::season::season_id_of;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 
@@ -367,7 +372,7 @@ async fn r1445_recent_retired_off_schedule_and_busy_bots_are_skipped() {
     let now = now_ms();
     let hour = hour_of(now);
 
-    // The four closest are each out of reach for one reason; the far one is the only choice.
+    // The six closest are each out of reach for one reason; the far one is the only choice.
     let recent = new_bot(&app, BotSpec::rated(1000.0)).await;
     let retired = new_bot(&app, BotSpec::rated(1001.0)).await;
     let off_schedule = new_bot(
@@ -389,6 +394,10 @@ async fn r1445_recent_retired_off_schedule_and_busy_bots_are_skipped() {
         },
     )
     .await;
+    // R1446: decks dealt for a catalog this server no longer plays seat it in no Best of 1.
+    let stale_decks = new_bot(&app, BotSpec::rated(1005.0)).await;
+    let older: Vec<BotDeck> = vec![from(json!({ "cards": deck(1), "portrait": "vanilla" }))];
+    q!(app, bots_set_decks(&stale_decks, &older, "an-older-catalog"));
     let far = new_bot(&app, BotSpec::rated(1150.0)).await;
 
     // The person played `recent` last; it is among their last BOT_RECENT_OPPONENTS games.
@@ -413,9 +422,52 @@ async fn r1445_recent_retired_off_schedule_and_busy_bots_are_skipped() {
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
     assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
     assert_eq!(
-        seated(&app, &[&recent, &retired, &off_schedule, &busy, &deckless, &far]).await,
+        seated(
+            &app,
+            &[
+                &recent,
+                &retired,
+                &off_schedule,
+                &busy,
+                &deckless,
+                &stale_decks,
+                &far
+            ]
+        )
+        .await,
         vec![far.clone()]
     );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1445_a_start_that_fails_lets_the_bot_go() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    // The claim put the bot in the match; the next write, the player's in-match state, fails.
+    let refused = Arc::new(AtomicBool::new(false));
+    let once = Arc::clone(&refused);
+    fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
+        if method == "profiles.setInMatch" && !once.swap(true, Ordering::SeqCst) {
+            return Err(StoreError::Other(format!("{method} refused by the test")));
+        }
+        Ok(())
+    }));
+    assert!(try_pair(&app).await.is_err(), "the start's failure stands");
+    assert!(
+        refused.load(Ordering::SeqCst),
+        "the write after the claim was refused"
+    );
+    fake(&app).await.on_call = None;
+
+    let bots = q!(app, bots_list());
+    assert_eq!(bots.len(), 1);
+    assert_eq!(bots[0].profile_id, bot);
+    assert_eq!(bots[0].in_match_id, None, "the bot is free again");
+    let profile = q!(app, profiles_get_by_id(&person)).expect("the person");
+    assert_eq!(profile.in_match_id, None);
+    assert!(matches(&app).await.is_empty(), "no match started");
 }
 
 #[tokio::test(start_paused = true)]
@@ -575,6 +627,8 @@ async fn r1444_no_read_tells_a_bot_seat() {
         shown["rank"]["tier"].is_string() && shown["rank"]["tier"] != "jlorious",
         "a Grape rank: {shown}"
     );
+    // On its own tier's floor, as a placed player often stands: never one no player could hold.
+    assert_eq!(shown["rank"]["floor"], shown["rank"]["tier"], "{shown}");
 
     let mut bodies = vec![ranks];
     for path in [
@@ -592,5 +646,48 @@ async fn r1444_no_read_tells_a_bot_seat() {
         for tell in ["\"kind\"", "\"pilot", "srv-bot", "\"bot\"", "ladderBot"] {
             assert!(!text.contains(tell), "{tell} in {text}");
         }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1444_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
+    // Jlorious takes the first JLORIOUS_SIZE placed Mythic players (R608): with exactly that many
+    // nobody holds Mythic Grape, and one more is the first who does.
+    for (in_mythic, shown) in [(JLORIOUS_SIZE, "golden"), (JLORIOUS_SIZE + 1, "mythic")] {
+        let app = app_with_bots(true).await;
+        let season = season_id_of(jackioh_cards::catalog_version());
+        let mythic = GrapeTier::Mythic as i32;
+        for _ in 0..in_mythic {
+            let id = next_id("mythic");
+            fake(&app)
+                .await
+                .seed_profile(json!({ "id": id, "status": "active", "rating": 1000 }));
+            let mut rank = fresh_rank(&season, &id, 0);
+            rank.games = RANK_PLACEMENT_GAMES;
+            rank.ladder = Some(tier_bottom(mythic));
+            rank.floor = mythic;
+            rank.peak_ladder = rank.ladder;
+            q!(app, ranked_put_rank(&rank));
+        }
+        // The bot is rated above every one of them, so its rating calls for Mythic.
+        let (person, token) = new_person(&app, 1000.0).await;
+        let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
+        ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        let row = fake(&app).await.tables.matches[0].clone();
+        let (status, _, ranks) = call(
+            &app,
+            "GET",
+            &format!("/api/matches/{}/ranks", row.id),
+            Some(&token),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{ranks}");
+        let bot_seat = if row.players.0 == bot { "p1" } else { "p2" };
+        assert_eq!(
+            ranks["seats"][bot_seat]["rank"]["tier"], shown,
+            "{in_mythic} in Mythic: {ranks}"
+        );
     }
 }

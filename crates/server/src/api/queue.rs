@@ -701,7 +701,7 @@ async fn pair_with_bots(
                 .map_err(|error| ApiError::internal(error.to_string()))?;
             recent
         };
-        let Some(bot) = choose_bot(ticket, &bots, &recent, &busy, hour) else {
+        let Some(bot) = choose_bot(ticket, &bots, &recent, &busy, hour, &app.catalog.version) else {
             continue;
         };
         let match_id = new_uuid();
@@ -765,33 +765,35 @@ async fn start_bot_match(
             ticket.portrait.clone().flatten()
         },
     };
-    let bot_seat = if random {
-        MatchSeat {
-            profile_id: bot.profile_id.clone(),
-            player: bot_player,
-            deck: dealt_deck(&seed, bot_player.as_str(), false),
-            portrait: dealt_portrait(&seed, bot_player.as_str()),
-        }
-    } else {
-        let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck"), 0)
-            .pick(&bot.decks)
-            .cloned()
-            .ok_or_else(|| ApiError::internal(format!("bot {} holds no deck", bot.profile_id)))?;
-        MatchSeat {
-            profile_id: bot.profile_id.clone(),
-            player: bot_player,
-            deck: picked.cards,
-            portrait: Some(picked.portrait),
-        }
-    };
-    let seats = if bot_first {
-        (bot_seat, human)
-    } else {
-        (human, bot_seat)
-    };
+    // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
+    // in the match, and nothing else reaps an `open` skeleton but the pool's sizing (R1446).
+    let started = async {
+        let bot_seat = if random {
+            MatchSeat {
+                profile_id: bot.profile_id.clone(),
+                player: bot_player,
+                deck: dealt_deck(&seed, bot_player.as_str(), false),
+                portrait: dealt_portrait(&seed, bot_player.as_str()),
+            }
+        } else {
+            let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck"), 0)
+                .pick(&bot.decks)
+                .cloned()
+                .ok_or_else(|| ApiError::internal(format!("bot {} holds no deck", bot.profile_id)))?;
+            MatchSeat {
+                profile_id: bot.profile_id.clone(),
+                player: bot_player,
+                deck: picked.cards,
+                portrait: Some(picked.portrait),
+            }
+        };
+        let seats = if bot_first {
+            (bot_seat, human)
+        } else {
+            (human, bot_seat)
+        };
 
-    // §9.5's in-match state for the player; `tickets_claim_for_bot` put the bot in the match.
-    {
+        // §9.5's in-match state for the player; `tickets_claim_for_bot` put the bot in the match.
         let mut tx = app
             .db
             .begin(None)
@@ -803,27 +805,27 @@ async fn start_bot_match(
         tx.commit()
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
-    }
 
-    // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
-    let started = app
-        .matches
-        .start(
-            app,
-            StartMatchInput {
-                match_id: match_id.to_string(),
-                seed,
-                catalog_version: app.catalog.version.clone(),
-                ranked: true,
-                seats,
-                mode: None,
-                stake: None,
-            },
-        )
-        .await;
+        // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
+        app.matches
+            .start(
+                app,
+                StartMatchInput {
+                    match_id: match_id.to_string(),
+                    seed: seed.clone(),
+                    catalog_version: app.catalog.version.clone(),
+                    ranked: true,
+                    seats,
+                    mode: None,
+                    stake: None,
+                },
+            )
+            .await
+    }
+    .await;
     if let Err(error) = started {
-        // As `start_paired_match`'s: nothing reaps an `open` skeleton, so both profiles are let go
-        // and the skeleton discarded before the error stands (the ticket stays claimed).
+        // As `start_paired_match`'s: both profiles are let go and the skeleton discarded before the
+        // error stands (the ticket stays claimed).
         let cleanup = async {
             let mut tx = app
                 .db
@@ -865,6 +867,12 @@ async fn start_bot_match(
 pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
+        // R1446: a bot (and its player) a cut-off start still holds is let go before the sweep.
+        if app.env.ladder_bots
+            && let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await
+        {
+            tracing::warn!(event = "bots.start.release_failed", message = %error);
+        }
         if let Err(error) = try_pair(&app).await {
             // A failed sweep must not kill the sweeper: the next one may well succeed.
             tracing::warn!(event = "matchmaker.sweep_failed", message = %error.message);

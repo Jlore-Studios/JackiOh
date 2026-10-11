@@ -164,3 +164,37 @@ begin
   raise notice 'OK (R1444): an auth user''s delete takes its profile, a human profile needs one, a bot''s does not';
 end $$;
 rollback;
+
+\echo '### R1446: a bot owns no collection, whatever grants the launch collection ###'
+begin;
+do $$
+declare
+  p1      constant uuid := '11111111-1111-1111-1111-111111111111';
+  bot     constant uuid := 'b1446000-0000-4000-8000-000000000001';
+  v_cards bigint;
+  n       bigint;
+begin
+  -- Vacuity guard: the launch backfill has cards to grant, and grants them to a person.
+  select count(*) into v_cards from public.cards
+   where token = false and catalog_version = app.catalog_version();
+  if v_cards = 0 then
+    raise exception 'FAIL (R1446): the current catalog holds no non-Token card; the backfill below would grant nothing to anyone';
+  end if;
+
+  insert into public.profiles (id, kind, status) values (bot, 'bot', 'active');
+  perform app.grant_launch_collection_all();
+  select count(*) into n from public.collection where profile_id = p1 and quantity >= 1;
+  if n <> v_cards then
+    raise exception 'FAIL (R1446): profile 1 owns % of the % cards after the backfill; it must still grant people', n, v_cards;
+  end if;
+  select count(*) into n from public.collection where profile_id = bot;
+  if n <> 0 then
+    raise exception 'FAIL (R1446): the backfill (0016 runs it on every catalog stamp) granted the bot % cards', n;
+  end if;
+  select count(*) into n from public.collection_grants where profile_id = bot;
+  if n <> 0 then
+    raise exception 'FAIL (R1446): the bot has % collection_grants rows', n;
+  end if;
+  raise notice 'OK (R1446): the launch backfill grants people and passes over the bot';
+end $$;
+rollback;

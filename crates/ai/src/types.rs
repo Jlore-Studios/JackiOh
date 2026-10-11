@@ -46,8 +46,8 @@ pub struct AiStyle {
 
 /// SURFACE §9: `decide`'s options; `budget` defaults to AI_BUDGET (`AiOptions::new`).
 pub struct AiOptions<'a> {
-    /// The AI's own stream; determinize is its only consumer. The caller reads `rng.cursor()` back
-    /// afterwards.
+    /// The AI's own stream; determinize is its only consumer, with an `AiStyle`'s two draws under
+    /// `decide_styled` (R1444). The caller reads `rng.cursor()` back afterwards.
     pub rng: Rng,
     pub budget: SearchBudget,
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.

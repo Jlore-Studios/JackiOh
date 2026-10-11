@@ -564,16 +564,26 @@ pub fn visible_rank(rank: Option<&SeasonRank>, jlorious_position: Option<i32>) -
 
 /// R1444: the rank a ladder bot's rating calls for among the season's placed players' ratings
 /// (`others`), which the match screen shows for a bot in place of the ladder rank it never holds
-/// (R610): R606's target, read as a Grape place on the bottom floor. Never Jlorious, a place on the
-/// leaderboard a bot is kept off.
-pub fn called_for_rank(rating: f64, others: &[f64]) -> VisibleRank {
-    let place = place_of(target_ladder(&percentile_of(rating, others)));
+/// (R610): R606's target, read as a Grape place on its own tier's floor, where a placed player's
+/// rank always stands (`apply_ranked_game` raises the floor to every tier reached and never lets the
+/// ladder below it). Never Jlorious, a place on the leaderboard a bot is kept off; and so never
+/// Mythic Grape unless some placed player holds it (`mythic_grape_held`: more placed players stand in
+/// Mythic than Jlorious's `JLORIOUS_SIZE`, R608), since until then every one of them is Jlorious: a
+/// rating that calls for Mythic shows the top of the tier below.
+pub fn called_for_rank(rating: f64, others: &[f64], mythic_grape_held: bool) -> VisibleRank {
+    let target = target_ladder(&percentile_of(rating, others));
+    let ladder = if mythic_grape_held {
+        target
+    } else {
+        target.min(tier_bottom(MYTHIC) - 1)
+    };
+    let place = place_of(ladder);
     VisibleRank::Grape {
         tier: place.tier,
         division: place.division,
         pips: place.pips,
         pips_per_division: RANK_PIPS_PER_DIVISION,
-        floor: grape_at(0, GrapeTier::Rotten),
+        floor: place.tier,
     }
 }
 

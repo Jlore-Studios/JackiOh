@@ -202,7 +202,8 @@ cargo jackioh stats report live.jsonl --json                                # th
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
 counts the human seats when it reads live data alone and every seat when it reads development data,
-so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified` (R1447).
+so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified`, or with `--source=all`,
+which counts every seat of both sources unless a pilot is named (R1447).
 
 `stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
 one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
@@ -242,14 +243,18 @@ which this process plays itself. Off, none of it runs: no bot is seated and the 
 
 - `bots::fallback` is pure: which waiting ticket may have a bot (`fallback_due`) and which bot it
   gets (`choose_bot`: in the pool, on its schedule, in no match, not one of the player's last
-  `BOT_RECENT_OPPONENTS`, the closest in rating; none for a player rated above every bot). The
+  `BOT_RECENT_OPPONENTS`, for Best of 1 holding decks dealt for this catalog, the closest in
+  rating; none for a player rated above every bot). The
   queue's sweep (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a
   ticket and its bot in one statement (`tickets_claim_for_bot`, single-shot like a pair's claim)
-  and starts the match, ranked, the bot's seat a coin from the seed (R1445). Conquest never gets one.
+  and starts the match, ranked, the bot's seat a coin from the seed (R1445); a start that fails
+  lets both go. Conquest never gets one.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
   budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
-  acting clock. Its streams (`{seed}:bot-ai:{home}`, `{seed}:bot-timing:{home}`) are the server's
+  acting clock, the search's deadline too; a move whose write failed is decided again
+  `BOT_WRITE_RETRY_MS` later. A move decided before the person acted still goes while
+  it is the same turn and the engine takes it, so the person's own actions never hold it back. Its streams (`{seed}:bot-ai:{home}`, `{seed}:bot-timing:{home}`) are the server's
   own, never the match rng, so a match with a bot replays from `(seed, log)` like any other, and a
   rebuilt actor resumes the bot's seat with its streams started again (R1444).
 - `bots::persona` is the server's port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
@@ -262,16 +267,21 @@ which this process plays itself. Off, none of it runs: no bot is seated and the 
   A new bot draws a strength (its R610 rating seeded from it), a speed, a persona, a schedule, an
   account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
   patch's human Best-of-1 decklists, then `build_ai_deck`'s, each checked legal, and they are dealt
-  again when the catalog version changes (R1446).
+  again when the catalog version changes (R1446). The queue's sweeper lets go a bot whose claimed
+  match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
+  (`release_stale_starts`), which is what a restart mid-start leaves.
 
 Migration 0030 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
 it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,
 decks and when it retired; RLS on with no policy and no client grant), and swaps the profile's
 foreign key to `auth.users` for triggers: inserting a person's profile still needs its auth user
-and deleting an auth user still deletes its profile, but a bot's profile needs none. A bot's rating
+and deleting an auth user still deletes its profile, but a bot's profile needs none; and it limits
+the launch collection's backfill (`app.grant_launch_collection_all`, which every catalog stamp
+runs) to people, since a bot owns no collection. A bot's rating
 is a `bot_ratings` row (0022, R610). Nothing a client reads carries a profile's `kind`, a seat's
 pilot or a bot's nonces, and `GET /api/matches/:matchId/ranks` shows a bot's seat the rank its
-rating calls for among the placed players' ratings, since it has no season row (R1444). The human
+rating calls for among the placed players' ratings, on that tier's floor and below Mythic Grape
+unless more players stand in Mythic than Jlorious holds, since it has no season row (R1444). The human
 side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
 with its bot id in `rated_games`, and is read only when a query asks for it (R1447).
 

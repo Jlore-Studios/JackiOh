@@ -51,14 +51,16 @@ pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
 
 /// R1445: the bot the ticket pairs with, or none. None when the player is rated above every bot in
 /// the pool; else, of the bots in the pool, on their schedule, in no match, not `busy` (taken by
-/// this sweep), not among the player's `recent` opponents and, for Best of 1, holding a deck, the
-/// one closest in rating, ties on id.
+/// this sweep), not among the player's `recent` opponents and, for Best of 1, holding decks dealt
+/// for the catalog this server plays (`catalog_version`, R1446), the one closest in rating, ties on
+/// id.
 pub fn choose_bot<'a>(
     ticket: &Ticket,
     bots: &'a [BotRow],
     recent: &[String],
     busy: &IndexSet<String>,
     hour: i32,
+    catalog_version: &str,
 ) -> Option<&'a BotRow> {
     let pool: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
     if pool.iter().all(|bot| ticket.rating > bot.rating) {
@@ -68,7 +70,10 @@ pub fn choose_bot<'a>(
         .filter(|bot| on_schedule(bot, hour))
         .filter(|bot| bot.in_match_id.is_none() && !busy.contains(&bot.profile_id))
         .filter(|bot| !recent.contains(&bot.profile_id))
-        .filter(|bot| ticket.mode != QueueMode::Bo1 || !bot.decks.is_empty())
+        .filter(|bot| {
+            ticket.mode != QueueMode::Bo1
+                || (!bot.decks.is_empty() && bot.decks_catalog_version.as_deref() == Some(catalog_version))
+        })
         .min_by(|a, b| {
             let gap_a = (a.rating - ticket.rating).abs();
             let gap_b = (b.rating - ticket.rating).abs();

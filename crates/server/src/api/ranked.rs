@@ -27,6 +27,7 @@ use jackioh_engine::PerPlayer;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
+use crate::config::JLORIOUS_SIZE;
 use crate::db::store::{
     BotRating, Pilot, Profile, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season, SeasonStanding,
     StoreError, Tx,
@@ -868,11 +869,22 @@ pub async fn match_ranks(
         .filter(|standing| standing.rank.ladder.is_some())
         .map(|standing| standing.rating)
         .collect();
+    // R608: Jlorious takes the first JLORIOUS_SIZE of the placed Mythic players; only past them does
+    // anyone hold Mythic Grape.
+    let in_mythic = standings
+        .iter()
+        .filter(|standing| {
+            standing
+                .rank
+                .ladder
+                .is_some_and(|ladder| tier_index_of(ladder) == GrapeTier::Mythic as i32)
+        })
+        .count();
     let seat = |profile_id: &str, bot: &Option<BotRating>| SeatRank {
         profile_id: profile_id.to_string(),
         username: username_in(&usernames, profile_id),
         rank: match bot {
-            Some(bot) => called_for_rank(bot.glicko.rating, &placed),
+            Some(bot) => called_for_rank(bot.glicko.rating, &placed, in_mythic > JLORIOUS_SIZE),
             None => rank_in(&standings, &jlorious, profile_id),
         },
         you: profile_id == viewer_id,
