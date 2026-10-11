@@ -498,6 +498,12 @@ impl MatchActor {
             Task::Arm => {
                 let snapshot = engine::snapshot(&self.lock().state);
                 self.shared.clock.sync(&clock_view_for(&snapshot));
+                // R744, R1446: a bot's seat is here from the start, as an opponent whose socket has
+                // attached, so a person who has not opened the match yet is away from now.
+                if snapshot.result.is_none() && PLAYERS.iter().any(|home| self.shared.bots[*home].is_some()) {
+                    let mut core = self.lock();
+                    self.start_absent_grace(&mut core);
+                }
                 self.persist_clocks().await;
                 // R1442: the rank bucket is the tier each player holds as the match arms.
                 if !self.lock().finished {
@@ -1532,9 +1538,10 @@ impl MatchActor {
     /// R744: an account that has had no socket on this actor (the actor was rebuilt after a restart,
     /// or the player never opened the match) is disconnected, so its grace starts with the first
     /// socket that does attach, on the seat it plays (R677): at the deadline stored on the match when
-    /// there is one, else a fresh window. Nothing starts at boot, so a match no socket returns to stays
-    /// the reaper's draw (R112) and nobody loses by seat order. Safe to repeat: a running grace keeps
-    /// its deadline (R147).
+    /// there is one, else a fresh window. A bot's seat is attached from the start, so in a match with
+    /// a bot it starts as the actor arms (R1446). Nothing starts at boot, so a match no socket returns
+    /// to stays the reaper's draw (R112) and nobody loses by seat order. Safe to repeat: a running
+    /// grace keeps its deadline (R147).
     fn start_absent_grace(&self, core: &mut Core) {
         for home in PLAYERS {
             if core.attached_once[home] {
@@ -1702,10 +1709,15 @@ impl MatchActor {
 
     /// R672: which seats hold an open socket right now. The registry's `presence_of` reads this, so a
     /// rematch offer learns whether the opponent is still on the match. A seat is present while it
-    /// holds a socket that is still open.
+    /// holds a socket that is still open. R1446: a bot's seat holds none, and is present until the
+    /// game ends, as a person playing it would be; after that it reads as gone.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();
-        let open = |home: PlayerId| core.sockets[home].as_ref().is_some_and(Socket::is_open);
+        let playing_on = !core.finished && !core.voided;
+        let open = |home: PlayerId| {
+            core.sockets[home].as_ref().is_some_and(Socket::is_open)
+                || (playing_on && self.shared.bots[home].is_some())
+        };
         PerPlayer::new(open(PlayerId::P1), open(PlayerId::P2))
     }
 }

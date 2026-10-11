@@ -181,6 +181,9 @@ What the actor holds, each with a test named after it:
 - A seat a ladder bot holds has no socket: the actor plays it itself (`drive_bots`), its moves
   server actions with `srv-bot-<seq>` nonces through the same path a client's take, its seat never
   disconnected and so never given a grace, and its persona's emotes relayed as a player's are (R1446).
+  It counts as attached as the actor arms, so a person who has not opened the match is away from
+  then (R744), and it reads as present (`presence`) until the game ends. As for any match, a
+  restart's actor is rebuilt when the person's socket comes back.
 
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
@@ -263,13 +266,15 @@ which this process plays itself. Off, none of it runs: no bot is seated and the 
   (R645, R1344).
 - `bots::pool` sizes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
   (`run_bot_pool`): `clamp(BOT_POOL_MIN, round(BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people),
-  BOT_POOL_MAX)` active bots, retiring the newest and reinstating the most recently retired first.
+  BOT_POOL_MAX)` active bots, retiring the youngest accounts and reinstating the most recently
+  retired first.
   A new bot draws a strength (its R610 rating seeded from it), a speed, a persona, a schedule, an
   account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
   patch's human Best-of-1 decklists, then `build_ai_deck`'s, each checked legal, and they are dealt
   again when the catalog version changes (R1448). The queue's sweeper lets go a bot whose claimed
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
-  (`release_stale_starts`), which is what a restart mid-start leaves.
+  (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
+  `LADDER_BOTS` says, since a restart may have turned it off.
 
 Migration 0031 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
 it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,

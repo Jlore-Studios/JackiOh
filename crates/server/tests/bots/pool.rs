@@ -1,5 +1,5 @@
 //! R1448 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
-//! weekly active people, BOT_POOL_MAX)`; an excess retires the newest active bots and a shortfall puts
+//! weekly active people, BOT_POOL_MAX)`; an excess retires the youngest accounts and a shortfall puts
 //! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
 //! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
 //! the default `Player#n`), and its Best-of-1 decks are the patch's human decklists first, then the
@@ -8,10 +8,14 @@
 //!
 //! `jackioh_server::bots::pool`, against the fake store and the real catalog.
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use indexmap::IndexSet;
 use serde_json::{Value, json};
 
 use jackioh_engine::wire::GameRecord;
+use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::now_ms;
 use jackioh_server::bots::pool::{
     PoolChange, draw_decks, draw_new_bot, plan_pool, pool_target, refresh_pool, release_stale_starts,
@@ -19,7 +23,7 @@ use jackioh_server::bots::pool::{
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX,
-    BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, PersonaName,
+    BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, PersonaName,
 };
 use jackioh_server::db::store::{BotRow, Ticket};
 use jackioh_server::username::normalize_username;
@@ -116,7 +120,7 @@ fn r1448_plan_pool_retires_newest_reinstates_first() {
         bot("new-retired", 600, Some(20_000)),
     ];
 
-    // Three active, one wanted: the two newest go.
+    // Three active, one wanted: the two youngest accounts (latest `created_at`) go.
     assert_eq!(
         plan_pool(&bots, 1),
         PoolChange {
@@ -361,4 +365,44 @@ async fn r1448_a_bot_whose_start_was_cut_off_is_let_go() {
     assert_eq!(in_match(&cut.profile_id), None, "the cut-off start's bot is free");
     assert_eq!(in_match(&going.profile_id), Some(claimed[1].clone()));
     assert_eq!(release_stale_starts(&app, later + 1).await.expect("a release"), 0);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1448_the_sweeper_lets_a_cut_off_start_go_with_the_bots_off() {
+    // A start cut off by a restart whose new deploy turned the bots off: nothing will seat a bot
+    // again, but the bot and its player are still let go.
+    let app = empty_test_app().await;
+    assert!(!app.env.ladder_bots, "PREMISE: the bots are off");
+    let now = now_ms();
+    refresh_pool(&app, "off", now).await.expect("a refresh");
+    let bot = q!(app, bots_list()).remove(0);
+    let ticket: Ticket = serde_json::from_value(json!({
+        "id": "ticket-cut-off",
+        "profileId": "person-cut-off",
+        "rating": 1000,
+        "mode": "bo1",
+        "deck": [],
+        "portrait": null,
+        "trio": null,
+        "catalogVersion": app.catalog.version,
+        "enqueuedAt": now,
+        "status": "open",
+        "matchId": null,
+    }))
+    .expect("a ticket");
+    q!(app, tickets_insert(&ticket));
+    assert!(q!(
+        app,
+        tickets_claim_for_bot(&ticket.id, &bot.profile_id, "match-cut-off", now)
+    ));
+
+    let sweeper = tokio::spawn(run_matchmaker(Arc::clone(&app)));
+    let wait = BOT_STALE_START_SECONDS + 2 * MATCHMAKER_SWEEP_INTERVAL_SECONDS;
+    tokio::time::sleep(Duration::from_secs(u64::try_from(wait).expect("a wait"))).await;
+    sweeper.abort();
+    let held = q!(app, bots_list())
+        .into_iter()
+        .find(|row| row.profile_id == bot.profile_id)
+        .and_then(|row| row.in_match_id);
+    assert_eq!(held, None, "the cut-off start's bot is free");
 }

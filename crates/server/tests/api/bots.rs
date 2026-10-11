@@ -630,7 +630,14 @@ async fn r1446_no_read_tells_a_bot_seat() {
     // On its own tier's floor, as a placed player often stands: never one no player could hold.
     assert_eq!(shown["rank"]["floor"], shown["rank"]["tier"], "{shown}");
 
-    let mut bodies = vec![ranks];
+    // R672: while the game goes on the bot is on the match, as a person playing it is, though it
+    // holds no socket.
+    let rematch_path = format!("/api/matches/{}/rematch", row.id);
+    let (status, _, rematch) = call(&app, "GET", &rematch_path, Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{rematch}");
+    assert_eq!(rematch["opponentHere"], json!(true), "{rematch}");
+
+    let mut bodies = vec![ranks, rematch];
     for path in [
         "/api/ranked",
         "/api/leaderboard",
@@ -647,6 +654,12 @@ async fn r1446_no_read_tells_a_bot_seat() {
             assert!(!text.contains(tell), "{tell} in {text}");
         }
     }
+
+    // Once the game ends the bot reads as gone, so the person is never offered a rematch.
+    concede_bot_match(&app, &person).await;
+    let (status, _, rematch) = call(&app, "GET", &rematch_path, Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{rematch}");
+    assert_eq!(rematch["opponentHere"], json!(false), "{rematch}");
 }
 
 #[tokio::test(start_paused = true)]

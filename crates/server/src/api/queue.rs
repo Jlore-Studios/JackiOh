@@ -868,10 +868,10 @@ async fn start_bot_match(
 pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
-        // R1448: a bot (and its player) a cut-off start still holds is let go before the sweep.
-        if app.env.ladder_bots
-            && let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await
-        {
+        // R1448: a bot (and its player) a cut-off start still holds is let go before the sweep,
+        // whatever `LADDER_BOTS` says now: a start cut off before a restart that turned it off
+        // holds them too.
+        if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
             tracing::warn!(event = "bots.start.release_failed", message = %error);
         }
         if let Err(error) = try_pair(&app).await {

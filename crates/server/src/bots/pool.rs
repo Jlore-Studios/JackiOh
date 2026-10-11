@@ -3,8 +3,9 @@
 //! The pool holds `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people,
 //! BOT_POOL_MAX)` active bots, sized again every `BOT_POOL_REFRESH_INTERVAL_SECONDS` and once as the
 //! server boots (`run_bot_pool`, spawned by `app.rs` when `LADDER_BOTS=on`). An excess retires the
-//! newest active bots, which finish the match they are in; a shortfall puts the most recently
-//! retired back first, so the ladder keeps meeting the same faces, and only then makes new ones.
+//! active bots with the youngest accounts (the latest `created_at`, the account age drawn for each),
+//! which finish the match they are in; a shortfall puts the most recently retired back first, so the
+//! ladder keeps meeting the same faces, and only then makes new ones.
 //!
 //! A new bot is drawn from the pool's seed like a player is made: a strength (`BOT_STRENGTHS`, its
 //! R610 rating seeded from it), a think speed, a persona (R645's weights), the hours it is on, an
@@ -14,9 +15,9 @@
 //! kept only when it is legal (`validate_deck`, against a collection of its own cards: a bot owns
 //! nothing and needs nothing), and dealt again whenever the catalog version changes.
 //!
-//! `release_stale_starts`, which the queue's sweeper runs every sweep while `LADDER_BOTS=on`, lets
-//! go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a start
-//! a crash or a restart cut off, which nothing else reaps.
+//! `release_stale_starts`, which the queue's sweeper runs every sweep whatever `LADDER_BOTS` says,
+//! lets go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a
+//! start a crash or a restart cut off, which nothing else reaps.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -58,7 +59,7 @@ pub fn pool_target(weekly: i64) -> usize {
 /// R1448: what a refresh does to the pool.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PoolChange {
-    /// Active bots to retire, newest first.
+    /// Active bots to retire, the youngest accounts first.
     pub retire: Vec<String>,
     /// Retired bots to put back, the most recently retired first.
     pub reinstate: Vec<String>,
@@ -278,8 +279,8 @@ async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result
 
 /// R1448: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
 /// the claim, and that match's player with it: a start a crash or a restart cut off. The queue's
-/// sweeper runs it every sweep while `LADDER_BOTS=on` (`run_matchmaker`), so neither is held out of
-/// the queue for longer than about that. Answers how many bots it let go.
+/// sweeper runs it every sweep whatever `LADDER_BOTS` says (`run_matchmaker`), so neither is held
+/// out of the queue for longer than about that. Answers how many bots it let go.
 pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let released = tx

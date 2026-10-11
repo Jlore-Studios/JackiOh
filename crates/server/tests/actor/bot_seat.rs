@@ -105,6 +105,28 @@ async fn bot_match_with(
     ranked: bool,
     extra: &[&str],
 ) -> BotMatch {
+    let (app, actor) = unopened_bot_match(seed, person, persona, ranked, extra).await;
+    let socket = create_fake_socket();
+    actor.attach(person, socket.socket());
+    actor.idle().await;
+    BotMatch {
+        app,
+        actor,
+        socket,
+        person,
+        seed: seed.to_string(),
+    }
+}
+
+/// `bot_match_with`'s match before the person opens it: started as the queue starts one, with no
+/// socket on either seat.
+async fn unopened_bot_match(
+    seed: &str,
+    person: PlayerId,
+    persona: PersonaName,
+    ranked: bool,
+    extra: &[&str],
+) -> (Arc<App>, MatchActor) {
     let app = test_app_with(TestAppOptions {
         skip_fixtures: true,
         ..TestAppOptions::default()
@@ -162,16 +184,7 @@ async fn bot_match_with(
         .actor_for(&app, MATCH_ID)
         .await
         .expect("the match's actor");
-    let socket = create_fake_socket();
-    actor.attach(person, socket.socket());
-    actor.idle().await;
-    BotMatch {
-        app,
-        actor,
-        socket,
-        person,
-        seed: seed.to_string(),
-    }
+    (app, actor)
 }
 
 /// Lets time pass, a quarter second at a time, until `done` holds.
@@ -396,6 +409,36 @@ async fn r1446_bot_seat_never_gets_a_grace() {
         "a bot's seat is never away"
     );
     assert!(m.actor.snapshot().result.is_none());
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1446_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace() {
+    let (app, actor) =
+        unopened_bot_match("seed-bot-absent", PlayerId::P2, PersonaName::Silent, false, &[]).await;
+    actor.idle().await;
+    // The bot is at the table as the match arms, as an opponent whose socket attached, so the person's
+    // grace runs from then; the bot's seat never gets one.
+    let row = q!(app, matches_get(MATCH_ID)).expect("the match row");
+    let grace = to_json(&row.clocks)["graceDeadline"].clone();
+    assert!(grace["p2"].is_i64(), "the person is away: {grace}");
+    assert!(grace["p1"].is_null(), "the bot never is: {grace}");
+
+    wait_until(&actor, "the match's end", |actor| {
+        actor.snapshot().result.is_some()
+    })
+    .await;
+    let log = log_of(&app).await;
+    let last = log.last().expect("a logged action");
+    assert_eq!(
+        (last.0.as_str(), last.2.as_str()),
+        ("p2", "disconnectExpired"),
+        "{log:?}"
+    );
+    let result = q!(app, results_get_by_match(MATCH_ID)).expect("the result");
+    assert_eq!(result.winner_profile_id.as_deref(), Some(BOT));
+    // The result let the bot go, free for the next ticket.
+    let bots = q!(app, bots_list());
+    assert!(bots[0].in_match_id.is_none(), "{:?}", bots[0].in_match_id);
 }
 
 #[tokio::test(start_paused = true)]
