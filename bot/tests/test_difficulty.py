@@ -96,8 +96,8 @@ class BuilderTests(unittest.TestCase):
                                           "build": ("claude-3", "sonnet", "medium"),
                                           "review": ("claude-3", "opus", "strong")})
         self.assertEqual(planned["routing"], [
-            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max) is "
-            "free now"])
+            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max, "
+            "gpt-5.6-terra) is free now"])
 
     def test_a_medium_item_on_a_claude_account_is_built_with_sonnet(self):
         """Sonnet at xhigh is medium (#317 part 5), so claude-3 builds a medium item with it and
@@ -271,8 +271,8 @@ class BuilderTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual(seats(planned)["build"], ("agy", "gemini-3.8-flash-high", "medium"))
         self.assertEqual(planned["routing"], [
-            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max) is "
-            "free now"])
+            "#3: stepped up from weak to medium to build it: no weak-tier model (swe-2-max, "
+            "gpt-5.6-terra) is free now"])
         self.assertIn("stepped up from weak to medium", planned["assignment"] + " ".join(
             planned["routing"]))
         # Medium with only a strong model free steps up to strong: claude-2 by day, whose Sonnet
@@ -416,17 +416,20 @@ class ReviewRunTests(unittest.TestCase):
         self.assertEqual(seats(plan_mod.make(ctx))["review"][0], "claude-4")
 
     def test_otherwise_a_medium_model_another_family_first_then_the_same_one(self):
+        votes = {"sha": "h1", "builder": "muse", "approvals": ["muse"], "tiers": {"muse": "medium"}}
         gh = FakeGitHub()
         ctx = ctx_for(gh, at=DAY)
-        self.pull(gh, ctx)
+        self.pull(gh, ctx, votes=votes)
         planned = plan_mod.make(ctx)
-        self.assertEqual(seats(planned)["review"], ("muse", "muse-spark-1.3-contributor", "medium"))
-        self.assertEqual(planned["approved"], ["gpt"])
-        # With only gpt set up, gpt reviews it again: the same medium model may give both.
+        self.assertEqual(seats(planned)["review"], ("agy", "gemini-3.8-flash-high", "medium"))
+        self.assertEqual(planned["approved"], ["muse"])
+        # With only Muse set up, Muse reviews it again: the same medium model may give both.
+        # (gpt, weak since 2026-10-11, reviews nothing harder than an easy item.)
         gh2 = FakeGitHub()
-        ctx2 = ctx_for(gh2, at=DAY, machine=("gpt",))
-        self.pull(gh2, ctx2)
-        self.assertEqual(seats(plan_mod.make(ctx2))["review"], ("gpt", "gpt-5.6-terra", "medium"))
+        ctx2 = ctx_for(gh2, at=DAY, machine=("muse", "gpt"))
+        self.pull(gh2, ctx2, votes=votes)
+        self.assertEqual(seats(plan_mod.make(ctx2))["review"],
+                         ("muse", "muse-spark-1.3-contributor", "medium"))
 
     def test_a_hard_pull_request_takes_a_strong_model_first_or_a_medium_one(self):
         gh = FakeGitHub()
