@@ -4487,6 +4487,13 @@
     "669": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T19:58:26Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 3 fails: besides crates/tools the plan edits spec/README.md (a note in spec/) and CLAUDE.md, to keep the written list of what spec check fails on true"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
