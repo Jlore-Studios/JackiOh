@@ -58,7 +58,7 @@ export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | 
  * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
  * until it is (R1420).
  */
-export const SHIPPED_SETS = ["Core", "Classic", "Classic+"] as const satisfies readonly SetName[];
+export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative"] as const satisfies readonly SetName[];
 
 /** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {
