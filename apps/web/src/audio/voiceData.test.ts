@@ -251,7 +251,7 @@ describe("B42 parseCardAudio", () => {
     const kinded = fixture();
     kinded.cards["core-004"] = { kind: "unit", ...kinded.cards["core-004"] };
     expect(parseError(kinded)).toBe(
-      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast)",
+      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger)",
     );
 
     const slow = fixture();
@@ -359,7 +359,7 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names an unknown hook", () => {
     expectError((t) => {
       t.cards["core-004"] = { jump: { effect: "zip" } };
-    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast)");
+    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger)");
   });
 
   it("R655 names a hook the card's kind may not carry", () => {
@@ -425,7 +425,7 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names a field no part of the file allows", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "hustler", text: "Hi.", rate: 200 } };
-    }, "cards.core-004.play.rate: unknown field (expected voice, text, effect)");
+    }, "cards.core-004.play.rate: unknown field (expected voice, text, lines, effect)");
     expectError((t) => {
       t.effects.thud = { sfx: "impact", volume: 1 };
     }, "effects.thud.volume: unknown field (expected sfx, pitch, gain, params)");

@@ -1511,8 +1511,8 @@
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
     },
     "meditative-065": { // Keymaster Keenus
-      play: { voice: "guard", text: "Every lock needs a key. I have all of them." },
-      death: { voice: "guard", text: "You'll have to find your own way in." },
+      play: { voice: "guard", text: "Every lock, every key. All mine." },
+      death: { voice: "guard", text: "Find your own way in." },
     },
     "meditative-066": { // Fiery Waraxe
       cast: { voice: "hero", text: "Burn bright, swing hard!" },
