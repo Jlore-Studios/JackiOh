@@ -279,7 +279,8 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
 /// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
 /// R1449: a ladder bot's game counts toward the gate like any live game, and its people's side
-/// toward the figures; the bot's side never does (`public_report`).
+/// toward the figures; the bot's side never does (`public_report`). That a bot game adds one deck
+/// where a person's adds two is a tell R1446 records and keeps.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
