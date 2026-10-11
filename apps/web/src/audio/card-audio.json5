@@ -1350,7 +1350,7 @@
       cast: { voice: "kid", text: "Me no likey. You keep it." },
     },
     "meditative-007": { // Introspection
-      cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
+      cast: { voice: "sapi-mystic", text: "Breathe in. Look within." },
     },
     "meditative-008": { // Reach the Summit
       cast: { voice: "announcer", text: "One step closer to the summit!" },
@@ -1500,7 +1500,7 @@
       death: { voice: "diva", text: "Back into the mountain." },
     },
     "meditative-040": { // Feng Shui
-      cast: { voice: "crone", text: "Water feeds wood, wood feeds fire. Mind it." },
+      cast: { voice: "crone", text: "Water feeds wood. Wood feeds fire." },
     },
     "meditative-041": { // CN Smuggler
       play: { voice: "hustler", text: "Nothing to declare. Wink." },
@@ -1612,7 +1612,7 @@
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
     },
     "meditative-065": { // Keymaster Keenus
-      play: { voice: "guard", text: "Every lock, every key. All mine." },
+      play: { voice: "guard", text: "Every lock. Every key. Mine." },
       attack: { voice: "guard", text: "Unlocking you." },
       death: { voice: "guard", text: "Find your own way in." },
     },
@@ -1815,7 +1815,7 @@
       death: { voice: "posh", text: "Commencement came early." },
     },
     "meditative-097-7": { // The Great Wall
-      play: { voice: "guard", text: "Ten thousand miles. No one gets through." },
+      play: { voice: "guard", text: "Ten thousand miles. None pass." },
       attack: { voice: "guard", text: "The wall advances!" },
       death: { voice: "guard", text: "The wall has fallen." },
     },
