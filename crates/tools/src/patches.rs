@@ -2798,7 +2798,9 @@ mod tests {
 
             // R1420: a set the catalog holds before it ships is no patch's: no fragment claims its
             // cards, `patches check` passes with them unclaimed, and a promotion snapshots the catalog
-            // without them, while catalog.json keeps them.
+            // without them, while catalog.json keeps them. The Meditative set was one until it shipped
+            // in v0.3.5; the reserved Boss set, which `SHIPPED_SETS` does not list, stands in for the
+            // next.
             #[test]
             fn r1420_ships_the_catalog_without_the_cards_of_a_set_that_has_not_shipped() {
                 let temp = TempDir::new("jackioh-ship-unshipped-");
@@ -2837,9 +2839,10 @@ mod tests {
                     Some("2026-10-08T12:00:00+00:00"),
                 );
 
-                // A batch adds a Meditative card: nothing to claim, and the check passes.
+                // A batch adds a card of a set that has not shipped: nothing to claim, and the check
+                // passes.
                 let mut with_card = base.clone();
-                with_card.insert("med".to_string(), in_set(card("med", 2), "Meditative"));
+                with_card.insert("boss".to_string(), in_set(card("boss", 2), "Boss"));
                 write_files(root, &[("crates/cards/catalog.json", json(&with_card))]);
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 git(root, &["add", "-A"], None);
@@ -2874,18 +2877,23 @@ mod tests {
                 let catalog: Catalog =
                     serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
                 assert!(
-                    catalog.contains_key("med"),
+                    catalog.contains_key("boss"),
                     "catalog.json keeps the card being built"
                 );
             }
 
             #[test]
             fn r1420_the_shipped_text_is_the_file_itself_when_every_entry_ships() {
-                let shipped = json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]));
+                // A Meditative card ships since v0.3.5, so a catalog that holds one is its own text.
+                let shipped = json(&catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("med", 1), "Meditative"),
+                    card("bbb", 2),
+                ]));
                 assert_eq!(crate::patches::shipped_text(&shipped).unwrap(), shipped);
                 let mixed = json(&catalog_of(vec![
                     in_set(card("aaa", 1), "Core"),
-                    in_set(card("med", 1), "Meditative"),
+                    in_set(card("boss", 1), "Boss"),
                     card("bbb", 2),
                 ]));
                 let view = crate::patches::shipped_text(&mixed).unwrap();

@@ -879,7 +879,7 @@ impl InvariantMonitor {
     /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
     /// `side` is the side it animated on: on the other player's turn (R1126's Cane) it is an entry, R383's.
     fn on_its_side_before_this_turn(&self, id: &str, side: PlayerId, state: &GameState) -> bool {
-        if !crate::animated::r1062_is_live() || side != self.active {
+        if side != self.active {
             return false;
         }
         let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {

@@ -838,10 +838,12 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
         assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
     }
 
-    /// D14: until the Meditative set opens, R383 stands — the start-of-turn animation is an entry.
+    /// D14: R1062 waited for the Meditative set, and until it opened the start-of-turn animation was
+    /// an entry (R383). The set shipped in v0.3.5, so R1062 holds in every game, nothing previewed.
     #[test]
-    fn r1062_waits_for_the_meditative_set_until_then_the_start_of_turn_animation_is_an_entry() {
-        let mut state = playing("r1062-closed");
+    fn r1062_holds_with_nothing_previewed_since_the_meditative_set_shipped_in_v0_3_5() {
+        assert!(set_ships(SetName::Meditative));
+        let mut state = playing("r1062-shipped");
         let card = put(
             &mut state,
             &spatula.id,
@@ -855,7 +857,8 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
         animate_at_turn_start(&mut sink, P1);
         let now = live(sink.state, &card.id);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
-        assert!(is_sick(sink.state, &now));
+        assert!(!is_sick(sink.state, &now));
+        assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
     }
 
     #[test]

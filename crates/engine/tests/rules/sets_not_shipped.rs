@@ -1,9 +1,11 @@
-//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`), the Meditative set while issue
-//! #496 builds it. Its cards are in no pool that names no set, in no deck, and in no random deck,
-//! until the patch that lists the set; a pool that names the set, or names its cards, reaches them;
-//! and the testkit's preview opens the set on one thread, as the fuzz tool does. Also R1421 (a Prime
-//! pool holds the Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share, and
-//! R1371 (the newest shipped set, which a preview never moves).
+//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). The Meditative set was one while
+//! issue #496 built it and shipped in v0.3.5 (issue #553), so it now draws, deals and leans like Core;
+//! the gate stays for the next set, which these tests stand in for with fixture cards of the reserved
+//! Boss set, a set `SHIPPED_SETS` does not list. Such a set's cards are in no pool that names no set,
+//! in no deck, and in no random deck, until the patch that lists the set; a pool that names the set,
+//! or names its cards, reaches them; and the testkit's preview opens the set on one thread, as the
+//! fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422 (`anyTags`), the pool
+//! pieces the set's cards share, and R1371 (the newest shipped set, which a preview never moves).
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -35,7 +37,8 @@ fn card(id: &str, set: &str, index: &str, tags: &[&str], token: bool) -> CardDef
 }
 
 /// Twenty-one shipped Core cards (a deck's worth and one), two Meditative cards and a Meditative
-/// token, two Prime tokens and a KY and a Book card for the pools.
+/// token (shipped since v0.3.5), two cards and a token of the Boss set (which does not ship), two
+/// Prime tokens and a KY and a Book card for the pools.
 fn defs() -> CardDefs {
     let mut defs: Vec<CardDef> = (1..=21)
         .map(|n| card(&format!("core-{n:03}"), "Core", &n.to_string(), &[], false))
@@ -61,6 +64,9 @@ fn defs() -> CardDefs {
         &["CN", "KY", "Prime"],
         true,
     ));
+    defs.push(card("boss-001", "Boss", "1", &["CN"], false));
+    defs.push(card("boss-002", "Boss", "2", &["CN", "KY"], false));
+    defs.push(card("boss-002-1", "Boss", "2.1", &["CN", "KY", "Prime"], true));
     defs.into_iter().map(|def| (def.id.clone(), def)).collect()
 }
 
@@ -79,38 +85,81 @@ fn meditative(ids: &[String]) -> Vec<String> {
         .collect()
 }
 
+/// The Boss fixture's ids among `ids`: the cards of a set that does not ship.
+fn unshipped(ids: &[String]) -> Vec<String> {
+    ids.iter().filter(|id| id.starts_with("boss-")).cloned().collect()
+}
+
 mod r1420_a_set_the_catalog_holds_before_it_ships {
     use super::*;
 
+    /// The release (v0.3.5, issue #553) listed the Meditative set: it ships, in its catalog place
+    /// after Classic+, and every set that ships is in the catalog order in that order. The reserved
+    /// Boss sets ship no card.
     #[test]
-    fn r1420_the_meditative_set_is_in_the_catalog_and_does_not_ship_yet() {
-        assert!(!set_ships(SetName::Meditative));
+    fn r1420_the_meditative_set_shipped_in_v0_3_5_and_keeps_its_place_in_the_catalog_order() {
+        assert!(set_ships(SetName::Meditative));
+        assert!(set_is_open(SetName::Meditative));
         assert!(SHIPPED_SETS.iter().all(|set| CATALOG_SETS.contains(set)));
-        assert!(CATALOG_SETS.contains(&SetName::Meditative));
+        let places: Vec<usize> = SHIPPED_SETS
+            .iter()
+            .map(|set| {
+                CATALOG_SETS
+                    .iter()
+                    .position(|listed| listed == set)
+                    .expect("ordered")
+            })
+            .collect();
+        assert!(places.windows(2).all(|pair| pair[0] < pair[1]), "{places:?}");
+        assert_eq!(
+            CATALOG_SETS.iter().position(|set| *set == SetName::Meditative),
+            CATALOG_SETS
+                .iter()
+                .position(|set| *set == SetName::ClassicPlus)
+                .map(|at| at + 1)
+        );
+        for reserved in [SetName::Boss, SetName::BossX] {
+            assert!(!set_ships(reserved));
+            assert!(!set_is_open(reserved));
+        }
     }
 
     #[test]
     fn r1420_a_pool_that_names_no_set_never_draws_a_card_of_a_set_that_has_not_shipped() {
         setup();
-        assert_eq!(meditative(&pool(json!({}))), Vec::<String>::new());
-        assert_eq!(meditative(&pool(json!({ "tags": ["CN"] }))), Vec::<String>::new());
+        assert_eq!(unshipped(&pool(json!({}))), Vec::<String>::new());
+        assert_eq!(unshipped(&pool(json!({ "tags": ["CN"] }))), Vec::<String>::new());
         assert_eq!(
-            meditative(&pool(json!({ "withTokens": true }))),
+            unshipped(&pool(json!({ "withTokens": true }))),
             Vec::<String>::new()
         );
-        assert_eq!(pool(json!({ "tags": ["KY"] })), vec!["core-031"]);
+        // The Meditative set ships, so the same pools draw its cards (its token only where a pool
+        // asks for tokens, §5.1).
+        assert_eq!(
+            meditative(&pool(json!({ "tags": ["CN"] }))),
+            vec!["meditative-033", "meditative-034"]
+        );
+        assert_eq!(
+            meditative(&pool(json!({ "withTokens": true }))),
+            vec!["meditative-033", "meditative-034", "meditative-045-1"]
+        );
+        assert_eq!(
+            pool(json!({ "tags": ["KY"] })),
+            vec!["core-031", "meditative-034"]
+        );
     }
 
     #[test]
     fn r1420_a_pool_that_names_the_set_or_its_cards_reaches_them() {
         setup();
+        assert_eq!(pool(json!({ "set": "Boss" })), vec!["boss-001", "boss-002"]);
+        assert_eq!(
+            pool(json!({ "defId": ["boss-002", "boss-002-1"] })),
+            vec!["boss-002", "boss-002-1"]
+        );
         assert_eq!(
             pool(json!({ "set": "Meditative" })),
             vec!["meditative-033", "meditative-034"]
-        );
-        assert_eq!(
-            pool(json!({ "defId": ["meditative-034", "meditative-045-1"] })),
-            vec!["meditative-034", "meditative-045-1"]
         );
     }
 
@@ -118,47 +167,65 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
     fn r1420_the_preview_opens_the_set_on_this_thread_until_its_guard_drops() {
         setup();
         {
-            let _preview = preview_sets(&[SetName::Meditative]);
-            assert!(set_is_open(SetName::Meditative));
+            let _preview = preview_sets(&[SetName::Boss]);
+            assert!(set_is_open(SetName::Boss));
+            assert!(!set_ships(SetName::Boss), "a preview ships nothing");
             assert_eq!(
-                meditative(&pool(json!({ "tags": ["CN"] }))),
-                vec!["meditative-033", "meditative-034"]
+                unshipped(&pool(json!({ "tags": ["CN"] }))),
+                vec!["boss-001", "boss-002"]
             );
-            // A set keeps its place in the catalog order: Meditative after Classic+ (B2.2).
+            // The Meditative set keeps its place after Classic+ (B2.2), and a set the catalog order
+            // does not name sorts after every set it does.
             let all = pool(json!({}));
-            assert_eq!(all.last().map(String::as_str), Some("meditative-034"));
+            assert_eq!(
+                &all[all.len() - 4..],
+                ["meditative-033", "meditative-034", "boss-001", "boss-002"]
+            );
         }
-        assert!(!set_is_open(SetName::Meditative));
-        assert_eq!(meditative(&pool(json!({}))), Vec::<String>::new());
-
-        // Nested guards restore what was open before them: `preview_every_set` inside a narrower
-        // preview, then the narrower one, then nothing.
+        assert!(!set_is_open(SetName::Boss));
+        assert_eq!(unshipped(&pool(json!({}))), Vec::<String>::new());
+        // A preview of a set that ships changes nothing: it was open already.
         {
-            let _outer = preview_sets(&[SetName::Meditative]);
+            let before = pool(json!({}));
+            let _preview = preview_sets(&[SetName::Meditative]);
+            assert_eq!(pool(json!({})), before);
+        }
+
+        // Nested guards restore what was open before them: `preview_every_set` (every set the
+        // catalog orders) inside a narrower preview, then the narrower one, then nothing.
+        {
+            let _outer = preview_sets(&[SetName::Boss]);
             {
                 let _inner = preview_every_set();
-                assert!(set_is_open(SetName::Meditative));
+                assert!(set_is_open(SetName::Boss));
+                assert!(!set_is_open(SetName::BossX), "the catalog order names no Boss-X");
             }
-            assert!(set_is_open(SetName::Meditative));
+            assert!(set_is_open(SetName::Boss));
         }
-        assert!(!set_is_open(SetName::Meditative));
+        assert!(!set_is_open(SetName::Boss));
     }
 
     #[test]
     fn r1420_no_deck_holds_a_card_of_a_set_that_has_not_shipped_unless_it_is_previewed() {
         setup();
         let catalog = defs();
-        assert!(!deckable(&catalog["meditative-033"]));
+        assert!(!deckable(&catalog["boss-001"]));
         assert!(deckable(&catalog["core-001"]));
+        assert!(deckable(&catalog["meditative-033"]), "shipped since v0.3.5");
         assert!(!deckable(&catalog["classicplus-038-1"]), "a Token never is");
+        assert!(!deckable(&catalog["meditative-045-1"]), "a Token never is");
+
+        let mut shipped: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
+        shipped.push("meditative-033".to_string());
+        assert!(validate_deck(&shipped, &catalog, "p1", 20).is_ok());
 
         let mut deck: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
-        deck.push("meditative-033".to_string());
+        deck.push("boss-001".to_string());
         let refused = validate_deck(&deck, &catalog, "p1", 20).expect_err("refused");
         assert!(refused.to_string().contains("has not shipped yet"), "{refused}");
 
-        let _preview = preview_sets(&[SetName::Meditative]);
-        assert!(deckable(&catalog["meditative-033"]));
+        let _preview = preview_sets(&[SetName::Boss]);
+        assert!(deckable(&catalog["boss-001"]));
         assert!(validate_deck(&deck, &catalog, "p1", 20).is_ok());
     }
 
@@ -166,8 +233,10 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
     fn r1420_the_validator_refuses_a_queued_deck_that_holds_one_under_l3() {
         setup();
         let catalog = defs();
-        let mut cards: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
+        let mut cards: Vec<String> = (1..=18).map(|n| format!("core-{n:03}")).collect();
+        // A shipped Meditative card passes L3 since v0.3.5; the Boss card does not.
         cards.push("meditative-034".to_string());
+        cards.push("boss-002".to_string());
         let collection: IndexMap<String, i32> = cards.iter().map(|id| (id.clone(), 1)).collect();
         let result = jackioh_engine::validator::validate_deck(&jackioh_engine::validator::DeckInput {
             deck: jackioh_engine::validator::LoadoutDeck {
@@ -188,11 +257,7 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
             .map(|error| error.message.clone())
             .collect();
         assert_eq!(l3.len(), 1, "{:?}", result.errors);
-        assert!(
-            l3[0].contains("the Meditative set has not shipped yet"),
-            "{}",
-            l3[0]
-        );
+        assert!(l3[0].contains("the Boss set has not shipped yet"), "{}", l3[0]);
     }
 }
 
@@ -210,10 +275,12 @@ mod r1371_the_newest_shipped_set {
             .position(|set| *set == newest)
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
+        // Classic+ until the release; the Meditative set from v0.3.5.
+        assert_eq!(newest, SetName::Meditative);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
-        let _preview = preview_sets(&[SetName::Meditative]);
+        let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(newest_shipped_set(), newest);
-        assert_ne!(newest_shipped_set(), SetName::Meditative);
+        assert_ne!(newest_shipped_set(), SetName::Boss);
     }
 }
 
@@ -225,7 +292,7 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
         setup();
         assert_eq!(
             pool(json!({ "tags": ["Prime"] })),
-            vec!["classicplus-038-1", "classicplus-046-1"]
+            vec!["classicplus-038-1", "classicplus-046-1", "meditative-045-1"]
         );
         // No other pool reaches them: a Felinor pool is cards only.
         assert_eq!(pool(json!({ "tags": ["Felinor"] })), Vec::<String>::new());
@@ -235,10 +302,16 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
             pool(json!({ "anyTags": ["Human", "AI"] })),
             vec!["core-022", "classicplus-t-ai-01"]
         );
-        let _preview = preview_sets(&[SetName::Meditative]);
+        // A set that has not shipped adds its Prime tokens only when previewed (R1420).
+        let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(
             pool(json!({ "tags": ["Prime"] })),
-            vec!["classicplus-038-1", "classicplus-046-1", "meditative-045-1"]
+            vec![
+                "classicplus-038-1",
+                "classicplus-046-1",
+                "meditative-045-1",
+                "boss-002-1"
+            ]
         );
     }
 }
@@ -251,10 +324,9 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
         setup();
         assert_eq!(
             pool(json!({ "anyTags": ["KY", "Book"] })),
-            vec!["core-031", "classic-003"]
+            vec!["core-031", "classic-003", "meditative-034"]
         );
         assert_eq!(pool(json!({ "tags": ["KY", "Book"] })), Vec::<String>::new());
-        let _preview = preview_sets(&[SetName::Meditative]);
         assert_eq!(
             pool(json!({ "anyTags": ["KY", "CN"] })),
             vec!["core-031", "meditative-033", "meditative-034"]
@@ -267,6 +339,18 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
                 "classicplus-038-1",
                 "classicplus-046-1",
                 "meditative-045-1"
+            ]
+        );
+        // A set that has not shipped joins the union only when previewed (R1420).
+        let _preview = preview_sets(&[SetName::Boss]);
+        assert_eq!(
+            pool(json!({ "anyTags": ["KY", "CN"] })),
+            vec![
+                "core-031",
+                "meditative-033",
+                "meditative-034",
+                "boss-001",
+                "boss-002"
             ]
         );
     }

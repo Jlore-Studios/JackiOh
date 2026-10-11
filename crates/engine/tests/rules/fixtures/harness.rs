@@ -66,7 +66,8 @@ pub fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId, count: i32
         .collect()
 }
 
-/// The player's library, top first, as their own deck: each card known to its owner (R311).
+/// The player's library, top first, as their own deck: each card known to its owner (R311) and
+/// dealt, so not Created (R943), as the testkit scenario's setup deals its piles.
 pub fn set_library(
     state: &mut GameState,
     player: PlayerId,
@@ -74,7 +75,7 @@ pub fn set_library(
 ) -> Vec<CardInstance> {
     let mut cards: Vec<CardInstance> = def_ids
         .iter()
-        .map(|def_id| new_instance(state, def_id.as_ref(), player, Zone::Library { player }))
+        .map(|def_id| new_dealt_instance(state, def_id.as_ref(), player, Zone::Library { player }))
         .collect();
     for card in cards.iter_mut() {
         show_to_owner(card);
