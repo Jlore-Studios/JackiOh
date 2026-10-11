@@ -4860,15 +4860,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/server/src/api/results.rs"
+          ],
+          "from": "f98786d4dfaeac25f318007227c875fe9eaad4c2",
+          "main": "b0200ee51a88b4c8a1c7154b76d9156b6da04059"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "38172524006",
+            "run": "38176307109",
             "tier": "strong"
           }
         ],
-        "sha": "f98786d4dfaeac25f318007227c875fe9eaad4c2",
+        "sha": "9a4e253c86ff9741e2a111c34185623faf5cd77d",
         "tiers": {
           "claude": "strong"
         }
