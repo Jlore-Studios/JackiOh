@@ -141,8 +141,11 @@ mod tests {
         up.play(FRUIT, json!({}));
         assert_eq!(added(&up).len(), 2);
 
+        // Ten in hand, nine once the Fruit is cast: two cards asked for, the first fills the hand to
+        // HAND_CAP and the second burns.
         crate::register_all();
-        let mut full = fruited(false, None, Some(8));
+        let mut full = fruited(false, None, Some(9));
+        crate::upgrade_number(&mut full, FRUIT, "cards");
         full.play(FRUIT, json!({}));
         assert_eq!(added(&full).len(), 1);
         assert_eq!(
