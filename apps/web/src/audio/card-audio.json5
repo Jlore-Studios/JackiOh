@@ -1612,7 +1612,7 @@
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
     },
     "meditative-065": { // Keymaster Keenus
-      play: { voice: "guard", text: "Every lock. Every key. Mine." },
+      play: { voice: "guard", text: "Every lock is mine." },
       attack: { voice: "guard", text: "Unlocking you." },
       death: { voice: "guard", text: "Find your own way in." },
     },

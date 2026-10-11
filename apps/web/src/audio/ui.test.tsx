@@ -639,7 +639,7 @@ describe("B44 Game preloads the voice lines each view makes likely, once the con
     const second = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "core-012" }), null, null, null, null] }) });
     rerenderGame(rerender, second);
 
-    expect(engine.preloadVoices).toHaveBeenLastCalledWith(["core-012-death"]);
+    expect(engine.preloadVoices).toHaveBeenLastCalledWith(["core-012-death", "core-012-attack"]);
   });
 
   it("B44 an engine that is not running is never asked to preload", () => {
