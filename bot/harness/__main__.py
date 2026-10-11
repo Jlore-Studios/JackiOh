@@ -617,102 +617,31 @@ def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
-    """Triage a new issue or pull request, or one a person called it on (`triage.py`). Every step
-    skips quietly on failure: triage is a convenience, never a reason for a red run."""
-    if args.step == "gate":
-        payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
-        asked = str((payload.get("inputs") or {}).get("number") or "").strip().lstrip("#")
-        if asked:  # `workflow_dispatch`: a person called triage on this thread
-            try:
-                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(int(asked))}
-            except (GitHubError, ValueError) as exc:
-                _output({"go": "false", "number": ""})
-                print(redact(f"triage: skip: #{asked} could not be read: {exc}"))
-                return 0
-        elif payload.get("action") == "labeled" and (payload.get("issue") or {}).get("number"):
-            # #307: a method label (or `bot:approved` on a suggestion) starts triage. A person
-            # gets METHOD_WAIT to set a difficulty and a priority, and then the issue is read
-            # again, so their labels count.
-            if not triage_mod.starts_triage(str((payload.get("label") or {}).get("name") or "")):
-                _output({"go": "false", "number": ""})
-                print("triage: skip: not a method label")
-                return 0
-            time.sleep(triage_mod.METHOD_WAIT.total_seconds())
-            number = int(payload["issue"]["number"])
-            try:
-                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(number)}
-            except (GitHubError, ValueError) as exc:
-                _output({"go": "false", "number": ""})
-                print(redact(f"triage: skip: #{number} could not be read: {exc}"))
-                return 0
-        go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
-                                  cfg.root, clock_now(), cfg.timezone, asked=bool(asked))
-        thread, _ = triage_mod.thread_of(payload)
-        _output({"go": str(go).lower(), "number": thread.get("number") or ""})
-        print(f"triage: {'go' if go else 'skip'}: {why}")
-        return 0
-    number = int(args.number)
-    out = Path(args.verdict)
-    if args.step == "classify":
-        try:
-            ctx = _ctx(cfg, write=False)
-            thread = ctx.gh.get_issue(number)
-            text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
-                                     triage_mod.conventions_text(cfg.root),
-                                     triage_mod.issue_types(ctx.gh),
-                                     ctx.gh.list_issues(state="open", limit=300),
-                                     method=triage_mod.method_of(thread))
-            model, effort = triage_mod.classifier_model(cfg.root)
-            answer = triage_mod.run_muse(cfg.bin("muse"), model, effort, text)
-            verdict = triage_mod.parse(answer)
-        except Exception as exc:  # noqa: BLE001 - any failure skips
-            print(redact(f"triage: {triage_mod.CLASSIFIER} did not classify #{number}: {exc}"))
-            return 0
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps({"number": number, "verdict": verdict}), encoding="utf-8")
-        print(f"triage: #{number}: {json.dumps(verdict)[:500]}")
-        return 0
-    try:
-        written = json.loads(out.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        # No answer from the classifier: the method label's own labels and assignees, and the
-        # links the issue's own text and title give, are still made.
-        written = {"number": number, "verdict": None}
-    if int(written.get("number") or 0) != number:
-        print(f"triage: the answer is for #{written.get('number')}, not #{number}")
-        return 0
+    """Triage a new issue or pull request, an issue a person labelled `human`, or a thread a
+    person called it on (`triage.py`). Any failure skips quietly: triage is a convenience, never a
+    reason for a red run."""
+    payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
+    asked = str((payload.get("inputs") or {}).get("number") or "").strip().lstrip("#")
     try:
         ctx = _ctx(cfg)
-        thread = ctx.gh.get_issue(number)
+        if asked:  # `workflow_dispatch`: a person called triage on this thread
+            payload = {"issue": ctx.gh.get_issue(int(asked))}
+        step, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
+                                    asked=bool(asked))
+        print(f"triage: {step or 'skip'}: {why}")
+        if not step:
+            return 0
+        number = int(triage_mod.thread_of(payload)[0]["number"])
+        thread = ctx.gh.get_issue(number)  # afresh: what a person set meanwhile counts
         is_pr = "pull_request" in thread
-        repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
-        open_issues: dict[int, dict] | None = None
-        linked: dict[str, Any] = {}
-        if not is_pr:
-            open_issues = {int(i["number"]): i for i in ctx.gh.list_issues(state="open", limit=300)
-                           if "pull_request" not in i}
-            linked = {"blocked_by": {int(i["number"]) for i in ctx.gh.blocked_by(number)},
-                      "blocking": {int(i["number"]) for i in ctx.gh.blocking(number)},
-                      "parent": triage_mod.parent_number(thread)}
-        plan = triage_mod.decide(written.get("verdict"), thread, is_pr, repo_labels,
-                                 cfg.bot_login, triage_mod.issue_types(ctx.gh), open_issues,
-                                 linked, asked=bool(getattr(args, "asked", False)))
-        ids = {n: int(i.get("id") or 0) for n, i in (open_issues or {}).items()}
-        ids[number] = int(thread.get("id") or 0)
-        done = triage_mod.apply(ctx.gh, number, plan, ids)
-    except GitHubError as exc:
-        print(redact(f"triage: could not triage #{number}: {exc}"))
+        plan = triage_mod.decide(step, thread, is_pr, cfg.bot_login,
+                                 types=None if is_pr else triage_mod.issue_types(ctx.gh),
+                                 form=not asked)
+        done = triage_mod.apply(ctx.gh, number, plan)
+    except (GitHubError, ValueError) as exc:
+        print(redact(f"triage: could not triage: {exc}"))
         return 0
-    if plan.classified:
-        # Every thread triage classified says so (a closed one, or an issue whose method label
-        # went before the answer came, was not classified, and gets nothing).
-        try:
-            ctx.gh.create_comment(number, triage_mod.comment(
-                plan, done, is_pr=is_pr, answered=isinstance(written.get("verdict"), dict)))
-        except GitHubError as exc:
-            print(redact(f"triage: could not comment on #{number}: {exc}"))
-    lines = done or ["nothing to change"]
-    report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
+    report = f"Triage of #{number}:\n" + _bullets((done or ["nothing to change"]) + plan.notes)
     print(report)
     _summary(report)
     return 0
@@ -796,15 +725,9 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", help="create or update the labels, and create the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
-    p = sub.add_parser("triage", help="label, assign, title and link a new issue or pull "
-                       "request, or one a person called it on")
-    p.add_argument("step", choices=("gate", "classify", "apply"))
-    p.add_argument("--payload", default="", help="gate: the event's payload file")
-    p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
-    p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
-    p.add_argument("--asked", action="store_true",
-                   help="apply: a person called triage on it, so an issue with no method label "
-                   "is classified all the same")
+    p = sub.add_parser("triage", help="label, type and assign a new issue or pull request, an "
+                       "issue labelled human, or one a person called it on")
+    p.add_argument("--payload", required=True, help="the event's payload file")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top

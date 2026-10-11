@@ -1,6 +1,6 @@
 // Issue #219: the emote picker, the Mute emotes menu and a voice line's speech bubble, measured in a
 // real browser. A click on a portrait hangs its menu off the portrait, where each is measured, and a
-// hold opens the hero's inspect view with the same menu in it (R1446, R1330), which is measured too,
+// hold opens the hero's inspect view with the same menu in it (R1449, R1330), which is measured too,
 // with the portraits' vivid layers (R1332). The view is opened here by a right-click, the hold's mouse
 // twin, since a spec waits on no clock.
 //
@@ -112,7 +112,7 @@ function fontSizePx(element: Element): number {
 }
 
 /**
- * Opens a hero's inspect view by a right-click on its portrait (R1446): the portrait, not the hero's
+ * Opens a hero's inspect view by a right-click on its portrait (R1449): the portrait, not the hero's
  * centre, where a phone puts the power.
  */
 function openView(side: "you" | "opponent"): void {
@@ -120,7 +120,7 @@ function openView(side: "you" | "opponent"): void {
   cy.get(ts("hero-inspect")).should("be.visible");
 }
 
-/** Opens a portrait's menu by a click, hung off the portrait (R1446): the picker on yours, the mute on theirs. */
+/** Opens a portrait's menu by a click, hung off the portrait (R1449): the picker on yours, the mute on theirs. */
 function openMenu(side: "you" | "opponent"): void {
   cy.get(`${ts(`hero-${side}`)} .hero-portrait`).click();
   cy.get(`${ts(`hero-${side}`)} ${ts(side === "you" ? "emote-menu" : "emote-mute-menu")}`).should("be.visible");
@@ -276,7 +276,7 @@ for (const viewport of VIEWPORTS) {
       });
     });
 
-    it("R1330 R1446 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close a touch target", () => {
+    it("R1330 R1449 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close a touch target", () => {
       for (const side of ["you", "opponent"] as const) {
         openView(side);
         cy.get(ts("hero-inspect")).should(($view) => {

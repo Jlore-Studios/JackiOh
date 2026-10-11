@@ -5,9 +5,9 @@
 //
 // Issue #544 (R1330–R1331) added the hero's inspect view: the portrait large with its words, health
 // and Armor, with the same menu in it, and the squash and glint the board's oval answers with. Since
-// R1446 a click (or Enter) on a portrait hangs its menu off the portrait, as before #544, and a hold
+// R1449 a click (or Enter) on a portrait hangs its menu off the portrait, as before #544, and a hold
 // (a touch's or a mouse's, a right-click, the context-menu key or Shift+F10) opens the view. The
-// `MN02` block tests the view and the `R1446` block the two presses.
+// `MN02` block tests the view and the `R1449` block the two presses.
 //
 // The harness is the route's own wiring: `useEmotes` is the same api `MatchHotseatRoute` and
 // `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to the test through
@@ -152,14 +152,14 @@ describe("the hero portraits (R641)", () => {
 });
 
 describe("your portrait's emote menu (R643)", () => {
-  it("R643 R1343 R1446 clicking your portrait opens the menu of your dealt hand on your hero", () => {
+  it("R643 R1343 R1449 clicking your portrait opens the menu of your dealt hand on your hero", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} hands={HANDS} />);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
 
     fireEvent.click(screen.getByTestId("hero-you"));
 
-    // A click hangs the menu off your portrait (R1446); only a hold opens the inspect view.
+    // A click hangs the menu off your portrait (R1449); only a hold opens the inspect view.
     const menu = within(screen.getByTestId("hero-you")).getByTestId("emote-menu");
     expect(menu).not.toHaveClass("emote-menu--inline");
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
@@ -252,7 +252,7 @@ describe("your portrait's emote menu (R643)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R1446 a second click on the portrait closes the menu the first one opened", () => {
+  it("R1449 a second click on the portrait closes the menu the first one opened", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     const open = screen.getByRole("button", { name: /^Emotes for Mr\. Vanilla, your hero/ });
@@ -555,14 +555,14 @@ function renderVG(options: { legal?: readonly ActionBody[]; onAction?: () => voi
   return { api, ...utils };
 }
 
-/** The portrait's open button on `side`, named for the hero it opens (R1446). */
+/** The portrait's open button on `side`, named for the hero it opens (R1449). */
 function portraitButton(side: "you" | "opponent"): HTMLElement {
   const button = screen.getByTestId(testid.hero(side)).querySelector<HTMLElement>("button.hero-portrait-open");
   if (button === null) throw new Error(`no portrait button on ${side}`);
   return button;
 }
 
-/** Opens `side`'s inspect view the quickest way a test can: a right-click on its portrait (R1446). */
+/** Opens `side`'s inspect view the quickest way a test can: a right-click on its portrait (R1449). */
 function inspectHero(side: "you" | "opponent"): void {
   fireEvent.contextMenu(portraitButton(side));
 }
@@ -701,7 +701,7 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     }
   });
 
-  it("R1330 R1446 with a card selected neither a click nor a right-click on a portrait opens anything", () => {
+  it("R1330 R1449 with a card selected neither a click nor a right-click on a portrait opens anything", () => {
     const onAction = vi.fn();
     renderVG({ legal: UNIT_ATTACKS, onAction });
     fireEvent.click(screen.getByTestId("card-u1"));
@@ -731,13 +731,13 @@ describe("MN02 the hero's inspect view (R1330)", () => {
   });
 });
 
-describe("R1446 a click opens the portrait's menu, a hold its inspect view", () => {
+describe("R1449 a click opens the portrait's menu, a hold its inspect view", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
   for (const pointerType of ["mouse", "touch"] as const) {
-    it(`R1446 a ${pointerType} held on your portrait opens the view, and the lift's click neither closes it nor opens the menu`, () => {
+    it(`R1449 a ${pointerType} held on your portrait opens the view, and the lift's click neither closes it nor opens the menu`, () => {
       vi.useFakeTimers();
       renderVG();
       const open = portraitButton("you");
@@ -763,7 +763,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
       expect(within(screen.getByTestId("hero-you")).queryByTestId("emote-menu")).toBeNull();
     });
 
-    it(`R1446 a ${pointerType} that lets go before the hold is a click: the menu on the portrait, no view`, () => {
+    it(`R1449 a ${pointerType} that lets go before the hold is a click: the menu on the portrait, no view`, () => {
       vi.useFakeTimers();
       renderVG();
       const open = portraitButton("you");
@@ -784,7 +784,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     });
   }
 
-  it("R1446 a hold on the opponent's portrait opens their view, with the mute item in it", () => {
+  it("R1449 a hold on the opponent's portrait opens their view, with the mute item in it", () => {
     vi.useFakeTimers();
     renderVG();
     fireEvent.pointerDown(portraitButton("opponent"), { pointerType: "mouse", button: 0, clientX: 5, clientY: 5 });
@@ -797,7 +797,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     expect(within(screen.getByTestId("hero-opponent")).queryByTestId("emote-mute-menu")).toBeNull();
   });
 
-  it("R1446 a hold on a portrait whose menu is open turns the menu into the view", () => {
+  it("R1449 a hold on a portrait whose menu is open turns the menu into the view", () => {
     vi.useFakeTimers();
     renderVG();
     const open = portraitButton("you");
@@ -816,7 +816,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     expect(within(screen.getByTestId("hero-you")).queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("R1446 a mouse that drags off the portrait before the hold opens nothing, and a right button holds nothing", () => {
+  it("R1449 a mouse that drags off the portrait before the hold opens nothing, and a right button holds nothing", () => {
     vi.useFakeTimers();
     renderVG();
     const open = portraitButton("you");
@@ -834,7 +834,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
   });
 
-  it("R1446 a hold on a hero that is a target opens nothing: the hold is the player aiming", () => {
+  it("R1449 a hold on a hero that is a target opens nothing: the hold is the player aiming", () => {
     vi.useFakeTimers();
     renderVG({ legal: FACE_ATTACK });
     fireEvent.click(screen.getByTestId("card-u1"));
@@ -846,7 +846,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
   });
 
-  it("R1446 the keyboard reaches both: Enter is the click's menu, Shift+F10 and the context-menu key the view, focus on Close and back on Escape", () => {
+  it("R1449 the keyboard reaches both: Enter is the click's menu, Shift+F10 and the context-menu key the view, focus on Close and back on Escape", () => {
     renderVG({ legal: FACE_ATTACK });
     const open = screen.getByRole("button", { name: /^Emotes for Mr\. Vanilla, your hero; hold, or Shift\+F10, to inspect$/ });
     expect(open).toHaveAttribute("aria-haspopup", "menu");
@@ -886,7 +886,7 @@ describe("R1446 a click opens the portrait's menu, a hold its inspect view", () 
     expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
   });
 
-  it("R1446 a right-click on the portrait opens the view and keeps the browser's menu shut", () => {
+  it("R1449 a right-click on the portrait opens the view and keeps the browser's menu shut", () => {
     renderVG();
     expect(fireEvent.contextMenu(portraitButton("you"))).toBe(false);
     expect(screen.getByTestId("hero-inspect")).toHaveAttribute("data-side", "you");
@@ -902,7 +902,7 @@ describe("MN02 the portrait's reaction (R1331)", () => {
     __resetSettingsForTests();
   });
 
-  it("R1331 R1446 opening the menu makes the portrait react, and the reaction ends after PORTRAIT_REACT_MS", () => {
+  it("R1331 R1449 opening the menu makes the portrait react, and the reaction ends after PORTRAIT_REACT_MS", () => {
     vi.useFakeTimers();
     renderVG();
     expect(frameOf("you")).not.toHaveAttribute("data-reacting");
@@ -932,7 +932,7 @@ describe("MN02 the portrait's reaction (R1331)", () => {
     expect(frameOf("you")).not.toHaveAttribute("data-reacting");
   });
 
-  it("R1331 R1446 opening the view straight from a hold makes the portrait react", () => {
+  it("R1331 R1449 opening the view straight from a hold makes the portrait react", () => {
     vi.useFakeTimers();
     renderVG();
     fireEvent.pointerDown(portraitButton("opponent"), { pointerType: "touch", button: 0, clientX: 5, clientY: 5 });

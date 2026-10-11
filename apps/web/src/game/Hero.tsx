@@ -27,7 +27,7 @@
 // `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
 // `activated` row, which plays on its card (`card-<instanceId>`).
 //
-// The portrait has two presses (R1446). A click on the hero when it is not a legal target, or Enter
+// The portrait has two presses (R1449). A click on the hero when it is not a legal target, or Enter
 // or Space on the portrait's own button (a control named for the hero, laid over the art and given
 // no testid, so a drag or a click still resolves to `hero-<side>`), toggles the emote menu hung off
 // the portrait: your picker, or the opponent's one-item mute (R643). A hold on the portrait (a
@@ -80,7 +80,7 @@ export type HeroProps = {
 /** The portrait's hold has no overlay of its own: it opens the hero's view through Game. */
 const NO_OVERLAY = (): null => null;
 
-/** R1446: the keys that open the inspect view from the portrait's button, a hold's keyboard twin. */
+/** R1449: the keys that open the inspect view from the portrait's button, a hold's keyboard twin. */
 function isInspectKey(event: { key: string; shiftKey: boolean }): boolean {
   return event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
 }
@@ -108,7 +108,7 @@ export default function Hero(props: HeroProps): ReactElement {
   const panelReduces = useSetting("reduceMotion");
   const osReduces = useOsReducedMotion();
   const reacting = usePortraitReaction(menu !== null, panelReduces || osReduces);
-  // R1446: a touch or a mouse held on the portrait opens the view, unless the hero is a target (a
+  // R1449: a touch or a mouse held on the portrait opens the view, unless the hero is a target (a
   // hold there is the player aiming). The handlers sit on the whole oval, badges included. Hover is
   // off: a portrait has nothing to preview. The trigger's capture swallows the click that lifting the
   // finger or the button sends, which would otherwise toggle the menu on the portrait as well. The
@@ -137,12 +137,12 @@ export default function Hero(props: HeroProps): ReactElement {
       data-glow={glowAttr(props.highlight, testId)}
       // No aria-disabled while the hero is not a target, as a card carries: the hero holds controls
       // of its own (the portrait's button, its menu, the Heroic Power), and a disabled ancestor would
-      // have assistive tech read every one of them as disabled (R1446). Not being a tab stop says it.
+      // have assistive tech read every one of them as disabled (R1449). Not being a tab stop says it.
       aria-label={side === "you" ? "Your hero" : "Opponent hero"}
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
         // Issue §2: targeting always wins. A legal hero is a target, so the click lands on it; a
-        // non-legal one toggles its menu on the portrait instead (R1446): the emote picker (yours)
+        // non-legal one toggles its menu on the portrait instead (R1449): the emote picker (yours)
         // or the mute item (theirs).
         if (legal) {
           props.onClick?.(target);
@@ -190,7 +190,7 @@ export default function Hero(props: HeroProps): ReactElement {
         {emotes?.show !== null && emotes?.show !== undefined && (
           <EmoteShowEl key={emotes.show.key} show={emotes.show} />
         )}
-        {/* R1446: the click's menu, hung off the portrait as it was before R1330. A hold puts the
+        {/* R1449: the click's menu, hung off the portrait as it was before R1330. A hold puts the
             same menu in the inspect view below instead. */}
         {emotes !== undefined && menu === "emotes" && !inspect && (
           <EmoteMenu side={side} hand={emotes.hand} gate={emotes.gate} onPick={emotes.onPick} onClose={emotes.onCloseMenu} />

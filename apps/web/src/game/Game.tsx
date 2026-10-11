@@ -189,7 +189,7 @@ export default function Game({
   /**
    * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
    * hotseat hand-over closes it the way a hand-over closes the concede question, and where: hung
-   * off the portrait (`panel`, a click) or in the hero's inspect view (`inspect`, a hold; R1446).
+   * off the portrait (`panel`, a click) or in the hero's inspect view (`inspect`, a hold; R1449).
    * Issue §2's other closes — outside press, Escape, picking — live in the menus themselves; the
    * ones that are a board state (a drag or targeting starting) are the render-adjust below.
    */
@@ -527,7 +527,7 @@ export default function Game({
    * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
    * is the click Hero took when its hero was NOT legal, and a selection in flight still wins. The
    * click toggles the menu on the portrait; `onPortraitHold`, the hold, opens the hero's inspect
-   * view with the same menu in it, the panel giving way to it (R1446).
+   * view with the same menu in it, the panel giving way to it (R1449).
    */
   const heroEmotes = useCallback(
     (side: "you" | "opponent"): HeroEmotes | undefined => {

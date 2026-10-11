@@ -2,7 +2,7 @@
 // emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
 // the seat's dealt hand and nothing else (R1343): its voice lines and its emoji, in the pool's order.
 // A click on a portrait hangs its menu off the portrait, the placement below; a hold opens the hero's
-// inspect view (`HeroInspect.tsx`), which draws the same menu `inline` (R1446, R1330).
+// inspect view (`HeroInspect.tsx`), which draws the same menu `inline` (R1449, R1330).
 //
 // Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
 // the hand's voice lines sit on an arc above the portrait, its emoji in a row under them, the bubble or
@@ -45,7 +45,7 @@ export function arcDrop(index: number, count: number): number {
 /**
  * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
  * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against. A
- * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1446): that click
+ * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1449): that click
  * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
  * on its pointerdown would have the click open the menu again.
  */

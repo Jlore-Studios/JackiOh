@@ -12,8 +12,9 @@ have used:
 - an open issue or PR assigned to the bot that nothing ever queued;
 - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
 - a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
-  wait for a person to run `python3 -m harness setup`, so `method:manual` and `method:use-bot`
-  (#307) shipped without existing, and no issue could be triaged;
+  wait for a person to run `python3 -m harness setup`, so the method labels (#307) shipped
+  without existing, and no issue could be triaged; and one it no longer uses
+  (`config.RETIRED_LABELS`), which it deletes;
 - a tree the bot split (`squishy:tree`, #60) whose sub-issues have all closed: its close-out is
   queued, which checks the parent against `main` and closes it or opens what is missing;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
@@ -37,7 +38,7 @@ from typing import Any, Callable
 from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
+from harness.config import (LABELS, LABEL_BLOCKED, RETIRED_LABELS, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
@@ -80,11 +81,12 @@ def sweep(ctx: Context) -> list[str]:
 
 
 def _labels(ctx: Context, since: datetime) -> list[str]:
-    """Create every label in `config.LABELS` the repository lacks, once each time that list
-    changes (`labels_synced`, its fingerprint, in the state file), so a tick normally reads
-    nothing. A label a person deleted comes back with the next change to the list, or with
-    `python3 -m harness setup`."""
-    want = hashlib.sha256(json.dumps(sorted(LABELS.items())).encode("utf-8")).hexdigest()[:16]
+    """Create every label in `config.LABELS` the repository lacks and delete every one in
+    `config.RETIRED_LABELS` it still has, once each time those lists change (`labels_synced`,
+    their fingerprint, in the state file), so a tick normally reads nothing. A label a person
+    deleted comes back with the next change to the list, or with `python3 -m harness setup`."""
+    want = hashlib.sha256(json.dumps([sorted(LABELS.items()), RETIRED_LABELS])
+                          .encode("utf-8")).hexdigest()[:16]
     if ctx.store.load().get("labels_synced") == want:
         return []
     notes, refused = [], False
@@ -95,6 +97,13 @@ def _labels(ctx: Context, since: datetime) -> list[str]:
         except GitHubError as exc:  # one GitHub refuses never stops the rest
             refused = True
             notes.append(f"could not create the label `{name}`: {str(exc)[:200]}")
+    for name in RETIRED_LABELS:
+        try:
+            if ctx.gh.delete_label(name):
+                notes.append(f"deleted the retired label `{name}`")
+        except GitHubError as exc:
+            refused = True
+            notes.append(f"could not delete the label `{name}`: {str(exc)[:200]}")
     if not refused:  # a refused one is tried again next tick
         ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
     return notes
@@ -129,19 +138,13 @@ def _green_heads(ctx: Context, since: datetime) -> list[str]:
 
 
 def _issue_types(ctx: Context, since: datetime) -> list[str]:
-    """Every open issue gets a type. Triage types the ones people open; the ones a bot opens (the
-    CI-duration alerts, the status issue) never reach it, and triage can miss one. Those get
-    `triage.fallback_type`: a bot's at once, anyone else's after `triage.TYPE_GRACE`."""
+    """Every open issue gets a type. Triage types the ones people open as they open; the ones a
+    bot opens (the CI-duration alerts, the status issue) never reach it, and triage can miss one.
+    Those get the same `triage.fallback_type`."""
     notes: list[str] = []
     types: dict[str, str] | None = None
     for issue in ctx.gh.list_issues(state="open"):
         if "pull_request" in issue or issue.get("type"):
-            continue
-        user = issue.get("user") or {}
-        login = str(user.get("login") or "")
-        by_bot = login.lower() == ctx.cfg.bot_login.lower() or login.endswith("[bot]")
-        opened = parse_iso(issue.get("created_at"))
-        if not by_bot and (opened is None or ctx.now() - opened < triage.TYPE_GRACE):
             continue
         types = types if types is not None else triage.issue_types(ctx.gh)
         wanted = triage.fallback_type(issue, types)

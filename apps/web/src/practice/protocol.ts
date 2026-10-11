@@ -79,7 +79,11 @@ export type PracticeReplaySummary = {
   portraits: { p1: PortraitId; p2: PortraitId };
 };
 
-/** R768: a summary as `replays` answers it; `unavailable` is part 1's reason it cannot be replayed. */
+/**
+ * R768: a summary as `replays` answers it; `unavailable` is part 1's reason it cannot be replayed:
+ * `earlier_patch` from its catalog alone, `rules_changed` once a `replay` of it found so, since the
+ * list folds no game.
+ */
 export type PracticeReplayListing = PracticeReplaySummary & { unavailable?: ReplayRefusal };
 
 /** Dev builds only (MODE !== "production"); the one message that carries the raw state. */

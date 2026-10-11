@@ -81,7 +81,7 @@ SECRET_KEYS: tuple[str, ...] = (
 )
 
 #: GitHub refuses a label whose description is longer than this (422), so `harness setup` and the
-#: sweep could never create `method:manual` and `method:use-bot` while theirs were 107 and 111.
+#: sweep could never create the method labels (#307, gone since #664) while theirs were 107 and 111.
 LABEL_DESCRIPTION_MAX = 100
 #: The prefix of the labels that are the bot's own (`bot:`, `squishy:`).
 LABEL_PREFIX = IDENTITY.label_prefix
@@ -92,8 +92,7 @@ def said(text: str) -> str:
     "Squishy" in Squishy's process, and stays itself in the night bot's."""
     plain = NAME[4:] if NAME.startswith("the ") else NAME
     return (text.replace("The night bot", NAME[:1].upper() + NAME[1:])
-            .replace("the night bot", NAME).replace("night bot", plain)
-            .replace("bot:approved", f"{LABEL_PREFIX}approved"))
+            .replace("the night bot", NAME).replace("night bot", plain))
 
 
 #: The bot's own labels, by what follows the prefix.
@@ -104,9 +103,7 @@ _OWN: dict[str, tuple[str, str]] = {
     "revise": ("5319e7", "Queued for the night bot to revise this PR"),
     "blocked": ("b60205", "The night bot needs a person before it can go on"),
     "pr": ("c5def5", "A pull request the night bot opened"),
-    "suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:approved to have it built"),
-    "approved": ("0e8a16", "A person approved this suggestion: after two minutes, triage treats it as method:use-bot"),
-    "needs-review": ("e99695", "A bot pull request that a person must merge: it touches review-only paths"),
+    "suggestion": ("d4c5f9", "An improvement the night bot suggests; add bot:build to have it built"),
     "cross-review": ("0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"),
     "needs-plan": ("1d76db", "Queued for the night bot: a strong model plans it first, into the description"),
     "planned": ("0075ca", "It has a plan: in its description, which the builder starts from"),
@@ -134,16 +131,12 @@ _SHARED: dict[str, tuple[str, str]] = {
     "priority:high": ("d73a4a", "The night bot picks this up first"),
     "priority:medium": ("fbca04", "The night bot picks this up after priority:high"),
     "priority:low": ("0e8a16", "The night bot picks this up last, after unlabelled work"),
-    "Info": ("bfdadc", "For the record, nothing to build: migrations, statistics, the night bot's status"),
-    "method:manual": ("f9d0c4", "People do it: after two minutes, triage labels it human, fixes its title and assigns both people"),
-    "method:use-bot": ("c2e0c6", "The bot does it: after two minutes, triage labels, retitles and queues it, and assigns the bot"),
 }
 #: The type labels (`docs/issues-and-patches.md`, Labels): every issue carries at least one, and
 #: they are the only labels triage gives a pull request (`triage.TYPE_LABELS`). Made by hand until
 #: #187; the colours are the ones they were made with.
 _TYPES: dict[str, tuple[str, str]] = {
     "patch": ("fbca04", "A numbered release of the game: cards, rules, the client, the server's features"),
-    "large patch": ("006b75", "A big patch, with patch: a new expansion or set, or a change to many cards at once"),
     "major version": ("0052cc", "A vX.Y.0 release that changes the game or the codebase broadly, and each of its parts"),
     "architecture": ("0e8a16", "The repository, tooling, CI, deploys and agent setup"),
     "night bot": ("5319e7", "The night bot and Squishy themselves: bot/, .harness/, .squishy/ and their workflows"),
@@ -155,8 +148,8 @@ TYPE_LABELS: tuple[str, ...] = tuple(_TYPES)
 _WORKFLOW_LABELS: dict[str, tuple[str, str]] = {
     "production merge": ("5319e7", "The merge of main into production (promote-production.yml)"),
 }
-#: A bot without suggestions (Squishy) has no labels for them.
-_NO_SUGGESTIONS = ("suggestion", "approved")
+#: A bot without suggestions (Squishy) has no label for them.
+_NO_SUGGESTIONS = ("suggestion",)
 #: Every label the repository uses, with its colour and description: the one list (#187). The
 #: sweep creates any the repository lacks; `python3 -m harness setup` creates them and brings each
 #: one's colour and description back to this list. The bot's own labels are the running bot's:
@@ -179,11 +172,9 @@ LABEL_PR_OPEN = f"{LABEL_PREFIX}pr-open"
 LABEL_REVISE = f"{LABEL_PREFIX}revise"
 LABEL_BLOCKED = f"{LABEL_PREFIX}blocked"
 LABEL_PR = f"{LABEL_PREFIX}pr"
+#: One of the bot's own ideas (`prompts/suggest.md`): a person who queues it (`bot:build`, an
+#: assignment or `/harness build`) approves it, and the label comes off (`queue.queue_build`).
 LABEL_SUGGESTION = f"{LABEL_PREFIX}suggestion"
-#: A person's yes to a suggestion: triage answers it as `method:use-bot` (labels, title,
-#: priority, the bot assigned, `bot:build`), and the queue builds no suggestion without it.
-LABEL_APPROVED = f"{LABEL_PREFIX}approved"
-LABEL_NEEDS_REVIEW = f"{LABEL_PREFIX}needs-review"
 #: A bot pull request whose head the review rule approved but which auto-merge could not take
 #: (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so it
 #: waits for a person to merge it. It comes off when the pull request goes back into the queue (`queue.set_state_label`).
@@ -208,10 +199,12 @@ LABEL_TREE = f"{LABEL_PREFIX}tree"
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
 #: gets a reply saying so.
 LABEL_HUMAN = "human"
-#: #307: a person's choice of who does an issue; triage takes no issue without one.
-LABEL_INFO = "Info"
-LABEL_METHOD_MANUAL = "method:manual"
-LABEL_METHOD_BOT = "method:use-bot"
+#: Labels the bot used to have: the sweep deletes them from the repository (`sweep._labels`), so
+#: nobody puts on one that no longer does anything. #664 took the method labels and `bot:approved`
+#: (`bot:build` and `human` hand an issue on), `bot:needs-review` (always beside `ready for
+#: merge`), and `large patch` and `Info`, which nothing read.
+RETIRED_LABELS: tuple[str, ...] = ("method:manual", "method:use-bot", f"{LABEL_PREFIX}approved",
+                                   f"{LABEL_PREFIX}needs-review", "large patch", "Info")
 #: An item's difficulty decides which models may plan, build and review it; no label counts as
 #: medium, and with several the hardest counts. Like `human`, these match whatever their case.
 DIFFICULTIES = ("easy", "medium", "hard")

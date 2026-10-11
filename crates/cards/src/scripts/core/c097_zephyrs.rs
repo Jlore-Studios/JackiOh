@@ -1,9 +1,9 @@
-//! #97 Zephyrs (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29). Spell, cost 0.
-//!   Base:    "Discover the 'perfect' card from the Core set; exile this"
+//! #97 Zephyrs (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29, R1446). Spell, cost 0.
+//!   Base:    "Discover the 'perfect' card; exile this"
 //!   Radiant: "A perfect Radiant card" — the cell restates only which card the Discover hands over,
 //!            so "exile this" is kept and the pick arrives Radiant (§8 Conventions).
-//!   Engine:  "Scorer in 10.7 ranks every non-token Core card except #97 for the current state;
-//!            Discover offers the top 3 (R29)".
+//!   Engine:  "Scorer in 10.7 ranks every non-token card of every set that ships except #97 for the
+//!            current state; Discover offers the top 3 (R29, R1446)".
 //! The ranking is the subsystem's (§10.7): `subsystems/scorer.rs` owns every weight and filter, so
 //! this card only asks it for three ids and passes `{ radiant }`, so the radiant face ranks radiant
 //! faces (`ScorerOptions`, §5.2). The ids are a `defId` pool (§5.1), so only those three are offered;
@@ -75,8 +75,11 @@ pub fn script() -> CardScripts {
 }
 
 // BUILD M4-T4 row 97: "Scorer deterministic; a lethal-enabling card ranks first when lethal
-// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant". §10.7's dry run plays
-// each candidate on a copy of the state and reads only what its player may read (R222).
+// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant; the pool is every set
+// that ships but #97 (R1446)". §10.7's dry run plays each candidate on a copy of the state and reads
+// only what its player may read (R222). The pool is the real catalog's, so a test that names cards
+// reads Core's own top three, whose order the other sets cannot move: Core comes first in the catalog
+// order, so each Core candidate's dry run is the one it was when the pool was Core alone.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,13 +130,39 @@ mod tests {
         js(&scored.priority)
     }
 
+    /// The state #97 resolves in: the same game with #97 gone from hand (it costs 0) and no prompt
+    /// open yet, so the scorer's dry run plays (`dry_run_base`), as it does for the Discover.
+    fn resolving(setup: &Value) -> GameState {
+        let mut options = setup.clone();
+        if let Some(hand) = options["p1"]["hand"].as_array_mut() {
+            hand.retain(|card| card.as_str() != Some(ZEPHYRS));
+        }
+        scenario(options).state().clone()
+    }
+
+    /// The first three Core cards of a ranking: Core's own top three, the pool #97 drew on before
+    /// R1446, in the order it ranked them then.
+    fn core_top_three(ranked: &[subsystems::Scored]) -> Vec<String> {
+        ranked
+            .iter()
+            .filter(|scored| scored.def.set == SetName::Core)
+            .take(3)
+            .map(|scored| scored.def.id.clone())
+            .collect()
+    }
+
+    fn is_token(def: &CardDef) -> bool {
+        def.token || def.tags.contains(&Tag::Token)
+    }
+
     mod n97_zephyrs_base {
         use super::*;
 
         #[test]
         fn r29_offers_exactly_the_scorer_s_top_3_and_nothing_else() {
             crate::register_all();
-            let mut s = scenario(json!({ "seed": "zephyrs-top3", "p1": { "hand": [ZEPHYRS] } }));
+            let setup = json!({ "seed": "zephyrs-top3", "p1": { "hand": [ZEPHYRS] } });
+            let mut s = scenario(setup.clone());
             s.play(ZEPHYRS, json!({}));
 
             let pending = open(s.state());
@@ -143,8 +172,9 @@ mod tests {
             assert_eq!(pending["max"], 1);
             assert_eq!(pending["options"].as_array().map(Vec::len), Some(3));
 
-            // The state the card read is this one: the spell is resolving and the prompt is open.
-            let top: Vec<String> = subsystems::top_three(s.state(), P1, &options(None))
+            // The state the card read is this one with the spell resolving: #97 is out of the hand and no
+            // prompt is open yet, so the scorer's dry run plays.
+            let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(None))
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
@@ -163,9 +193,9 @@ mod tests {
                 let candidates = subsystems::candidate_defs();
                 let def = candidates.iter().find(|candidate| &candidate.id == id);
                 assert!(def.is_some());
-                let def = js(&def);
-                assert_eq!(def["token"], false);
-                assert_eq!(def["set"], "Core");
+                let def = def.expect("a candidate");
+                assert!(!is_token(def));
+                assert!(SHIPPED_SETS.contains(&def.set));
             }
         }
 
@@ -193,18 +223,27 @@ mod tests {
             crate::register_all();
             // p1's 3/3 can already swing at the hero for 3; #45 adds 4 with Charge on its summon turn, and
             // costs 2 of p1's 4 mana, so 3 + 4 ≥ p2's 7 health is lethal available this turn.
-            let mut s = scenario(json!({
+            let setup = json!({
                 "seed": "zephyrs-lethal",
                 "p1": { "hand": [ZEPHYRS], "field": [BOARD] },
                 "p2": { "health": 7 },
-            }));
+            });
+            let mut s = scenario(setup.clone());
             s.play(ZEPHYRS, json!({}));
 
             let ranked = subsystems::rank(s.state(), P1, &options(None));
-            assert_eq!(ranked.first().map(|scored| scored.def.id.clone()).as_deref(), Some(CHARGER));
             assert_eq!(ranked.first().map(priority_of), Some(json!("lethal")));
-            // …and the card offers it, which is the whole of what #97 contributes.
-            assert!(option_ids(&open(s.state())).contains(&CHARGER.to_string()));
+            // Core's own top card is #45, read as lethal (R1446 lets cards of the other sets that are
+            // lethal too rank beside it).
+            assert_eq!(core_top_three(&ranked).first().map(String::as_str), Some(CHARGER));
+            let charger = ranked.iter().find(|scored| scored.def.id == CHARGER);
+            assert_eq!(charger.map(priority_of), Some(json!("lethal")));
+            // …and the card offers the top 3 of the state it resolves in, the best of them a lethal card,
+            // which is the whole of what #97 contributes.
+            let top = subsystems::top_three(&resolving(&setup), P1, &options(None));
+            assert_eq!(top.first().map(priority_of), Some(json!("lethal")));
+            let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
+            assert_eq!(sorted(&option_ids(&open(s.state()))), sorted(&top));
         }
 
         #[test]
@@ -268,15 +307,17 @@ mod tests {
         #[test]
         fn s5_2_the_radiant_face_ranks_the_radiant_faces_so_the_top_3_is_the_radiant_top_3() {
             crate::register_all();
-            let mut s = scenario(json!({
+            let setup = json!({
                 "seed": "zephyrs-radiant-rank",
                 "p1": { "hand": [ZEPHYRS], "field": [BOARD] },
                 "p2": { "field": [BOARD], "health": 20 },
-            }));
+            });
+            let mut s = scenario(setup.clone());
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
 
-            let top: Vec<String> = subsystems::top_three(s.state(), P1, &options(Some(true)))
+            // Ranked for the state as the Discover meets it, the dry run included (a prompt open stops it).
+            let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(Some(true)))
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
@@ -330,55 +371,77 @@ mod tests {
             .collect()
     }
 
+    /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446).
+    fn offers_rank_at(setup: &Value, priorities: &[&str]) {
+        let top = subsystems::top_three(&resolving(setup), P1, &options(None));
+        for scored in &top {
+            let priority = priority_of(scored);
+            assert!(
+                priorities.contains(&priority.as_str().unwrap_or_default()),
+                "{} is offered at {priority}",
+                scored.def.id
+            );
+        }
+        let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
+        let mut s = scenario(setup.clone());
+        s.play(ZEPHYRS, json!({}));
+        assert_eq!(sorted(&offered_ids(&s)), sorted(&top));
+    }
+
     mod n97_zephyrs_s10_7_s_dry_run_reads_what_a_card_s_text_does {
         use super::*;
 
         #[test]
-        fn s10_7_hero_below_10_and_card_heals_high_at_5_health_all_three_offers_are_cards_that_heal() {
+        fn s10_7_hero_below_10_and_card_heals_high_at_5_health_the_three_best_core_cards_heal() {
             crate::register_all();
             // Nothing is lethal (p2 is at 30 with no board on either side) and there is no enemy board to
             // clear, so the heal criterion is the highest one that applies. Seven Core cards heal their
-            // controller's hero, so a scorer that ranks every one of them "high" offers three of them.
-            let mut s = scenario(json!({
+            // controller's hero, so a scorer that ranks every one of them "high" puts three of them at
+            // the top of Core's cards.
+            let setup = json!({
                 "seed": "r5-zephyrs-heal",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER], "health": 5 },
-            }));
-            s.play(ZEPHYRS, json!({}));
-            let offered = offered_ids(&s);
-            assert_eq!(offered.len(), 3);
-            assert_eq!(outside(&offered, HEALERS), Vec::<String>::new(), "offers that do not heal");
+            });
+            let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
+            assert_eq!(core.len(), 3);
+            assert_eq!(outside(&core, HEALERS), Vec::<String>::new(), "Core cards that do not heal");
+            // …and every offer, of whatever set, ranks at the heal criterion or above.
+            offers_rank_at(&setup, &["lethal", "clear", "heal"]);
         }
 
         #[test]
-        fn s10_7_can_clear_the_enemy_board_high_facing_three_7_7s_all_three_offers_clear_the_board() {
+        fn s10_7_can_clear_the_enemy_board_high_facing_three_7_7s_the_three_best_core_cards_clear_the_board() {
             crate::register_all();
             // Three #25 4-mana 7/7s (Armor 7): no unit in Core answers one alone, let alone three, while
             // Flood, Big Felinor, Twisting Nether and Ceaseless Void each remove the whole board by text.
-            let mut s = scenario(json!({
+            let setup = json!({
                 "seed": "r5-zephyrs-clear",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER] },
                 "p2": { "field": ["core-025", "core-025", "core-025"] },
-            }));
-            s.play(ZEPHYRS, json!({}));
-            let offered = offered_ids(&s);
-            assert_eq!(offered.len(), 3);
-            assert_eq!(outside(&offered, CLEARERS), Vec::<String>::new(), "offers that do not clear the board");
+            });
+            let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
+            assert_eq!(core.len(), 3);
+            assert_eq!(outside(&core, CLEARERS), Vec::<String>::new(), "Core cards that do not clear the board");
+            // …and every offer, of whatever set, ranks at the clear criterion or above.
+            offers_rank_at(&setup, &["lethal", "clear"]);
         }
 
         #[test]
-        fn s10_7_lethal_available_max_with_the_enemy_hero_at_3_all_three_offers_deal_the_last_3() {
+        fn s10_7_lethal_available_max_with_the_enemy_hero_at_3_the_three_best_core_cards_deal_the_last_3() {
             crate::register_all();
             // p1 has 4 mana (Zephyrs costs 0) and p2 has no board, so any card that puts 3 damage on the
             // enemy hero this turn is lethal: a burn spell as much as a Charge unit.
-            let mut s = scenario(json!({
+            let setup = json!({
                 "seed": "r5-zephyrs-lethal",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER] },
                 "p2": { "health": 3 },
-            }));
-            s.play(ZEPHYRS, json!({}));
-            let offered = offered_ids(&s);
-            assert_eq!(offered.len(), 3);
-            assert_eq!(outside(&offered, LETHAL_AT_3), Vec::<String>::new(), "offers that are not lethal");
+            });
+            let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
+            assert_eq!(core.len(), 3);
+            assert_eq!(outside(&core, LETHAL_AT_3), Vec::<String>::new(), "Core cards that are not lethal");
+            // …and every offer, of whatever set, is lethal.
+            offers_rank_at(&setup, &["lethal"]);
         }
     }
 
@@ -469,7 +532,7 @@ mod tests {
             // for 8 the turn it lands, which is lethal on a hero at 8; under p1's own #65.1 Spikey Pillow
             // it swings for 2, which is not lethal on a hero at 4. The scorer reads the printed 4 both
             // times, and the Duelist has no text for the dry run to play.
-            let mut under_weapons = scenario(json!({
+            let under_weapons = scenario(json!({
                 "seed": "zephyrs-weapons",
                 "p1": { "hand": [ZEPHYRS, VANILLA], "backrow": ["core-014"], "library": LIBRARY },
                 "p2": { "hand": [VANILLA], "health": 8, "library": LIBRARY },
@@ -483,9 +546,9 @@ mod tests {
             assert_eq!(priority_of(&scored_on(&under_weapons, "core-045")), json!("lethal"));
             assert_ne!(priority_of(&scored_on(&under_pillow, "core-045")), json!("lethal"));
 
-            // …and what p1 is offered follows: the lethal card is on the table.
-            under_weapons.play(ZEPHYRS, json!({}));
-            assert!(offered_defs(&under_weapons).contains(&"core-045".to_string()));
+            // …and the ranking follows: the lethal card is among Core's top three.
+            let ranked = subsystems::rank(under_weapons.state(), P1, &options(None));
+            assert!(core_top_three(&ranked).contains(&"core-045".to_string()));
         }
 
         #[test]
@@ -535,6 +598,57 @@ mod tests {
             }));
 
             assert_ne!(priority_of(&scored_on(&g, "core-055")), json!("clear"));
+        }
+    }
+
+    mod n97_zephyrs_r1446_every_set_that_ships {
+        use super::*;
+
+        #[test]
+        fn r1446_the_pool_is_every_non_token_card_of_every_set_that_ships_zealotism_included() {
+            crate::register_all();
+            let mut pool: Vec<String> = subsystems::candidate_defs().iter().map(|def| def.id.clone()).collect();
+            pool.sort();
+            let mut expected: Vec<String> = crate::CATALOG
+                .values()
+                .filter(|def| !is_token(def) && SHIPPED_SETS.contains(&def.set) && def.id != ZEPHYRS)
+                .map(|def| def.id.clone())
+                .collect();
+            expected.sort();
+            assert_eq!(pool, expected);
+            // R387: #97 leaves out only its own id, so C+ #27 Zephrys Zealotism is a candidate.
+            assert!(pool.contains(&"classicplus-027".to_string()));
+            assert!(!pool.contains(&ZEPHYRS.to_string()));
+            for set in SHIPPED_SETS {
+                assert!(
+                    subsystems::candidate_defs().iter().any(|def| def.set == set),
+                    "{set} is in the pool"
+                );
+            }
+        }
+
+        #[test]
+        fn r1446_every_candidate_scores_on_both_faces_without_a_panic() {
+            crate::register_all();
+            // Every set the catalog orders, shipped or previewed: the dry run plays each of them.
+            let _preview = preview_every_set();
+            let plain = json!({
+                "seed": "zephyrs-every-candidate",
+                "p1": { "hand": [ZEPHYRS, VANILLA], "library": LIBRARY },
+                "p2": { "hand": [VANILLA], "library": LIBRARY },
+            });
+            let pressed = json!({
+                "seed": "zephyrs-every-candidate-pressed",
+                "p1": { "hand": [ZEPHYRS, VANILLA], "health": 5, "library": LIBRARY },
+                "p2": { "hand": [VANILLA], "health": 3, "field": [SEVEN_SEVEN], "library": LIBRARY },
+            });
+            let candidates = subsystems::candidate_defs().len();
+            for setup in [&plain, &pressed] {
+                let state = resolving(setup);
+                for radiant in [false, true] {
+                    assert_eq!(subsystems::rank(&state, P1, &options(Some(radiant))).len(), candidates);
+                }
+            }
         }
     }
 }

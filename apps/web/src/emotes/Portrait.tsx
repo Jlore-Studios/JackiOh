@@ -54,7 +54,7 @@ export function HeroPortrait({
   /** R987: the side's Luck (`SideView.luck`); the badge draws only above 0. */
   luck?: number;
   /**
-   * R1446: the hold's pointer handlers, on the whole oval: its badges sit over the open button (the
+   * R1449: the hold's pointer handlers, on the whole oval: its badges sit over the open button (the
    * health badge covers the oval's centre at some sizes), so a press on one is a press on the portrait.
    */
   press?: DOMAttributes<HTMLElement>;

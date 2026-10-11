@@ -203,7 +203,7 @@ export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent
  * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
  * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
  * (the legal branch still goes to `onClick`), which toggles the menu hung off the portrait, and
- * `onPortraitHold` the hold that opens the hero's inspect view instead (R1446, R1330; issue §2:
+ * `onPortraitHold` the hold that opens the hero's inspect view instead (R1449, R1330; issue §2:
  * targeting wins). `menu` says a menu is open and which, and `inspect` whether it is in the view.
  */
 export type HeroEmotes = {
@@ -212,7 +212,7 @@ export type HeroEmotes = {
   hand: readonly EmoteId[];
   show: EmoteShow | null;
   menu: "emotes" | "mute" | null;
-  /** R1446: the open menu sits in the hero's inspect view (a hold) rather than on the portrait (a click). */
+  /** R1449: the open menu sits in the hero's inspect view (a hold) rather than on the portrait (a click). */
   inspect: boolean;
   muted: boolean;
   gate: () => EmoteGate;

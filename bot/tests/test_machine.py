@@ -46,13 +46,9 @@ class StarterTests(unittest.TestCase):
             8: [job("work", "waiting", ["night-vm-agy"])]})           # an approval, not a runner
         self.assertEqual(starter.waiting_jobs("123", ["bot-night.yml"], get, NOW), [])
 
-    def test_triage_wakes_it_too(self):
-        self.assertEqual(starter.DEFAULT_WORKFLOWS.split(","), ["bot-night.yml", "triage.yml"])
-        get, calls = fake_api({"in_progress": [{"id": 9}]}, {9: [
-            job("classify", "queued", ["night-vm-devin"])]})
-        found = starter.waiting_jobs("123", starter.DEFAULT_WORKFLOWS.split(","), get, NOW)
-        self.assertEqual(found[0]["label"], "night-vm-devin")
-        self.assertTrue(any("/workflows/triage.yml/" in c for c in calls))
+    def test_only_the_night_bot_wakes_it(self):
+        """Triage runs no model there since #664, so only bot-night's jobs need the machine."""
+        self.assertEqual(starter.DEFAULT_WORKFLOWS.split(","), ["bot-night.yml"])
 
     def test_a_job_whose_runner_is_missing_stops_waking_it(self):
         get, _ = fake_api({"in_progress": [{"id": 7}]}, {7: [
