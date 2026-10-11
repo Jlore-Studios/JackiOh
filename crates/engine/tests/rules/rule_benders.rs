@@ -202,7 +202,7 @@ mod r940 {
         let mut sink = Sink::for_state(s.state());
         let state = s.state_mut();
         let mut engine = sink.on(state);
-        let mut ctx = make_context(
+        let ctx = make_context(
             &mut engine,
             None,
             HookOptions {
@@ -211,7 +211,7 @@ mod r940 {
             },
         );
         let matched: Vec<String> = cards_in_card_scope(
-            &mut ctx,
+            &ctx,
             &scope,
             Some(&CardScopeOptions {
                 aim: Some(TargetAim::Harm),
