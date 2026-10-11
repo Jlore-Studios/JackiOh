@@ -10,7 +10,7 @@ body:
 
         - **Title:** `Patch v0.3.X: <what it does>`, a short phrase. Keep the `X`: the branch that makes the patch's pending fragment names the number (Version numbers). A part of a multi-part patch is `Patch v0.3.X (part n of m): …`, a sub-issue of its tracker.
         - **Small?** One fix, one card's numbers or text, or one cosmetic or client tweak, with no new mechanic, keyword, ruling set or feature, is a micro patch: use the Micro patch form instead.
-        - **Who does it:** choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
+        - **Who does it:** choose below, or later label it `human` (people) or `bot:build` (the night bot). Your choice, difficulty and priority become labels, and triage adds the type label and the issue type (Task, Bug or Feature); with no difficulty, the bot's planner rates it.
   - type: textarea
     id: what
     attributes:
@@ -60,9 +60,9 @@ body:
     id: method
     attributes:
       label: Who does it
-      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      description: "People: labelled `human` and assigned to both people. The night bot: labelled `bot:build`, which queues it. Or decide later and add one of those labels yourself."
       options:
         - Decide later
-        - People (method:manual)
-        - The night bot (method:use-bot)
+        - People (human)
+        - The night bot (bot:build)
       default: 0

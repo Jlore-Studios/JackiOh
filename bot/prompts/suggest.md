@@ -1,4 +1,4 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Suggest improvements to JackiOh
 
 The night bot of `$repo` has nothing queued tonight. Your job is to propose up to $count
@@ -34,7 +34,12 @@ $existing
 The very first line must be a single HTML comment carrying JSON on one line, with nothing before
 it:
 
-    <!-- suggestions: [{"title": "Short imperative title", "body": "Markdown body"}] -->
+    <!-- suggestions: [{"title": "Patch v0.3.Y: what it does", "body": "Markdown body"}] -->
+
+Each title follows `docs/issues-and-patches.md`, Titles, since nothing retitles it later: a small
+change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title does (`Patch v0.3.Y: `
+today), a bigger one as `patch.yml`'s (`Patch v0.3.X: `), tooling or CI `Architecture: ` or `CI: `,
+and the bots themselves `Night bot: `, each followed by what it does.
 
 Each body has these sections: `## Why`, `## Proposal`, `## Where it lands` (files and SPEC
 sections), `## Acceptance criteria` (a checklist a reviewer can verify), and `## Size and risks`.

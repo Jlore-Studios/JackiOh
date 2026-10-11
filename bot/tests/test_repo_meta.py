@@ -140,8 +140,8 @@ class IssueFormTests(unittest.TestCase):
             # The sync creates every one, and every issue carries a type label.
             self.assertLessEqual(set(labels), set(config.LABELS), name)
             self.assertTrue(set(labels) & set(config.TYPE_LABELS), name)
-            # Triage's model types it (Task, Bug, Feature) and only types an untyped issue; a
-            # `human` label would keep a method label from ever reaching triage.
+            # Triage types it (Task, Bug, Feature) and only types an untyped issue; who does it
+            # is the dropdown's answer, so no form puts `human` on by itself.
             self.assertNotRegex(text, r"(?m)^type:", name)
             self.assertNotIn(config.LABEL_HUMAN, labels, name)
             self.assertIn("docs/issues-and-patches.md", text, name)
@@ -159,17 +159,16 @@ class IssueFormTests(unittest.TestCase):
         return found
 
     def test_every_form_asks_who_does_it_and_each_answer_is_its_label(self):
-        """`triage.yml`'s `form` job turns the dropdowns into the labels a person would set by
-        hand: the method last, since it starts triage, and nothing for "Decide later", "Not sure"
-        or "No priority"."""
+        """Triage turns the dropdowns into the labels a person would set by hand: who does it
+        is `human` or `bot:build`, and "Decide later", "Not sure" or "No priority" is nothing."""
         for name, text in self.forms.items():
             dropdowns = self.dropdowns(text)
             self.assertIn("method", dropdowns, name)
             for ident, (label, options) in dropdowns.items():
                 answers = [triage.form_labels(f"### {label}\n\n{option}") for option in options]
                 if ident == "method":
-                    self.assertEqual(answers, [[], [config.LABEL_METHOD_MANUAL],
-                                               [config.LABEL_METHOD_BOT]], name)
+                    self.assertEqual(answers, [[], [config.LABEL_HUMAN],
+                                               [config.LABEL_BUILD]], name)
                 elif ident == "difficulty":
                     self.assertEqual(answers, [[], *([d] for d in config.DIFFICULTY_LABELS)], name)
                 elif ident == "priority":
@@ -188,20 +187,20 @@ class FormLabelsTests(unittest.TestCase):
     """`triage.form_labels`: an issue form's body as GitHub writes it, to labels."""
 
     BODY = ("### What it does\n\nA thing.\r\n\r\n### Difficulty (a guess)\n\nhard: engine rules, the AI\n\n"
-            "### Priority\n\nlow\n\n### Who does it\n\nThe night bot (method:use-bot)\n")
+            "### Priority\n\nlow\n\n### Who does it\n\nThe night bot (bot:build)\n")
 
-    def test_the_answers_in_order_the_method_last(self):
+    def test_the_answers_in_order(self):
         self.assertEqual(triage.form_labels(self.BODY),
-                         ["difficulty:hard", config.LABEL_PRIORITY_LOW, config.LABEL_METHOD_BOT])
+                         ["difficulty:hard", config.LABEL_PRIORITY_LOW, config.LABEL_BUILD])
 
     def test_nothing_from_a_body_no_form_wrote_or_unanswered_fields(self):
         self.assertEqual(triage.form_labels(""), [])
-        self.assertEqual(triage.form_labels("Please fix the method:use-bot thing"), [])
+        self.assertEqual(triage.form_labels("Please fix the (bot:build) thing"), [])
         self.assertEqual(triage.form_labels("### Priority\n\n_No response_\n\n### Who does it\n\n"
                                             "Decide later"), [])
 
     def test_text_a_person_wrote_is_not_an_answer(self):
-        body = "### What it does\n\nUse method:use-bot here, and priority high\n"
+        body = "### What it does\n\nUse (human) here, and priority high\n"
         self.assertEqual(triage.form_labels(body), [])
 
 
@@ -213,14 +212,24 @@ class LabelListTests(unittest.TestCase):
         docs = (ROOT / "docs" / "issues-and-patches.md").read_text(encoding="utf-8")
         table = re.search(r"^## Labels\n(.*?)^## ", docs, re.M | re.S).group(1)
         named = re.findall(r"^\| `([^`]+)` \|", table, re.M)
-        self.assertEqual(named[:6], ["patch", "large patch", "major version", "architecture", "night bot", "Info"])
+        self.assertEqual(named[:4], ["patch", "major version", "architecture", "night bot"])
         used = {*named, *dashboard.LABELS, *disk.LABELS, *stats.LABELS, *triage.TYPE_LABELS,
-                config.LABEL_HUMAN, config.LABEL_READY, *triage.METHODS, *config.DIFFICULTY_LABELS,
+                config.LABEL_HUMAN, config.LABEL_READY, *config.DIFFICULTY_LABELS,
                 config.LABEL_PRIORITY_HIGH, config.LABEL_PRIORITY_MEDIUM, config.LABEL_PRIORITY_LOW}
         # And every label a workflow or a script puts on by name.
         for path in (*WORKFLOWS.glob("*.yml"), *(ROOT / "scripts").glob("*.sh")):
             used |= set(re.findall(r'--(?:add-)?label "([^"$]+)"', path.read_text(encoding="utf-8")))
         self.assertEqual(sorted(used - set(config.LABELS)), [])
+
+    def test_no_retired_label_is_in_use(self):
+        """#664: the sweep deletes the retired labels, so none may come back through the list,
+        the conventions or a form."""
+        retired = {name.lower() for name in config.RETIRED_LABELS}
+        self.assertEqual({name.lower() for name in config.LABELS} & retired, set())
+        for path in (ROOT / "docs" / "issues-and-patches.md", *FORMS.glob("*.yml")):
+            text = path.read_text(encoding="utf-8").lower()
+            self.assertEqual([name for name in sorted(retired) if f"`{name}`" in text], [],
+                             path.name)
 
     def test_the_production_merge_label_is_as_its_script_writes_it(self):
         """promote-production.sh creates its label with `--force`, which would undo any other."""

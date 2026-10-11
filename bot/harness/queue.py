@@ -23,11 +23,11 @@ from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
 from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS,
-                            LABEL_APPROVED, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
-                            LABEL_METHOD_BOT, LABEL_PR, LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW,
-                            LABEL_PRIORITY_MEDIUM, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_TREE, LABEL_WORKING, MODES, MODE_LABELS, OTHERS,
-                            PLAN_FLOOR, SLASH, UNRATED_PLAN_FLOOR)
+                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR,
+                            LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
+                            LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
+                            LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR, SLASH,
+                            UNRATED_PLAN_FLOOR)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -166,19 +166,6 @@ def human_reply(number: int) -> str:
             "label off to hand it to me.")
 
 
-def unapproved(names: set[str]) -> bool:
-    """One of the bot's suggestions that no person has approved: it is built only once someone
-    labels it `bot:approved` (or `method:use-bot`), which triage answers by queueing it."""
-    lowered = {name.lower() for name in names}
-    return LABEL_SUGGESTION in lowered and not lowered & {LABEL_APPROVED, LABEL_METHOD_BOT}
-
-
-def unapproved_reply(number: int) -> str:
-    return (f"#{number} is one of my suggestions, which I build only once a person approves it: "
-            f"label it `{LABEL_APPROVED}`, and two minutes later triage titles, labels and queues "
-            "it.")
-
-
 def _label_note(names: set[str]) -> str:
     """What `difficulty:hard` on the thread changes about who takes it (`human` refuses earlier)."""
     if difficulty_of(names) == "hard":
@@ -284,10 +271,9 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     words = MODE_WORDS.get(mode_of(names), "build it")
     if mode_of(names) == "fullsend" and is_fullsend("", record):
         words = "reconcile its parts into one pull request"  # split already (#505)
-    if unapproved(names):
-        if LABEL_BUILD in names:
-            ctx.gh.remove_label(number, LABEL_BUILD)
-        return unapproved_reply(number)
+    if LABEL_SUGGESTION in names:
+        # A person queued one of my suggestions, which is their yes to it (#664).
+        ctx.gh.remove_label(number, LABEL_SUGGESTION)
     if LABEL_WORKING in names:
         _pending(ctx, number, by, ask)
         return (f"I am working on #{number} right now. When this run ends I go round once more "
@@ -685,13 +671,11 @@ def candidates(ctx: Context, state: dict[str, Any],
     plan counts at this one. Either queue label queues either kind of thread: an issue builds
     and a pull request revises. A queue label is the request, so a thread that failed before and
     was labelled again is taken again. A thread labelled `human` is left out, whatever model
-    would take it, and so are a suggestion no person approved (`unapproved`), a fullsend issue
-    whose parts are still open (`open_parts`, #505), forced or not, and a build that waits for
-    another issue (`waits_for`) unless it was forced, each with a line in `skipped` when the
-    caller keeps one."""
+    would take it, and so are a fullsend issue whose parts are still open (`open_parts`, #505),
+    forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
+    each with a line in `skipped` when the caller keeps one."""
     found: dict[int, Candidate] = {}
     human: set[int] = set()
-    suggested: set[int] = set()
     others: dict[int, str] = {}
     parted: dict[int, list[int]] = {}
     builds: list[dict[str, Any]] = []
@@ -700,7 +684,7 @@ def candidates(ctx: Context, state: dict[str, Any],
             number = int(thread["number"])
             names = label_names(thread)
             if (LABEL_WORKING in names or number in found or number in human
-                    or number in suggested or number in others or number in parted):
+                    or number in others or number in parted):
                 continue
             is_pr = "pull_request" in thread
             if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
@@ -708,9 +692,6 @@ def candidates(ctx: Context, state: dict[str, Any],
             lowered = {name.lower() for name in names}
             if LABEL_HUMAN in lowered:
                 human.add(number)
-                continue
-            if not is_pr and unapproved(names):
-                suggested.add(number)
                 continue
             other = owner(thread)
             if other is not None:
@@ -753,8 +734,6 @@ def candidates(ctx: Context, state: dict[str, Any],
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
                        "tier" for number in sorted(human))
-        skipped.extend(f"#{number} skipped: a suggestion no person approved (`{LABEL_APPROVED}`)"
-                       for number in sorted(suggested))
         skipped.extend(f"#{number} skipped: it is {name}'s" for number, name in sorted(others.items()))
         skipped.extend(f"#{number} skipped: its fullsend parts "
                        f"{', '.join(f'#{n}' for n in parts)} are still open"

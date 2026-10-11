@@ -173,12 +173,6 @@ class NightBotLeavesSquishyAloneTests(unittest.TestCase):
         self.gh.add_assignees(8, ["squishy-squooby"])
         self.assertIn("is Squishy's", queue_mod.queue_build(self.ctx, 8, by="jgoetzmann"))
 
-    def test_squishys_own_labels_are_never_offered_by_triage(self):
-        from harness import triage
-        self.assertTrue(triage._bot_only("squishy:split"))
-        self.assertTrue(triage._bot_only("bot:build"))
-        self.assertFalse(triage._bot_only("patch"))
-
 
 class BotsDoNotTalkForEverTests(unittest.TestCase):
     """The bots name each other in their replies; only a bare `stop` from the other bot is a
