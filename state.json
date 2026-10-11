@@ -6253,11 +6253,12 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-11T21:00:00Z",
-          "utilization": 0.45
+          "resets_at": "2026-10-12T02:00:00Z",
+          "utilization": 1.01
         },
-        "observed_at": "2026-10-11T17:13:04Z",
-        "status": "allowed"
+        "observed_at": "2026-10-11T23:28:36Z",
+        "rejected_resets_at": "2026-10-12T02:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
