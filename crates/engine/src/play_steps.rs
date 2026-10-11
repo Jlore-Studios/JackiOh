@@ -53,9 +53,7 @@ use crate::echo::{
 };
 use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
-use crate::mana::{
-    cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent, spend_mana,
-};
+use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent};
 use crate::modifiers::remove_modifier;
 use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{

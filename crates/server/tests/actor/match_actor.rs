@@ -1664,7 +1664,9 @@ mod r880_parses_a_craft_answer_and_refuses_a_malformed_recipe {
 mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
     use super::*;
     use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
-    use jackioh_engine::{ActionType, GameState, PerPlayer, PlagueSpend, RevealAt, Row, Selection, ZoneChoice};
+    use jackioh_engine::{
+        ActionType, GameState, PerPlayer, PlagueSpend, RevealAt, Row, Selection, ZoneChoice,
+    };
     use jackioh_server::actor::engine::deal_random_deck;
     use jackioh_server::actor::protocol::{
         ActionMessage, CLIENT_ACTION_TYPES, ClientMessage, MalformedMessage, parse_client_message,
