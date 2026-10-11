@@ -11,8 +11,8 @@
 
 use jackioh_ai::{AI_EVAL, NextSwing, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Phase, PlayerId, Value,
-    Winner, json,
+    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
+    PlayerId, Value, Winner, json,
 };
 
 use super::support::{AI, clone, register_cards, scenario};
@@ -248,6 +248,77 @@ mod evaluate_the_strength_passs_terms {
             lost - kept,
             10,
         );
+    }
+
+    /// The first unit of p1's units lane 1.
+    fn first_unit(state: &GameState) -> CardInstance {
+        state.players[AI].units[0]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned()
+            .expect("a unit stands on p1's field")
+    }
+
+    #[test]
+    fn printed_taunt_unit_in_defense_position_keeps_its_inherent_taunt() {
+        // Midrange Menace is 9/9 with a printed Taunt and no Armor.
+        let attack = board(json!({ "p1": { "field": ["core-019"] } }));
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let (atk, def) = (first_unit(&attack), first_unit(&defense));
+        // Switching costs it what it costs a vanilla body: its attack share, less the position's Armor
+        // that `positionGrants` keeps. Its own Taunt is not part of the loss.
+        let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 9.0;
+        let kept = AI_EVAL.position_grants * AI_EVAL.armor_point;
+        assert_close(
+            unit_worth(&attack, &atk, &AI_EVAL) - unit_worth(&defense, &def, &AI_EVAL),
+            lost - kept,
+            10,
+        );
+        // Against a vanilla body of the same stats, in the same position, it is worth its Taunt more,
+        // less the share of that Taunt the position grants the body anyway.
+        let mut vanilla = def.clone();
+        vanilla.vanilla = true;
+        let diff = unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&defense, &vanilla, &AI_EVAL);
+        assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
+        assert!(diff > 0.0);
+    }
+
+    #[test]
+    fn defense_position_grants_scale_with_position_grants_weight() {
+        let vanilla_def = board(json!({ "p1": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        let taunt_def = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let (v_unit, t_unit) = (first_unit(&vanilla_def), first_unit(&taunt_def));
+        for share in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let mut w = AI_EVAL;
+            w.position_grants = share;
+            // Mr. Vanilla, 4/4: the position's Taunt and Armor 1 count for `share` of themselves.
+            let body =
+                w.health * 4.0 + w.armor_point + w.attack * 4.0 * w.defense_attack_share + w.keyword.taunt;
+            assert_close(
+                unit_worth(&vanilla_def, &v_unit, &w),
+                body - (1.0 - share) * (w.keyword.taunt + w.armor_point),
+                10,
+            );
+            // Midrange Menace, 9/9: its Taunt is its own, so only the position's Armor is discounted.
+            let body =
+                w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
+            assert_close(
+                unit_worth(&taunt_def, &t_unit, &w),
+                body - (1.0 - share) * w.armor_point,
+                10,
+            );
+        }
+    }
+
+    #[test]
+    fn granted_taunt_unit_in_defense_position_keeps_its_granted_taunt() {
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        let plain = first_unit(&defense);
+        let mut granted = plain.clone();
+        granted.granted_keywords.push(Keyword::Taunt);
+        let diff = unit_worth(&defense, &granted, &AI_EVAL) - unit_worth(&defense, &plain, &AI_EVAL);
+        assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
+        assert!(diff > 0.0);
     }
 }
 
