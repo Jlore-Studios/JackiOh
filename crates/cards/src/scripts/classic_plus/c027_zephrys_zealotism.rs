@@ -1,9 +1,9 @@
-//! C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; R29, R364, R387, R416). (4) Spell, Mythic.
+//! C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; R29, R364, R387, R416, R1446). (4) Spell, Mythic.
 //!
 //! THE HAND IS THE SUBSYSTEM'S. B5 E34, the perfect-hand scorer: R29's Zephyrs scorer ranks
-//! every non-token Classic and Classic+ card but this one (R387) for the state as this resolves,
-//! each on the face it would arrive with, ties by card id; each other card in the caster's hand
-//! goes to their graveyard (not a discard; a unit-token card ceases to exist, R11) and the top N
+//! every non-token card of every set that ships (R1446) but this one (R387) for the state as this
+//! resolves, each on the face it would arrive with, ties by card id; each other card in the caster's
+//! hand goes to their graveyard (not a discard; a unit-token card ceases to exist, R11) and the top N
 //! distinct cards arrive in rank order, N being how many there were (R416).
 //!
 //! "Refresh your mana" is §6.3 Refresh (R364): current mana rises toward max and never past it,
@@ -41,8 +41,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; B5 E34, R29, R364, R387, R416): replaces hand with
-// the scorer's top distinct non-token Classic and Classic+ picks for current state. Replaced cards
+// C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; B5 E34, R29, R364, R387, R416, R1446): replaces hand
+// with the scorer's top distinct non-token picks of every set that ships for current state. Replaced cards
 // go to graveyard and new ones are hidden (R97). Refreshes mana up to max. Radiant cards arrive radiant.
 #[cfg(test)]
 mod tests {
@@ -121,6 +121,10 @@ mod tests {
         want.iter().all(|w| xs.iter().any(|x| x == w))
     }
 
+    fn is_token(def: &CardDef) -> bool {
+        def.token || def.tags.contains(&Tag::Token)
+    }
+
     mod c_n27_zephrys_zealotism {
         use super::*;
 
@@ -171,7 +175,7 @@ mod tests {
             }
 
             #[test]
-            fn r387_r416_never_a_core_card_never_a_token_never_zephrys_zealotism_itself() {
+            fn r387_r1446_every_card_from_a_set_that_ships_never_a_token_never_zephrys_zealotism_itself() {
                 crate::register_all();
                 let s = play(
                     &json!({ "p1": { "hand": [STOCKPILE, MENACE, TIMMY, STOCKPILE, MENACE, TIMMY, STOCKPILE, MENACE, TIMMY] } }),
@@ -188,15 +192,44 @@ mod tests {
                         .iter()
                         .find(|scored| scored.def.id == card.def_id)
                         .expect("the arrived card is in the ranking");
-                    assert!(entry.def.set == SetName::Classic || entry.def.set == SetName::ClassicPlus);
-                    assert!(!entry.def.token);
+                    assert!(SHIPPED_SETS.contains(&entry.def.set));
+                    assert!(!is_token(&entry.def));
                     assert_ne!(card.def_id, ZEALOTISM);
                 }
-                let pool = ranked(&json!({}), false);
-                assert!(pool.iter().all(|scored| {
-                    (scored.def.set == SetName::Classic || scored.def.set == SetName::ClassicPlus) && !scored.def.token
-                }));
-                assert!(!pool.iter().any(|scored| scored.def.id == ZEALOTISM));
+                // R1446: the pool is every non-token card of every set that ships but this one (R387).
+                let mut pool: Vec<String> =
+                    ranked(&json!({}), false).iter().map(|scored| scored.def.id.clone()).collect();
+                pool.sort();
+                let mut expected: Vec<String> = crate::CATALOG
+                    .values()
+                    .filter(|def| !is_token(def) && SHIPPED_SETS.contains(&def.set) && def.id != ZEALOTISM)
+                    .map(|def| def.id.clone())
+                    .collect();
+                expected.sort();
+                assert_eq!(pool, expected);
+                // Zealotism leaves out only its own id, so #97 Zephyrs is in its pool.
+                assert!(pool.contains(&"core-097".to_string()));
+                for set in SHIPPED_SETS {
+                    assert!(
+                        pool.iter().any(|id| crate::card_def(id).set == set),
+                        "{set} is in the pool"
+                    );
+                }
+            }
+
+            #[test]
+            fn r1446_every_candidate_scores_on_both_faces_without_a_panic() {
+                crate::register_all();
+                // Every set the catalog orders, shipped or previewed: the dry run plays each of them.
+                let _preview = preview_every_set();
+                let candidates = subsystems::perfect_pool(None, Some(ZEALOTISM)).len();
+                let lethal = json!({ "p1": { "hand": [STOCKPILE, MENACE], "mana": 8 }, "p2": { "health": 4 } });
+                let pressed = json!({ "p1": { "hand": [STOCKPILE], "health": 5 }, "p2": { "field": [TIMMY] } });
+                for setup in [&lethal, &pressed] {
+                    for radiant in [false, true] {
+                        assert_eq!(ranked(setup, radiant).len(), candidates);
+                    }
+                }
             }
 
             #[test]
@@ -215,6 +248,22 @@ mod tests {
                         .iter()
                         .all(|scored| !matches!(scored.priority, subsystems::ScorePriority::Lethal))
                 );
+            }
+
+            #[test]
+            fn r1446_a_core_card_that_enables_lethal_is_dealt_45_deft_duelist() {
+                crate::register_all();
+                // p2 at 4 with the 4 mana left after this card's (4): #45 Deft Duelist, a Core 4/3 Charge
+                // for 2, is lethal, and the pool reaches Core since R1446, so it is dealt.
+                const DEFT_DUELIST: &str = "core-045";
+                let setup = json!({ "p1": { "hand": [STOCKPILE, MENACE], "mana": 8 }, "p2": { "health": 4 } });
+                let duelist = ranked(&setup, false)
+                    .into_iter()
+                    .find(|scored| scored.def.id == DEFT_DUELIST)
+                    .expect("#45 is in the pool");
+                assert_eq!(duelist.def.set, SetName::Core);
+                assert!(matches!(duelist.priority, subsystems::ScorePriority::Lethal));
+                assert!(hand_defs(&play(&setup, false)).contains(&DEFT_DUELIST.to_string()));
             }
 
             #[test]
@@ -339,11 +388,16 @@ mod tests {
             }
 
             #[test]
-            fn r416_the_radiant_face_draws_on_classic_and_classic_plus_only_too() {
+            fn r1446_the_radiant_face_draws_on_every_set_that_ships_too() {
                 crate::register_all();
                 let s = play(&json!({ "p1": { "hand": [STOCKPILE, MENACE] } }), true);
                 for card in s.hand(P1) {
-                    assert!(card.def_id.starts_with("classic"));
+                    assert!(card.radiant);
+                    assert!(SHIPPED_SETS.contains(&crate::card_def(&card.def_id).set));
+                }
+                let pool = ranked(&json!({}), true);
+                for set in SHIPPED_SETS {
+                    assert!(pool.iter().any(|scored| scored.def.set == set), "{set} is in the Radiant pool");
                 }
             }
         }

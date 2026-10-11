@@ -1,5 +1,6 @@
-//! The Zephyrs scorer (SPEC §10.7's scorer bullet, R29, §8 #97): rank every non-token Core
-//! definition except Zephyrs itself for the current state, so the Discover can offer the top 3.
+//! The Zephyrs scorer (SPEC §10.7's scorer bullet, R29, §8 #97): rank every non-token definition of
+//! every set that ships except Zephyrs itself (R1446) for the current state, so the Discover can offer
+//! the top 3.
 //!
 //! §10.7's priorities, in order: lethal available → max; can clear the enemy board → high; hero
 //! below 10 and the card heals → high; otherwise stats per mana plus draw value.
@@ -31,13 +32,11 @@ use std::cmp::Ordering;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::config::{SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
 use crate::damage::DamageTarget;
 use crate::layers::unit_view;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for};
-use crate::prelude::json_as;
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance};
@@ -46,7 +45,8 @@ use crate::wire::{
     Winner, Zone, ZoneChoice, has_keyword, opponent_of,
 };
 
-/// R29: the scorer ranks every non-token Core card except #97 itself.
+/// #97's §5 index in the Core set, read only to find #97's id, which the perfect pool leaves out
+/// (R29, R387, R1446).
 pub const ZEPHYRS_INDEX: &str = "97";
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -89,15 +89,20 @@ pub struct Scored {
     pub parts: ScoredParts,
 }
 
-/// R29, §5.1: the candidate pool — Core only, because #97 says "only from the core set" (B2.6), and
-/// never #97 itself, named by its id (R387). `query` already drops tokens.
+/// R1446: the perfect pool #97 and C+ #27 draw on: a pool that names no set, so every non-token card
+/// of every set that ships (R380, R1420, §5.1), less the asking card's own definition ids, a fused
+/// card's ingredients included (R387, `catalog::self_def_ids`). Neither card lists a set, so a set
+/// joins both the day its release lists it in `SHIPPED_SETS`.
+pub fn perfect_pool(state: Option<&GameState>, self_def_id: Option<&str>) -> Vec<&'static CardDef> {
+    let args =
+        crate::catalog::excluding_def_id(state, &crate::catalog::CatalogQueryArgs::default(), self_def_id);
+    crate::catalog::query(&args)
+}
+
+/// R29, R1446: the candidate pool, the perfect pool less #97, left out by its id (R387).
 pub fn candidate_defs() -> Vec<&'static CardDef> {
     let zephyrs = crate::catalog::def_by_index(SetName::Core, ZEPHYRS_INDEX).map(|def| def.id.clone());
-    let query = match zephyrs {
-        None => json!({ "set": "Core" }),
-        Some(id) => json!({ "set": "Core", "excludeDefId": id }),
-    };
-    crate::catalog::query(&json_as(query))
+    perfect_pool(None, zephyrs.as_deref())
 }
 
 fn face_for(def: &CardDef, radiant: bool) -> &CardFace {
@@ -813,7 +818,7 @@ pub fn compare_scored(a: &Scored, b: &Scored) -> Ordering {
     }
 }
 
-/// R29: every non-token Core definition except #97, best first, as a total order.
+/// R29, R1446: the perfect pool less #97 (`candidate_defs`), best first, as a total order.
 pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
     // One copy for every candidate's dry run: each plays on a copy of it and puts it back as it was.
     let mut base = dry_run_base(state, viewer);

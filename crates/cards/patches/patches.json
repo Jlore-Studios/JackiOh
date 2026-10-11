@@ -8666,5 +8666,36 @@
         "kind": "added"
       }
     ]
+  },
+  {
+    "version": "v0.3.6",
+    "date": "2026-10-11",
+    "title": "Patch v0.3.6: the perfect cards draw on every set that ships",
+    "source": "issue #577",
+    "notes": "Core #97 Zephyrs and Classic+ #27 Zephrys Zealotism no longer name a set: both draw on every non-token card of every set that ships but their own (R1446), Meditative included, and a later set joins them the day it ships. Zephyrs may offer Zephrys Zealotism and Zealotism may deal Zephyrs. Only the pools and the words change.",
+    "commits": [
+      "10d856865bc8b319c8145dac17d6e143d32e4560"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-027",
+        "name": "Zephrys Zealotism",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

@@ -252,6 +252,13 @@ class FakeGitHub:
         self.labels[name] = {"name": name, "color": color, "description": description}
         return True
 
+    def delete_label(self, name: str) -> bool:
+        if self.labels.pop(name, None) is None:
+            return False
+        for thread in self.threads.values():
+            thread["labels"] = [label for label in thread["labels"] if label.get("name") != name]
+        return True
+
     def sync_label(self, name: str, color: str, description: str) -> str:
         found = self.labels.get(name)
         if found is None:

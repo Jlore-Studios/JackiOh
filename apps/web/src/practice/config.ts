@@ -49,3 +49,9 @@ export const PRACTICE_RESULT_PARTICLES = 18;
 
 /** R768: retained free-game replays. */
 export const PRACTICE_REPLAYS_KEPT = 10;
+
+/**
+ * R768: how many of the kept games opened last the worker holds folded, so going back to one folds
+ * it no second time. Each holds a state every `REPLAY_CHECKPOINT_EVERY` steps.
+ */
+export const PRACTICE_REPLAYS_CACHED = 5;

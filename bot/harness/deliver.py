@@ -35,11 +35,11 @@ from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED,
-                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
-                            LABEL_NEEDS_REVIEW, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
-                            LABEL_REVISE, LABEL_STUCK, LABEL_SUGGESTION, LABEL_TREE, OTHERS,
-                            PLAN_FLOOR, SLASH, STATE_BRANCH, TITLE)
+from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED,
+                            LABEL_PR, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_STUCK,
+                            LABEL_SUGGESTION, LABEL_TREE, OTHERS, PLAN_FLOOR, SLASH, STATE_BRANCH,
+                            TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, Identity, matches
@@ -1824,7 +1824,7 @@ class Deliverer:
         merge` and ask the operator to merge it."""
         number = int(pull.get("number") or 0)
         if number:
-            self.gh.add_labels(number, [LABEL_NEEDS_REVIEW, LABEL_READY])
+            self.gh.add_labels(number, [LABEL_READY])
             self._try(lambda: self.gh.request_reviewers(number, [self.cfg.operator]))
         return (f"Auto-merge is off because {why}. The reviews approved it, so it is labelled "
                 f"`{LABEL_READY}`: @{self.cfg.operator}, it waits for you to merge it.")
@@ -1974,9 +1974,8 @@ class Deliverer:
             if not title or not body:
                 continue
             footer = (f"\n\n---\nSuggested by @{self.cfg.bot_login} while the queue was empty. "
-                      f"Add the `{LABEL_APPROVED}` label to have it built: two minutes later "
-                      "triage titles, labels and queues it as it does `method:use-bot`, and the "
-                      "bot rates its difficulty when it plans it. Close it to say no.")
+                      f"Add the `{LABEL_BUILD}` label to have it built, and the bot rates its "
+                      "difficulty when it plans it. Close it to say no.")
             issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")

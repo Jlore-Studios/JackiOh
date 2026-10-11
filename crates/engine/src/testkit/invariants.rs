@@ -1,6 +1,7 @@
-//! Fuzz-level invariants for summoning sickness, exertion, game over and hidden information (SPEC §4.1,
-//! §4.2, §10.3, §10.8, R53, R83, R171; docs/polish/4-edge-cases.md "Fuzz invariants"). `cargo jackioh
-//! fuzz` runs one monitor per game (SURFACE §8, §12), and the edge-case hunters reuse it.
+//! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
+//! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
+//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), and the
+//! edge-case hunters reuse it.
 //!
 //! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
 //! sick. It keeps a shadow built only from the event stream:
@@ -19,7 +20,7 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!
-//! The six checks:
+//! The seven checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -66,6 +67,12 @@
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
+//!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
+//!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
+//!      has drained every paused sequence, so `work` is empty and `work_cursor` is back at 0. A game that
+//!      ended mid-sequence keeps what it owed (`settle` stops at the result, and nothing runs after it,
+//!      I5), so a game over is not checked: the fuzz reaches such game overs (Classic #52 Final
+//!      Gambit's `afterRedirect`, Classic #56 Spell Tyrant's `resolve`).
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -808,7 +815,7 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
 /// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4 and I5, and `hidden` is I6 for both seats.
+/// shadow and runs I2, I4, I5 and I7, and `hidden` is I6 for both seats.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -984,7 +991,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4 and I5 against the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5 and I7 against the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
@@ -1172,6 +1179,32 @@ impl InvariantMonitor {
                     ));
                 }
             }
+        }
+
+        // I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
+        if state.result.is_none()
+            && state.pending.is_none()
+            && state.mulligan.is_none()
+            && (!state.work.is_empty() || state.work_cursor != 0)
+        {
+            let owed: Vec<String> = state
+                .work
+                .iter()
+                .map(|item| {
+                    format!(
+                        "{} ({}, {}, {})",
+                        item.id, item.resume.def_id, item.resume.hook, item.resume.step
+                    )
+                })
+                .collect();
+            found.push(format!(
+                "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
+                 (§9.3, §10.3, R113)",
+                state.work.len(),
+                owed.join(", "),
+                state.work_cursor,
+                state.turn
+            ));
         }
 
         found

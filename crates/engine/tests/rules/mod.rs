@@ -129,6 +129,7 @@ pub mod hero_immune;
 pub mod hero_power;
 pub mod hotseat_smoke;
 pub mod instance_data;
+pub mod invariants;
 pub mod kill_credit;
 pub mod ky_test;
 pub mod last_boards;
