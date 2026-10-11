@@ -135,6 +135,22 @@ mod tests {
         (s, unit)
     }
 
+    /// Like `summoned`, from the first seed after `seed` whose pick the death pass can destroy (not
+    /// Indestructible, no Divine Shield, no Reborn), so its granted Death fires.
+    fn mortal(seed: &str, radiant_face: bool) -> (Scenario, CardInstance) {
+        (0..200)
+            .map(|n| summoned(&format!("{seed}-{n}"), radiant_face))
+            .find(|(s, unit)| {
+                !keywords_of(s.state(), unit).iter().any(|keyword| {
+                    matches!(
+                        keyword.kind(),
+                        KeywordKind::Indestructible | KeywordKind::DivineShield | KeywordKind::Reborn
+                    )
+                })
+            })
+            .expect("a seed summons a mortal (4) Unit")
+    }
+
     /// The fused card's definition and its two ingredients' definitions.
     fn fused_parts(s: &Scenario, card: &CardInstance) -> (CardDef, Vec<(CardDef, bool)>) {
         let def = def_of(Some(s.state()), &card.def_id).clone();
@@ -219,13 +235,14 @@ mod tests {
                 .iter()
                 .filter(|event| event.event_type() == GameEventType::Summoned)
                 .count();
-            assert_eq!(summons, 1, "the summoned Unit's Cry summoned nothing more");
+            // One for the played card's arrival, one for the summon: the Cry summoned nothing more.
+            assert_eq!(summons, 2, "the summoned Unit's Cry summoned nothing more");
         }
 
         #[test]
         fn the_fused_card_is_a_non_token_spell_at_the_lesser_of_the_sum_and_4() {
             for n in 0..12 {
-                let (mut s, unit) = summoned(&format!("upperclassman-cost-{n}"), false);
+                let (mut s, unit) = mortal(&format!("upperclassman-cost-{n}"), false);
                 kill(&mut s, &unit);
                 let made = fused(&s);
                 assert_eq!(made.len(), 1);
@@ -246,7 +263,7 @@ mod tests {
 
         #[test]
         fn the_fused_text_is_both_texts() {
-            let (mut s, unit) = summoned("upperclassman-text", false);
+            let (mut s, unit) = mortal("upperclassman-text", false);
             kill(&mut s, &unit);
             let made = fused(&s);
             let (def, parts) = fused_parts(&s, &made[0]);
@@ -256,7 +273,7 @@ mod tests {
 
         #[test]
         fn r1107_stolen_the_fused_card_goes_to_the_dying_units_controller() {
-            let (mut s, unit) = summoned("upperclassman-steal", false);
+            let (mut s, unit) = mortal("upperclassman-steal", false);
             run_as(
                 &mut s,
                 &[steal(json_as(json!({ "instanceId": unit.id })))],
@@ -271,7 +288,7 @@ mod tests {
 
         #[test]
         fn a_full_hand_burns_the_fused_card() {
-            let (mut s, unit) = summoned("upperclassman-burn", false);
+            let (mut s, unit) = mortal("upperclassman-burn", false);
             // Fill p1's hand to the cap.
             while s.hand("p1").len() < HAND_CAP as usize {
                 let card = new_instance(s.state_mut(), FILLER, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
@@ -293,7 +310,7 @@ mod tests {
 
         #[test]
         fn r468_the_fused_definition_survives_a_json_round_trip() {
-            let (mut s, unit) = summoned("upperclassman-json", false);
+            let (mut s, unit) = mortal("upperclassman-json", false);
             kill(&mut s, &unit);
             let made = fused(&s);
             let before = def_of(Some(s.state()), &made[0].def_id).clone();
@@ -314,7 +331,7 @@ mod tests {
 
         #[test]
         fn r469_the_radiant_face_fuses_two_radiant_ingredients_into_a_radiant_card() {
-            let (mut s, unit) = summoned("upperclassman-radiant-parts", true);
+            let (mut s, unit) = mortal("upperclassman-radiant-parts", true);
             kill(&mut s, &unit);
             let made = fused(&s);
             assert_eq!(made.len(), 1);

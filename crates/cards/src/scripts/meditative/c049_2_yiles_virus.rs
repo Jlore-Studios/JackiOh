@@ -86,8 +86,11 @@ mod tests {
     use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const VIRUS: &str = "meditative-049-2";
+    const TAMED: &str = "meditative-049"; // "Cry: Summon a Yile's Virus for your opponent across from this."
+    const GIRLFRIEND: &str = "meditative-049-3"; // every enemy Unit attacks it at its start of turn.
     const NEIGHBOUR: &str = "core-012"; // 3/4, standing beside the Virus.
     const FILLER: &str = "core-005";
 
@@ -120,6 +123,132 @@ mod tests {
                 let virus = s.unit(P1, 2).expect("the virus").clone();
                 s.expect_refused(|s| s.attack(&virus, "hero"));
                 s.expect_refused(|s| s.switch_position(&virus));
+            }
+
+            #[test]
+            fn it_never_taunts_an_attack_on_the_hero_goes_past_it() {
+                let mut s = scenario(json!({
+                    "seed": "virus-no-taunt",
+                    "p1": {
+                        "field": [{ "def": NEIGHBOUR, "lane": 1 }],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": {
+                        "field": [{ "def": VIRUS, "lane": 1 }],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                }));
+                let virus = s.unit(P2, 1).expect("the virus");
+                assert_eq!(s.stats(&virus).position, Position::Atk);
+                let attacker = s.unit(P1, 1).expect("the attacker");
+
+                s.attack(&attacker, "hero");
+
+                s.expect_health(P2, 30 - 3);
+            }
+
+            #[test]
+            fn r53_forced_attacks_still_make_it_attack() {
+                let mut s = scenario(json!({
+                    "seed": "virus-forced",
+                    "active": "p2",
+                    "p1": {
+                        "field": [{ "def": VIRUS, "lane": 1 }],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": {
+                        "hand": [GIRLFRIEND, FILLER],
+                        "library": [FILLER, FILLER],
+                        "mana": 4,
+                    },
+                }));
+                let virus = s.unit(P1, 1).expect("the virus");
+                s.play(GIRLFRIEND, json!({ "zone": 1 }));
+                let girlfriend = s.unit(P2, 1).expect("the animated girlfriend");
+
+                s.start_turn();
+
+                // Can't attack, yet the Girlfriend's forced attack makes it attack (R53).
+                assert!(s.events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::AttackDeclared { attacker_id, target_id, forced: true, .. }
+                        if *attacker_id == virus.id && *target_id == girlfriend.id
+                )));
+            }
+
+            #[test]
+            fn r384_activate_only_in_its_controllers_main_phase() {
+                let mut s = yard("virus-their-turn", false);
+                let virus = s.unit(P1, 2).expect("the virus");
+
+                s.end_turn();
+
+                // p2's turn: p1 can't activate it.
+                s.expect_refused(|s| s.activate(&virus, json!({})));
+                s.expect_in_zone(&virus, "field");
+            }
+
+            #[test]
+            fn its_death_with_an_empty_hand_discards_nothing() {
+                let mut s = scenario(json!({
+                    "seed": "virus-empty-hand",
+                    "p1": {
+                        "field": [{ "def": VIRUS, "lane": 1 }],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                let virus = s.unit(P1, 1).expect("the virus");
+
+                s.activate(&virus, json!({}));
+
+                assert!(s.unit(P1, 1).is_none());
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Discarded { .. })));
+            }
+
+            #[test]
+            fn r12_summoned_for_the_opponent_they_are_its_controller_and_victim() {
+                let mut s = scenario(json!({
+                    "seed": "virus-for-them",
+                    "p1": { "hand": [TAMED, FILLER], "library": [FILLER, FILLER] },
+                    "p2": { "hand": [FILLER, FILLER], "library": [FILLER, FILLER] },
+                }));
+                s.play(TAMED, json!({ "zone": 1 }));
+                let virus = s.unit(P2, 1).expect("the virus across from it");
+                assert_eq!(virus.def_id, VIRUS);
+                assert_eq!(virus.controller, P2);
+
+                s.end_turn();
+
+                // p2's start of turn: p2's hero is hit, p1's is not.
+                s.expect_health(P2, 28);
+                s.expect_health(P1, 30);
+                // p2 activates it; its Death discards from p2's hand.
+                let before = s.hand(P2).len();
+                s.activate(&virus, json!({}));
+                assert_eq!(s.hand(P2).len(), before - 1);
+            }
+
+            #[test]
+            fn r386_its_numbers_read_through_param() {
+                let mut s = yard("virus-param", false);
+                let virus = s.unit(P1, 2).expect("the virus");
+                step_param(s.card_mut(&virus), "damage", 1);
+                step_param(s.card_mut(&virus), "discards", 1);
+                let left = s.unit(P1, 1).expect("left");
+
+                s.start_turn();
+
+                // 3 damage now: the 3/4 neighbour sits at 1, the hero at 27.
+                s.expect_stats(&left, json!({ "health": 1 }));
+                s.expect_health(P1, 27);
+                // And its Death discards 2.
+                let before = s.hand(P1).len();
+                s.activate(&virus, json!({}));
+                assert_eq!(s.hand(P1).len(), before - 2);
             }
 
             #[test]
@@ -182,6 +311,14 @@ mod tests {
 
         mod radiant {
             use super::*;
+
+            #[test]
+            fn radiant_is_0_16() {
+                let s = yard("virus-radiant-stats", true);
+                let virus = s.unit(P1, 2).expect("the virus");
+                let stats = s.stats(&virus);
+                assert_eq!((stats.attack, stats.health), (0, 16));
+            }
 
             #[test]
             fn radiant_discards_2_and_deals_4() {

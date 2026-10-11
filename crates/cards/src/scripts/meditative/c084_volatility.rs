@@ -63,6 +63,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const KY_CONSTANT: &str = "classicplus-041";
+    const ARMORED: &str = "core-025"; // (4) 7/7 Armor 7.
 
     /// One Buff or Nerf of `id`, as one application of a tune verb makes it (B3.4 rule 1).
     fn tune(s: &mut Scenario, id: &str, direction: TuneDirection) -> Vec<GameEvent> {
@@ -131,7 +132,37 @@ mod tests {
     }
 
     fn harmless_and_harmful() -> Vec<Keyword> {
-        vec![Keyword::Taunt, Keyword::Rush, Keyword::Armor { n: 3 }, Keyword::CantAttack]
+        vec![Keyword::Taunt, Keyword::Rush, Keyword::CantAttack]
+    }
+
+    /// A field Volatility with the 7/7's printed Armor 7 fused in (R102), so its X row (a
+    /// printed numbered keyword) has something to move; its multipliers are its own.
+    fn armored(seed: &str, radiant: bool, keywords: &[Keyword]) -> (Scenario, String) {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [FILLER],
+                "library": filler(3),
+                "field": [{ "def": VOLATILITY, "radiant": radiant }, ARMORED],
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let kept = s.unit(P1, 1).unwrap();
+        let other = s.unit(P1, 2).unwrap();
+        {
+            let state = s.state_mut();
+            let mut events = Vec::new();
+            let mut rng = Rng::new(&state.seed, state.rng_cursor);
+            let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
+            jackioh_engine::subsystems::fuse::fuse(
+                &mut sink,
+                json_as(json!({ "ingredients": [other], "target": kept })),
+            )
+            .expect("the fusion");
+        }
+        s.card_mut(kept.id.as_str()).granted_keywords.extend(keywords.iter().cloned());
+        (s, kept.id)
     }
 
     /// The one tune event of a step, panicking unless there is exactly one.
@@ -295,12 +326,12 @@ mod tests {
         fn r1160_a_buffs_x_row_moves_x_by_2() {
             let mut seen = false;
             for seed in 1..=60 {
-                let (mut s, id) =
-                    volatile(&format!("vol-x-{seed}"), "field", false, &[Keyword::Armor { n: 3 }]);
+                let (mut s, id) = armored(&format!("vol-x-{seed}"), false, &[]);
+                let armor = s.stats(id.as_str()).armor;
                 if let TuningChange::X { key, delta } = only(&tune(&mut s, &id, TuneDirection::Upgrade)) {
                     assert_eq!(key, "Armor");
                     assert_eq!(delta, 2);
-                    assert_eq!(s.stats(id.as_str()).armor, 5);
+                    assert_eq!(s.stats(id.as_str()).armor, armor + 2);
                     seen = true;
                 }
             }
@@ -311,8 +342,8 @@ mod tests {
         fn r1160_a_nerf_is_doubled_and_never_removes_a_harmful_keyword() {
             let (mut keyword_seen, mut x_seen) = (false, false);
             for seed in 1..=60 {
-                let (mut s, id) =
-                    volatile(&format!("vol-nerf-{seed}"), "field", false, &harmless_and_harmful());
+                let (mut s, id) = armored(&format!("vol-nerf-{seed}"), false, &harmless_and_harmful());
+                let armor = s.stats(id.as_str()).armor;
                 let events = tune(&mut s, &id, TuneDirection::Degrade);
                 assert_eq!(
                     events.iter().filter(|event| matches!(event, GameEvent::Degraded { .. })).count(),
@@ -336,7 +367,7 @@ mod tests {
                     TuningChange::X { key, delta } => {
                         assert_eq!(key, "Armor");
                         assert_eq!(delta, -2);
-                        assert_eq!(s.stats(id.as_str()).armor, 1);
+                        assert_eq!(s.stats(id.as_str()).armor, armor - 2);
                         x_seen = true;
                     }
                     _ => {}
@@ -403,8 +434,7 @@ mod tests {
         fn r1160_radiant_nerfs_are_normal() {
             let (mut keyword_seen, mut x_seen) = (false, false);
             for seed in 1..=60 {
-                let (mut s, id) =
-                    volatile(&format!("vol-rnerf-{seed}"), "field", true, &harmless_and_harmful());
+                let (mut s, id) = armored(&format!("vol-rnerf-{seed}"), true, &harmless_and_harmful());
                 let card = s.card(id.as_str()).clone();
                 assert_eq!(tune_multiplier_of(s.state(), &card, TuneDirection::Degrade), 1);
                 match only(&tune(&mut s, &id, TuneDirection::Degrade)) {

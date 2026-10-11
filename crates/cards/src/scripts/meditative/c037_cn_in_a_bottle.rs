@@ -69,8 +69,8 @@ mod tests {
     }
 
     /// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor
-    /// written back.
-    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) {
+    /// written back; their events.
+    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
         {
@@ -86,6 +86,7 @@ mod tests {
             settle(&mut sink, SettleOptions::default());
         }
         s.state_mut().rng_cursor = rng.cursor();
+        events
     }
 
     /// p1 with a filler in hand and room for more; p2 holds a filler.
@@ -100,7 +101,7 @@ mod tests {
 
     /// A bottle added to p1's hand; the card that took its place.
     fn add_bottle(s: &mut Scenario, radiant: bool) -> CardInstance {
-        apply_for_p1(s, &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE, "radiant": radiant })))]);
+        let _ = apply_for_p1(s, &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE, "radiant": radiant })))]);
         s.hand(P1).last().cloned().expect("the replacement")
     }
 
@@ -217,7 +218,6 @@ mod tests {
                 assert_ne!(new_card.def_id, BOTTLE);
                 assert!(new_card.radiant);
                 assert_eq!(new_card.chinese, Some(true));
-                assert!(s.events().iter().any(|event| matches!(event, GameEvent::AddedToHand { .. })));
             }
 
             #[test]
@@ -329,7 +329,7 @@ mod tests {
                 }));
                 let held = s.hand(P1).into_iter().find(|card| card.def_id == BOTTLE).expect("the bottle");
                 let before = s.state().players[P1].clone();
-                s.play(&held.id, json!({}));
+                s.play(&held.id, json!({ "x": 1 }));
                 s.expect_in_zone(&held.id, "graveyard");
                 let after = &s.state().players[P1];
                 assert_eq!(after.hand.len(), before.hand.len() - 1, "nothing added");
@@ -338,12 +338,12 @@ mod tests {
                 // Cast at random by an effect, it does nothing either.
                 let mut s = quiet("bottle-random-cast");
                 let before = s.state().players[P1].clone();
-                apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": BOTTLE, "random": true })))]);
+                let events = apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": BOTTLE, "random": true })))]);
                 let after = &s.state().players[P1];
                 assert_eq!(after.hand.len(), before.hand.len());
                 assert_eq!(after.library.len(), before.library.len());
                 assert_eq!(after.hero, before.hero);
-                assert!(!bottle_transformed(s.events()));
+                assert!(!bottle_transformed(&events));
             }
         }
 

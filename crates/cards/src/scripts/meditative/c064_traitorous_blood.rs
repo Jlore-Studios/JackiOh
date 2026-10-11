@@ -198,6 +198,150 @@ mod tests {
         s.expect_events(json!(["attackDeclared", "trapFired", "redirected"]));
     }
 
+    /// Moths to the Flame (Core #9): "Start of turn: Every enemy Unit attacks this." — forced attacks.
+    const MOTHS: &str = "core-009";
+    /// Midrange Menace (Core #19): a 9/9 Taunt.
+    const MENACE: &str = "core-019";
+
+    fn kinds_of(events: &[GameEvent]) -> Vec<&'static str> {
+        events.iter().map(|event| event.event_type().as_str()).collect()
+    }
+
+    #[test]
+    fn r33_it_is_face_down_until_it_fires() {
+        let mut s = blood_game();
+        let seen = serde_json::to_string(&s.view(P2)).expect("the view serialises");
+        assert!(!seen.contains(ID), "p2 reads the set trap");
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.end_turn();
+        s.attack(&foe, "hero");
+        let seen = serde_json::to_string(&s.view(P2).opponent.graveyard).expect("JSON");
+        assert!(seen.contains(ID), "fired, it is public");
+    }
+
+    #[test]
+    fn r121_a_forced_attack_never_sets_it_off() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "field": [MOTHS],
+                "backrow": [{ "def": ID, "faceDown": true }],
+                "library": ["core-005", "core-005"],
+            },
+            "p2": { "field": [VANILLA, SCARAB], "library": ["core-005", "core-005"] },
+        }));
+        // p1's start of turn: Moths makes every enemy Unit attack it, each attack forced.
+        s.start_turn();
+        let events = s.last_events().to_vec();
+        assert!(
+            events.iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
+            "the forced attacks were made: {:?}",
+            kinds_of(&events)
+        );
+        assert!(!kinds_of(&events).contains(&"redirected"));
+        assert!(!kinds_of(&events).contains(&"trapFired"));
+        s.expect_in_zone(ID, "field");
+    }
+
+    #[test]
+    fn its_own_sides_attack_never_sets_it_off() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [VANILLA, SCARAB], "backrow": [{ "def": ID, "faceDown": true }] },
+            "p2": { "field": [BIG] },
+        }));
+        let mine = s.unit(P1, 1).unwrap().id;
+        s.attack(&mine, "hero");
+        assert!(!kinds_of(s.last_events()).contains(&"redirected"));
+        s.expect_in_zone(ID, "field");
+    }
+
+    #[test]
+    fn taunt_is_ignored() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [MENACE], "backrow": [{ "def": ID, "faceDown": true }] },
+            "p2": { "field": [VANILLA, SCARAB] },
+        }));
+        let foe = s.unit(P2, 1).unwrap().id;
+        let neighbour = s.unit(P2, 2).unwrap().id;
+        let menace = s.unit(P1, 1).unwrap().id;
+        s.end_turn();
+        // The Taunt forces the declaration onto the Menace; the redirect still goes to the ally.
+        s.attack(&foe, &menace);
+        assert_eq!(hits(&s)[0], (Some(foe.clone()), neighbour.clone(), 4));
+        s.expect_in_zone(&neighbour, "graveyard");
+        s.expect_stats(&menace, json!({ "health": 9 }));
+    }
+
+    #[test]
+    fn redirected_is_public() {
+        let mut s = blood_game();
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.end_turn();
+        s.attack(&foe, "hero");
+        for viewer in [P1, P2] {
+            let events = serde_json::to_value(s.view(viewer).events).expect("events");
+            let redirected: Vec<&Value> = events
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|event| event["type"] == json!("redirected"))
+                .collect();
+            assert_eq!(redirected.len(), 1, "{viewer:?} reads the redirect");
+        }
+    }
+
+    #[test]
+    fn the_trap_is_consumed() {
+        let mut s = blood_game();
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.end_turn();
+        s.attack(&foe, "hero");
+        assert!(s.backrow(P1, 1).is_none(), "its backrow zone is empty");
+        s.expect_in_zone(ID, "graveyard");
+    }
+
+    #[test]
+    fn radiant_copies_each_unit_the_combat_destroyed() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
+            "p2": { "field": [SCARAB, SCARAB] },
+        }));
+        make_radiant(&mut s, ID);
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.end_turn();
+        s.attack(&foe, "hero");
+        // The two 1/1s destroyed each other: p1 gets a fresh copy of each.
+        assert!(s.unit(P2, 1).is_none() && s.unit(P2, 2).is_none());
+        let copies: Vec<CardInstance> = (1..=UNIT_ZONES).filter_map(|lane| s.unit(P1, lane)).collect();
+        assert_eq!(copies.len(), 2);
+        assert!(copies.iter().all(|copy| copy.def_id == SCARAB && copy.controller == P1));
+    }
+
+    #[test]
+    fn radiant_a_full_board_takes_fewer_copies() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "field": [VANILLA, VANILLA, VANILLA, VANILLA],
+                "backrow": [{ "def": ID, "faceDown": true }],
+            },
+            "p2": { "field": [SCARAB, SCARAB] },
+        }));
+        make_radiant(&mut s, ID);
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.end_turn();
+        s.attack(&foe, "hero");
+        assert!(s.unit(P2, 1).is_none() && s.unit(P2, 2).is_none());
+        let scarabs = (1..=UNIT_ZONES)
+            .filter_map(|lane| s.unit(P1, lane))
+            .filter(|unit| unit.def_id == SCARAB)
+            .count();
+        assert_eq!(scarabs, 1, "one open zone, one copy");
+    }
+
     #[test]
     fn radiant_copies_destroyed() {
         let mut s = blood_game();

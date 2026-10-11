@@ -67,6 +67,9 @@ mod tests {
     const SCARAB: &str = "core-007";
     /// M #25 Blue-Eyes White Felinor, 12/9 Felinor, immune to tribal tag based hate.
     const WHITE_FELINOR: &str = "meditative-025";
+    /// C #61 Plague Bringer Goliath 7/7 Plague, Trample; C #73 Nurse Cleaver 3/6 untagged, Cleave.
+    const GOLIATH: &str = "classic-061";
+    const CLEAVER: &str = "classic-073";
 
     /// `SideSetup.backrow` takes no `radiant` flag: flip the instance directly.
     fn make_radiant(s: &mut Scenario, card: &str) {
@@ -138,6 +141,100 @@ mod tests {
         s.expect_in_zone(&victim, "graveyard");
         // The strike back is the Vanilla's own 4, never bonused.
         assert_eq!(dealt(&s, &victim, &attacker), Some(4));
+    }
+
+    #[test]
+    fn r1120_trample_excess_carries_the_bonus() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [GOLIATH], "backrow": [ID] },
+            "p2": { "field": [VANILLA] },
+        }));
+        let goliath = s.unit(P1, 1).unwrap().id;
+        let victim = s.unit(P2, 1).unwrap().id;
+        s.attack(&goliath, &victim);
+        // 7 + 3 into a 4/4 Human: 6 tramples over to the hero, not 3.
+        s.expect_in_zone(&victim, "graveyard");
+        s.expect_health(P2, 30 - 6);
+    }
+
+    #[test]
+    fn r1120_a_cleave_splash_carries_the_bonus() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [{ "def": CLEAVER, "lane": 2 }], "backrow": [ID] },
+            "p2": { "field": [{ "def": BIG, "lane": 1 }, { "def": VANILLA, "lane": 2 }] },
+        }));
+        let cleaver = s.unit(P1, 2).unwrap().id;
+        let victim = s.unit(P2, 2).unwrap().id;
+        let beside = s.unit(P2, 1).unwrap().id;
+        s.attack(&cleaver, &victim);
+        // The untagged Cleaver's strike and its splash are both 3 + 3.
+        assert_eq!(dealt(&s, &cleaver, &victim), Some(6));
+        assert_eq!(dealt(&s, &cleaver, &beside), Some(6));
+    }
+
+    #[test]
+    fn r1120_the_base_face_bonuses_the_opponents_units_too() {
+        let mut s = anxiety_game();
+        s.end_turn();
+        // Their Human into our Felinor shares no tag: 4 + 3.
+        let vanilla = s.unit(P2, 1).unwrap().id;
+        let ours = s.unit(P1, 1).unwrap().id;
+        s.attack(&vanilla, &ours);
+        assert_eq!(dealt(&s, &vanilla, &ours), Some(7));
+    }
+
+    #[test]
+    fn r1120_an_attack_on_a_hero_gets_nothing() {
+        let mut s = anxiety_game();
+        let felinor = s.unit(P1, 1).unwrap().id;
+        s.attack(&felinor, "hero");
+        s.expect_health(P2, 30 - 3);
+    }
+
+    #[test]
+    fn r1120_the_displayed_attack_never_changes() {
+        let mut s = anxiety_game();
+        let felinor = s.unit(P1, 1).unwrap().id;
+        let unit_attack = |s: &Scenario, id: &str| {
+            s.view(P1)
+                .you
+                .units
+                .iter()
+                .flatten()
+                .find(|unit| unit.instance_id == id)
+                .map(|unit| unit.attack)
+        };
+        assert_eq!(shown(&s, &felinor), 3);
+        assert_eq!(unit_attack(&s, &felinor), Some(3));
+        let foe = s.unit(P2, 1).unwrap().id;
+        s.attack(&felinor, &foe);
+        assert_eq!(dealt(&s, &felinor, &foe), Some(6));
+        // Shown 3 before and after the bonused strike.
+        assert_eq!(shown(&s, &felinor), 3);
+        assert_eq!(unit_attack(&s, &felinor), Some(3));
+    }
+
+    #[test]
+    fn r1121_condition_targets_are_on_the_viewers_own_attackers_in_their_main_phase() {
+        let mut s = anxiety_game();
+        let felinor = s.unit(P1, 1).unwrap().id;
+        let scarab = s.unit(P1, 2).unwrap().id;
+        let vanilla = s.unit(P2, 1).unwrap().id;
+        let big = s.unit(P2, 2).unwrap().id;
+        // The Felinor shares Felinor with the big one: only the Human qualifies. The untagged
+        // Scarab qualifies against both.
+        assert_eq!(yellow(&s, &felinor), vec![vanilla.clone()]);
+        assert_eq!(yellow(&s, &scarab), vec![vanilla.clone(), big.clone()]);
+        // Never on enemy Units, in either seat's view, on p1's turn.
+        let theirs = s.view(P1);
+        assert!(theirs.opponent.units.iter().flatten().all(|unit| unit.condition_targets.is_none()));
+        let foe = s.view(P2);
+        assert!(foe.you.units.iter().flatten().all(|unit| unit.condition_targets.is_none()));
+        // Absent on the opponent's turn.
+        s.end_turn();
+        assert!(yellow(&s, &felinor).is_empty());
     }
 
     #[test]

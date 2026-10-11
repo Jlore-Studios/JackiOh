@@ -284,6 +284,120 @@ mod tests {
         );
     }
 
+    /// Counterspell (Classic #17): "Reveals when your opponent plays a Spell: Counter it."
+    const COUNTERSPELL: &str = "classic-017";
+    /// Stockpile (Core #5): a (1) Spell.
+    const SPELL: &str = "core-005";
+
+    fn attacked(s: &Scenario) -> bool {
+        last_kinds(s).contains(&"attackDeclared")
+    }
+
+    /// Apply `effects` as `controller`'s, outside any card.
+    fn run_as(s: &mut Scenario, effects: &[Effect], controller: PlayerId) -> Vec<GameEvent> {
+        use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
+        use jackioh_engine::rng::Rng;
+        use jackioh_engine::script::EngineSink;
+        let mut events = Vec::new();
+        let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+        let mut rng = Rng::new(&seed, cursor);
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions { controller: Some(controller), ..HookOptions::default() },
+            );
+            apply_effects(effects, &mut ctx);
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+        events
+    }
+
+    #[test]
+    fn a_play_tied_with_the_best_does_nothing() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [ID] },
+            "p2": { "mana": 10, "hand": [GOOD, GOOD, BAD], "field": ["core-007"] },
+        }));
+        s.play(ID, json!({}));
+        s.end_turn();
+        // Two 4/4s for (1) score the same: playing either is optimal (ties count, MD-D28).
+        s.play(GOOD, json!({}));
+        assert!(!attacked(&s), "a tie sends nothing: {:?}", last_kinds(&s));
+    }
+
+    #[test]
+    fn a_cast_is_not_judged() {
+        let mut s = pareto_game(false);
+        let events = run_as(
+            &mut s,
+            &[cast_new(CastNewArgs { def: BAD.into(), radiant: None, how: CastHow::default() })],
+            P2,
+        );
+        let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
+        assert!(!kinds.contains(&"attackDeclared"), "a cast sends nothing: {kinds:?}");
+    }
+
+    #[test]
+    fn a_countered_play_is_not_judged() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [ID], "backrow": [{ "def": COUNTERSPELL, "faceDown": true }] },
+            "p2": { "mana": 10, "hand": [GOOD, SPELL], "field": ["core-007"] },
+        }));
+        s.play(ID, json!({}));
+        s.end_turn();
+        let spell = s.hand(P2).into_iter().find(|card| card.def_id == SPELL).expect("the Spell").id;
+        assert!(
+            !subsystems::pareto::judge_play(s.state(), P2, &spell),
+            "the Spell scores below the 4/4, so only the counter keeps the Cane home"
+        );
+        s.play(&spell, json!({}));
+        assert!(last_kinds(&s).contains(&"countered"), "{:?}", last_kinds(&s));
+        assert!(!attacked(&s), "a countered play sends nothing: {:?}", last_kinds(&s));
+    }
+
+    #[test]
+    fn the_judgement_survives_a_json_round_trip_and_replays_the_same() {
+        let mut s = pareto_game(false);
+        let round: GameState =
+            serde_json::from_value(serde_json::to_value(s.state()).expect("serialises")).expect("deserialises");
+        s.play(BAD, json!({}));
+        let first = jackioh_engine::replay::hash_state(s.state());
+        assert!(attacked(&s));
+        *s.state_mut() = round;
+        s.play(BAD, json!({}));
+        assert!(attacked(&s));
+        assert_eq!(jackioh_engine::replay::hash_state(s.state()), first);
+    }
+
+    #[test]
+    fn with_the_cane_gone_nothing_attacks() {
+        let mut s = pareto_game(false);
+        let cane = remembered_cane(&s, ID).expect("Pareto remembers its Cane");
+        run_as(
+            &mut s,
+            &[exile(json_as(json!({ "target": { "of": "instance", "instanceId": cane } })))],
+            P1,
+        );
+        s.expect_in_zone(&cane, "exile");
+        s.play(BAD, json!({}));
+        assert!(!attacked(&s), "no Cane, no attack: {:?}", last_kinds(&s));
+    }
+
+    #[test]
+    fn without_a_card_that_hears_it_an_emote_is_refused() {
+        let mut s = pareto_game(false);
+        assert!(
+            !jackioh_engine::reduce::legal_actions(s.state(), P2)
+                .iter()
+                .any(|body| matches!(body, ActionBody::Emote { .. }))
+        );
+        s.expect_refused(|s| s.act(ActionBody::Emote { emote: EmoteId::Greetings }, P2, "greetings"));
+    }
+
     #[test]
     fn judge_rates_the_better_body_optimal() {
         // The judge behind the two plays above: from p2's own view, the 4/4 for (1) is the top

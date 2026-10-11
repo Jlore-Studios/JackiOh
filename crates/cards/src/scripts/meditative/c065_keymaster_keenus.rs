@@ -163,8 +163,114 @@ mod tests {
             }
         }
 
+        /// Apply `effects` as p1's, outside any card, then run the state check.
+        fn run_and_check(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
+            let mut events = Vec::new();
+            let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+            let mut rng = Rng::new(&seed, cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                {
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions { controller: Some(P1), ..HookOptions::default() },
+                    );
+                    apply_effects(effects, &mut ctx);
+                }
+                state_check(&mut sink);
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            events
+        }
+
+        mod base_more {
+            use super::*;
+
+            #[test]
+            fn played_with_stack_it_goes_on_top_of_a_pile() {
+                crate::register_all();
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = scenario(json!({
+                    "seed": "keenus-stack",
+                    "p1": { "mana": 10, "field": [VANILLA], "hand": [KEENUS, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let under = s.unit(P1, 1).expect("the Vanilla").id;
+                s.play(KEENUS, json!({ "zone": 1 }));
+                // Keenus tops lane 1's pile, the Vanilla dormant under it (§3.2 Stack, R13).
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(KEENUS.to_string()));
+                assert!(matches!(
+                    s.card(under.as_str()).zone,
+                    Zone::Field { player: PlayerId::P1, row: Row::Units, lane: 1 }
+                ));
+                let stats = s.stats(KEENUS);
+                assert_eq!((stats.attack, stats.health), (1, 1), "not fused: Keenus alone");
+            }
+
+            #[test]
+            fn r386_its_numbered_keywords_move_by_nerf_and_buffs_x_row() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "keenus-tune",
+                    "p1": { "hand": [KEENUS, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let id = s.card(KEENUS).id.clone();
+                let numbered = |s: &Scenario| -> i32 {
+                    keywords_of(s.state(), s.card(id.as_str()))
+                        .iter()
+                        .map(|keyword| match keyword {
+                            Keyword::Armor { n } | Keyword::Lucky { n } | Keyword::SpellDamage { n } => *n,
+                            _ => 0,
+                        })
+                        .sum()
+                };
+                assert_eq!(numbered(&s), 3);
+                run_and_check(&mut s, &[upgrade(json_as(json!({ "instanceId": id, "times": 40 })))]);
+                assert!(numbered(&s) > 3, "a Buff raised Armor, Lucky or Spell Damage");
+            }
+
+            #[test]
+            fn destroyed_it_survives_indestructible_and_its_death_does_not_fire() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "keenus-destroy",
+                    "p1": {
+                        "field": [{ "def": KEENUS, "radiant": true }, VANILLA],
+                        "hand": [FILLER],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let id = s.unit(P1, 1).expect("Keenus").id;
+                let events = run_and_check(
+                    &mut s,
+                    &[destroy(json_as(json!({ "target": { "of": "instance", "instanceId": id } })))],
+                );
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(id.clone()), "Keenus stands");
+                assert!(
+                    !events.iter().any(|event| matches!(event, GameEvent::KeywordGranted { .. })),
+                    "no Death: nothing granted"
+                );
+            }
+        }
+
         mod radiant {
             use super::*;
+
+            #[test]
+            fn the_radiant_face_is_2_2() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "keenus-stats",
+                    "p1": { "mana": 10, "hand": [{ "def": KEENUS, "radiant": true }, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.play(KEENUS, json!({ "zone": 1 }));
+                let stats = s.stats(KEENUS);
+                assert_eq!((stats.attack, stats.health), (2, 2));
+            }
 
             /// Carnivorous Cube (Core #22): (3) Unit, "Cry: Tribute one of your other Units".
             const CUBE: &str = "core-022";

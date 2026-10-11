@@ -76,10 +76,21 @@ mod tests {
     fn printed_at_start(s: &mut Scenario) -> Vec<(String, String)> {
         let mark = s.events().len();
         s.start_turn();
-        s.events()[mark..]
+        let events = &s.events()[mark..];
+        // The turn draw arrives too: it is the one with a `drawn` event.
+        let drawn: Vec<&String> = events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player, instance_id, def_id } if *player == P1 => {
+                GameEvent::Drawn { instance_id, .. } => Some(instance_id),
+                _ => None,
+            })
+            .collect();
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::AddedToHand { player, instance_id, def_id }
+                    if *player == P1 && !drawn.contains(&instance_id) =>
+                {
                     Some((instance_id.clone(), def_id.clone()))
                 }
                 _ => None,

@@ -325,8 +325,8 @@ mod tests {
         assert_eq!(luck_of(s.state(), P1), 2);
     }
 
-    /// `effects` applied for p1 on a sink over the scenario's state, then settled.
-    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) {
+    /// `effects` applied for p1 on a sink over the scenario's state, then settled; their events.
+    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
         {
@@ -342,6 +342,7 @@ mod tests {
             settle(&mut sink, SettleOptions::default());
         }
         s.state_mut().rng_cursor = rng.cursor();
+        events
     }
 
     fn last(s: &Scenario, player: PlayerId) -> Option<CardElement> {
@@ -397,9 +398,8 @@ mod tests {
         const CONJURE_KY: &str = "core-057";
         let mut s = judged_game("meditative-040-cast", json!([WOOD, "core-005"]));
         s.play(WOOD, json!({}));
-        let mark = s.events().len();
-        apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": CONJURE_KY })))]);
-        let verdicts: Vec<FengShuiOutcome> = s.events()[mark..]
+        let events = apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": CONJURE_KY })))]);
+        let verdicts: Vec<FengShuiOutcome> = events
             .iter()
             .filter_map(|event| match event {
                 GameEvent::FengShui { outcome, player: P1, .. } => Some(*outcome),

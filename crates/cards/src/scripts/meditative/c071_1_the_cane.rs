@@ -155,6 +155,96 @@ mod tests {
         assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(ID.to_string()));
     }
 
+    const PARETO: &str = "meditative-071";
+    const FILLER: &str = "core-005";
+
+    #[test]
+    fn summoned_on_your_turn_it_attacks_from_its_second_turn() {
+        crate::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [PARETO, FILLER], "library": [FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }));
+        s.play(PARETO, json!({}));
+        // Animated as it entered, but summoning sick this turn.
+        assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(ID.to_string()));
+        s.expect_refused(|s| s.attack(ID, "hero"));
+        s.end_turn().end_turn();
+        // Its second turn: animated again, and it may attack.
+        s.attack(ID, "hero");
+        s.expect_health(PlayerId::P2, 30 - 3);
+    }
+
+    #[test]
+    fn indestructible_a_destroy_leaves_it_standing() {
+        let mut s = cane_game();
+        s.end_turn().end_turn();
+        let cane = s.unit(P1, 1).expect("the animated Cane").id;
+        let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&seed, cursor);
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions { controller: Some(PlayerId::P2), ..HookOptions::default() },
+                );
+                apply_effects(
+                    &[destroy(json_as(json!({ "target": { "of": "instance", "instanceId": cane } })))],
+                    &mut ctx,
+                );
+            }
+            state_check(&mut sink);
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+        assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(cane));
+    }
+
+    #[test]
+    fn pierce_its_hit_ignores_hero_armor() {
+        crate::register_all();
+        let _open = preview_sets(&[SetName::Meditative]);
+        let mut s = scenario(json!({
+            "p1": { "backrow": [ID], "hand": [FILLER], "library": [FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "armor": 3 },
+        }));
+        s.end_turn().end_turn();
+        s.attack(ID, "hero");
+        s.expect_health(PlayerId::P2, 30 - 3);
+    }
+
+    #[test]
+    fn a_cane_pareto_did_not_summon_is_never_sent() {
+        crate::register_all();
+        // Pareto set straight onto the field ran no Cry, so it remembers no Cane; a stray Cane
+        // stands beside it.
+        let mut s = scenario(json!({
+            "p1": { "backrow": [PARETO, ID] },
+            "p2": { "mana": 10, "hand": ["core-008", "core-t-felinor"], "field": [SCARAB] },
+        }));
+        s.end_turn();
+        s.play("core-t-felinor", json!({}));
+        let kinds: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
+        assert!(!kinds.contains(&"attackDeclared"), "the stray Cane stays home: {kinds:?}");
+        assert_eq!(s.backrow(P1, 2).map(|card| card.def_id), Some(ID.to_string()));
+    }
+
+    #[test]
+    fn the_radiant_face_is_6_2() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [{ "def": PARETO, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        s.play(PARETO, json!({}));
+        let cane = s.unit(P1, 2).expect("the Radiant Cane");
+        assert!(cane.radiant);
+        s.expect_stats(cane.id.as_str(), json!({ "attack": 6, "health": 2 }));
+    }
+
     #[test]
     fn radiant_trample() {
         crate::register_all();

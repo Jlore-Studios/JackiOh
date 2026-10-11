@@ -191,6 +191,146 @@ mod tests {
             let text = serde_json::to_string(&s.view(P2)).expect("a view serialises");
             assert!(!text.contains(ROCK), "the bought Rock arrives hidden");
         }
+
+        #[test]
+        fn r1000_every_lot_is_priced_10_yuan_a_printed_mana_plus_5_a_rarity_rank() {
+            for n in 0..5 {
+                let s = opened(&format!("market-price-sweep-{n}"), true, &[]);
+                for lot in stall(&s) {
+                    let def = crate::card_def(&lot);
+                    let rarity = if def.token {
+                        def.printed_rarity
+                            .and_then(|printed| printed.as_str().parse::<Rarity>().ok())
+                            .unwrap_or(Rarity::Common)
+                    } else {
+                        def.rarity
+                    };
+                    let rank = [Rarity::Common, Rarity::Rare, Rarity::Epic, Rarity::Legendary, Rarity::Mythic]
+                        .iter()
+                        .position(|listed| *listed == rarity)
+                        .expect("a ranked rarity") as i32
+                        + 1;
+                    let price = 10 * query_cost(&def) + 5 * rank;
+                    assert_eq!(subsystems::yuan_price(&def, false), price, "{lot}");
+                    if price <= 80 {
+                        assert_eq!(cost_of(&s, &format!("mode:{lot}")), Some(price), "{lot}");
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn r1000_only_the_lots_within_the_yuan_left_and_leave_are_offered() {
+            for n in 0..10 {
+                let s = opened(&format!("market-within-{n}"), false, &[]);
+                let open = pending(&s);
+                let budget = open.budget.expect("a budget");
+                assert!(open.options.iter().any(|option| option.key == "none"), "Leave is offered");
+                for lot in stall(&s) {
+                    let price = subsystems::yuan_price(&crate::card_def(&lot), false);
+                    let offered = cost_of(&s, &format!("mode:{lot}")).is_some();
+                    assert_eq!(offered, price <= budget, "{lot} at {price} with {budget} left");
+                }
+            }
+        }
+
+        #[test]
+        fn r1000_none_while_the_hand_is_full() {
+            // The Radiant face, so the market still opens on its barters: no lot is offered.
+            let hand: Vec<Value> = vec![json!(FILLER); HAND_CAP as usize - 1];
+            let mut s = opened("market-full", true, &hand);
+            // The cast left HAND_CAP - 1 cards: a Rock fills the last slot.
+            s.answer(json!([format!("mode:{ROCK}")]));
+            assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+            let keys: Vec<String> = pending(&s).options.iter().map(|option| option.key.clone()).collect();
+            assert!(keys.iter().all(|key| key == "none" || key.starts_with("instance:")), "{keys:?}");
+            assert!(keys.contains(&"none".to_string()));
+        }
+
+        #[test]
+        fn r113_each_buy_adds_its_card_at_its_printed_cost_and_reopens_the_prompt() {
+            let mut s = opened("market-buys", false, &[]);
+            for budget in [40, 30] {
+                s.answer(json!([format!("mode:{ROCK}")]));
+                assert_eq!(pending(&s).kind, PromptKind::Market, "the prompt reopens");
+                assert_eq!(pending(&s).budget, Some(budget));
+            }
+            let rocks: Vec<CardInstance> =
+                s.hand(P1).into_iter().filter(|card| card.def_id == ROCK).collect();
+            assert_eq!(rocks.len(), 2);
+            for rock in rocks {
+                assert!(!rock.radiant);
+                assert_eq!(rock.cost_override, None, "at its printed cost");
+                assert_eq!(rock.cost_mod, 0);
+            }
+        }
+
+        #[test]
+        fn r1000_the_stall_never_rerolls_inside_one_market() {
+            let mut s = opened("market-no-reroll", false, &[]);
+            let first = stall(&s);
+            s.answer(json!([format!("mode:{ROCK}")]));
+            let after = stall(&s);
+            // The Rock sold leaves the stall; every other lot is the one rolled at the start.
+            let mut expected = first.clone();
+            let sold = expected.iter().position(|id| id == ROCK).expect("a Rock");
+            expected.remove(sold);
+            assert_eq!(after, expected);
+            // Every simulation of the same answer sees the same lots.
+            let text = serde_json::to_string(s.state()).expect("the state serialises");
+            let copy: GameState = serde_json::from_str(&text).expect("the state parses");
+            assert_eq!(
+                copy.pending.expect("open").resume.data.get(subsystems::MARKET_STALL_KEY),
+                pending(&s).resume.data.get(subsystems::MARKET_STALL_KEY)
+            );
+        }
+
+        #[test]
+        fn r1000_unspent_yuan_is_gone_on_leave() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "market-twice",
+                "p1": { "hand": [ID, ID, FILLER], "library": [FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let markets: Vec<String> =
+                s.hand(P1).iter().filter(|card| card.def_id == ID).map(|card| card.id.clone()).collect();
+            s.play(&markets[0], json!({}));
+            s.answer(json!([format!("mode:{ROCK}")]));
+            assert_eq!(pending(&s).budget, Some(40));
+            s.answer(json!(["none"]));
+            assert!(s.state().pending.is_none());
+            // The next market opens at its own 50, nothing carried over.
+            s.play(&markets[1], json!({}));
+            assert_eq!(pending(&s).budget, Some(50));
+        }
+
+        #[test]
+        fn r1002_a_timeout_leaves() {
+            let s = opened("market-timeout", false, &[]);
+            let hand = s.hand(P1).len();
+            let timed = reduce(
+                s.state(),
+                &json_as::<Action>(json!({ "type": "timeout", "playerId": "p1", "nonce": "market-t1" })),
+            );
+            assert_eq!(timed.error, None);
+            assert!(timed.state.pending.is_none() || timed.state.active == P2);
+            assert!(timed.state.players.p1.hand.len() <= hand + 1, "nothing was bought");
+            assert!(!timed.state.players.p1.hand.iter().any(|card| card.def_id == ROCK));
+        }
+
+        #[test]
+        fn yuan_reads_through_param() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "market-param",
+                "p1": { "hand": [ID, FILLER], "library": [FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            set_param(s.card_mut(ID), "yuan", 30);
+            s.play(ID, json!({}));
+            assert_eq!(pending(&s).budget, Some(30));
+        }
     }
 
     mod radiant {
@@ -219,6 +359,28 @@ mod tests {
                 .expect("the Rock arrived");
             assert!(!rock.radiant, "a bought card is on its base face on either face");
             assert_eq!(pending(&s).budget, Some(70));
+        }
+
+        #[test]
+        fn r1001_one_barter_per_hand_card_a_base_card_at_its_plain_price() {
+            let mut s = opened("market-barters", true, &[json!(FILLER), json!(FILLER), json!("core-008")]);
+            let hand = s.hand(P1);
+            let barters: Vec<String> = pending(&s)
+                .options
+                .iter()
+                .filter(|option| option.key.starts_with("instance:"))
+                .map(|option| option.key.clone())
+                .collect();
+            assert_eq!(barters.len(), hand.len(), "one barter per hand card");
+            for card in &hand {
+                assert!(barters.contains(&format!("instance:{}", card.id)));
+            }
+            let traded = hand[2].clone();
+            let price = subsystems::yuan_price(&crate::card_def(&traded.def_id), false);
+            s.answer(json!([format!("instance:{}", traded.id)]));
+            assert_eq!(pending(&s).budget, Some(80 + price), "a base card is not doubled");
+            // The bartered card is gone: no second barter for it.
+            assert!(!pending(&s).options.iter().any(|option| option.key == format!("instance:{}", traded.id)));
         }
     }
 }

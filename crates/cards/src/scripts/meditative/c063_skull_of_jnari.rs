@@ -147,6 +147,92 @@ mod tests {
                 assert_eq!(sources[0], Some(skull.id.clone()));
             }
 
+            /// Me and Mr Token (Core #15): (1) Unit, "Cry: Summon a Rush Token".
+            const MR_TOKEN: &str = "core-015";
+            /// Anti-oneshot Armor (Core #73): a Field Spell, so never picked.
+            const FIELD_SPELL: &str = "core-073";
+
+            fn p1_units(s: &Scenario) -> usize {
+                (1..=UNIT_ZONES).filter(|lane| s.unit(P1, *lane).is_some()).count()
+            }
+
+            #[test]
+            fn the_summoned_unit_runs_no_cry() {
+                let s = skull_with("skull-no-cry", false, json!([MR_TOKEN, FILLER]));
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(MR_TOKEN.to_string()));
+                // Its Cry would have summoned a Rush Token beside it.
+                assert_eq!(p1_units(&s), 1);
+                assert!(s.state().pending.is_none());
+            }
+
+            #[test]
+            fn it_takes_the_leftmost_open_unit_zone() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "skull-leftmost",
+                    "p1": {
+                        "hand": [MR_TOKEN, FILLER],
+                        "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }],
+                        "backrow": [{ "def": SKULL, "lane": 1 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.start_turn();
+                assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(MR_TOKEN.to_string()));
+            }
+
+            #[test]
+            fn the_opponents_start_of_turn_summons_nothing() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "skull-theirs",
+                    "p1": {
+                        "hand": [VANILLA, FILLER],
+                        "backrow": [{ "def": SKULL, "lane": 1 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER, FILLER], "library": filler(4) },
+                }));
+                // p1 ends its turn: p2's start of turn runs, and the Skull is not p2's.
+                s.end_turn();
+                assert_eq!(s.state().active, PlayerId::P2);
+                assert_eq!(p1_units(&s), 0);
+                assert!(hand_def_ids(&s).contains(&VANILLA.to_string()));
+            }
+
+            #[test]
+            fn r129_no_unit_in_hand_draws_no_random_number() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "skull-no-unit",
+                    "p1": {
+                        "hand": [FILLER, FIELD_SPELL],
+                        "backrow": [{ "def": SKULL, "lane": 1 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let cursor = s.state().rng_cursor;
+                s.start_turn();
+                assert_eq!(p1_units(&s), 0);
+                assert_eq!(cursor, s.state().rng_cursor, "no pick was drawn");
+            }
+
+            #[test]
+            fn the_opponent_sees_only_the_arrival() {
+                let s = skull_with("skull-hidden", false, json!([VANILLA, FIELD_SPELL]));
+                let view = s.view(PlayerId::P2);
+                let seen = serde_json::to_string(&view).expect("the view serialises");
+                // The arrival is public…
+                assert!(
+                    view.opponent.units.iter().flatten().any(|unit| unit.def_id == VANILLA),
+                    "p2 sees the summoned Vanilla"
+                );
+                // …and nothing else of the hand it came from.
+                assert!(!seen.contains(FIELD_SPELL), "p2 reads the rest of p1's hand");
+            }
+
             #[test]
             fn units_reads_through_param() {
                 crate::register_all();

@@ -92,6 +92,86 @@ mod tests {
             assert!(!added[0].radiant);
         }
 
+        /// The def CN Tech added to p1's hand under `rows`.
+        fn picked(rows: Vec<(&str, i32, i32)>, seed: &str) -> String {
+            register_win_rates(table(rows));
+            let mut s = casting(seed, false);
+            let before = s.hand(PlayerId::P1).len();
+            s.play(TECH, json!({}));
+            let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
+            assert_eq!(added.len(), 1);
+            added[0].def_id.clone()
+        }
+
+        #[test]
+        fn r1100_only_cards_with_at_least_20_games_qualify() {
+            // A perfect 19 games loses to a 50% rate over 20.
+            assert_eq!(picked(vec![("core-008", 19, 19), (LEADER, 10, 20)], "cn-tech-min"), LEADER);
+        }
+
+        #[test]
+        fn r1100_the_best_exact_rate_wins() {
+            // 21/40 beats 20/40 by one win: compared exactly, never as a rounded float.
+            assert_eq!(picked(vec![("core-008", 20, 40), (LEADER, 21, 40)], "cn-tech-rate"), LEADER);
+        }
+
+        #[test]
+        fn r1100_a_tie_goes_to_more_games_then_to_the_catalog_id() {
+            assert_eq!(picked(vec![("core-008", 10, 20), (LEADER, 20, 40)], "cn-tech-tie-games"), LEADER);
+            assert_eq!(
+                picked(vec![("core-008", 10, 20), ("core-002", 10, 20)], "cn-tech-tie-id"),
+                "core-002"
+            );
+        }
+
+        #[test]
+        fn r1100_glitch_tokens_and_ids_no_longer_in_the_catalog_never() {
+            assert_eq!(
+                picked(
+                    vec![
+                        ("classic-t-glitch", 40, 40),
+                        ("core-065-1", 40, 40),
+                        ("core-999-gone", 40, 40),
+                        (LEADER, 1, 40),
+                    ],
+                    "cn-tech-never"
+                ),
+                LEADER
+            );
+        }
+
+        #[test]
+        fn r1101_the_same_table_and_seed_give_the_same_card() {
+            // The fallback draws from the match rng: the same seed makes the same card, whoever
+            // runs the engine (the server natively, the client through WASM).
+            let one = picked(vec![], "cn-tech-same");
+            let two = picked(vec![], "cn-tech-same");
+            assert_eq!(one, two);
+            register_win_rates(table(vec![]));
+            let mut s = casting("cn-tech-same", false);
+            let cursor = s.state().rng_cursor;
+            s.play(TECH, json!({}));
+            assert!(s.state().rng_cursor > cursor, "the fallback drew from the match rng");
+        }
+
+        #[test]
+        fn the_added_card_is_hidden_from_the_opponent() {
+            register_win_rates(table(vec![(LEADER, 30, 40)]));
+            let mut s = casting("cn-tech-hidden", false);
+            s.play(TECH, json!({}));
+            let view: Value =
+                serde_json::to_value(view_for(s.state(), PlayerId::P2)).expect("the view serialises");
+            assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
+            let added = s
+                .hand(PlayerId::P1)
+                .into_iter()
+                .find(|card| card.def_id == LEADER)
+                .expect("the leader in hand");
+            let text = view.to_string();
+            assert!(!text.contains(&added.id), "the opponent never sees its id");
+            assert!(!text.contains(LEADER), "nor its def");
+        }
+
         #[test]
         fn the_radiant_face_adds_it_radiant() {
             register_win_rates(table(vec![(LEADER, 30, 40)]));

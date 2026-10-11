@@ -214,7 +214,8 @@ mod tests {
                 .iter()
                 .filter(|event| event.event_type() == GameEventType::Summoned)
                 .count();
-            assert_eq!(summons, 1, "the summoned Unit's Cry summoned nothing more");
+            // One for the played card's arrival, one for the summon: the Cry summoned nothing more.
+            assert_eq!(summons, 2, "the summoned Unit's Cry summoned nothing more");
         }
 
         #[test]

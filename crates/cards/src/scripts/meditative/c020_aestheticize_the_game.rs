@@ -72,6 +72,7 @@ mod tests {
     const GAME: &str = "meditative-020";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const FIENDER: &str = "core-092"; // (2) Unit with Stack.
 
     fn board(hand: Value) -> Scenario {
         scenario(json!({
@@ -183,6 +184,163 @@ mod tests {
             let result = s.state().result.expect("a hero at 0 ends the game");
             assert_eq!(result.winner, Winner::P2);
             assert_eq!(result.reason, GameOverReason::HeroDeath);
+        }
+    }
+
+    mod more {
+        use super::*;
+
+        fn board_of(field: Value) -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "seed": "aestheticize-board",
+                "p1": { "hand": [GAME, FILLER], "field": field, "library": [FILLER, FILLER], "mana": 10 },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }))
+        }
+
+        #[test]
+        fn r640_it_is_quickdraw_on_both_faces() {
+            crate::register_all();
+            let scripts = script();
+            for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
+            }
+            assert!(crate::card_def(GAME).tags.contains(&Tag::Quickdraw));
+        }
+
+        #[test]
+        fn r848_the_condition_is_public_with_its_progress() {
+            crate::register_all();
+            let mut s = board(json!([GAME]));
+            play_mode(&mut s, HEALTH_MODE);
+            for viewer in [P1, PlayerId::P2] {
+                let view = s.view(viewer);
+                let side = if viewer == P1 { &view.you } else { &view.opponent };
+                let labels: Vec<String> = side.modifiers.iter().map(|badge| badge.label.clone()).collect();
+                assert!(
+                    labels.contains(&"You win at 100 hero Health (30/100)".to_string()),
+                    "{viewer:?} sees it: {labels:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn r850_it_wins_only_once_its_effect_list_closes() {
+            crate::register_all();
+            // The Radiant face: the win is met at once, and the draw after it still resolves.
+            let mut s = board(json!([{ "def": GAME, "radiant": true }]));
+            s.state_mut().players.p1.hero.health = 90;
+            let library = s.state().players.p1.library.len();
+            play_mode(&mut s, HEALTH_MODE);
+            assert_eq!(s.state().players.p1.library.len(), library - 1, "the draw resolved first");
+            let result = s.state().result.expect("then the win");
+            assert_eq!(result.reason, GameOverReason::AltWin);
+            assert_eq!(result.winner, Winner::P1);
+        }
+
+        #[test]
+        fn r849_100_attack_and_100_health_win() {
+            let mut s = board_of(json!([{ "def": VANILLA, "statsOverride": { "attack": 100, "health": 100 } }]));
+            s.play(GAME, json!({ "modes": [BOARD_MODE] }));
+            let result = s.state().result.expect("100/100 wins");
+            assert_eq!(result.winner, Winner::P1);
+            assert_eq!(result.reason, GameOverReason::AltWin);
+        }
+
+        #[test]
+        fn r849_both_totals_are_needed() {
+            let mut s = board_of(json!([{ "def": VANILLA, "statsOverride": { "attack": 100, "health": 99 } }]));
+            s.play(GAME, json!({ "modes": [BOARD_MODE] }));
+            assert!(s.state().result.is_none(), "99 health is short");
+            let mut s = board_of(json!([{ "def": VANILLA, "statsOverride": { "attack": 99, "health": 100 } }]));
+            s.play(GAME, json!({ "modes": [BOARD_MODE] }));
+            assert!(s.state().result.is_none(), "99 attack is short");
+        }
+
+        #[test]
+        fn r849_current_health_and_dormant_cards_not_counted() {
+            // A damaged 100/100 counts its current health.
+            let mut s = board_of(json!([{ "def": VANILLA, "statsOverride": { "attack": 100, "health": 100 }, "damage": 1 }]));
+            s.play(GAME, json!({ "modes": [BOARD_MODE] }));
+            assert!(s.state().result.is_none(), "99 current health is short");
+            // A 100/100 dormant under a Stack pile counts nothing.
+            let mut s = board_of(json!([
+                { "def": VANILLA, "statsOverride": { "attack": 100, "health": 100 } },
+                { "def": FIENDER, "stack": true },
+            ]));
+            s.play(GAME, json!({ "modes": [BOARD_MODE] }));
+            assert!(s.state().result.is_none(), "the dormant card is not counted");
+        }
+
+        #[test]
+        fn r850_two_winners_draw() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "aestheticize-draw",
+                "active": "p2",
+                "p1": { "hand": [GAME, FILLER], "library": [FILLER, FILLER], "mana": 10 },
+                "p2": { "hand": [GAME, FILLER], "library": [FILLER, FILLER], "mana": 10 },
+            }));
+            s.play(GAME, json!({ "modes": [GRAVEYARD_MODE] }));
+            assert!(s.state().result.is_none());
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            // p2's graveyard reaches 100 and p1's hero 100 with no check between.
+            let filler = s.pile(P1, "library")[0].clone();
+            for _ in 0..100 {
+                s.state_mut().players.p2.graveyard.push(filler.clone());
+            }
+            s.state_mut().players.p1.hero.health = 100;
+            s.play(GAME, json!({ "modes": [HEALTH_MODE] }));
+            let result = s.state().result.expect("two winners");
+            assert_eq!(result.winner, Winner::Draw);
+            assert_eq!(result.reason, GameOverReason::AltWin);
+        }
+
+        #[test]
+        fn r848_either_of_two_conditions_wins() {
+            crate::register_all();
+            let mut s = board(json!([GAME, GAME, FILLER]));
+            s.state_mut().players.p1.mana.current = 10;
+            play_mode(&mut s, HEALTH_MODE);
+            play_mode(&mut s, GRAVEYARD_MODE);
+            assert!(s.state().result.is_none());
+            // The second one met, the first still unmet: it wins.
+            let filler = s.card(FILLER).clone();
+            for _ in 0..100 {
+                s.state_mut().players.p1.graveyard.push(filler.clone());
+            }
+            s.play(FILLER, json!({}));
+            let result = s.state().result.expect("either one wins");
+            assert_eq!(result.winner, Winner::P1);
+            assert_eq!(result.reason, GameOverReason::AltWin);
+        }
+
+        #[test]
+        fn r848_nothing_removes_it_its_card_leaving_included() {
+            crate::register_all();
+            let mut s = board(json!([GAME]));
+            play_mode(&mut s, HEALTH_MODE);
+            let card = s.card(GAME).id.clone();
+            s.expect_in_zone(&card, "graveyard");
+            // The card leaves its graveyard and turns go by: the condition stays.
+            s.state_mut().players.p1.graveyard.retain(|held| held.id != card);
+            for _ in 0..4 {
+                s.end_turn();
+            }
+            assert_eq!(conditions(&s), vec![("health".to_string(), 100)]);
+        }
+
+        #[test]
+        fn r386_the_thresholds_read_through_param() {
+            for (mode, key) in [(HEALTH_MODE, "health"), (GRAVEYARD_MODE, "graveyard"), (BOARD_MODE, "board")] {
+                crate::register_all();
+                let mut s = board(json!([GAME]));
+                step_param(s.card_mut(GAME), key, -1);
+                play_mode(&mut s, mode);
+                assert_eq!(conditions(&s), vec![(key.to_string(), 90)], "for {key}");
+            }
         }
     }
 
