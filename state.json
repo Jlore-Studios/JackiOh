@@ -4327,15 +4327,8 @@
     "what": "plan #650 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-11T15:31:02Z",
-    "notes": [
-      "#647 needs a plan",
-      "#648 needs a plan",
-      "#649 needs a plan",
-      "#650 needs a plan",
-      "started a night run, as a lane was free: #650 (medium) is queued to build, for `agy`: plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
-      "#663: typed it Task"
-    ],
+    "at": "2026-10-11T15:45:10Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
