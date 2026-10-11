@@ -5636,14 +5636,18 @@
         {
           "at": "2026-10-11T12:52:37Z",
           "minutes": 21.1
+        },
+        {
+          "at": "2026-10-11T16:41:02Z",
+          "minutes": 34.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-11T16:00:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-11T21:00:00Z",
+          "utilization": 0.09
         },
-        "observed_at": "2026-10-11T12:52:37Z",
+        "observed_at": "2026-10-11T16:41:02Z",
         "status": "allowed"
       }
     },
