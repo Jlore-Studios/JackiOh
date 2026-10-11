@@ -38,8 +38,8 @@ use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
     Action, ActionBody, Aim, AimEnd, EmoteId, GameEvent, GameOverReason, HandView, PLAYER_IDS, PendingView,
-    PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng, aim_key, deal_emote_hand, emote_gate, hand_holds,
-    portrait_or_default,
+    PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng, aim_key, deal_emote_hand, emote_gate,
+    hand_holds, portrait_or_default,
 };
 
 use crate::actor::clock::{Timer, after, create_match_clock};
@@ -280,7 +280,13 @@ fn mulligan_key(owed: &[PlayerId]) -> String {
 /// R645: the persona of the bot that began in `home`, playing engine seat `seat`: its own rng stream
 /// (`{seed}:bot-persona:{home}`, apart from the match rng and the search's) and its dealt hand
 /// (R1344). `None` for a person's home.
-fn persona_for(seed: &str, home: PlayerId, seat: PlayerId, bot: Option<&BotRow>, hand: &[EmoteId]) -> Option<EmotePersona> {
+fn persona_for(
+    seed: &str,
+    home: PlayerId,
+    seat: PlayerId,
+    bot: Option<&BotRow>,
+    hand: &[EmoteId],
+) -> Option<EmotePersona> {
     let bot = bot?;
     let mut rng = Rng::new(&format!("{seed}:bot-persona:{home}"), 0);
     Some(EmotePersona::new(
@@ -370,7 +376,13 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     let opening = engine::snapshot(&state);
     let telemetry = telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
     // R677: a rebuilt actor's bot may already play the other seat.
-    let seat_of_home = |home: PlayerId| if opening.seats_swapped { home.opponent() } else { home };
+    let seat_of_home = |home: PlayerId| {
+        if opening.seats_swapped {
+            home.opponent()
+        } else {
+            home
+        }
+    };
     let personas = PerPlayer::new(
         persona_for(
             &match_row.seed,
@@ -388,8 +400,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         ),
     );
     let bot_view = |home: PlayerId, bot: &Option<BotRow>| {
-        bot.as_ref()
-            .map(|_| engine::view_for(&state, seat_of_home(home)))
+        bot.as_ref().map(|_| engine::view_for(&state, seat_of_home(home)))
     };
     let bot_views = PerPlayer::new(bot_view(PlayerId::P1, &bots.p1), bot_view(PlayerId::P2, &bots.p2));
 
@@ -1085,7 +1096,9 @@ impl MatchActor {
             return;
         }
         for home in PLAYERS {
-            let Some(bot) = &self.shared.bots[home] else { continue };
+            let Some(bot) = &self.shared.bots[home] else {
+                continue;
+            };
             if core.bot_thinking[home] {
                 continue;
             }
@@ -1149,7 +1162,7 @@ impl MatchActor {
                 .or_else(|| fallback_action(&core.state, player));
             // Set before the move goes, since the move's own push already starts the next one.
             let turn = core.state.turn;
-            (player, body, std::mem::replace(&mut core.bot_moved_turn[home], Some(turn)))
+            (player, body, core.bot_moved_turn[home].replace(turn))
         };
         let Some(body) = body else {
             self.lock().bot_moved_turn[home] = previous_turn;
@@ -1216,7 +1229,9 @@ impl MatchActor {
                 if core.finished || core.stopped {
                     return;
                 }
-                let Some(view) = core.bot_views[home].clone() else { return };
+                let Some(view) = core.bot_views[home].clone() else {
+                    return;
+                };
                 match core.personas[home].as_mut() {
                     Some(persona) => persona.on_player_turn_long(&view, now_ms()),
                     None => Vec::new(),

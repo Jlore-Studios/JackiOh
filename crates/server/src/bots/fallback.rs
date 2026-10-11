@@ -36,7 +36,11 @@ pub fn fallback_due(ticket: &Ticket, now: i64) -> bool {
 
 /// The hour of the day (UTC) at `now` (epoch ms), the hour a bot's schedule is read at.
 pub fn hour_of(now: i64) -> i32 {
-    i32::try_from(now.div_euclid(MS_PER_HOUR).rem_euclid(i64::from(BOT_HOURS_PER_DAY))).unwrap_or(0)
+    i32::try_from(
+        now.div_euclid(MS_PER_HOUR)
+            .rem_euclid(i64::from(BOT_HOURS_PER_DAY)),
+    )
+    .unwrap_or(0)
 }
 
 /// R1446: whether the bot is on at `hour` of the day (UTC): its schedule runs `active_hours` hours

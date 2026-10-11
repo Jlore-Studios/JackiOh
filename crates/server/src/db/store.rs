@@ -1843,7 +1843,11 @@ impl Tx<'_> {
     }
 
     /// R1445: the profiles `profile_id` faced in its last `limit` finished matches, newest first.
-    pub async fn results_recent_opponents(&mut self, profile_id: &str, limit: usize) -> StoreResult<Vec<String>> {
+    pub async fn results_recent_opponents(
+        &mut self,
+        profile_id: &str,
+        limit: usize,
+    ) -> StoreResult<Vec<String>> {
         dispatch!(self, results_recent_opponents(profile_id, limit))
     }
 

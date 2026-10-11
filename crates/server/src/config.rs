@@ -784,14 +784,14 @@ pub const BOT_DEFAULT_USERNAME_SHARE: f64 = 0.3;
 /// every name fits `USERNAME_MAX_LENGTH`.
 pub const BOT_NAME_FIRST: &[&str] = &[
     "Quiet", "Brave", "Lucky", "Sly", "Mighty", "Silver", "Rusty", "Clever", "Swift", "Gentle", "Bold",
-    "Sunny", "Misty", "Lazy", "Grumpy", "Jolly", "Cosmic", "Frosty", "Golden", "Hidden", "Little",
-    "Shadow", "Velvet", "Wild",
+    "Sunny", "Misty", "Lazy", "Grumpy", "Jolly", "Cosmic", "Frosty", "Golden", "Hidden", "Little", "Shadow",
+    "Velvet", "Wild",
 ];
 /// R1446: the second halves of a bot's username.
 pub const BOT_NAME_SECOND: &[&str] = &[
-    "Otter", "Falcon", "Badger", "Panda", "Comet", "Wizard", "Knight", "Pickle", "Turnip", "Mango",
-    "Raven", "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle",
-    "Dragon", "Muffin", "Noodle", "Sparrow",
+    "Otter", "Falcon", "Badger", "Panda", "Comet", "Wizard", "Knight", "Pickle", "Turnip", "Mango", "Raven",
+    "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle", "Dragon",
+    "Muffin", "Noodle", "Sparrow",
 ];
 /// R1444: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
 /// the mean of `ln(think_ms)`.

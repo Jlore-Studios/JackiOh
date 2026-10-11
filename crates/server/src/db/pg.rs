@@ -70,16 +70,16 @@ use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, EmoteEventRow, FrozenDeck,
-    FrozenTrio, GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
-    MatchSignalRow, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    NewBot, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary,
-    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput,
-    RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide,
-    StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow,
+    MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
+    RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeriesRow, SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -4584,7 +4584,10 @@ pub async fn bots_create(t: &mut PgTx<'_>, bot: &NewBot) -> Result<(), StoreErro
                    $7::jsonb, $8::text)",
     )
     .bind(bot.profile_id.as_str())
-    .bind(small(i64::try_from(bot.strength).unwrap_or(i64::MAX), "strength")?)
+    .bind(small(
+        i64::try_from(bot.strength).unwrap_or(i64::MAX),
+        "strength",
+    )?)
     .bind(bot.speed)
     .bind(bot.persona.as_str())
     .bind(small(i64::from(bot.active_from_hour), "hour")?)

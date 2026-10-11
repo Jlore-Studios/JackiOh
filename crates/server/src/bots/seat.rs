@@ -70,8 +70,8 @@ pub async fn play(job: BotJob) -> BotMove {
         // The blocking pool's thread has no card override: the registered catalog it reads is the
         // real one, as the match's own (`actor::engine`).
         jackioh_cards::register_all();
-        let deadline =
-            std::time::Instant::now() + Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
+        let deadline = std::time::Instant::now()
+            + Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
         let should_stop = move || std::time::Instant::now() >= deadline;
         let mut options = AiOptions {
             rng: ai_rng,

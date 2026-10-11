@@ -282,9 +282,7 @@ mod stats_cards_report {
 
         let names = |card: &str| (card == "core-001").then(|| "Big D Fender".to_owned());
         let text = render_card_stats(&report, &one, &names);
-        assert!(text.contains(
-            "Card win rates: live games, every mode, patch v0.2.5, human and AI pilots (unified)."
-        ));
+        assert!(text.contains("Card win rates: live games, every mode, patch v0.2.5, human pilots."));
         let row = text
             .split('\n')
             .find(|line| line.starts_with("core-001 Big D Fender"))

@@ -4,6 +4,7 @@
 
 pub mod account;
 pub mod auth;
+pub mod bots;
 pub mod catalog;
 pub mod client_address;
 pub mod code_input_parity;

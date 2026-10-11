@@ -32,8 +32,8 @@ use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
 use crate::db::store::{
-    BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput, StoreError,
-    Tx,
+    BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
+    StoreError, Tx,
 };
 
 /// Why `attach` could not hand the socket to a seat. `ws_server.rs` closes with 4404 for an
@@ -127,7 +127,10 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
 /// R1444: the ladder bot at each home seat of a match between `players` (seat order), or none for a
 /// person. The bots' rows are read only when a seat's profile is a bot's, inside the caller's
 /// transaction, so a match `start` makes and the same match `rebuild` folds read the same seats.
-async fn bots_of(t: &mut Tx<'_>, players: &(String, String)) -> Result<PerPlayer<Option<BotRow>>, StoreError> {
+async fn bots_of(
+    t: &mut Tx<'_>,
+    players: &(String, String),
+) -> Result<PerPlayer<Option<BotRow>>, StoreError> {
     let profiles = t
         .profiles_get_many(&[players.0.clone(), players.1.clone()])
         .await?;

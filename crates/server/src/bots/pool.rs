@@ -34,7 +34,9 @@ use crate::config::{
     BOT_POOL_PER_WEEKLY_ACTIVE, BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN,
     BOT_STRENGTHS, USERNAME_CHANGE_COOLDOWN_MS,
 };
-use crate::db::store::{BotDeck, BotRow, GameRecordQuery, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome};
+use crate::db::store::{
+    BotDeck, BotRow, GameRecordQuery, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
+};
 use crate::username::{normalize_username, username_key};
 
 /// Unit conversion, not configuration: a day in milliseconds.
@@ -305,7 +307,9 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     let stale: Vec<BotRow> = bots
         .into_iter()
         .filter(|bot| bot.retired_at.is_none())
-        .filter(|bot| bot.decks.is_empty() || bot.decks_catalog_version.as_deref() != Some(app.catalog.version.as_str()))
+        .filter(|bot| {
+            bot.decks.is_empty() || bot.decks_catalog_version.as_deref() != Some(app.catalog.version.as_str())
+        })
         .collect();
     let records = if stale.is_empty() {
         Vec::new()

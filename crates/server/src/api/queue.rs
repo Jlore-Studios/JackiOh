@@ -737,7 +737,12 @@ async fn pair_with_bots(
 /// frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`), with its
 /// portrait; All Random deals both seats as for two people (R258, R642), the bot's with no lean.
 /// The match is ranked (R604): a ticket the queue paired, whoever it was paired with.
-async fn start_bot_match(app: &Arc<App>, ticket: &Ticket, bot: &BotRow, match_id: &str) -> Result<(), ApiError> {
+async fn start_bot_match(
+    app: &Arc<App>,
+    ticket: &Ticket,
+    bot: &BotRow,
+    match_id: &str,
+) -> Result<(), ApiError> {
     let seed = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
     let bot_first = jackioh_engine::Rng::new(&format!("{seed}:bot-seat"), 0).coin();
     let (human_player, bot_player) = if bot_first {

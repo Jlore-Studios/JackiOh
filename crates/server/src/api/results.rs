@@ -45,8 +45,8 @@ use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
 use crate::config::{MATCH_REAPER_INTERVAL_SECONDS, RATING_START, RESULT_WRITE_ATTEMPTS};
 use crate::db::store::{
-    LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow, SeriesRow,
-    SeriesStatus, StoreError, Tx,
+    LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
+    SeriesRow, SeriesStatus, StoreError, Tx,
 };
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,

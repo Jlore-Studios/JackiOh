@@ -93,22 +93,22 @@ use jackioh_engine::wire::stats::{
 use jackioh_engine::wire::{PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
+use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
     RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, USERNAME_DEFAULT_BASE,
 };
-use crate::config::PersonaName;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db,
-    EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind,
-    MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus, PerMode, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    NewBot, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
+    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCode, LastBoardEntry,
+    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;

@@ -4,6 +4,7 @@
 //! Written once by part 1 (SURFACE §1).
 
 pub mod aim;
+pub mod bot_seat;
 pub mod clock;
 pub mod dealt_deck;
 pub mod engine_real;
