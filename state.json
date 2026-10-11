@@ -3769,7 +3769,7 @@
       "stop_requested": false
     },
     "616": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "handoff": {
@@ -3786,9 +3786,9 @@
       "planned_at": "2026-10-11T14:39:38Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
-      "provider": "claude-6",
-      "run_id": "38146017571",
-      "started_at": "2026-10-11T14:09:45Z",
+      "provider": "claude-4",
+      "run_id": "38148104497",
+      "started_at": "2026-10-11T14:40:42Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -4311,9 +4311,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-11T14:21:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38146806826",
-    "what": "build #577 on claude-2"
+    "at": "2026-10-11T14:40:42Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38148104497",
+    "what": "build #616 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-11T14:32:50Z",
