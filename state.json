@@ -4253,6 +4253,7 @@
       },
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T16:31:45Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
