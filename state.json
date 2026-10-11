@@ -4474,11 +4474,11 @@
       "planned_at": "2026-10-11T20:11:36Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_tier": "medium",
-      "provider": "agy",
+      "provider": "claude-3",
       "queued_at": "2026-10-11T19:40:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "38169668811",
-      "started_at": "2026-10-11T19:50:48Z",
+      "run_id": "38171178568",
+      "started_at": "2026-10-11T20:12:34Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4762,9 +4762,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-11T20:07:49Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38170842177",
-    "what": "build #616 on claude-4"
+    "at": "2026-10-11T20:12:34Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38171178568",
+    "what": "plan #667 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-11T20:01:02Z",
