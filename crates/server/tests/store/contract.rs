@@ -2982,6 +2982,25 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
     }
 
+    async fn r1450_never_reaps_a_live_or_a_finished_match(harness: &StoreHarness) {
+        let now = harness.now();
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let live = match_row(&id(), &p1.id, &p2.id, harness, now);
+        let finished_row = match_row(&id(), &p1.id, &p2.id, harness, now);
+        q!(harness, t => t.matches_create(&live));
+        q!(harness, t => t.matches_create(&finished_row));
+        q!(harness, t => t.matches_finish(&finished_row.id, now));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(now + 86_400_000)), 0);
+        assert_eq!(q!(harness, t => t.matches_get(&live.id)), Some(live));
+        let finished = j(&must(
+            q!(harness, t => t.matches_get(&finished_row.id)),
+            "finished match",
+        ));
+        assert_eq!(finished["status"], "finished");
+    }
+
     both_stores!(
         round_trips_a_match_row_clocks_included,
         refuses_a_second_match_with_the_same_id,
@@ -2994,6 +3013,7 @@ mod matches {
         r679_forgets_a_voided_live_match_its_row_its_log_and_both_players_in_match_flags,
         r679_never_forgets_a_finished_match_or_one_with_a_result,
         finishes_a_match_and_drops_it_out_of_the_live_set,
+        r1450_never_reaps_a_live_or_a_finished_match,
     );
 }
 
@@ -3160,6 +3180,61 @@ mod rooms {
         );
     }
 
+    async fn r1450_reaps_an_expired_unjoined_room_and_frees_its_code(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let expires_at = now + 1_000;
+        let r = room(harness, "ABC234", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&r)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(expires_at)), 0);
+        assert!(q!(harness, t => t.rooms_get("ABC234")).is_some());
+        let second = room(harness, "ABC234", &other.id, json!({}));
+        assert!(!q!(harness, t => t.rooms_create(&second)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(expires_at + 1)), 1);
+        assert!(q!(harness, t => t.rooms_get("ABC234")).is_none());
+        assert!(q!(harness, t => t.rooms_create(&second)));
+    }
+
+    async fn r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go(
+        harness: &StoreHarness,
+    ) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        let expires_at = now + 1_000;
+
+        let room_a = room(harness, "ABC234", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&room_a)));
+        let stranded = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &stranded, now)),
+            "claim stranded",
+        );
+        q!(harness, t => t.profiles_set_in_match(&host.id, Some(&stranded)));
+        q!(harness, t => t.profiles_set_in_match(&guest.id, Some(&stranded)));
+
+        let room_b = room(harness, "BCD345", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&room_b)));
+        let started = id();
+        must(
+            q!(harness, t => t.rooms_claim("BCD345", &guest.id, &started, now)),
+            "claim started",
+        );
+        let started_row = match_row(&started, &host.id, &guest.id, harness, now);
+        q!(harness, t => t.matches_create(&started_row));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(now + 1_001)), 1);
+
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&host.id)), "host"))["inMatchId"].is_null());
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&guest.id)), "guest"))["inMatchId"].is_null());
+        let reissued = room(harness, "ABC234", &host.id, json!({}));
+        assert!(q!(harness, t => t.rooms_create(&reissued)));
+        assert_eq!(q!(harness, t => t.matches_get(&started)), Some(started_row));
+    }
+
     both_stores!(
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
@@ -3168,6 +3243,8 @@ mod rooms {
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
         becomes_a_live_match_once_the_registry_creates_it,
+        r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
+        r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
     );
 }
 
@@ -3372,6 +3449,37 @@ mod tickets {
         assert_eq!(q!(harness, t => t.matches_get(&match_id)), Some(row));
     }
 
+    async fn r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go(
+        harness: &StoreHarness,
+    ) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let ta = ticket(harness, &a.id, json!({}));
+        let tb = ticket(harness, &b.id, json!({}));
+        q!(harness, t => t.tickets_insert(&ta));
+        q!(harness, t => t.tickets_insert(&tb));
+
+        let reserved = id();
+        let claimed_at = harness.now();
+        assert!(q!(harness, t => t.tickets_claim_pair(&ta.id, &tb.id, &reserved, claimed_at)));
+        q!(harness, t => t.profiles_set_in_match(&a.id, Some(&reserved)));
+        q!(harness, t => t.profiles_set_in_match(&b.id, Some(&reserved)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(claimed_at)), 0);
+        assert_eq!(
+            j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"))["inMatchId"],
+            reserved.as_str()
+        );
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(claimed_at + 1)), 1);
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"))["inMatchId"].is_null());
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["inMatchId"].is_null());
+
+        let ticket_a = j(&must(q!(harness, t => t.tickets_get(&ta.id)), "ticket a"));
+        assert_eq!(ticket_a["status"], "matched");
+        assert!(ticket_a["matchId"].is_null());
+    }
+
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
@@ -3382,6 +3490,7 @@ mod tickets {
         claims_a_pair_exactly_once,
         refuses_to_pair_a_ticket_with_itself,
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
+        r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go,
     );
 }
 
