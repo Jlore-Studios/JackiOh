@@ -4289,6 +4289,13 @@
     "655": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T23:58:08Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "44 script files exceeds the easy rule's 10-file cap and hits the hard rule's ~40-file line, so it is hard by count alone"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
