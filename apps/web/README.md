@@ -239,11 +239,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - A finished free game is kept for its replay (R768): when it ends the worker adds its config, log,
   catalog version, final hash and a summary to the store, the newest PRACTICE_REPLAYS_KEPT of them, but
   not a lesson or a game Glitch voided (R679). `{ type: "replays" }` answers the summaries, newest
-  first, each with `unavailable` set to `earlier_patch` or `rules_changed` when it was played on
-  another catalog or no longer folds to its hash; `{ type: "replay", game, from, count }` answers a
-  page of `{ step, turn, view }` in the seat the human played at each step (R677), and `total`. Both
-  are refused while a game is in progress, a game that is unavailable is refused with its reason, and
-  neither ever carries the log, the seed, the decks or a state. Nothing on screen sends them yet.
+  first, and folds none of them: each has `unavailable` set to `earlier_patch` when it was played on
+  another catalog, or to `rules_changed` once opening it found that it no longer folds to its hash;
+  `{ type: "replay", game, from, count }` answers a page of `{ step, turn, view }` in the seat the
+  human played at each step (R677), and `total`, from the fold the worker holds of each of the last
+  PRACTICE_REPLAYS_CACHED games opened. Both are refused while a game is in progress, a game that is
+  unavailable is refused with its reason, and neither ever carries the log, the seed, the decks or a
+  state. Nothing on screen sends them yet.
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
