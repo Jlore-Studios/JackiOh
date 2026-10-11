@@ -211,7 +211,7 @@ mod tests {
                 let table: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
                 let mut differed = 0;
                 // Re-pinned for v0.3.5: the Meditative set joins the pool, so other seeds pick the Grapes.
-                for seed in ["drop-reroll-7", "drop-reroll-18", "drop-reroll-32", "drop-reroll-46"] {
+                for seed in ["drop-reroll-7", "drop-reroll-16", "drop-reroll-19", "drop-reroll-46"] {
                     let mut s = shop(seed, false, &[FILLER]);
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut probe = Rng::new(&s.state().seed, s.state().rng_cursor);

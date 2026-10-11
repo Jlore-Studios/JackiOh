@@ -259,9 +259,9 @@ mod tests {
         fn r826_a_fused_card_copies_its_fused_definition() {
             // Re-pinned for v0.3.5: the Meditative set joins the pool. The old seed's Discovers now
             // fuse a card whose Cry opens a prompt, so its play had not resolved; this one fuses
-            // Pointmaster and Prem Panther, whose play resolves at once.
+            // Jlockheed's J15 Fighter and Mr. Vanilla, whose play resolves at once.
             let mut s = scenario(json!({
-                "seed": "double-header-fuse-2",
+                "seed": "double-header-fuse-1",
                 "p1": side(json!({ "backrow": [ID], "hand": [CRAFT, SPARE] })),
                 "p2": side(json!({ "field": [VANILLA] })),
             }));

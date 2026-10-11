@@ -243,7 +243,7 @@ mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     fn r41_r102_r174_a_crafted_ceaseless_void_carnivorous_cube_whose_void_exiled_the_meal_has_eaten_nothing_so_its_death_summons_nothing()
      {
         let mut g = scenario(json!({
-            "seed": "r6cube-262", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
+            "seed": "r6cube-4630", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": { "hand": [CRAFT_A_CARD, HIT_JOB, STOCKPILE], "mana": 10, "field": [{ "def": GARY, "lane": 1 }] },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": RENO, "lane": 1 }] },
         }));
@@ -298,7 +298,7 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     fn r102_8_68_a_crafted_reno_twisted_sorcerer_reads_the_hero_reno_has_just_set_to_30_so_it_deals_4_not_8()
     {
         let mut g = scenario(json!({
-            "seed": "r6reno-7159", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
+            "seed": "r6reno-3560", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": { "hand": [CRAFT_A_CARD, STOCKPILE], "mana": 10, "health": 5 },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": RENO, "lane": 1 }] },
         }));
