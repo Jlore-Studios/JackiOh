@@ -2,18 +2,19 @@
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
 //
 //   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice,
-//        which covers a play and a death line per catalog Unit and one cast line per anything else)
+//        which covers a play, an attack (R1448) and a death line per catalog Unit and one cast line
+//        per anything else)
 //        exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at byte 4 and brand
 //        `M4A ` at byte 8; the manifest lists exactly those keys with each file's size and its
 //        recomputed voiceHash; the directory holds nothing else.
 //        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501).
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501, 12 MiB since R1448).
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
 //   R655 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
 //        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
-//        no file.
+//        no file, though since R1448 a unit's attack hook names a voice like its play and death.
 //
 // The Surface's `--check` contract (every expected key has a manifest entry whose hash matches and
 // a file of that size, no orphan files or entries; otherwise one line per problem, each starting
@@ -105,11 +106,13 @@ function voicedNow(key: string): boolean {
 }
 
 /**
- * SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything
- * else, of the sets that have shipped (R1420).
+ * SPEC §10.11's lines: a play, an attack (R1448) and a death line per Unit (tokens included), one cast
+ * line per everything else, of the sets that have shipped (R1420).
  */
 const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
-  .flatMap(([id, card]) => (card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`]))
+  .flatMap(([id, card]) =>
+    card.type === "Unit" ? [`${id}-play`, `${id}-attack`, `${id}-death`] : [`${id}-cast`],
+  )
   .filter(voicedNow);
 
 const AUDIO = readJson5(AUDIO_PATH);
@@ -149,9 +152,9 @@ const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
  */
 const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO).filter(voicedNow), ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
-/** Core's own count (44 units, 67 spells and traps) plus whatever the other sets bring. */
+/** Core's own count (44 units with three lines each, 67 spells and traps) plus whatever the other sets bring. */
 const EXPECTED_FILE_COUNT = EXPECTED_KEYS.length;
-const CORE_FILE_COUNT = 155;
+const CORE_FILE_COUNT = 199;
 
 const MANIFEST = readJson(MANIFEST_PATH);
 const MANIFEST_FILES: Json = isRecord(MANIFEST.files) ? MANIFEST.files : {};
@@ -280,7 +283,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
@@ -344,7 +347,7 @@ function expectReported(root: string, keys: readonly string[]): void {
 // ------------------------------------------------------------------------------------ B35 ---
 
 describe("the committed voice files (B35)", () => {
-  it("B35 expects a play and a death line per unit and one cast line per spell and trap, Core's 155 among them", () => {
+  it("B35 R1448 expects a play, an attack and a death line per unit and one cast line per spell and trap, Core's 199 among them", () => {
     expect(new Set(EXPECTED_KEYS).size, "no key twice").toBe(EXPECTED_FILE_COUNT);
     const voiced = new Set(EXPECTED_KEYS);
     expect(REQUIRED_KEYS.filter((key) => !voiced.has(key)), "lines SPEC §10.11 requires that no hook voices").toEqual([]);
@@ -451,8 +454,8 @@ describe("the committed voice files (B35)", () => {
 // ------------------------------------------------------------------------------------ B36 ---
 
 describe("the voice budget (B36)", () => {
-  it("B36 R501 fits the whole set into VOICE_BUDGET_BYTES (6 MiB), counted in 4 KiB blocks", () => {
-    expect(VOICE_BUDGET_BYTES, "the budget R501 fixes").toBe(6 * 1024 * 1024);
+  it("B36 R501 R1448 fits the whole set into VOICE_BUDGET_BYTES (12 MiB), counted in 4 KiB blocks", () => {
+    expect(VOICE_BUDGET_BYTES, "the budget R1448 fixes").toBe(12 * 1024 * 1024);
     const sizes = EXPECTED_KEYS.map((key) => sizeOnDisk(key));
     expect(sizes.filter((size) => size === null), "every expected file exists to be measured").toEqual([]);
     const onDisk = sizes.reduce<number>((sum, size) => sum + Math.ceil((size ?? 0) / BLOCK) * BLOCK, 0);
@@ -477,16 +480,18 @@ describe("the move to card-audio.json5 (R655)", () => {
     expect(wrong, "lines whose voice or text changed in the move").toEqual([]);
   });
 
-  it("R655 expects no file for a hook that is only an effect, core-066's attack among them", () => {
-    expect(cardsOf(AUDIO)["core-066"]?.attack, "core-066's attack hook").toEqual({ effect: "rumble" });
+  it("R655 R1448 leaves no hook that is only an effect: core-066's attack, once only its rumble, now speaks too", () => {
+    expect(cardsOf(AUDIO)["core-066"]?.attack, "core-066's attack hook").toEqual({
+      voice: "brute",
+      text: "Rock bottom!",
+      effect: "rumble",
+    });
     const effectOnly = Object.entries(cardsOf(AUDIO)).flatMap(([defId, entry]) =>
       Object.entries(entry)
         .filter(([, assignment]) => isRecord(assignment) && assignment.voice === undefined)
         .map(([hook]) => `${defId}-${hook}`),
     );
-    expect(effectOnly, "the file has effect-only hooks").toContain("core-066-attack");
-    const voiced = effectOnly.filter((key) => key in MANIFEST_FILES || existsSync(voicePath(key)));
-    expect(voiced, "effect-only hooks with a manifest entry or a file").toEqual([]);
+    expect(effectOnly, "hooks that name no voice").toEqual([]);
   });
 });
 
@@ -767,19 +772,16 @@ describe("gen-voice.mjs --check (B37)", () => {
   );
 
   it(
-    "R655 exits 0 when a card gains an attack hook that is only an effect, which renders no file",
+    "R655 R1448 exits 1 and names core-004-attack when that unit's attack hook is cut down to only an effect",
     () => {
       const root = copyWebTree();
       editAudio(root, (table) => {
         const entry = cardsOf(table)["core-004"];
         if (!isRecord(entry)) throw new Error("no core-004 entry");
-        expect(entry.attack, "core-004 has no attack hook yet").toBeUndefined();
+        expect(entry.attack, "core-004's attack line").toEqual({ voice: "hustler", text: "All in!" });
         entry.attack = { effect: "zip" };
       });
-      const run = runCheck(["--root", root]);
-      expect(run.status, describeRun(run)).toBe(0);
-      expect(reportedKeys(run)).toEqual([]);
-      expect(existsSync(voicePath("core-004-attack", join(root, REL_VOICE_DIR)))).toBe(false);
+      expectReported(root, ["core-004-attack"]);
     },
     CHECK_TIMEOUT_MS,
   );

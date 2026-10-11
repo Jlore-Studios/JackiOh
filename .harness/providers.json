@@ -148,13 +148,14 @@
       "quiet_check": false
     },
     "gpt": {
-      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). Weak since 2026-10-11: easy items only.",
+      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). Weak since 2026-10-11: easy items only, which it takes ahead of the stronger models while it is free (easy_first), before Devin, so a week shows what it can do (#682).",
       "enabled": true,
       "cli": "codex",
       "family": "gpt",
       "model": "gpt-5.6-terra",
       "effort": "xhigh",
       "tier": "weak",
+      "easy_first": true,
       "login": "machine",
       "runs_on": "night-vm-gpt",
       "schedule": { "mode": "always" },
@@ -205,6 +206,7 @@
       "login": "machine",
       "runs_on": "night-vm-muse",
       "lanes": 4,
+      "usage_since": "2026-10-11T00:00:00Z",
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
