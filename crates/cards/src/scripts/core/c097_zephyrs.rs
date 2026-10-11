@@ -223,11 +223,12 @@ mod tests {
             crate::register_all();
             // p1's 3/3 can already swing at the hero for 3; #45 adds 4 with Charge on its summon turn, and
             // costs 2 of p1's 4 mana, so 3 + 4 ≥ p2's 7 health is lethal available this turn.
-            let mut s = scenario(json!({
+            let setup = json!({
                 "seed": "zephyrs-lethal",
                 "p1": { "hand": [ZEPHYRS], "field": [BOARD] },
                 "p2": { "health": 7 },
-            }));
+            });
+            let mut s = scenario(setup.clone());
             s.play(ZEPHYRS, json!({}));
 
             let ranked = subsystems::rank(s.state(), P1, &options(None));
@@ -237,8 +238,12 @@ mod tests {
             assert_eq!(core_top_three(&ranked).first().map(String::as_str), Some(CHARGER));
             let charger = ranked.iter().find(|scored| scored.def.id == CHARGER);
             assert_eq!(charger.map(priority_of), Some(json!("lethal")));
-            // …and the card offers the top 3, which is the whole of what #97 contributes.
-            assert_eq!(option_ids(&open(s.state())).len(), 3);
+            // …and the card offers the top 3 of the state it resolves in, the best of them a lethal card,
+            // which is the whole of what #97 contributes.
+            let top = subsystems::top_three(&resolving(&setup), P1, &options(None));
+            assert_eq!(top.first().map(priority_of), Some(json!("lethal")));
+            let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
+            assert_eq!(sorted(&option_ids(&open(s.state()))), sorted(&top));
         }
 
         #[test]
@@ -366,6 +371,24 @@ mod tests {
             .collect()
     }
 
+    /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446).
+    fn offers_rank_at(setup: &Value, priorities: &[&str]) {
+        let top = subsystems::top_three(&resolving(setup), P1, &options(None));
+        for scored in &top {
+            let priority = priority_of(scored);
+            assert!(
+                priorities.contains(&priority.as_str().unwrap_or_default()),
+                "{} is offered at {priority}",
+                scored.def.id
+            );
+        }
+        let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
+        let mut s = scenario(setup.clone());
+        s.play(ZEPHYRS, json!({}));
+        assert_eq!(sorted(&offered_ids(&s)), sorted(&top));
+    }
+
     mod n97_zephyrs_s10_7_s_dry_run_reads_what_a_card_s_text_does {
         use super::*;
 
@@ -383,9 +406,8 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, HEALERS), Vec::<String>::new(), "Core cards that do not heal");
-            let mut s = scenario(setup);
-            s.play(ZEPHYRS, json!({}));
-            assert_eq!(offered_ids(&s).len(), 3);
+            // …and every offer, of whatever set, ranks at the heal criterion or above.
+            offers_rank_at(&setup, &["lethal", "clear", "heal"]);
         }
 
         #[test]
@@ -401,9 +423,8 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, CLEARERS), Vec::<String>::new(), "Core cards that do not clear the board");
-            let mut s = scenario(setup);
-            s.play(ZEPHYRS, json!({}));
-            assert_eq!(offered_ids(&s).len(), 3);
+            // …and every offer, of whatever set, ranks at the clear criterion or above.
+            offers_rank_at(&setup, &["lethal", "clear"]);
         }
 
         #[test]
@@ -419,9 +440,8 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, LETHAL_AT_3), Vec::<String>::new(), "Core cards that are not lethal");
-            let mut s = scenario(setup);
-            s.play(ZEPHYRS, json!({}));
-            assert_eq!(offered_ids(&s).len(), 3);
+            // …and every offer, of whatever set, is lethal.
+            offers_rank_at(&setup, &["lethal"]);
         }
     }
 
