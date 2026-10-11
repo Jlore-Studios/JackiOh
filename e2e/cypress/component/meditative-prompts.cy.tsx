@@ -166,7 +166,9 @@ function longPress(selector: string): void {
   // The sheet now covers the finger, and the press lifts where it began: forced, since Cypress would
   // otherwise refuse an element under the sheet, which is exactly where a real finger is.
   cy.get(selector).trigger("pointerup", { eventConstructor: "PointerEvent", pointerType: "touch", pointerId: 7, isPrimary: true, button: 0, force: true });
-  cy.get(selector).click({ force: true });
+  // The lift's own click, as the browser sends it after a long-press: a lone click event, since
+  // `cy.click()` would play a fresh tap (a new pointerdown first) that no finger made.
+  cy.get(selector).trigger("click", { force: true });
 }
 
 /* ----------------------------------------------------------------------------------- helpers */
