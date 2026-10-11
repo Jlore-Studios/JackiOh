@@ -145,7 +145,7 @@ function drive(game: Game, budget: number): void {
       }
       if (step.kind === "answer") {
         expect(step.error, `${game.label}: the ${step.promptKind} answer`).to.eq(null);
-        expect(step.shown, `${game.label}: the board shows the ${step.promptKind} prompt the view holds`).to.eq(step.promptKind);
+        expect(step.shown, `${game.label}: the board shows the ${step.promptKind} prompt the view holds`).to.eq(step.drawn);
       }
       if (step.kind === "play") {
         expect(step.error, `${game.label}: playing ${step.defId}`).to.eq(null);
