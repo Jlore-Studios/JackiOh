@@ -4404,7 +4404,8 @@ the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbe
     - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
       Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
       Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
-      Peptides, M #86 Mayor Medinamogger and M #102 Catboy Maid SSR+.
+      Peptides, M #65 Keymaster Keenus (Lucky 1 is among its every keyword), M #86 Mayor Medinamogger
+      and M #102 Catboy Maid SSR+.
     - It is a query in `crates/cards/src/query.rs` (`luck_based()`), like every other random pool,
       over the catalog query's `luckBased` (`CatalogQueryArgs.luck_based`, `is_luck_based` in
       `crates/engine/src/catalog.rs`): either face's printed keywords hold Lucky, or its text says
