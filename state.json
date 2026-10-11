@@ -7207,14 +7207,18 @@
         {
           "at": "2026-10-11T19:58:24Z",
           "minutes": 8.1
+        },
+        {
+          "at": "2026-10-11T20:27:12Z",
+          "minutes": 12.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T00:40:00Z",
-          "utilization": 0.03
+          "utilization": 0.09
         },
-        "observed_at": "2026-10-11T19:58:24Z",
+        "observed_at": "2026-10-11T20:27:12Z",
         "status": "allowed"
       }
     },
