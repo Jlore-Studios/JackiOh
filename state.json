@@ -4476,6 +4476,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-11T18:40:39Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38164833557",
       "self_check_findings": [],
       "started_at": "2026-10-11T18:43:44Z",
