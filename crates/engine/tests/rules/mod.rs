@@ -209,6 +209,7 @@ pub mod untributable;
 pub mod validator;
 pub mod validator_drafts;
 pub mod view_for;
+pub mod view_hidden_ids;
 pub mod view_marks;
 pub mod windfury;
 pub mod zones;

@@ -123,7 +123,10 @@ mod r280_a_preview_value_may_carry_the_set_of_cards_it_counts {
             .into_iter()
             .next()
             .expect("the marker in hand");
-        set_answered(&["c1", "c2"]);
+        // R1447: the ids a view carries are cards its viewer reads, so the hook names two of the
+        // viewer's own hand cards.
+        let counted = in_hand(&mut state, &marker().id, P1, 2);
+        set_answered(&[&counted[0].id, &counted[1].id]);
 
         let preview = hand_card(&view_for(&state, P1), &card.id).preview;
 
@@ -134,7 +137,7 @@ mod r280_a_preview_value_may_carry_the_set_of_cards_it_counts {
                     label: "marker".to_string(),
                     value: 2,
                     display: None,
-                    ids: Some(vec!["c1".to_string(), "c2".to_string()]),
+                    ids: Some(vec![counted[0].id.clone(), counted[1].id.clone()]),
                 },
                 PreviewValue {
                     label: "plain".to_string(),
@@ -153,17 +156,18 @@ mod r280_a_preview_value_may_carry_the_set_of_cards_it_counts {
             .into_iter()
             .next()
             .expect("the marker in hand");
-        set_answered(&["c7"]);
+        let counted = in_hand(&mut state, &marker().id, P1, 2);
+        set_answered(&[&counted[0].id]);
 
         let preview = hand_card(&view_for(&state, P1), &card.id).preview;
-        set_answered(&["c7", "c8"]);
+        set_answered(&[&counted[0].id, &counted[1].id]);
 
         assert_eq!(
             preview
                 .as_ref()
                 .and_then(|values| values.first())
                 .and_then(|value| value.ids.clone()),
-            Some(vec!["c7".to_string()])
+            Some(vec![counted[0].id.clone()])
         );
     }
 }

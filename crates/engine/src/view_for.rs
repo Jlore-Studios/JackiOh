@@ -678,11 +678,15 @@ fn carried_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option
 /// player can hold more than one — their own plus one taken with #36 radiant or #49 — and each is
 /// separately once-per-turn, which is why this is a list and every entry carries its `instanceId`
 /// for `activatePower` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
+///
+/// R1447: a power on a face-down card is no power. A Trap fused with #98 keeps the rolled power in its
+/// memory, but a face-down card has no ability to use (`activate::is_acting_on_field`), and naming it
+/// would hand the other seat the hidden card's id and definition.
 fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
     let mut powers: Vec<HeroPowerView> = Vec::new();
     for side in PLAYER_IDS {
         for card in state.players[side].backrow.iter().flatten() {
-            if card.controller != player {
+            if card.controller != player || is_face_down(state, card) {
                 continue;
             }
             let Some(power) = power_of(card) else {
