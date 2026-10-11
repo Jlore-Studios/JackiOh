@@ -36,6 +36,7 @@ import {
   englishProblems,
   nextGame,
   noteProblems,
+  GAME_OVER,
   owedPromptKind,
   playStep,
   printedCost,
@@ -104,14 +105,21 @@ function afterPlay(game: Game, step: Extract<PlayStep, { kind: "play" }>): void 
 /** Rest a mouse on a card, read its hover preview, and leave. */
 function readInspect(selector: string, where: string): void {
   cy.get(selector).first().trigger("pointerover", { pointerType: "mouse", force: true });
-  cy.get(ts(INSPECT_HOVER), { timeout: timeouts.view }).should(($hover) => {
-    expect(noteProblems($hover.text(), `${where}'s inspect view`)).to.deep.equal([]);
+  // Retried until the preview opens; the message names the card, should it never open.
+  cy.get("body", { timeout: timeouts.view }).should(($body) => {
+    const hover = $body.find(ts(INSPECT_HOVER));
+    expect(hover.length, `${where}'s hover preview opens`).to.be.greaterThan(0);
+    expect(noteProblems(hover.text(), `${where}'s inspect view`)).to.deep.equal([]);
   });
   cy.get(selector).first().trigger("pointerout", { pointerType: "mouse", force: true });
   cy.get(ts(INSPECT_HOVER)).should("not.exist");
 }
 
-/** Whether the game is done with: every card played, a turn past the limit, or two empty-handed ends with empty decks. */
+/**
+ * Whether the game is done with: every card played, a card won it (a Wincon, such as #8 Reach the
+ * Summit's tenth Ascent: the cards it did not play go to the next game), a turn past the limit, or
+ * two empty-handed ends with empty decks.
+ */
 function finished(game: Game, step: PlayStep): boolean {
   if (game.toPlay.size === 0) return true;
   if (step.kind === "over") return true;
@@ -132,7 +140,7 @@ function drive(game: Game, budget: number): void {
     cy.document({ log: false }).then((doc) => {
       const step = playStep(handle as Handle, game.toPlay, doc);
       Cypress.log({ name: "step", message: `${game.label}: ${JSON.stringify(step)}` });
-      if (step.kind === "over") throw new Error(`${game.label}: ${step.why}`);
+      if (step.kind === "over" && step.why !== GAME_OVER) throw new Error(`${game.label}: ${step.why}`);
       if (step.kind === "mulligan") {
         // Both mulligans in: a card that replaces itself as it enters a hand has done so.
         const state = handle.state as { mulligan?: unknown };

@@ -59,6 +59,9 @@ function dispatched(handle: Handle, body: ActionBody, seat: PlayerId): string | 
   return result?.error ?? null;
 }
 
+/** The one `over` a game may end on: a card won it (the heroes cannot die, so only a Wincon ends one). */
+export const GAME_OVER = "the game is over";
+
 /** Mirrors `apps/web/src/game/contract.ts`: a "Choose one" this short is drawn as a Discover pop-up. */
 const DISCOVER_OPTION_LIMIT = 5;
 
@@ -93,7 +96,7 @@ export function owedPromptKind(handle: Handle): string | null {
  */
 export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Document): PlayStep {
   const state = handle.state as unknown as StateLike;
-  if (state.result !== null && state.result !== undefined) return { kind: "over", why: "the game is over" };
+  if (state.result !== null && state.result !== undefined) return { kind: "over", why: GAME_OVER };
   const seat = seatToAct(state);
   if (handle.seat !== seat) {
     handle.setSeat(seat);
