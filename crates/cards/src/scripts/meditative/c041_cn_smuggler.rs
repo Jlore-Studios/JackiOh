@@ -70,7 +70,8 @@ mod tests {
     #[test]
     fn start_of_turn_adds_a_rock_then_a_non_token_cn_card_not_itself() {
         crate::register_all();
-        // No Meditative card in a pool that names no set (R1420) unless the set is previewed.
+        // The pool names no set, so it draws from every set that ships, the Meditative set among
+        // them (R380, R1420).
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [FILLER], "library": LIBRARY },
@@ -84,7 +85,6 @@ mod tests {
         assert_eq!(hand.len(), 4, "the Rock, one CN card, then the draw");
         assert_eq!(hand[1], ROCK, "the Rock first");
         assert!(is_cn_non_token(&hand[2]), "{} is a non-token CN card, not itself", hand[2]);
-        assert!(!hand[2].starts_with("meditative-"), "no Meditative card without a preview");
         assert!(s.hand(P1).iter().all(|card| !card.radiant));
         // Hidden from the opponent.
         let theirs = serde_json::to_string(&s.view(P2)).unwrap();
@@ -93,9 +93,9 @@ mod tests {
     }
 
     #[test]
-    fn previewed_the_cn_pool_reaches_meditative_cards() {
+    fn the_cn_pool_reaches_meditative_cards_now_the_set_ships() {
         crate::register_all();
-        let _preview = preview_sets(&[SetName::Meditative]);
+        // No preview: the Meditative set ships (R1420), so a pool that names no set reaches it.
         let ids: Vec<String> =
             crate::query::pool(ID, &json_as(json!({ "tags": ["CN"] }))).iter().map(|def| def.id.clone()).collect();
         assert!(ids.contains(&"meditative-039".to_string()));

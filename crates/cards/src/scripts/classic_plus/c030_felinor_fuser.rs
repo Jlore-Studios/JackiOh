@@ -100,8 +100,23 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FUSER: &str = "classicplus-030";
-    /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside.
-    const FELINOR_UNITS: [&str; 5] = ["core-012", "core-043", "core-086", "classic-047", "classicplus-046"];
+    /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
+    /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool.
+    const FELINOR_UNITS: [&str; 12] = [
+        "core-012",
+        "core-043",
+        "core-086",
+        "classic-047",
+        "classicplus-046",
+        "meditative-025",
+        "meditative-030",
+        "meditative-067",
+        "meditative-087",
+        "meditative-093",
+        "meditative-094",
+        "meditative-102",
+    ];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
     const FILLER: &str = "core-005";

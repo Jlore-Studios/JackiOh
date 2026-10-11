@@ -48,6 +48,8 @@ mod tests {
     const GAOKAO: &str = "meditative-034"; // Destroy neither-CN-nor-KY, then Buff either.
     const MANDATE: &str = "meditative-078"; // Exile every non-CN permanent.
     const RCTA: &str = "meditative-035"; // Give a non-CN permanent the CN tag (aim: help).
+    const ANXIETY: &str = "meditative-052"; // +3 Attack attacking a Unit sharing no tag.
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: (1) 1/1 with no tag and no Taunt.
     const HIT_JOB: &str = "core-016"; // Destroy target unit, no tag filter.
     const VANILLA: &str = "core-008"; // Mr. Vanilla: (1) 4/4 Human, neither CN nor KY.
     const MENACE: &str = "core-019"; // Midrange Menace: (3) 9/9 with no tag, so not Human.
@@ -185,6 +187,32 @@ mod tests {
                 || cost_now(s.state(), s.card(&felinor)) < cost_before,
             "it grew: {before:?} → {after:?}"
         );
+    }
+
+    #[test]
+    fn r940_economic_anxietys_bonus_does_not_apply_against_it() {
+        // p1's Human behind Economic Anxiety shares no tag with the Felinor nor the untagged Scarab.
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "felinor-anxiety",
+            "p1": { "field": [VANILLA], "backrow": [ANXIETY], "library": library() },
+            "p2": {
+                "field": [{ "def": FELINOR, "lane": 1 }, { "def": SCARAB, "lane": 2 }],
+                "library": library(),
+            },
+        }));
+        let felinor = felinor_id(&s);
+        let scarab = s.unit(P2, 2).expect("the Scarab stands").id.clone();
+        let vanilla = s.unit(P1, 1).expect("the Vanilla stands").id.clone();
+        // The yellow (R1121) lists the Scarab, which takes the +3, and never the Felinor …
+        let view = s.view(P1);
+        let attacker = view.you.units.iter().flatten().find(|unit| unit.instance_id == vanilla);
+        let yellow = attacker.and_then(|unit| unit.condition_targets.clone());
+        assert_eq!(yellow, Some(vec![scarab]));
+        // … and the Human's strike on it is its printed 4, never 4 + 3.
+        s.attack(&vanilla, &felinor);
+        assert_eq!(s.card(&felinor).damage, 4);
+        s.expect_in_zone(&felinor, "field");
     }
 
     #[test]

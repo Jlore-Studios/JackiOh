@@ -59,6 +59,10 @@ mod tests {
 
     const CHAOS: &str = "classicplus-073";
     const CORE_CHAOS: &str = "core-095";
+    const MEDITATIVE_CHAOS: &str = "meditative-095";
+    /// The "Call to Chaos" pool: every edition, #95, this card and M #95 (§8.7 row 73, R1240, R1420).
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool, M #95 with it.
+    const EDITIONS: [&str; 3] = [CORE_CHAOS, CHAOS, MEDITATIVE_CHAOS];
     const GOLEM: &str = "classicplus-073-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
@@ -503,7 +507,7 @@ mod tests {
         }
 
         #[test]
-        fn r35_r387_9_10_replaces_your_deck_one_for_one_with_call_to_chaos_cards_of_either_edition_that_cost_0() {
+        fn r35_r387_9_10_replaces_your_deck_one_for_one_with_call_to_chaos_cards_of_any_edition_that_cost_0() {
             crate::register_all();
             let s = chaos(
                 Some("replace"),
@@ -512,7 +516,7 @@ mod tests {
             let library = s.pile(P1, "library");
             assert_eq!(library.len(), 6);
             for card in &library {
-                assert!(card.def_id == CORE_CHAOS || card.def_id == CHAOS);
+                assert!(EDITIONS.contains(&card.def_id.as_str()));
                 assert_eq!(card.cost_override, Some(0));
             }
         }
@@ -538,10 +542,11 @@ mod tests {
         }
 
         #[test]
-        fn r70_r28_10_10_casts_a_random_call_to_chaos_of_either_edition_free_and_counted_as_a_play() {
+        fn r70_r28_10_10_casts_a_random_call_to_chaos_of_any_edition_free_and_counted_as_a_play() {
             crate::register_all();
             let mut editions: IndexSet<String> = IndexSet::new();
-            for seed in ["a", "b", "c", "d", "e", "f"] {
+            // Re-pinned for v0.3.5: the Meditative set joins the pool, so the seeds reach all three editions.
+            for seed in ["a", "b", "c", "d", "e", "f", "g", "h"] {
                 let game_seed = format!("{SEED}-{seed}");
                 let mut s = scenario(json!({
                     "seed": game_seed,
@@ -560,8 +565,8 @@ mod tests {
                 assert_eq!(cast[0]["costPaid"], json!(0));
                 editions.insert(cast[0]["defId"].as_str().unwrap_or("").to_string());
             }
-            assert!(editions.iter().all(|id| id == CHAOS || id == CORE_CHAOS));
-            assert_eq!(editions.len(), 2);
+            assert!(editions.iter().all(|id| EDITIONS.contains(&id.as_str())));
+            assert_eq!(editions.len(), EDITIONS.len(), "{editions:?}");
         }
     }
 
@@ -584,7 +589,7 @@ mod tests {
             // The played card, then one cast (link 20). Whatever that cast rolled, a further cast would be link 21.
             assert_eq!(played.len(), 2);
             let edition = played[1]["defId"].as_str().unwrap_or("");
-            assert!(edition == CHAOS || edition == CORE_CHAOS);
+            assert!(EDITIONS.contains(&edition));
         }
     }
 
@@ -643,7 +648,7 @@ mod tests {
             assert!(index_of(&types, "addedToHand") < index_of(&types, "summoned"));
             assert!(index_of(&types, "summoned") < index_of(&types, "transformed"));
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(GOLEM.to_string()));
-            assert!(s.pile(P1, "library").iter().all(|card| card.def_id == CHAOS || card.def_id == CORE_CHAOS));
+            assert!(s.pile(P1, "library").iter().all(|card| EDITIONS.contains(&card.def_id.as_str())));
         }
 
         #[test]

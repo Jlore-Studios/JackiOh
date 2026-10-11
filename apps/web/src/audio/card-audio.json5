@@ -1475,6 +1475,9 @@
     "meditative-053": { // Prestige
       cast: { voice: "diva", text: "Darling, true class never fades." },
     },
+    "meditative-054": { // Money Machine
+      cast: { voice: "hustler", text: "Cha-ching! Everybody gets a little something." },
+    },
     "meditative-055": { // Dragon Fruit
       cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
     },
@@ -1708,6 +1711,10 @@
     "meditative-101": { // Gachaholic
       play: { voice: "sapi-trickster", text: "Just one more pull. I can feel it." },
       death: { voice: "sapi-trickster", text: "The pity was so close..." },
+    },
+    "meditative-102": { // Catboy Maid SSR+
+      play: { voice: "sapi-cat", text: "Welcome home, master! Nyaa!" },
+      death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
   },
   emotes: {

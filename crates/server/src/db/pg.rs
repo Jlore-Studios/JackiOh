@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0030) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0031) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -88,10 +88,12 @@ use crate::username::{render_username, username_key};
 pub type PgTx<'a> = Transaction<'a, Postgres>;
 
 /// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`): one
-/// hero died, a player conceded, or a player's disconnect grace ran out. The other four
-/// (`both-heroes-dead`, `draw-accepted`, `turn-cap`, `match-ceiling`) are draws. `results_record_for`
-/// reads a winnerless decisive row as the deleted winner's (migration 0012).
-const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect"];
+/// hero died, a player conceded, a player's disconnect grace ran out, or an effect won the game for
+/// one player (`won-by-effect`, R1412). The others (`both-heroes-dead`, `draw-accepted`, `turn-cap`,
+/// `match-ceiling`) are draws, and `alt-win` is either: two players holding an alternative win draw
+/// (R850). `results_record_for` reads a winnerless decisive row as the deleted winner's (migration
+/// 0012).
+const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect", "won-by-effect"];
 
 // ---------------------------------------------------------------------------
 // The role the server acts as

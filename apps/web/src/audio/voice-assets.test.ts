@@ -656,17 +656,17 @@ describe("gen-voice.mjs --check (B37)", () => {
   function unrenderedTree(set: string): { root: string; catalog: string } {
     const root = copyWebTree();
     editAudio(root, (table) => {
-      cardsOf(table)["meditative-999"] = { cast: { voice: "narrator", text: "Breathe in. Breathe out." } };
+      cardsOf(table)["boss-999"] = { cast: { voice: "narrator", text: "Breathe in. Breathe out." } };
     });
     const catalog = join(root, "catalog.json");
-    writeJson(catalog, { ...CATALOG, "meditative-999": { type: "Spell", set } });
+    writeJson(catalog, { ...CATALOG, "boss-999": { type: "Spell", set } });
     return { root, catalog };
   }
 
   it(
     "R1420 owes no file for a line of a set that has not shipped, and the same line on a shipped card is missing",
     () => {
-      const unshipped = unrenderedTree("Meditative");
+      const unshipped = unrenderedTree("Boss");
       const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
       expect(quiet.status, describeRun(quiet)).toBe(0);
       expect(reportedKeys(quiet)).toEqual([]);
@@ -674,7 +674,7 @@ describe("gen-voice.mjs --check (B37)", () => {
       const shipped = unrenderedTree("Core");
       const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
       expect(loud.status, describeRun(loud)).toBe(1);
-      expect(reportedKeys(loud)).toContain("meditative-999-cast");
+      expect(reportedKeys(loud)).toContain("boss-999-cast");
     },
     CHECK_TIMEOUT_MS,
   );

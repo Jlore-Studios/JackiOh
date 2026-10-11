@@ -365,26 +365,60 @@ mod r943 {
         );
     }
 
-    /// D14: until the Meditative set ships, nothing is marked, so a shipped game's state (The Coin
-    /// included) hashes as it did before the set.
+    /// D14: until the Meditative set shipped nothing was marked, so a game of the shipped sets hashed
+    /// as it did before the set. It shipped in v0.3.5: with nothing previewed, a game's setup now
+    /// hands out a Created Coin and deals every deck card unmarked.
     #[test]
-    fn r943_nothing_is_created_while_the_meditative_set_is_closed() {
+    fn r943_since_the_meditative_set_shipped_every_game_marks_the_coin_and_no_dealt_card() {
         jackioh_cards::register_all();
+        assert!(set_ships(SetName::Meditative));
         let mut cursor: u32 = 1;
         let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
-        assert_eq!(minted.created, None, "no mark while the set is closed");
-        let mut s = scenario(json!({
-            "seed": "benders-created-closed",
-            "p1": { "hand": [FILLER], "library": [{ "def": VANILLA }, FILLER] },
-            "p2": { "hand": [FILLER], "library": library() },
-        }));
-        let mut sink = Sink::for_state(s.state());
-        let coin = {
-            let state = s.state_mut();
-            let mut engine = sink.on(state);
-            create_in_hand(&mut engine, P1, "core-t-coin")
-        };
-        assert_eq!(coin.created, None, "The Coin of a shipped game is unmarked");
+        assert_eq!(minted.created, Some(true), "a minted instance is Created");
+        let deck: Vec<String> = [
+            "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+            "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
+            "core-017", "core-018", "core-019", "core-020",
+        ]
+        .map(String::from)
+        .to_vec();
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: "benders-created-shipped".to_string(),
+            decks: (deck.clone(), deck),
+            ..Default::default()
+        }))
+        .state;
+        // The Coin is dealt once both mulligans are answered (R244).
+        for player in PLAYER_IDS {
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            let action = Action::new(ActionBody::Mulligan { keep }, player, format!("created-{player}"));
+            let result = reduce(&state, &action);
+            assert_eq!(result.error, None);
+            state = result.state;
+        }
+        let cards: Vec<&CardInstance> = PLAYER_IDS
+            .iter()
+            .flat_map(|player| {
+                state.players[*player]
+                    .hand
+                    .iter()
+                    .chain(&state.players[*player].library)
+            })
+            .collect();
+        let coins: Vec<&&CardInstance> = cards.iter().filter(|card| card.def_id == COIN_DEF_ID).collect();
+        assert_eq!(coins.len(), 1, "the second seat holds The Coin");
+        assert_eq!(coins[0].created, Some(true), "The Coin is Created");
+        assert!(
+            cards
+                .iter()
+                .filter(|card| card.def_id != COIN_DEF_ID)
+                .all(|card| card.created.is_none()),
+            "dealt deck cards are not"
+        );
     }
 
     #[test]

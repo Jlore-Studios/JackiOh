@@ -4404,7 +4404,8 @@ the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbe
     - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
       Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
       Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
-      Peptides, M #86 Mayor Medinamogger and M #102 Catboy Maid SSR+.
+      Peptides, M #65 Keymaster Keenus (Lucky 1 is among its every keyword), M #86 Mayor Medinamogger
+      and M #102 Catboy Maid SSR+.
     - It is a query in `crates/cards/src/query.rs` (`luck_based()`), like every other random pool,
       over the catalog query's `luckBased` (`CatalogQueryArgs.luck_based`, `is_luck_based` in
       `crates/engine/src/catalog.rs`): either face's printed keywords hold Lucky, or its text says
@@ -5101,7 +5102,7 @@ R780–R799 up to MB26 R1280–R1299; MS01 R1300–R1319; MN01–MN09 ten each, 
 R1400–R1409; MR R1410–R1419; the foundation (MF) R1420–R1429, the top block, so that once it is on `main`
 the next free number (`spec/INDEX.md`'s last row plus one) is above every block and work outside #496
 never lands in one. A part that needs more than its block takes the next free number on `main`, and
-so does MB27, which came after the blocks were reserved and has none: it took R1444–R1440. The
+so does MB27, which came after the blocks were reserved and has none: it took R1438–R1440 and R1444. The
 blocks are listed in docs/issues-and-patches.md, Ruling numbers, so other work can see they are held;
 should a number of a block be on `main` anyway, the part renumbers per that section.
 
@@ -5154,11 +5155,15 @@ policy and the timeout can answer it.
 | MR | #553 | the release | the set ships: the gate opens, one fragment, the migration, deck codes, the traces, the audit | every other part (#571 included) | built by the orchestrating session |
 
 **The end state** (MR): every card of [[§8.8]] in the catalog with its script and tests; the set in
-`SHIPPED_SETS`; one pending fragment claiming the 132 entries, shipped by `patches ship`; the migration
-that lets the server seed the new tag; deck and trio codes that know the set's numbers; the golden traces
-re-blessed once and every seed-pinned test re-pinned for the bigger pools; the fuzz tool at 1,000 seeds,
-the AI's gates and the arena result of MN08 green; `cargo jackioh catalog check` holding Meditative to
-every count; REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`.
+`SHIPPED_SETS`; one pending fragment claiming the 132 entries, shipped by `patches ship`; the migrations
+that let the server seed the new tag (0030) and record the two new endings (0031), with `won-by-effect`
+joining `pg.rs`'s `DECISIVE_REASONS` (MB04's note below); deck and trio codes that know the set's numbers;
+the golden traces re-blessed once and every seed-pinned test re-pinned for the bigger pools; the fuzz tool
+at 1,000 seeds and the AI's gates green; `cargo jackioh catalog check` holding Meditative to every count;
+REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`. As amended on #551, MN08's
+sweep and arena result are not part of it: that training is deferred to issue #616, and until it is done
+the AI's random decks hold no Meditative card, a soft gate (`AI_DECK_GATED_SETS`) that #616 lifts by
+emptying the list once the AI meets MN08's bar ([[R1390]]).
 
 MB04's note for that migration (issue #520): it must also admit `alt-win` and `won-by-effect` in
 `results_reason_check` (0004) and `rated_games_reason_check` (0022), and `won-by-effect` joins

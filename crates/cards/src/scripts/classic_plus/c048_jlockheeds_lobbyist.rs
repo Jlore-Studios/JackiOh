@@ -2,7 +2,8 @@
 //!   Base:    "Can't be in Defense Position. Death: Add a random Jlockheed card to your hand. It costs (0)."
 //!   Radiant: "Death: Add a random Radiant Jlockheed card to your hand. It costs (0)."
 //!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
-//!            C+ #52) but this one (R387): #13, #14, C #4, C+ #51 and C+ #52; `costOverride` 0; the hand
+//!            C+ #52, M #87, M #97) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87 and M #97;
+//!            `costOverride` 0; the hand
 //!            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
 //!
@@ -63,7 +64,18 @@ mod tests {
     const SWITCH_ALL: &str = "core-048"; // (0) Spell: switch the position of every Unit
     const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
     const FILLER: &str = "core-005";
-    const POOL: [&str; 5] = ["classic-004", "classicplus-051", "classicplus-052", "core-013", "core-014"];
+    /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52
+    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockheed's Evil Blueprints (§8.8).
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool.
+    const POOL: [&str; 7] = [
+        "classic-004",
+        "classicplus-051",
+        "classicplus-052",
+        "core-013",
+        "core-014",
+        "meditative-087",
+        "meditative-097",
+    ];
 
     #[derive(Default)]
     struct Board {
@@ -199,7 +211,7 @@ mod tests {
         }
 
         #[test]
-        fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_and_c_n51_n52_one_tag_never_itself() {
+        fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_c_n51_n52_and_meditative_n87_n97_one_tag_never_itself() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
             for i in 0..80 {

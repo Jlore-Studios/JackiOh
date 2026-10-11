@@ -210,7 +210,8 @@ mod tests {
                 let grapes: IndexSet<&str> = GRAPE_ODDS.iter().map(|grape| grape.def_id).collect();
                 let table: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
                 let mut differed = 0;
-                for seed in ["drop-reroll-3", "drop-reroll-36", "drop-reroll-72", "drop-reroll-76"] {
+                // Re-pinned for v0.3.5: the Meditative set joins the pool, so other seeds pick the Grapes.
+                for seed in ["drop-reroll-7", "drop-reroll-16", "drop-reroll-19", "drop-reroll-46"] {
                     let mut s = shop(seed, false, &[FILLER]);
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut probe = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -358,19 +359,29 @@ mod tests {
                 s.play(DROP, json!({}));
                 // Nine cards in hand after the play: one fits, two burn.
                 assert_eq!(added(&s).len(), 1);
-                let burned: Vec<String> = s
+                let burned: Vec<(String, String)> = s
                     .events()
                     .iter()
                     .filter_map(|event| match event {
-                        GameEvent::Burned { instance_id, .. } => Some(instance_id.clone()),
+                        GameEvent::Burned { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
                         _ => None,
                     })
                     .collect();
                 assert_eq!(burned.len(), 2);
-                for id in &burned {
-                    let card = s.card(id);
-                    assert!(matches!(card.zone.z(), ZoneName::Graveyard | ZoneName::Gone));
-                    assert_eq!(card.brittle, None);
+                for (id, def_id) in &burned {
+                    match find_instance(s.state(), id) {
+                        Some(card) => {
+                            assert!(matches!(card.zone.z(), ZoneName::Graveyard | ZoneName::Gone));
+                            assert_eq!(card.brittle, None);
+                        }
+                        // A burned unit token ceases to exist (R11): it is in no pile, so nothing holds a
+                        // count. Re-pinned for v0.3.5: the Meditative set joins the pool, and this seed
+                        // now burns a unit token (C+ #19.5), which no pile holds to look up.
+                        None => {
+                            let def = def_of(Some(s.state()), def_id);
+                            assert!(def.token && def.type_ == CardType::Unit, "{def_id}");
+                        }
+                    }
                 }
                 assert_eq!(s.hand(P1).len(), cap);
             }

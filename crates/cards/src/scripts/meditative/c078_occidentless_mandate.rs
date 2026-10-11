@@ -265,7 +265,10 @@ mod tests {
 
             #[test]
             fn discount_reads_through_param() {
-                let mut s = decreed("mandate-radiant-param", true, json!([VANILLA]), json!([]));
+                // Re-pinned for v0.3.5: the Meditative set joins the pool. The old seed now draws
+                // M #37 CN in a bottle, which replaces itself on arrival with a fresh card that
+                // carries no discount; this one draws M #40 Feng Shui.
+                let mut s = decreed("mandate-radiant-param-0", true, json!([VANILLA]), json!([]));
                 set_param(s.card_mut(ID), "discount", 3);
                 s.play(ID, json!({}));
                 assert_eq!(added(&s).iter().map(|card| card.cost_mod).collect::<Vec<i32>>(), vec![-3]);

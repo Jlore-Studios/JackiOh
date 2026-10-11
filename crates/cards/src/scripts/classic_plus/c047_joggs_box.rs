@@ -58,7 +58,9 @@ mod tests {
     const BOX: &str = "classicplus-047";
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
-    const CALLS: [&str; 2] = ["core-095", "classicplus-073"];
+    /// Every Call to Chaos edition (R380): Core #95, C+ #73 and M #95. Re-pinned for v0.3.5: the
+    /// Meditative set joins the pool.
+    const CALLS: [&str; 3] = ["core-095", "classicplus-073", "meditative-095"];
 
     #[derive(Clone, Debug)]
     struct Played {
@@ -264,7 +266,11 @@ mod tests {
             assert!(!seen.contains(BOX));
             assert!(defs.iter().all(|entry| entry.type_ == CardType::Spell && !entry.token));
             let sets: IndexSet<SetName> = defs.iter().map(|entry| entry.set).collect();
-            assert_eq!(sets, IndexSet::from([SetName::Core, SetName::Classic, SetName::ClassicPlus]));
+            // Re-pinned for v0.3.5: the Meditative set joins the pool.
+            assert_eq!(
+                sets,
+                IndexSet::from([SetName::Core, SetName::Classic, SetName::ClassicPlus, SetName::Meditative])
+            );
         }
 
         #[test]

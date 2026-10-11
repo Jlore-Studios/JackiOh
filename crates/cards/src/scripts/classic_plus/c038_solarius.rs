@@ -215,7 +215,9 @@ mod tests {
             assert_eq!(primes.len(), 1);
             assert!(!primes[0].radiant);
             assert_eq!(library.len(), 13);
-            assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": false, "count": 1 })));
+            // The Prime is effect-made, so R943 marks it Created. Re-pinned for v0.3.5: the Meditative
+            // set ships, so R943's Created mark is live.
+            assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": false, "count": 1, "created": true })));
             assert!(events_json(&s).iter().any(|event| event["type"] == "shuffledIn" && event["defId"] == PRIME));
         }
 
@@ -302,7 +304,8 @@ mod tests {
             let primes: Vec<bool> =
                 s.pile(P1, "library").into_iter().filter(|card| card.def_id == PRIME).map(|card| card.radiant).collect();
             assert_eq!(primes, vec![true]);
-            assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": true, "count": 1 })));
+            // R943: Created (re-pinned for v0.3.5: the Meditative set ships, so the mark is live).
+            assert!(own_library_cards(&s).contains(&json!({ "defId": PRIME, "radiant": true, "count": 1, "created": true })));
         }
     }
 }

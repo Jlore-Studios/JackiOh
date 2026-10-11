@@ -37,6 +37,7 @@ const SCHOOL: &str = "meditative-097-3";
 const MEGA_CHURCH: &str = "meditative-097-4";
 const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
+const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
 const YILES_VIRUS: &str = "meditative-049-2";
@@ -44,7 +45,7 @@ const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 24] = [
+const ACTIVATE_CARDS: [&str; 25] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -64,6 +65,7 @@ const ACTIVATE_CARDS: [&str; 24] = [
     MEGA_CHURCH,
     UNIVERSITY,
     HEADQUARTERS,
+    MONEY_MACHINE,
     GACHAHOLIC,
     ALUNETH,
     YILES_VIRUS,
@@ -929,6 +931,48 @@ mod m_n97_9_jlockheeds_headquarters {
         assert!(!listed(&s, &id).is_empty(), "Activate 2 has a second use");
         activate_listed(&mut s, HEADQUARTERS, any);
         assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+mod m_n54_money_machine {
+    use super::*;
+
+    /// Its controller uses the listed `activate`: 2 of p1's mana, and the Machine is Tributed.
+    fn tributes_itself(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, MONEY_MACHINE, any);
+        assert_eq!(s.state().players.p1.mana.current, mana - 2);
+        s.expect_in_zone(MONEY_MACHINE, "graveyard");
+    }
+
+    #[test]
+    fn r384_r1105_base_spends_2_and_tributes_itself() {
+        tributes_itself(false);
+    }
+
+    #[test]
+    fn r384_r1105_radiant_spends_2_and_tributes_itself() {
+        tributes_itself(true);
+    }
+
+    /// MD-D9: on p2's own turn, p2's `legal_actions` lists the `activate` off p1's Machine too.
+    #[test]
+    fn r1105_the_opponent_is_listed_it_on_their_own_turn() {
+        let s = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": [MONEY_MACHINE], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(MONEY_MACHINE).id.clone();
+        assert!(
+            legal_actions(s.state(), P2).into_iter().any(
+                |action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
+            )
+        );
     }
 }
 

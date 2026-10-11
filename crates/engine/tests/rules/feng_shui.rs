@@ -3,8 +3,9 @@
 //!
 //! The units' indices end in 1–5 on purpose (R980: 水 火 木 金 土); the Trap ends in 2 (火) and the
 //! judge in 0 (土). Every pipeline test puts a judge in p1's backrow and plays two cards: the first
-//! play writes the record, the second is judged against it. The record tests preview the Meditative
-//! set, which is what writes it (R982).
+//! play writes the record, the second is judged against it. The record was written only while the
+//! Meditative set was open (R982, D14); the set shipped in v0.3.5, so it is written in every game,
+//! and the tests that still preview the set preview nothing it had not opened already.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -301,23 +302,38 @@ mod r982_a_face_down_play_is_neither_judged_nor_recorded {
     }
 }
 
-mod r982_no_record_while_the_set_is_closed {
+mod r982_the_record_is_written_in_every_game_since_the_set_shipped {
     use super::*;
 
+    /// Until the release no record was written while the set was closed, so every play was a first
+    /// play; the set shipped in v0.3.5, so with nothing previewed the first play is recorded and the
+    /// second is judged against it.
     #[test]
-    fn r982_no_record_while_the_set_is_closed() {
-        assert!(!set_is_open(SetName::Meditative));
-        let mut state = game("r982-closed");
-        judge(&mut state, false);
+    fn r982_the_record_is_written_in_every_game_since_the_set_shipped() {
+        assert!(set_ships(SetName::Meditative));
+        let mut state = game("r982-shipped");
+        let judge_card = judge(&mut state, false);
         let wood = one(&mut state, PlayerId::P1, &id_for("wood"), false);
         let state = play(&state, PlayerId::P1, &wood.id).state;
-        assert_eq!(last_element(&state, PlayerId::P1), None);
-        // With no record every later play is a first play: neutral, whatever the pair.
+        assert_eq!(last_element(&state, PlayerId::P1), Some(CardElement::Wood));
+        // Wood generates fire: the second play is judged positive and recorded in turn.
         let mut state = state;
         let fire = one(&mut state, PlayerId::P1, &id_for("fire"), false);
         let played_out = play(&state, PlayerId::P1, &fire.id);
-        assert!(of_type(&played_out.events, "fengShui").is_empty());
-        assert_eq!(last_element(&played_out.state, PlayerId::P1), None);
+        assert_eq!(
+            of_type(&played_out.events, "fengShui"),
+            vec![json!({
+                "type": "fengShui",
+                "instanceId": fire.id,
+                "sourceId": judge_card.id,
+                "player": "p1",
+                "outcome": "positive",
+            })]
+        );
+        assert_eq!(
+            last_element(&played_out.state, PlayerId::P1),
+            Some(CardElement::Fire)
+        );
     }
 }
 
