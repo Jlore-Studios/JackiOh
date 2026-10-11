@@ -899,8 +899,15 @@ mod tests {
 
     #[test]
     fn a_card_nothing_can_carry_into_a_deck_is_refused() {
-        for id in ["core-t-coin", "no-such-card"] {
+        // No deckable card's refs name the Glitch token.
+        for id in ["classic-t-glitch", "no-such-card"] {
             assert!(resolve_force(&ids(&[id])).is_err(), "{id}");
         }
+        // The Coin was such a token until the Meditative set shipped in v0.3.5: Meditative #27
+        // Clip-Farming Lawyer names it, so it carries it now.
+        assert_eq!(
+            resolve_force(&ids(&["core-t-coin"])).unwrap(),
+            ids(&["meditative-027"])
+        );
     }
 }
