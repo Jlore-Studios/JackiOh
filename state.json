@@ -4472,7 +4472,15 @@
       "feedback_since": "2026-10-11T18:15:03Z",
       "issue": 649,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "93374b7b006525b221cca78908c3465bca34c558",
+        "tiers": {}
+      }
     },
     "75": {
       "action": "build",
