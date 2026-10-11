@@ -333,12 +333,14 @@ mod tests {
             s.play(INJECTION, json!({}));
 
             // The play was public and its text names the card, so p2 knows what went in; never where.
-            // Both cost 1, so the list goes by name (R310): CN-Virus before Stockpile.
+            // Both cost 1, so the list goes by name (R310): CN-Virus before Stockpile. The virus is
+            // effect-made, so R943 marks it Created; the dealt Stockpiles carry no mark. Re-pinned for
+            // v0.3.5: the Meditative set ships, so R943's Created mark is live.
             assert_eq!(
                 js(&s.view(Some(P2)).you.own_library),
                 json!({
                     "cards": [
-                        { "defId": VIRUS, "radiant": true, "count": 1 },
+                        { "defId": VIRUS, "radiant": true, "count": 1, "created": true },
                         { "defId": "core-005", "radiant": false, "count": 4 },
                     ],
                     "unknown": 0,
@@ -363,7 +365,9 @@ mod tests {
             let list = s.view(Some(P1)).you.own_library;
             assert_eq!(list.as_ref().map(|list| list.unknown), Some(0));
             let cards: Vec<Value> = list.map(|list| list.cards.iter().map(js).collect()).unwrap_or_default();
-            assert!(cards.contains(&json!({ "defId": VIRUS, "radiant": false, "count": 2 })));
+            // R943: the copies are effect-made, so Created (re-pinned for v0.3.5: the Meditative set
+            // ships, so R943's Created mark is live).
+            assert!(cards.contains(&json!({ "defId": VIRUS, "radiant": false, "count": 2, "created": true })));
             assert!(cards.contains(&json!({ "defId": "core-005", "radiant": false, "count": 3 })));
         }
     }
