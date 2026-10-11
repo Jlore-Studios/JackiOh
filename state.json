@@ -4420,6 +4420,13 @@
     "666": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T20:02:44Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 3 fails: deleting stale open rows is a \u00a79.5 lifecycle decision the spec does not make, so the change adds ruling R1450 and edits spec/; the item is also already set to medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
