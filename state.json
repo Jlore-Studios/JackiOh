@@ -4212,6 +4212,13 @@
     "648": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T16:41:07Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 5 fails: the invariant lives in crates/engine/src/testkit/invariants.rs and cites R113 (rule 3); it is testkit code, not rules or the resolution loop, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
