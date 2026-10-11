@@ -1709,6 +1709,10 @@
       play: { voice: "sapi-trickster", text: "Just one more pull. I can feel it." },
       death: { voice: "sapi-trickster", text: "The pity was so close..." },
     },
+    "meditative-102": { // Catboy Maid SSR+
+      play: { voice: "sapi-cat", text: "Welcome home, master! Nyaa!" },
+      death: { voice: "sapi-cat", text: "Nyaa... logging off." },
+    },
   },
   emotes: {
     vanilla: {

@@ -15827,5 +15827,42 @@
       "keywords": [],
       "text": "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
     }
+  },
+  "meditative-102": {
+    "id": "meditative-102",
+    "index": "102",
+    "name": "Catboy Maid SSR+",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 38,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 2
+        }
+      ],
+      "text": "Lucky 2\nCry: Draw 1-2. Add 1-10 to your Jade Counter."
+    }
   }
 }

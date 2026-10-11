@@ -780,14 +780,21 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
                 "classicplus-053",
                 "classicplus-065",
                 "classicplus-066",
+                // The Meditative set ships (R1420): SPEC §8.8's #36, #65, #86 and #102.
+                "meditative-036",
+                "meditative-065",
+                "meditative-086",
+                "meditative-102",
             ])
         );
         let _preview = preview_sets(&[SetName::Meditative]);
         let expected: Vec<String> = ids(CATALOG.values().filter(|def| reads_as_luck_based(def)));
         assert_eq!(sorted(ids(query(&luck_based()))), sorted(expected.clone()));
-        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
-        // makes no roll; #101 Gachaholic gives Lucky and prints none.
+        // Meditative #36 CN Peptides and #86 Mayor Medinamogger print Lucky on their Radiant faces,
+        // #65 Keymaster Keenus and #102 Catboy Maid SSR+ on both; #40 Feng Shui gives Luck and makes
+        // no roll; #101 Gachaholic gives Lucky and prints none.
         assert!(expected.contains(&"meditative-036".to_string()));
+        assert!(expected.contains(&"meditative-102".to_string()));
         assert!(!expected.contains(&"meditative-040".to_string()));
         assert!(!expected.contains(&"meditative-101".to_string()));
     }
@@ -829,6 +836,8 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "meditative-091",
         "meditative-093",
         "meditative-101",
+        // SPEC §8.8 row 102: Catboy Maid SSR+, a 1/1.
+        "meditative-102",
     ];
 
     #[test]
