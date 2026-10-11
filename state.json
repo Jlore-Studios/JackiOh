@@ -4473,6 +4473,7 @@
         "by": "`claude` (strong)",
         "sha": "93374b7b006525b221cca78908c3465bca34c558"
       },
+      "closed_at": "2026-10-11T18:47:59Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -4482,6 +4483,7 @@
       "interruptions": 0,
       "issue": 649,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-11T18:40:39Z",
