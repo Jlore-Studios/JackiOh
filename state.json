@@ -4521,11 +4521,13 @@
         "by": "`claude` (strong)",
         "sha": "50e447211b8c01d13aac8110977ce44efa5a5aaa"
       },
+      "closed_at": "2026-10-11T18:51:58Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-11T17:53:27Z",
       "issue": 647,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
