@@ -176,12 +176,12 @@ mod tests {
                 // Nothing into the Golem's own deck.
                 assert_eq!(s.pile(P1, "library").len(), 2);
                 assert!(viruses(&s, P1).is_empty());
-                // R311: shuffled in openly, so p2's own list names it.
+                // R311: shuffled in openly, so p2's own list names it, marked Created (R943).
                 assert_eq!(
                     crate::js(&s.view(Some(P2)).you.own_library),
                     json!({
                         "cards": [
-                            { "defId": CN_VIRUS, "radiant": false, "count": 1 },
+                            { "defId": CN_VIRUS, "radiant": false, "created": true, "count": 1 },
                             { "defId": FILLER, "radiant": false, "count": 4 },
                         ],
                         "unknown": 0,
