@@ -140,12 +140,6 @@ pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: Anim
     step_into_units(sink, card, options, true)
 }
 
-/// R1062 revises R383 with the Meditative set (R1420): until the set opens, an "Animated on your turn"
-/// card's start-of-turn animation is an entry as before, so a shipped game plays as it did (D14).
-pub fn r1062_is_live() -> bool {
-    crate::catalog::set_is_open(crate::wire::SetName::Meditative)
-}
-
 /// B3.1 rules 2, 4 and 5 shared by `animate_card` (an entry) and `animate_at_turn_start` (none, R1062).
 fn step_into_units(
     sink: &mut FieldSink<'_>,
@@ -292,7 +286,8 @@ pub fn animate_on_entry(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
 
 /// B3.1 rule 4: `player`'s "Animated on your turn" cards step into their unit zones, backrow lane 1 to
 /// 5 (R68's order), each as far as an open unit zone lets it. Only the top of a backrow pile acts (B5
-/// E21), and a face-down card stays hidden (rule 8).
+/// E21), and a face-down card stays hidden (rule 8). The step is no entry (R1062, which revised R383
+/// with the Meditative set and holds in every game since it shipped in v0.3.5).
 pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
     for slot in slots_of(player, Row::Backrow) {
         let Some(card) = card_at(sink.state, slot).cloned() else {
@@ -304,7 +299,7 @@ pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
         if animated_kind_of(sink.state, &card) != Some(AnimatedKind::AnimatedOnYourTurn) {
             continue;
         }
-        step_into_units(sink, &card, AnimateOptions::default(), !r1062_is_live());
+        step_into_units(sink, &card, AnimateOptions::default(), false);
     }
 }
 

@@ -8,7 +8,8 @@ import type { Tag } from "./Tag";
  */
 export type GameLog = { playedByTag: { [key in Tag]?: number }, lastFaceUpPlay?: FaceUpRecord, 
 /**
- * R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written only
- * while the Meditative set is open, so a shipped game never carries it (D14).
+ * R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written in
+ * every game since the Meditative set shipped (v0.3.5; before it, only while the set was
+ * previewed, D14).
  */
 lastElement?: CardElement, };

@@ -128,6 +128,15 @@ fn entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
     }
 }
 
+/// An entry of cards an effect minted into the library: Created (R943), unlike the dealt cards
+/// `set_library` lays down.
+fn created_entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
+    LibraryEntryView {
+        created: Some(true),
+        ..entry(def_id, radiant, count)
+    }
+}
+
 fn to_json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("serialises")
 }
@@ -363,7 +372,7 @@ mod r311_what_the_owner_was_shown_going_in {
             list_of(&state, P1),
             LibraryView {
                 cards: vec![
-                    entry(&virus().id, true, 1),
+                    created_entry(&virus().id, true, 1),
                     entry(&alpha().id, false, 1),
                     entry(&beta().id, false, 1)
                 ],
@@ -460,7 +469,7 @@ mod r312_cards_the_owner_was_never_shown {
         assert_eq!(
             list_of(&state, P1),
             LibraryView {
-                cards: vec![entry(&alpha().id, false, 1)],
+                cards: vec![created_entry(&alpha().id, false, 1)],
                 unknown: 2
             }
         );
