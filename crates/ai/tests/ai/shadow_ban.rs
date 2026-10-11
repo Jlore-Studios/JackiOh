@@ -530,6 +530,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
     // for two seeds, Hard's two take 12 s). Whether a card is affordable at four crystals follows from
     // its cost, never from the seed, so Easy's check plays one game.
+    //
+    // Hard's check plays four: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
+    // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
+    // and 8, before its sixth crystal; game 4 holds the card affordable on four turns.
 
     /// R186 GIGA Glowy Jelly Bean (6 mana) is unswept at Easy's four crystals
     #[test]
@@ -556,7 +560,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         let hard = js(sweep_card(
             "core-029",
             &SweepOptions {
-                seeds: Some(2),
+                seeds: Some(4),
                 now: None,
                 tier: Some(Difficulty::Hard),
             },

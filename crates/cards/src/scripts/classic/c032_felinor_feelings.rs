@@ -3,22 +3,18 @@
 //!   Radiant: "Summon a Felinor Token. Then steal an enemy permanent in a lane where you control a (1)
 //!             Cost Unit."
 //!
-//! "In a lane where you control a (1) Cost Unit": a lane (§3.1) holding a Unit its caster controls —
-//! the top of a unit pile, since a card dormant under a Stack is not on the field (R13) — whose own
-//! cost is exactly (1): R396's reading (`costNow`), R65's cost where it stands, its cost changes
-//! counting, an X Unit at the X it was played for (0 with none chosen). The enemy permanent may be the
-//! top of their unit pile in that lane or their backrow card in it, face-down included (whose identity
-//! the thief reads from then on, and its owner no longer does, R33).
+//! A lane (§3.1) counts when the top of its unit pile (a card dormant under a Stack is not on the
+//! field, R13) is yours and costs exactly (1): R396's `costNow`, R65's cost where it stands, an X Unit
+//! at the X it was played for (0 with none chosen). The enemy permanent may be the top of their pile
+//! there or their backrow card, face-down included (the thief reads it from then on, R33; an option
+//! carries only its id, R177).
 //!
-//! Base: a declared target (R81), filtered by `targetChecks` (§10.6) so `legalActions` and the client
-//! offer only the permanents in such lanes. A board that offers none does not refuse the play: it is
-//! legal with no target and the steal fizzles (§8's conventions, R90). The steal is §6.3's (R15: its
-//! own lane on your side if free, else the first free zone of its row; none, and it stays), an entry
-//! that leaves a stolen Unit summoning sick (R171).
+//! Base: a declared target (R81), filtered by `targetChecks` (§10.6). With no such target the play is
+//! still legal and the steal fizzles (§8's conventions, R90). The steal is §6.3's (R15: its own lane
+//! if free, else the first free zone; none, and it stays), an entry that leaves it summoning sick (R171).
 //!
-//! Radiant: first a Felinor Token (a (1) Cost Unit) in your leftmost open unit zone (R64); then the
-//! steal is a prompt, so the token's own lane counts. A full board summons no token and the prompt
-//! reads the lanes as they are; with no such permanent the prompt is never opened.
+//! Radiant: first a Felinor Token in your leftmost open unit zone (R64), then the steal is a prompt, so
+//! the token's lane counts. A full board summons no token; with no such permanent no prompt opens.
 
 use indexmap::IndexSet;
 use jackioh_engine::prelude::*;
@@ -55,12 +51,10 @@ fn in_feeling_lane(state: &GameState, player: PlayerId, card: Option<&CardInstan
     feeling_lanes(state, player).contains(&lane)
 }
 
-/// `const laneRule: TargetCheck = ({ state, player, candidate }) => inFeelingLane(state, player, candidate)`.
 fn lane_rule() -> TargetCheck {
     target_check(|args| in_feeling_lane(args.state, args.player, args.candidate))
 }
 
-/// `steal({ target: { of: "chosen" } })`.
 fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
@@ -94,16 +88,6 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #32 Felinor Feelings — SPEC §8.6 row 32, BUILD M9 Classic row C 32: "The target is declared with
-// the play (R81): any enemy permanent (the top of a unit pile, a backrow card, a face-down card) in a
-// lane where a Unit you control costs exactly (1) (R65, its `costMod` counting; an X Unit its X, 0 with
-// none chosen, R396); no such target → the play is still legal and the steal fizzles (§8's
-// conventions, R90); stolen per §6.3 (its own lane if free, else the first free zone; none → it stays,
-// R15), an entry that leaves it summoning sick (R171); a stolen face-down trap is read by you from then
-// on and no longer by its owner (R33); a face-down option carries only its id (R177); radiant: first
-// summon a Felinor Token into your leftmost open zone, then pick the steal in a prompt, so the token's
-// lane counts; a full board summons no token and the prompt reads the rest; no target then → nothing;
-// no tuned numbers".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,7 +106,6 @@ mod tests {
     const TOKEN: &str = "core-t-felinor";
     const FILLER: &str = "core-010";
 
-    /// `{ ...base, ...over }`: TS's object spread of a side setup over its defaults.
     fn spread(mut base: Value, over: Value) -> Value {
         if let (Some(into), Some(more)) = (base.as_object_mut(), over.as_object()) {
             for (key, value) in more {
@@ -132,7 +115,7 @@ mod tests {
         base
     }
 
-    /// TS `setup(p1, p2, radiantFace = false)`: each `SideSetup` spread over the hand Feelings needs.
+    /// Each `SideSetup` spread over the hand Feelings needs.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "p1": spread(json!({ "hand": [{ "def": FEELINGS, "radiant": radiant_face }, FILLER] }), p1),
@@ -178,7 +161,7 @@ mod tests {
             .collect()
     }
 
-    /// The open prompt's options, as selections (TS `s.state.pending?.options.map((o) => o.selection)`).
+    /// The open prompt's options, as selections.
     fn pending_selections(s: &Scenario) -> Option<Vec<Selection>> {
         s.state()
             .pending
@@ -285,8 +268,6 @@ mod tests {
                 let billy = must_unit(&s, P1, 1);
                 let menace = must_unit(&s, P2, 1);
 
-                // TS wrote through the live instance (`delete billy.x`, `billy.x = 1`); here it is found
-                // in the state by id.
                 find_instance_mut(s.state_mut(), &billy.id).expect("Billy is on the field").x = None;
                 assert!(!offered(&s).contains(&menace.id));
                 find_instance_mut(s.state_mut(), &billy.id).expect("Billy is on the field").x = Some(1);

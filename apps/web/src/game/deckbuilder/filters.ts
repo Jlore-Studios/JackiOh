@@ -13,9 +13,15 @@
 // The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
 // catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
 // builds none, and its tag chips are `ALMANAC_TAGS`.
+//
+// Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
+// chip shows only while a card of a shipped set carries its tag (`shippedTags`), so the Meditative
+// set's chip and Wincon's arrive with the set and never before.
 
+import { CATALOG } from "@jackioh/cards";
 import {
   SHIPPED_SETS,
+  setShips,
   fillParams,
   type CardCost,
   type CardDef,
@@ -27,6 +33,7 @@ import {
 } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { isGlitch } from "../../cards/glitch.ts";
 import { poolFrom } from "./loadout.ts";
 import { almanacShelf } from "./shelf.ts";
 
@@ -61,19 +68,40 @@ export const FILTER_TAGS: readonly Tag[] = [
   // The mechanics patch: every card that uses Plague Counters.
   "Plague",
   // Patch v0.2.Y: Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max
-  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the two Prime tokens carry it.
+  // and Classic+ #37 Wardrum. "Prime" is left out with "AI": only the Prime tokens carry it.
   "Catalyst",
   "Acclaimed",
+  // The Meditative set's (R1381): #8 Reach the Summit and #20 Aestheticize the Game, which win the
+  // game another way (R1420's set). The chip shows once a shipped card carries it.
+  "Wincon",
 ];
 
 /**
  * The almanac's tag chips (R630): the deck builder's, then the three only tokens carry, "Prime" (the
- * two Prime tokens), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
+ * Prime tokens, R1421), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
  * a catalog card carries.
  */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Token"];
 
-/** The sets a deck may draw on (R380: one format, every set), in catalog order. */
+/** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
+export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {
+  const carried = new Set<Tag>();
+  for (const def of cards) {
+    if (isGlitch(def.id) || !setShips(def.set)) continue;
+    for (const tag of def.tags) carried.add(tag);
+  }
+  return order.filter((tag) => carried.has(tag));
+}
+
+const BUNDLED: readonly CardDef[] = Object.values(CATALOG);
+
+/** R1381: the deck builder's tag chips, read off the bundled catalog. */
+export const DECK_CHIP_TAGS: readonly Tag[] = shippedTags(FILTER_TAGS, BUNDLED);
+
+/** R1381: the almanac's tag chips. */
+export const ALMANAC_CHIP_TAGS: readonly Tag[] = shippedTags(ALMANAC_TAGS, BUNDLED);
+
+/** The sets a deck may draw on (R380: one format, every set that ships, R1380), in catalog order. */
 export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;
 
 export const FILTER_RARITIES: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];

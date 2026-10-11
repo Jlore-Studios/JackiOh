@@ -62,7 +62,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `s.unit(seat, lane) ?? fallback`: the unit's id, or the fallback reference.
+    /// The unit's id, or the fallback reference.
     fn unit_or(s: &Scenario, seat: PlayerId, lane: i32, fallback: &str) -> String {
         s.unit(seat, lane).map(|card| card.id).unwrap_or_else(|| fallback.to_string())
     }
@@ -93,7 +93,7 @@ mod tests {
             assert_eq!(ID, HOGAR);
             assert_eq!(crate::card_def(ID).id, HOGAR);
             let scripts = script();
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
+            // The Radiant face is the base script itself.
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.death.as_ref().unwrap(),
                 scripts.radiant.death.as_ref().unwrap()

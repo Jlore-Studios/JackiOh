@@ -25,12 +25,13 @@ pub use crate::catalog::{
     CatalogQueryArgs, FUSED_DIGEST_MARK, GlitchOdds, RADIANT_INGREDIENT_MARK, TransientHolder,
     catalog_version, def_by_index, def_of, excluding_def_id, find_def, fused_id_parts, fused_id_specs,
     glitch_or_not, is_digest_id, pick_generated, query, query_cost, registered_catalog, roll_grape,
-    self_def_ids,
+    roll_weighted, self_def_ids,
 };
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;
 pub use crate::faces::*;
+pub use crate::grants::*;
 pub use crate::graveyard_play::*;
 pub use crate::kill_credit::*;
 pub use crate::layers::*;
@@ -44,10 +45,12 @@ pub use crate::replacements::*;
 pub use crate::restrictions::*;
 pub use crate::rng::*;
 pub use crate::script::*;
+pub use crate::secrets::*;
 pub use crate::state::*;
 pub use crate::times_played::*;
 pub use crate::traps::*;
 pub use crate::tuning::*;
+pub use crate::win_rates::*;
 pub use crate::zones::*;
 
 pub use crate::effects::*;

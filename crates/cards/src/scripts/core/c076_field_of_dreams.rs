@@ -1,35 +1,21 @@
 //! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5).
 //!
 //! Base: "Replace your hand with the same number of Reminisce; exile this". The radiant cell is
-//! "Radiant Reminisce", which restates only what the copies are, so every other clause is kept
-//! (§8 Conventions) and the two faces differ by one flag.
+//! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.
 //!
-//! R31 is the whole card: "Replaced cards go to the GY (ruling), so Reminisce can find them." So the
-//! replacement is a DISCARD of the whole hand, not an exile — the old hand lands in the graveyard,
-//! which is exactly the pool #72 Reminisce discovers from (R50 reads the actual graveyard, so the
-//! spell tokens among them are eligible too). A unit-token card in that hand ceases to exist instead
-//! of reaching the graveyard, which is `discard`'s own R11 rule and not this card's business.
-//!
-//! N is the hand size AT RESOLUTION. §10.5 step 4 has already moved Field of Dreams out of the hand
-//! into `resolving`, so it never counts itself, and the effects below are built before any of them
-//! applies — the count is taken before the hand is emptied. N = 0 (the last card in hand) discards
-//! nothing, adds nothing and still exiles this.
-//!
-//! The hand cap never bites here (R4): N ≤ HAND_CAP − 1 because Field of Dreams itself held a slot,
-//! and the N copies arrive into a hand the discard has just emptied, so nothing is ever burned.
-//! `add_to_hand` applies the cap regardless, so the rule is enforced either way.
-//!
-//! Missing verbs (see the report): `discard_hand({ player })` — a deterministic whole-hand discard.
-//! `discard_random({ count: N })` would be wrong, not merely ugly: it burns N rng draws to reach a
-//! deterministic outcome and so shifts `rng_cursor`, which breaks replay parity (§9.3, §10.7).
+//! R31: the replacement is a DISCARD of the whole hand, so the old cards land in the graveyard, the pool
+//! #72 Reminisce discovers from (R50); a unit-token card in that hand ceases to exist instead (R11,
+//! `discard`'s rule). N is the hand size AT RESOLUTION: §10.5 step 4 already moved this card to
+//! `resolving`, so it never counts itself. N = 0 discards nothing and still exiles this. R4's cap never
+//! bites: N ≤ HAND_CAP − 1 and the copies arrive into an emptied hand. `discard_hand` is deterministic;
+//! `discard_random` would shift `rng_cursor` and break replay parity (§9.3, §10.7).
 
 use jackioh_engine::effects::{add_to_hand, discard_hand, exile};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-076";
 
-/// R31: the card the hand is replaced with — #72 Reminisce, by catalog id (TS read it off
-/// `cardDef("core-072")`, never restating it; the catalog check holds the id to the catalog).
+/// R31: the card the hand is replaced with — #72 Reminisce, by catalog id (the catalog check holds it).
 const REMINISCE: &str = "core-072";
 
 /// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This is the only
@@ -91,14 +77,13 @@ mod tests {
         json!({ "field": ["core-019"], "library": ["core-008", "core-008"] })
     }
 
-    /// TS `{ ...KEEP_BUSY, hand }`.
     fn busy_with_hand(hand: Value) -> Value {
         let mut side = keep_busy();
         side["hand"] = hand;
         side
     }
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)

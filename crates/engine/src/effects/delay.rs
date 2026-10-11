@@ -24,17 +24,20 @@ use serde_json::Value;
 
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, discard_hand};
+use crate::effects::steal::{StealOtherwise, StealTarget, steal};
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, cards_in_scope, instance_of, player_of, stands_since_script_began,
+    BoardScope, PlayerSpec, TargetSpec, cards_in_scope_aimed, instance_of, player_of,
+    stands_since_script_began,
 };
 use crate::marks::{mark_delayed, sync_marks};
-use crate::modifiers::{add_start_of_turn_effect, schedule_delayed};
-use crate::prompts::{SELF_KEY, resume_self};
+use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delayed};
+use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
-use crate::state::{DelayedAt, DelayedEffect, Resume, is_turn_of};
-use crate::wire::{CardMark, Phase, PlayerId, ZoneName};
+use crate::state::{DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
+use crate::wire::{CardMark, Phase, PlayerId, Row, ZoneName, opponent_of};
 use crate::work::RUN_MARKS_KEY;
+use crate::zones::{card_at, slots_of};
 
 /// The `Script` key a delayed continuation lands on unless the card names another. `script.ts`
 /// documents `delayed` as "a delayed effect this card scheduled, resolved at its R62 point", and it
@@ -46,6 +49,10 @@ pub const DELAYED_HOOK: &str = "delayed";
 
 /// R350: `DelayAt.player` for the turn that is running, whoever's it is.
 pub const THIS_TURN: &str = "turn";
+
+/// R1140: the `ctx.data` key under which a delayed step that watches hand cards (`DelayArgs.handWatch`)
+/// finds the ones still watched as it runs, in the order they were picked (`due_resume`).
+pub const HAND_WATCH_KEY: &str = "handWatch";
 
 /// `DelayAt.player`: a `PlayerSpec`, relative to the controller like every other, or `"turn"`
 /// (`THIS_TURN`): the player whose turn is running as the effect is made.
@@ -114,9 +121,17 @@ pub struct DelayArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub next: Option<bool>,
     /// R437: the mark the watched card carries in both views while this effect waits (#50's pending
-    /// steal, `{ mark: "steal", color: "purple" }`). Ignored without `watch`.
+    /// steal, `{ mark: "steal", color: "purple" }`). Ignored without `watch` or `handWatch`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mark: Option<CardMark>,
+    /// R1140 (ME-HANDMARK, Meditative #76 Do or Die): hand cards this effect is aimed at, by instance id.
+    /// Each is watched for its stay in that hand: it is dropped as it leaves (played, discarded,
+    /// shuffled away, stolen, R174), the effect with it once none is left, and a card that comes back is
+    /// a new stay nobody watches. Those of them not in a hand now are left out, and with none left
+    /// nothing is scheduled. `mark` marks each (R1141). The step finds the ones still watched under
+    /// `HAND_WATCH_KEY`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hand_watch: Option<Vec<String>>,
 }
 
 /// §6.2's "at the start of your next turn" and "end of turn" as one verb (#39 Recycling Initiative,
@@ -146,6 +161,16 @@ pub fn delay(args: DelayArgs) -> Effect {
         if args.next != Some(true) && ends_other_players_turn(ctx, &args.at) {
             return;
         }
+        // R1140: a hand watch is aimed at cards in a hand now; with none of them there, nothing waits.
+        let hand_watch: Option<Vec<String>> = args.hand_watch.as_ref().map(|ids| {
+            ids.iter()
+                .filter(|id| find_instance(ctx.state, id).is_some_and(|card| card.zone.z() == ZoneName::Hand))
+                .cloned()
+                .collect()
+        });
+        if hand_watch.as_ref().is_some_and(Vec::is_empty) {
+            return;
+        }
         // `resumeSelf` is the one builder for the def id, the face and the instance id, so a delay
         // and a prompt store the same shape; only the hook differs, and only when a card says so.
         let resume = delayed_resume(
@@ -165,11 +190,33 @@ pub fn delay(args: DelayArgs) -> Effect {
         };
         let controller = ctx.controller;
         let entry = schedule_delayed(ctx, controller, at, resume, args.watch.clone(), not_before);
-        // R437: the card it waits for carries the mark until it resolves, fizzles or is forgotten.
+        if let Some(ids) = &hand_watch
+            && let Some(stored) = ctx.state.delayed.iter_mut().find(|due| due.id == entry.id)
+        {
+            stored.hand_watch = Some(ids.clone());
+        }
+        // R437: the card it waits for carries the mark until it resolves, fizzles or is forgotten; R1141:
+        // each hand card it watches, while it is watched.
         if let Some(mark) = &args.mark {
-            mark_delayed(ctx, &entry, mark);
+            match &hand_watch {
+                Some(ids) => sync_marks(ctx, &entry.id, mark, ids),
+                None => mark_delayed(ctx, &entry, mark),
+            }
         }
     })
+}
+
+/// R1140: the continuation a due entry re-enters — its stored `Resume`, and for a hand watch the cards
+/// still watched under `HAND_WATCH_KEY`, read off the entry as it runs, so a card that left the hand
+/// while it waited is not among them.
+pub fn due_resume(entry: &DelayedEffect) -> Resume {
+    let mut resume = entry.resume.clone();
+    if let Some(ids) = &entry.hand_watch {
+        resume
+            .data
+            .insert(HAND_WATCH_KEY.to_string(), Value::from(ids.clone()));
+    }
+    resume
 }
 
 /// The continuation a delayed effect stores: this script's step (`prompts.resumeSelf`) as a run of its
@@ -214,6 +261,12 @@ fn ends_other_players_turn(ctx: &EffectContext<'_>, at: &DelayAt) -> bool {
 /// card's step for every other entry (R126).
 pub const DELAYED_DESTROY_HOOK: &str = "@delayedDestroy";
 pub const DELAYED_DISCARD_HAND_HOOK: &str = "@delayedDiscardHand";
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): the hook an Allured Unit's steal waits under.
+pub const DELAYED_ALLURE_HOOK: &str = "@delayedAllure";
+/// R963: the mark an Allured enemy Unit carries in both views while the steal waits (R437).
+pub const ALLURE_MARK: &str = "allure";
+/// R963: that mark's colour.
+pub const ALLURE_MARK_COLOR: &str = "pink";
 
 /// A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
 /// running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546). `(defId, radiant)`.
@@ -307,6 +360,45 @@ pub fn destroy_at_next_turn_start(args: DestroyAtNextTurnStartArgs) -> Effect {
                     mark_delayed(ctx, &entry, mark);
                 }
             }
+        }
+    })
+}
+
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty): "Allure every enemy Unit" — each enemy Unit on
+/// the field now (the top of its pile, `card_at`, so a carried Unit, R446, and a card dormant
+/// under a Stack, R13, are never marked) is stolen at the start of the Allurer's next turn, in
+/// lane order, or destroyed with no open unit zone (`otherwise: destroy`). One delayed entry per
+/// Unit, each watching its stay (R174) and carrying the public `allure` mark (R437) until it
+/// resolves, fizzles or is forgotten. The entries outlive the Allurer (R76).
+pub fn allure_enemy_units() -> Effect {
+    Effect::new("allureEnemyUnits", move |ctx| {
+        let (def_id, radiant) = maker_of(ctx);
+        let owner = ctx.controller;
+        let at = DelayedAt {
+            phase: Phase::Start,
+            player: owner,
+        };
+        let mark = CardMark {
+            mark: ALLURE_MARK.to_string(),
+            color: ALLURE_MARK_COLOR.to_string(),
+        };
+        // `slots_of` walks the row in lane order; `card_at` reads the top of each pile.
+        for slot in slots_of(opponent_of(owner), Row::Units) {
+            let Some(unit) = card_at(ctx.state, slot).cloned() else {
+                continue;
+            };
+            let mut data: IndexMap<String, Value> = IndexMap::new();
+            data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
+            let resume = Resume {
+                def_id: def_id.clone(),
+                hook: DELAYED_ALLURE_HOOK.to_string(),
+                step: "unit".to_string(),
+                radiant,
+                instance_id: None,
+                data,
+            };
+            let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), None);
+            mark_delayed(ctx, &entry, &mark);
         }
     })
 }
@@ -417,7 +509,8 @@ pub fn refresh_scope_marks(sink: &mut EngineSink<'_>) {
                     ..HookOptions::default()
                 },
             );
-            cards_in_scope(&ctx, &scope)
+            // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+            cards_in_scope_aimed(&ctx, &scope, crate::wire::TargetAim::Harm)
                 .iter()
                 .map(|card| card.id.clone())
                 .collect()
@@ -457,6 +550,17 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
             (discard.apply)(&mut ctx);
             true
         }
+        DELAYED_ALLURE_HOOK => {
+            if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
+                let target = StealTarget {
+                    instance_id: Some(instance_id.to_string()),
+                    otherwise: Some(StealOtherwise::Destroy),
+                    ..StealTarget::default()
+                };
+                (steal(target).apply)(&mut ctx);
+            }
+            true
+        }
         _ => false,
     }
 }
@@ -492,5 +596,38 @@ pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
         resume.instance_id = None;
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_start_of_turn_effect(ctx, player, resume, &args.label);
+    })
+}
+
+/// `watchLaneThisTurn`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchLaneArgs {
+    pub lane: i32,
+    pub step: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<IndexMap<String, Value>>,
+}
+
+/// MD-B22, R946 (Meditative #98, Radiant face): "after you put a card into that lane, …" — a
+/// `thisTurn` watcher on the controller that re-enters the card's `step` (under `hook`,
+/// `RESUME_HOOK` unless the card names another) after one of their cards enters one of their zones
+/// in `lane`, by a resolved play or a summon. It is the player's effect now, not the card's: it
+/// resolves with no `self` whatever became of the card (R127), under the face it was made with,
+/// carrying `data`. `label` is its badge (R169), in the card's own words.
+pub fn watch_lane_this_turn(args: WatchLaneArgs) -> Effect {
+    Effect::new("watchLaneThisTurn", move |ctx| {
+        let mut resume = delayed_resume(
+            ctx,
+            &args.step,
+            args.data.clone().unwrap_or_default(),
+            args.hook.as_deref().unwrap_or(RESUME_HOOK),
+        );
+        resume.instance_id = None;
+        let player = ctx.controller;
+        add_lane_watch(ctx, player, args.lane, resume, &args.label);
     })
 }

@@ -196,6 +196,8 @@ pub struct CastOptions {
     pub random: Option<bool>,
     pub target_enemies: Option<bool>,
     pub afterward: Option<CastAfterward>,
+    /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration.
+    pub aim_at: Option<String>,
 }
 
 /// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with

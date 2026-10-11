@@ -167,7 +167,9 @@
 }
 
 .hero-health,
-.hero-armor {
+.hero-armor,
+.hero-jade,
+.hero-luck {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -191,6 +193,11 @@
 .hero-armor {
   border: 1px solid rgb(203 213 225 / 50%);
   background: radial-gradient(circle at 35% 30%, #94a3b8, #475569 60%, #334155);
+}
+
+.hero-jade {
+  border: 1px solid rgb(52 211 153 / 55%);
+  background: radial-gradient(circle at 35% 30%, #34d399, #047857 55%, #064e3b);
 }
 
 .power-button,
@@ -291,6 +298,22 @@
   color: #bfdbfe;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* R1223: the credit line beside the tray — what can still be borrowed, what is owed, used or not. */
+.mana-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #e7d8b7;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* R1224: a locked crystal keeps its diamond, hatched to say the refresh already spent it. */
+.mana-crystal[data-locked="true"] {
+  background: repeating-linear-gradient(45deg, #3a3f55 0 2px, #141a2e 2px 4px);
+  border-color: #8a8455;
 }
 
 .piles {
@@ -1465,6 +1488,21 @@
   white-space: nowrap;
 }
 
+/* R1200: while a Mayor acts every target is random; the badge sits beside the status chip. */
+.random-targets {
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+  font-size: 0.72em;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The turn control is inset into the board rail, with its timer in the same brass housing rather
    than another floating HUD chip. Legality remains the button's native disabled state. */
 .turn-mechanism {
@@ -1974,7 +2012,8 @@
   }
 
   .seat .hero-health,
-  .seat .hero-armor {
+  .seat .hero-armor,
+  .seat .hero-luck {
     min-width: 32px;
     height: 32px;
     font-size: 1.2em;
@@ -2130,7 +2169,8 @@
   }
 
   .hero-health,
-  .hero-armor {
+  .hero-armor,
+  .hero-luck {
     min-width: 26px;
     height: 26px;
   }
@@ -2298,6 +2338,24 @@
      a unit, your own hero just above the hand) stays in sight and in reach. */
   .hand-you .hand-slot[data-lifted="true"]:has(> .card[data-selected="true"]) {
     transform: translateY(-10px);
+  }
+}
+
+/* A narrow phone, 360 to 380 px wide (#552): the one row of controls has 30 px less than at 390x844,
+   where it fits with a pixel to spare, and the gear ran off the screen, so the page scrolled
+   sideways. The row tightens its gaps and the buttons' side padding; every button stays a 44 px
+   target (B29). */
+@media (max-width: 380px) {
+  .board .control-bar {
+    gap: 4px;
+  }
+
+  .board .control-bar .control {
+    padding-inline: 6px;
+  }
+
+  .board .control-bar [data-testid="settings-open-game"] {
+    padding-inline: 10px;
   }
 }
 

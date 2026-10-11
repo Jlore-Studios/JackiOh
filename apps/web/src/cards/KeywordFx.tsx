@@ -339,6 +339,29 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Untributable: () => (
+    <Part className="kw-glyph-art kw-anchor" anim fit="contain">
+      <path d="M50 14 L50 78 M28 34 L72 34" stroke="#0b0d12" strokeWidth="8" strokeLinecap="round" />
+      <path d="M50 14 L50 78 M28 34 L72 34" stroke="#c9b88a" strokeWidth="4" strokeLinecap="round" />
+      <path d="M26 56 C26 76 38 86 50 86 C62 86 74 76 74 56" fill="none" stroke="#c9b88a" strokeWidth="4" strokeLinecap="round" />
+    </Part>
+  ),
+
+  "Immune to tribal tag based hate": () => (
+    <Part className="kw-glyph-art kw-tribal" anim fit="contain">
+      <circle cx="50" cy="50" r="30" fill="none" stroke="#0b0d12" strokeWidth="6" />
+      <circle cx="50" cy="50" r="30" fill="none" stroke="#7fb6dd" strokeWidth="3" />
+      <circle cx="50" cy="50" r="18" fill="none" stroke="#7fb6dd" strokeWidth="2" strokeOpacity="0.7" />
+    </Part>
+  ),
+
+  Magnetic: () => (
+    <Part className="kw-glyph-art kw-magnet" anim fit="contain">
+      <path d="M28 24 V56 A22 22 0 0 0 72 56 V24 H58 V54 A8 8 0 0 1 42 54 V24 Z" fill="#e0574f" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M28 24 H42 V38 H28 Z M58 24 H72 V38 H58 Z" fill="#f3e3b4" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

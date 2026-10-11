@@ -4,10 +4,13 @@ import type { BrittleCounter } from "./BrittleCounter";
 import type { Counters } from "./Counters";
 import type { Enchantment } from "./Enchantment";
 import type { Exertion } from "./Exertion";
+import type { Grant } from "./Grant";
 import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
+import type { SetAs } from "./SetAs";
+import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
@@ -53,6 +56,12 @@ divineShieldSpent?: boolean,
  */
 markedDestroyed?: boolean, 
 /**
+ * MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+ * of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+ * `Some(true)`.
+ */
+markedExiled?: true, 
+/**
  * Came back through Reborn, so it no longer has it (§4.5 step 4).
  */
 rebornSpent?: boolean, 
@@ -97,4 +106,37 @@ berserk?: true,
  * zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
  * Transform is a new card with a count of its own (R57).
  */
-timesPlayed?: number, };
+timesPlayed?: number, 
+/**
+ * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
+ * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
+ * Transform's new card is without it. Only ever `Some(true)`.
+ */
+chinese?: true, 
+/**
+ * MD-B6, R943 (ME-CREATED): the instance was minted after the decks were built — by an
+ * effect or a rule during the game, never a dealt deck card. Public wherever the viewer may
+ * read the card. Kept in every zone and through R78's and R766's resets; a card that keeps
+ * its instance keeps it. Only ever `Some(true)`.
+ */
+created?: true, 
+/**
+ * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+ * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+ * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+ * with the card leaving the field (R1045). Absent on every other card.
+ */
+setAs?: SetAs, 
+/**
+ * MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
+ * the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
+ * Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
+ * unites it, a Transform drops it.
+ */
+grantedTags?: Array<Tag>, 
+/**
+ * ME-GRANT (MD-D13): the Death abilities other cards granted this card, in the order granted.
+ * R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
+ * Fuse unites them, a Transform drops them — as `granted_tags` above.
+ */
+grants?: Array<Grant>, };

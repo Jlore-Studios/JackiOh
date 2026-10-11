@@ -36,12 +36,12 @@ fn picks(ctx: &mut EffectContext<'_>) -> Vec<CardInstance> {
     deck.into_iter().filter(|card| ids.contains(&card.id)).collect()
 }
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed (ids here).
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -72,18 +72,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #8 Withering Storm — SPEC §8.7 row 8, BUILD M9 Classic+ row C+ 8: "Degrades 4 different random
-// cards in the opponent's deck (R60), drawn among the cards a Degrade can change (an Immutable card, or
-// one no change reaches, is never picked), one draw from R386's menu each, then you draw 1; a deck with
-// 3 or fewer such cards degrades them all, one with none degrades nothing and draws no random number
-// (R129), and you still draw; the changes are `tuning` and leave the deck with the card; `degraded`
-// events stay unread by both players while the cards are in the deck (R177, R311) and the opponent's
-// library list does not change; card count and draw read through `param()`; radiant degrades every card
-// in the opponent's deck once".
-//
-// R569 (with R440): the pick is drawn among the cards a Degrade can change, and the count of `degraded`
-// cues never says how many of the deck's cards could — it is padded with `none` cues on cards no change
-// reaches, up to {cards} (or the deck's size).
+// SPEC §8.7 row 8: degrades {cards} different changeable cards in opponent's deck (R60,
+// R386), all of them when fewer, none when none and then no random number is drawn (R129);
+// padded with `none` cues (R569, R440).
+// Degraded events stay unread while in deck (R177, R311).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -114,7 +106,6 @@ mod tests {
         scenario(options)
     }
 
-    /// The TS default `p1Library`.
     fn two_stockpiles() -> Value {
         json!([STOCKPILE, STOCKPILE])
     }

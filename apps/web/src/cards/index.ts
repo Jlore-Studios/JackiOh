@@ -3,7 +3,7 @@
 // Everything outside `src/cards/` imports from here. Inside `src/cards/`, files import each other
 // by path and never through this barrel, so it cannot create an import cycle.
 
-export { faceModel } from "./model.ts";
+export { ALL_TRIBES, faceModel } from "./model.ts";
 export type { FaceCost, FaceLayout, FaceModel, FaceSource, FaceStats, FaceText, InPlay, StatTone } from "./model.ts";
 
 // The three marks on a face's text (SPEC §10.10): the Radiant diff (R277), references (R279) and,
@@ -80,7 +80,7 @@ export { Icon } from "./icons.tsx";
 export type { IconName } from "./icons.tsx";
 
 // R370, R371: the words a face-down backrow card is drawn with.
-export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
+export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
 // Slice A: art.
 export { ART_MANIFEST, CardArt, artUrl } from "./art/index.ts";

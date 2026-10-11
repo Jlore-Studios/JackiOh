@@ -49,6 +49,15 @@ function reasonText(outcome: PracticeOutcome, reason: GameOverReason): string {
     case "voided":
       // R679: a Glitch voided the game.
       return "This match never happened.";
+    case "alt-win":
+      // R850: a held alternative win won.
+      if (outcome === "draw") return "Both players met a winning condition.";
+      return outcome === "win"
+        ? "You met your winning condition."
+        : "The AI met its winning condition.";
+    case "won-by-effect":
+      // R850: an effect won the game outright.
+      return outcome === "win" ? "Your card won the game." : "The AI's card won the game.";
   }
 }
 

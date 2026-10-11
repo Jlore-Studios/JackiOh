@@ -40,16 +40,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #2 Bigot. BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable,
-// no target → enters anyway; radiant clears every enemy non-Human, Humans survive".
-//
-// The pick is a play-time choice (R81), so it travels in the `play` action as a `Selection` and
-// never opens a prompt; R90 is what refuses an illegal pick and what keeps the play legal when the
-// board has no legal pick at all (§8's Conventions: the Cry fizzles, the unit still enters).
-//
-// Non-Human units used here: #25 "4-mana 7/7" (no tags, no hooks) and #12 Duplicating Felinors
-// (Felinor; its Cry only fires on a play, never on a board the harness placed).
-// Human units used here: #8 Mr. Vanilla and #20 Pointmaster.
+// BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable, no target → enters
+// anyway; radiant clears every enemy non-Human, Humans survive".
+// Non-Human: #25 (no tags, no hooks) and #12 Duplicating Felinors (its Cry never fires on a board
+// the harness placed). Human: #8 Mr. Vanilla and #20 Pointmaster.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

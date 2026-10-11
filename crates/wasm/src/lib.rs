@@ -33,8 +33,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use jackioh_engine::{
-    self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
-    PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
+    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, DECK_SIZE, FoldArgs, GameState,
+    PLAYER_IDS, PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -337,6 +337,36 @@ pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {
     to_json(&engine::deal_emote_hand(seed, player(seat)?))
 }
 
+/// R1420's preview, in the browser: from this call on the module treats `sets` (`SetName[]`) as sets
+/// that ship, as the testkit's `preview_sets` does on a test's thread, so a deck may hold their cards
+/// and a pool that names no set reaches them. WebAssembly runs one thread, so the preview lasts the
+/// module's life. Only a module built with the `preview` feature can preview (the engine's testkit:
+/// `scripts/build-wasm.sh` builds it for development, the unit tests and the e2e client, and apps/web's
+/// `prebuild` builds the production bundle without it); any other refuses a set. The hotseat route
+/// calls it for its E2E injection's `preview`, in development builds only (#552's play-through).
+#[wasm_bindgen]
+pub fn preview_sets(sets_json: &str) -> Result<(), JsError> {
+    let sets: Vec<engine::SetName> = parse("previewSets: the sets", sets_json)?;
+    preview(&sets)
+}
+
+#[cfg(feature = "preview")]
+fn preview(sets: &[engine::SetName]) -> Result<(), JsError> {
+    // The guard ends the preview when it drops; the module keeps it instead.
+    std::mem::forget(engine::testkit::preview_sets(sets));
+    Ok(())
+}
+
+#[cfg(not(feature = "preview"))]
+fn preview(sets: &[engine::SetName]) -> Result<(), JsError> {
+    if sets.is_empty() {
+        return Ok(());
+    }
+    Err(JsError::new(
+        "previewSets: this module was built without the `preview` feature, so it previews no set (R1420)",
+    ))
+}
+
 // ---------------------------------------------------------------------------------------------
 // The AI (SURFACE §9)
 // ---------------------------------------------------------------------------------------------
@@ -456,18 +486,36 @@ pub fn constants() -> Result<String, JsError> {
 // The engine's tables the web's tests read (`subsystems.*`)
 // ---------------------------------------------------------------------------------------------
 
-/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames, heroPowers: [{name, x,
-/// title, radiantTitle, label, radiantLabel}] }`. `heroPowerNames` is TypeScript's
-/// `HERO_POWERS.map((power) => power.name)`.
+/// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost —
+/// a `CraftPreview` — so the block editor shows what the reducer will say and the client decides
+/// nothing (CLAUDE.md rule 7).
+#[wasm_bindgen]
+pub fn craft_preview(recipe_json: &str, cost: f64) -> Result<String, JsError> {
+    let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
+    if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
+        return Err(JsError::new("craftPreview: the cost must be a whole number"));
+    }
+    to_json(&engine::subsystems::craft::craft_preview(&recipe, cost as i32))
+}
+
+/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,
+/// heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }`. `heroPowerNames` is
+/// TypeScript's `HERO_POWERS.map((power) => power.name)`.
 #[wasm_bindgen]
 pub fn engine_tables() -> Result<String, JsError> {
-    use jackioh_engine::subsystems::{call_to_chaos, call_to_chaos_plus, hero_power};
+    use jackioh_engine::subsystems::{
+        call_to_chaos, call_to_chaos_meditative, call_to_chaos_plus, hero_power,
+    };
 
     let chaos_effects: Vec<Value> = call_to_chaos::CHAOS_EFFECTS
         .iter()
         .map(|effect| json!({ "label": effect.label }))
         .collect();
     let chaos_plus_effects: Vec<Value> = call_to_chaos_plus::CHAOS_PLUS_EFFECTS
+        .iter()
+        .map(|effect| json!({ "label": effect.label }))
+        .collect();
+    let chaos_med_effects: Vec<Value> = call_to_chaos_meditative::CHAOS_MED_EFFECTS
         .iter()
         .map(|effect| json!({ "label": effect.label }))
         .collect();
@@ -488,6 +536,7 @@ pub fn engine_tables() -> Result<String, JsError> {
     to_json(&json!({
         "chaosEffects": chaos_effects,
         "chaosPlusEffects": chaos_plus_effects,
+        "chaosMedEffects": chaos_med_effects,
         "heroPowerNames": hero_power_names,
         "heroPowers": hero_powers,
     }))

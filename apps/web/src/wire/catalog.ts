@@ -58,7 +58,7 @@ export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | 
  * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
  * until it is (R1420).
  */
-export const SHIPPED_SETS = ["Core", "Classic", "Classic+"] as const satisfies readonly SetName[];
+export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative"] as const satisfies readonly SetName[];
 
 /** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {
@@ -113,12 +113,18 @@ export type Keyword =
   | { kind: "Spell Damage"; n: number }
   /** E35: a Spell can't target this and doesn't affect it. */
   | { kind: "Immune to Spells" }
+  /** MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this. */
+  | { kind: "Immune to tribal tag based hate" }
   /** R636: a Unit may attack twice each turn. */
   | { kind: "Windfury" }
   /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
   | { kind: "Temporary" }
   /** A Unit may attack and switch position in the same turn (R49). */
-  | { kind: "Deft" };
+  | { kind: "Deft" }
+  /** R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing. */
+  | { kind: "Untributable" }
+  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-MAGNETIC). */
+  | { kind: "Magnetic" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -146,9 +152,12 @@ export const KEYWORD_KINDS = [
   "Brittle",
   "Spell Damage",
   "Immune to Spells",
+  "Immune to tribal tag based hate",
   "Windfury",
   "Temporary",
   "Deft",
+  "Untributable",
+  "Magnetic",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {
@@ -349,7 +358,9 @@ export type CatalogQuery = {
  * §10.6. E18 adds: `number` (a number from a fixed range, Classic #18), `answer` (one of a
  * multiple-choice problem's options, Classic+ #42), `cell` (a board cell, Classic+ #62), `reward`
  * (a completed quest's reward, Classic #90) and `pick` (a budgeted pick of several cards from a pile,
- * Classic #44). A mode prompt the other player holds is a `mode` prompt with their id.
+ * Classic #44). A mode prompt the other player holds is a `mode` prompt with their id. `craft` is
+ * ME-CRAFT's answer (Meditative #17, R880): a recipe the block editor sends. `market` is ME-MARKET's
+ * (Meditative #42, R1000): a night market's deals, one per answer.
  */
 export type PromptKind =
   | "discover"
@@ -366,7 +377,9 @@ export type PromptKind =
   | "answer"
   | "cell"
   | "reward"
-  | "pick";
+  | "pick"
+  | "craft"
+  | "market";
 
 export type Row = "units" | "backrow";
 

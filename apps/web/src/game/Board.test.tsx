@@ -51,6 +51,17 @@ describe("Board", () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it("shows the random-targets badge only when the view flags it", () => {
+    const flagged = render(<Board view={{ ...fullBoardView(), randomTargets: true }} />);
+    expect(screen.getByTestId("random-targets")).toHaveTextContent("Targets are random");
+    expect(flagged.container.firstChild).toHaveAttribute("data-random-targets", "");
+    flagged.unmount();
+
+    render(<Board view={fullBoardView()} />);
+    expect(screen.queryByTestId("random-targets")).toBeNull();
+    expect(screen.getByTestId(testid.board)).not.toHaveAttribute("data-random-targets");
+  });
+
   it("builds End turn into its rail and reflects existing legality without deciding a move", () => {
     const view = fullBoardView();
     const active = render(<Board view={view} highlight={highlightOf([testid.endTurn])} />);
@@ -386,6 +397,23 @@ describe("Board", () => {
     expect(screen.getByTestId(testid.hero("opponent")).querySelector(".loss-pop")).toBeNull();
   });
 
+  it("R961 each seat's Jade Counter shows beside its hero above 0, nothing before", () => {
+    const plain = fullBoardView();
+    render(<Board view={plain} />);
+    expect(document.querySelectorAll(".hero-jade")).toHaveLength(0);
+    cleanup();
+
+    const jaded = {
+      ...plain,
+      you: { ...plain.you, jade: 5 },
+      opponent: { ...plain.opponent, jade: 2 },
+    };
+    render(<Board view={jaded} />);
+    const badges = [...document.querySelectorAll(".hero-jade")];
+    expect(badges.map((badge) => badge.getAttribute("data-jade")).sort()).toEqual(["2", "5"]);
+    for (const badge of badges) expect(badge.getAttribute("title")).toBe("Jade Counter");
+  });
+
   it("writes the log from view.events without naming a drawn card", () => {
     const view = fullBoardView();
     const logged = withEvents(view, [
@@ -400,5 +428,52 @@ describe("Board", () => {
     expect(log).toHaveTextContent("Turn 3: You");
     expect(log).toHaveTextContent("Opponent drew a card");
     expect(log.innerHTML).not.toContain("core-042");
+  });
+
+  it("R1224 the tray locks the instalment's crystals and lists what is owed", () => {
+    const view = fullBoardView();
+    render(
+      <Board
+        view={{
+          ...view,
+          you: {
+            ...view.you,
+            mana: { current: 3, max: 4 },
+            credit: { available: 3, owed: [1, 1, 1], locked: 1, used: true },
+          },
+        }}
+      />,
+    );
+
+    // Four crystals, three filled; the top one (index 3 ≥ current and ≥ 4 − 1) is locked.
+    const tray = screen.getByTestId("mana-you");
+    expect(tray.querySelectorAll(".mana-crystal")).toHaveLength(4);
+    expect(tray.querySelectorAll('.mana-crystal[data-locked="true"]')).toHaveLength(1);
+    expect(tray.querySelectorAll('.mana-crystal[data-locked="true"][data-filled="false"]')).toHaveLength(1);
+
+    const chip = screen.getByTestId("credit-you");
+    expect(chip).toHaveTextContent("+3 credit");
+    expect(chip).toHaveTextContent("owed 1·1·1");
+    expect(chip).toHaveAttribute("data-used", "true");
+  });
+
+  it("R1225 the credit chip says whether the line was used", () => {
+    const view = fullBoardView();
+    const { rerender } = render(
+      <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: false } } }} />,
+    );
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "false");
+    expect(screen.getByTestId("credit-you")).toHaveTextContent("unused");
+
+    rerender(
+      <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: true } } }} />,
+    );
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "true");
+    expect(screen.getByTestId("credit-you")).not.toHaveTextContent("unused");
+
+    // The Radiant face has no use-it-or-lose-it: no `used`, and the chip says nothing about it.
+    rerender(<Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [] } } }} />);
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "none");
+    expect(screen.getByTestId("credit-you")).not.toHaveTextContent("used");
   });
 });

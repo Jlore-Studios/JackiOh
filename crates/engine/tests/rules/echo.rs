@@ -101,8 +101,45 @@ fn echo_unit() -> CardDef {
     )
 }
 
+/// R802: a Spell whose Echo X is its caster's max mana (Meditative #5's shape, with a multiple of 1).
+fn echo_x() -> CardDef {
+    def("echo-x", "Spell", 1530, json!({}))
+}
+
+/// The same, whose resolution also raises its caster's max mana by 2, so a later read would differ.
+fn echo_x_grow() -> CardDef {
+    def("echo-x-grow", "Spell", 1531, json!({}))
+}
+
+/// The same computed Echo X beside a printed Echo 2: the larger holds.
+fn echo_x_printed() -> CardDef {
+    def("echo-x-printed", "Spell", 1532, json!({}))
+}
+
 fn defs() -> Vec<CardDef> {
-    vec![twinspell(), pinger(), ask_spell(), cast_unit(), echo_unit()]
+    vec![
+        twinspell(),
+        pinger(),
+        ask_spell(),
+        cast_unit(),
+        echo_unit(),
+        echo_x(),
+        echo_x_grow(),
+        echo_x_printed(),
+    ]
+}
+
+/// R802's fixture hook: X is the caster's max mana.
+fn max_mana_echo() -> Option<EchoXHook> {
+    Some(read_hook(|args| max_mana_of(args.state, args.self_.controller)))
+}
+
+/// Raises the running card's controller's max mana by 2 (a test-only write).
+fn grow_max_mana() -> Effect {
+    Effect::new("ec:growMaxMana", |ctx| {
+        let controller = ctx.controller;
+        ctx.state.players[controller].mana.max += 2;
+    })
 }
 
 /// #79's engine half: the pending Echo is a player modifier naming the Twinspell that granted it.
@@ -167,6 +204,36 @@ fn scripts() -> IndexMap<String, CardScripts> {
         echo_unit().id,
         both(Script {
             static_flags: Some(json_as(json!({ "echo": 1 }))),
+            cry: Some(hit_two()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        echo_x().id,
+        both(Script {
+            echo_x: max_mana_echo(),
+            cry: Some(hit_two()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        echo_x_grow().id,
+        both(Script {
+            echo_x: max_mana_echo(),
+            cry: Some(hook(|_ctx| {
+                vec![
+                    damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 }))),
+                    grow_max_mana(),
+                ]
+            })),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        echo_x_printed().id,
+        both(Script {
+            static_flags: Some(json_as(json!({ "echo": 2 }))),
+            echo_x: max_mana_echo(),
             cry: Some(hit_two()),
             ..Script::default()
         }),
@@ -635,5 +702,81 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_eq!(events_of_type(&bench.events, GameEventType::Summoned).len(), 0);
         // It still resolved: a cast fires the script whatever happens to the card afterwards (R70).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
+    }
+}
+
+mod r802_computed_echo_x {
+    use super::*;
+
+    /// p1 at `max` max mana and 4 mana to spend, playing `def_id` from hand.
+    fn play_at(seed: &str, def_id: &str, max: i32) -> (GameState, GameState) {
+        let mut state = playing(seed);
+        state.players.p1.mana.max = max;
+        let card = hand_card(&mut state, def_id, PlayerId::P1);
+        let after = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
+        (state, after)
+    }
+
+    #[test]
+    fn r802_repeats_x_times_from_the_casters_max_mana_as_it_is_played() {
+        // X = 1: one repeat, two resolutions of 2 damage.
+        let (_, one) = play_at("r802-one", &echo_x().id, 1);
+        assert_eq!(one.players.p2.hero.health, HERO_HEALTH - 4);
+        // X = 3: three repeats, four resolutions.
+        let (before, three) = play_at("r802-three", &echo_x().id, 3);
+        assert_eq!(three.players.p2.hero.health, HERO_HEALTH - 8);
+        // One play however many resolutions.
+        assert_eq!(three.counters.played, before.counters.played + 1);
+        assert_eq!(echo_queue(&three), Vec::<EchoItem>::new());
+    }
+
+    #[test]
+    fn r802_max_mana_gained_while_it_resolves_changes_nothing() {
+        // X is read once, at §10.5 step 4: each resolution raises max mana by 2, and still only the
+        // two repeats X = 2 queued follow the first resolution.
+        let (_, after) = play_at("r802-grow", &echo_x_grow().id, 2);
+        assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 6);
+        assert_eq!(after.players.p1.mana.max, 2 + 3 * 2);
+    }
+
+    #[test]
+    fn r802_the_larger_of_printed_and_computed_echo_holds() {
+        // Printed Echo 2 against X = 1: Echo 2, three resolutions.
+        let (_, low) = play_at("r802-printed-low", &echo_x_printed().id, 1);
+        assert_eq!(low.players.p2.hero.health, HERO_HEALTH - 6);
+        // Printed Echo 2 against X = 4: Echo 4, five resolutions; they do not add up.
+        let (_, high) = play_at("r802-printed-high", &echo_x_printed().id, 4);
+        assert_eq!(high.players.p2.hero.health, HERO_HEALTH - 10);
+    }
+
+    #[test]
+    fn r802_twinspell_adds_one_to_a_computed_echo() {
+        let mut state = playing("r802-twinspell");
+        state.players.p1.mana.max = 2;
+        pending_echo(&mut state, PlayerId::P1, 1);
+        let card = hand_card(&mut state, &echo_x().id, PlayerId::P1);
+        let after = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
+        // X = 2, plus the grant's 1: three repeats, four resolutions.
+        assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 8);
+        assert_eq!(echo_mods(&after, PlayerId::P1), Vec::<PlayerModifier>::new());
+    }
+
+    #[test]
+    fn r802_a_cast_reads_its_casters_max_mana() {
+        let mut state = playing("r802-cast");
+        state.players.p1.mana.max = 3;
+        state.players.p2.mana.max = 1;
+        let card = hand_card(&mut state, &echo_x().id, PlayerId::P1);
+        let mut bench = Bench::new(&state);
+        cast_card(&mut bench.sink(&mut state), &card, Default::default());
+        settle(&mut bench.sink(&mut state), Default::default());
+        // p1's max mana, 3: four resolutions, though p2's is 1.
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 8);
     }
 }

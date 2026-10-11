@@ -10,3 +10,4 @@ pub mod redeem_race;
 pub mod season_start;
 pub mod seed_accounts;
 pub mod seed_catalog;
+pub mod timing_fit;

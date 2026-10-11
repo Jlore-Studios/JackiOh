@@ -1,27 +1,15 @@
 //! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/9 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
-//! copy of this unit"; the radiant cell says "Same", so the radiant face runs the very same text
-//! (§8 Conventions) on the 6/9 body — and its copy is a Radiant 6/9 too, so the effect doubles with
-//! the stats (R275). §8's Engine cell: "Copy per R57, placed per R64; the copy's Cry does not fire
-//! (§6.2)".
+//! copy of this unit"; the radiant cell says "Same", so the radiant face runs the same text (§8
+//! Conventions) on the 6/9 body, and its copy is a Radiant 6/9 too (R275). §8's Engine cell: "Copy
+//! per R57, placed per R64; the copy's Cry does not fire (§6.2)".
 //!
-//! R57 (copy semantics): "A copy of a unit on the field keeps its radiant flag, buffs, granted
-//! keywords, Vanilla state and `statsOverride` and resets damage, exertion and counters." The copy is
-//! a new instance, so it also takes the current turn as its `summonedTurn` (§4.1 summoning sickness)
-//! and carries no memory of its own.
+//! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`
+//! and resets damage, exertion and counters; as a new instance it takes the current turn as its
+//! `summonedTurn` (§4.1). R64: with no zone named it takes the leftmost free zone and fizzles
+//! silently when the row has none. R1 / §6.2: copies fire no Cry, so the chain ends after one copy.
 //!
-//! R64 (placement): with no zone named the copy takes the leftmost empty, unlocked, unreserved unit
-//! zone, and the summon fizzles silently when the row has none — which is the row's "board full → no
-//! copy" with no check of its own.
-//!
-//! R1 / §6.2 (Cry): "Only when played from hand or cast by an effect. Copies, Recruit, Reborn, tokens,
-//! Transform never fire it" — the cited reason being this very card, which "would fill the board for
-//! 2 mana otherwise". A summon fires no Cry (engine/src/effects/summon.rs), so the chain ends after
-//! one copy on its own.
-//!
-//! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs), which resolves `of` to a
-//! unit, clones it per R57 and places it per R64 through the same path as `summon`. A card file may
-//! not read the buffs, keywords and Vanilla state off the instance and rebuild them (CLAUDE.md
-//! rule 5), which is why the copy is a verb and not a `summon({ defId, radiant })`.
+//! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs). A card file may not
+//! rebuild buffs, keywords and Vanilla state off the instance (CLAUDE.md rule 5), hence a verb.
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -49,21 +37,11 @@ pub fn script() -> CardScripts {
 // #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
 // (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
 //
-// R57: a copy of a unit on the field keeps its radiant flag, buffs, granted keywords, Vanilla state
-// and `statsOverride`, and resets damage, exertion and counters.
-// R64: with no zone named the copy takes the leftmost empty, unlocked, unreserved unit zone, and
-// the summon fizzles when the row has none.
-// R1 / §6.2: a copy fires no Cry — the ruling names this very card ("#12 would fill the board for
-// 2 mana otherwise").
+// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/9.
 //
-// Radiant (R275): the body is a 6/9 and the cell is "Same", so the copy — which keeps the radiant
-// flag (R57) — is a Radiant 6/9 as well: the effect doubles with the stats.
-//
-// HARNESS GAP, worked around here and reported: there is no way to seed layer-4 buffs or damage.
-// They cannot be reached through play either: a Cry fires the instant the unit enters, so the played
-// body has no history yet. R78 resets both on leaving the field and `reduce`'s play path resets
-// neither on entering, so seeding them on the hand instance is the one route to the "buffs copied,
-// damage not" clause.
+// HARNESS GAP: layer-4 buffs and damage cannot be seeded, nor reached through play (a Cry fires the
+// instant the unit enters). R78 resets both on leaving the field and the play path resets neither on
+// entering, so seeding the hand instance is the one route to "buffs copied, damage not".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -85,8 +63,7 @@ mod tests {
         row.iter().map(|id| id.map(str::to_string)).collect()
     }
 
-    /// HARNESS GAP (see the header): layer-4 buffs and damage, seeded on the hand instance because a
-    /// Cry leaves no window to apply them on the field.
+    /// HARNESS GAP (see the header): layer-4 buffs and damage, seeded on the hand instance.
     fn seed_history(s: &mut Scenario, id: &str, attack: i32, health: i32, damage: i32) {
         match find_instance_mut(s.state_mut(), id) {
             Some(felinors) => {
@@ -108,9 +85,8 @@ mod tests {
             fn r64_puts_the_copy_in_the_leftmost_free_unit_zone_not_the_lane_next_to_it() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    // Lanes 1 and 3 are taken, so lane 2 is the leftmost free zone for the Felinors
-                    // itself and lane 4 for its copy: placement is "leftmost free", never "adjacent"
-                    // (§3.1 lanes).
+                    // Lanes 1 and 3 are taken: the Felinors takes 2 and its copy 4, "leftmost free",
+                    // never "adjacent" (§3.1 lanes).
                     "p1": {
                         "field": [
                             { "def": "core-008", "lane": 1 },
@@ -147,8 +123,7 @@ mod tests {
             fn r57_copies_buffs_and_does_not_copy_damage_exertion_or_counters() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["core-012", "core-005"], "library": ["core-005"] } }));
-                // HARNESS GAP (see the header): layer-4 buffs and damage, seeded on the hand instance
-                // because a Cry leaves no window to apply them on the field.
+                // HARNESS GAP (see the header).
                 let felinors = s.card("core-012").id.clone();
                 seed_history(&mut s, &felinors, 2, 2, 3);
 

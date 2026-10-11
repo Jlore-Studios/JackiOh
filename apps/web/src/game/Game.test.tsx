@@ -187,7 +187,7 @@ describe("the result overlay", () => {
   });
 
   it("has a sentence for every reason, from either side", () => {
-    const reasons = ["hero-death", "both-heroes-dead", "concede", "draw-accepted", "turn-cap", "disconnect", "match-ceiling"] as const;
+    const reasons = ["hero-death", "both-heroes-dead", "concede", "draw-accepted", "turn-cap", "disconnect", "match-ceiling", "alt-win", "won-by-effect"] as const;
     for (const reason of reasons) {
       for (const outcome of ["win", "loss", "draw"] as const) {
         const text = resultReason(outcome, reason);

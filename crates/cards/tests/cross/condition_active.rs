@@ -1135,14 +1135,76 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
     }
 }
 
+// Meditative #57 Clip-Farming Critikal (hand only): Combo, a card played earlier this turn
+
+/// Meditative #57 Clip-Farming Critikal lights up in hand once a card was played this turn (R195)
+mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_played_this_turn_r195 {
+    use super::*;
+
+    const CRITIKAL: &str = "meditative-057";
+    /// (1) Spell: draws and heals, then waits in the graveyard for the Combo to return it.
+    const STOCKPILE: &str = "core-005";
+
+    fn critikal(radiant: bool) -> Scenario {
+        let card = if radiant {
+            json!({ "def": CRITIKAL, "radiant": true })
+        } else {
+            json!(CRITIKAL)
+        };
+        setup(json!({
+            "seed": format!("r195-m057-{radiant}"),
+            "p1": { "hand": [STOCKPILE, card, "core-010"], "library": ["core-020", "core-020", "core-020"] },
+            "p2": { "hand": ["core-010"], "library": ["core-020", "core-020"] },
+        }))
+    }
+
+    fn stockpile_in_hand(s: &Scenario) -> Option<Instance> {
+        copies_in_hand(s, STOCKPILE).into_iter().next()
+    }
+
+    #[test]
+    fn r195_played_first_it_does_not_glow_and_returns_nothing() {
+        let mut s = critikal(false);
+        let card = s.card(CRITIKAL).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(CRITIKAL, json!({}));
+        s.expect_in_zone(STOCKPILE, "hand");
+        assert_eq!(s.pile("p1", "graveyard").len(), 0);
+    }
+
+    #[test]
+    fn r195_after_a_play_it_glows_in_hand_and_returns_that_card() {
+        let mut s = critikal(false);
+        let card = s.card(CRITIKAL).clone();
+        s.play(STOCKPILE, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(CRITIKAL, json!({}));
+        let back = stockpile_in_hand(&s).expect("the Stockpile came back to hand");
+        assert!(!back.radiant);
+    }
+
+    #[test]
+    fn r195_the_radiant_face_glows_on_the_same_play_and_returns_the_card_radiant() {
+        let mut s = critikal(true);
+        let card = s.card(CRITIKAL).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(STOCKPILE, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(CRITIKAL, json!({}));
+        let back = stockpile_in_hand(&s).expect("the Stockpile came back to hand");
+        assert!(back.radiant);
+    }
+}
+
 // The set of cards that declare the hook is R195's list
 
 /// R195 the cards that declare conditionMet
 mod r195_the_cards_that_declare_condition_met {
     // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own card
-    // files, and so do R662's Core #18, #60, #70, #85, #96 and #100.
+    // files, and so do R662's Core #18, #60, #70, #85, #96 and #100; Meditative #57 Clip-Farming
+    // Critikal proves its own above.
     #[test]
-    fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
+    fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_meditative_c57_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
      {
         // One entry per script file present: the registry `scripts_of` builds.
         let cards = jackioh_cards::scripts_of();
@@ -1174,6 +1236,7 @@ mod r195_the_cards_that_declare_condition_met {
                 "core-093",
                 "core-096",
                 "core-100",
+                "meditative-057",
             ]
         );
 

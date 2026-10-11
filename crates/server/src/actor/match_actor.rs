@@ -33,8 +33,9 @@ use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, EmoteId, GameOverReason, HandView, PLAYER_IDS, PendingView, PerPlayer,
-    PlayerId, PlayerView, PortraitId, aim_key, deal_emote_hand, emote_gate, hand_holds, portrait_or_default,
+    Action, ActionBody, Aim, AimEnd, EmoteId, GameEvent, GameOverReason, HandView, PLAYER_IDS, PendingView,
+    PerPlayer, PlayerId, PlayerView, PortraitId, aim_key, deal_emote_hand, emote_gate, hand_holds,
+    portrait_or_default,
 };
 
 use crate::actor::clock::{Timer, after, create_match_clock};
@@ -48,6 +49,7 @@ use crate::actor::protocol::{
     ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
     parse_client_message, portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
+use crate::actor::telemetry::{self, LIVE_PILOTS, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::app::now_ms;
 use crate::config::{
@@ -55,6 +57,7 @@ use crate::config::{
     MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
+use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
 
@@ -72,6 +75,9 @@ pub struct MatchActorInput {
     /// R679: called once, synchronously, when a Glitch voids the match, before the store forgets it —
     /// the registry drops the actor here, so nothing can reach a match that no longer exists.
     pub on_voided: Option<Box<dyn Fn() + Send + Sync>>,
+    /// R1442: the play telemetry a rebuild replayed from `log` (`telemetry::replay`). `None`, the
+    /// actor starts recording from the match's creation.
+    pub telemetry: Option<Recorder>,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -92,6 +98,12 @@ enum Task {
         home: PlayerId,
         nonce: String,
         body: ActionBody,
+    },
+    /// MD-D29, R1127: an emote that passed the rate gate, to mint as an `Emote` action once it runs
+    /// — the seat resolved then, the legality read off the live state.
+    Emote {
+        home: PlayerId,
+        emote: EmoteId,
     },
     Submit {
         player: PlayerId,
@@ -117,6 +129,7 @@ impl Task {
             Task::Arm => "arm".to_string(),
             Task::Hello { .. } => "hello".to_string(),
             Task::Action { body, .. } | Task::Submit { body, .. } => format!("action:{}", body.action_type()),
+            Task::Emote { .. } => "emote".to_string(),
             Task::Expire(expiry) => format!("expiry:{}", expiry.kind()),
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
@@ -189,6 +202,11 @@ struct Core {
     last_pending_for: Option<PlayerId>,
     /// R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change.
     last_mulligan_owed: String,
+    /// R1442: the match's play telemetry, written once its result has landed.
+    telemetry: Recorder,
+    /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
+    /// telemetry's rank bucket; `None` until then, or when it could not be read.
+    tiers: Option<PerPlayer<RankTier>>,
 }
 
 struct Shared {
@@ -263,6 +281,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         state,
         log,
         on_voided,
+        telemetry,
     } = input;
     let seats = (
         MatchSeat {
@@ -310,6 +329,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         deal_emote_hand(&match_row.seed, PlayerId::P2),
     );
     let opening = engine::snapshot(&state);
+    let telemetry = telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
 
     let core = Core {
         state,
@@ -328,6 +348,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         swapped: opening.seats_swapped,
         last_pending_for: opening.pending_for,
         last_mulligan_owed: mulligan_key(&mulligan_window(&opening)),
+        telemetry,
+        tiers: None,
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -388,6 +410,13 @@ impl MatchActor {
                 let snapshot = engine::snapshot(&self.lock().state);
                 self.shared.clock.sync(&clock_view_for(&snapshot));
                 self.persist_clocks().await;
+                // R1442: the rank bucket is the tier each player holds as the match arms.
+                if !self.lock().finished {
+                    let tiers =
+                        telemetry::ladder_tiers_or_none(&self.shared.deps, &self.shared.match_row.players)
+                            .await;
+                    self.lock().tiers = tiers;
+                }
                 if snapshot.result.is_some() {
                     self.on_terminal(&snapshot).await;
                 }
@@ -418,6 +447,25 @@ impl MatchActor {
             } => {
                 let answer = self.apply_action(player, nonce, body).await;
                 let _ = reply.send(answer);
+            }
+            Task::Emote { home, emote } => {
+                // MD-D29, R1127: the seat is the one this account plays when the emote runs, and the
+                // `Emote` action is minted only while a card hears it — otherwise the relay above is
+                // all the emote ever was (R643). The reply is discarded: the sender already showed
+                // the emote locally, and a rate-limited emote is silently dropped.
+                let player = playing(&self.lock(), home);
+                let wanted = ActionBody::Emote { emote };
+                let nonce = {
+                    let core = self.lock();
+                    if engine::legal_actions(&core.state, player).contains(&wanted) {
+                        Some(format!("{SERVER_NONCE_PREFIX}emote-{}", core.next_seq))
+                    } else {
+                        None
+                    }
+                };
+                if let Some(nonce) = nonce {
+                    let _ = self.apply_action(player, nonce, wanted).await;
+                }
             }
             Task::Expire(expiry) => self.on_expire(expiry).await,
             Task::Disconnect { home } => {
@@ -642,6 +690,8 @@ impl MatchActor {
             for player in PLAYERS {
                 self.push_clock(&core, player);
             }
+            // R1442: a seat's think time runs from this push.
+            core.telemetry.on_pushed(&snapshot, now_ms());
         }
 
         if snapshot.result.is_some() {
@@ -809,6 +859,12 @@ impl MatchActor {
             self.let_go_unrecorded();
             return;
         }
+        // R1442: the play telemetry goes after the result, so its write can never cost it.
+        let played = {
+            let core = self.lock();
+            core.telemetry.finish(&LIVE_PILOTS, core.tiers.as_ref())
+        };
+        telemetry::record(&self.shared.deps, &played).await;
 
         tracing::info!(
             event = "match.over",
@@ -906,10 +962,21 @@ impl MatchActor {
 
         let ack = ack_message(&nonce, seq);
         {
-            let mut core = self.lock();
-            core.state = result.state;
+            let mut guard = self.lock();
+            let core = &mut *guard;
+            let before = std::mem::replace(&mut core.state, result.state);
             core.next_seq = seq + 1;
             core.acks.insert(nonce, ack.clone());
+            // R1442: the move as it arrived, on the state it was made in, once the state has moved on
+            // with the log, so nothing the telemetry does can leave the two apart.
+            core.telemetry.on_action(
+                &before,
+                &row.action,
+                seq,
+                row.at,
+                self.shared.clock.remaining_for(player),
+                result.events.last().map(GameEvent::event_type),
+            );
         }
 
         self.after_change().await;
@@ -963,6 +1030,17 @@ impl MatchActor {
                     player.opponent(),
                     &emote_relay_message(player, emote.emote),
                 );
+                // R1442: recorded until the result, which the telemetry is written with.
+                if !core.finished {
+                    let turn = core.state.turn;
+                    core.telemetry.on_emote(home, emote.emote, turn, now);
+                }
+                // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that
+                // hears it answers it in turn order behind every action queued ahead of it.
+                self.enqueue(Task::Emote {
+                    home,
+                    emote: emote.emote,
+                });
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {

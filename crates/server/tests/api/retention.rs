@@ -12,9 +12,11 @@ use serde_json::{Value, json};
 
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS};
+use jackioh_server::config::{
+    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow};
+use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow, MatchSignalRow};
 
 use crate::support::deps::test_app;
 
@@ -60,6 +62,20 @@ fn action_row(match_id: &str) -> MatchActionRow {
     )
 }
 
+/// R1442: one seat's end-of-game signals, the smallest row of a match's play telemetry.
+fn signals_row(match_id: &str) -> MatchSignalRow {
+    from(json!({
+        "matchId": match_id,
+        "seat": "p1",
+        "drawOffers": 0,
+        "drawAccepted": false,
+        "rematchOffered": false,
+        "rematchAccepted": false,
+        "timeouts": 0,
+        "pilot": "human",
+    }))
+}
+
 /// Logs one code attempt in a transaction of its own.
 async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     let attempt: CodeAttempt = from(
@@ -83,6 +99,7 @@ mod the_retention_purge {
         let now = now_ms();
         let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS * DAY_MS;
         let match_actions_ended_before = now - MATCH_ACTION_RETENTION_DAYS * DAY_MS;
+        let play_telemetry_ended_before = now - PLAY_TELEMETRY_RETENTION_DAYS * DAY_MS;
 
         log_attempt(&app, "at-cutoff", code_attempts_before).await;
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
@@ -98,10 +115,24 @@ mod the_retention_purge {
             for match_id in ["m-at-cutoff", "m-past-cutoff"] {
                 data.tables.match_actions.push(action_row(match_id));
             }
+            // R1442: the play telemetry's own cutoff, on matches with no log left.
+            data.tables
+                .matches
+                .push(finished_match("t-at-cutoff", Some(play_telemetry_ended_before)));
+            data.tables.matches.push(finished_match(
+                "t-past-cutoff",
+                Some(play_telemetry_ended_before - 1),
+            ));
+            for match_id in ["t-at-cutoff", "t-past-cutoff"] {
+                data.tables.match_signals.push(signals_row(match_id));
+            }
         }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
-        assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            json_of(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1 })
+        );
         let data = fake(&app).await;
         let attempts: Vec<String> = data
             .tables
@@ -117,6 +148,13 @@ mod the_retention_purge {
             .map(|row| row.match_id.clone())
             .collect();
         assert_eq!(actions, vec!["m-at-cutoff".to_string()]);
+        let signals: Vec<String> = data
+            .tables
+            .match_signals
+            .iter()
+            .map(|row| row.match_id.clone())
+            .collect();
+        assert_eq!(signals, vec!["t-at-cutoff".to_string()]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -144,7 +182,10 @@ mod the_retention_purge {
         }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
-        assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            json_of(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+        );
         let data = fake(&app).await;
         let attempts: Vec<String> = data
             .tables

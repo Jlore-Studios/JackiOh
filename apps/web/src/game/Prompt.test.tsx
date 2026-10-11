@@ -10,7 +10,7 @@
 // Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
 // nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -422,6 +422,31 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R1086 the picker sends the choice", () => {
+    const onAction = vi.fn();
+    const view = viewWith();
+    const interaction = playing([
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+    ]);
+
+    render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("mode");
+    expect(optionTestids()).toEqual(["prompt-option-true", "prompt-option-false"]);
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Magnetic");
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Stack");
+
+    fireEvent.click(screen.getByTestId("prompt-option-true"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: true,
+    });
+  });
+
   it("a declared target pick builds the play's targets, not an answer", () => {
     const onAction = vi.fn();
     const interaction = playing([
@@ -527,6 +552,40 @@ describe("the R81 kinds render the same picker when the engine does open them as
       expect(screen.getByTestId(present)).toBeInTheDocument();
     });
   }
+
+  it("R880 a craft prompt opens the block editor", () => {
+    const onAction = vi.fn();
+    const recipe: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const view = viewWith({
+      pending: pendingFor(
+        "craft",
+        [{ key: "craft:#digest", label: "Pure Closure", recipe: { ...recipe } }],
+        { budget: 2 },
+      ),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("craft");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "craft");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/12 pts");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+  });
 
   it("#492 an x prompt of a few values is the card picker too, each number on a card", () => {
     const onAction = vi.fn();
@@ -640,5 +699,55 @@ describe("min and max gate the confirm, and both came from the view", () => {
 
     render(<Prompt view={view} onAction={vi.fn()} />);
     expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+  });
+});
+
+describe("R1044 the face-down picker asks how to play it", () => {
+  it("shows its labels, and a pick sends", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const view = viewWith();
+    const set = {
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "backrow", lane: 1 },
+      faceDown: "startOfNextTurn",
+    } as const;
+    const interaction = playing([
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+      { ...set, faceDown: "endOfThisTurn" },
+      set,
+      { ...set, faceDown: "endOfNextTurn" },
+    ]);
+
+    render(
+      <Prompt
+        view={view}
+        interaction={interaction}
+        legal={interaction.stage === "playing" ? interaction.candidates : []}
+        onAction={onAction}
+        onInteraction={onInteraction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("mode");
+    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(optionTestids()).toEqual([
+      "prompt-option-up",
+      "prompt-option-endOfThisTurn",
+      "prompt-option-startOfNextTurn",
+      "prompt-option-endOfNextTurn",
+    ]);
+    expect(screen.getByText("Play it face-up")).not.toBeNull();
+    expect(screen.getByText("Set face-down: reveal at the start of your next turn")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-up"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 3 },
+    });
+    expect(onInteraction).toHaveBeenCalledWith(IDLE);
   });
 });

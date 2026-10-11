@@ -14,7 +14,8 @@ import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { testid } from "./contract.ts";
 import { EMPTY_LOG_HISTORY, LOG_GAP_TEXT, advanceLogHistory } from "./useLogHistory.ts";
-import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { CHINESE } from "../cards/chinese.ts";
+import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 
 afterEach(() => {
   cleanup();
@@ -131,9 +132,34 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(text[3]).toBe("Opponent lost an effect");
   });
 
+  it("R1000 a night market reads as a deal at the night market", () => {
+    render(<Log view={withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "c1", kind: "market" }])} />);
+    const text = lines().join("\n");
+    expect(text).toContain("a deal at the night market");
+    expect(text).not.toContain("(market)");
+  });
+
   it("ends the game in words", () => {
     render(<Log view={withEvents(fullBoardView(), [{ type: "gameOver", winner: "p2", reason: "concede" }])} />);
     expect(lines()).toEqual(["Opponent won. You conceded."]);
+  });
+
+  it("R860 a kept secret's line names no choice; a revealed one names it", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          { type: "secretChosen", player: "p1", secretId: "secret-1" },
+          { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+          { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual([
+      "You kept a secret",
+      "Your secret was Greed",
+      "Opponent guessed Attack: the reward is cancelled",
+    ]);
+    expect(lines().join("\n")).not.toContain("greed");
   });
 });
 
@@ -254,6 +280,30 @@ describe("Log: a line about a card opens that card", () => {
     expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(nameOf("core-005"));
     expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
   });
+
+  it("R1301 the log names a Chinese unit by its Chinese name", () => {
+    const chinese = CHINESE["core-002"]?.name ?? "";
+    const view = baseView({
+      opponent: emptySide("p2", {
+        units: [unit("p2", { instanceId: "u9", defId: "core-002", chinese: true }), unit("p2", { instanceId: "u8", defId: "core-002" }), null, null, null],
+      }),
+    });
+    renderLog(
+      withEvents(view, [
+        // A translation gets no line of its own: the card's face says it.
+        { type: "translated", instanceId: "u9" },
+        { type: "damage", sourceId: null, targetId: "u9", amount: 2, combat: false },
+        { type: "damage", sourceId: null, targetId: "u8", amount: 1, combat: false },
+      ]),
+    );
+    const lines = cardLines();
+    expect(lines.map((line) => line.textContent)).toEqual([`${chinese} took 2 damage`, `${nameOf("core-002")} took 1 damage`]);
+    expect(chinese).not.toBe("");
+    // The line opens the card as the board draws it: in Chinese.
+    fireEvent.click(lines[0] ?? document.body);
+    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent(chinese);
+    expect(screen.getByTestId(INSPECT_SHEET)).not.toHaveTextContent(nameOf("core-002"));
+  });
 });
 
 describe("R745 the log keeps the whole game, not only the view's window", () => {
@@ -372,11 +422,88 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
     expect(lines()).toEqual(["Turn 3: You", said(1), "Turn 4: Opponent", said(2)]);
   });
 
+  it("writes (extra turn) on an extra turn's line", () => {
+    render(
+      <Log
+        view={withEvents(baseView(), [
+          { type: "turnStarted", player: "p1", turn: 3 },
+          { type: "turnStarted", player: "p1", turn: 4, extra: true },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual(["Turn 3: You", "Turn 4: You (extra turn)"]);
+  });
+
   it("R745 says in one line where a view shares no event with the one before, and keeps what it had", () => {
     const events = game(80);
     const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 32))} />);
     rerender(<Log view={withEvents(baseView(), windowOf(events, 80))} />);
     expect(lines()).toEqual([...saidRange(1, 32), LOG_GAP_TEXT, ...saidRange(49, 80)]);
     expect(screen.getByText(LOG_GAP_TEXT)).toHaveAttribute("data-event", "gap");
+  });
+});
+
+// #552 (MN09): the lines the Meditative play-through turned up, read as English. A line that opens on
+// a card the viewer may not read opens with a capital; a hidden card turned into another hidden card
+// says only that it changed; a craft prompt is a card to craft; and the lines about one card shown in
+// Chinese name it in Chinese, whichever field the event names it by (R1301).
+describe("#552 the log reads as English on the Meditative cards' events", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
+
+  function lines(view: PlayerView): string[] {
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Log view={view} />
+      </CatalogContext.Provider>,
+    );
+    return [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
+  }
+
+  it("R1320 a Nerf, a Buff and a changed number on a card the viewer may not read open with a capital", () => {
+    expect(
+      lines(
+        withEvents(baseView(), [
+          { type: "degraded", instanceId: "hidden", defId: "hidden", change: { kind: "none" } },
+          { type: "upgraded", instanceId: "hidden", defId: "hidden", change: { kind: "none" } },
+          { type: "numberChanged", instanceId: "hidden", defId: "hidden", key: "hidden", value: 0 },
+          { type: "crumbled", instanceId: "hidden", defId: "hidden", owner: "p2", zone: "field" },
+        ]),
+      ),
+    ).toEqual(["A card was nerfed", "A card was buffed", "A card changed", "A card crumbled"]);
+  });
+
+  it("R97 a hidden card turned into another hidden card says only that it was transformed, and a public one names both", () => {
+    expect(
+      lines(
+        withEvents(baseView(), [
+          { type: "transformed", instanceId: "hidden", fromDefId: "hidden", toDefId: "hidden", newInstanceId: "hidden" },
+          { type: "transformed", instanceId: "c1", fromDefId: "meditative-037", toDefId: "core-005", newInstanceId: "c2" },
+        ]),
+      ),
+    ).toEqual(["A hidden card was transformed", `${nameOf("meditative-037")} became ${nameOf("core-005")}`]);
+  });
+
+  it("R880 a craft prompt reads as a card to craft", () => {
+    expect(lines(withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "ch1", kind: "craft" }]))).toEqual([
+      "Opponent must choose a card to craft",
+    ]);
+  });
+
+  it("R1301 R1320 the lines about a unit shown in Chinese all name it in Chinese: its stat buff and its Buff", () => {
+    const chinese = CHINESE["meditative-023"]?.name ?? "";
+    const view = baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u5", defId: "meditative-023", chinese: true }), null, null, null, null] }),
+    });
+    expect(chinese).not.toBe("");
+    expect(
+      lines(
+        withEvents(view, [
+          { type: "buffed", instanceId: "u5", attack: 2, health: 2 },
+          { type: "upgraded", instanceId: "u5", defId: "meditative-023", change: { kind: "stats", attack: 1, health: 1 } },
+          { type: "destroyed", instanceId: "u5", defId: "meditative-023", owner: "p1", controller: "p1", attack: 3, maxHealth: 5, killerId: null },
+        ]),
+      ),
+    ).toEqual([`${chinese} gained +2/+2`, `${chinese} was buffed`, `${chinese} was destroyed`]);
   });
 });

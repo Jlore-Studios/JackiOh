@@ -30,7 +30,14 @@ export type PromptKind =
   | "tribute"
   | "direction"
   | "x"
-  | "embiggen";
+  | "embiggen"
+  | "number"
+  | "answer"
+  | "cell"
+  | "reward"
+  | "pick"
+  | "craft"
+  | "market";
 
 /** BUILD M5-T4: every animation sets `data-animating="<eventType>"` while it runs. */
 export type EventType = string;
@@ -123,6 +130,15 @@ export type JackiOhDevHandle = {
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
   /** Present in networked mode (apps/web/src/game/net.ts) when the route is not hotseat. */
   seat?: PlayerId;
+  /**
+   * Hotseat only (routes/dev/hotseat.tsx): the seat holding the device's `viewFor`, its
+   * `legalActions`, and handing the device to a seat. Spec 36's driver (support/playthrough.ts) reads
+   * the view and the legal list to choose each step, as the AI does; the view is a `PlayerView`,
+   * kept loose here like the state.
+   */
+  view?: () => Record<string, unknown>;
+  legal?: () => ActionBody[];
+  setSeat?: (seat: PlayerId) => void;
 };
 
 /**
@@ -166,6 +182,12 @@ export type E2EDeckInjection = {
   seed: string;
   /** R180: each seat's handicap, from the fixtures that carry one; absent when neither does. */
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
+  /**
+   * R1420: the sets the hotseat engine previews before it creates the game, so a deck may hold a set
+   * the catalog carries before it ships (spec 36's `["Meditative"]`). The route calls the engine's
+   * `previewSets`, which a production build's module refuses.
+   */
+  preview?: string[];
 };
 
 /** How a prompt is answered. `answerPrompt` resolves these against the modal, then the board. */

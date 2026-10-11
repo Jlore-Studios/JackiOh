@@ -359,7 +359,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
           expect(hand.length, "seat two was dealt a deck and drew from it").to.be.at.least(constants.OPENING_DRAW[0]);
           for (const card of hand) {
             // R258/R380 can deal from every set.
-            expect(card, "a catalog id").to.match(/^(core|classic|classicplus)-\d{3}$/);
+            expect(card, "a catalog id").to.match(/^(core|classic|classicplus|meditative)-\d{3}$/);
           }
         },
       );

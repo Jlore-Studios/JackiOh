@@ -38,9 +38,9 @@ import DeckWorkshop from "./DeckWorkshop.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import {
   COST_BUCKETS,
+  DECK_CHIP_TAGS,
   FILTER_RARITIES,
   FILTER_SETS,
-  FILTER_TAGS,
   FILTER_TYPES,
   deckListOrder,
   manaCurve,
@@ -471,10 +471,10 @@ describe("filtering (B31)", () => {
       ...FILTER_SETS.map(filterSetId),
       ...COST_BUCKETS.map(filterCostId),
       ...FILTER_TYPES.map(filterTypeId),
-      ...FILTER_TAGS.map(filterTagId),
+      ...DECK_CHIP_TAGS.map(filterTagId),
       ...FILTER_RARITIES.map(filterRarityId),
     ];
-    expect(ids).toHaveLength(3 + 8 + 5 + 13 + 5);
+    expect(ids).toHaveLength(FILTER_SETS.length + 8 + 5 + DECK_CHIP_TAGS.length + 5);
     for (const id of ids) {
       const chip = within(filters).getByTestId(id);
       expect(chip.tagName, id).toBe("BUTTON");

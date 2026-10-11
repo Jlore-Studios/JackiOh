@@ -133,6 +133,18 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0028_usernames.sql",
         include_str!("../../migrations/0028_usernames.sql"),
     ),
+    (
+        "0029_play_telemetry.sql",
+        include_str!("../../migrations/0029_play_telemetry.sql"),
+    ),
+    (
+        "0030_meditative_set.sql",
+        include_str!("../../migrations/0030_meditative_set.sql"),
+    ),
+    (
+        "0031_meditative_endings.sql",
+        include_str!("../../migrations/0031_meditative_endings.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

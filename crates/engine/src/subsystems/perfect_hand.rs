@@ -6,8 +6,6 @@
 //! the same hand. This adds only the pool (every non-token Classic and Classic+ card but the asking
 //! card, R387), the face (Radiant on the Radiant face), the order (score, then card id, since an index
 //! repeats across sets) and the hand.
-//!
-//! Port of `packages/engine/src/subsystems/perfectHand.ts`.
 
 use std::cmp::Ordering;
 
@@ -20,7 +18,7 @@ use crate::state::{CardInstance, GameState, find_instance};
 use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, score_def};
 use crate::wire::PlayerId;
 
-/// `rankPerfectHand`'s options (TS `{ radiant?: boolean; selfDefId?: string }`).
+/// `rank_perfect_hand`'s options.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RankPerfectHandOptions {
@@ -30,7 +28,7 @@ pub struct RankPerfectHandOptions {
     pub self_def_id: Option<String>,
 }
 
-/// `replaceHandWithPerfect`'s argument (TS `{ radiant?: boolean }`).
+/// `replace_hand_with_perfect`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplaceHandWithPerfectArgs {
@@ -45,8 +43,7 @@ pub fn rank_perfect_hand(
     options: RankPerfectHandOptions,
 ) -> Vec<Scored> {
     let mut base = dry_run_base(state, viewer);
-    // TS `excludingDefId({ set: ["Classic", "Classic+"] }, selfDefId)`: the running card's ids added to
-    // the pool's exclusions, none when there is no running card.
+    // The running card's ids join the pool's exclusions; none when there is no running card.
     let excluded: Vec<String> = match options.self_def_id.as_deref() {
         None => Vec::new(),
         Some(self_def_id) => {
@@ -73,7 +70,7 @@ pub fn rank_perfect_hand(
         .into_iter()
         .map(|def| score_def(state, viewer, def, &scorer_options, base.as_mut()))
         .collect();
-    // TS `b.score - a.score || (a.def.id < b.def.id ? -1 : 1)`: a NaN difference ties, as JS reads it.
+    // Best score first; a NaN difference ties, and ties go by card id.
     ranked.sort_by(|a, b| match b.score.partial_cmp(&a.score) {
         Some(Ordering::Equal) | None => a.def.id.cmp(&b.def.id),
         Some(order) => order,
@@ -82,9 +79,8 @@ pub fn rank_perfect_hand(
 }
 
 /// R416: each other card in the controller's hand goes to their graveyard — a replace, not a discard
-/// (#76's reading; a unit-token card ceases to exist, R11) — and the top N of the ranking, made on the
-/// state before anything moves, arrive in rank order at their printed cost. N is the hand's size, so
-/// an empty hand ranks nothing and gets nothing.
+/// (a unit-token card ceases to exist, R11) — and the top N of the ranking, made on the state before
+/// anything moves, arrive in rank order at their printed cost, N being the hand's size.
 pub fn replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs) -> Effect {
     Effect::new("replaceHandWithPerfect", move |ctx| {
         let hand: Vec<CardInstance> = ctx.sink.state.players[ctx.controller].hand.clone();
@@ -112,7 +108,6 @@ pub fn replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs) -> Effect {
                 crate::zones::OffFieldZone::Graveyard,
                 Default::default(),
             );
-            // TS read the live object's zone after the move; the card as it now stands.
             let landed = find_instance(ctx.sink.state, &card.id)
                 .cloned()
                 .unwrap_or_else(|| card.clone());

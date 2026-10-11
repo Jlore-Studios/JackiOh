@@ -2,12 +2,15 @@
 //!
 //! Port of `packages/engine/src/effects/shuffleInto.ts`.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-use crate::draw::shuffle_into_library;
+use crate::draw::{ShuffleInOutcome, shuffle_into_library};
 use crate::enchantments::united_enchantments;
+use crate::own_library::hide_from_owner;
 use crate::script::Effect;
-use crate::state::{CardInstance, GameState, find_instance, new_instance};
+use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::tuning::copy_tuning;
 use crate::wire::Zone;
 
@@ -15,7 +18,8 @@ use super::targets::{PlayerSpec, player_of};
 
 /// R57 as patch v0.2.0 extends it (B3.4 rule 4, R443): a copy shuffled into a library carries its
 /// source's `tuning` and enchantments beside the radiant flag — never its Brittle count, which a copy
-/// never inherits. `source` is the card copied, when it still exists and is of the copy's definition.
+/// never inherits — and its `chinese` flag (ME-CN, R1300). `source` is the card copied, when it still
+/// exists and is of the copy's definition.
 fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
     let Some(source) = source else {
         return;
@@ -23,6 +27,9 @@ fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
     if source.def_id != copy.def_id {
         return;
     }
+    copy.chinese = source.chinese;
+    // MD-B15, R923: a copy keeps the granted tags of the card copied.
+    copy.granted_tags = source.granted_tags.clone();
     if let Some(tuning) = copy_tuning(source.tuning.as_ref()) {
         copy.tuning = Some(tuning);
     }
@@ -47,6 +54,19 @@ pub struct ShuffleIntoArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_of: Option<String>,
+    /// R1246: written on each new card's `memory` (§10.1), so a card shuffled in remembers what made it
+    /// (Meditative #96's Journey Complete, `memory.journey`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<IndexMap<String, Value>>,
+    /// ME-DECK-BOTTOM (Meditative #49): put the fresh card at this end of the library instead of
+    /// a random position. Absent is the shuffle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<crate::ownership::LibraryEnd>,
+    /// R1106 (MD-D10, Meditative #54 Money Machine): the card goes in unseen, so its owner's list
+    /// counts it as unknown until it leaves (R312's `hide_from_owner`), not with what it is (R311).
+    /// Absent is the open shuffle-in every other card makes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unseen: Option<bool>,
 }
 
 /// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
@@ -63,7 +83,22 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
-            shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref());
+            if let Some(memory) = &args.memory {
+                card.memory.extend(memory.clone());
+            }
+            let outcome = match args.position {
+                None => shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref()),
+                Some(end) => {
+                    crate::draw::put_into_library(ctx, &mut card, false, args.copy_of.as_deref(), end)
+                }
+            };
+            // R1106: an unseen card's record is cleared once it lies in the library.
+            if args.unseen == Some(true)
+                && outcome == ShuffleInOutcome::Library
+                && let Some(live) = find_instance_mut(ctx.state, &card.id)
+            {
+                hide_from_owner(live);
+            }
         }
     })
 }

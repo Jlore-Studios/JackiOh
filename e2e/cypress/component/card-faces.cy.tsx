@@ -165,8 +165,11 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
     );
     expect(TEXT_TIER_MAX.xl).to.eq(260);
     // Balance patch 1 (issue #88) rewords C+ #40 Appropriations and C+ #42 KY's Test onto short
-    // faces, so they leave the allowance; nothing else crosses the tier either way.
+    // faces, so they leave the allowance; nothing else crosses the tier either way. The catalog holds
+    // the Meditative set before it ships (R1420), and Meditative #45 Knowledge Breaker's Radiant face
+    // crosses it too (meditative-faces.cy.tsx measures the set's faces at the inspect sizes).
     expect(long).to.have.members([
+      "meditative-045 radiant",
       "core-093 base",
       "core-093 radiant",
       "core-095 base",

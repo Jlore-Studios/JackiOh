@@ -2,33 +2,16 @@
 //!
 //! Base: "Rush. Whenever this takes damage, +1 Plague Counter. Start of turn: +1 mana per Plague
 //! Token". Radiant: "Rush; +2 mana per token". The radiant cell lists Rush without "Plus", so Rush
-//! is the radiant face's COMPLETE keyword list (§8 Conventions) — which is what the catalog prints
-//! on both faces, so nothing here grants it (§10.4 layer 1 reads it off the def). The cell restates
-//! only the mana number, so the damage→token clause is kept exactly as the base writes it.
+//! is its COMPLETE keyword list (§8 Conventions): the catalog prints it on both faces and nothing
+//! here grants it (§10.4 layer 1). The base's damage→token clause is kept, as the cell restates
+//! only the mana number.
 //!
-//! The token count is `counters.plague` on the instance (§10.1) and the `plague` effect is the only
-//! thing that writes it; this file reads it and nothing else (CLAUDE.md rule 5).
-//!
-//! Two rulings do the work the card text leaves out, and neither is implemented here:
-//!   R63 — "a hit whose amount is 0 before step 1 is not a damage instance" and "a hit that is 0
-//!         after Armor and the cap emits no `damage` event and triggers nothing". `dealDamage`
-//!         (`engine/src/damage.ts`) returns before pushing the event in both cases, so a hit Armor
-//!         or the Anti-oneshot cap swallowed makes NO token. That is why this trigger counts
-//!         `damage` EVENTS rather than attacks: one event is one damage instance is one token.
-//!   R78 — "leaving the field resets an instance's … counters", so the tokens are gone the moment it
-//!         leaves and it comes back at zero. `resetInstance` (`engine/src/zones.ts`) does that; the
-//!         card neither implements nor helps it, and the test only asserts it.
-//!
-//! The condition is written twice, once as R99's `when` predicate and once as a guard inside `run`,
-//! and both call the same function. `when` is the declaration R99 asks for; the guard is there
-//! because `runQueuedTrigger` (`triggers.ts`) matches on `on` alone and never consults `when` — only
-//! the trap path does (`traps.ts`) — so a unit trigger that put its condition only in `when` would
-//! make a token off every hit anywhere on the board. Reported with this card; the guard stays
-//! correct either way, since a non-trap trigger is not spent by returning nothing.
-//!
-//! R280: "+1 mana per Plague Counter {n}" — the mana it gives at its controller's next start of turn,
-//! its own Plague Counters times the face's rate, off the same `manaNow` the hook gains. It reads the
-//! card's own counters, which travel on its public view (§10.8); a card in hand holds none (R78).
+//! The count is `counters.plague` (§10.1), written only by the `plague` effect (CLAUDE.md rule 5).
+//! R63: a 0 hit emits no `damage` event, so the trigger counts EVENTS, one per instance. R78: leaving
+//! the field resets counters. The condition is R99's `when` and also a guard in `run`, since queued
+//! unit triggers never consult `when`. R280: the preview is the mana it gives at its controller's next
+//! start of turn, `mana_now` off its own Plague Counters, which travel on its public view (§10.8); a
+//! card in hand holds none (R78).
 
 use jackioh_engine::prelude::*;
 
@@ -116,17 +99,10 @@ pub fn script() -> CardScripts {
 // #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91: "One Plague Counter per damage instance; +1 mana per
 // token at start of turn (radiant +2); counters reset on leaving").
 //
-// Fixtures. Fauci is 1/6 → 2/12, so a 2-attack unit can hit it twice without killing it:
-// #61 Prejudiced Postdoc is a 2/4 with no keywords, and its Cry never fires because the harness
-// places it rather than playing it (R1). #68 Twisted Sorcerer (5/5) is the finisher for the R78
-// test and #4 Gary the Gambler (1/1) the 1-attack striker for R63's zero rule.
-//
-// Every test that crosses a turn boundary gives BOTH sides a card in hand: the engine auto-ends a
-// turn with nothing meaningful left on it (R82), which would otherwise cascade several turns
-// forward and fire the start-of-turn hook more than once.
-//
-// The mana it would give at its controller's next start of turn, its R280 `preview`, is proved in
-// test/preview.test.ts.
+// Fauci is 1/6 → 2/12, so #61 Postdoc (2/4, no keywords; its Cry never fires because the harness
+// places it, R1) can hit it twice without killing it. #68 (5/5) finishes it for R78, #4 Gary (1/1)
+// is R63's zero-hit striker. A test that crosses a turn boundary gives BOTH sides a card in hand, or
+// the engine auto-ends the turn (R82) and fires the start-of-turn hook more than once.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,7 +153,6 @@ mod tests {
     }
 
     /// A board where p2 can attack p1's Fauci, with nothing that could auto-end either turn (R82).
-    /// TS `board({ radiant?, enemies })`.
     fn board(radiant: Option<bool>, enemies: &[&str]) -> Scenario {
         let mut fauci = json!({ "def": FAUCI });
         if radiant == Some(true) {

@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 25 tables of migrations 0001-0026 ==='
+\echo '=== CHECK 2: the 28 tables of migrations 0001-0029 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -56,14 +56,16 @@ declare
   -- collection_grants (0002), loadouts/loadout_decks/loadout_deck_cards (0003),
   -- matches/match_actions/tickets/results (0004); then decks/trios (0007, R250, R252),
   -- series (0009, R263), tutorial_progress (0011, R320), game_records (0014, R376), last_boards
-  -- (0017, R565), player_settings (0018, R633), player_stats (0021, R654) and the ranked ladder's
-  -- seasons/season_ranks/bot_ratings/rated_games (0022, R603-R612). 0005, 0006, 0008, 0010, 0012, 0013,
-  -- 0015, 0016, 0019, 0020, 0023, 0024, 0025 and 0026 add no table. The three loadout
+  -- (0017, R565), player_settings (0018, R633), player_stats (0021, R654), the ranked ladder's
+  -- seasons/season_ranks/bot_ratings/rated_games (0022, R603-R612) and the play telemetry's
+  -- action_timings/emote_events/match_signals (0029, R1442). 0005, 0006, 0008, 0010, 0012, 0013,
+  -- 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027 and 0028 add no table. The three loadout
   -- tables stay after 0007, unread and unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'bot_ratings', 'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'game_records',
-    'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions', 'matches',
-    'player_settings', 'player_stats', 'profiles', 'rated_games', 'results', 'season_ranks', 'seasons', 'series', 'tickets', 'trios', 'tutorial_progress'];
+    'action_timings', 'bot_ratings', 'cards', 'code_attempts', 'collection', 'collection_grants', 'decks',
+    'emote_events', 'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts',
+    'match_actions', 'match_signals', 'matches', 'player_settings', 'player_stats', 'profiles', 'rated_games', 'results',
+    'season_ranks', 'seasons', 'series', 'tickets', 'trios', 'tutorial_progress'];
   actual  text[];
   missing text[];
   extra   text[];
@@ -872,18 +874,19 @@ begin
     array_length(expected, 1);
 end $$;
 
-\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime and Acclaimed included, and refuses any other ==='
+\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed and Wincon included, and refuses any other ==='
+\echo '### R1411: cards_tags_check admits Wincon and a Meditative row as seed-catalog writes it ###'
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
 -- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), 0020 with the
--- mechanics patch's Plague, and 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed. Each probe
--- row is removed before the next, and each probe runs in a block of its own, so later checks see
--- only the cards CHECK 10 seeded.
+-- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, and 0030 with
+-- the Meditative set's Wincon (R1411). Each probe row is removed before the next, and each probe
+-- runs in a block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$
 declare
-  -- The `Tag` union in packages/shared/src/catalog-types.ts, in its order.
+  -- The `Tag` union in crates/engine/src/wire/catalog_types.rs, in its order.
   catalog_tags constant text[] := array[
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
-    'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Token'];
+    'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -899,16 +902,31 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All sixteen on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All seventeen on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all sixteen tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all seventeen tags';
   end;
   delete from public.cards where id = 'check18-probe';
+
+  -- A row as `seed-catalog` writes Meditative #8 Reach the Summit, a Wincon Spell of the
+  -- Meditative set, and a token of the set's (#39.1, a Field Spell) are admitted: no check names a
+  -- set, and the types and rarities are the ones every set uses.
+  begin
+    insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
+                              catalog_version)
+    values ('check18-probe', '8', 'Check 18 probe', 'Meditative', 'Spell', array['Wincon'], 'Mythic',
+            false, '1'::jsonb, 'core-1'),
+           ('check18-probe-token', '39.1', 'Check 18 probe token', 'Meditative', 'Field Spell',
+            array['CN', 'Token'], 'Token', true, '0'::jsonb, 'core-1');
+  exception when check_violation then
+    raise exception 'FAIL (CHECK 18): a Meditative row was refused (R1411)';
+  end;
+  delete from public.cards where id in ('check18-probe', 'check18-probe-token');
 
   -- A near miss is still refused: the check was widened by one name, not dropped.
   refused := false;
@@ -925,7 +943,7 @@ begin
     raise exception 'FAIL (CHECK 18): cards_tags_check admitted the unknown tag Jlocked';
   end if;
 
-  if exists (select 1 from public.cards where id = 'check18-probe') then
+  if exists (select 1 from public.cards where id in ('check18-probe', 'check18-probe-token')) then
     raise exception 'FAIL (CHECK 18): the probe row was left behind';
   end if;
 

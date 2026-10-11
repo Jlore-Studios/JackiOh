@@ -201,7 +201,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
      {
         register_all();
         let mut g = scenario(json!({
-            "seed": "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
+            "seed": "craft-9344", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [PREM_PANTHER] },
         }));
@@ -249,7 +249,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
      {
         register_all();
         let mut g = scenario(json!({
-            "seed": "craft-446", // the first Discover offers Archivist, the second Silly Silas (pools of every set, R380)
+            "seed": "craft-1439", // the first Discover offers Archivist, the second Silly Silas (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4, "library": [MR_VANILLA, MIDRANGE_MENACE, MR_VANILLA] },
             "p2": { "hand": [RENO], "field": [MR_VANILLA] },
         }));
@@ -496,6 +496,7 @@ fn first_pick_key(action: &ActionBody) -> String {
         Some(Selection::Instance { instance_id }) => instance_id.clone(),
         Some(Selection::Zone { .. }) => "zone".to_string(),
         Some(Selection::Mode { .. }) => "mode".to_string(),
+        Some(Selection::Craft { .. }) => "craft".to_string(),
         Some(Selection::None) => "none".to_string(),
     }
 }

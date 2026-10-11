@@ -19,7 +19,7 @@
 
 import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
-import type { CardView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
+import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
@@ -155,9 +155,21 @@ export function popsFrom(
   return pops;
 }
 
-function ManaTray({ side, mana, animating }: { side: Side; mana: { current: number; max: number }; animating?: AnimatingMap }): ReactElement {
+function ManaTray({
+  side,
+  mana,
+  credit,
+  animating,
+}: {
+  side: Side;
+  mana: { current: number; max: number };
+  credit?: CreditView;
+  animating?: AnimatingMap;
+}): ReactElement {
   const testId = `mana-${side}`;
   const crystals = Math.max(mana.max, mana.current);
+  // R1224: the instalment the last refresh took locks that many of the tray's top crystals.
+  const locked = credit?.locked ?? 0;
   return (
     <span
       className="mana"
@@ -171,12 +183,29 @@ function ManaTray({ side, mana, animating }: { side: Side; mana: { current: numb
         {Array.from({ length: crystals }, (_unused, index) => (
           // `.mana-crystal` is the class the M5-T4 acceptance row and e2e read; `.crystal` is the
           // shorter alias the animation table's prose uses. Both sit on every crystal.
-          <span key={index} className="mana-crystal crystal" data-filled={index < mana.current ? "true" : "false"} />
+          <span
+            key={index}
+            className="mana-crystal crystal"
+            data-filled={index < mana.current ? "true" : "false"}
+            data-locked={index >= mana.current && index >= crystals - locked ? "true" : undefined}
+          />
         ))}
       </span>
       <span className="mana-text">
         {mana.current}/{mana.max}
       </span>
+      {credit !== undefined && (
+        <span
+          className="mana-credit"
+          data-testid={`credit-${side}`}
+          data-available={credit.available === undefined ? "none" : String(credit.available)}
+          data-used={credit.used === undefined ? "none" : String(credit.used)}
+        >
+          {credit.available !== undefined && <span>+{credit.available} credit</span>}
+          {(credit.owed?.length ?? 0) > 0 && <span>owed {(credit.owed ?? []).join("·")}</span>}
+          {credit.used !== undefined && <span>{credit.used ? "used" : "unused"}</span>}
+        </span>
+      )}
     </span>
   );
 }
@@ -234,7 +263,11 @@ function browseEntries(
   if (browse.kind === "library") {
     for (const entry of browse.library.cards) {
       const face = namedFace(lookup, browse.view, { defId: entry.defId, radiant: entry.radiant });
-      if (face !== null) entries.push({ key: `${entry.defId}:${entry.radiant ? "radiant" : "base"}`, face, count: entry.count });
+      if (face !== null) {
+        if (entry.created === true) face.created = true;
+        const created = entry.created === true ? ":created" : "";
+        entries.push({ key: `${entry.defId}:${entry.radiant ? "radiant" : "base"}${created}`, face, count: entry.count });
+      }
     }
     if (browse.library.unknown > 0) entries.push({ key: "unknown", face: null, count: browse.library.unknown });
     return { entries, order: LIBRARY_ORDER };
@@ -379,7 +412,7 @@ function Seat({
         pops={pops.get(testid.hero(side))}
         emotes={emotes?.(side)}
       />
-      <ManaTray side={side} mana={seat.mana} animating={animating} />
+      <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
@@ -555,6 +588,7 @@ export default function Board({
         data-viewer={view.viewer}
         data-drag={dragToPlay ? "on" : "off"}
         data-log={logOpen ? "open" : undefined}
+        data-random-targets={view.randomTargets === true ? "" : undefined}
       >
         <Seat
           view={view}
@@ -568,7 +602,7 @@ export default function Board({
           emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
-        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label="Field" ref={field}>
           <SandSurface field={field} disabled={sandDisabled} />
@@ -592,7 +626,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" hand={yourHand} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
+        <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label="Controls">
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
@@ -617,6 +651,12 @@ export default function Board({
             </span>
           </div>
           {matchStatus === undefined ? null : <div className="board-status">{matchStatus}</div>}
+          {/* R1200: while a Mayor acts every target is drawn at random, so the board says so. */}
+          {view.randomTargets === true ? (
+            <div className="random-targets" data-testid="random-targets" role="status">
+              Targets are random
+            </div>
+          ) : null}
           <div className="turn-mechanism" data-turn-state={endTurnState}>
             <ControlButton
               control="end-turn"

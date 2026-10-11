@@ -182,7 +182,13 @@ fn max_actions_per_game() -> usize {
 }
 
 /// §2.5 plus R84: the policy never concedes or offers a draw, so only these three can occur.
-const TERMINAL_REASONS: &[&str] = &["hero-death", "both-heroes-dead", "turn-cap"];
+const TERMINAL_REASONS: &[&str] = &[
+    "hero-death",
+    "both-heroes-dead",
+    "turn-cap",
+    "alt-win",
+    "won-by-effect",
+];
 
 // ---------------------------------------------------------------------------------------------
 // The deck pool

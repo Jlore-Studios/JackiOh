@@ -7,7 +7,8 @@
 //! screen's only read. The gate itself lives in `http.rs` (`assert_active`), never here.
 //!
 //! Routes (SURFACE §11.3): `POST /api/auth/signin` (it answers only under `E2E=1`, where the
-//! fixture provider knows passwords; Supabase answers 503 as TS did), `GET /api/profile`,
+//! fixture provider knows passwords; Supabase answers 503 as TS did), `POST
+//! /api/auth/username-signin` (R1443: a sign-in by username, on any provider), `GET /api/profile`,
 //! `DELETE /api/account`, `GET /api/auth/me`. `POST /api/auth/signup` is not ported.
 
 use std::future::Future;
@@ -17,10 +18,14 @@ use axum::body::Body;
 use axum::response::Response;
 use serde_json::{Value, json};
 
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Caller, Req, json, now_ms};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, now_ms, rate_limited,
+};
 use crate::api::username::own_username;
 use crate::app::App;
-use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, Session};
+use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, PasswordGrantOutcome, Session};
+use crate::config::USERNAME_SIGN_IN_WINDOW_MS;
+use crate::username::sign_in_name;
 
 // NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11:
 //   Topic: The scope of the identical sign-up and sign-in error (extends R145)
@@ -38,6 +43,13 @@ use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, Session};
 // §9.4 does not write these strings; the ruling above is about their being one string, not about
 // their wording. (Sign-up's own string went with the route, SURFACE §11.3.)
 const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an account.";
+
+// R1443: the one refusal of a sign-in by username, whatever was wrong (R160), and its two answers
+// that say nothing about an account: a rate limit (R192) and a provider nobody could reach. The
+// client shows its own copy of the first (`USERNAME_SIGN_IN_FAILED_MESSAGE` in `net/auth.ts`).
+const USERNAME_SIGN_IN_FAILED_MESSAGE: &str = "That username and password do not match an account.";
+const USERNAME_SIGN_IN_RATE_LIMITED_MESSAGE: &str = "too many sign-in attempts; wait, then try again";
+const USERNAME_SIGN_IN_UNAVAILABLE_MESSAGE: &str = "the sign-in service could not be reached";
 
 // Not in SPEC, and no R-row: wording only, for `DELETE /api/account`.
 const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
@@ -114,6 +126,76 @@ pub async fn sign_in(app: &Arc<App>, req: Req) -> ApiResult {
             "session": session_body(&session),
         }),
     ))
+}
+
+fn username_refused() -> ApiError {
+    ApiError::new(ApiErrorCode::Unauthorized, USERNAME_SIGN_IN_FAILED_MESSAGE)
+}
+
+/// R1443: one attempt counted against `key`, or the rate limit with its wait (R192) once its
+/// window is full.
+fn attempt(app: &App, key: &str, now: i64) -> Result<(), ApiError> {
+    if app.sign_in_limiter.allow(key, now) {
+        return Ok(());
+    }
+    Err(rate_limited(
+        USERNAME_SIGN_IN_RATE_LIMITED_MESSAGE,
+        app.sign_in_limiter.retry_after_ms(key, now),
+    ))
+}
+
+/// `POST /api/auth/username-signin` (`AuthLevel::None`), R1443: a sign-in by username and password.
+/// The provider signs in by email alone and no player may learn another's address, so the server
+/// finds the one profile holding the name (R1434's key and tag) and asks the provider for the
+/// session with its address. The answer is the session, whether the email is verified and the
+/// authenticator app R665 still needs; never the address. No such name, a name that cannot be one
+/// and every refusal of the provider's are one 401 (R160). Every attempt counts against the
+/// caller's address (R190) and, once the name reads, against the name, each
+/// `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` per `USERNAME_SIGN_IN_WINDOW_SECONDS` (R192).
+pub async fn username_sign_in(app: &Arc<App>, req: Req) -> ApiResult {
+    let username = required_str(&req.body, "username")?;
+    let password = required_str(&req.body, "password")?;
+    let now = now_ms();
+    attempt(app, &address_key(&req.address), now)?;
+    let Some((key, tag)) = sign_in_name(&username) else {
+        return Err(username_refused());
+    };
+    attempt(app, &format!("username:{key}#{}", tag.unwrap_or(0)), now)?;
+
+    let mut tx = app.db.begin(None).await?;
+    let profile = tx.profiles_get_by_username(&key, tag).await?;
+    tx.commit().await?;
+    let Some(profile) = profile.filter(|profile| !profile.email.is_empty()) else {
+        return Err(username_refused());
+    };
+
+    match app.auth.password_grant(&profile.email, &password).await {
+        PasswordGrantOutcome::Granted(grant) => Ok(json(
+            200,
+            json!({
+                "session": {
+                    "accessToken": grant.access_token,
+                    "refreshToken": grant.refresh_token,
+                    "expiresIn": grant.expires_in,
+                },
+                "emailVerified": grant.email_verified,
+                "secondFactor": grant.second_factor,
+            }),
+        )),
+        PasswordGrantOutcome::Refused => {
+            // No name, address or profile id in the line: it would tie a name to its address.
+            tracing::warn!(event = "auth.username_signin_rejected");
+            Err(username_refused())
+        }
+        PasswordGrantOutcome::RateLimited => Err(rate_limited(
+            USERNAME_SIGN_IN_RATE_LIMITED_MESSAGE,
+            USERNAME_SIGN_IN_WINDOW_MS,
+        )),
+        PasswordGrantOutcome::Unavailable => Err(ApiError::new(
+            ApiErrorCode::Unavailable,
+            USERNAME_SIGN_IN_UNAVAILABLE_MESSAGE,
+        )),
+    }
 }
 
 /// `GET /api/profile` (`AuthLevel::Active`): the account screen: who you are signed in as, and how

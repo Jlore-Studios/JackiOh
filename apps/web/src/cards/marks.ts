@@ -42,6 +42,8 @@ export const MARK_PALETTES = {
   cyan: { rim: "#4fe3ff", core: "#e0fbff", glow: "#0fa3c4", preset: "frost" },
   blue: { rim: "#6b94ff", core: "#e3eaff", glow: "#2349c9", preset: "frost" },
   orange: { rim: "#ff9a3d", core: "#fff1de", glow: "#d1570a", preset: "ember" },
+  // Meditative #39.5 Jade Beauty's Allure (`ALLURE_MARK_COLOR`), pink (R963).
+  pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
@@ -72,6 +74,11 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   berserk: { name: "Berserk", text: BERSERK_WORDS },
   // Classic #20 The Power to Punish: the unit marked for death wears #50's aura, in red (R437).
   destroy: { name: "Destroy", text: "Marked: destroyed at the start of its marker's next turn" },
+  // Meditative #39.5 Jade Beauty: "at the start of your next turn they join your side" (R963).
+  allure: {
+    name: "Allure",
+    text: "Marked: joins its marker's side at the start of their next turn, or dies with no room",
+  },
 };
 
 /** The words for a mark the table does not know. */

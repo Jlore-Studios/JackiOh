@@ -17,6 +17,19 @@ export const UNREVEALED_NOTE = "Face down — your opponent can't see this card"
 /** R370: what a back in the backrow is. */
 export const FACE_DOWN_TITLE = "Face-down trap";
 
+/**
+ * R1046: when your own face-down play reveals, in the D3 words the picker offered it in. Keyed by
+ * the wire timing so the badge and the picker cannot disagree.
+ */
+export const REVEAL_AT_LABEL: Record<string, string> = {
+  endOfThisTurn: "End of your turn",
+  startOfNextTurn: "Start of your next turn",
+  endOfNextTurn: "End of your next turn",
+};
+
+/** R1046: what your own face-down play's timing badge tooltips. */
+export const REVEAL_AT_NOTE = "Reveals — your opponent can't see when";
+
 /** R370: the line under it in its inspect overlay. */
 export const FACE_DOWN_HINT = "Only the player who set it can see what it is. It springs by itself when its condition is met.";
 

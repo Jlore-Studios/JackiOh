@@ -185,8 +185,8 @@ pub const CODE_ATTEMPTS_PER_IP_PER_HOUR: i64 = 20;
 pub const CODE_ATTEMPT_WINDOW_SECONDS: i64 = 3600;
 
 // ---------------------------------------------------------------------------------------------
-// Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row.
-// The privacy policy must state these same periods.
+// Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row
+// (the play telemetry's period is R1442's). The privacy policy must state these same periods.
 // ---------------------------------------------------------------------------------------------
 
 /// Days a `code_attempts` row (profile id, peppered IP hash, time) is kept. The limits that read the
@@ -195,6 +195,10 @@ pub const CODE_ATTEMPT_RETENTION_DAYS: i64 = 30;
 /// Days a finished match's action log is kept after the match ended. Only a live match is ever
 /// replayed from its log; the result row, and so the rating history, is kept.
 pub const MATCH_ACTION_RETENTION_DAYS: i64 = 90;
+/// R1442: days a finished match's play telemetry (`action_timings`, `emote_events`,
+/// `match_signals`, migration 0029) is kept after the match ended. Longer than the log, so the
+/// think-time fits (`jackioh-server timing-fit`) have a year of games to draw on.
+pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 /// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
@@ -366,6 +370,16 @@ pub const USERNAME_PREVIEW_DEBOUNCE_MS: i64 = 400;
 pub const USERNAME_DEFAULT_BASE: &str = "Player";
 
 // ---------------------------------------------------------------------------------------------
+// Username sign-in (SPEC §9.4, R1443). The route is `src/api/auth.rs`'s `username_sign_in`.
+// ---------------------------------------------------------------------------------------------
+
+/// R1443: how many username sign-ins one address may try in a window, and, counted apart, how many
+/// may be tried at one username.
+pub const USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW: usize = 10;
+/// R1443: the window `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` counts in (5 minutes).
+pub const USERNAME_SIGN_IN_WINDOW_SECONDS: i64 = 300;
+
+// ---------------------------------------------------------------------------------------------
 // Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
 // ---------------------------------------------------------------------------------------------
 
@@ -470,14 +484,15 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
 /// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
-/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused.
+/// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
+/// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
 /// SPEC §11 R255: the one older deck-code version still read. Every code minted before patch v0.2.0
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -486,15 +501,20 @@ pub struct CatalogNumberSetOffsets {
     pub classic: i32,
     #[serde(rename = "Classic+")]
     pub classic_plus: i32,
+    #[serde(rename = "Meditative")]
+    pub meditative: i32,
 }
 
-/// SPEC §11 R255, R339 (B2.2): a card's catalog number in a version 2 deck or trio code is its §5
-/// index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n — still written as
-/// LEB128. No set holds 1000 cards, so a number names one set and one card.
+/// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
+/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
+/// 3000 + n — still written as LEB128. No set holds 1000 cards, so a number names one set and one
+/// card. Meditative's offset is the next thousand in catalog order (R1420), and it moved no other
+/// set's, so a code minted before the set shipped reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
     classic_plus: 2000,
+    meditative: 3000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
@@ -623,6 +643,31 @@ pub const PLAYER_STATS_PAGE_LIMIT: usize = 50;
 pub const PLAYER_STATS_BYTES_MAX: usize = 16384;
 
 // ---------------------------------------------------------------------------------------------
+// Play telemetry (SPEC §9.11, R1442): how humans pace their moves, for the ladder bots (#636).
+// ---------------------------------------------------------------------------------------------
+
+/// R1442: the fewest human think times a bucket needs before `jackioh-server timing-fit` fits it.
+pub const TIMING_FIT_MIN_SAMPLES: usize = 30;
+
+/// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
+/// standard deviation `sigma` over `samples` moves of `action_kind` (an `ActionType` literal), made
+/// first or later in the turn, by players in `rank_bucket` (a `RankTier` literal; `None` for the
+/// moves no tier was read for).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThinkTimeFit {
+    pub rank_bucket: Option<&'static str>,
+    pub action_kind: &'static str,
+    pub first_in_turn: bool,
+    pub samples: usize,
+    pub mu: f64,
+    pub sigma: f64,
+}
+
+/// R1442: the think-time fits, pasted by hand from `jackioh-server timing-fit` (CLAUDE.md rule 9);
+/// the ladder bots (#636) read it. Empty until enough human games are recorded.
+pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
+
+// ---------------------------------------------------------------------------------------------
 // Derived millisecond helpers, since timers (`tokio::time`) take milliseconds.
 // ---------------------------------------------------------------------------------------------
 
@@ -638,3 +683,5 @@ pub const DISCONNECT_GRACE_MS: i64 = DISCONNECT_GRACE_SECONDS * 1000;
 pub const MATCH_CEILING_MS: i64 = MATCH_CEILING_MINUTES * 60 * 1000;
 /// R1435: `USERNAME_CHANGE_COOLDOWN_SECONDS` in milliseconds.
 pub const USERNAME_CHANGE_COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_SECONDS * 1000;
+/// R1443: `USERNAME_SIGN_IN_WINDOW_SECONDS` in milliseconds.
+pub const USERNAME_SIGN_IN_WINDOW_MS: i64 = USERNAME_SIGN_IN_WINDOW_SECONDS * 1000;

@@ -1,13 +1,9 @@
 //! C #70 Book of Plague (SPEC §8.6 row 70). (1) Spell, Book, Epic.
 //!   Base:    "Place {tokens|Plague Counter|Plague Counters}." — 5; Radiant: the same text — 10.
-//!   Engine:  "Plague Counters (§6.3): five (Radiant ten) placements of 1, each on a permanent you choose
-//!            (either side, face-down cards included, repeats allowed), one prompt per token. Tunes:
-//!            tokens 5 ↑."
 //!
-//! `placePlagueTokens`: one `target` prompt naming the single permanent every placement lands on (R689),
-//! over every permanent on the field (a face-down card the chooser may not read offered by its id
-//! alone, R177); with none on the field nothing is placed. Each placement is its own (C #53 answers
-//! each; C #27 multiplies its own). The count is the declared `tokens` (R386).
+//! Five (radiant ten) Plague Counter placements (§6.3) on the single permanent a prompt names (R689),
+//! over every permanent on the field (face-down cards offered by id alone, R177); with none on the field
+//! nothing is placed. Placements are individual (C #53 answers each; C #27 multiplies). Count is `tokens` (R386).
 
 use jackioh_engine::effects::place_plague_tokens;
 use jackioh_engine::prelude::*;
@@ -28,16 +24,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: "Five placements of one Plague
-// Token, all on the one permanent a single prompt names (R689), on any permanent either side,
-// face-down ones included; with no permanent on the field it places nothing; each placement is still
-// its own for "whenever tokens are placed" (C #53 draws five times) and C #27 doubles its share;
-// a face-down option carries only its id (R177); tagged Book, so C #4 answers it; radiant: ten; its
-// tuned number (tokens) reads through `param()` (R386)".
-//
-// The C #27 Pestilent Slime and C #4 Palantir cases need those cards' scripts (cards-classic-a).
-
-/// `describe("C #70 Book of Plague")`.
+// C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: Five placements of one Plague
+// Token on the permanent a single prompt names (R689), face-down ones by id alone (R177); with no
+// permanent on the field places nothing; individual for C #53 and C #27; tagged Book; radiant: 10 (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,7 +55,6 @@ mod tests {
         vec![X; n]
     }
 
-    /// TS `must(value, what)`.
     fn must<T>(value: Option<T>, what: &str) -> T {
         match value {
             Some(value) => value,
@@ -132,7 +120,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "tokens", "base": 5, "radiant": 10, "better": "up", "step": 1, "min": 1 }])
         );
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face, its Cry the same one.
+        // The Radiant face is the base face, its Cry the same one.
         let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.base.cry.as_ref().expect("a Cry"),
@@ -140,7 +128,6 @@ mod tests {
         ));
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -334,7 +321,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

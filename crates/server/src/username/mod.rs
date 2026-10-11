@@ -14,6 +14,8 @@
 //!   one name, and so are `Straße` and `STRASSE`. Both stores call it, and Postgres collation never
 //!   decides.
 //! - [`render_username`] and [`parse_username`] go between `(base, tag)` and `Max#3`.
+//! - [`sign_in_name`] reads a username typed at sign-in as the key and tag of the one profile that
+//!   holds it (R1443).
 
 use caseless::default_case_fold_str;
 use unicode_normalization::UnicodeNormalization;
@@ -138,6 +140,26 @@ pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
             (tag >= 1).then_some((base, Some(tag)))
         }
     }
+}
+
+/// R1443: the key and tag of the username typed at sign-in, which name its one holder (R1434's
+/// unique key and tag): `Max#3`, `max#3` and fullwidth `ＭＡＸ＃３` all name `("max", Some(3))`. The
+/// text is trimmed and read in NFKC, split as [`parse_username`] splits a shown name, and its base
+/// keyed as a claim's is ([`username_key`]). None when nothing was typed, when the text is longer
+/// than `USERNAME_INPUT_MAX_CHARS` (refused before it is normalised, as a claim's is), or when the
+/// part after the last `#` is not a tag. The base is not checked against R1432 on purpose: it only
+/// has to match a name someone holds, and a name a later filter would refuse still names its holder.
+pub fn sign_in_name(typed: &str) -> Option<(String, Option<i64>)> {
+    let trimmed = typed.trim();
+    if trimmed.is_empty() || trimmed.chars().count() > USERNAME_INPUT_MAX_CHARS {
+        return None;
+    }
+    let read: String = trimmed.nfkc().collect();
+    let (base, tag) = parse_username(&read)?;
+    if base.is_empty() {
+        return None;
+    }
+    Some((username_key(base), tag))
 }
 
 fn in_bmp(ch: char) -> bool {
@@ -553,5 +575,22 @@ mod tests {
         assert_eq!(parse_username("Max#+1"), None);
         assert_eq!(render_username("Max", Some(3)), "Max#3");
         assert_eq!(render_username("Max", None), "Max");
+    }
+
+    #[test]
+    fn r1443_a_typed_username_names_its_key_and_tag() {
+        let named = |key: &str, tag: Option<i64>| Some((key.to_string(), tag));
+        assert_eq!(sign_in_name("Max"), named("max", None));
+        assert_eq!(sign_in_name(" MAX#3 "), named("max", Some(3)));
+        assert_eq!(sign_in_name("ＭＡＸ#3"), named("max", Some(3)));
+        assert_eq!(sign_in_name("ＭＡＸ＃３"), named("max", Some(3)));
+        assert_eq!(sign_in_name("STRASSE"), sign_in_name("Straße"));
+        // Unchecked: a name R1432 would refuse still reads, and simply matches nobody.
+        assert_eq!(sign_in_name("a b"), named("a b", None));
+        for nothing in ["", "   ", "#3", "Max#0", "Max#x", "Max#"] {
+            assert_eq!(sign_in_name(nothing), None, "{nothing:?}");
+        }
+        assert_eq!(sign_in_name(&"x".repeat(USERNAME_INPUT_MAX_CHARS + 1)), None);
+        assert!(sign_in_name(&"x".repeat(USERNAME_INPUT_MAX_CHARS)).is_some());
     }
 }

@@ -1,60 +1,29 @@
 //! #90.1 CN-Virus (SPEC §8.5, §7, §4.4, R57, R58, R70, R80, R316, R350).
 //!
 //! Base: "Cast on draw: take 1 damage; at end of turn, shuffle 2 copies of this into your deck".
-//! Radiant: "Cast on draw: take 2 damage; at end of turn, shuffle 3 copies of this into your deck"
-//! (§8's cell "Take 2 damage; 3 copies", R275: both numbers scale).
-//! Engine cell: "Damage goes through the pipeline; cast-on-draw chains, capped by R58; the copies wait
-//! for the end of the turn it was cast on (R350); copies stop at the library cap (R80)."
+//! Radiant: take 2 damage, 3 copies (§8's cell, R275: both numbers scale).
 //!
-//! §7's token rules say the rest: "CN-Virus damage is a normal damage instance to your own hero
-//! (Armor and Anti-oneshot Armor apply)." It is a SPELL token, so unlike a unit token it lives in a
-//! hand and a library like a real card and goes to the graveyard after it resolves (§7, R11).
-//!
-//! NOTHING HERE CASTS OR DRAWS. `staticFlags.castOnDraw` is the whole of "Cast on draw": `drawOne`
-//! (engine/src/draw.ts) reads the flag off the drawn card, casts it, and repeats the draw, stopping
-//! at `CAST_ON_DRAW_CHAIN_CAP` casts — after which the next such card goes to hand uncast and ends
-//! the chain (R58). `castCard` makes the cast free, counts it as a card played (R70) and sends the
-//! spell to the graveyard afterwards. The flag is on BOTH faces: R58's cap is a property of the
-//! draw, not of the card, and the radiant cell changes only the two numbers.
-//!
-//! "TAKE 1 DAMAGE" (radiant 2) IS DAMAGE, TO THE DRAWER'S OWN HERO, AND AT ONCE. `{ of: "selfHero" }`
-//! resolves to `ctx.controller`, and a cast-on-draw card resolves with `controller === owner` (off
-//! the field control follows ownership, R12), so the player who drew it takes the hit — which is
-//! exactly why #90 hands the token to the OPPONENT. It is damage and not "lose health" (R18), so it
-//! runs the whole §4.4 pipeline: step 2 subtracts the hero's Armor, so Going Long (#84) reduces or
-//! removes it, and step 3 applies any Anti-oneshot Armor cap. A hit reduced to 0 emits nothing and
-//! triggers nothing (R63) — and the copies are still owed, because the two clauses are independent.
-//!
-//! THE COPIES WAIT FOR THE END OF THE TURN (R350, patch v0.1.1, issue #27). They were shuffled in at
-//! once, so a chain could draw the copies it had just made. Now the cast arms a delayed effect for the
-//! end of the turn it is cast on — whoever's turn that is (`THIS_TURN`), since a draw can come on
-//! either player's turn (#32 Prem Panther defending) — and the copies go in at §2.2's end-of-turn
-//! delayed-effect point, in R68's creation order with the turn's other delayed effects (#39's copies,
-//! #78's exile). So a chain only ever casts the viruses the library already held. Each cast arms its
-//! own shuffle, so three viruses cast in one turn shuffle in 2 + 2 + 2 at its end. One cast after
-//! that turn's delayed effects have begun is due at the next such point for the same player (R62).
-//!
-//! THE COPIES ARE FRESH INSTANCES CARRYING THE RADIANT FLAG. The continuation is the face that was
-//! cast (`resume.radiant`), and each copy is created with that flag — R57's rule for copies shuffled
-//! into a library — which is what makes a Radiant virus breed Radiant viruses: each drawn copy casts
-//! the radiant face, takes 2 and arms 3 more. They go to the caster's own library ("into YOUR deck";
-//! the delayed effect runs as the virus's controller, its owner), each at a uniformly random position
-//! from the match rng, and `shuffleIntoLibrary` stops at `LIBRARY_CAP`, reporting each copy a full
-//! library refuses with `libraryOverflow` (R80, R316).
+//! A spell token (§7, R11): `static_flags.cast_on_draw` is the whole of "Cast on draw", on both faces.
+//! The draw casts it free as a card played (R70) and caps the chain (R58). It hits the drawer's own
+//! hero (control follows ownership off the field, R12) as damage, not "lose health" (R18): §4.4's
+//! pipeline, so Armor applies, and a hit reduced to 0 triggers nothing (R63) but the copies are owed.
+//! The copies wait for the end of the turn it was cast on, whoever's (R350), at §2.2's delayed-effect
+//! point in R68's order, so a chain casts only library viruses; a cast after those have begun is due
+//! at the next such point for the same player (R62). They are fresh copies with the cast face's
+//! radiant flag (R57); a full library refuses (R80, R316).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-090-1";
 
-// No `mod tests` here: the TS card has no test file of its own, and #90.1's behaviour is proved by
-// #90 CN Viral Injection's tests (`c090_cn_viral_injection.rs`).
+// No `mod tests` here: #90.1's behaviour is proved by #90 CN Viral Injection's tests
+// (`c090_cn_viral_injection.rs`).
 
 /// R350: the step the end-of-turn delayed effect re-enters (§10.6: `script.resume[step]`).
 const COPIES_STEP: &str = "copies";
 
-/// The two numbers are the whole of the radiant text: "take 1 damage; shuffle 2 copies", radiant "take
-/// 2 damage; 3 copies" — the declared numbers `damage` and `copies` (R386), each less being better for
-/// the virus's controller, the player who draws it.
+/// The two numbers are the whole of the radiant text, declared as `damage` and `copies` (R386); less
+/// of either is better for the virus's controller, the player who draws it.
 fn virus() -> Script {
     Script {
         static_flags: Some(StaticFlags {

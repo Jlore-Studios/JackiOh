@@ -4,7 +4,7 @@
 //! forms the new cards name — a whole lane (Classic #71 Lane Eater), the zone a permanent was just
 //! played into (Classic #84 Lockdown, Classic+ #34 Memory Leak), a random zone not already Locked
 //! (Classic+ #34), the firing trap's own zone (Classic+ #1 Doom Shroom) and every zone (Classic+ #77
-//! Anti-Softlock).
+//! Anti-Softlock), and a random Locked zone to Unlock (Meditative #27 Clip-Farming Lawyer).
 //!
 //! Port of `packages/engine/src/effects/locks.ts`.
 
@@ -199,6 +199,26 @@ pub fn lock_random_zone(args: ZoneScope) -> Effect {
         let at = ctx.rng.int(open.len() as i32);
         if let Some(slot) = open.get(at as usize) {
             lock_one(ctx, &slot.clone());
+        }
+    })
+}
+
+/// R900: Unlock one random Locked zone the scope covers, both sides and both rows by default (Meditative
+/// #27 Clip-Farming Lawyer's "Unlock a random zone"), the mirror of `lock_random_zone`. One uniform draw
+/// from the match rng among the Locked candidates (R60), an occupied one as fair a pick as an empty one;
+/// none Locked, nothing is drawn (R129).
+pub fn unlock_random_zone(args: ZoneScope) -> Effect {
+    Effect::new("unlockRandomZone", move |ctx| {
+        let locked: Vec<ZoneSlot> = zones_in_scope(ctx, &args)
+            .into_iter()
+            .filter(|slot| is_locked(ctx.state, slot))
+            .collect();
+        if locked.is_empty() {
+            return;
+        }
+        let at = ctx.rng.int(locked.len() as i32);
+        if let Some(slot) = locked.get(at as usize) {
+            unlock_one(ctx, &slot.clone());
         }
     })
 }

@@ -297,7 +297,10 @@ export async function deleteAccount(token: string): Promise<void> {
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account
 // path: without a publishable key configured there it answers 503 with "This server does not broker
 // passwords", which is the normal deployment. A second client helper pointing at it would be a
-// sign-in path that silently fails, so there is one and it is `net/auth.ts`.
+// sign-in path that silently fails, so there is one and it is `net/auth.ts`. The one sign-in that
+// reaches this server is a username's (R1443), since only the server may read the address a name
+// signs in with: `net/auth.ts`'s `signInWithUsername` sends it to `/api/auth/username-signin`
+// through `apiRequest`.
 
 /**
  * `GET /api/codes/status`: so the code screen can say "paused" instead of guessing, and how many

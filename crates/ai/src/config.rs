@@ -6,7 +6,7 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
-use jackioh_engine::KeywordKind;
+use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
 use crate::types::SearchBudget;
@@ -49,6 +49,8 @@ pub struct AiSearch {
     pub lines_per_action: i32,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
+    /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
+    pub tribute_sets: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -59,6 +61,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_width: 60,
     lines_per_action: 2,
     probe_seed: "ai:probe",
+    tribute_sets: 120,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
@@ -190,6 +193,9 @@ pub struct EvalWeights {
     pub library_comfort: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
+    /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
+    /// turns' mana spent early.
+    pub owed_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's hero health.
@@ -257,6 +263,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
+    owed_mana: 0.8,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -321,6 +329,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
+    // them did.
+    owed_mana: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -383,6 +394,15 @@ pub struct AiDeterminize {
 pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
     exclude_def_ids: &["core-098"],
 };
+
+/// R1390: the soft gate. The sets the AI's randomized decks are never dealt from, whatever ships or a
+/// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, so the AI's own decks (practice,
+/// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
+/// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
+/// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
+/// Meditative is gated until the AI is trained on its cards (issue #551's deferred work, MN08 of
+/// #496): lifting the gate is emptying this list, which deals every deck exactly as before it.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Meditative];
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,

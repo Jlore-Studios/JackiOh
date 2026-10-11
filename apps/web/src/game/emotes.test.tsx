@@ -1,7 +1,11 @@
 // The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): a portrait's art
 // on each seat's hero with the health and armor badges, your portrait's menu of your dealt hand, the
-// opponent's one-item mute, and every way the menu must leave — a pick, a press outside, Escape,
-// the start of a play or attack, a hotseat seat change and the end of the match.
+// opponent's one-item mute, and every way the menu must leave — a pick, a press on the dim around
+// it, Escape, the start of a play or attack, a hotseat seat change and the end of the match.
+//
+// Issue #544 (R1330–R1331) put both menus in the hero's inspect view: the portrait large with its
+// words, health and Armor, opened by a click, a long-press or Enter on either portrait, and the
+// squash and glint the board's oval answers with. The `MN02` block at the end tests the view.
 //
 // The harness is the route's own wiring: `useEmotes` is the same api `MatchHotseatRoute` and
 // `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to the test through
@@ -15,11 +19,17 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
-import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS } from "@jackioh/shared";
+import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS, PORTRAITS } from "@jackioh/shared";
 
+import { flavourFor } from "../cards/flavour.ts";
+import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
+import { PORTRAIT_REACT_MS } from "../emotes/config.ts";
 import { DEFAULT_EMOTE_HAND, type EmoteHands } from "../emotes/hand.ts";
+import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
 import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
+import { REDUCED_MOTION_QUERY } from "./animations.ts";
 import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
 
@@ -147,10 +157,10 @@ describe("your portrait's emote menu (R643)", () => {
 
     fireEvent.click(screen.getByTestId("hero-you"));
 
-    const you = screen.getByTestId("hero-you");
-    const menu = within(you).getByTestId("emote-menu");
-    // The menu mounts on the portrait itself — the picker's items hang off the hero.
-    expect(menu.closest(".hero-portrait")).not.toBeNull();
+    const view = screen.getByTestId("hero-inspect");
+    const menu = within(view).getByTestId("emote-menu");
+    // The menu is drawn in the hero's inspect view (R1330), not hung off the 44px portrait.
+    expect(screen.getByTestId("hero-you").contains(view)).toBe(false);
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE);
     // The hand's voice lines arced above, its emoji in a row below (issue §2).
     const arc = menu.querySelector<HTMLElement>(".emote-voice-arc");
@@ -231,13 +241,16 @@ describe("your portrait's emote menu (R643)", () => {
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 
-  it("the menu closes on a press outside it", () => {
+  it("the view closes on a press on the dim around it", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
     fireEvent.click(screen.getByTestId("hero-you"));
     expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
-    fireEvent.pointerDown(document.body);
+    const scrim = screen.getByTestId("hero-inspect-scrim");
+    fireEvent.pointerDown(scrim);
+    fireEvent.click(scrim);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
   });
 
   it("R643 selecting an attacker shuts an open menu — targeting wins", () => {
@@ -411,8 +424,7 @@ describe("the opponent's mute (R643)", () => {
 
     fireEvent.click(screen.getByTestId("hero-opponent"));
 
-    const opponent = screen.getByTestId("hero-opponent");
-    const menu = within(opponent).getByTestId("emote-mute-menu");
+    const menu = within(screen.getByTestId("hero-inspect")).getByTestId("emote-mute-menu");
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
     expect(within(menu).getByTestId("emote-mute").textContent).toContain("Mute emotes");
     // Their hero never gets your picker.
@@ -493,5 +505,323 @@ describe("the opponent's mute (R643)", () => {
     expect(
       screen.getByTestId("hero-opponent").querySelector('[data-testid="emote-bubble"]'),
     ).toBeNull();
+  });
+});
+
+/** Both seats' portraits are told apart by their words, so the view's text can be checked. */
+const PORTRAITS_VG = { p1: "vanilla", p2: "gary" } as const;
+
+/** The two attacks that leave a selected attacker with units to hit and no hero to hit. */
+const UNIT_ATTACKS: readonly ActionBody[] = [
+  { type: "attack", attackerId: "u1", targetId: "u6" },
+  { type: "attack", attackerId: "u1", targetId: "u7" },
+  END_TURN,
+];
+
+function renderVG(options: { legal?: readonly ActionBody[]; onAction?: () => void; onSend?: () => void } = {}) {
+  const api = { current: null as EmotesApi | null };
+  const utils = render(
+    <EmoteGame
+      view={BOARD}
+      legal={options.legal ?? [END_TURN]}
+      onAction={options.onAction ?? vi.fn()}
+      apiRef={api}
+      portraits={PORTRAITS_VG}
+      onSend={options.onSend}
+    />,
+  );
+  return { api, ...utils };
+}
+
+/** The hero's `.hero-portrait` frame, which carries `data-reacting` while the oval reacts. */
+function frameOf(side: "you" | "opponent"): HTMLElement {
+  const frame = screen.getByTestId(testid.hero(side)).querySelector<HTMLElement>(".hero-portrait");
+  if (frame === null) throw new Error(`no portrait frame on ${side}`);
+  return frame;
+}
+
+describe("MN02 the hero's inspect view (R1330)", () => {
+  it("R1330 a click on your portrait opens its view: the portrait large, its name, title, flavour line, health and Armor", () => {
+    renderVG();
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("hero-you"));
+
+    const view = screen.getByRole("dialog", { name: "Mr. Vanilla" });
+    expect(view).toBe(screen.getByTestId("hero-inspect"));
+    expect(view).toHaveAttribute("aria-modal", "true");
+    expect(view).toHaveAttribute("data-side", "you");
+    expect(view.querySelector('.hero-inspect-portrait .portrait-art[data-portrait-art="vanilla"]')).not.toBeNull();
+    expect(within(view).getByTestId("hero-inspect-name")).toHaveTextContent("Mr. Vanilla");
+    expect(within(view).getByTestId("hero-inspect-title")).toHaveTextContent("Flat, polite, unbothered");
+    expect(within(view).getByTestId("hero-inspect-flavour")).toHaveTextContent("No tricks, no text, no regrets.");
+    // The full board's heroes: yours carries 21 health and 3 Armor (the badges' own numbers).
+    expect(within(view).getByTestId("hero-inspect-health")).toHaveAttribute("data-health", "21");
+    expect(within(view).getByTestId("hero-inspect-health")).toHaveTextContent("21");
+    expect(within(view).getByTestId("hero-inspect-armor")).toHaveAttribute("data-armor", "3");
+    expect(within(view).getByTestId("hero-inspect-armor")).toHaveTextContent("3");
+    // The view sits in a portal over a scrim, not inside the 44px hero.
+    expect(screen.getByTestId("hero-you").contains(view)).toBe(false);
+    expect(screen.getByTestId("hero-inspect-scrim")).toBeInTheDocument();
+  });
+
+  it("R1330 the opponent's view shows their portrait's words, health 30 and Armor 0", () => {
+    renderVG();
+
+    fireEvent.click(screen.getByTestId("hero-opponent"));
+
+    const view = screen.getByTestId("hero-inspect");
+    expect(view).toHaveAttribute("data-side", "opponent");
+    expect(view.querySelector('.portrait-art[data-portrait-art="gary"]')).not.toBeNull();
+    expect(within(view).getByTestId("hero-inspect-name")).toHaveTextContent("Gary the Gambler");
+    expect(within(view).getByTestId("hero-inspect-title")).toHaveTextContent(PORTRAITS.gary.flavour);
+    const flavour = flavourFor(PORTRAIT_DEFS.gary.defId)?.flavour;
+    expect(flavour).toBeDefined();
+    expect(within(view).getByTestId("hero-inspect-flavour")).toHaveTextContent(flavour as string);
+    expect(within(view).getByTestId("hero-inspect-health")).toHaveAttribute("data-health", "30");
+    expect(within(view).getByTestId("hero-inspect-armor")).toHaveAttribute("data-armor", "0");
+    expect(within(view).getByTestId("hero-inspect-armor")).toHaveTextContent("0");
+    // Their view holds the mute item and never your emote hand.
+    expect(within(view).getByTestId("emote-mute-menu")).toBeInTheDocument();
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+  });
+
+  it("R1330 your view holds the emote menu: a pick sends, shows the bubble on your hero and closes the view", () => {
+    const onSend = vi.fn();
+    renderVG({ onSend });
+    fireEvent.click(screen.getByTestId("hero-you"));
+    const view = screen.getByTestId("hero-inspect");
+    const menu = within(view).getByTestId("emote-menu");
+    expect(menu).toHaveClass("emote-menu--inline");
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE);
+
+    fireEvent.click(within(menu).getByTestId("emote-greetings"));
+
+    expect(onSend).toHaveBeenCalledWith("p1", "greetings");
+    expect(within(screen.getByTestId("hero-you")).getByTestId("emote-bubble")).toHaveClass("emote-bubble");
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+    // The click that picked did not reach the hero and reopen the view.
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+  });
+
+  it("R1330 their view holds Mute emotes: muting mutes them and closes the view", () => {
+    const { api } = renderVG();
+    fireEvent.click(screen.getByTestId("hero-opponent"));
+    const menu = within(screen.getByTestId("hero-inspect")).getByTestId("emote-mute-menu");
+    expect(menu).toHaveClass("emote-menu--inline");
+
+    fireEvent.click(within(menu).getByTestId("emote-mute"));
+
+    expect(api.current?.muted("p2")).toBe(true);
+    expect(api.current?.muted("p1")).toBe(false);
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+    expect(screen.queryByTestId("emote-mute-menu")).toBeNull();
+  });
+
+  it("R1330 Close and Escape close the view, and a press inside it does not", () => {
+    renderVG();
+    fireEvent.click(screen.getByTestId("hero-you"));
+    // Focus goes to Close when the view opens.
+    expect(screen.getByTestId("hero-inspect-close")).toHaveFocus();
+
+    const name = screen.getByTestId("hero-inspect-name");
+    fireEvent.pointerDown(name);
+    fireEvent.click(name);
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("hero-inspect-close"));
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("hero-opponent"));
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+  });
+
+  it("R1330 targeting wins: a legal hero's click is the attack, on either side, and no view opens", () => {
+    for (const [hero, targetId] of [
+      ["hero-you", "hero-p1"],
+      ["hero-opponent", "hero-p2"],
+    ] as const) {
+      const onAction = vi.fn();
+      const { unmount } = renderVG({ legal: FACE_ATTACK, onAction });
+      fireEvent.click(screen.getByTestId("card-u1"));
+      const target = screen.getByTestId(hero);
+      expect(target).toHaveAttribute("data-legal", "true");
+
+      fireEvent.click(target);
+
+      expect(onAction).toHaveBeenCalledWith({ type: "attack", attackerId: "u1", targetId });
+      expect(screen.queryByTestId("hero-inspect")).toBeNull();
+      unmount();
+    }
+  });
+
+  it("R1330 with a card selected the portrait click opens no view", () => {
+    const onAction = vi.fn();
+    renderVG({ legal: UNIT_ATTACKS, onAction });
+    fireEvent.click(screen.getByTestId("card-u1"));
+    expect(screen.getByTestId("hero-you")).toHaveAttribute("data-legal", "false");
+
+    fireEvent.click(screen.getByTestId("hero-you"));
+    fireEvent.click(screen.getByTestId("hero-opponent"));
+
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R1330 a touch long-press opens the view and the lift's click does not close it", () => {
+    vi.useFakeTimers();
+    try {
+      renderVG();
+      const open = screen.getByRole("button", { name: /Inspect Mr\. Vanilla, your hero/ });
+
+      fireEvent.pointerDown(open, { pointerType: "touch", clientX: 10, clientY: 10 });
+      expect(screen.queryByTestId("hero-inspect")).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS + 1);
+      });
+      expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+
+      // The finger lifts: its click lands on the button (swallowed) or on the scrim now over it
+      // (ignored this soon); neither closes the view, and neither toggles it through Game.
+      fireEvent.pointerUp(open, { pointerType: "touch", clientX: 10, clientY: 10 });
+      fireEvent.click(open, { detail: 1 });
+      fireEvent.click(screen.getByTestId("hero-inspect-scrim"), { detail: 1 });
+      expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("R1330 a touch that lifts before the long-press is a tap: it opens the view through the click", () => {
+    vi.useFakeTimers();
+    try {
+      renderVG();
+      const open = screen.getByRole("button", { name: /Inspect Mr\. Vanilla, your hero/ });
+      fireEvent.pointerDown(open, { pointerType: "touch", clientX: 10, clientY: 10 });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS / 2);
+      });
+      fireEvent.pointerUp(open, { pointerType: "touch", clientX: 10, clientY: 10 });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      expect(screen.queryByTestId("hero-inspect")).toBeNull();
+      fireEvent.click(open);
+      expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("R1330 the keyboard reaches it: a named button, Enter not cancelled by the hero, focus on Close and back on Escape, tabindex -1 while the hero is a target", () => {
+    renderVG({ legal: FACE_ATTACK });
+    const open = screen.getByRole("button", { name: /Inspect Mr\. Vanilla, your hero/ });
+    expect(open).toHaveAttribute("aria-haspopup", "dialog");
+    expect(open).toHaveAttribute("aria-expanded", "false");
+    expect(open).not.toHaveAttribute("data-testid");
+    // The button is the hero's one tab stop while it is not a target.
+    expect(open).not.toHaveAttribute("tabindex");
+    // The hero's own key handler leaves a key on the button to the button, so Enter and Space
+    // reach their native click.
+    expect(fireEvent.keyDown(open, { key: "Enter" })).toBe(true);
+    expect(fireEvent.keyDown(open, { key: " " })).toBe(true);
+
+    open.focus();
+    fireEvent.click(open);
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    expect(open).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("hero-inspect-close")).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("hero-inspect")).toBeNull();
+    expect(open).toHaveFocus();
+    expect(open).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("R1330 a hero that is a target is the one tab stop, and its button is not", () => {
+    renderVG({ legal: FACE_ATTACK });
+    fireEvent.click(screen.getByTestId("card-u1"));
+    const hero = screen.getByTestId("hero-you");
+    expect(hero).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("button", { name: /Inspect Mr\. Vanilla, your hero/ })).toHaveAttribute("tabindex", "-1");
+    // The hero's own Enter is still the target pick.
+    expect(fireEvent.keyDown(hero, { key: "Enter" })).toBe(false);
+  });
+});
+
+describe("MN02 the portrait's reaction (R1331)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    window.localStorage.clear();
+    __resetSettingsForTests();
+  });
+
+  it("R1331 opening the view makes the portrait react, and the reaction ends after PORTRAIT_REACT_MS", () => {
+    vi.useFakeTimers();
+    renderVG();
+    expect(frameOf("you")).not.toHaveAttribute("data-reacting");
+
+    fireEvent.click(screen.getByTestId("hero-you"));
+
+    expect(frameOf("you")).toHaveAttribute("data-reacting", "true");
+    expect(frameOf("you").querySelector(".hero-portrait-glint")).not.toBeNull();
+    // Only the portrait whose view opened reacts.
+    expect(frameOf("opponent")).not.toHaveAttribute("data-reacting");
+    act(() => {
+      vi.advanceTimersByTime(PORTRAIT_REACT_MS - 1);
+    });
+    expect(frameOf("you")).toHaveAttribute("data-reacting", "true");
+    act(() => {
+      vi.advanceTimersByTime(2);
+    });
+    expect(frameOf("you")).not.toHaveAttribute("data-reacting");
+    expect(frameOf("you").querySelector(".hero-portrait-glint")).toBeNull();
+    // The view stays up after the reaction, and closing it does not react again.
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("hero-inspect-close"));
+    expect(frameOf("you")).not.toHaveAttribute("data-reacting");
+  });
+
+  it("R1331 under the panel's Reduce motion the view opens and the portrait does not react", () => {
+    vi.useFakeTimers();
+    writeSettings({ reduceMotion: true });
+    renderVG();
+
+    fireEvent.click(screen.getByTestId("hero-you"));
+
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    expect(frameOf("you")).not.toHaveAttribute("data-reacting");
+    expect(frameOf("you").querySelector(".hero-portrait-glint")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(PORTRAIT_REACT_MS * 2);
+    });
+    expect(frameOf("you")).not.toHaveAttribute("data-reacting");
+  });
+
+  it("R1331 the OS's reduced-motion preference stills it too", () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          media: query,
+          matches: query === REDUCED_MOTION_QUERY,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    );
+    renderVG();
+
+    fireEvent.click(screen.getByTestId("hero-opponent"));
+
+    expect(screen.getByTestId("hero-inspect")).toBeInTheDocument();
+    expect(frameOf("opponent")).not.toHaveAttribute("data-reacting");
+    expect(frameOf("opponent").querySelector(".hero-portrait-glint")).toBeNull();
   });
 });

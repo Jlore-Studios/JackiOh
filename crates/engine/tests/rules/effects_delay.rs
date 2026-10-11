@@ -22,7 +22,9 @@
 
 use std::cell::Cell;
 
-use jackioh_engine::effects::{DELAYED_HOOK, THIS_TURN, add_player_modifier, damage, delay};
+use jackioh_engine::effects::{
+    DELAYED_HOOK, HAND_WATCH_KEY, THIS_TURN, add_player_modifier, damage, delay, due_resume, give_from_hand,
+};
 use jackioh_engine::testkit::*;
 use jackioh_engine::{
     PlayerId::{P1, P2},
@@ -104,14 +106,33 @@ fn bolt_hook() -> Hook {
     })
 }
 
+/// R1140: the step a hand watch below names (`delay`'s `handWatch`).
+const POCKET_STEP: &str = "pocket";
+
+/// The cards the watch still holds as it comes due, out of the other hand into this player's.
+fn pocket_hook() -> Hook {
+    hook(|ctx| {
+        let ids: Vec<String> = ctx
+            .data
+            .get(HAND_WATCH_KEY)
+            .and_then(Value::as_array)
+            .map(|ids| ids.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .unwrap_or_default();
+        vec![give_from_hand(json_as(json!({ "from": "enemy", "ids": ids })))]
+    })
+}
+
 /// A body that registers the same continuation BOTH ways: as its own `delayed` hook (the shape
 /// `turn.runDelayed` can re-enter today) and as an entry in its `resume` step table (the shape
 /// `prompts.runResume` and `work.cardStepFor` understand). That is what lets one fixture prove the
 /// first spelling works and the second does not, with nothing else different between the two tests.
+/// Its table also holds R1140's pocket step.
 fn bolt_script() -> Script {
     Script {
         delayed: Some(bolt_hook()),
-        resume: [(BOLT_STEP, bolt_hook())].into_iter().collect(),
+        resume: [(BOLT_STEP, bolt_hook()), (POCKET_STEP, pocket_hook())]
+            .into_iter()
+            .collect(),
         ..Script::default()
     }
 }
@@ -578,6 +599,136 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         assert_eq!(json_of(&entry.resume.data), json!({ "amount": 7 }));
         // The scheduling half is complete: it is stored, it is owned, and it is due.
         assert_eq!(due_delayed(&state, Phase::End, P1).len(), 1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1140, R1141: a delayed effect watching cards in a hand (ME-HANDMARK, Meditative #76)
+// ---------------------------------------------------------------------------
+
+mod delay_watching_hand_cards_r1140_r1141 {
+    use super::*;
+
+    fn steal_mark() -> Value {
+        json!({ "mark": "steal", "color": "purple" })
+    }
+
+    /// p1's pocket step, due at p1's next start of turn, watching `ids` in a hand.
+    fn watching(state: &mut GameState, scribe: &CardInstance, ids: &[String]) {
+        run(
+            state,
+            vec![delay(json_as(json!({
+                "at": { "phase": "start", "player": "self" },
+                "step": POCKET_STEP,
+                "hook": RESUME_HOOK,
+                "handWatch": ids,
+                "mark": steal_mark(),
+            })))],
+            as_scribe(scribe),
+        );
+    }
+
+    /// The cards of `seat`'s own hand whose view carries a mark.
+    fn marked_in_own_hand(state: &GameState, seat: PlayerId) -> Vec<String> {
+        match view_for(state, seat).you.hand {
+            HandView::Cards(cards) => cards
+                .into_iter()
+                .filter(|card| card.marks.is_some())
+                .map(|card| card.instance_id)
+                .collect(),
+            HandView::Count { .. } => panic!("a seat's own hand is its cards"),
+        }
+    }
+
+    fn ids_of(cards: &[CardInstance]) -> Vec<String> {
+        cards.iter().map(|card| card.id.clone()).collect()
+    }
+
+    #[test]
+    fn r1140_a_hand_watch_marks_and_steals_those_still_held() {
+        let mut state = playing("delay-hand-watch");
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
+        let ids = ids_of(&in_hand(&mut state, &bolt().id, P2, 2));
+        watching(&mut state, &scribe, &ids);
+        assert_eq!(only(&state.delayed).hand_watch, Some(ids.clone()));
+        // §10.1: still plain data.
+        let round_tripped: Vec<DelayedEffect> =
+            serde_json::from_value(json_of(&state.delayed)).expect("the delayed list is JSON");
+        assert_eq!(round_tripped, state.delayed);
+        // R1141: the hand's owner sees both marks; the other player only how many.
+        assert_eq!(marked_in_own_hand(&state, P2), ids);
+        assert_eq!(view_for(&state, P1).opponent.hand_marked, Some(2));
+        assert_eq!(view_for(&state, P2).opponent.hand_marked, None);
+
+        // One leaves the hand and comes back: a new stay, neither watched nor marked.
+        let mut first = find_instance(&state, &ids[0]).cloned().expect("the first card");
+        let _ = move_to_zone(
+            &mut state,
+            &mut first,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
+        let _ = move_to_zone(&mut state, &mut first, OffFieldZone::Hand, Default::default());
+        assert_eq!(only(&state.delayed).hand_watch, Some(vec![ids[1].clone()]));
+        assert_eq!(marked_in_own_hand(&state, P2), vec![ids[1].clone()]);
+        assert_eq!(view_for(&state, P1).opponent.hand_marked, Some(1));
+
+        // At p1's next start of turn the one still watched is p1's, in p1's hand.
+        let after = end_turns(&state, 2);
+        assert_eq!(after.active, P1);
+        assert!(after.delayed.is_empty());
+        assert!(ids_of(&after.players.p1.hand).contains(&ids[1]));
+        assert!(!ids_of(&after.players.p1.hand).contains(&ids[0]));
+        assert_eq!(find_instance(&after, &ids[1]).map(|card| card.owner), Some(P1));
+        assert_eq!(find_instance(&after, &ids[0]).map(|card| card.owner), Some(P2));
+        assert!(after.marks.is_none());
+    }
+
+    #[test]
+    fn r1140_a_watch_left_empty_is_dropped() {
+        let mut state = playing("delay-hand-watch-empty");
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
+        let ids = ids_of(&in_hand(&mut state, &bolt().id, P2, 1));
+        watching(&mut state, &scribe, &ids);
+        assert_eq!(state.delayed.len(), 1);
+        let mut card = find_instance(&state, &ids[0]).cloned().expect("the card");
+        let _ = move_to_zone(&mut state, &mut card, OffFieldZone::Library, Default::default());
+        // Watching nothing, the entry is gone, and with it the mark.
+        assert!(state.delayed.is_empty());
+        assert_eq!(view_for(&state, P1).opponent.hand_marked, None);
+        let after = end_turns(&state, 2);
+        assert!(after.marks.is_none());
+        assert_eq!(find_instance(&after, &ids[0]).map(|card| card.owner), Some(P2));
+    }
+
+    #[test]
+    fn r1140_no_hand_card_schedules_nothing() {
+        let mut state = playing("delay-hand-watch-none");
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
+        // A card on the field is in no hand, and an empty list names nothing.
+        watching(&mut state, &scribe, std::slice::from_ref(&scribe.id));
+        watching(&mut state, &scribe, &[]);
+        assert!(state.delayed.is_empty());
+        assert!(state.marks.is_none());
+    }
+
+    #[test]
+    fn r1140_an_entry_without_a_hand_watch_runs_as_before() {
+        // D14: no `handWatch` key on an entry that watches no hand, and no key in its step's data.
+        let mut state = playing("delay-hand-watch-absent");
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
+        run(
+            &mut state,
+            vec![delay(json_as(
+                json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 2 } }),
+            ))],
+            as_scribe(&scribe),
+        );
+        assert!(json_of(only(&state.delayed)).get("handWatch").is_none());
+        let resumed = due_resume(only(&state.delayed));
+        assert_eq!(resumed, only(&state.delayed).resume);
+        let ended = end_turns(&state, 1);
+        assert_eq!(ended.players.p2.hero.health, HERO_HEALTH - 2);
     }
 }
 

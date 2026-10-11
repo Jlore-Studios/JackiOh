@@ -84,7 +84,7 @@ export type VoiceLineKind = CardHook;
  * What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>`
  * files). The split-from-the-end VoiceKey convention holds either way.
  */
-export type PlayableLineKind = VoiceLineKind | VoiceEmoteId;
+export type PlayableLineKind = VoiceLineKind | VoiceEmoteId | `trigger${number}`;
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast", "emote-gary-thanks". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${PlayableLineKind}`;
 
@@ -133,6 +133,7 @@ export type CardEffect = { sfx: SfxId; pitch: number; gain: number; params?: Sfx
 /** R655: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither). */
 export type HookAssignment =
   | { voice: string; text: string; effect?: string }
+  | { voice: string; lines: string[]; effect?: string }
   | { effect: string; voice?: undefined; text?: undefined };
 
 /** A card's hooks, with the kind its catalog type gives it (the file never states it). */

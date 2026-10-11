@@ -18,7 +18,9 @@
 // line never opens a card it does not print: a sentinel, a hero, a draw or a line that says "a
 // unit" opens nothing. What opens is the card in play (faces.ts, SPEC §10.10): as it stands where
 // the view still lists it, else its definition as the game shows it; and a match-made card (a
-// Fuse's, R243) is named and drawn from the definition the view carries for it.
+// Fuse's, R243) is named and drawn from the definition the view carries for it. A card the view
+// says is Chinese (ME-CN, R1301) is named by its Chinese name, and a translation itself gets no line:
+// the card's words changed language, and the board already shows it.
 //
 // The window is not the whole game: the lines whose events have left it come from
 // `useLogHistory.ts` (R745), kept as they read when they arrived, with a definition's face and no
@@ -29,6 +31,7 @@ import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, t
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger } from "../cards/index.ts";
+import { chineseName } from "../cards/chinese.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
@@ -37,6 +40,7 @@ import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { sideOf, testid, touchHoldMode } from "./contract.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
+import { PREDICTED_WORDS, SECRET_WORDS } from "./secrets.ts";
 import { CHAOS_TEXT } from "./showcase/constants.ts";
 import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
 
@@ -58,6 +62,8 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   cell: "a cell",
   reward: "a reward",
   pick: "cards to take",
+  craft: "a card to craft",
+  market: "a deal at the night market",
 };
 
 /** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */
@@ -80,6 +86,12 @@ const HIDDEN_CARD = "hidden";
 type Naming = {
   /** A card's printed name, or its def id when no catalog is loaded (see catalog.ts). */
   def: (defId: string) => string;
+  /**
+   * A card an event names by both its instance and its definition: as `def` names it, but in Chinese
+   * while the view shows that instance in Chinese (R1301), so the lines about one card name it as the
+   * board does, whichever field the event carries (#552).
+   */
+  card: (instanceId: string, defId: string) => string;
   /** A card by name where it is public, else "a unit" (or `unknown`). Heroes read as a seat's. */
   instance: (instanceId: string, unknown?: string) => string;
   seat: (player: PlayerId) => string;
@@ -129,6 +141,7 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
       case "libraryOverflow":
       case "discarded":
       case "radiantSet":
+      case "deradianted":
       case "trapFired":
         note(event.instanceId, event.defId);
         break;
@@ -188,6 +201,8 @@ const OVERFLOW_OUTCOME: Readonly<Record<LibraryOverflowOutcome, string>> = {
 function describe(event: GameEvent, view: PlayerView, name: Naming): string | null {
   /** A card an overflow names: by name where the viewer reads it, else "a card" (R97). */
   const named = (defId: string): string => (defId === HIDDEN_CARD ? "a card" : name.def(defId));
+  /** The same, naming the card as the board shows that instance (R1301's Chinese name included). */
+  const namedCard = (instanceId: string, defId: string): string => (defId === HIDDEN_CARD ? "a card" : name.card(instanceId, defId));
   switch (event.type) {
     case "cardPlayed":
       return `${name.seat(event.player)} played ${name.def(event.defId)} for ${event.costPaid}`;
@@ -200,7 +215,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
           `${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}: a face-down trap was set${cost === undefined ? "" : `, ${costPhrase(cost)}`}`,
         );
       }
-      return `${name.def(event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`);
     case "damage": {
       // R1360: the Armor's part of the hit, where it took one.
       const absorbed = event.absorbed ?? 0;
@@ -210,6 +225,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "damageAbsorbed":
       // R1361: the Armor took the whole hit, so nothing was dealt.
       return `${capitalised(name.instance(event.targetId))}'s Armor absorbed ${String(event.absorbed)} damage${event.combat ? " in combat" : ""}`;
+    case "secretChosen":
+      // R860: the line names only that a secret is held — never the choice.
+      return `${name.seat(event.player)} kept a secret`;
+    case "secretRevealed":
+      // R864: revealed, the choice is public history.
+      return capitalised(`${name.whose(event.player)} secret was ${SECRET_WORDS[event.choice]}`);
+    case "predicted":
+      // R864: the guess and what it did to the reward.
+      return `${name.seat(event.player)} guessed ${SECRET_WORDS[event.guess]}: ${PREDICTED_WORDS[event.outcome]}`;
     case "healthLost":
       return `${name.seat(event.player)} lost ${event.amount} health`;
     case "healed":
@@ -217,15 +241,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "divineShieldLost":
       return `${capitalised(name.instance(event.instanceId))} lost its Divine Shield`;
     case "destroyed":
-      return `${name.def(event.defId)} was destroyed`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} was destroyed`);
     case "cardResolved":
       return null;
     case "enteredGraveyard":
-      return `${name.def(event.defId)} went to ${name.whose(event.owner)} graveyard`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} went to ${name.whose(event.owner)} graveyard`);
     case "exiled":
-      return `${name.def(event.defId)} was exiled`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} was exiled`);
     case "bounced":
-      return `${name.def(event.defId)} returned to ${name.whose(event.owner)} hand`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} returned to ${name.whose(event.owner)} hand`);
     case "burned":
       // R317: a full hand's card, named where the viewer reads it (the sentinel is "a card").
       return capitalised(`${name.whose(event.owner)} hand is full: ${named(event.defId)} burned`);
@@ -255,6 +279,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${capitalised(name.instance(event.instanceId))} ${event.lost === true ? "lost" : "gained"} ${event.keyword.kind}`;
     case "counterChanged":
       return `${capitalised(name.instance(event.instanceId))} ${event.counter} counters: ${event.value}`;
+    case "jadeChanged":
+      return capitalised(`${name.whose(event.player)} Jade Counter is ${event.value}`);
     case "costChanged":
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
       return event.cost < 0
@@ -267,9 +293,18 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.seat(event.player)} ${event.added ? "gained" : "lost"} ${what}`;
     }
     case "radiantSet":
-      return `${name.def(event.defId)} became Radiant`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} became Radiant`);
+    case "deradianted":
+      // MD-D6: the mirror of `radiantSet`'s line.
+      return capitalised(`${name.card(event.instanceId, event.defId)} is no longer Radiant`);
+    case "manaSpent":
+      // MD-D26: the spend is noise beside the play or activation it paid for; `manaChanged` says the total.
+      return null;
     case "transformed":
-      return `${name.def(event.fromDefId)} became ${name.def(event.toDefId)}`;
+      // R97: a card the viewer may not read is a hidden card on both sides; with nothing to name the
+      // line says only that it changed (a hidden card in a hand becoming another, #552).
+      if (event.fromDefId === HIDDEN_CARD && event.toDefId === HIDDEN_CARD) return "A hidden card was transformed";
+      return capitalised(`${name.def(event.fromDefId)} became ${name.card(event.newInstanceId, event.toDefId)}`);
     case "fused":
       return `${event.instanceIds.length} cards fused into ${name.def(event.defId)}`;
     case "positionSwitched":
@@ -294,7 +329,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "manaChanged":
       return `${name.seat(event.player)} ${name.seat(event.player) === "You" ? "have" : "has"} ${event.current}/${event.max} mana`;
     case "turnStarted":
-      return `Turn ${event.turn}: ${name.seat(event.player)}`;
+      // R845: an extra turn's line says so.
+      return `Turn ${event.turn}: ${name.seat(event.player)}${event.extra === true ? " (extra turn)" : ""}`;
     case "turnEnded":
       return `${name.seat(event.player)} ended turn ${event.turn} with ${event.unspentMana} mana unspent`;
     case "turnAutoEnded":
@@ -307,6 +343,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.seat(event.player)} offered a draw`;
     case "drawAnswered":
       return `${name.seat(event.player)} ${event.accept ? "accepted" : "declined"} the draw`;
+    case "emoted":
+      return `${name.seat(event.player)} emoted`;
     case "gameOver": {
       const why = resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason);
       return event.winner === "draw" ? `Draw. ${why}` : `${seatLabel(view, event.winner)} won. ${why}`;
@@ -328,18 +366,20 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "deanimated":
       return `${name.def(event.defId)} returned to ${name.whose(event.player)} ${zoneLabel("backrow", event.backrowLane)}`;
     case "crumbled":
-      return `${named(event.defId)} crumbled`;
+      return capitalised(`${namedCard(event.instanceId, event.defId)} crumbled`);
     // R1320: players read the engine's Degrade as a Nerf and its Upgrade as a Buff.
     case "degraded":
-      return `${named(event.defId)} was nerfed`;
+      return capitalised(`${namedCard(event.instanceId, event.defId)} was nerfed`);
     case "upgraded":
-      return `${named(event.defId)} was buffed`;
+      return capitalised(`${namedCard(event.instanceId, event.defId)} was buffed`);
     case "numberChanged":
-      if (event.key === HIDDEN_CARD) return `${named(event.defId)} changed`;
+      if (event.key === HIDDEN_CARD) return capitalised(`${namedCard(event.instanceId, event.defId)} changed`);
       // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").
-      return event.key === "cost"
-        ? `${named(event.defId)} now costs (${String(event.value)})`
-        : `${named(event.defId)}'s ${keyWords(event.key)} became ${String(event.value)}`;
+      return capitalised(
+        event.key === "cost"
+          ? `${namedCard(event.instanceId, event.defId)} now costs (${String(event.value)})`
+          : `${namedCard(event.instanceId, event.defId)}'s ${keyWords(event.key)} became ${String(event.value)}`,
+      );
     case "redirected":
       return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
     case "healthSet":
@@ -363,30 +403,48 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return roll === null ? null : `${who} rolled: ${chaosNames(roll).join("; ")}`;
     }
     case "flickered":
-      return `${name.def(event.defId)} flickered`;
+      return capitalised(`${name.card(event.instanceId, event.defId)} flickered`);
     case "drawLimited":
       return `${name.seat(event.player)} could not draw more this turn`;
+    case "discardPrevented":
+      return `${name.seat(event.player)} could not be made to discard`;
     case "turnCutShort":
       return capitalised(`${name.whose(event.player)} turn was cut short`);
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
+    case "fengShui":
+      // R983: whose play was judged, and how.
+      return capitalised(`${name.whose(event.player)} play was ${FENG_SHUI_LINE[event.outcome]}`);
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
       return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
+    case "translated":
+      // R1301: only the language the card is shown in changed; its face says so.
+      return null;
   }
 }
 
 /** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
+  const def = (defId: string): string => (defId === HIDDEN_CARD ? "a hidden card" : (lookup?.(defId, false)?.name ?? defId));
   return {
-    def: (defId) => (defId === HIDDEN_CARD ? "a hidden card" : (lookup?.(defId, false)?.name ?? defId)),
+    def,
+    card: (instanceId, defId) => {
+      if (defId === HIDDEN_CARD || instanceId === HIDDEN_CARD || cardInView(view, instanceId)?.chinese !== true) return def(defId);
+      const info = lookup?.(defId, false);
+      return chineseName(defId, info?.name ?? defId, info?.def);
+    },
     instance: (instanceId, unknown = "a unit") => {
       if (instanceId === `hero-${view.you.player}`) return "your hero";
       if (instanceId === `hero-${view.opponent.player}`) return "the opponent's hero";
       const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
-      return defId === undefined ? unknown : (lookup?.(defId, false)?.name ?? defId);
+      if (defId === undefined) return unknown;
+      const info = lookup?.(defId, false);
+      const english = info?.name ?? defId;
+      // R1301: a card the view shows in Chinese is named in Chinese.
+      return cardInView(view, instanceId)?.chinese === true ? chineseName(defId, english, info?.def) : english;
     },
     seat: (player) => seatLabel(view, player),
     whose: (player) => whoseLabel(view, player),
@@ -399,6 +457,12 @@ const GLITCH_OUTCOME_LINE: Readonly<Record<Extract<GameEvent, { type: "glitched"
   swap: "the players swap seats",
   boards: "other games' boards appear",
   void: "the match never happened",
+};
+
+/** R983: each Feng Shui outcome, as its log line ends. */
+const FENG_SHUI_LINE: Readonly<Record<Extract<GameEvent, { type: "fengShui" }>["outcome"], string>> = {
+  positive: "auspicious (吉)",
+  negative: "inauspicious (凶)",
 };
 
 /** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */
@@ -455,6 +519,13 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
       const card = event.instanceId === HIDDEN_CARD ? null : byDef(event.defId, event.instanceId);
       return card === null ? null : { ...card, radiant: true };
     }
+    case "deradianted": {
+      // MD-D6: the mirror of `radiantSet`'s card.
+      const card = event.instanceId === HIDDEN_CARD ? null : byDef(event.defId, event.instanceId);
+      return card === null ? null : { ...card, radiant: false };
+    }
+    case "manaSpent":
+      return null;
     case "transformed":
       return byDef(event.toDefId, event.newInstanceId);
     case "fused":

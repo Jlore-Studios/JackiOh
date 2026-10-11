@@ -476,6 +476,26 @@
   text-overflow: ellipsis;
 }
 
+/* The newest set's "New" ribbon (R1383): a red tab on the card's left edge, clear of the "In deck"
+   badge at the top and the "+" at the corner, shown for the patch that ships the set and the next. */
+.db-new {
+  position: absolute;
+  z-index: 1;
+  top: 44%;
+  left: -3px;
+  padding: 1px 7px 1px 6px;
+  border-radius: 0 999px 999px 0;
+  background: #c8322b;
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.65);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* The "+" that adds the card to the open deck in one tap. It is drawn 28 px round in the card's
    top-right corner, and its ::before widens the hit area to 44 px (task 7's touch-target floor)
    without covering more of the face. */

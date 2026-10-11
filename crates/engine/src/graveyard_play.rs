@@ -126,7 +126,8 @@ pub fn graveyard_payments_for(
         return Vec::new();
     }
     let grants = admitting(state, player, card);
-    let mana = state.players[player].mana.current;
+    // R1223: a graveyard play may borrow too.
+    let mana = crate::credit::spendable_mana(state, player);
     let mut out: Vec<PlayPayment> = Vec::new();
     let priced: Vec<&GraveyardGrant> = grants
         .iter()
@@ -188,7 +189,8 @@ pub fn why_graveyard_play_refused(
             "a card played from your graveyard must cost ({least}) or more"
         )));
     }
-    let mana = state.players[player].mana.current;
+    // R1223: a graveyard play may borrow too.
+    let mana = crate::credit::spendable_mana(state, player);
 
     let Some(plague) = plague else {
         if !priced.iter().any(|grant| grant.permission.plague != Some(true)) {

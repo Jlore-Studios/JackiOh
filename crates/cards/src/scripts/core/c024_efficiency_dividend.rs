@@ -1,24 +1,15 @@
 //! #24 Efficiency Dividend (SPEC §8.2, R65, R81, R68, §5.1).
 //!
 //! Base: "Choose one: deal X damage to a target; heal a target 2X; gain floor(X/2) mana next turn.
-//! End of turn: returns to hand". Radiant (R275: an X-cost card's X is scaled): "Choose one: deal 2X
-//! damage to a target; heal a target 4X; gain X mana next turn. End of turn: returns to hand" — the
-//! §8 cell's "Uses 2X". So the radiant face is the base arithmetic run on 2X instead of X: 2X damage,
-//! 2·2X = 4X healing and floor(2X/2) = X mana, exactly the printed numbers, and the modes, the target
-//! and the return to hand are all kept (§8 Conventions). What the player pays is still X (R65).
+//! End of turn: returns to hand". Radiant (R275: an X-cost card's X is scaled, "Uses 2X"): the same
+//! arithmetic on 2X, with the modes, target and return to hand kept (§8 Conventions). The price is
+//! still X, bounded by the play validator, so nothing here re-checks it (R65).
 //!
-//! R81: X, the mode and the target all travel in the `play` action and never pause resolution, so
-//! the hook reads `ctx.x`, `ctx.modes` (through `chosenOptions`, which also reads a mode selection)
-//! and `{ of: "chosen" }`. R65: an X-cost card being played costs exactly X — `costMod` and
-//! discounts do not change it — and the play validator bounds X by current mana, so nothing here
-//! re-checks the price.
-//!
-//! "Gain floor(X/2) mana next turn" is a positive `mana.nextTurnMod` (§2.3), the same one-shot
-//! modifier Hinder makes negative: `refreshMana` spends it at the next refresh and clears it.
-//!
-//! §5.1 and R68: the spell is flagged `returnToHandAtEndOfTurn` when played and comes back from the
-//! graveyard at the end of that turn, as a graveyard trigger. No verb sets that flag yet (reported),
-//! so the hook gates on the flag OR this turn's play log — see #23 for the same note.
+//! R81: X, the mode and the target all travel in the `play` action and never pause resolution, so the
+//! hook reads `ctx.x`, `ctx.modes` (through `chosenOptions`) and `{ of: "chosen" }`. "Gain floor(X/2)
+//! mana next turn" is a positive `mana.nextTurnMod` (§2.3), the one-shot modifier Hinder makes negative.
+//! §5.1 and R68: the spell returns from the graveyard at the end of its turn. No verb sets
+//! `returnToHandAtEndOfTurn` yet, so the hook gates on the flag OR this turn's play log (see #23).
 
 use jackioh_engine::prelude::*;
 
@@ -38,11 +29,10 @@ fn modes() -> Vec<ModeDecl> {
     }]
 }
 
-/// R81: the target travels with the play. It is the damage and heal modes' target alone
-/// (`forModes`): §8's Conventions have "a target" picked from every legal unit and hero, and only an
-/// EMPTY set lets the effect fizzle — a hero always stands, so those two modes always name one, while
-/// the mana mode names none at all (R90). With `min: 0` for every mode, a damage or heal play could
-/// name nobody and pay its X for nothing.
+/// R81: the target travels with the play, for the damage and heal modes alone (`forModes`). §8's
+/// Conventions pick "a target" from every legal unit and hero and only an EMPTY set fizzles; a hero
+/// always stands, so those modes always name one and the mana mode names none (R90). With `min: 0`
+/// for every mode, a damage or heal play could name nobody and pay its X for nothing.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl {
         for_modes: Some(vec![MODE_DAMAGE.to_string(), MODE_HEAL.to_string()]),
@@ -91,7 +81,7 @@ fn dividend(uses: i32) -> Script {
             }
         })),
         end_of_turn: Some(hook(|ctx| {
-            // TS read the live `ctx.self`: the card as it stands now.
+            // The live `ctx.self`: the card as it stands now.
             let Some(self_) = ctx.live_self() else {
                 return vec![];
             };
@@ -113,19 +103,11 @@ pub fn script() -> CardScripts {
 }
 
 // #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
-// mana (R81); three modes; next-turn mana +floor(X/2); returns to hand". Radiant (R275: an X-cost
-// card's X is scaled) uses 2X: "deal 2X damage to a target; heal a target 4X; gain X mana next
-// turn", still for X paid. Each radiant mode is checked at an odd and an even X, and X = 0 is
-// refused on both faces (R348: X is at least 1).
-//
-// R81: X, the mode and the target all travel in the `play` action, so no fixture answers a prompt —
-// there is none, and `state.pending` is asserted to stay null.
-//
-// The harness default board is turn 9, so p1 has 4 mana and their next refresh is MAX_MANA 4; a
-// positive `mana.nextTurnMod` shows up as current mana above that, while max mana stays 4: §2.3 lists
-// Efficiency Dividend as temporary mana, which "adds to current mana and can exceed 4", and max mana
-// is min(turns, 4) plus persistent modifiers only. Both sides keep a unit and a card in hand so no
-// turn auto-ends.
+// mana (R81); three modes; next-turn mana +floor(X/2); returns to hand". Radiant (R275) uses 2X, still
+// for X paid; each radiant mode is checked at an odd and an even X, and X = 0 is refused (R348).
+// Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so
+// no turn auto-ends. The default board is turn 9: 4 mana now and a MAX_MANA 4 refresh, so a positive
+// `mana.nextTurnMod` shows as current mana above 4 while max mana stays 4 (§2.3: temporary mana).
 #[cfg(test)]
 mod tests {
     use super::script;

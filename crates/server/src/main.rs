@@ -41,6 +41,10 @@ enum Command {
     StatsImport(Rest),
     /// Write the game records `stats-cards` reads to a JSONL file.
     StatsExport(Rest),
+    /// Fold the action logs still held into the play telemetry's action timings (R1442).
+    TimingBackfill(Rest),
+    /// Print log-normal fits of human think times to paste into config (R1442).
+    TimingFit(Rest),
 }
 
 /// The arguments after the subcommand, passed through untouched to the tool's own parser.
@@ -64,6 +68,8 @@ async fn main() -> ExitCode {
         Command::StatsCards(rest) => cli::card_stats::run(rest.args).await,
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
         Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
+        Command::TimingBackfill(rest) => cli::timing_backfill::run(rest.args).await,
+        Command::TimingFit(rest) => cli::timing_fit::run(rest.args).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

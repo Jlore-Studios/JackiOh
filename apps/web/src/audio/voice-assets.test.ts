@@ -104,10 +104,13 @@ function voicedNow(key: string): boolean {
   return typeof set !== "string" || setShips(set as SetName);
 }
 
-/** SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything else. */
-const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
-  card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
-);
+/**
+ * SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything
+ * else, of the sets that have shipped (R1420).
+ */
+const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
+  .flatMap(([id, card]) => (card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`]))
+  .filter(voicedNow);
 
 const AUDIO = readJson5(AUDIO_PATH);
 
@@ -121,12 +124,16 @@ function voicesOf(table: Json): Record<string, Json> {
   return table.voices as Record<string, Json>;
 }
 
-/** The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice. */
+/** The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice, and one `<defId>-trigger<n>` key per trigger line (R1088). */
 function voicedKeys(table: Json): string[] {
   return Object.entries(cardsOf(table)).flatMap(([defId, entry]) =>
-    Object.entries(entry)
-      .filter(([, assignment]) => isRecord(assignment) && assignment.voice !== undefined)
-      .map(([hook]) => `${defId}-${hook}`),
+    Object.entries(entry).flatMap(([hook, assignment]) => {
+      if (!isRecord(assignment) || assignment.voice === undefined) return [];
+      if (hook === "trigger" && Array.isArray(assignment.lines)) {
+        return (assignment.lines as unknown[]).map((_, i) => `${defId}-trigger${i + 1}`);
+      }
+      return [`${defId}-${hook}`];
+    }),
   );
 }
 
@@ -201,11 +208,13 @@ function expectedHash(key: string, table: Json = AUDIO): string | null {
   }
   const entry = cards[defId];
   if (!isRecord(entry)) return null;
-  const assignment = entry[line];
+  // R1088: `trigger<n>` resolves to the n-th line of the card's trigger list.
+  const trigger = /^trigger([0-9]+)$/.exec(line);
+  const assignment = trigger !== null ? entry.trigger : entry[line];
   if (!isRecord(assignment) || typeof assignment.voice !== "string") return null;
   const voice = voices[assignment.voice];
   if (!isRecord(voice)) return null;
-  const text = assignment.text;
+  const text = trigger !== null ? (assignment.lines as unknown[])?.[Number(trigger[1]) - 1] : assignment.text;
   if (typeof text !== "string") return null;
   if (voice.backend === "sapi") {
     return sapiHash({ voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text });
@@ -271,7 +280,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
@@ -647,17 +656,17 @@ describe("gen-voice.mjs --check (B37)", () => {
   function unrenderedTree(set: string): { root: string; catalog: string } {
     const root = copyWebTree();
     editAudio(root, (table) => {
-      cardsOf(table)["meditative-999"] = { cast: { voice: "narrator", text: "Breathe in. Breathe out." } };
+      cardsOf(table)["boss-999"] = { cast: { voice: "narrator", text: "Breathe in. Breathe out." } };
     });
     const catalog = join(root, "catalog.json");
-    writeJson(catalog, { ...CATALOG, "meditative-999": { type: "Spell", set } });
+    writeJson(catalog, { ...CATALOG, "boss-999": { type: "Spell", set } });
     return { root, catalog };
   }
 
   it(
     "R1420 owes no file for a line of a set that has not shipped, and the same line on a shipped card is missing",
     () => {
-      const unshipped = unrenderedTree("Meditative");
+      const unshipped = unrenderedTree("Boss");
       const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
       expect(quiet.status, describeRun(quiet)).toBe(0);
       expect(reportedKeys(quiet)).toEqual([]);
@@ -665,7 +674,7 @@ describe("gen-voice.mjs --check (B37)", () => {
       const shipped = unrenderedTree("Core");
       const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
       expect(loud.status, describeRun(loud)).toBe(1);
-      expect(reportedKeys(loud)).toContain("meditative-999-cast");
+      expect(reportedKeys(loud)).toContain("boss-999-cast");
     },
     CHECK_TIMEOUT_MS,
   );

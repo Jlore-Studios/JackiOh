@@ -8,8 +8,8 @@
 //! would be a second source — for Armor it would literally double it, because §10.4 sums Armor
 //! across sources. So both scripts are empty.
 //!
-//! R49 (two exertions: one attack plus one switch in a turn) is the Deft keyword, which
-//! `combat.ts` reads through §10.4's layers, so a granted Deft works the same as the printed one.
+//! R49 (two exertions: one attack plus one switch in a turn) is the Deft keyword, read through
+//! §10.4's layers, so a granted Deft works the same as the printed one.
 
 use jackioh_engine::prelude::*;
 
@@ -28,13 +28,9 @@ pub fn script() -> CardScripts {
 // The must-pass row (BUILD M4-T4 #45): "Charge; attack then switch and switch then attack in one
 // turn (R49); radiant Armor 1."
 //
-// R6 fixes what "switch then attack" has to mean: "attacking from Defense is not allowed and
-// switching to Attack spends the turn's exertion — #45 is the exception". So the second order is a
-// unit that starts in Defense, switches to Attack and then attacks: for every other unit the switch
-// has spent the turn, and each control case below proves that on #20 Pointmaster.
-//
-// Charge and Armor 1 are printed keywords, so the tests read them through their effect (a summon
-// turn attack; a 1-damage hit reduced to nothing) rather than off the def.
+// R6: "switch then attack" is a unit that starts in Defense, switches to Attack and then attacks;
+// for every other unit the switch spends the turn, which the #20 Pointmaster controls prove.
+// Charge and Armor 1 are printed keywords, so the tests read them through their effect.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -42,15 +38,13 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS's `def` (`cardDef("core-045")`): the catalog card this file scripts.
+    /// The catalog card this file scripts.
     fn def() -> CardDef {
         crate::register_all();
         crate::card_def(ID)
     }
 
-    /// Deft Duelist in hand, an enemy hero to hit; #21 Hinder keeps the turn alive (R82). TS flagged a
-    /// radiant hand card after the build; the setup entry's own `radiant` sets the same flag on the
-    /// same freshly created hand card.
+    /// Deft Duelist in hand, an enemy hero to hit; #21 Hinder keeps the turn alive (R82).
     fn from_hand(radiant_duelist: bool) -> Scenario {
         scenario(json!({
             "seed": "deft-duelist",
@@ -75,8 +69,7 @@ mod tests {
         s.unit(player, lane).and_then(|card| card.position)
     }
 
-    /// TS's `staticFlags?.deftDuelist`: the legacy flag (read nowhere, not ported, SURFACE §7.2) is
-    /// absent from a face's static flags as they are written out.
+    /// The legacy `deftDuelist` flag is read nowhere (SURFACE §7.2) and is absent from a face's flags.
     fn has_deft_duelist_flag(face: &Script) -> bool {
         serde_json::to_value(face.flags()).unwrap().get("deftDuelist").is_some()
     }

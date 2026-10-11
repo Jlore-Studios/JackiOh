@@ -2,14 +2,16 @@
 // showcase, a log line, a pile and a prompt draw for a card the view names (SPEC §10.10).
 //
 // A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
-// card's stats in its owner's hand, a unit's numbers, keywords and Vanilla mark on the field, the
-// power a Heroic Power rolled, a match-made definition's own name and text, and what the card's
-// formula comes to now (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle
-// count (R385), what Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow
-// card standing as a Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell
-// text a copier has (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
+// card's stats in its owner's hand, a hand card's keywords where the view gives them (E38, R1438), a
+// unit's numbers, keywords and Vanilla mark on the field, the power a Heroic Power rolled, a
+// match-made definition's own name and text, and what the card's formula comes to now
+// (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle count (R385), what
+// Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow card standing as a
+// Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell text a copier has
+// (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
 // off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
-// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`).
+// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`). A card the
+// view says is Chinese (`CardView.chinese`, ME-CN, R1301) is drawn in the Chinese table's words.
 //
 // The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
 // definitions the view carries beside the cards it names (R243), else from nothing: the card is
@@ -50,7 +52,8 @@ export type LiveFacts = {
 
 /**
  * The face in play of a card the view lists: its live cost, and whatever else the view says about
- * it — a unit's numbers and keywords, a hand Unit's stats, a Heroic Power's power, the Vanilla mark.
+ * it — a unit's numbers and keywords, a hand Unit's stats, a hand card's keywords, a Heroic Power's
+ * power, the Vanilla mark.
  */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
@@ -58,6 +61,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit === undefined && card.attack !== undefined && card.health !== undefined) {
     inPlay.handStats = { attack: card.attack, health: card.health };
   }
+  // B5 E38, R1438: a hand card's keywords as the view gives them, a given Lucky included.
+  if (unit === undefined && card.keywords !== undefined) inPlay.handKeywords = card.keywords;
   // R43, R243: in hand the power rides on the card; on the field the hero's power list names it.
   const power = card.power !== undefined ? { name: card.power } : facts.fieldPower;
   if (power !== undefined) inPlay.power = power;
@@ -73,6 +78,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (card.tuning !== undefined) inPlay.tuning = card.tuning;
   // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
   if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  // R980: the card's element, while a Feng Shui acts.
+  if (card.element !== undefined) inPlay.element = card.element;
   if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
   // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
   const marks = marksOf(card);
@@ -81,6 +88,10 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
+  // MD-B6, R943: a Created card, wherever the view carries the mark.
+  if (card.created === true) inPlay.created = true;
+  // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
+  if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;
@@ -95,6 +106,10 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     name: info.name,
     ...(type === undefined ? {} : { type }),
     radiant: card.radiant,
+    // R1301: the view says the card is shown in Chinese; never a card the viewer may not read.
+    chinese: card.chinese === true,
+    // MD-B15, R923: the view's tags where they differ from the definition's (a granted tag).
+    ...(card.tags === undefined ? {} : { tags: card.tags }),
     liveCost: card.cost,
     ...(unit === undefined
       ? {}

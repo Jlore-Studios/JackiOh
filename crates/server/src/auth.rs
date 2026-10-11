@@ -4,8 +4,11 @@
 //!
 //! Managed auth (SPEC §9.4) over Supabase Auth. Per §9.2 the browser signs in against Supabase
 //! directly with the publishable key; this server only verifies the bearer token, so `verify` is the
-//! load-bearing method. No server-side password path: a service-role sign-up would bypass the
-//! provider's rate limits and email confirmation, which §9.4's invite gate relies on.
+//! load-bearing method. Its one password path is R1443's sign-in by username (`password_grant`),
+//! which asks the provider for the session with the address only the server may read, behind the
+//! route's own limits. It never signs anyone up: a service-role sign-up would bypass the provider's
+//! rate limits and email confirmation, which §9.4's invite gate relies on. `sign_in_with_password`
+//! (`/api/auth/signin`) still answers unavailable on Supabase.
 //!
 //! Security notes (§9.8's "Invite code brute force" row lists "verified email"):
 //!  - `email_verified` NEVER comes from the token's `user_metadata` (users can edit it, which would
@@ -59,6 +62,32 @@ pub struct Session {
 }
 
 pub type AuthSession = Session;
+
+/// R1443: the provider's session for a username sign-in, as the browser gets it: never the address.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PasswordGrant {
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    /// Seconds the access token lives, when the provider says.
+    pub expires_in: Option<i64>,
+    /// The provider's `email_confirmed_at` is set. Screen wording only: §9.4's gate reads its own.
+    pub email_verified: bool,
+    /// R665: the id of the verified authenticator app whose code the session still needs, if any.
+    pub second_factor: Option<String>,
+}
+
+/// What a password grant (R1443) came to.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PasswordGrantOutcome {
+    Granted(PasswordGrant),
+    /// Any refusal but a rate limit: a wrong password, an unconfirmed address, a banned user. One
+    /// outcome, so the route cannot tell them apart (R160).
+    Refused,
+    /// The provider's own limit (R192), which counts this server's address.
+    RateLimited,
+    /// Nobody answered, or the answer was not a session.
+    Unavailable,
+}
 
 /// Why a provider call did not produce what was asked.
 ///
@@ -191,6 +220,56 @@ fn has_verified_totp(factors: Option<&Value>) -> bool {
     factors.iter().any(|factor| {
         factor.get("factor_type").and_then(Value::as_str) == Some("totp")
             && factor.get("status").and_then(Value::as_str) == Some("verified")
+    })
+}
+
+/// R665: the id of the first verified TOTP factor in GoTrue's `factors` list, as `has_verified_totp`
+/// finds one.
+fn verified_totp_id(factors: Option<&Value>) -> Option<String> {
+    let Some(Value::Array(factors)) = factors else {
+        return None;
+    };
+    factors
+        .iter()
+        .filter(|factor| {
+            factor.get("factor_type").and_then(Value::as_str) == Some("totp")
+                && factor.get("status").and_then(Value::as_str) == Some("verified")
+        })
+        .find_map(|factor| {
+            factor
+                .get("id")
+                .and_then(Value::as_str)
+                .filter(|id| !id.is_empty())
+        })
+        .map(str::to_string)
+}
+
+/// R1443: GoTrue's token answer as a `PasswordGrant`, or None when it holds no access token. An
+/// account with a verified authenticator app whose id is missing is no answer either: a session it
+/// could not raise to `aal2` would be refused at once (R665).
+fn password_grant_of(body: &Value) -> Option<PasswordGrant> {
+    let text = |value: Option<&Value>| {
+        value
+            .and_then(Value::as_str)
+            .filter(|text| !text.is_empty())
+            .map(str::to_string)
+    };
+    let access_token = text(body.get("access_token"))?;
+    let user = body.get("user");
+    let factors = user.and_then(|user| user.get("factors"));
+    let second_factor = verified_totp_id(factors);
+    if second_factor.is_none() && has_verified_totp(factors) {
+        return None;
+    }
+    Some(PasswordGrant {
+        access_token,
+        refresh_token: text(body.get("refresh_token")),
+        expires_in: body
+            .get("expires_in")
+            .and_then(Value::as_i64)
+            .filter(|seconds| *seconds > 0),
+        email_verified: text(user.and_then(|user| user.get("email_confirmed_at"))).is_some(),
+        second_factor,
     })
 }
 
@@ -876,9 +955,52 @@ impl SupabaseAuth {
         Some(to_auth_user(&user))
     }
 
-    /// No server-side password path: every caller is told where sign-in actually happens.
+    /// No sign-in by email here (`/api/auth/signin`): every caller is told where sign-in actually
+    /// happens. A sign-in by username is `password_grant` (R1443).
     pub async fn sign_in_with_password(&self, _email: &str, _password: &str) -> Result<Session, AuthError> {
         Err(AuthError::Unavailable(PASSWORD_PATH_DISABLED_MESSAGE.to_string()))
+    }
+
+    /// R1443: GoTrue's password grant (`POST /auth/v1/token?grant_type=password`) for the address a
+    /// username names, the one password this server ever passes on. The provider's text is never
+    /// read: its status alone says refused, rate-limited or unavailable.
+    pub async fn password_grant(&self, email: &str, password: &str) -> PasswordGrantOutcome {
+        let response = match self
+            .http
+            .post(format!("{}/token?grant_type=password", self.auth_base))
+            .header("apikey", &self.secret_key)
+            .header("authorization", format!("Bearer {}", self.secret_key))
+            .header("accept", "application/json")
+            .json(&json!({ "email": email, "password": password }))
+            .timeout(Duration::from_millis(
+                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
+            ))
+            .send()
+            .await
+        {
+            Ok(response) => response,
+            Err(_) => return PasswordGrantOutcome::Unavailable,
+        };
+        let status = response.status();
+        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            return PasswordGrantOutcome::RateLimited;
+        }
+        if status.is_server_error() {
+            return PasswordGrantOutcome::Unavailable;
+        }
+        if !status.is_success() {
+            return PasswordGrantOutcome::Refused;
+        }
+        match response
+            .json::<Value>()
+            .await
+            .ok()
+            .as_ref()
+            .and_then(password_grant_of)
+        {
+            Some(grant) => PasswordGrantOutcome::Granted(grant),
+            None => PasswordGrantOutcome::Unavailable,
+        }
     }
 
     // Deleting a user ends its sessions and refresh tokens at the provider, but an access token
@@ -1075,6 +1197,21 @@ impl E2eAuth {
         })
     }
 
+    /// R1443's password grant on the fixtures: `sign_in_with_password`, any refusal `Refused`. No
+    /// fixture has an authenticator app.
+    pub fn password_grant(&self, email: &str, password: &str) -> PasswordGrantOutcome {
+        match self.sign_in_with_password(email, password) {
+            Ok(session) => PasswordGrantOutcome::Granted(PasswordGrant {
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+                expires_in: None,
+                email_verified: session.user.email_verified,
+                second_factor: None,
+            }),
+            Err(_) => PasswordGrantOutcome::Refused,
+        }
+    }
+
     // A deleted user's tokens stop verifying, as the real provider's session check makes them.
     pub fn delete_user(&self, user_id: &str) -> Result<(), AuthError> {
         let mut state = self.lock();
@@ -1121,6 +1258,15 @@ impl Auth {
         match self {
             Auth::Supabase(auth) => auth.sign_in_with_password(email, password).await,
             Auth::E2e(auth) => auth.sign_in_with_password(email, password),
+        }
+    }
+
+    /// R1443: the session for an account's address and password, asked of the provider for a
+    /// sign-in by username. The address never goes back to the caller.
+    pub async fn password_grant(&self, email: &str, password: &str) -> PasswordGrantOutcome {
+        match self {
+            Auth::Supabase(auth) => auth.password_grant(email, password).await,
+            Auth::E2e(auth) => auth.password_grant(email, password),
         }
     }
 

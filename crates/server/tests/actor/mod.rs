@@ -14,4 +14,5 @@ pub mod match_actor;
 pub mod recovery;
 pub mod rooms;
 pub mod series_recovery;
+pub mod telemetry;
 pub mod ws_server;

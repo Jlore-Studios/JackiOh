@@ -491,10 +491,13 @@ fn die_insect(radiant: bool, amount: i32) -> Effect {
                 .collect();
         pool.push(None);
         let roll = |rng: &mut Rng| -> InsectPick { rng.pick(&pool).cloned().flatten() };
-        let pick = if radiant {
+        // R987: the controller's Luck rolls extra times beside the Radiant face's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
+        let lucky = if radiant { DIE_INSECT_LUCKY } else { 0 } + luck;
+        let pick = if lucky > 0 {
             ctx.sink
                 .rng
-                .lucky(DIE_INSECT_LUCKY, roll, better_insect_pick(&*ctx.sink.state))
+                .lucky(lucky, roll, better_insect_pick(&*ctx.sink.state))
         } else {
             roll(&mut *ctx.sink.rng)
         };

@@ -354,6 +354,32 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
+    /// R881: a `craft` prompt is answered with one of its presets — the AI never freehands a recipe.
+    #[test]
+    fn r881_the_ai_answers_a_craft_prompt_with_one_of_its_presets() {
+        install();
+        let effect = effects::choose_craft(json_as(json!({ "step": "craft", "cost": 2 })));
+        let state = asked("r881-craft", effect, json!({}), AI);
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Craft)
+        );
+        let options: Vec<Selection> = state
+            .pending
+            .as_ref()
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(options.len(), 4);
+        let picked = selection_of(&answered(&state, "r881-craft"));
+        assert!(picked.first().is_some_and(|first| options.contains(first)));
+    }
+
     /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
     fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()
@@ -517,5 +543,41 @@ mod e18_a_whole_game_with_the_new_prompts {
         assert_eq!(record.fallbacks, 0);
         assert!(opened.iter().any(|kind| kind == "mode"), "{}", opened.join(" "));
         assert!(opened.iter().any(|kind| kind == "pick"), "{}", opened.join(" "));
+    }
+}
+
+/// ME-MARKET (Meditative #42, R1000): a night market's `market` prompt is answered like any other —
+/// the stall is fixed when the market opens, so every simulation sees the same lots.
+mod me_market_the_ai_answers_a_night_market {
+    use super::*;
+
+    #[test]
+    fn r1000_the_ai_answers_a_night_market_with_a_legal_deal() {
+        install();
+        let mut s = scenario(json!({
+            "seed": "ai-market",
+            "p1": { "hand": ["meditative-042", "core-005"], "library": ["core-053", "core-030"] },
+            "p2": { "hand": ["core-005"], "library": ["core-053", "core-030"] },
+        }));
+        s.play("meditative-042", json!({}));
+        let state = s.state().clone();
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Market)
+        );
+        let keys: Vec<String> = state
+            .pending
+            .as_ref()
+            .map(|pending| pending.options.iter().map(|option| option.key.clone()).collect())
+            .unwrap_or_default();
+        let picked = selection_of(&answered(&state, "ai-market"));
+        assert_eq!(picked.len(), 1);
+        let offered = state.pending.as_ref().is_some_and(|pending| {
+            pending
+                .options
+                .iter()
+                .any(|option| Some(&option.selection) == picked.first())
+        });
+        assert!(offered, "one of the market's own deals: {picked:?} of {keys:?}");
     }
 }

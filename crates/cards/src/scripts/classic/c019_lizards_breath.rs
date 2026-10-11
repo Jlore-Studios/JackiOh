@@ -3,36 +3,20 @@
 //!            gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the pile listed
 //!            first." — 2, 1, 2, 4
 //!   Radiant: "Deal {damage} damage. Your two largest piles add their effects: …" — 4, 1, 2, 4
-//!   Engine:  "Your own deck, graveyard and exile, counted as it resolves. The damage is one hit on the
-//!            play's target: 2, or 6 with exile (Radiant 4, or 8); then the draw and the temporary mana.
-//!            A `preview` (R280) names the pile or piles that would count now. Tunes: damage 2 ↑; draw
-//!            1 ↑; mana 2 ↑; extra damage 4 ↑."
 //!
-//! "Deal N damage" with no target named is targeted (§8's Conventions): any unit or hero, either side,
-//! chosen with the play (R81).
-//!
-//! The piles are counted as the Spell resolves — it is in the resolving zone then, so in none of them
-//! (§10.5) — and ranked by size, a tie going to the pile the text lists first (Deck, then Graveyard,
-//! then Exile); the base face takes the largest, the Radiant face the two largest. `countingPiles` is
-//! that ranking, and both the resolution and the preview read it. So three empty piles pick the Deck,
-//! which draws (from an empty deck, a fatigue, §2.4).
-//!
-//! Exile's effect is part of the one hit: the damage is {damage}, plus {extraDamage} when Exile counts,
-//! dealt once. Then the Deck's draw and the Graveyard's mana — temporary mana, §2.3 — in that order.
-//!
-//! R280: the preview names the pile or piles that count now, one value per pile in rank order, each
-//! carrying the pile's name as `display` beside its size, after the face's own words for the ranking
-//! ("Your largest pile", "Your two largest piles"). It reads only the controller's pile sizes, which
-//! are public (§10.8), never a pile's contents.
-//!
-//! The numbers are the declared `damage`, `draw`, `mana` and `extraDamage` (R386), read through `param`.
+//! Targeted (§8's Conventions): any unit or hero, either side, chosen with the play (R81). The piles
+//! are your own, counted as the Spell resolves (it is in none of them, §10.5) and ranked by size, a
+//! tie going to the first listed (Deck, Graveyard, Exile), so three empty piles pick the Deck, whose
+//! draw is a fatigue (§2.4). Exile's extra damage joins the one hit; then the draw and the temporary
+//! mana (§2.3). R280: the preview lists the counting piles in rank order, by name and size (public,
+//! §10.8). Numbers read through `param` (R386).
 
 use jackioh_engine::effects::{damage, draw, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-019";
 
-/// TS `PileName`: the three piles' names in the text.
+/// The three piles' names in the text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PileName {
     Deck,
@@ -72,7 +56,6 @@ const PILES: [Pile; 3] = [
     },
 ];
 
-/// TS `RankedPile = { name: PileName; size: number }`.
 #[derive(Clone, Copy, Debug)]
 struct RankedPile {
     name: PileName,
@@ -91,7 +74,7 @@ fn counting_piles(state: &GameState, player: PlayerId, count: usize) -> Vec<Rank
         .enumerate()
         .map(|(order, pile)| (pile.name, zone_count(state, player, pile.zone), order))
         .collect();
-    // Stable, as `Array.prototype.sort` (SURFACE §4.4.1): `b.size - a.size || a.order - b.order`.
+    // Stable (SURFACE §4.4.1): the larger first, a tie by the text's order.
     sized.sort_by(|a, b| b.1.cmp(&a.1).then(a.2.cmp(&b.2)));
     sized
         .into_iter()
@@ -147,16 +130,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #19 Lizard's Breath — SPEC §8.6 row 19, BUILD M9 Classic row C 19: "One hit on the play's target
-// (any Unit or hero): 2, or 6 when Exile counts; your own deck, graveyard and exile are counted as it
-// resolves (this Spell, resolving, is in none); the largest pile adds its effect: Deck draws 1,
-// Graveyard gives 2 mana this turn, Exile adds 4 damage; ties go to the pile listed first (Deck, then
-// Graveyard, then Exile), so three empty piles pick Deck and draw (fatigue from an empty deck); the
-// draw and the mana follow the hit; its preview names the pile that would count now (R280); radiant:
-// 4, or 8 with Exile, and the two largest piles add their effects with the same ties; the preview
-// names both; its tuned numbers (damage, draw, mana, extra damage) read through `param()` (R386)".
-//
-// The preview's proofs (R280) are in `../preview.test.ts`, with the other cards'.
+// BUILD M9 Classic row C 19: one hit (2, or 6 with Exile; radiant 4, or 8), then the largest pile's
+// draw or mana (the two largest on radiant), ties to the pile listed first; numbers via `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,7 +156,7 @@ mod tests {
         Radiant,
     }
 
-    /// TS `piles(deck, graveyard, exile)`: the side's library, graveyard and exile, as setup JSON.
+    /// The side's library, graveyard and exile, as setup JSON.
     fn piles(deck: usize, graveyard: usize, exile: usize) -> (Value, Value, Value) {
         (json!(vec![X; deck]), json!(vec![FILLER; graveyard]), json!(vec![FILLER; exile]))
     }

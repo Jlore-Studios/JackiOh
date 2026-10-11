@@ -384,6 +384,10 @@ describe("R503 one distinct picture per catalog entry", () => {
     expect(varietySalt("classic-043")).not.toBe(varietySalt("core-043"));
     expect(varietySalt("classicplus-043")).not.toBe(varietySalt("classic-043"));
     expect(varietySalt("classicplus-012-1")).toBe(varietySalt("classicplus-012"));
+    expect(varietySalt("meditative-097")).not.toBe(varietySalt("core-002"));
+    expect(varietySalt("meditative-097")).not.toBe(varietySalt("classic-043"));
+    expect(varietySalt("meditative-097")).not.toBe(varietySalt("classicplus-043"));
+    expect(varietySalt("meditative-097-4")).toBe(varietySalt("meditative-097"));
   });
 });
 

@@ -19,7 +19,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP, SETUP_TURN};
+use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, LIBRARY_CAP, SETUP_TURN};
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -47,10 +47,17 @@ use crate::wire::{
 /// sink's rng, so the cursor it advanced would be discarded — two determinism bugs for one convenience.
 /// These two functions are the sink-holding funnels §2.4 already routes every hand and library arrival
 /// through (see the header of `effects/add_to_hand.rs`: "Both routes end in `../draw`'s `addToHand`").
-fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
+pub(crate) fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
     // §9.3, R113: the clause is an effect list like any other, so a question in it pauses the rest of
     // it on `state.work` (`prompts::run_start_of_game`), and a draw loop around it owes its remainder.
-    crate::prompts::run_start_of_game(sink, instance, instance.owner);
+    let whole = crate::prompts::run_start_of_game(sink, instance, instance.owner);
+    // MD-B18, R925: a hand arrival also runs "When this enters your hand", after R151's clause.
+    if whole
+        && let Some(live) = crate::state::find_instance(sink.state, &instance.id).cloned()
+        && matches!(live.zone, Zone::Hand { .. })
+    {
+        crate::prompts::run_enters_hand(sink, &live, live.owner);
+    }
 }
 
 /// #75: a backrow card that turns an empty-library draw into a Rush Token card.
@@ -76,9 +83,11 @@ pub enum AddToHandOutcome {
     Burned,
 }
 
-/// §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11).
+/// §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11). Full is
+/// the owner's hand cap, `HAND_CAP` or the hand size an effect set (R1143).
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
-    let full = sink.state.players[instance.owner].hand.len() as i32 >= HAND_CAP;
+    let full = sink.state.players[instance.owner].hand.len() as i32
+        >= crate::query::hand_cap_of(sink.state, instance.owner);
     if full {
         let landed = crate::zones::move_to_zone(
             sink.state,
@@ -154,6 +163,29 @@ pub fn shuffle_into_library(
     existing: bool,
     copy_of: Option<&str>,
 ) -> ShuffleInOutcome {
+    into_library(sink, instance, existing, copy_of, None)
+}
+
+/// A fresh card put at a named end of its owner's library (Meditative #49's bottom, ME-DECK-BOTTOM):
+/// `LibraryEnd::Top` is position 0, `LibraryEnd::Bottom` the last one, with no rng draw. The caps
+/// and reports are `shuffle_into_library`'s.
+pub fn put_into_library(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    existing: bool,
+    copy_of: Option<&str>,
+    end: crate::ownership::LibraryEnd,
+) -> ShuffleInOutcome {
+    into_library(sink, instance, existing, copy_of, Some(end))
+}
+
+fn into_library(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    existing: bool,
+    copy_of: Option<&str>,
+    end: Option<crate::ownership::LibraryEnd>,
+) -> ShuffleInOutcome {
     let library_len = sink.state.players[instance.owner].library.len() as i32;
     if library_len >= LIBRARY_CAP {
         if !existing {
@@ -192,7 +224,13 @@ pub fn shuffle_into_library(
         crate::zones::report_graveyard_landing(sink, instance, landed);
         return ShuffleInOutcome::Dropped;
     }
-    let position = sink.rng.int(library_len + 1);
+    // ME-DECK-BOTTOM: a named end is placed, not drawn — the bottom is the last card, with no
+    // rng draw (R80's cap still refuses a full library, above).
+    let position = match end {
+        None => sink.rng.int(library_len + 1),
+        Some(crate::ownership::LibraryEnd::Top) => 0,
+        Some(crate::ownership::LibraryEnd::Bottom) => library_len,
+    };
     crate::zones::move_to_zone(
         sink.state,
         instance,
@@ -280,10 +318,15 @@ fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 }
 
 fn limit_binds(limit: &DrawLimit, controller: PlayerId, player: PlayerId) -> bool {
-    if limit.player == DrawLimitPlayer::Both {
+    player_binds(limit.player, controller, player)
+}
+
+/// Whether `who`, read relative to a card's controller, names `player`.
+fn player_binds(who: DrawLimitPlayer, controller: PlayerId, player: PlayerId) -> bool {
+    if who == DrawLimitPlayer::Both {
         return true;
     }
-    if limit.player == DrawLimitPlayer::SelfSide {
+    if who == DrawLimitPlayer::SelfSide {
         player == controller
     } else {
         player == opponent_of(controller)
@@ -318,6 +361,30 @@ pub fn draw_limit_of(state: &GameState, player: PlayerId) -> Option<i32> {
         }
     }
     lowest
+}
+
+/// R800: whether an effect's discard from `player`'s hand is stopped now — while it is not their turn,
+/// a card acting on the field guards them (`Script.discard_guard`, Meditative #1). Several guards do no
+/// more than one. A discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never
+/// asks (`effects::move_`).
+pub fn discard_guarded(state: &GameState, player: PlayerId) -> bool {
+    if state.active == player {
+        return false;
+    }
+    PLAYER_IDS.into_iter().any(|side| {
+        text_on_field(state, side).into_iter().any(|card| {
+            let script = crate::scripts::script_of(state, card);
+            script.discard_guard.as_ref().is_some_and(|hook| {
+                hook(HookArgs {
+                    state,
+                    self_: card,
+                    radiant: card.radiant,
+                })
+                .into_iter()
+                .any(|who| player_binds(who, card.controller, player))
+            })
+        })
+    })
 }
 
 /// B5 E3, R457: whether `player`'s next draw may not happen — they have made as many draws this turn

@@ -7,6 +7,7 @@
 // - A match extends over a following ` <digits|X|♾️>` and then a `:`, so "Cry:", "Armor 2",
 //   "Combo 2:" and "Activate ♾️:" (patch v0.2.0, R384) are each one term.
 
+import { CHINESE_TERMS } from "./chinese.ts";
 import { GLOSSARY, type GlossaryEntry, type GlossaryTermId } from "./glossary.ts";
 import type { FaceModel } from "./model.ts";
 
@@ -95,14 +96,19 @@ function stateTerms(face: FaceModel): GlossaryTermId[] {
   return ids;
 }
 
-/** termsIn(the face's text), then face.keywords' kinds, then the terms its states name; distinct; mapped to entries. */
+/**
+ * termsIn(the face's text), then face.keywords' kinds, then the terms its states name; distinct; mapped
+ * to entries. ME-CN, R1301: a Chinese face's terms are found in its English text, the words the
+ * tokenizer reads, and each entry reads in Chinese (R1303's table).
+ */
 export function glossaryFor(face: FaceModel): GlossaryEntry[] {
   const ids: GlossaryTermId[] = [];
   const add = (id: GlossaryTermId): void => {
     if (!ids.includes(id)) ids.push(id);
   };
-  for (const id of termsIn(face.text.full)) add(id);
+  for (const id of termsIn(face.englishText ?? face.text.full)) add(id);
   for (const keyword of face.keywords) add(keyword.kind);
   for (const id of stateTerms(face)) add(id);
-  return ids.map((id) => GLOSSARY[id]);
+  const entries = ids.map((id) => GLOSSARY[id]);
+  return face.chinese === true ? entries.map((entry) => ({ ...entry, ...CHINESE_TERMS.glossary[entry.id] })) : entries;
 }

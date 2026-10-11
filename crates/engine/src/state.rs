@@ -20,8 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, Row, RowFlags, Selection, Tag, Tuning, Zone, ZoneRef,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
+    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
+    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -92,6 +93,25 @@ pub struct Exertion {
 pub struct KnownAs {
     pub def_id: String,
     pub radiant: bool,
+}
+
+/// ME-GRANT (MD-D13): one Death ability another card granted this one — `<defId>#<key>` naming a
+/// hook the granting card registers beside its faces (`Script.grants`), the face it was granted on,
+/// and the numbers it was granted with. Plain data, never a closure, so state stays JSON and
+/// replays exactly. A grant behaves like a granted keyword (§10.4): it shows on the Unit, survives
+/// a copy (R57) and a Vanilla, and is lost when the card leaves the field (R78).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Grant {
+    pub grant: String,
+    pub radiant: bool,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub params: IndexMap<String, i32>,
 }
 
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
@@ -192,6 +212,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marked_destroyed: Option<bool>,
+    /// MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+    /// of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub marked_exiled: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -239,6 +265,62 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub times_played: Option<i32>,
+    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
+    /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
+    /// Transform's new card is without it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
+    /// MD-B6, R943 (ME-CREATED): the instance was minted after the decks were built — by an
+    /// effect or a rule during the game, never a dealt deck card. Public wherever the viewer may
+    /// read the card. Kept in every zone and through R78's and R766's resets; a card that keeps
+    /// its instance keeps it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
+    /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+    /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+    /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+    /// with the card leaving the field (R1045). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub set_as: Option<SetAs>,
+    /// MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
+    /// the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
+    /// Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
+    /// unites it, a Transform drops it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub granted_tags: Option<Vec<Tag>>,
+    /// ME-GRANT (MD-D13): the Death abilities other cards granted this card, in the order granted.
+    /// R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
+    /// Fuse unites them, a Transform drops them — as `granted_tags` above.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<Vec<Grant>>,
+}
+
+/// ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
+/// when it reveals, the turn it was set in, the Echo a Radiant Paranoia gave it (R1045), and, once
+/// a set Spell has turned face-up, that its own text now resolves (`revealing`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SetAs {
+    pub reveal: RevealAt,
+    pub set_turn: i32,
+    /// R1045: the Echo the permission added as the card was set (Radiant Paranoia's +1), once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub echo: Option<i32>,
+    /// R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealing: Option<bool>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -417,6 +499,25 @@ pub enum ModifierKind {
     HeroArmor {
         amount: i32,
     },
+    /// R848 (Meditative #20): a chosen alternative win condition, held for the rest of the game
+    /// (expiry `never`, R458). Several stack, each its own modifier, and any one met wins.
+    AltWin {
+        condition: AltWinCondition,
+        threshold: i32,
+    },
+    /// MD-B22, R946: Showdown's turn watcher (Meditative #98, Radiant face) — for the rest of the
+    /// turn, after a card of this player enters one of their zones in `lane`, the stored `resume`
+    /// re-enters the card's step with the card's id in its data. Expiry `thisTurn`. `label` is its
+    /// badge (R169), the card's own words.
+    LaneWatch {
+        lane: i32,
+        resume: Resume,
+        label: String,
+    },
+    /// MD-C21, R1021: Meditative #48 Tranquility — this player's hero is immune to damage: every
+    /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
+    /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
+    HeroImmune,
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
@@ -478,6 +579,14 @@ pub struct DelayedEffect {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub watch: Option<String>,
+    /// R1140 (ME-HANDMARK, Meditative #76 Do or Die): the hand cards this effect is aimed at, in the
+    /// order it picked them. Each is dropped the moment its stay in that hand ends
+    /// (`zones::forget_hand_watch`), and the entry with it once none is left; as it runs, its step
+    /// reads the ones still watched (`effects::delay::HAND_WATCH_KEY`). Absent on every other entry,
+    /// so a game that never watches a hand hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_watch: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -563,7 +672,8 @@ pub struct PromptOption {
     pub key: String,
     pub label: String,
     pub selection: Selection,
-    /// B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies).
+    /// B5 E18: what this option counts against the prompt's `budget`: a `pick` option's R65 cost, a
+    /// `market` lot's price, a barter's yuan written negative (R1000, R1001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub cost: Option<i32>,
@@ -590,8 +700,8 @@ pub struct PendingChoice {
     pub min: i32,
     pub max: i32,
     /// B5 E18: a `pick` prompt's budget — the most its picked options' `cost`s may add up to (Classic
-    /// #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
-    /// as it did before the field existed.
+    /// #44's "a total cost of (5) or less"), or a `market` prompt's yuan left (R1000). Absent on every
+    /// other prompt, so a state without one hashes as it did before the field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
@@ -663,6 +773,36 @@ pub struct DeclaredAttack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub exits_from: Option<u32>,
+    /// ME-ATTACKSUMMON (R1202): bounce the substitute after its combat when set — Windfast's base
+    /// face bounces the summoned Unit if it is still on the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub bounce_after: Option<bool>,
+    /// MD-D19, R1122: a trap in the window re-aimed this attack at an ally of its attacker, which
+    /// §4.3 then resolves as a combat between allies. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub redirected: Option<bool>,
+    /// MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+    /// Unit it destroyed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub copies_for: Option<PlayerId>,
+}
+
+/// MD-D28, R1125: the verdict on one opponent's play — whether it was their best-scored playable
+/// card, judged on the pre-play state from their own view. Never in a view (§10.8).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayJudgement {
+    pub instance_id: String,
+    pub optimal: bool,
+    pub turn: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
@@ -691,6 +831,20 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_by_type: Option<IndexMap<CardType, i32>>,
+    /// R1223: how much mana this player borrowed this turn, one debt however many spends made it;
+    /// above 0 is "used the credit line" (R1225). `startTurn` rebuilds the log, which clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_borrowed: Option<i32>,
+    /// R1223: how many instalments this turn's debt is split into. Cleared with the log.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub borrowed_parts: Option<i32>,
+    /// R1224: the instalment actually taken off this turn's refresh, after any forgiveness — the
+    /// locked crystals the view shows. Set at the refresh, which follows the log reset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_locked: Option<i32>,
 }
 
 /// `PlayerState.hero`.
@@ -776,6 +930,11 @@ pub struct PlayerState {
     pub fatigue_count: i32,
     /// Turns this player has started, for the mana refresh (§2.3).
     pub turns_started: i32,
+    /// R1223: the instalment due at each of this player's coming refreshes, the next one first,
+    /// with trailing zeros trimmed; `None` when empty, so a game without credit hashes as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub owed_instalments: Option<Vec<i32>>,
     /// My Pawn: the AI policy plays out the rest of this turn (R44).
     pub ai_turn: bool,
     /// R180: this seat's handicap. Absent means HUMAN_HANDICAP, and createGame never stores one equal
@@ -820,6 +979,50 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
+    /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
+    /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
+    /// (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
+    /// ME-JADE, R961: this player's Jade Counter, public, which only rises (`effects::jade`). Absent until
+    /// it first rises, so a game without a Jade hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub jade: Option<i32>,
+    /// R844 (Meditative #18, #19): the `turns_started` index through which this player's refresh
+    /// gives 0 mana. Absent while no loss covers a future refresh, so a game that never loses one
+    /// hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub lost_refresh_through: Option<i32>,
+    /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
+    /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
+    /// hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub extra_turns: Option<i32>,
+    /// R847 (Meditative #19.1): once-a-game Temporal Rift flag — set when a Rift grants this player
+    /// an extra turn, so a later Rift grants none. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub rift_extra_turn: Option<bool>,
+    /// R850 (Meditative #8, #20): set when an effect wins the game for this player outright
+    /// (`win_game`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub won_by_effect: Option<bool>,
+}
+
+string_union! {
+    /// R848 (Meditative #20): which measure a chosen alternative win condition reads.
+    pub enum AltWinCondition {
+        Health = "health",
+        Graveyard = "graveyard",
+        Board = "board",
+    }
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
@@ -869,6 +1072,12 @@ pub struct GameState {
     pub trigger_queue: Vec<QueuedTrigger>,
     /// The attack whose trap window is open, between declaration and damage (§4.2 step 4, R44).
     pub declared_attack: Option<DeclaredAttack>,
+    /// MD-D28, R1125: the verdict on the last judged play, stored as the play began. Never in a
+    /// view (§10.8). Absent while no card judges plays, so a game without one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub play_judgement: Option<PlayJudgement>,
     /// Paused sequences waiting to continue, in order (§9.3, §10.6).
     pub work: Vec<WorkItem>,
     /// R113: how many items the *current* pause cascade has parked. A scope parks its remainder at
@@ -996,6 +1205,12 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
+    // ---- Meditative MB05 (ME-SECRET, R860–R865) ----
+    /// R860: the hidden choices Mind Games kept. D14: absent until the first secret is kept, so a game
+    /// that never uses one hashes exactly as before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub secrets: Option<Vec<SecretRecord>>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1036,6 +1251,27 @@ pub struct LastBoardEntry {
 
 /// R417: each seat's last board in seat order, as `create_game` and `replay::fold` take them.
 pub type LastBoardInput = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
+
+/// ME-SECRET, R860: one hidden choice a Mind Games kept (`state.secrets`). The choice reaches only
+/// its owner's view until `revealed` is set — by the reward resolving, or by a Fortify Mind judged
+/// against it (R864) — and the AI's `redact` drops it while `determinize` samples it (R865).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretRecord {
+    pub id: String,
+    pub owner: PlayerId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub choice: Option<SecretChoice>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealed: Option<bool>,
+}
 
 /// R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.rs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1235,6 +1471,10 @@ pub struct FaceUpRecord {
     pub radiant: bool,
     #[serde(rename = "type")]
     pub type_: CardType,
+    /// R1300: the played card was Chinese (T-AI-5's copy is too). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
 }
 
 /// B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`).
@@ -1250,6 +1490,12 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
+    /// R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written in
+    /// every game since the Meditative set shipped (v0.3.5; before it, only while the set was
+    /// previewed, D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub last_element: Option<CardElement>,
 }
 
 fn empty_row<T: Clone>(size: i32) -> Vec<Option<T>> {
@@ -1292,6 +1538,7 @@ pub fn create_player_state() -> PlayerState {
         draw_offer: DrawOfferState::default(),
         fatigue_count: 0,
         turns_started: 0,
+        owed_instalments: None,
         ai_turn: false,
         handicap: None,
         auto_end_turn: None,
@@ -1299,6 +1546,12 @@ pub fn create_player_state() -> PlayerState {
         carried: None,
         game_log: None,
         draws: None,
+        hand_cap: None,
+        jade: None,
+        lost_refresh_through: None,
+        extra_turns: None,
+        rift_extra_turn: None,
+        won_by_effect: None,
     }
 }
 
@@ -1512,6 +1765,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         last_damaged_by: None,
         divine_shield_spent: None,
         marked_destroyed: None,
+        marked_exiled: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,
@@ -1519,9 +1773,30 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         times_played: None,
+        chinese: None,
+        // R943: every instance minted after the deal is Created; `new_dealt_instance` clears the
+        // mark. Written in every game since the Meditative set shipped (v0.3.5; before it, only
+        // while the set was previewed, D14).
+        created: Some(true),
+        set_as: None,
+        granted_tags: None,
+        grants: None,
     };
     *next_id += 1;
     instance
+}
+
+/// MD-B6, R943: the dealt deck cards — `build_game`'s deck loop and a Glitch reset's new deal —
+/// are never Created. Every other `new_instance` call mints a Created card.
+pub fn new_dealt_instance(
+    state: &mut impl NextId,
+    def_id: &str,
+    owner: PlayerId,
+    zone: Zone,
+) -> CardInstance {
+    let mut card = new_instance(state, def_id, owner, zone);
+    card.created = None;
+    card
 }
 
 /// A game in phase `setup`: libraries hold the decks in list order, and `setup.rs` (M1-T5)
@@ -1589,6 +1864,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         pending: None,
         trigger_queue: Vec::new(),
         declared_attack: None,
+        play_judgement: None,
         work: Vec::new(),
         work_cursor: 0,
         echo_queue: Vec::new(),
@@ -1624,6 +1900,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         reset_owed: None,
         seat_swaps: None,
         glitch_boards: None,
+        secrets: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -1637,7 +1914,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         let deck = deck_of(options, seat);
         let mut library: Vec<CardInstance> = deck
             .iter()
-            .map(|def_id| new_instance(&mut state, def_id, player, Zone::Library { player }))
+            .map(|def_id| new_dealt_instance(&mut state, def_id, player, Zone::Library { player }))
             .collect();
         let numbers: Vec<String> = library.iter().map(|card| card.id.clone()).collect();
         let ids = numbering.shuffle(&numbers);
@@ -1829,7 +2106,7 @@ mod tests {
                 "id": "c7", "defId": "core-001", "owner": "p2", "controller": "p2", "radiant": false,
                 "zone": { "z": "hand", "player": "p2" }, "damage": 0, "buffs": { "attack": 0, "health": 0 },
                 "grantedKeywords": [], "vanilla": false, "costMod": 0, "counters": {}, "memory": {},
-                "exertion": { "attacked": false, "switched": false }
+                "exertion": { "attacked": false, "switched": false }, "created": true
             })
         );
         assert_eq!(serde_json::from_value::<CardInstance>(json).unwrap(), card);

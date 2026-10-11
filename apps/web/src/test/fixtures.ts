@@ -121,11 +121,16 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Brittle", n: 2 },
   { kind: "Spell Damage", n: 1 },
   { kind: "Immune to Spells" },
+  { kind: "Immune to tribal tag based hate" },
   // Patch v0.2.X's keyword rules (R636, R637).
   { kind: "Windfury" },
   { kind: "Temporary" },
   // Patch v0.2.4's keyword (R49).
   { kind: "Deft" },
+  // R1220's keyword.
+  { kind: "Untributable" },
+  // Meditative batch 16's keyword (R1086).
+  { kind: "Magnetic" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {
@@ -330,6 +335,8 @@ export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
     rarity,
     token: ingredients.every((def) => def.token),
     cost,
+    // R179, R468: the list the id names, which a Chinese face reads its ingredients' words by (R1301).
+    ingredients: ingredients.map((def) => ({ defId: def.id })),
     base: fusedFaceOf(ingredients.map((def) => def.base)),
     radiant: fusedFaceOf(ingredients.map((def) => def.radiant)),
   };

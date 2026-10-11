@@ -2,39 +2,16 @@
 //! "It costs 0" — the radiant cell restates only the cost clause, so the Discover and the self-exile
 //! are kept and only the discount changes (§8 Conventions).
 //!
-//! R50 is the whole of the Discover: the options come from the ACTUAL graveyard, not from a pool, so
-//! spell tokens sitting there are eligible and are drawn without replacement. `discover_from_graveyard`
-//! (effects/choose.rs) is exactly that — it shuffles the real graveyard pile and offers instance
-//! selections — so this card names the step and nothing else. A pool-based Discover
-//! (`discover_from_catalog`) would exclude tokens and would be wrong here.
+//! R50: the Discover's options come from the ACTUAL graveyard (`discover_from_graveyard`), so spell
+//! tokens there are eligible; a pool-based `discover_from_catalog` would exclude them.
 //!
-//! The two-step shape, per §10.6 and prompts.rs:
-//!   cry   -> [discover_from_graveyard({ step: "chosen" }), exile self]
-//!   resume.chosen -> [chosen card to hand, its cost changed]
+//! Two steps (§10.6): the cry opens the Discover and parks "exile this"; the answer runs `resume.chosen`
+//! first, then the parked exile. An empty graveyard opens nothing (§6.3: the card still resolves), so
+//! `exile` runs straight through. The resume step never reads `ctx.self`: its instance may be gone.
 //!
-//! `apply_resumable` parks the tail of an effect list as a `WorkItem` the moment a prompt opens, and
-//! `answer_prompt` runs the resume step FIRST and then drains the parked tail. So one array covers
-//! both branches of "exile this":
-//!   - graveyard non-empty: the prompt opens, `exile` is parked, and it runs after the pick has
-//!     reached the hand — the order §8 writes (Discover, cost, exile);
-//!   - graveyard empty: `discover_from_graveyard` returns without opening anything (§6.3: an effect
-//!     with no options fizzles and the card still resolves), no prompt, so `exile` runs straight
-//!     through in the same pass and `resume.chosen` never runs at all.
-//!
-//! The resume step therefore reads only `{ of: "chosen" }` and never `ctx.self`: a resumed step may
-//! find its instance gone (§10.6), and a Spell mid-resolution is in no pile for `find_instance` to
-//! find anyway.
-//!
-//! Cost: R65 starts the calculation from `costOverride`, else the printed cost, then adds `costMod`,
-//! then the player's discounts. So "costs 1 less" is `costMod -1` (it stacks and it travels with the
-//! card between zones, R78), while "it costs 0" is a `costOverride` of 0 — the same reading R77 gives
-//! Craft a Card's "0-cost hand card". Reported as a ruling to settle: a `costOverride` of 0 still has
-//! `costMod` added after it, so a radiant Reminisce on a card KY's Math Equation has bumped to +1
-//! leaves it at 1 rather than 0.
-//!
-//! R4 is the engine's: `add_to_hand({ instance })` puts the card in the hand through the same pipeline a
-//! draw uses, so a card picked into a full hand is burned to the graveyard. §6.3's Add to hand row is
-//! "Creates OR MOVES the card", so moving the Discover's pick is that verb and not one of its own.
+//! Cost (R65): "1 less" is `costMod -1` (travels with the card, R78); "costs 0" is a `costOverride` of 0
+//! (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick (§6.3 "Creates OR
+//! MOVES"), so a card picked into a full hand is burned.
 
 use jackioh_engine::effects::{add_to_hand, discover_from_graveyard, exile, set_cost_mod, set_cost_override};
 use jackioh_engine::prelude::*;
@@ -83,23 +60,16 @@ pub fn script() -> CardScripts {
 
 // #72 Reminisce — SPEC §8.3, BUILD M4-T4: "Discover from the GY including spell tokens (R50);
 // chosen card −1 (radiant 0); exiled; empty GY → nothing".
-//
-// The card under test is a two-step script (§10.6): the Cry opens the Discover and parks "exile
-// this" as a work item, and the answer runs the `chosen` resume step and then drains the parked
-// tail. So every test here asserts BOTH halves — where the picked card went and what its cost is,
-// and that Reminisce itself ended in exile — and one test covers each of the two paths through the
-// Cry's single effect list: the prompt opened (tail parked), and the graveyard was empty (tail ran
-// straight through, resume step never reached).
-//
-// core-013 Jlockeed Shredder-10 (printed cost 3) is the Discover subject in the cost tests on both
-// faces, so the base "-1" (cost 2) and the radiant "costs 0" are the same card read two ways.
+// Each test asserts both halves (where the pick went and its cost, and that Reminisce was exiled);
+// one covers each path of the Cry's list: prompt opened (tail parked), graveyard empty (tail ran).
+// core-013 Jlockeed Shredder-10 (printed cost 3) is the Discover subject in the cost tests.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -107,7 +77,7 @@ mod tests {
 
     use crate::js;
 
-    /// Every `costChanged` event, as TS's object literal compares it.
+    /// Every `costChanged` event.
     fn costs_changed(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "costChanged").collect()
     }

@@ -2,24 +2,14 @@
 //!   Base:    "Shuffle your graveyard into your deck. Draw {draw}." — draw 1
 //!   Radiant: "Shuffle your graveyard into your deck. They cost ({discount}) less. Draw {draw}." — 1, 1
 //!   Engine:  "Every card in your graveyard (this Spell is resolving, not in it) at random positions;
-//!            R80's cap: cards that don't fit stay in the graveyard, each reported by
-//!            `libraryOverflow` (R316). Radiant: `costMod` −1 on each shuffled card. Then the draw. The
-//!            name sits inside C #64 Malzahar's Recycler and is a rules word the reference proof never
-//!            reads as this card unless `refs` lists it (R381). Tunes: draw 1 ↑; Radiant discount 1 ↑."
+//!            R80's cap: cards that don't fit stay in the graveyard, each reported by `libraryOverflow`
+//!            (R316). Radiant: `costMod` −1 on each shuffled card. Then the draw."
 //!
-//! The graveyard is read once, as the Spell begins to resolve — it is in the resolving zone then
-//! (§10.5), so it is not among the cards — and each card is shuffled in, in graveyard order, each at
-//! its own random position (`shuffleCardInto`): the same card, its `costMod` and the rest of what R78
-//! keeps, going in openly to its owner (R311) at a slot neither player reads (R97). A card a full
-//! library turns away stays where it is (R80, R316).
-//!
-//! Radiant: "They" are the cards that went in, so the discount lands on each of them that is now in
-//! the deck, and on no card the cap left behind: a `costMod` of −{discount}, which R78 keeps in every
-//! zone. A change made inside a library is read by nobody (R177), so its `costChanged` stays hidden.
-//!
-//! Then the draw, §2.4's pipeline. An empty graveyard only draws.
-//!
-//! The numbers are the declared `draw` and `discount` (R386), read through `param`.
+//! The graveyard is read once, as the Spell begins to resolve, so the Spell itself (in the resolving
+//! zone, §10.5) is not among the cards. Each is shuffled in at its own random position, keeping its
+//! `costMod` (R78), openly to its owner (R311) at a slot neither player reads (R97).
+//! Radiant: "They" are the cards that went in, so a card the cap left behind gets no discount, and a
+//! change made inside a library is read by nobody (R177). Then the draw (§2.4's pipeline).
 
 use jackioh_engine::prelude::*;
 
@@ -42,9 +32,8 @@ fn recycle(discounts: bool) -> Script {
                 }));
             }
             if discounts {
-                // TS read `-param(ctx, "discount")` as each card's discount was built, off the Cry's own
-                // context; the number is the same at either moment (a card's declared numbers do not
-                // move while its Spell resolves), so it is read here, where the context is in hand.
+                // A card's declared numbers do not move while its Spell resolves, so the discount is
+                // read here, where the context is in hand.
                 let discount = param(&*ctx, "discount");
                 let shuffled = shuffled.clone();
                 effects.push(for_each_card(ForEachCardArgs {
@@ -79,13 +68,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30: "Shuffles every card in your graveyard
-// into your deck at random positions (this Spell is resolving, not there, and lands in the graveyard
-// after); R80's cap: cards that don't fit stay in the graveyard; the positions are blank in both views
-// and your deck list names the cards (R311); then draw 1; an empty graveyard only draws; radiant: each
-// shuffled card costs (1) less (`costMod`, kept, R78); its name is a rules word, and C #64's
-// "Recycler" is no reference to it (R381); its tuned numbers (draw, radiant discount) read through
-// `param()` (R386)".
+// C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30: shuffles every graveyard card into your
+// deck at random positions; R80's cap: cards that don't fit stay in the graveyard; positions are blank
+// in both views and your deck list names the cards (R311); then draw 1; radiant: each shuffled card costs
+// (1) less (`costMod`, R78). Its name is a rules word, and C #64's "Recycler" is no reference to it
+// (R381); numbers: R386.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,7 +104,6 @@ mod tests {
         all
     }
 
-    /// `Array.from({ length: LIBRARY_CAP - 1 }, () => X)`.
     fn nearly_full_library() -> Vec<&'static str> {
         (0..LIBRARY_CAP - 1).map(|_| X).collect()
     }

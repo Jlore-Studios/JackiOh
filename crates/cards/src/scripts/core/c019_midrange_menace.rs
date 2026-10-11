@@ -2,22 +2,14 @@
 //! "Taunt, Immutable; same". Engine cell: "Heal removes all damage".
 //!
 //! The radiant cell lists keywords without "Plus", so `[Taunt, Immutable]` is the radiant form's
-//! complete keyword list, and "same" restates the end-of-turn clause verbatim (§8 Conventions) — so
-//! both faces carry the identical hook.
+//! complete keyword list, and "same" restates the end-of-turn clause (§8 Conventions): both faces carry
+//! the identical hook. Neither keyword is granted here: both are PRINTED in the catalog and applied by
+//! §10.4's layer system (combat enforces the Taunt; R23's Immutable scope is the effects library's), so
+//! a re-grant would double it.
 //!
-//! Neither keyword is granted here. Taunt on the base face and Taunt + Immutable on the radiant face
-//! are PRINTED in the catalog (`def.base.keywords`, `def.radiant.keywords`) and §10.4's layer system
-//! applies them: `combat.ts`'s `tauntWall` enforces the Taunt and R23's scope ("blocks Vanilla,
-//! Transform … on the Immutable card itself; Radiant still allowed") is the effects library's, in
-//! `effects/transform.ts`. A script that re-granted a printed keyword would double it.
-//!
-//! "End of turn" is the controller's own end of turn (§6.2): `turn.ts`'s
-//! `triggerOrder(sink, "endOfTurn", player)` is narrowed to the active player, so this never fires on
-//! the opponent's end — the same reading as #13's "not on the opponent's end".
-//!
-//! "Heal to full" is §6.3's Heal with `toFull`, which takes ALL of the unit's damage off and raises
-//! nothing: `healToFull` in `damage.ts`. §4's "damage stays on a unit between turns … only a heal or
-//! leaving the field takes it off" is why the card needs this at all.
+//! "End of turn" is the controller's own (§6.2), never the opponent's, as in #13. "Heal to full" is
+//! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between
+//! turns, which is why the card needs this at all.
 
 use jackioh_engine::prelude::*;
 
@@ -43,20 +35,11 @@ pub fn script() -> CardScripts {
 // #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19.
 //
 // Must-pass (M4-T4): "Taunt enforced; heals to full at own end of turn; radiant Immutable refuses
-// Sheepish".
+// Sheepish". §4: damage stays on a unit until a heal (§6.3) or leaving the field (R78) takes it off.
 //
-// Engine cell: "Heal removes all damage". §4: "Damage stays on a unit between turns: no phase and no
-// cleanup step clears it, and only a heal (§6.3) or leaving the field (R78) takes it off" — which is
-// why the heal is worth a card at all.
-//
-// The radiant cell lists keywords without "Plus", so `[Taunt, Immutable]` is the radiant form's
-// COMPLETE keyword list, and "same" restates the end-of-turn clause (§8 Conventions): both are
-// asserted below, base and radiant.
-//
-// R23's "refuses Sheepish" clause: #41 Sheepish is the Trap that transforms a unit into a Sheep
-// Token, and its script belongs to another card file, so the transform half of R23 must be proved
-// from THAT side. What this file owns is the half that makes R23 apply here — that the radiant face
-// really carries Immutable, printed and visible in the view — plus the base face NOT carrying it.
+// R23's "refuses Sheepish": the transform half belongs to #41 Sheepish's file. This file owns the half
+// that makes R23 apply: the radiant face carries Immutable, printed and visible in the view, and the
+// base face does not. Both faces are asserted for the keyword list and the end-of-turn heal.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

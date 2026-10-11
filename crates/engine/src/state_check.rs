@@ -509,6 +509,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             row: at.row,
             lane: at.lane,
             former_id: None,
+            source_id: None,
             arrived_during: None,
             exits_from: None,
         };
@@ -572,7 +573,8 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         }
 
         // §5.2: the face the card was wearing as it died, which is the snapshot's own.
-        let Some(hook) = crate::scripts::script_of(sink.state, &snapshot).death.clone() else {
+        // ME-GRANT (MD-D13): the card's own Death, then each granted Death in the order granted.
+        let Some(hook) = crate::grants::death_hook_of(sink.state, &snapshot) else {
             pass.owed.remove(0);
             resume_at = None;
             continue;
@@ -729,6 +731,15 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     for card in &read {
         crate::zones::remove_from_field(sink.state, &card.unit, Default::default());
     }
+    // R823 (Meditative #10 Double Counting): a Death hook runs again for each extra run its card's
+    // controller's multiplier gives, back to back on the same snapshot (R89), the multiplier read once
+    // the collected cards are off the field (R463), so one dying in this pass doubles nothing.
+    let mut extra: IndexMap<PlayerId, usize> = IndexMap::new();
+    for player in PLAYER_IDS {
+        let runs =
+            crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::CryAndDeath);
+        extra.insert(player, runs.max(0) as usize);
+    }
 
     for mut card in read {
         let landed = crate::zones::move_to_zone(
@@ -744,6 +755,16 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             continue;
         }
         pass.owed.push(card.snapshot.clone());
+        let runs = extra.get(&card.snapshot.controller).copied().unwrap_or(0);
+        if runs > 0
+            && crate::scripts::script_of(sink.state, &card.snapshot)
+                .death
+                .is_some()
+        {
+            for _ in 0..runs {
+                pass.owed.push(card.snapshot.clone());
+            }
+        }
         pass.collected.push(CollectedEntry {
             id: card.unit.id.clone(),
             def_id: card.unit.def_id.clone(),
@@ -805,6 +826,10 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
 /// hero check is left to the state check that follows the whole effect (R59): a sacrifice is one
 /// effect among the list that made it, and nothing about it touches a hero.
 pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    // R1220: a Sacrifice of an Untributable card does nothing.
+    if crate::query::is_untributable(sink.state, card) {
+        return;
+    }
     let mut pass = collect(sink, std::slice::from_ref(card), DeathCause::Sacrificed);
     pass.sacrificed = Some(true);
     run_death_pass(sink, &mut pass, None);
@@ -817,6 +842,12 @@ pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
 /// by one, the first sacrifice's Death ran before the others had died, so the client chose the order
 /// the Deaths resolved in (#81's Death radiating a unit #86's Death was about to steal, or not).
 pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
+    // R1220: Untributable cards are dropped from a Sacrifice first; when none is left, nothing happens.
+    let cards: Vec<CardInstance> = cards
+        .iter()
+        .filter(|card| !crate::query::is_untributable(sink.state, card))
+        .cloned()
+        .collect();
     if cards.is_empty() {
         return;
     }
@@ -830,7 +861,7 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     for player in order {
         for row in [Row::Units, Row::Backrow] {
             for lane in 1..=crate::zones::row_size(row) {
-                for card in cards {
+                for card in &cards {
                     if let Some(at) = crate::zones::slot_of(sink.state, card)
                         && at.player == player
                         && at.row == row
@@ -845,6 +876,45 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     let mut pass = collect(sink, &ordered, DeathCause::Sacrificed);
     pass.sacrificed = Some(true);
     run_death_pass(sink, &mut pass, None);
+}
+
+/// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths — in R68's order,
+/// the active player's units first. The move is §6.3 Exile's (`effects::move_::exile_card`): to the
+/// exile pile (a unit token ceases to exist instead, R11), the exile counter fed (R55), `exiled`
+/// reported. No Death, no Reborn, no `destroyed` (R461), even when the hit was lethal.
+fn exile_marked(sink: &mut EngineSink<'_>) {
+    let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
+        [PlayerId::P1, PlayerId::P2]
+    } else {
+        [PlayerId::P2, PlayerId::P1]
+    };
+    let mut marked: Vec<CardInstance> = Vec::new();
+    for player in order {
+        marked.extend(
+            units_of(sink.state, player)
+                .into_iter()
+                .filter(|unit| unit.marked_exiled == Some(true)),
+        );
+    }
+    for unit in marked {
+        let Some(live) = find_instance(sink.state, &unit.id).cloned() else {
+            continue;
+        };
+        if live.marked_exiled != Some(true) {
+            continue;
+        }
+        let mut card = live;
+        let moved =
+            crate::zones::move_to_zone(sink.state, &mut card, OffFieldZone::Exile, Default::default());
+        if matches!(moved, MoveResult::Moved) {
+            sink.state.counters.exiled += 1;
+        }
+        sink.events.push(GameEvent::Exiled {
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            owner: card.owner,
+        });
+    }
 }
 
 /// R42: `lastDamagedBy` names the hit that took a unit to 0 or less health. A unit the check leaves
@@ -902,16 +972,19 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             permanents_in_play(state)
                 .into_iter()
                 .filter(|card| {
-                    crate::scripts::script_of(state, card)
-                        .tribute_when
-                        .as_ref()
-                        .is_some_and(|when| {
-                            when(HookArgs {
-                                state,
-                                self_: card,
-                                radiant: card.radiant,
+                    // R1220: an Untributable card's `tributeWhen` never fires — without this, a card
+                    // whose condition holds would loop the state check up to its pass cap.
+                    !crate::query::is_untributable(state, card)
+                        && crate::scripts::script_of(state, card)
+                            .tribute_when
+                            .as_ref()
+                            .is_some_and(|when| {
+                                when(HookArgs {
+                                    state,
+                                    self_: card,
+                                    radiant: card.radiant,
+                                })
                             })
-                        })
                 })
                 .collect()
         };
@@ -921,6 +994,13 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                 return;
             }
             continue;
+        }
+
+        // MD-D31, R1124: the marked units leave for exile before anything is collected for death.
+        // Exiling asks nothing, so a prompt already open (R156) does not stop the collection below.
+        exile_marked(sink);
+        if sink.state.result.is_some() {
+            return;
         }
 
         let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
@@ -961,7 +1041,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         if dying.is_empty() {
-            if hero_check(sink) {
+            // R850: the settled game-end point — a hero at 0 loses first, then a held win wins.
+            if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.

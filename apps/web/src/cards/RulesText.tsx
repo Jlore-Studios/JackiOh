@@ -19,6 +19,10 @@
 //   dotted box with ▲ (better) or ▼ (worse) after it (`.cf-tuned[data-way]`, the glyph drawn by the
 //   stylesheet so the text stays the number), and its printed value in the tooltip.
 //
+// A Chinese face's text (ME-CN, R1301) names the cards its `refs` link by their Chinese names, so
+// those are the names looked for, and "光辉" before one points it at the Radiant face; the face a
+// reference opens is the named card's printed one.
+//
 // A mark and a reference nest: a mark that holds a whole name holds its reference ("Also add a
 // Lava Golem …"), a mark inside a name sits inside the reference ("Rush Tokens"' marked "Tokens"),
 // and a mark that crosses a name's edge is cut there, so the elements always nest.
@@ -31,6 +35,7 @@ import { Fragment, type ReactElement, type ReactNode } from "react";
 import type { CardDef, PreviewValue } from "@jackioh/shared";
 
 import { CardRef } from "./CardRef.tsx";
+import { CHINESE_TERMS, chineseDef } from "./chinese.ts";
 import type { TextRange } from "./radiantDiff.ts";
 import { useDefResolver } from "./refContext.tsx";
 import { findRefs, type RefMatch } from "./refs.ts";
@@ -47,6 +52,8 @@ type RulesTextProps = {
   values?: readonly PreviewValue[];
   /** R386: the numbers in `text` the view moved off their printed values, in play. */
   tuned?: readonly TunedRange[];
+  /** R1301: `text` is a Chinese face's, which names its references by their Chinese names. */
+  chinese?: boolean;
 };
 
 type Insert = { at: number; text: string; label: string };
@@ -125,10 +132,10 @@ function contains(outer: { start: number; end: number }, inner: { start: number;
   return outer.start <= inner.start && inner.end <= outer.end;
 }
 
-export function RulesText({ text, marks = NONE, refs = NONE, values = NONE, tuned = NONE }: RulesTextProps): ReactElement {
+export function RulesText({ text, marks = NONE, refs = NONE, values = NONE, tuned = NONE, chinese = false }: RulesTextProps): ReactElement {
   const resolve = useDefResolver();
   const defs: CardDef[] = resolve === null ? [] : refs.flatMap((id) => resolve(id) ?? []);
-  const matches = defs.length === 0 ? [] : findRefs(text, defs);
+  const matches = defs.length === 0 ? [] : chinese ? findRefs(text, defs.map(chineseDef), CHINESE_TERMS.radiant) : findRefs(text, defs);
   const refWraps: Wrap[] = matches.flatMap((match) => {
     const def = defs.find((candidate) => candidate.id === match.id);
     return def === undefined ? [] : [{ start: match.start, end: match.end, kind: "ref" as const, match, def }];

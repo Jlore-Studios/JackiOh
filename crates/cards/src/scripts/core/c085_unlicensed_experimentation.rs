@@ -1,73 +1,21 @@
 //! #85 Unlicensed Experimentation (SPEC §8.4 row 85): Trap, cost 1, Legendary.
 //!   Base:    "When the opponent plays a permanent whose type matches one you control: Fuse it onto
 //!             a random permanent of yours of that type"
-//!   Radiant: "Onto every such permanent" — the cell restates only which of your permanents receive
-//!            it, so everything else is the base clause (§8 Conventions), and R77 spells the radiant
-//!            case out: "fuses the played permanent onto each matching permanent separately, one
-//!            fusion at a time".
+//!   Radiant: "Onto every such permanent": only the targets change (§8 Conventions); R77 fuses the
+//!            played permanent onto each matching permanent separately, one fusion at a time.
 //!
-//! ARMING vs FIRING (R61, and `traps.ts`'s own rule). `traps.ts`: "`run` returning `[]` is a trap
-//! that fired for nothing — it can never mean 'this event was not mine'", so every condition that
-//! must leave this trap armed and face-down lives in the `when` predicate, and `run` is reached only
-//! once the trap really is firing. R61 divides the two precisely:
-//!   - leaves it ARMED: your own play; a Spell; a token, a Recruit, a copy, a Reborn or a Transform
-//!     result; a permanent whose type matches nothing you control.
-//!   - FIRES it: the opponent playing or casting a permanent from hand whose type matches one you
-//!     control — and then "when no legal target of that type remains, the trap fires, is consumed
-//!     and does nothing, and the played permanent stays". An Immutable permanent of yours is still
-//!     "one you control" (so the trap fires) but is never chosen as the Fuse target (R23), which is
-//!     exactly how that last sentence happens. So `when` counts Immutable permanents and `run`
-//!     does not.
-//!
-//! WHICH EVENT (R17, R61, R70, §10.5). §10.5 step 7's `cardResolved`, not step 4's `cardPlayed`.
-//! Both name a play — `playSteps.ts` reports a play from hand and `resolve.castCard` a cast, which
-//! R70 makes a play "for every rule that counts or reacts to plays" — but R17 puts this trap at step
-//! 7, "after a played permanent's Cry", while step 4 is #41 Sheepish's moment, before it ("Sheepish
-//! fires on the `summoned`/`cardPlayed` pair emitted at step 4 … Bear Honeypot, Unstable Clone
-//! Machine and Unlicensed Experimentation fire on the events step 7 emits", `traps.ts`). Watching
-//! `cardPlayed` would fuse the played permanent away before its own Cry ever ran.
-//!
-//! A summon — Recruit, a copy, a token, Reborn, a Transform result — emits `summoned` and never
-//! either of these, so R61's exclusions are the event's own, with one exception this card has to
-//! make itself: a TOKEN CARD can be played from a hand (#75's Rush Token card, Combo-Fodder), and
-//! R61 says tokens never set this off. Hence the token check in `playedPermanent`.
-//!
-//! "PLAYED PERMANENTS ONLY" IS `event.permanent` (R61). Step 7 answers the question itself: the flag
-//! says whether the card is still in play at the moment it resolved, which is exactly what this trap
-//! needs and what a Spell can never be. It also settles the cases a board re-check would have to
-//! guess at — a Unit #41 Sheepish has already transformed away, a token that ceased to exist, R138's
-//! cast permanent that found no zone and went to its graveyard — all report false, so none of them
-//! arms this trap and nothing here reads a zone.
-//!
-//! FUSE, VIA THE EFFECTS BARREL (§6.3 Fuse, R77, R23, R61).
-//! `fuseCards({ instanceIds, targetInstanceIds, pick })` is the verb. The loop over the targets is
-//! inside it rather than here, and that is load-bearing: `subsystems/fuse.ts` has an ingredient
-//! cease to exist the moment a fusion is made (`removeFromAnyZone`, then `{ z: "gone" }`), so after
-//! the first fusion the played permanent is held by no pile and `findInstance` cannot reach it. An
-//! ingredient only ever contributes its DEFINITION, which is why the subsystem says a ceased-to-
-//! exist ingredient still fuses — but only something holding the resolved instance can honour that.
-//! So this card names its targets once and the verb keeps the ingredient across the fusions.
-//! The base face's "a random permanent of yours of that type" is `pick: "random"`, drawn with
-//! `ctx.rng` inside the effect so the draw stays in the reducer (§9.3, §10.7).
-//! and nothing else about this file changes.
-//!
-//! The rest is deliberately NOT here: `fireTrap` emits `trapFired`, runs the state check and
-//! consumes the trap (a Trap goes to its owner's graveyard, §3.2), and R33 keeps a face-down trap's
-//! identity in `viewFor`. R13 leaves a card dormant under a Stack off the field, so it is neither a
-//! match nor a target; `cardAt` reads the acting card per zone, which is that rule.
-//!
-//! THE GLOW (R662). The trap lights up on its controller's field while they control a permanent,
-//! other than this trap, that a played permanent could be fused onto (`fusablePermanentsOf`: not
-//! Immutable, R23). Which type the opponent will play is theirs to choose, so the glow says the trap
-//! has somewhere to land, the same on both faces; R61 still fires it on an Immutable match alone.
+//! ARMING vs FIRING (R61): what must leave the trap armed and face-down (your own play, a Spell, a
+//! token, a Recruit, copy, Reborn or Transform result, a type matching nothing of yours) lives in
+//! `when`, never in `run`, whose empty list means "fired for nothing". An Immutable permanent of
+//! yours still counts in `when` ("one you control") but `run` never picks it (R23).
+//! EVENT: `CardResolved` (§10.5 step 7, R17, R70), not `CardPlayed` (step 4, #41 Sheepish's moment):
+//! the trap fires after the played permanent's Cry, and `event.permanent` says it is still in play.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-085";
 
-// §10.5 step 7's event: a play or a cast that has finished resolving (R17, R70). TS names it
-// `ResolvedEvent = Extract<GameEvent, { type: "cardResolved" }>`; here it is `GameEvent::CardResolved`,
-// matched where it is read.
+// §10.5 step 7's event: a play or a cast that has finished resolving (R17, R70), `GameEvent::CardResolved`.
 
 /// R61 and §5.1: "Field Trap counts as Trap", in both directions, so both read as one key.
 fn type_key(type_: CardType) -> CardType {
@@ -78,7 +26,7 @@ fn type_key(type_: CardType) -> CardType {
     }
 }
 
-/// The permanent this play put on the opponent's field, or null when the event is not one this trap
+/// The permanent this play put on the opponent's field, or `None` when the event is not one this trap
 /// answers: the controller's own play, a Spell or anything else that is no longer in play (R61's
 /// `permanent`), a token (R61), or a card the instance table can no longer name.
 fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardInstance> {
@@ -95,8 +43,9 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
     if *player == ctx.controller {
         return None;
     }
-    // R61: "played permanents only". Step 7 read this as it landed, so no board check is needed and
-    // a Spell, or a Unit an earlier trap has already taken off the field, is out by the same test.
+    // R61: "played permanents only". Step 7 read this as it landed, so no board check is needed: a
+    // Spell, a Unit an earlier trap took off the field and R138's cast permanent that found no zone
+    // are out by the same test.
     if !*permanent {
         return None;
     }
@@ -112,15 +61,10 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
 }
 
 /// "a permanent of yours of that type" (§8), which R61 narrows twice: the firing trap is "neither
-/// matched nor fused onto", and R13 leaves a card dormant under a Stack off the field.
-///
-/// And never the played card itself. "Fuse IT onto a permanent of yours" names two different cards,
-/// yet the played one can already stand on this trap's side when the trap fires: #52 Silly Silas
-/// played into its controller's lane 5 and rotated right crosses to this side (§3.1), so a scan of
-/// "yours" meets him. Counted, he made "one you control" true for a trap with nothing else to fuse
-/// onto, and picked, he was fused onto himself, which `fuse` refuses — the trap was spent for
-/// nothing although another permanent of the type was there (R61 spends it only with no legal
-/// target). Left out of both, the trap stays armed when he is the only match (R99).
+/// matched nor fused onto", and R13 leaves a card dormant under a Stack off the field. Never the
+/// played card either: #52 Silly Silas rotated onto this side (§3.1) would be counted, then fused onto
+/// himself, which `fuse` refuses, spending the trap for nothing although another permanent of the
+/// type was there (R61 spends it only with no legal target). Left out of both, the trap stays armed when he is the only match (R99).
 fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardInstance) -> Vec<CardInstance> {
     let wanted = type_key(type_);
     let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
@@ -170,17 +114,16 @@ fn experimentation(on_all: bool) -> TrapTrigger {
                 .map(|card| card.id)
                 .collect();
 
-            // R61: with no legal target the trap fires, is consumed and does nothing, and the played
-            // permanent stays — which is an empty effect list, and `fireTrap` does the rest.
+            // R61: with no legal target the trap fires, is consumed (a Trap goes to its owner's
+            // graveyard, §3.2) and does nothing, and the played permanent stays: an empty effect list.
             if target_ids.is_empty() {
                 return vec![];
             }
 
-            // R77: one fusion per target, each its own transient definition, the played permanent
-            // contributing its definition to every one of them. `fuseCards` holds the resolved
-            // ingredient across the loop, which is why `targetInstanceIds` is one effect and not one
-            // effect per target — after the first fusion the played card is in `{ z: "gone" }` and no id
-            // can reach it again. The random pick of the base face is `ctx.rng` INSIDE that effect.
+            // R77, §6.3: one fusion per target, each its own transient definition. One effect names all
+            // the targets because `fuse_cards` holds the resolved ingredient across them (after the first
+            // fusion the played card is gone and no id reaches it); the base face's random pick is
+            // `ctx.rng` inside that effect, so the draw stays in the reducer (§9.3, §10.7).
             let pick = if on_all { "all" } else { "random" };
             vec![fuse_cards(json_as(json!({
                 "instanceIds": [played.id],
@@ -203,7 +146,9 @@ fn experimentation(on_all: bool) -> TrapTrigger {
     })
 }
 
-/// R662: armed while a permanent of its controller's, other than this trap, could take a Fuse.
+/// R662: armed while a permanent of its controller's, other than this trap, could take a Fuse (not
+/// Immutable, R23). Which type the opponent plays is theirs to choose, so the glow only says the Fuse
+/// has somewhere to land, the same on both faces; R61 still fires the trap on an Immutable match alone.
 fn condition_met() -> ConditionHook {
     condition_hook(|ctx| {
         ctx.zone == ConditionZone::Field
@@ -227,37 +172,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #85 Unlicensed Experimentation — SPEC §8.4 row 85 ("When the opponent plays a permanent whose
-// type matches one you control: Fuse it onto a random permanent of yours of that type" / radiant
-// "Onto every such permanent"), BUILD M4-T4 row 85.
-//
-// Every test puts the trap face-down in p1's backrow lane 3 and makes p2 the active player: a Trap
-// answers the OPPONENT's action and resolves to completion before that action continues (§10.3).
-//
-// The two halves of the card, and the ruling that splits them:
-//
-//   R99  A condition that must leave the trap ARMED belongs in the trigger's `when`, never in `run`
-//        — R61 makes an empty effect list from `run` mean "fired, consumed, did nothing". So the
-//        "arming" tests below are the real test of R99: each one is an event this trap must ignore,
-//        and after it the trap is still on the field and still face-down.
-//   R61  What fires it: the opponent playing or casting a permanent from hand whose type matches
-//        one they control. Field Trap counts as Trap; the firing trap is neither matched nor fused
-//        onto; an Immutable permanent of yours IS "one you control" (so the trap fires) but is
-//        never the Fuse target (R23) — which is the "fires, is consumed, does nothing, and the
-//        played permanent stays" case.
-//   R17  It fires AFTER the played permanent's Cry, unlike #41 Sheepish, which fires before it.
-//   R77/R102  What the Fuse composes: summed stats, united keywords, cost capped at FUSE_COST_CAP
-//        4, the target instance kept with its damage and position, the other ingredient ceasing to
-//        exist (R86's `{ z: "gone" }`) with no Death trigger and no destroyed counter.
-//
-// The ingredients are placed by `field`/played from `hand` and chosen so no Cry muddies the board:
-//   #11 Tempo Timmy   1, 3/3, Rush + First Strike, no Cry
-//   #25 4-mana 7/7    4, 7/7, Armor 7, no Cry
-//   #15 Me and Mr Tok 1, 1/1, Cry: summon a Rush Token — the R17 timing probe
-//   #8  Mr. Vanilla   1, 3/3, Immutable, no Cry
-//
-// R662's yellow glow (`conditionMet`): on its controller's field while they control a permanent other
-// than the trap that is not Immutable, both faces, checked against the opponent's play, at the end.
+// #85 Unlicensed Experimentation — SPEC §8.4 row 85, BUILD M4-T4 row 85. Every test puts the trap
+// face-down in p1's backrow lane 3 with p2 active: a Trap answers the OPPONENT's action and resolves
+// to completion before that action continues (§10.3). The "arming" tests are R99's proof: an event
+// the trap must ignore leaves it on the field, face-down. R61 and R23 say what fires it (an Immutable
+// match fires it and takes no Fuse), R17 times it after the Cry, R77/R102/R86 compose the Fuse (the
+// other ingredient ceases to exist, with no Death trigger and no destroyed counter).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -320,7 +240,7 @@ mod tests {
             .unwrap_or_else(|| panic!("{player} has no {def_id} in hand"))
     }
 
-    /// TS `s.events.findIndex(match)`: -1 when no event matches.
+    /// The index of the first matching event, -1 when none matches.
     fn index_of_event(s: &Scenario, matching: impl Fn(&GameEvent) -> bool) -> isize {
         s.events()
             .iter()
@@ -671,8 +591,6 @@ mod tests {
             }
         }
 
-        /// TS `R662 ${face}: with a Unit of its controller's it glows for them only, and the opponent's
-        /// Unit is fused onto it`.
         fn with_a_unit_it_glows_and_fuses(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -689,7 +607,6 @@ mod tests {
             assert!(s.unit(P2, 1).is_none());
         }
 
-        /// TS `R662 ${face}: alone on its side it does not glow, and the opponent's Unit stays theirs`.
         fn alone_it_does_not_glow(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -705,7 +622,6 @@ mod tests {
             assert_eq!(s.unit(P2, 1).map(|card| card.def_id.clone()), Some(VANILLA.to_string()));
         }
 
-        /// TS `R662 ${face}: an Immutable permanent alone takes no Fuse (R23), so it does not glow`.
         fn an_immutable_permanent_alone_does_not_glow(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({

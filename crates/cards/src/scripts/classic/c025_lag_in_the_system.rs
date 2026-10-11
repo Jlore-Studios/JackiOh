@@ -1,33 +1,22 @@
-//! C #25 Lag in the System (SPEC §8.6 row 25, §6.3 Exile; R13, R65, R66, R113, R135, R396). Spell,
-//! cost 0, Epic.
+//! C #25 Lag in the System (SPEC §8.6 row 25, §6.3 Exile). Spell, cost 0, Epic.
 //!   Base:    "Exile every ({threshold}) Cost or less card on the field." (balance patch 1: the
 //!            Field alone, the whole board)
 //!   Radiant: "Exile every ({threshold}) Cost or less enemy card on the field, in their hand and in
 //!            their deck."
-//!   Engine:  "C #18 with the numbers fixed at 0 and 1: the same zones, the same cost reading (R65 at
-//!            resolution; an X card in a hand or deck costs 0, so it goes, and on the field it costs its
-//!            X, R396), the Spell itself spared, graveyards and exile untouched. Tunes: threshold 1 ↑."
 //!
-//! THE SET is read once, as the Spell resolves (`forEachCard`, R66, R113), and each card is then its
-//! own exile (R135), so a card that a sweep uncovers — one dormant under a Stack pile, which is not on
-//! the field while it lies there (§3.2, R13) — is not in it. The zones are the field (the tops of the
-//! unit piles and every backrow card, face-down ones included, both sides in R68's walk), then each
-//! side's hand and deck, the Spell's controller first. Graveyards and exile are never read. The Spell
-//! itself is resolving (§10.5), in none of those zones, so it is spared.
-//!
-//! THE COST is `costNow` (R396), R65's cost as it stands at resolution: a hand card at its hand cost
-//! (its player's discounts included), a deck or field card at its own; an X card counts the X it was
-//! played for on the field, and 0 anywhere else or when it arrived with none chosen. An exiled card is
-//! public, so each `exiled` event names it; none carries a deck position.
-//!
-//! THE RADIANT FACE reads the opponent's side only: their field, hand and deck.
+//! The set is read once, as the Spell resolves (`forEachCard`, R66, R113), and each card is then its
+//! own exile (R135), so a card a sweep uncovers (one dormant under a Stack pile, not on the field,
+//! §3.2, R13) is not in it. Zones: the field (unit-pile tops, every backrow card, face-down included,
+//! both sides in R68's walk), then each side's hand and deck, the Spell's controller first (the Radiant
+//! face reads the opponent's side only); never graveyards or exile. The resolving Spell (§10.5) is in
+//! none of them, so it is spared. Cost is `costNow` (R396), R65's at resolution: an X card costs its X
+//! on the field and 0 anywhere else.
 
 use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-025";
 
-/// TS `type Whose = "any" | "enemy"`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Whose {
     Any,
@@ -100,17 +89,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #25 Lag in the System — SPEC §8.6 row 25, BUILD M9 Classic row C 25: "Exile every (1) Cost or
-// less card on both fields" (balance patch 1: the Field alone — units and backrow, both sides; hands
-// and decks stay). Costs read per R65 at resolution; an X card on the field costs the X it was played
-// for (0 with none chosen, R396); face-down and Indestructible cards (C #90 In Too Deep) included;
-// graveyards and exile untouched; the Spell itself is resolving and spared; radiant: the opponent's
-// field, hand and deck only (an X card in a hand or deck costs 0 and goes); its tuned number
-// (threshold) reads through `param()` (R386)".
-//
-// An X card on the field "played for X": the test stands a C+ #69 Buff Billy on the field with its
-// stats given (`statsOverride`) and records the X it was played for on the instance, as a play would
-// (`CardInstance.x`, §2.3).
+// C #25 Lag in the System — SPEC §8.6 row 25, BUILD M9 Classic row C 25: face-down and Indestructible
+// cards (C #90 In Too Deep) are exiled too; its tuned number (threshold) reads through `param()` (R386).
+// An X card on the field "played for X": the test gives a C+ #69 Buff Billy its stats (`statsOverride`)
+// and records the X it was played for on the instance (`CardInstance.x`, §2.3).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1116,3 +1116,156 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
         assert_eq!(hash_state(&replayed(&run1)), hash_state(&run1.state));
     }
 }
+
+/// R1087 (M #75): a keyword a fusion brings in applies at once — a fused "Animated on your turn"
+/// animates the kept card at its controller's next start of turn, while a fused plain Animated
+/// waits until the card enters the field again.
+mod r1087_a_fused_animated_keyword_applies_at_once {
+    use super::*;
+    use jackioh_engine::animated::animate_at_turn_start;
+    use jackioh_engine::effects::move_::bounce_card;
+
+    /// A plain Field Spell keeper (2/3), an "Animated on your turn" Field Spell (4/5) and a plain
+    /// Animated Field Spell (1/1).
+    fn animated_defs() -> Vec<CardDef> {
+        let def = |id: &str, index: i32, attack: i32, health: i32, keywords: Value| -> CardDef {
+            json_as(json!({
+                "id": id,
+                "index": index.to_string(),
+                "name": format!("{id} (animated fusion)"),
+                "set": "Core",
+                "type": "Field Spell",
+                "tags": [],
+                "rarity": "Common",
+                "token": false,
+                "cost": 1,
+                "base": { "attack": attack, "health": health, "keywords": keywords, "text": id },
+                "radiant": {
+                    "attack": attack * 2,
+                    "health": health * 2,
+                    "keywords": keywords,
+                    "text": id,
+                },
+            }))
+        };
+        vec![
+            def("fv-keep", 1971, 2, 3, json!([])),
+            def(
+                "fv-turn",
+                1972,
+                4,
+                5,
+                json!([{ "kind": "Animated on your turn" }, { "kind": "Rush" }]),
+            ),
+            def("fv-plain", 1973, 1, 1, json!([{ "kind": "Animated" }])),
+        ]
+    }
+
+    /// `playing` with the fusion-Animated defs registered (default scripts: no hooks).
+    fn animated_game(seed: &str) -> Run {
+        let run = playing(seed);
+        let mut catalog = registered_catalog().clone();
+        let mut registry = registered_scripts().clone();
+        for def in animated_defs() {
+            registry.insert(
+                def.id.clone(),
+                CardScripts {
+                    base: Script::default(),
+                    radiant: Script::default(),
+                },
+            );
+            catalog.insert(def.id.clone(), def);
+        }
+        register_catalog(catalog);
+        register_scripts(registry);
+        run
+    }
+
+    fn animated_events(events: &[GameEvent]) -> Vec<GameEvent> {
+        events
+            .iter()
+            .filter(|event| event.event_type() == GameEventType::Animated)
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn r1087_fused_animated_on_your_turn_animates_next_start_of_turn() {
+        let mut run = animated_game("fused-turn");
+        let keep = put(&mut run.state, "fv-keep", slot(P1, Row::Backrow, 1), json!({}));
+        let turn = put(&mut run.state, "fv-turn", slot(P1, Row::Backrow, 2), json!({}));
+        let mut sink = Sink::for_state(&run.state);
+        let kept = must(
+            fuse_in(
+                &mut run.state,
+                &mut sink,
+                json!({ "ingredients": [turn], "target": keep }),
+            ),
+            "the fusion",
+        );
+
+        // The fusion brings the keyword in but animates nothing yet: the keeper stays backrow.
+        assert_eq!(
+            card_at(&run.state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
+            Some(kept.id.clone())
+        );
+        assert!(!is_animated(&run.state, &kept));
+        assert!(animated_events(&sink.events).is_empty());
+
+        // At its controller's next start of turn it animates, with the summed stats.
+        let mut sink = Sink::for_state(&run.state);
+        animate_at_turn_start(&mut sink.on(&mut run.state), P1);
+        let kept = must(find_instance(&run.state, &kept.id).cloned(), "the keeper");
+        assert!(is_animated(&run.state, &kept));
+        assert_eq!(animated_events(&sink.events).len(), 1);
+        assert_eq!(unit_view(&run.state, &kept).attack, 6);
+        assert_eq!(unit_view(&run.state, &kept).health, 8);
+    }
+
+    #[test]
+    fn r1087_fused_plain_animated_waits_for_entry() {
+        let mut game = animated_game("fused-plain");
+        let keep = put(&mut game.state, "fv-keep", slot(P1, Row::Backrow, 1), json!({}));
+        let plain = put(&mut game.state, "fv-plain", slot(P1, Row::Backrow, 2), json!({}));
+        let mut sink = Sink::for_state(&game.state);
+        let kept = must(
+            fuse_in(
+                &mut game.state,
+                &mut sink,
+                json!({ "ingredients": [plain], "target": keep }),
+            ),
+            "the fusion",
+        );
+
+        // A fused plain Animated waits until the card enters the field again: no animation now,
+        // and none at the next start of turn either.
+        assert!(!is_animated(&game.state, &kept));
+        assert!(animated_events(&sink.events).is_empty());
+        let mut sink = Sink::for_state(&game.state);
+        animate_at_turn_start(&mut sink.on(&mut game.state), P1);
+        let kept = must(find_instance(&game.state, &kept.id).cloned(), "the keeper");
+        assert!(!is_animated(&game.state, &kept));
+        assert!(animated_events(&sink.events).is_empty());
+
+        // Bounced and played again, it enters animated.
+        let kept_id = kept.id.clone();
+        let mut sink = Sink::for_state(&game.state);
+        let bounce = Effect::new("bounce-back", move |ctx| {
+            if let Some(card) = find_instance(ctx.state, &kept_id).cloned() {
+                bounce_card(&mut ctx.sink, &card);
+            }
+        });
+        run(&mut game.state, &mut sink, bounce, None);
+        game = act(
+            &game,
+            json!({
+                "type": "play",
+                "instanceId": kept.id,
+                "zone": { "row": "backrow", "lane": 1 },
+                "playerId": "p1",
+            }),
+        );
+        let kept = must(find_instance(&game.state, &kept.id).cloned(), "the keeper");
+        assert!(is_animated(&game.state, &kept));
+    }
+}

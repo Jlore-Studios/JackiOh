@@ -2,7 +2,8 @@
 // computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
 // what comes out was derived from that array and nothing else.
 
-import type { ActionBody, PlayerView, Selection } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PlayerView, RevealAt, Selection } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,6 +18,8 @@ import {
   pendingHighlight,
   pickInPlay,
   selectionForOption,
+  selectionKey,
+  selectionTestid,
   withNonce,
   type Interaction,
 } from "./actions.ts";
@@ -554,6 +557,15 @@ describe("the attack flow", () => {
     expect(result.action).toEqual({ type: "attack", attackerId: "u1", targetId: "hero-p2" });
   });
 
+  it("sends a random attack on the attacker's click", () => {
+    const random: ActionBody = { type: "attack", attackerId: "u1", targetId: RANDOM_ATTACK_TARGET };
+
+    const result = onClickTarget(view, [random], IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+    expect(result.action).toEqual(random);
+    expect(result.interaction).toEqual(IDLE);
+  });
+
   it("deselects the attacker when it is clicked again", () => {
     const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
     const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
@@ -751,6 +763,54 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
     });
   });
 
+  it("craft → the preset's recipe (R880)", () => {
+    const recipe: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const pending = pendingFor(
+      "craft",
+      [{ key: "craft:#digest", label: "Pure Closure", recipe: { ...recipe } }],
+      { budget: 2 },
+    );
+    if (!pending.forYou) throw new Error("fixture");
+
+    expect(answerAction(pending, ["craft:#digest"], view)).toEqual({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+    expect(selectionKey({ pick: "craft", recipe: { ...recipe } })).toBe(
+      `craft:${JSON.stringify(recipe)}`,
+    );
+    expect(selectionTestid(view, { pick: "craft", recipe: { ...recipe } })).toBeNull();
+  });
+
+  it("market → a lot's mode, a barter's instance, Leave's none (R1000, R1001)", () => {
+    const pending = pendingFor(
+      "market",
+      [
+        { key: "mode:core-080", label: "Lot", defId: "core-080", cost: 30 },
+        { key: "instance:h1", label: "Traded", instanceId: "h1", defId: "core-005", cost: -15 },
+        { key: "none", label: "Leave" },
+      ],
+      { budget: 50 },
+    );
+    if (!pending.forYou) throw new Error("fixture");
+
+    const answer = (selection: Selection[]) => ({ type: "answer", choiceId: "ch1", selection });
+    expect(answerAction(pending, ["mode:core-080"], view)).toEqual(answer([{ pick: "mode", option: "core-080" }]));
+    expect(answerAction(pending, ["instance:h1"], view)).toEqual(answer([{ pick: "instance", instanceId: "h1" }]));
+    expect(answerAction(pending, ["none"], view)).toEqual(answer([{ pick: "none" }]));
+  });
+
   it("maps a no-op option to { pick: 'none' }", () => {
     expect(selectionForOption({ key: "none", label: "Nothing" })).toEqual({ pick: "none" });
     expect(selectionForOption({ key: "none:nothing", label: "Nothing" })).toEqual({ pick: "none" });
@@ -896,5 +956,148 @@ describe("a selection keeps the rest of the board's affordances", () => {
 
     expect(lit.has(testid.card("u2"))).toBe(true);
     expect(lit.has(testid.endTurn)).toBe(true);
+  });
+});
+
+describe("R1044 playing face-down as a Trap", () => {
+  const view = seatedView();
+  const set = (lane: number, faceDown: RevealAt): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    zone: { row: "backrow", lane },
+    faceDown,
+  });
+  const legal: ActionBody[] = [
+    playZone("h1", 3),
+    set(1, "endOfThisTurn"),
+    set(1, "startOfNextTurn"),
+    set(1, "endOfNextTurn"),
+    set(2, "startOfNextTurn"),
+  ];
+  const start = () => onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("faceDown is asked first, face-up first", () => {
+    expect(outstandingNeed(start())).toEqual({
+      kind: "faceDown",
+      min: 1,
+      max: 1,
+      options: ["up", "endOfThisTurn", "startOfNextTurn", "endOfNextTurn"],
+    });
+  });
+
+  it('picking "up" drops the set plays', () => {
+    const result = pickInPlay(start(), { faceDown: "up" });
+
+    expect(result.action).toEqual(playZone("h1", 3));
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("a zone click keeps only the set plays", () => {
+    const result = onClickTarget(view, legal, start(), { on: "zone", side: "you", row: "backrow", lane: 1 });
+
+    expect(result.action).toBeUndefined();
+    expect(outstandingNeed(result.interaction)).toEqual({
+      kind: "faceDown",
+      min: 1,
+      max: 1,
+      options: ["endOfThisTurn", "startOfNextTurn", "endOfNextTurn"],
+    });
+  });
+
+  it("a target click drops them", () => {
+    const targeted: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 }, targets: [{ pick: "hero", player: "p2" }] },
+      set(1, "startOfNextTurn"),
+    ];
+    const playing = onClickTarget(view, targeted, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+    const result = onClickTarget(view, targeted, playing, { on: "hero", side: "opponent" });
+
+    expect(result.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 3 },
+      targets: [{ pick: "hero", player: "p2" }],
+    });
+  });
+
+  it("the sent body has faceDown", () => {
+    const zoned = onClickTarget(view, legal, start(), {
+      on: "zone",
+      side: "you",
+      row: "backrow",
+      lane: 1,
+    }).interaction;
+    const result = pickInPlay(zoned, { faceDown: "startOfNextTurn" });
+
+    expect(result.action).toEqual(set(1, "startOfNextTurn"));
+    expect(result.interaction).toEqual(IDLE);
+  });
+});
+
+describe("R1086 Magnetic plays (issue #532)", () => {
+  it("R1086 a Magnetic card onto a friendly Unit sends magnetic: true", () => {
+    const legal: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+    ];
+    const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
+
+    // One zone, two ways to play it: the picker asks which.
+    expect(outstandingNeed(playing.interaction)).toEqual({
+      kind: "magnetic",
+      min: 1,
+      max: 1,
+      values: [true, false],
+    });
+
+    const result = pickInPlay(playing.interaction, { magnetic: true });
+
+    expect(result.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: true,
+    });
+  });
+
+  it("R1086 Stack and Magnetic on one zone ask which", () => {
+    const legal: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+    ];
+    const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
+
+    // Two zones first, then which way onto the shared one.
+    expect(outstandingNeed(playing.interaction)).toEqual({
+      kind: "zone",
+      min: 1,
+      max: 1,
+      zones: [
+        { row: "units", lane: 1 },
+        { row: "units", lane: 3 },
+      ],
+    });
+
+    const zoned = onClickTarget(seatedView(), legal, playing.interaction, {
+      on: "zone",
+      side: "you",
+      row: "units",
+      lane: 1,
+    });
+    expect(outstandingNeed(zoned.interaction)).toEqual({
+      kind: "magnetic",
+      min: 1,
+      max: 1,
+      values: [true, false],
+    });
+
+    const stacked = pickInPlay(zoned.interaction, { magnetic: false });
+    expect(stacked.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 1 },
+      magnetic: false,
+    });
   });
 });

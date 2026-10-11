@@ -1,22 +1,14 @@
 //! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +4 attack,
-//! Rush, First Strike", radiant "+10 attack". §8's Engine cell: "Aura grants keywords; removed when
-//! it leaves".
+//! Rush, First Strike", radiant "+10 attack": only the number changes (§8 Conventions).
 //!
-//! The radiant cell changes only a number, so it changes only that number (§8 Conventions): the two
-//! keywords are kept and the attack bonus becomes +10.
+//! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
+//! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
+//! M3-T2) and vanishes the instant the card stops being an aura source. `applies` reads instance data
+//! only and never calls back into `unit_view`, or the layers would recurse.
 //!
-//! Nothing here removes anything. An aura is §10.4 layer 5, gathered from every permanent in play by
-//! `aura_mods` in `engine/src/layers.rs` and recomputed on every read, so the bonus covers units
-//! summoned after the Field Spell landed (BUILD M3-T2's acceptance names this card for exactly that)
-//! and vanishes the instant the card stops being an aura source — destroyed, exiled, stolen or
-//! bounced. `applies` reads instance data only and never calls back into `unit_view`, or the layers
-//! would recurse.
-//!
-//! "Your units": the controller's units on the field, in the `units` row. The Field Spell itself sits
-//! in the backrow, so the row test also keeps the aura off its own card, and a unit the opponent
-//! steals stops matching because `controller` is what is compared (R78 resets it on the way out).
-//! Rush from this aura is what R83's "a Reborn body the board has granted Rush may attack again"
-//! refers to; granting the keyword is all this card does about it.
+//! "Your units": the controller's units in the `units` row, so the aura skips its own backrow card and
+//! a stolen unit stops matching because `controller` is compared (R78 resets it on the way out). Rush
+//! from this aura is what R83's "a Reborn body the board has granted Rush may attack again" refers to.
 
 use jackioh_engine::prelude::*;
 
@@ -51,22 +43,11 @@ pub fn script() -> CardScripts {
 }
 
 // #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +4 attack, Rush, First Strike
-// while present; later summons get it; gone when destroyed; radiant +10".
-//
-// The keywords are tested through the rules rather than through a keyword list, which is what the
-// row is really about:
-//   Rush         — §4.1: a unit summoned this turn attacking a unit at all.
-//   First Strike — §4.3 step 1: the ally kills Bigot (6/1) and takes nothing back, where without
-//                  the keyword the simultaneous step would kill a 4-health ally outright.
-// Bigot is seeded on the field, so its own Cry never fires (R1: only when played).
-//
-// The aura is §10.4 layer 5, recomputed on every read from the permanents in play, so "gone when it
-// leaves" is not a clause this card scripts — the test proves it by removing the Field Spell.
-//
-// CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed ("Destroy target backrow card"),
-// whose target is unnarrowed and may therefore be an ally card (§8 Conventions). It is the only
-// in-game way a test can take a Field Spell off the board; a harness step that removed a permanent
-// would make this test self-contained.
+// while present; later summons get it; gone when destroyed; radiant +10". The keywords are tested
+// through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
+// killing Bigot (6/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
+// CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
+// is unnarrowed, §8 Conventions), the only in-game way a test can take a Field Spell off the board.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -2,24 +2,18 @@
 //!   Base:    "Activate: Place {tokens|Plague Counter|Plague Counters} on this.
 //!             You may play Units from your graveyard, paying with Plague Counters from this: each counter
 //!             pays (1), and each such play spends at least 1 counter." — 2 tokens; Radiant: 4.
-//!   Engine:  "Play from the graveyard (§6.3 Play) for Units, live while this is on the field, with a
-//!            second way to pay: the `play` action carries how many tokens pay (at least 1, at most the
-//!            tokens on this and the price), the rest in mana, and each paying token is removed from this
-//!            card; so a Unit that costs (0) can't be played this way. … its choices and counting are as
-//!            from hand, and R65's player discounts apply. Tunes: tokens 2 ↑."
+//!   Engine:  Play from graveyard (§6.3) for Units while on field. Token payment spends at least 1 counter,
+//!            rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
 //!
-//! The token placement is an Activate ability, once per turn (R384): one placement of {tokens} on
-//! itself (R386's declared number). The permission is `graveyardPlay` with `units` and `plague`: the
-//! engine offers and checks the token payment, takes the card from the graveyard as a play (its Cry
-//! fires, it counts as played; not R70's free cast) and removes the spent tokens from this card.
-//! Tokens other cards place here pay too; R78 clears them when it leaves.
+//! Activate ability once per turn (R384) places {tokens} (R386). Graveyard play permission is a play
+//! (Cry fires, counts as played; not R70 cast); spent tokens are removed; other cards' tokens pay;
+//! R78 clears them on leave.
 
 use jackioh_engine::effects::place_plague;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-074";
 
-/// TS `const plant: ActivationDecl`.
 fn plant() -> ActivationDecl {
     ActivationDecl {
         id: "plant".to_string(),
@@ -58,14 +52,6 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #74 Corpse Plantation — SPEC §8.6 row 74, BUILD M9 Classic row C 74: "Activate: one placement of 2
-// Plague Counters on itself, once per turn; while it has tokens, `legalActions` offers `play` for Units in
-// your graveyard, the action carrying how many tokens pay, at least 1 and at most the tokens on it and
-// the price, each paying (1) and the rest paid in mana; it is a play (the Unit's Cry fires and it counts
-// as played), not a free cast; a (0) Cost Unit can't use it; with no tokens left it offers nothing;
-// tokens others place add to it, and leaving the field resets them (R78); radiant: 4 tokens; its tuned
-// number (tokens) reads through `param()` (R386)".
-//
 // The harness's `play` takes a card from a hand, so a graveyard play is sent to `reduce` as
 // `legalActions` offers it and read back off its result (as C #28 Second Wind's test does).
 
@@ -95,7 +81,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `type Step = { state; events } & { error? }`.
     struct Step {
         state: GameState,
         events: Vec<GameEvent>,
@@ -119,13 +104,12 @@ mod tests {
             })
             .collect();
         let mut options: Vec<Option<i32>> = offered.into_iter().collect();
-        // TS's comparator-less `.sort()` compares the values as strings ("1" < "2" < "null").
+        // Compares the values as strings ("1" < "2" < "null").
         options.sort_by_key(|option| option.map_or_else(|| "null".to_string(), |tokens| tokens.to_string()));
         options
     }
 
-    /// TS `send(state, body)`: a `play` from p1 with the body's fields. TS numbered its nonces with a module
-    /// counter; here each one is numbered by the state's applied actions, which is as unique along a game.
+    /// A `play` from p1 with the body's fields, nonces numbered by applied actions.
     fn send(state: &GameState, body: Value) -> Step {
         let mut action = json!({ "type": "play", "playerId": "p1" });
         if let (Some(into), Some(from)) = (action.as_object_mut(), body.as_object()) {
@@ -200,7 +184,7 @@ mod tests {
             radiant: false,
         });
         assert_eq!(js(&answer), json!([{ "units": true, "plague": true }]));
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face, every hook the same one.
+        // The Radiant face is the base face, every hook the same one.
         assert!(Arc::ptr_eq(
             grant,
             scripts.radiant.graveyard_play.as_ref().expect("a graveyard permission")

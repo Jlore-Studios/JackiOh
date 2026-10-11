@@ -3,48 +3,24 @@
 //! (4). Base: "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket
 //! Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost
 //! would be (0). Exile this." Radiant: "… Then you may add a Pocket Chaos …" (§8's cell "You may
-//! skip adding it"; patch v0.1.1 removed the Radiant face's "draw 1"; patch v0.2.9 costs it at (4)
-//! and prices the gift, R742).
+//! skip adding it"; the gift is priced, R742). The radiant cell restates only the gift clause, so the
+//! Choose one and the exile are kept (§8 Conventions).
 //!
-//! §8's Conventions: the radiant cell restates the "add a Pocket Chaos" clause, so the Choose one and
-//! the exile are kept unchanged. The radiant difference is one: the gift becomes optional.
+//! BOTH choices are declared play choices, not prompts (R81 names #87; §10.6: a card's own play
+//! choices travel in the `play` action). `Script.modes` lists a `ModeDecl` per choice and a play must
+//! answer each, so the radiant face declares a second mode for the gift. A skip prompt would pause a
+//! resolution the base face never pauses; §10.6 reserves `PendingChoice` for choices made DURING it.
 //!
-//! BOTH choices are declared play choices, not prompts. R81's card list names #87, and §10.6 is
-//! explicit: "A card's own play choices (zone, X, embiggen, Tribute, declared targets and modes) are
-//! not prompts; they travel in the `play` action". `Script.modes` is a LIST of `ModeDecl`, and
-//! `playChoices.ts` enumerates the cross product of every declaration and refuses a play that does
-//! not answer each one (`refuseModes`: "Pocket Chaos needs a mode choice for each of its 2"), so the
-//! radiant face declares a second mode for the gift rather than opening a prompt mid-resolution.
-//! That is also the only reading that keeps the two faces consistent: making the skip a prompt would
-//! pause a resolution that the base face never pauses, and §10.6 reserves `PendingChoice` for
-//! choices made DURING resolution (Discover, chained steps, Echo repeats, casts, triggers).
+//! `chosenOptions(ctx)` returns the play's `modes` in declaration order. The two option sets are
+//! disjoint, so this file never indexes that list: `swap()` picks out its own and the gift clause
+//! looks for SKIP by name. A play with no swap mode fizzles that clause; the rest still resolves (§6.3).
 //!
-//! Reading the answers: `chosenOptions(ctx)` returns the play's `modes` in declaration order. The
-//! two option sets are disjoint, so this file never indexes into that list — `swap()` picks out the
-//! one of "health" | "board" | "library" it recognises and the gift clause looks for SKIP by name.
-//! A play that somehow carries no swap mode fizzles that clause and the rest of the card still
-//! resolves (§6.3, §8 Conventions).
+//! What each swap does is R73's, owned by the engine's swap effect (R12, R18, R33, R88; §3.1).
 //!
-//! What each swap does is R73's, and `effects/swap.ts` owns it, so nothing here re-states it:
-//!   - health: the two values change places, armor stays with its hero; not damage and not "lose
-//!     health", so no pipeline (R18).
-//!   - board: zone contents change sides lane by lane in BOTH rows (§3.1), read whole and then
-//!     placed, so control changes for everything including face-down traps — which stay face-down
-//!     and become readable by their new controller only (R33) — while ownership does not (R12).
-//!     Locks are zone flags and stay with their zones, and a card whose destination is Locked or
-//!     reserved bounces to its controller's hand (R88, R4, R11, R747).
-//!   - library: the two piles change places whole and in order, and each swapped card's owner
-//!     becomes the player now holding it — R12's one exception (R73). Fatigue stays with the player.
-//!
-//! The gift is a fresh, non-Radiant card: `addToHand` creates a new instance of this definition in
-//! the opponent's hand, and a full hand burns it (§2.4, R4). Radiant Pocket Chaos gives away a base
-//! copy — R57's "carries the radiant flag" is about copies of an existing card, and nothing in this
-//! card's text or the radiant cell says the gift is Radiant. Its base cost is priced, not copied:
-//! the gift arrives with a `costOverride` of the cast copy's base cost less GIFT_DISCOUNT (R742),
-//! kept in every zone (R78), so a gift cast in turn prices the next one down until (0) ends the chain.
-//!
-//! `def.id` is the definition this file already owns, so the gift needs no id literal and no second
-//! catalog lookup.
+//! The gift is a fresh, non-Radiant card (`addToHand` makes a new instance; a full hand burns it, §2.4,
+//! R4): R57's "carries the radiant flag" is about copies of an existing card. Its base cost is priced,
+//! not copied: a `costOverride` of the cast copy's base cost less GIFT_DISCOUNT (R742), kept in every
+//! zone (R78), so a gift cast in turn prices the next one down until (0) ends the chain.
 
 use jackioh_engine::prelude::*;
 
@@ -53,8 +29,8 @@ pub const ID: &str = "core-087";
 /// R742: the gift's base cost is this much less than the cast copy's.
 const GIFT_DISCOUNT: i32 = 1;
 
-/// The three things #87 swaps. The names are `effects/swap.ts`'s `SwapWhat` values, which is what
-/// lets `swap()` with no argument read the play's answer itself (§6.3 Choose one). (TS `SWAP_MODE`.)
+/// The three things #87 swaps. The names are the engine's `SwapWhat` values, which lets `swap()` with
+/// no argument read the play's answer itself (§6.3 Choose one).
 fn swap_mode() -> ModeDecl {
     ModeDecl {
         kind: PromptKind::Mode,
@@ -66,7 +42,6 @@ fn swap_mode() -> ModeDecl {
 const GIFT: &str = "gift";
 const SKIP: &str = "skip";
 
-/// TS `GIFT_MODE`.
 fn gift_mode() -> ModeDecl {
     ModeDecl {
         kind: PromptKind::Mode,
@@ -181,7 +156,6 @@ mod tests {
                 js(&base.modes),
                 json!([{ "kind": "mode", "options": ["health", "board", "library"] }])
             );
-            // The base face has exactly one choice: the gift is unconditional.
             assert_eq!(base.modes.len(), 1);
         }
 
@@ -232,7 +206,6 @@ mod tests {
 
             s.play(&this, json!({ "modes": ["health"] }));
 
-            // The gift is a fresh, non-Radiant instance owned by the opponent.
             let gifts = gifts_in(&s, P2);
             assert_eq!(gifts.len(), 1);
             assert_eq!(gifts.first().map(|card| card.owner), Some(P2));

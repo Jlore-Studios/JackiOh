@@ -8,11 +8,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::targets::{BoardScope, TargetSpec, adjacent_to, cards_in_scope, instance_of};
+use super::targets::{BoardScope, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of};
 use crate::damage::already_killed;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::state_check::sacrifice_now;
+use crate::wire::TargetAim;
 use crate::wire::{Row, Zone, ZoneName};
 
 /// The mark every destroy leaves (§6.3, §4.5 step 1). A destroy is not a damage instance, so no
@@ -76,7 +77,8 @@ pub fn destroy(args: DestroyArgs) -> Effect {
 /// `rows` defaults to `["units"]`; a sweep over permanents passes `["units", "backrow"]` (§6.3).
 pub fn destroy_all(args: BoardScope) -> Effect {
     Effect::new("destroyAll", move |ctx| {
-        for card in cards_in_scope(ctx, &args) {
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        for card in cards_in_scope_aimed(ctx, &args, TargetAim::Harm) {
             mark_destroyed(&mut *ctx.state, &card);
         }
     })
@@ -101,7 +103,7 @@ pub struct DestroyAdjacentToArgs {
 pub fn destroy_adjacent_to(args: DestroyAdjacentToArgs) -> Effect {
     Effect::new("destroyAdjacentTo", move |ctx| {
         let DestroyAdjacentToArgs { target, scope } = &args;
-        for card in adjacent_to(ctx, target, scope) {
+        for card in adjacent_to_aimed(ctx, target, scope, TargetAim::Harm) {
             mark_destroyed(&mut *ctx.state, &card);
         }
     })

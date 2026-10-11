@@ -81,7 +81,7 @@ pub fn rule_reaches(state: &GameState, rule: &CostRule, card: &CardInstance) -> 
     match &rule.types {
         None => true,
         Some(types) if types.is_empty() => true,
-        Some(types) => types.contains(&crate::faces::card_type_of(state, card)),
+        Some(types) => types.contains(&crate::alt_play::priced_type_of(state, card)),
     }
 }
 

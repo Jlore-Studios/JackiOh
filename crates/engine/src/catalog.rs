@@ -24,12 +24,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{
     GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS,
+    RollOdds,
 };
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, OneOrMany,
-    Rarity, SetName, Tag, set_ships,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
+    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
@@ -87,6 +88,7 @@ struct Registered {
     defs: CardDefs,
     version: String,
     index: indexmap::IndexMap<String, usize, IdHash>,
+    win_rates: crate::win_rates::WinRateTable,
 }
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
@@ -116,17 +118,35 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// TS `registerCatalog(defs, catalogVersion = "test")`. Set once per process: a second call is
-/// ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
-/// testkit's override instead (SURFACE §8).
-pub fn register_catalog(defs: CardDefs, catalog_version: &str) {
+/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table beside
+/// them (ME-STATS, MD-D1). Set once per process: a second call is ignored (the registry is a
+/// `OnceLock`, SURFACE §3); a test that needs another catalog sets the testkit's override instead
+/// (SURFACE §8).
+pub fn register_catalog(defs: CardDefs, catalog_version: &str, win_rates: crate::win_rates::WinRateTable) {
     let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
         index,
+        win_rates,
     });
 }
+
+/// ME-STATS: the win-rate table CN Tech reads — the testkit's override first, then the registered
+/// table, then an empty table held in a `OnceLock` (nothing registered yet).
+pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
+    #[cfg(feature = "testkit")]
+    if let Some(table) = crate::testkit::scenario::win_rates_override() {
+        return table;
+    }
+    match REGISTERED.get() {
+        Some(registered) => &registered.win_rates,
+        None => EMPTY_WIN_RATES.get_or_init(crate::win_rates::WinRateTable::default),
+    }
+}
+
+/// What `registered_win_rates` answers before anything is registered.
+static EMPTY_WIN_RATES: OnceLock<crate::win_rates::WinRateTable> = OnceLock::new();
 
 pub fn registered_catalog() -> &'static CardDefs {
     registered()
@@ -196,7 +216,8 @@ pub fn query_cost(def: &CardDef) -> i32 {
 /// every non-token card of every set (R380).
 ///
 /// (TS `CatalogQuery & { defId?, token? }`: the wire query's fields written out beside the two of its
-/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`.)
+/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
+/// `tribute` came after the port, on this side only.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogQueryArgs {
@@ -213,6 +234,12 @@ pub struct CatalogQueryArgs {
     /// R1422: has at least one of these tags.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub any_tags: Option<Vec<Tag>>,
+    /// R1444: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub luck_based: Option<bool>,
+    /// R1080: the printed base attack and health a pool asks for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats: Option<AttackHealth>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
@@ -230,6 +257,24 @@ pub struct CatalogQueryArgs {
     /// §5.1: `true` asks for tokens only, `false` forbids them (the default already does).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<bool>,
+    /// R1221: `true` asks for cards with a Tribute play cost only, `false` forbids them. A script
+    /// flag, not catalog data, so the pool keeps up with every new Tribute card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute: Option<bool>,
+}
+
+/// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
+/// base face, read off the registered script without state.
+fn has_tribute_cost(def: &CardDef) -> bool {
+    crate::scripts::registered_entry(&def.id)
+        .map(|entry| {
+            entry
+                .base
+                .static_flags
+                .as_ref()
+                .is_some_and(|flags| flags.tribute.unwrap_or(0) > 0)
+        })
+        .unwrap_or(false)
 }
 
 impl From<CatalogQuery> for CatalogQueryArgs {
@@ -241,12 +286,15 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             tags: query.tags,
             not_tags: query.not_tags,
             any_tags: query.any_tags,
+            luck_based: None,
+            stats: query.stats,
             rarity: query.rarity,
             set: query.set,
             exclude_def_id: query.exclude_def_id,
             with_tokens: query.with_tokens,
             def_id: None,
             token: None,
+            tribute: None,
         }
     }
 }
@@ -294,6 +342,18 @@ fn tag_pool_takes_token(args: &CatalogQueryArgs, def: &CardDef) -> bool {
     asked
         .into_iter()
         .any(|tag| POOL_TOKEN_TAGS.contains(tag) && def.tags.contains(tag))
+}
+
+/// R1444: the words of a card's text that make it flip a coin, read lower-cased.
+pub const COIN_FLIP_WORDS: &str = "flip a coin";
+
+/// MD-G1, R1444: a Luck-based card has a roll Lucky improves — it prints Lucky on either face (§6.1),
+/// or its text flips a coin, whose better side is heads (R1440). Read off the definition, so Lucky
+/// given to a card (R1438) never puts it in the pool.
+pub fn is_luck_based(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].into_iter().any(|face| {
+        has_keyword(&face.keywords, KeywordKind::Lucky) || face.text.to_lowercase().contains(COIN_FLIP_WORDS)
+    })
 }
 
 fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -> bool {
@@ -352,6 +412,21 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1422: `anyTags` means "has at least one of them".
     if let Some(any_tags) = &args.any_tags
         && !any_tags.iter().any(|tag| def.tags.contains(tag))
+    {
+        return false;
+    }
+    if args.luck_based == Some(true) && !is_luck_based(def) {
+        return false;
+    }
+    // R1221: the Tribute-cost filter, read off the registered script.
+    if let Some(wanted) = args.tribute
+        && has_tribute_cost(def) != wanted
+    {
+        return false;
+    }
+    // R1080: `stats` reads the printed base face; a face that prints none never matches.
+    if let Some(wanted) = args.stats
+        && (def.base.attack != Some(wanted.attack) || def.base.health != Some(wanted.health))
     {
         return false;
     }
@@ -593,21 +668,21 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
 // Grapes (C+ #65, #66; R382)
 // ---------------------------------------------------------------------------
 
-/// R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
-/// sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
-/// the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
-/// Returns the Grape's def id. (TS's `lucky = 0` default: pass 0.)
-pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
+/// R960: one weighted roll over `table` — one draw of the match rng over the percents' sum,
+/// walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
+/// the later entry, since the table runs from worst to best. Returns the rolled entry's def id.
+/// (TS's `lucky = 0` default: pass 0.)
+pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
     let roll = |rng: &mut Rng| -> usize {
-        let total: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
+        let total: i32 = table.iter().map(|entry| entry.percent).sum();
         let mut at = rng.int(total);
-        for (i, grape) in GRAPE_ODDS.iter().enumerate() {
-            if at < grape.percent {
+        for (i, entry) in table.iter().enumerate() {
+            if at < entry.percent {
                 return i;
             }
-            at -= grape.percent;
+            at -= entry.percent;
         }
-        GRAPE_ODDS.len().saturating_sub(1)
+        table.len().saturating_sub(1)
     };
     let extra = lucky.max(0);
     let index = if extra == 0 {
@@ -615,8 +690,16 @@ pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
     } else {
         rng.lucky(extra, roll, |a, b| a.max(b))
     };
-    let grape = GRAPE_ODDS.get(index).or_else(|| GRAPE_ODDS.last());
-    grape.map(|grape| grape.def_id.to_string()).unwrap_or_default()
+    let entry = table.get(index).or_else(|| table.last());
+    entry.map(|entry| entry.def_id.to_string()).unwrap_or_default()
+}
+
+/// R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
+/// sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
+/// the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
+/// Returns the Grape's def id. (TS's `lucky = 0` default: pass 0.)
+pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
+    roll_weighted(rng, GRAPE_ODDS, lucky)
 }
 
 /// The def ids `GRAPE_ODDS` rolls: a pool pick naming one of these is re-rolled (R382).

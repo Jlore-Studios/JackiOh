@@ -9,7 +9,7 @@
 //! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
 //! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
 //! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
-//! the TypeScript). The hotseat fixture must fold to "a798906b". Games run in
+//! the TypeScript). The hotseat fixture must fold to "5c3d578c". Games run in
 //! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
 //! divergence.
 //!
@@ -67,7 +67,7 @@ pub(crate) const GAMES_PATH: &str =
 const HOTSEAT: &str = include_str!("../../engine/tests/golden/01-hotseat-full-game.json");
 
 /// The hotseat fixture's final state hash (`hotseat-replay.test.ts`'s `EXPECTED_HASH`, SURFACE §5.2).
-const HOTSEAT_HASH: &str = "a798906b";
+const HOTSEAT_HASH: &str = "5c3d578c";
 
 /// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
 const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");
@@ -899,8 +899,15 @@ mod tests {
 
     #[test]
     fn a_card_nothing_can_carry_into_a_deck_is_refused() {
-        for id in ["core-t-coin", "no-such-card"] {
+        // No deckable card's refs name the Glitch token.
+        for id in ["classic-t-glitch", "no-such-card"] {
             assert!(resolve_force(&ids(&[id])).is_err(), "{id}");
         }
+        // The Coin was such a token until the Meditative set shipped in v0.3.5: Meditative #27
+        // Clip-Farming Lawyer names it, so it carries it now.
+        assert_eq!(
+            resolve_force(&ids(&["core-t-coin"])).unwrap(),
+            ids(&["meditative-027"])
+        );
     }
 }

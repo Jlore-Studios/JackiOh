@@ -11,18 +11,19 @@
 use serde::{Deserialize, Serialize};
 
 use crate::announce::{innermost_live_announce, is_announce_live, mark_countered};
-use crate::config::HAND_CAP;
 use crate::draw::add_to_hand;
 use crate::echo::exile_on_landing;
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, adjacent_to, cards_in_scope, instance_of, player_of,
+    BoardScope, PlayerSpec, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of, player_of,
 };
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
+use crate::plague::permanents_on_field;
 use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
-use crate::wire::{CounteredTo, GameEvent, Zone, ZoneName};
+use crate::wire::TargetAim;
+use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
 use crate::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone, report_graveyard_landing};
 
 /// One card to the exile pile: the whole of §6.3 Exile for a single card, so `exile`, `exile_all`,
@@ -111,13 +112,75 @@ pub fn exile(args: ExileArgs) -> Effect {
     })
 }
 
+/// `exileRandomFrom`'s zone: whose cards the picks come from.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ExileRandomZone {
+    Field,
+    Hand,
+    Library,
+    Graveyard,
+}
+
+/// `exileRandomFrom`'s argument: the seat whose cards, the zone, and how many.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExileRandomFromArgs {
+    pub player: PlayerSpec,
+    pub from: ExileRandomZone,
+    #[serde(default)]
+    pub count: i32,
+}
+
+/// MD-D27 (Meditative #69 The Maestro): exile `count` different random cards of `player`'s zone —
+/// field picks come from `permanents_on_field`, face-down cards included. The picks happen at apply
+/// time, off the match rng, so a replay with the same seed exiles the same cards; each pick goes
+/// down the same path a single exile takes (`exile_card`). An empty zone is skipped, never an error.
+pub fn exile_random_from(args: ExileRandomFromArgs) -> Effect {
+    Effect::new("exileRandomFrom", move |ctx| {
+        let player = player_of(ctx, args.player);
+        let ids: Vec<String> = match args.from {
+            ExileRandomZone::Field => permanents_on_field(ctx.state, player)
+                .iter()
+                .filter(|card| card.controller == player)
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Hand => ctx.state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Library => ctx.state.players[player]
+                .library
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+            ExileRandomZone::Graveyard => ctx.state.players[player]
+                .graveyard
+                .iter()
+                .map(|card| card.id.clone())
+                .collect(),
+        };
+        let mut picks = ctx.sink.rng.shuffle(&ids);
+        picks.truncate(args.count.max(0) as usize);
+        for id in &picks {
+            if let Some(card) = find_instance(ctx.state, id).cloned() {
+                exile_card(ctx, &card);
+            }
+        }
+    })
+}
+
 /// §6.3 Exile over a scope: every card the scope names, in `cards_in_scope` order, down the same path
 /// a single exile takes (#100 Ceaseless Void, "Cry: exile all other permanents on both sides" —
 /// `{ side: "any", rows: ["units", "backrow"], excludeSelf: true }`). `excludeSelf` is what leaves
 /// the running card standing; without it the Void would exile itself mid-Cry.
 pub fn exile_all(args: BoardScope) -> Effect {
     Effect::new("exileAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let cards: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -140,7 +203,9 @@ pub struct ExileAdjacentToArgs {
 /// unit has units. The card pairs this with a plain `exile` on the target itself.
 pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     Effect::new("exileAdjacentTo", move |ctx| {
-        let cards: Vec<CardInstance> = adjacent_to(ctx, &args.target, &args.scope).into_iter().collect();
+        let cards: Vec<CardInstance> = adjacent_to_aimed(ctx, &args.target, &args.scope, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -287,17 +352,34 @@ pub fn bounce(args: BounceArgs) -> Effect {
 /// unit tokens because they cease to exist rather than reaching a hand (R11).
 pub fn bounce_all(args: BoardScope) -> Effect {
     Effect::new("bounceAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let cards: Vec<CardInstance> = cards_in_scope_aimed(ctx, &args, TargetAim::Harm)
+            .into_iter()
+            .collect();
         for card in &cards {
             bounce_card(ctx, card);
         }
     })
 }
 
-/// Hand to GY for one named card, with the events §10.3 gives a discard. Exported for the one engine
-/// path that discards as a cost rather than as an effect: a targeting cost (R450, `targeting_point.rs`).
+/// Hand to GY for one named card, with the events §10.3 gives a discard. Exported for the engine paths
+/// that discard as a price or a rule rather than as an effect: a targeting cost (R450,
+/// `targeting_point.rs`) and Temporary's own-turn discard (R637, `temporary.rs`). R800's discard guard
+/// never reads it.
 pub fn discard_from_hand(ctx: &mut EngineSink<'_>, card: &CardInstance) {
     discard_card(ctx, card);
+}
+
+/// R800: an effect's discard of `count` cards from `player`'s hand that a discard guard stops — while
+/// it is not their turn and a card acting on the field guards them (`draw::discard_guarded`). It moves
+/// nothing and draws no random number (R129); a public `discardPrevented` reports it. A discard that
+/// would take no card asks nothing.
+fn guard_stops(ctx: &mut EngineSink<'_>, player: PlayerId, count: i32) -> bool {
+    if count <= 0 || !crate::draw::discard_guarded(ctx.state, player) {
+        return false;
+    }
+    ctx.events.push(GameEvent::DiscardPrevented { player, count });
+    true
 }
 
 fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
@@ -333,6 +415,11 @@ pub fn discard(args: DiscardArgs) -> Effect {
         let Some(card) = instance_of(ctx, &spec) else {
             return;
         };
+        if let Zone::Hand { player } = card.zone
+            && guard_stops(ctx, player, 1)
+        {
+            return;
+        }
         discard_card(ctx, &card);
     })
 }
@@ -347,21 +434,33 @@ pub struct DiscardRandomArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// §6.3 Discard at random (R16: only when the card says "random"), drawn from the match rng.
+/// §6.3 Discard at random (R16: only when the card says "random"), drawn from the match rng. A guarded
+/// hand (R800) loses nothing and draws no random number.
 pub fn discard_random(args: DiscardRandomArgs) -> Effect {
     Effect::new("discardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = args.count.unwrap_or(1).max(0);
-        for _ in 0..count {
-            if ctx.state.players[player].hand.is_empty() {
-                return;
-            }
-            let Some(card) = ctx.sink.rng.pick(&ctx.sink.state.players[player].hand).cloned() else {
-                return;
-            };
-            discard_card(ctx, &card);
+        let reach = count.min(ctx.state.players[player].hand.len() as i32);
+        if guard_stops(ctx, player, reach) {
+            return;
         }
+        discard_random_cards(ctx, player, count);
     })
+}
+
+/// `count` random cards from `player`'s hand to the graveyard, one rng draw each, stopping when the hand
+/// is empty. Exported for the Activate cost path (R384, `subsystems::activate`): a discard paid as a
+/// price, which R800's discard guard never reads.
+pub fn discard_random_cards(ctx: &mut EngineSink<'_>, player: PlayerId, count: i32) {
+    for _ in 0..count {
+        if ctx.state.players[player].hand.is_empty() {
+            return;
+        }
+        let Some(card) = ctx.rng.pick(&ctx.state.players[player].hand).cloned() else {
+            return;
+        };
+        discard_card(ctx, &card);
+    }
 }
 
 /// `discardHand`'s and `exileHand`'s arguments: `player` defaults to "self".
@@ -388,6 +487,9 @@ pub fn discard_hand(args: DiscardHandArgs) -> Effect {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         // A snapshot: `discard_card` splices the hand, so iterating it live would skip cards.
         let hand = ctx.state.players[player].hand.clone();
+        if guard_stops(ctx, player, hand.len() as i32) {
+            return;
+        }
         for card in &hand {
             discard_card(ctx, card);
         }
@@ -479,7 +581,9 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
         } else {
             match to {
                 CounterDestination::Thief => {
-                    if ctx.state.players[thief].hand.len() as i32 >= HAND_CAP {
+                    if ctx.state.players[thief].hand.len() as i32
+                        >= crate::query::hand_cap_of(ctx.state, thief)
+                    {
                         CounteredTo::Graveyard
                     } else {
                         CounteredTo::Hand

@@ -55,6 +55,7 @@ fn declared(events: &[GameEvent]) -> Vec<Declared> {
                 attacker_id,
                 target_id,
                 forced,
+                ..
             } => Some(Declared {
                 attacker_id: attacker_id.clone(),
                 target_id: target_id.clone(),

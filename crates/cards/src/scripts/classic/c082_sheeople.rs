@@ -14,7 +14,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-082";
 
-/// TS `const WORTH = def.params?.find((entry) => entry.key === "worth")`, which threw when absent.
 fn worth() -> Param {
     match crate::card_def(ID)
         .params
@@ -52,15 +51,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #82 Sheeople — SPEC §8.6 row 82, BUILD M9 Classic row C 82: "1/1 worth 2 Tributes, read off the face
-// that is up, toward a Tribute X only (a script's Tribute, C #21's included, counts it as one Unit, §6.3),
-// so it alone pays a Tribute 2 and overpays a Tribute 1 (R101); Death: draw 2, so tributing it draws; a
-// bounce or an exile draws nothing; radiant 2/2 worth 3, draw 3; its tuned numbers (draw, worth) read
-// through `param()` (R386)".
-//
-// A Tribute 2 is #66 The Rock with its Tribute X upgraded once (R101: "printed, or as a Degrade or
-// Upgrade left it"). The R386 worth case waits on the engine reading `tributeWorth` through `param`.
-// The C #21 Turtinator case needs C #21's script (cards-classic-a) registered.
+// C #82 Sheeople (SPEC §8.6 row 82): 1/1 worth 2 Tributes toward Tribute X only (§6.3),
+// paying Tribute 2 and overpaying Tribute 1 (R101); Death: draw 2, so tributing draws;
+// radiant 2/2 worth 3, draw 3; tuned numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -166,7 +159,6 @@ mod tests {
         ));
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -355,7 +347,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 

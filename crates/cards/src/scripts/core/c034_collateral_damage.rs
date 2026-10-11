@@ -2,39 +2,14 @@
 //! opponent's library", radiant "Also the permanents adjacent to the target in its row".
 //!
 //! "Also …" adds a clause and keeps every base clause (§8 Conventions), so the radiant form exiles
-//! the target, its two neighbours and a library card.
-//!
-//! Exile bypasses Indestructible and bumps the game exile counter, and neither is this file's work:
-//! `exile` (effects/move.ts) calls `moveToZone`, which never asks about keywords, and increments
-//! `state.counters.exiled` for R55. A unit token ceases to exist instead of entering the pile (R11).
+//! the target, its two neighbours and a library card. Exile (§6.3) bypasses Indestructible and bumps
+//! the exile counter in the engine's verb (R55); a unit token ceases to exist instead (R11).
 //!
 //! R81: "target permanent" is a unit or a backrow card on either side, declared here and carried in
 //! the `play` action; resolution never pauses.
 //!
-//! §3.1: adjacent is lane N−1 and N+1 on the SAME side and the SAME row, and it does not wrap.
-//! `zones.adjacent` is the single implementation of that and the verb below must use it.
-//!
-//! ORDER MATTERS, unlike #16 Hit Job's. Destroy only marks a card, so Hit Job can destroy the target
-//! before its neighbours; Exile moves the card at once, so once the target has left the field its
-//! zone is gone and `slotOf` can no longer find the neighbours. The neighbours are therefore exiled
-//! FIRST, while the target still stands in its lane.
-//!
-//! TWO MISSING VERBS (reported; both are already imported by sibling cards in this wave, so one
-//! implementation of each serves several cards):
-//!
-//!   exileRandomFromLibrary({ count, player? })    — #42 Eugenics imports the same verb
-//!       `count` different cards drawn uniformly from `player`'s library through `ctx.rng`, or the
-//!       whole library when it holds fewer, each going through the §6.3 Exile verb so the exile
-//!       counter moves (R55) and a unit-token card ceases to exist instead (R11). An empty library
-//!       costs nothing. `TargetSpec` has no library-card form — it is self / selfHero / enemyHero /
-//!       chosen — so no composition of the current barrel can name a card in a library.
-//!
-//!   exileAdjacentTo({ target: TargetSpec })       — mirrors #16 Hit Job's `destroyAdjacentTo`
-//!       Resolves `target` to a card on the field, reads its zone with `slotOf`, and exiles every
-//!       card `zones.adjacent(ref)` reports: lane N−1 and N+1 on the TARGET's own side and row,
-//!       never across sides and never wrapping. Silently does nothing when the target is not on the
-//!       field or has no occupied neighbour. A backrow target takes its backrow neighbours, since
-//!       §8's clause says "in its row".
+//! §3.1: adjacent is lane N−1 and N+1 on the SAME side and row, no wrap (`zones.adjacent`). Exile
+//! moves the card at once, so the neighbours go FIRST, while the target still stands in its lane.
 
 use jackioh_engine::effects::{exile, exile_adjacent_to, exile_random_from_library};
 use jackioh_engine::prelude::*;
@@ -76,19 +51,13 @@ pub fn script() -> CardScripts {
 // #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34:
 // "Exiles an Indestructible permanent and a random opponent library card; radiant same-row
 //  neighbours too".
-//
 // #66 The Rock is a 10/10 with printed Indestructible, so it is the must-pass's Indestructible
-// permanent (it is placed by the setup, so its Tribute cost is not in the way).
-//
-// RED UNTIL TWO VERBS LAND: the script imports `exileRandomFromLibrary({ count, player? })` (the
-// same verb #42 Eugenics imports) and `exileAdjacentTo({ target })` (the mirror of #16 Hit Job's
-// `destroyAdjacentTo`). Neither is in `effects/index.ts` yet, so this whole file fails to load until
-// they are added; the script file's header carries the exact signatures.
+// permanent (placed by the setup, so its Tribute cost is not in the way).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)

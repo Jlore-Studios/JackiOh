@@ -29,7 +29,8 @@
    `hero-health`/`hero-armor` look board.css gives them; only the anchoring is new. The badges are
    smaller than the loose row's were, so they sit on the art instead of beside it. */
 .hero-portrait .hero-health,
-.hero-portrait .hero-armor {
+.hero-portrait .hero-armor,
+.hero-portrait .hero-luck {
   position: absolute;
   bottom: -4px;
   min-width: 22px;
@@ -37,6 +38,15 @@
   padding: 0 4px;
   font-size: 0.82em;
   z-index: 2;
+}
+
+/* R987: Luck rides above the health badge, on the art's lower right. */
+.hero-portrait .hero-luck {
+  right: -6px;
+  bottom: 22px;
+  border: 1px solid rgb(240 230 200 / 55%);
+  background: #2c4a3e;
+  color: #f2e9c9;
 }
 
 .hero-portrait .hero-health {

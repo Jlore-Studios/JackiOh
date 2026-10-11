@@ -5,16 +5,14 @@
 //!            harms and at your side when it helps."
 //! E12's random casts (R452, R656): non-token Spells of every set (R380), repeats allowed (R60), every
 //! choice random, each target pick aimed by its declaration — enemies when it harms, friends when it
-//! helps. Its own Spell Damage (the catalog keyword) raises their hits, since it is on the field
-//! during its Cry.
+//! helps; X is the current mana, at least 1 (R348). Its own Spell Damage (the catalog keyword) raises
+//! their hits, since it is on the field during its Cry.
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-038-1";
 
-/// `castRandom({ query, count, radiant, targetEnemies: true })` (part 6.2's `CastRandomArgs`: a fixed
-/// query and count, the `how` half from TS's literal).
 fn cast_random_spells(count: i32, radiant: bool) -> Effect {
     cast_random(CastRandomArgs {
         query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
@@ -39,19 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38.1 Solarius Prime — SPEC §8.7 row 38.1, BUILD M9 Classic+ row C+ 38.1: "Spell Damage +3; Cry
-// casts 5 random non-token Spells of any set one after another (R380), every choice random with no
-// prompt, each target aimed by its declaration (R656: harm at enemies, help at friends), X the current
-// mana and at least 1 (R348), each
-// cast a play (R70) whose hits its own Spell Damage raises (it is on the field during its Cry); a cast
-// with no legal target fizzles and the next goes; a game that ends midway stops the rest; the casts are
-// public, what they add to your hand hidden (R97); Spell Damage and casts read through `param()`;
-// radiant Spell Damage +7 and the Spells are Radiant".
-//
-// The casts are random, so these tests read their shape off the event stream rather than naming the
-// Spells: a cast is a `cardAnnounced` by its caster at cost 0, and the Prime's own casts are the ones
-// announced while only the Prime itself is still resolving (a Spell that casts more, a Call to Chaos,
-// opens a deeper level until its own `cardResolved`).
+// C+ #38.1 Solarius Prime (SPEC §8.7): Cry casts 5 random non-token Spells of any set (R380),
+// aimed by declaration (R656), each a play (R70) raised by Spell Damage, additions hidden (R97).
+// Tests read casts off the event stream at depth 1 (until `cardResolved`), handling nested casts.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -241,14 +229,25 @@ mod tests {
                     sets.insert(def_of(Some(s.state()), &text(&event, "defId")).set.to_string());
                 }
             }
-            assert_eq!(sets.into_iter().collect::<Vec<_>>(), vec!["Classic", "Classic+", "Core"]);
+            // Re-pinned for v0.3.5: the Meditative set joins the pool.
+            assert_eq!(sets.into_iter().collect::<Vec<_>>(), vec!["Classic", "Classic+", "Core", "Meditative"]);
         }
 
         #[test]
         fn r656_each_pick_aims_by_its_declaration_harm_never_at_your_hero_help_never_at_an_enemy() {
-            // The helpful Spells a random cast can pick: their target declarations aim "help".
-            let help: IndexSet<&str> =
-                ["classic-003", "classicplus-010", "classicplus-057", "classicplus-071", "core-047", "core-063"].into_iter().collect();
+            // The helpful Spells a random cast can pick: their target declarations aim "help". Re-pinned for
+            // v0.3.5: the Meditative set joins the pool, M #35 RCTA (CN) with it.
+            let help: IndexSet<&str> = [
+                "classic-003",
+                "classicplus-010",
+                "classicplus-057",
+                "classicplus-071",
+                "core-047",
+                "core-063",
+                "meditative-035",
+            ]
+            .into_iter()
+            .collect();
             let mut aimed = 0;
             for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions::default());
@@ -260,7 +259,10 @@ mod tests {
                 foe.insert("hero-p2".to_string());
                 foe.extend(s.state().players.p2.units.iter().flatten().flatten().map(|card| card.id.clone()));
                 foe.extend(s.pile(P2, "graveyard").into_iter().map(|card| card.id));
-                for Cast { event, .. } in casts_during(&s, &prime) {
+                // Only the Prime's own picks aim (depth 1): a Jogg's Box among them casts truly at random,
+                // with no `targetEnemies` (R656), so its casts may hit your hero. Re-pinned for v0.3.5: the
+                // Meditative set joins the pool, and one seed's Box now casts a Lunar Eclipse at your hero.
+                for Cast { event, .. } in casts_during(&s, &prime).into_iter().filter(|cast| cast.depth == 1) {
                     let def_id = text(&event, "defId");
                     for target in event["targets"].as_array().cloned().unwrap_or_default() {
                         let target = target.as_str().unwrap_or_default().to_string();
@@ -280,12 +282,25 @@ mod tests {
 
         #[test]
         fn r70_each_cast_is_a_play_the_turns_log_counts_all_of_them() {
-            let (s, prime) = play_prime(&seeds()[0], PrimeOptions::default());
-            let casts = casts_during(&s, &prime);
-            let played = &s.state().players.p1.turn_log.played_ids;
-            for Cast { event, .. } in &casts {
-                assert!(played.contains(&text(event, "instanceId")));
+            // The log is the turn's, so it is read on the seeds whose casts leave p1's turn running: a
+            // Twisting Nether and a discard among them can leave p1 nothing to do, and R82 then ends the
+            // turn and its log with it. Re-pinned for v0.3.5: the Meditative set joins the pool, and the
+            // first seed's casts now end the turn.
+            let mut checked = 0;
+            for seed in seeds() {
+                let (s, prime) = play_prime(&seed, PrimeOptions::default());
+                if s.events().iter().any(|event| event.event_type() == GameEventType::TurnEnded) {
+                    continue;
+                }
+                let casts = casts_during(&s, &prime);
+                assert!(!casts.is_empty(), "{seed}");
+                let played = &s.state().players.p1.turn_log.played_ids;
+                for Cast { event, .. } in &casts {
+                    assert!(played.contains(&text(event, "instanceId")), "{seed}");
+                }
+                checked += 1;
             }
+            assert!(checked > 0);
         }
 
         #[test]

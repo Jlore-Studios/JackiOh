@@ -65,6 +65,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
 | Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
+| Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
 
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
@@ -125,6 +126,9 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `series` | **none** | no policy | none — holds both frozen trios and the hidden picks (R259) |
 | `tutorial_progress` | own row | `profile_id = auth.uid()` | none — the server merges a device's progress into it, never removing a lesson (R320) |
 | `game_records` | **none** | no policy | none — holds both hands and both decklists of every recorded game (R376) |
+| `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
+| `emote_events` | **none** | no policy | none (R1442) |
+| `match_signals` | **none** | no policy | none (R1442) |
 
 Three Supabase-specific traps this schema avoids on purpose:
 
@@ -613,8 +617,10 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` — and records them in `app.migrations`. Expected
-   result: 25 tables
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
+   `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` — and records them in
+   `app.migrations`. Expected
+   result: 28 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -644,7 +650,16 @@ step that is not yet implemented says which BUILD task delivers it.
    in order of sign-up, and names every new one the lowest free `Player#n` by trigger; a client
    reads its own row's username columns and writes none of them. It only adds: `display_name`,
    which no server reads from 0028 on, stays for the deploy before it, which reads it until the new
-   one serves, and a later migration drops it.
+   one serves, and a later migration drops it. 0029 adds the three server-only play telemetry tables
+   of R1442, `action_timings`, `emote_events` and `match_signals`, which no client role may read or
+   write: the retention purge gains a third cutoff that deletes a match's telemetry once
+   `PLAY_TELEMETRY_RETENTION_DAYS` days have passed since it ended, and deleting an account deletes
+   the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server
+   a deploy replaces. 0030 comes with the patch that ships the
+   Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411). 0031 puts the results' and the
+   rated games' reason checks back with the set's two endings, `alt-win` and `won-by-effect`, so a game the
+   set ends records its result (R1412).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -654,8 +669,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
-   (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 450
+   (370 cards + 80 tokens over Core, Classic, Classic+ and Meditative: patch v0.2.0, Glitch, issue #170,
+   and the Meditative set, issue #553) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
