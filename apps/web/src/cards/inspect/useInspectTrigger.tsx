@@ -32,11 +32,14 @@ export type InspectOptions = {
   hover?: boolean;
   /** Default true: a touch long-press opens the sheet, or calls onLongPress when given. */
   longPress?: boolean;
+  /** Default false: only a touch long-presses. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1446). */
+  holdAnyPointer?: boolean;
   onLongPress?: () => void;
   /** Without `onLongPress`, a hold opens the default sheet or a settings-gated preview; disabled previews leave a plain tap. */
   touchHold?: "sheet" | "preview";
-  /** A mouse right-click calls it and prevents the native menu. The deck builder only: the board
-      leaves right-click to the drag cancel. */
+  /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
+      portrait's, which acts only while nothing is targeted (R1446): the board's cards leave
+      right-click to the drag cancel. */
   onContextMenu?: () => void;
   /** Which side of the card the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
@@ -187,7 +190,8 @@ export function useInspectTrigger(
         holdPreview.current = null;
         disarmSuppressor();
         clearPress();
-        if (event.pointerType !== "touch" || opts.longPress === false) return;
+        const holds = event.pointerType === "touch" || (opts.holdAnyPointer === true && event.button === 0);
+        if (!holds || opts.longPress === false) return;
         const element = event.currentTarget;
         const pressKey = current.key;
         press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };

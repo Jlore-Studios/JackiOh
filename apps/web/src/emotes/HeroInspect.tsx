@@ -1,8 +1,9 @@
-// A hero's inspect view (R1330, issue #544): the dialog a click, a long-press or Enter on either
-// portrait opens. It shows the portrait large (`PortraitArt`, R1332), the portrait card's printed
-// name, its title (the roster's line, which the deck builder's picker also shows), its flavour line
-// (R660), and the hero's health and Armor from the view. It holds what the portrait's click opened
-// before it: your emote menu, or the opponent's one-item Mute emotes menu (R643), drawn inline.
+// A hero's inspect view (R1330, issue #544): the dialog a hold on either portrait opens, a touch's or
+// a mouse's, or a right-click, the context-menu key or Shift+F10 on it (R1446; a click hangs the menu
+// off the portrait instead). It shows the portrait large (`PortraitArt`, R1332), the portrait card's
+// printed name, its title (the roster's line, which the deck builder's picker also shows), its
+// flavour line (R660), and the hero's health and Armor from the view. It holds the menu the click
+// opens: your emote menu, or the opponent's one-item Mute emotes menu (R643), drawn inline.
 //
 // It is the touch sheet's kind of overlay (cards/inspect/InspectSheet.tsx): portalled to the end of
 // <body> over a scrim, focus on Close and back on close, Tab kept inside, Escape and the scrim and

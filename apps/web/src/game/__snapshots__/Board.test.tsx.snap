@@ -16,7 +16,6 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     data-side="opponent"
   >
     <div
-      aria-disabled="true"
       aria-label="Opponent hero"
       class="hero hero-opponent"
       data-legal="false"
@@ -3394,7 +3393,6 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
     data-side="you"
   >
     <div
-      aria-disabled="true"
       aria-label="Your hero"
       class="hero hero-you"
       data-legal="false"

@@ -27,12 +27,14 @@
 // `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
 // `activated` row, which plays on its card (`card-<instanceId>`).
 //
-// The portrait is something to look at (R1330, issue #544): a click on the hero when it is not a legal
-// target, a long-press of a touch on the portrait, or Enter or Space on the portrait's own button (a
-// control named for the hero, laid over the art and given no testid, so a drag or a click still
-// resolves to `hero-<side>`) opens the hero's inspect view (`emotes/HeroInspect.tsx`), which holds the
-// emote menu or the mute item that the click opened before. The portrait answers with a short squash
-// and glint, none under Reduce Motion (R1331). A target is still a target first.
+// The portrait has two presses (R1446). A click on the hero when it is not a legal target, or Enter
+// or Space on the portrait's own button (a control named for the hero, laid over the art and given
+// no testid, so a drag or a click still resolves to `hero-<side>`), toggles the emote menu hung off
+// the portrait: your picker, or the opponent's one-item mute (R643). A hold on the portrait (a
+// touch's or a mouse's, for LONG_PRESS_MS), a right-click, or the context-menu key or Shift+F10 on
+// its button opens the hero's inspect view instead (`emotes/HeroInspect.tsx`, R1330): the portrait
+// large, with the same menu in it. The portrait answers either with a short squash and glint, none
+// under Reduce Motion (R1331). A target is still a target first.
 
 import type { ReactElement } from "react";
 
@@ -42,7 +44,7 @@ import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
 import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
-import { EmoteShow as EmoteShowEl } from "../emotes/ui.tsx";
+import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx";
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { animTestid } from "./animations.ts";
@@ -75,8 +77,13 @@ export type HeroProps = {
   emotes?: HeroEmotes;
 };
 
-/** The portrait's long-press has no overlay of its own: it opens the hero's view through Game. */
+/** The portrait's hold has no overlay of its own: it opens the hero's view through Game. */
 const NO_OVERLAY = (): null => null;
+
+/** R1446: the keys that open the inspect view from the portrait's button, a hold's keyboard twin. */
+function isInspectKey(event: { key: string; shiftKey: boolean }): boolean {
+  return event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+}
 
 export default function Hero(props: HeroProps): ReactElement {
   const { view, side } = props;
@@ -85,6 +92,8 @@ export default function Hero(props: HeroProps): ReactElement {
   const emotes = props.emotes;
   const portrait = emotes?.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
+  const inspect = emotes?.inspect === true;
+  const portraitName = PORTRAIT_DEFS[portrait].def.name;
 
   const testId = testid.hero(side);
   const legal = isLegal(props.highlight, testId);
@@ -94,16 +103,27 @@ export default function Hero(props: HeroProps): ReactElement {
   const modifiersId = animTestid.modifiers(side);
   const modifiers = seat.modifiers ?? [];
 
-  // R1331: the portrait reacts as its view opens, and not at all under either Reduce Motion switch.
+  // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
+  // Motion switch.
   const panelReduces = useSetting("reduceMotion");
   const osReduces = useOsReducedMotion();
   const reacting = usePortraitReaction(menu !== null, panelReduces || osReduces);
-  // R1330: a touch held on the portrait opens the view, unless the hero is a target (a hold there
-  // is the player aiming). Hover is off: a portrait has nothing to preview. The trigger's capture
-  // swallows the click that lifting the finger sends, which would close the view just opened.
+  // R1446: a touch or a mouse held on the portrait opens the view, unless the hero is a target (a
+  // hold there is the player aiming). The handlers sit on the whole oval, badges included. Hover is
+  // off: a portrait has nothing to preview. The trigger's capture swallows the click that lifting the
+  // finger or the button sends, which would otherwise toggle the menu on the portrait as well. The
+  // menus stop their own pointerdowns, so a press held on a menu item is no hold on the portrait. A right-click is the mouse's twin of the hold, and the
+  // context-menu key's and Shift+F10's on the button; Game ignores all three while anything is
+  // being targeted, which is when the drag layer takes the right-click to cancel.
   const press = useInspectTrigger(
     emotes === undefined ? null : { key: `hero-portrait-${side}`, render: NO_OVERLAY },
-    { hover: false, longPress: !legal, onLongPress: () => emotes?.onPortrait() },
+    {
+      hover: false,
+      longPress: !legal,
+      holdAnyPointer: true,
+      onLongPress: () => emotes?.onPortraitHold(),
+      onContextMenu: () => emotes?.onPortraitHold(),
+    },
   );
 
   return (
@@ -115,12 +135,14 @@ export default function Hero(props: HeroProps): ReactElement {
       data-selected={selected ? "true" : undefined}
       data-animating={props.animating?.get(testId)}
       data-glow={glowAttr(props.highlight, testId)}
-      aria-disabled={legal ? undefined : "true"}
+      // No aria-disabled while the hero is not a target, as a card carries: the hero holds controls
+      // of its own (the portrait's button, its menu, the Heroic Power), and a disabled ancestor would
+      // have assistive tech read every one of them as disabled (R1446). Not being a tab stop says it.
       aria-label={side === "you" ? "Your hero" : "Opponent hero"}
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
         // Issue §2: targeting always wins. A legal hero is a target, so the click lands on it; a
-        // non-legal one opens its inspect view instead (R1330), which holds the emote menu (yours)
+        // non-legal one toggles its menu on the portrait instead (R1446): the emote picker (yours)
         // or the mute item (theirs).
         if (legal) {
           props.onClick?.(target);
@@ -146,21 +168,35 @@ export default function Hero(props: HeroProps): ReactElement {
         armor={hero.armor}
         luck={seat.luck}
         reacting={reacting}
+        press={emotes === undefined ? undefined : press.handlers}
       >
         {emotes !== undefined && (
           <button
             type="button"
             className="hero-portrait-open"
-            aria-label={`Inspect ${PORTRAIT_DEFS[portrait].def.name}, ${side === "you" ? "your hero" : "the opponent's hero"}`}
-            aria-haspopup="dialog"
+            aria-label={`${side === "you" ? "Emotes" : "Mute emotes"} for ${portraitName}, ${side === "you" ? "your hero" : "the opponent's hero"}; hold, or Shift+F10, to inspect`}
+            aria-haspopup="menu"
             aria-expanded={menu !== null}
+            title={`${portraitName}: click for ${side === "you" ? "emotes" : "the mute"}, hold to inspect`}
             // A legal hero is the one tab stop (its own tabIndex), the button reached only by a pointer.
             tabIndex={legal ? -1 : undefined}
-            {...press.handlers}
+            onKeyDown={(event) => {
+              if (!isInspectKey(event)) return;
+              event.preventDefault();
+              if (!legal) emotes.onPortraitHold();
+            }}
           />
         )}
         {emotes?.show !== null && emotes?.show !== undefined && (
           <EmoteShowEl key={emotes.show.key} show={emotes.show} />
+        )}
+        {/* R1446: the click's menu, hung off the portrait as it was before R1330. A hold puts the
+            same menu in the inspect view below instead. */}
+        {emotes !== undefined && menu === "emotes" && !inspect && (
+          <EmoteMenu side={side} hand={emotes.hand} gate={emotes.gate} onPick={emotes.onPick} onClose={emotes.onCloseMenu} />
+        )}
+        {emotes !== undefined && menu === "mute" && !inspect && (
+          <MuteMenu muted={emotes.muted} onMute={emotes.onMute} onClose={emotes.onCloseMenu} />
         )}
       </HeroPortrait>
       <span className="hero-seat">{side === "you" ? "You" : "Opponent"}</span>
@@ -243,7 +279,7 @@ export default function Hero(props: HeroProps): ReactElement {
 
       <PopLayer pops={props.pops} />
 
-      {emotes !== undefined && menu !== null && (
+      {emotes !== undefined && menu !== null && inspect && (
         <HeroInspect
           side={side}
           portrait={portrait}

@@ -1,8 +1,8 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
 // emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
 // the seat's dealt hand and nothing else (R1343): its voice lines and its emoji, in the pool's order.
-// Since R1330 the two menus are drawn inline in the hero's inspect view (`HeroInspect.tsx`); the
-// hung-off-the-hero placement below is what each does when it is not `inline`.
+// A click on a portrait hangs its menu off the portrait, the placement below; a hold opens the hero's
+// inspect view (`HeroInspect.tsx`), which draws the same menu `inline` (R1446, R1330).
 //
 // Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
 // the hand's voice lines sit on an arc above the portrait, its emoji in a row under them, the bubble or
@@ -44,14 +44,21 @@ export function arcDrop(index: number, count: number): number {
 
 /**
  * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
- * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against.
+ * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against. A
+ * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1446): that click
+ * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
+ * on its pointerdown would have the click open the menu again.
  */
-function useMenuLifetime(open: boolean, onClose: () => void): void {
+function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
-      const inside = (event.target as Element | null)?.closest?.("[data-emote-menu]");
-      if (inside === null || inside === undefined) onClose();
+      const target = event.target as Element | null;
+      const inside = target?.closest?.("[data-emote-menu]");
+      if (inside !== null && inside !== undefined) return;
+      const portrait = menu.current?.parentElement;
+      if (target instanceof Node && portrait?.contains(target) === true) return;
+      onClose();
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
@@ -62,7 +69,7 @@ function useMenuLifetime(open: boolean, onClose: () => void): void {
       window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, onClose]);
+  }, [open, onClose, menu]);
 }
 
 /**
@@ -124,8 +131,8 @@ export function EmoteMenu({
   /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
   inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(!inline, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
+  useMenuLifetime(!inline, onClose, menuRef);
   useKeepOnScreen(menuRef, !inline);
   const [, forceTick] = useState(0);
   useEffect(() => {
@@ -215,8 +222,8 @@ export function MuteMenu({
   /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
   inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(!inline, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
+  useMenuLifetime(!inline, onClose, menuRef);
   useKeepOnScreen(menuRef, !inline);
   return (
     <div

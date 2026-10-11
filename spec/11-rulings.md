@@ -225,4 +225,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R1445]] is a granted ability's quotation (the Meditative integration's house-style pass, 2026-10-11)**: [[R366]]'s labelled abilities that start their line are the card's own, and an ability a card grants another, Meditative #58's and #59's granted Deaths ([[R1107]]), is quoted inside the sentence that grants it, in double quotes, as #38 and C+ #14 quote theirs. It takes the next number after [[R1442]], R1439 being held for MD-G3. It edits nothing in the sections: [[§8]]'s cells are shorthand, and the catalog prints the quotation.
 
+**[[R1446]] is a hero portrait's two presses (the user's request, 2026-10-11)**: a click on a portrait, and Enter or Space on it, hangs the hero's menu off the portrait again, the emote menu or the opponent's mute item as before [[R1330]], and a hold, a touch's or a mouse's, a right-click, or the context-menu key or Shift+F10, opens the hero's inspect view with the same menu in it; targeting still wins. It takes the next number after [[R1445]]. It edits [[§10.10]], [[R643]], [[R1330]] and [[R1331]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

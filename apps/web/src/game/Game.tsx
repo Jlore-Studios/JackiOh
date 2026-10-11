@@ -188,11 +188,16 @@ export default function Game({
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**
    * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
-   * hotseat hand-over closes it the way a hand-over closes the concede question. Issue §2's other
-   * closes — outside press, Escape, picking — live in the menus themselves; the ones that are a
-   * board state (a drag or targeting starting) are the render-adjust below.
+   * hotseat hand-over closes it the way a hand-over closes the concede question, and where: hung
+   * off the portrait (`panel`, a click) or in the hero's inspect view (`inspect`, a hold; R1446).
+   * Issue §2's other closes — outside press, Escape, picking — live in the menus themselves; the
+   * ones that are a board state (a drag or targeting starting) are the render-adjust below.
    */
-  const [emoteMenu, setEmoteMenu] = useState<{ side: "you" | "opponent"; viewer: PlayerId } | null>(null);
+  const [emoteMenu, setEmoteMenu] = useState<{
+    side: "you" | "opponent";
+    viewer: PlayerId;
+    place: "panel" | "inspect";
+  } | null>(null);
 
   // The view the DOM is showing: the newest one once the queue has settled, an older one while
   // an event is still animating over it (BUILD M5-T4).
@@ -520,7 +525,9 @@ export default function Game({
    * One hero's emote surface, built per side (R643–R644). The picker opens only on your own
    * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
    * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
-   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.
+   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins. The
+   * click toggles the menu on the portrait; `onPortraitHold`, the hold, opens the hero's inspect
+   * view with the same menu in it, the panel giving way to it (R1446).
    */
   const heroEmotes = useCallback(
     (side: "you" | "opponent"): HeroEmotes | undefined => {
@@ -532,11 +539,16 @@ export default function Game({
         hand: emotes.handOf(shown.viewer),
         show: emotes.visible(player),
         menu: emoteMenu?.side === side ? (side === "you" ? "emotes" : "mute") : null,
+        inspect: emoteMenu?.side === side && emoteMenu.place === "inspect",
         muted: emotes.muted(player),
         gate: () => emotes.gate(shown.viewer),
         onPortrait: () => {
           if (interaction !== IDLE) return;
-          setEmoteMenu((open) => (open?.side === side ? null : { side, viewer: shown.viewer }));
+          setEmoteMenu((open) => (open?.side === side ? null : { side, viewer: shown.viewer, place: "panel" }));
+        },
+        onPortraitHold: () => {
+          if (interaction !== IDLE) return;
+          setEmoteMenu({ side, viewer: shown.viewer, place: "inspect" });
         },
         onPick: (emote) => {
           emotes.send(shown.viewer, emote);
