@@ -3531,6 +3531,7 @@
         "tier": "strong",
         "why": "hard's 'engine rules (crates/engine/src/)': the code edit is small, but the scorer will dry-run about 200 cards (Meditative's among them) it has never scored, and a panic or hidden-information leak there means fixing engine code"
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-10-11T16:55:28Z",
         "family": "claude",
@@ -3547,7 +3548,9 @@
       "planned_at": "2026-10-11T13:15:11Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 674,
       "provider": "claude-3",
+      "question": "",
       "run_id": "38161414420",
       "started_at": "2026-10-11T17:52:30Z",
       "stop_requested": false,
