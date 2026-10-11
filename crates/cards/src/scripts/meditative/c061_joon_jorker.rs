@@ -1,5 +1,6 @@
 //! M #61 Joon Jorker (SPEC §8.8 row 61): (3) Unit, Human, Common, 7/5 → 14/10.
-//!   Both faces: "End of turn: Buff the Unit to the right of this {times} times." — times 5 (Radiant 10).
+//!   Both faces: "End of turn: Buff the Unit to the right of this {times|time|times}." — times 5
+//!   (Radiant 10).
 //! Engine: at its controller's end of turn, separate Buffs (Upgrade, R386) on the acting Unit in the
 //!   next lane on its own side (MD-D16, R1060); none or Immutable neighbour: nothing (R129).
 

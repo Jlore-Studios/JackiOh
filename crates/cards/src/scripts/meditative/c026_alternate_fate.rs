@@ -1,8 +1,8 @@
 //! M #26 Alternate Fate (SPEC §8.8 row 26): (4) Field Spell, Legendary.
 //!
 //! Base:    "Aura: Players don't generate mana naturally.
-//!           End of turn: Summon a Mana Well into every empty backrow zone, for the player whose
-//!           zone it is."
+//!           End of turn: Summon a Mana Well into every empty backrow, for the player whose
+//!           backrow it is."
 //! Radiant: the same, plus " Yours are Radiant."
 //! Engine:
 //! - **The aura** is ME-TURN's zeroed refresh held by a card: `static_flags.no_natural_mana`, which

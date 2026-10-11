@@ -1,6 +1,6 @@
 //! M #48 Tranquility (SPEC §8.8 row 48): (2) Spell, Epic.
 //!
-//! Base:    "End your turn. Your hero is immune to damage until your next turn begins."
+//! Base:    "End the turn. Your hero is immune to damage until your next turn begins."
 //! Radiant: "Your hero is immune to damage until your next turn begins."
 //! Engine: the end of the turn is E10's `end_turn` (§6.3, R456) — the rest of the list resolves
 //! first, then every end-of-turn step runs; on the opponent's turn a cast has no turn of theirs to

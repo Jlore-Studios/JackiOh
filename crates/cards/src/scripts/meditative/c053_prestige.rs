@@ -1,9 +1,9 @@
-//! M #53 Prestige (SPEC §8.8 row 53): (4) Spell, Rare.
+//! M #53 Prestige (SPEC §8.8 row 53): (1) Spell, Common.
 //!
 //! Base:    "De-Radiant a Radiant Unit or face-up backrow card on either side, or a Radiant card
 //! in your hand. Add {cards|AI generated card|AI generated cards} to your hand."
 //! Radiant: "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and
-//! library. Add {cards|AI generated card|AI generated cards} to your hand."
+//! deck. Add {cards|AI generated card|AI generated cards} to your hand."
 //! Engine: MD-D6 — De-Radiant is Make Radiant reversed (`clearRadiant`), §5.2's exception: the face
 //! swaps back while damage, buffs and tuning stay. The base face clears the chosen card, if any
 //! (R90 already allows the play with nothing to choose, MD-D7); the Radiant face clears every
