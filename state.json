@@ -4881,9 +4881,9 @@
     "what": "build #638 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-11T23:40:01Z",
+    "at": "2026-10-11T23:51:07Z",
     "notes": [
-      "started a night run, as a lane was free: #638 (hard) is queued to build, for `claude-3`: build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #655 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
