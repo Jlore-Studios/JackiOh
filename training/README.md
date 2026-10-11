@@ -8,7 +8,14 @@ docs/v0.3.0/SURFACE.md §14.
 | Lane | Goal | Standing prompt |
 |---|---|---|
 | `improve` | a stronger AI: beat its predecessor in 75 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
-| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100 | [`unban.md`](unban.md) |
+| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100. **Done at generation 8** (2026-10-10), which lifted the last ban | [`unban.md`](unban.md) |
+
+The unban lane is done. Generation 8 (`training/history/unban.jsonl`) removed the last entry of
+`SHADOW_BAN`, and no AI can keep strictly fewer cards out of its decks than none, so no unban
+promotion can pass again: `promote --lane unban` refuses to play its games (The gate), and a session
+on [`unban.md`](unban.md) stops before it does any work. Its service, `jackioh-train@unban`, keeps
+cycling until a person stops and disables it on the training box (Stopping, starting and watching a
+lane). The lane has work again only if an entry is added to the table.
 
 ## How a lane runs
 
@@ -98,6 +105,10 @@ The engine (`crates/engine`), the cards (`crates/cards`), every test outside `cr
 
 A draw is not a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a
 failed gate. The report (Markdown) goes to stdout.
+
+Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
+none), so `promote --lane unban` says the lane is done and exits 1 before it plays a game, whatever
+the flag, writing nothing and printing no report.
 
 - `--dry-run` measures and writes nothing. It runs on a working copy with uncommitted changes in
   `crates/ai/src` (on HEAD's seeds, and says so).
