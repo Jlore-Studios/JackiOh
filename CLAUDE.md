@@ -55,7 +55,7 @@ pnpm exec eslint apps/web e2e
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants: Docker only, starts a throwaway postgres:16
 sh crates/server/tests/db/run.sh           # the server's store against a throwaway postgres:16 (Docker; KEEP_DB=1 keeps it)
 sh crates/server/tests/deploy/rehearse.sh  # Render's deploy rehearsed: the Docker image, migrating as a role that is not a superuser (as on Supabase), then a production boot (Docker)
-pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines with macOS `say`/`afconvert` (idempotent); `--check` runs anywhere
+pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines with macOS `say`/`afconvert` (idempotent); `--check` runs anywhere; from Linux, a commit message holding `[gen:voice]` renders them on GitHub's runners (voice.yml, R1448)
 pnpm --filter @jackioh/web gen:music   # re-render changed music scores with FluidSynth and ffmpeg (R631, idempotent); `--check` runs anywhere
 ```
 

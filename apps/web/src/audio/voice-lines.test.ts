@@ -57,7 +57,7 @@ const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
   trap: ["cast", "trigger"],
 };
 const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
-  unit: ["play", "death"],
+  unit: ["play", "attack", "death"],
   spell: ["cast"],
   trap: ["cast"],
 };
@@ -222,11 +222,12 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
     expect(stated, "entries that state a kind or a persona of their own").toEqual([]);
   });
 
-  it("B33 gives every unit a play and a death line and no cast hook", () => {
+  it("B33 R1448 gives every unit a play, an attack and a death line and no cast hook", () => {
     const wrong: string[] = [];
     for (const id of CATALOG_IDS.filter((catalogId) => catalogKind(catalogId) === "unit")) {
       const entry = CARDS[id] ?? {};
       if (!isLine(entry.play)) wrong.push(`${id}: no play line`);
+      if (!isLine(entry.attack)) wrong.push(`${id}: no attack line`);
       if (!isLine(entry.death)) wrong.push(`${id}: no death line`);
       if ("cast" in entry) wrong.push(`${id}: a unit carries a cast hook`);
     }
@@ -371,11 +372,11 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
     expect(coreLines, "Core's lines in the table").toHaveLength(155);
   });
 
-  it("B33 gives every card a line per its kind: twice the units plus the spells and traps", () => {
+  it("B33 R1448 gives every card a line per its kind: three times the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
-    // An attack line (R655) is a Unit's option beside these, and is held to B34 like any other.
-    const lines = allAssignments().filter(({ hook, value }) => hook !== "attack" && isLine(value));
-    expect(lines, "lines in the table").toHaveLength(units * 2 + (Object.keys(CARDS).length - units));
+    // Since R1448 a Unit's attack line (R655) is required beside its play and death lines.
+    const lines = allAssignments().filter(({ value }) => isLine(value));
+    expect(lines, "lines in the table").toHaveLength(units * 3 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
       const kind = catalogKind(id);
       return kind === undefined ? [] : LINES_OF_KIND[kind].map((hook) => `${id}-${hook}`);
