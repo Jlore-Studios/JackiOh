@@ -57,7 +57,8 @@
 //!        - Echo's `copies` (R399) names the definition of the card it copied (read off the copier);
 //!        - `swapsBook.from` (R671) names the Book a swap took the text from (read off the card).
 //!      A card in no pile that has no successor (no Transform or Fuse made it another, R177) reads only
-//!      when it is a token (R11) or a card a full library refused before it existed that copies nothing
+//!      when it is a token (R11), judged by the definition its leaving named (a Fuse and then R419's
+//!      Rollback can turn a token into a fused card and back, fuzz seed 119), or a card a full library refused before it existed that copies nothing
 //!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
 //!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
 //!      restated: R764 fixed it.
@@ -205,6 +206,11 @@ struct Lineage {
     never_made: IndexSet<String>,
     /// Each id, and the definitions the engine's own events pair with it.
     ties: IndexMap<String, IndexSet<String>>,
+    /// R11, R97: the definition each id last left a zone as (`destroyed`, `exiled`, `burned`,
+    /// `discarded`, `bounced`), which is what a card that ceased to exist was as it went. A card's
+    /// definition can change and change back (R77's Fuse, then R419's Rollback restoring the token
+    /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
+    gone_as: IndexMap<String, String>,
 }
 
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
@@ -212,6 +218,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut unread: IndexSet<String> = IndexSet::new();
     let mut never_made: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
+    let mut gone_as: IndexMap<String, String> = IndexMap::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = id.and_then(Value::as_str) else {
@@ -250,6 +257,13 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             let Some(id) = id.and_then(Value::as_str) else {
                 return;
             };
+            if let (Some(kind), Some(def)) = (
+                object.get("type").and_then(Value::as_str),
+                object.get("defId").and_then(Value::as_str),
+            ) && LEAVING_EVENTS.contains(&kind)
+            {
+                gone_as.insert(id.to_string(), def.to_string());
+            }
             let former = object.get("formerId").and_then(Value::as_str);
             // R419: Classic+ #35 Rollback recreates a card transformed away under a fresh id whose
             // `formerId` is the old one, so the card exists again and R177's mark is spent: its old id
@@ -294,8 +308,12 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
         unread,
         never_made,
         ties,
+        gone_as,
     }
 }
+
+/// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
+const LEAVING_EVENTS: [&str; 5] = ["destroyed", "exiled", "burned", "discarded", "bounced"];
 
 /// Where a card an id names stands for one viewer (`standing_of`'s answer).
 struct Standing {
@@ -348,11 +366,14 @@ fn standing_of(
             }
             let defs = lineage.ties.get(id)?;
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
-            // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
-            // stays as hidden as it was.
-            let token = defs
-                .iter()
-                .all(|def| crate::catalog::def_of(Some(&*state), def).token);
+            // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
+            // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
+            let token = match lineage.gone_as.get(id) {
+                Some(def) => crate::catalog::def_of(Some(&*state), def).token,
+                None => defs
+                    .iter()
+                    .all(|def| crate::catalog::def_of(Some(&*state), def).token),
+            };
             return Some(Standing {
                 reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),

@@ -730,3 +730,59 @@ mod r1126_the_canes_pareto_animation {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// I6 and a token that was fused, then rolled back to itself (fuzz seed 119)
+// ---------------------------------------------------------------------------------------------
+
+/// R97, R419, R11: Core #85's trap fuses a played Unit onto p2's Rush Token, which keeps the token's
+/// id under a fused (non-token) definition; C+ #35 Rollback then puts the token back as it was, a
+/// token again; it dies attacking, a token ceasing to exist in the open. I6 judges a card in no pile
+/// by what it left as, so the events that name it after it went read to both seats, as R97 says.
+mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
+    use super::*;
+
+    const ROLLBACK: &str = "classicplus-035";
+    const FUSING_TRAP: &str = "core-085";
+    const MENACE: &str = "core-019";
+
+    #[test]
+    fn r97_r419_i6_stays_clean_as_a_rolled_back_token_ceases_to_exist() {
+        let mut g = scenario(json!({
+            "p1": { "mana": 10, "hand": [VANILLA], "field": [MENACE], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": {
+                "mana": 10,
+                "hand": [ROLLBACK],
+                "field": [RUSH_TOKEN],
+                "backrow": [{ "def": FUSING_TRAP, "lane": 1 }],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let token = g.unit(PlayerId::P2, 1).expect("p2's Rush Token").id;
+        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419).
+        g.end_turn().end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // p1's Vanilla trips the trap, which fuses it onto the token: the token's id, a fused definition.
+        g.play(VANILLA, json!({ "zone": 2 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert!(
+            g.card(&token).def_id.starts_with("t-"),
+            "the token wears the fused definition"
+        );
+        // On p2's turn 12, Rollback 1 puts the board back to turn 11's start: the token is a token again.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.play(ROLLBACK, json!({ "modes": ["1"] }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert_eq!(g.card(&token).def_id, RUSH_TOKEN);
+        // It attacks the Taunt Menace and dies: a token, it ceases to exist (R11).
+        g.attack(token.as_str(), MENACE);
+        assert!(
+            find_instance(g.state(), &token).is_none(),
+            "the token ceased to exist"
+        );
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert_eq!(monitor.hidden(g.state()), no_violations());
+    }
+}
