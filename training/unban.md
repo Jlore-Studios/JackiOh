@@ -16,9 +16,9 @@ the lane is done: no AI can keep strictly fewer cards out of its decks than none
 can pass, and `promote --lane unban` refuses to play its games. Then stop at once:
 
 1. Run nothing that builds or plays games: no `promote`, `arena`, `sweep`, `trace` or `cargo test`.
-2. Change nothing and commit nothing, so the session leaves no promotion. (The draft pull request
-   `loop.sh` opened before the session started stays a draft; only a person stopping the service
-   ends that.) Do not take up other work instead: `SHADOW_WATCH` is the sweep's (R390), and the
+2. Change nothing and commit nothing, so the session leaves no promotion. (`loop.sh` starts no
+   session while the table on `main` is empty, so a session sees this only when it began before
+   the loop knew; the draft pull request stays a draft, and the loop idles from its next cycle.) Do not take up other work instead: `SHADOW_WATCH` is the sweep's (R390), and the
    `improve` lane is another lane's.
 3. Append one entry to `~/training-out/unban/attempts.md`: the date and "lane done: `SHADOW_BAN` is
    empty; nothing tried".
@@ -38,11 +38,38 @@ Everything below is for a table that still has entries.
 3. Only remove entries from `SHADOW_BAN`; never add one, and keep the table sorted by id. When you
    remove one, say in the comment above the table which generation removed it and why the AI now
    plays it. `SHADOW_WATCH` is the sweep's (R390): leave it. Do not raise `AI_BUDGET` or
-   `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit (SPEC §9.9).
+   `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit (SPEC §9.9). Leave
+   `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` as it is: which sets the AI's decks are gated
+   from is a person's call (R1390), never a lane's.
 4. Keep `cargo test -p jackioh-ai` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings`
    passing. Never weaken a test to make a change pass; a test that pins the ban list itself is
    updated to the new list. The AI stays pure (CLAUDE.md rule 4): no clock, no I/O, no randomness but
    the `Rng` it is handed.
+
+## The Meditative set first
+
+The Meditative set (102 cards, SPEC §8.8, `crates/cards/src/scripts/meditative/`) is the newest set and
+the one the AI has played least. Its cards bring new prompt kinds (the crafter, the market, the secret
+choice, the prediction), Jade, Luck, extra turns and wins by effect. For a while R1390's soft gate
+(`AI_DECK_GATED_SETS` in `crates/ai/src/config.rs`) kept every Meditative card out of the AI's decks.
+Issue #616 lifts it: it runs the sweep of record over the whole catalog, shadow-bans the Meditative
+cards the AI misplays (at most 20 of the 102) and empties the gate. From then on most of `SHADOW_BAN`
+is Meditative cards. They are this lane's first work, since each one unbanned is a card of the new set
+that the AI deals itself and plays:
+
+- Take the `meditative-…` entries before any other, one card or one family at a time. Cards that share
+  a prompt kind or a subsystem (the market's cards, the Jade cards, the Luck cards) usually share a
+  fix.
+- An entry's reason says what the sweep saw. `neverPlayed` is an evaluation blind spot: the beam never
+  finds the line worth it, and the generation notes above the table show how earlier unbans priced
+  one. `selfHarm` and `selfKill` are misplays. `timeout` is a decision too slow at the browser's budget.
+- `cargo jackioh sweep meditative-<nnn>` runs R186's sweep on one card on your build: it forces the
+  card into AI decks at Easy and Hard and says whether the AI played it and how it went. Check every
+  unban this way before the gate.
+
+While the gate still lists Meditative, the ban list holds no Meditative card, and work on one cannot
+promote. When `SHADOW_BAN` is empty the lane has nothing it could promote at all, and the loop starts no
+session until `main`'s AI bans a card again (`training/README.md`, How a lane runs).
 
 ## How you measure
 

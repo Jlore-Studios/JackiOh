@@ -10,9 +10,11 @@
 #      main again and push; if a required check failed, set it back (to draft, with the failure
 #      noted in attempts.md for the next session); otherwise wait. Nothing else runs meanwhile;
 #   2. otherwise fetch main, reset the lane's branch ai/<lane> to it, build jackioh from it and keep
-#      that binary as the parent (~/parent-jackioh): the parent is always the AI on main. Push
-#      ai/<lane> as main plus an empty `[skip ci]` commit naming the session, and make the lane's
-#      pull request this session's draft (opening one when none is open);
+#      that binary as the parent (~/parent-jackioh): the parent is always the AI on main. The unban
+#      lane stops here while the parent shadow-bans no card: nothing could promote, so the cycle
+#      waits TRAIN_IDLE_SECONDS and looks again. Otherwise push ai/<lane> as main plus an empty
+#      `[skip ci]` commit naming the session, and make the lane's pull request this session's
+#      draft (opening one when none is open);
 #   3. run one Devin session on the lane's standing prompt (training/<lane>.md). Every
 #      TRAIN_PROGRESS_SECONDS, push the checkout as it is to ai/<lane> as one `[skip ci]` commit
 #      when it changed, and rewrite the session's comment on the draft: how long it has run, the
@@ -32,7 +34,7 @@
 # Environment: DEVIN_MODEL (required), GH_TOKEN (the lane user's own, for gh), DATABASE_URL
 # (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS (default 16200: the standing
 # prompt's four hours, plus half an hour for the last gate run to finish), TRAIN_PROGRESS_SECONDS
-# (default 900).
+# (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane waits between looks).
 
 # shellcheck disable=SC2016 # the backticks in printf's formats are Markdown's, for GitHub
 set -u
@@ -69,6 +71,7 @@ parent="$HOME/parent-jackioh"
 pause="${TRAIN_PAUSE_SECONDS:-60}"
 session_limit="${TRAIN_SESSION_SECONDS:-16200}"
 progress_every="${TRAIN_PROGRESS_SECONDS:-900}"
+idle_pause="${TRAIN_IDLE_SECONDS:-900}"
 
 mkdir -p "$logs" "$out" "$work" || exit 1
 exec >>"$logs/$lane.log" 2>&1
@@ -91,6 +94,9 @@ pr=""
 stamp=""
 why=""
 report=""
+# The pause after this cycle (idle sets it longer), and the generation the lane last went idle on.
+sleep_for="$pause"
+idle_generation=""
 
 # Loads every finished day's record file not loaded yet (today's is still being written).
 import_records() {
@@ -125,6 +131,31 @@ clean_checkout() {
 build_parent() {
   cargo build --release --quiet -p jackioh-tools || return 1
   cp target/release/jackioh "$parent.new" && mv "$parent.new" "$parent"
+}
+
+# How many cards the parent keeps out of its own decks (R186), as its agent's `info` reports them.
+parent_bans() {
+  printf '{"op":"info"}\n{"op":"quit"}\n' | "$parent" agent | jq -er '.shadowBan | length'
+}
+
+# The unban lane with nothing to unban: the parent shadow-bans no card, and a promotion needs strictly
+# fewer, so a Devin session could only find that out (as #635's did, a minute each, on 2026-10-10).
+# The cycle starts none and waits idle_pause instead. The first idle cycle of a generation says so
+# once, in the log, the draft's title and a comment; a session starts again once main's AI bans a
+# card (a sweep of record, such as the one that lifts R1390's gate on the Meditative set, #616).
+idle() {
+  sleep_for="$idle_pause"
+  [ "$generation" != "$idle_generation" ] || return 0
+  idle_generation="$generation"
+  idle_at=$(git rev-parse --short "$base")
+  log "idle: the AI on main (generation $generation, $idle_at) shadow-bans no card, so there is nothing to unban"
+  [ -n "$pr" ] || return 0
+  gh pr edit "$pr" --title "AI gen $((generation + 1)) ($lane): idle, the AI on main bans no card" >/dev/null ||
+    log "cannot retitle #$pr"
+  cat >"$work/note.md" <<EOF
+**Idle:** the AI on \`main\` (generation $generation, $idle_at) shadow-bans no card, and a promotion of this lane needs strictly fewer bans than its parent, so no Devin session starts. The loop looks again every $((idle_pause / 60)) minutes and starts one once \`main\`'s AI bans a card again: a sweep of record adds the cards it misplays, as the one that brings the Meditative set into the AI's decks does (#616).
+EOF
+  comment "$pr" "$work/note.md" >/dev/null
 }
 
 # Whether the session left a promotion on ai/<lane>: a commit after $base whose subject is
@@ -436,6 +467,7 @@ session() {
 cycle() {
   cd "$repo" || return 1
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
+  sleep_for="$pause"
   if [ -z "$slug" ]; then
     slug=$(gh repo view --json nameWithOwner --jq .nameWithOwner) || {
       log "gh repo view failed; waiting"
@@ -484,6 +516,18 @@ cycle() {
   log "parent built from main at $base"
 
   import_records
+
+  if [ "$lane" = unban ]; then
+    if ! bans=$(parent_bans); then
+      log "the parent's agent did not report its shadow ban; waiting"
+      return 1
+    fi
+    if [ "$bans" -eq 0 ]; then
+      idle
+      return 0
+    fi
+    idle_generation=""
+  fi
 
   if ! start=$(git commit-tree "$base^{tree}" -p "$base" -m "[skip ci] AI training ($lane): session $stamp") ||
     ! git push --quiet --force origin "$start:refs/heads/$branch"; then
@@ -539,5 +583,5 @@ EOF
 log "lane started in $repo"
 while :; do
   cycle || log "the cycle stopped early; trying again after the pause"
-  sleep "$pause"
+  sleep "$sleep_for"
 done

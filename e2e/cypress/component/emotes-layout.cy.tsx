@@ -1,7 +1,8 @@
 // Issue #219: the emote picker, the Mute emotes menu and a voice line's speech bubble, measured in a
-// real browser. Since issue #544 both menus sit in the hero's inspect view (R1330), which a click on a
-// portrait opens, so each is measured there, and so is the view itself and the portraits' vivid layers
-// (R1332).
+// real browser. A click on a portrait hangs its menu off the portrait, where each is measured, and a
+// hold opens the hero's inspect view with the same menu in it (R1449, R1330), which is measured too,
+// with the portraits' vivid layers (R1332). The view is opened here by a right-click, the hold's mouse
+// twin, since a spec waits on no clock.
 //
 // Only a layout engine can say what these measure (jsdom has none; ui.test.tsx reads the
 // stylesheet's text instead):
@@ -62,7 +63,7 @@ const VIEWPORTS = [
   { width: 844, height: 390, touch: true },
 ] as const;
 
-/** Nothing targets either hero, so a click on a portrait opens its inspect view (SPEC §10.10). */
+/** Nothing targets either hero, so a click on a portrait opens its menu and a hold its view (SPEC §10.10). */
 const END_TURN_ONLY: Legal = [{ type: "endTurn" }];
 
 function ts(testid: string): string {
@@ -110,16 +111,24 @@ function fontSizePx(element: Element): number {
   return win === null ? 0 : Number.parseFloat(win.getComputedStyle(element).fontSize);
 }
 
-/** Opens a hero's inspect view: the portrait, not the hero's centre, where a phone puts the power. */
+/**
+ * Opens a hero's inspect view by a right-click on its portrait (R1449): the portrait, not the hero's
+ * centre, where a phone puts the power.
+ */
 function openView(side: "you" | "opponent"): void {
-  cy.get(`${ts(`hero-${side}`)} .hero-portrait`).click();
+  cy.get(`${ts(`hero-${side}`)} .hero-portrait`).rightclick();
   cy.get(ts("hero-inspect")).should("be.visible");
 }
 
-/** Opens your portrait's picker, which your hero's inspect view holds (R1330). */
+/** Opens a portrait's menu by a click, hung off the portrait (R1449): the picker on yours, the mute on theirs. */
+function openMenu(side: "you" | "opponent"): void {
+  cy.get(`${ts(`hero-${side}`)} .hero-portrait`).click();
+  cy.get(`${ts(`hero-${side}`)} ${ts(side === "you" ? "emote-menu" : "emote-mute-menu")}`).should("be.visible");
+}
+
+/** Opens your portrait's picker. */
 function openPicker(): void {
-  openView("you");
-  cy.get(`${ts("hero-inspect")} ${ts("emote-menu")}`).should("be.visible");
+  openMenu("you");
 }
 
 /** fullBoardView() seats the viewer as p1, so the opponent is p2. */
@@ -224,8 +233,8 @@ for (const viewport of VIEWPORTS) {
     });
 
     it("#219 the opponent's Mute emotes menu stays on the screen", () => {
-      openView("opponent");
-      cy.get(`${ts("hero-inspect")} ${ts("emote-mute-menu")}`)
+      openMenu("opponent");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-mute-menu")}`)
         .should("be.visible")
         .and(($menu) => {
           const menu = $menu[0] as Element;
@@ -255,25 +264,27 @@ for (const viewport of VIEWPORTS) {
     });
 
     it("#257 the opponent's Mute emotes menu is drawn over the board and takes the click", () => {
-      openView("opponent");
-      cy.get(`${ts("hero-inspect")} ${ts("emote-mute-menu")}`).should(($menu) => {
+      openMenu("opponent");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-mute-menu")}`).should(($menu) => {
         expectDrawnOnTop($menu[0] as HTMLElement, "the mute menu");
       });
       // A click Cypress cannot land (the item covered) fails here: before #257 the field took it.
       cy.get(ts("emote-mute")).click();
-      cy.get(ts("hero-inspect")).should("not.exist");
       cy.get(ts("emote-mute-menu")).should("not.exist");
       cy.then(() => {
         expect(mountedEmotes?.muted(OPPONENT), "the opponent muted").to.equal(true);
       });
     });
 
-    it("R1330 the hero's inspect view stays on the screen, its portrait large and Close a touch target", () => {
+    it("R1330 R1449 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close a touch target", () => {
       for (const side of ["you", "opponent"] as const) {
         openView(side);
         cy.get(ts("hero-inspect")).should(($view) => {
           const view = $view[0] as Element;
           expectOnScreen(view, `${side}'s inspect view`);
+          const menu = view.querySelector(ts(side === "you" ? "emote-menu" : "emote-mute-menu"));
+          expect(menu, `${side}'s menu in the view`).not.to.equal(null);
+          expectOnScreen(menu as Element, `${side}'s menu in the view`);
           const height = view.ownerDocument.documentElement.clientHeight;
           expect(view.getBoundingClientRect().bottom, `${side}'s inspect view's bottom edge`).to.be.at.most(
             height + EPSILON,

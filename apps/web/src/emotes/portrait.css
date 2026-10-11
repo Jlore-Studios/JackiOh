@@ -148,7 +148,7 @@
   to { background-position: -40% 0; opacity: 0; }
 }
 
-/* ---- the open button (R1330) ---------------------------------------------------------------- */
+/* ---- the open button (R1330, R1449) --------------------------------------------------------- */
 
 /* The portrait's art is a button laid over the oval, so a keyboard and a screen reader reach it.
    The hero's own `button` styling would otherwise draw it (board.css); each state is restated so
