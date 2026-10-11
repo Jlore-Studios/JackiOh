@@ -5704,14 +5704,18 @@
         {
           "at": "2026-10-11T16:53:24Z",
           "minutes": 7.0
+        },
+        {
+          "at": "2026-10-11T17:13:04Z",
+          "minutes": 4.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-11T21:00:00Z",
-          "utilization": 0.4
+          "utilization": 0.45
         },
-        "observed_at": "2026-10-11T16:53:24Z",
+        "observed_at": "2026-10-11T17:13:04Z",
         "status": "allowed"
       }
     },
