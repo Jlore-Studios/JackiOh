@@ -766,7 +766,8 @@ async fn start_bot_match(
         },
     };
     // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
-    // in the match, and nothing else reaps an `open` skeleton but the pool's sizing (R1448).
+    // in the match, and nothing else reaps an `open` skeleton but the sweeper's release of stale
+    // starts, `BOT_STALE_START_SECONDS` after the claim (R1448).
     let started = async {
         let bot_seat = if random {
             MatchSeat {
