@@ -30,6 +30,11 @@
 #      would be, must still serve render.yaml's version, warn naming the stale value, and leave the
 #      database stamped with render.yaml's version, never the stale one.
 #
+# REHEARSAL_DEPS_ONLY=1 stops after building the Dockerfile's `deps` stage (the image's
+# dependencies, `cargo chef cook`) with the cache flags below: no database, no image, no boot. CI
+# runs it as a job of its own before the rehearsal (#653), so a change to a manifest or Cargo.lock,
+# which recompiles every dependency, is paid there, and the rehearsal's own build finds them cached.
+#
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
 # The image is built and run with Docker either way.
@@ -88,7 +93,15 @@ fi
 echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
 
-echo "--- the image, built as Render builds it ---"
+# REHEARSAL_DEPS_ONLY (above) builds the `deps` stage alone, left in the build cache and written to
+# REHEARSAL_CACHE_TO, with no image to tag or load.
+if [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then
+  echo "--- the image's dependencies alone: the Dockerfile's deps stage, built as Render builds it ---"
+  set -- --target deps
+else
+  echo "--- the image, built as Render builds it ---"
+  set -- -t "$IMAGE"
+fi
 # REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
 # `--cache-from`/`--cache-to` syntax: CI's GitHub Actions cache, so an unchanged image is not compiled
 # again on every run. Same Dockerfile, same context, same image either way. Only a cache written
@@ -96,11 +109,16 @@ echo "--- the image, built as Render builds it ---"
 # cook`) among them, which a change to the sources alone reuses; `mode=min` keeps only the image's
 # own layers, so any change under crates/ compiles every dependency again.
 if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
-  set -- --cache-from "$REHEARSAL_CACHE_FROM"
+  set -- "$@" --cache-from "$REHEARSAL_CACHE_FROM"
   if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
-  docker buildx build --load "$@" -f "$REPO/$DOCKERFILE" -t "$IMAGE" "$REPO/$CONTEXT"
+  if [ -z "${REHEARSAL_DEPS_ONLY:-}" ]; then set -- "$@" --load; fi
+  docker buildx build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
 else
-  docker build -f "$REPO/$DOCKERFILE" -t "$IMAGE" "$REPO/$CONTEXT"
+  docker build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
+fi
+if [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then
+  echo "--- the deps stage is built and cached: the rehearsal proper builds the image on it ---"
+  exit 0
 fi
 
 docker network rm "$NETWORK" >/dev/null 2>&1 || true
