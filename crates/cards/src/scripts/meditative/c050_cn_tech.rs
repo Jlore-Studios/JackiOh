@@ -106,18 +106,27 @@ mod tests {
         #[test]
         fn r1100_only_cards_with_at_least_20_games_qualify() {
             // A perfect 19 games loses to a 50% rate over 20.
-            assert_eq!(picked(vec![("core-008", 19, 19), (LEADER, 10, 20)], "cn-tech-min"), LEADER);
+            assert_eq!(
+                picked(vec![("core-008", 19, 19), (LEADER, 10, 20)], "cn-tech-min"),
+                LEADER
+            );
         }
 
         #[test]
         fn r1100_the_best_exact_rate_wins() {
             // 21/40 beats 20/40 by one win: compared exactly, never as a rounded float.
-            assert_eq!(picked(vec![("core-008", 20, 40), (LEADER, 21, 40)], "cn-tech-rate"), LEADER);
+            assert_eq!(
+                picked(vec![("core-008", 20, 40), (LEADER, 21, 40)], "cn-tech-rate"),
+                LEADER
+            );
         }
 
         #[test]
         fn r1100_a_tie_goes_to_more_games_then_to_the_catalog_id() {
-            assert_eq!(picked(vec![("core-008", 10, 20), (LEADER, 20, 40)], "cn-tech-tie-games"), LEADER);
+            assert_eq!(
+                picked(vec![("core-008", 10, 20), (LEADER, 20, 40)], "cn-tech-tie-games"),
+                LEADER
+            );
             assert_eq!(
                 picked(vec![("core-008", 10, 20), ("core-002", 10, 20)], "cn-tech-tie-id"),
                 "core-002"
@@ -151,7 +160,10 @@ mod tests {
             let mut s = casting("cn-tech-same", false);
             let cursor = s.state().rng_cursor;
             s.play(TECH, json!({}));
-            assert!(s.state().rng_cursor > cursor, "the fallback drew from the match rng");
+            assert!(
+                s.state().rng_cursor > cursor,
+                "the fallback drew from the match rng"
+            );
         }
 
         #[test]

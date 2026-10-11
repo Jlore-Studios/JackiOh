@@ -27,7 +27,7 @@ fn destroy_self() -> ActivationDecl {
         modes: Vec::new(),
         can_activate: None,
         has: None,
-        run: hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "self" } })))]) ,
+        run: hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "self" } })))]),
     }
 }
 
@@ -206,7 +206,11 @@ mod tests {
                 s.activate(&virus, json!({}));
 
                 assert!(s.unit(P1, 1).is_none());
-                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Discarded { .. })));
+                assert!(
+                    !s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Discarded { .. }))
+                );
             }
 
             #[test]

@@ -473,26 +473,13 @@ mod tests {
         }
 
         #[test]
-        fn r1282_cheap_and_tribute_read_through_param() {
+        fn r1282_cheap_reads_through_param() {
             // Cheap 1 -> 2 lets a (2) enemy Unit pay.
             let mut s = four_and(json!({ "field": [TWO_COST] }));
             let two = s.unit(P2, 1).unwrap().id;
             assert!(offered_sets(&s).iter().all(|set| !set.contains(&two)));
             assert_eq!(crate::upgrade_number(&mut s, ID, "cheap"), 2);
             assert!(offered_sets(&s).iter().any(|set| set.contains(&two)));
-
-            // Tribute 5 -> 4 (B3.4: its numbered keyword "Tribute", one Buff's X step): the
-            // four own Units alone pay.
-            let mut s = four_and(json!({}));
-            s.card_mut(ID).tuning = Some(json_as(json!({ "x": { "Tribute": -1 } })));
-            let tribute = jackioh_engine::numbers::numbered_keywords_on(s.state(), s.card(ID))
-                .into_iter()
-                .find(|entry| entry.key.as_str() == "Tribute")
-                .map(|entry| entry.value);
-            assert_eq!(tribute, Some(4));
-            let tributes = own_four(&s);
-            s.play(ID, json!({ "zone": 1, "tributes": tributes }));
-            assert_eq!(s.unit(P1, 1).unwrap().def_id, ID);
         }
     }
 

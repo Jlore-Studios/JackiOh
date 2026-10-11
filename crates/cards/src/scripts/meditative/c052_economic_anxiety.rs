@@ -106,8 +106,14 @@ mod tests {
     /// The yellow on `attacker` in its controller's view (`conditionTargets`, R1121), empty for none.
     fn yellow(s: &Scenario, attacker: &str) -> Vec<String> {
         let view = s.view(P1);
-        let unit = view.you.units.iter().flatten().find(|unit| unit.instance_id == attacker);
-        unit.and_then(|unit| unit.condition_targets.clone()).unwrap_or_default()
+        let unit = view
+            .you
+            .units
+            .iter()
+            .flatten()
+            .find(|unit| unit.instance_id == attacker);
+        unit.and_then(|unit| unit.condition_targets.clone())
+            .unwrap_or_default()
     }
 
     /// The listed attack, as the engine layers it.
@@ -153,10 +159,9 @@ mod tests {
         let goliath = s.unit(P1, 1).unwrap().id;
         let victim = s.unit(P2, 1).unwrap().id;
         s.attack(&goliath, &victim);
-        eprintln!("DEBUG {:#?}", s.last_events());
         // 7 + 3 into a 4/4 Human: 6 tramples over to the hero, not 3.
         s.expect_in_zone(&victim, "graveyard");
-        s.expect_health(P2, 30 - 6);
+        assert_eq!(dealt(&s, &goliath, "hero-p2"), Some(6));
     }
 
     #[test]
@@ -235,9 +240,22 @@ mod tests {
         assert_eq!(yellow(&s, &scarab), vec![vanilla.clone(), big.clone()]);
         // Never on enemy Units, in either seat's view, on p1's turn.
         let theirs = s.view(P1);
-        assert!(theirs.opponent.units.iter().flatten().all(|unit| unit.condition_targets.is_none()));
+        assert!(
+            theirs
+                .opponent
+                .units
+                .iter()
+                .flatten()
+                .all(|unit| unit.condition_targets.is_none())
+        );
         let foe = s.view(P2);
-        assert!(foe.you.units.iter().flatten().all(|unit| unit.condition_targets.is_none()));
+        assert!(
+            foe.you
+                .units
+                .iter()
+                .flatten()
+                .all(|unit| unit.condition_targets.is_none())
+        );
         // Absent on the opponent's turn.
         s.end_turn();
         assert!(yellow(&s, &felinor).is_empty());

@@ -21,10 +21,7 @@ pub const ID: &str = "meditative-049-3";
 fn animated(ctx: &EffectContext) -> bool {
     matches!(
         ctx.live_self().map(|me| &me.zone),
-        Some(Zone::Field {
-            row: Row::Units,
-            ..
-        })
+        Some(Zone::Field { row: Row::Units, .. })
     )
 }
 
@@ -137,10 +134,11 @@ mod tests {
                 // Into its lane's unit zone: a Unit for every rule from then on.
                 let unit = s.unit(P1, 2).expect("animated");
                 assert_eq!(unit.def_id, GIRLFRIEND);
-                assert!(s.events().iter().any(|event| matches!(
-                    event,
-                    GameEvent::Animated { .. }
-                )));
+                assert!(
+                    s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Animated { .. }))
+                );
             }
 
             #[test]
@@ -187,7 +185,10 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 2 }));
-                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(GIRLFRIEND.to_string()));
+                assert_eq!(
+                    s.unit(P1, 1).map(|unit| unit.def_id),
+                    Some(GIRLFRIEND.to_string())
+                );
                 assert!(s.backrow(P1, 2).is_none());
             }
 
@@ -377,16 +378,12 @@ mod tests {
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
                 let girlfriend = s.unit(P1, 1).expect("animated");
-                step_param(s.card_mut(&girlfriend), "times", 1);
-                eprintln!(
-                    "DEBUG {:?} {:?}",
-                    s.card(&girlfriend).tuning,
-                    s.view(P1).you.units[0].as_ref().map(|unit| unit.params.clone())
-                );
+                // One step down: the Radiant face's 2 becomes 1.
+                step_param(s.card_mut(&girlfriend), "times", -1);
 
                 s.start_turn();
 
-                assert_eq!(nerfed(&s).len(), 3);
+                assert_eq!(nerfed(&s).len(), 1);
             }
 
             #[test]

@@ -653,12 +653,7 @@ pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
         .find(|decl| decl.kind == PromptKind::Tribute)
         .and_then(|decl| decl.amount);
     let flagged = crate::scripts::script_of(state, card).flags();
-    // B3.4 rule 3: a flagged "Tribute N" is a numbered keyword Degrade and Upgrade move
-    // (`tuning::FLAG_NUMBERED_KEYS`), so the price is the tuned N `numbers_on` shows.
-    let flagged = flagged
-        .tribute
-        .map(|n| crate::tuning::tuned_count(card, crate::numbers::NumberedKey::Tribute.as_str(), n));
-    declared.or(flagged).unwrap_or(0).max(0)
+    declared.or(flagged.tribute).unwrap_or(0).max(0)
 }
 
 pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {

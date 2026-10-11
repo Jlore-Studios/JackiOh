@@ -16,8 +16,8 @@
 //!   this one included.
 
 use jackioh_engine::effects::{
-    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board,
-    set_cost_mod, set_radiant_random, summon,
+    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board, set_cost_mod,
+    set_radiant_random, summon,
 };
 use jackioh_engine::prelude::*;
 
@@ -81,11 +81,7 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
             RandomEntry {
                 label: format!(
                     "Summon {} for your opponent",
-                    plural(
-                        viruses,
-                        "Radiant Yile's Virus",
-                        "Radiant Yile's Viruses"
-                    )
+                    plural(viruses, "Radiant Yile's Virus", "Radiant Yile's Viruses")
                 ),
                 effects: (0..viruses)
                     .map(|_| {
@@ -124,9 +120,7 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
 fn discount_for(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
     let (player, unspent) = match event {
         GameEvent::TurnEnded {
-            player,
-            unspent_mana,
-            ..
+            player, unspent_mana, ..
         } => (*player, *unspent_mana),
         _ => return vec![],
     };
@@ -414,7 +408,10 @@ mod tests {
             fn r1023_two_claudes_datacenters_into_your_backrow() {
                 let s = rolling("Datacenter", None);
                 assert_eq!(
-                    backrow_defs(&s, P1).iter().filter(|def| *def == DATACENTERS).count(),
+                    backrow_defs(&s, P1)
+                        .iter()
+                        .filter(|def| *def == DATACENTERS)
+                        .count(),
                     2
                 );
             }
@@ -422,8 +419,11 @@ mod tests {
             #[test]
             fn r1023_three_radiant_glitch_in_the_system_cards_at_0() {
                 let s = rolling("Glitch", None);
-                let glitches: Vec<CardInstance> =
-                    s.hand(P1).into_iter().filter(|card| card.def_id == GLITCH).collect();
+                let glitches: Vec<CardInstance> = s
+                    .hand(P1)
+                    .into_iter()
+                    .filter(|card| card.def_id == GLITCH)
+                    .collect();
                 assert_eq!(glitches.len(), 3);
                 for card in &glitches {
                     assert!(card.radiant);
@@ -617,10 +617,7 @@ mod tests {
                 assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
                 // … two Radiant Viruses for the opponent in place of the fill (MD-C24) …
                 let foe = field_defs(&s, P2);
-                assert_eq!(
-                    foe.iter().filter(|def| *def == VIRUS).count(),
-                    2
-                );
+                assert_eq!(foe.iter().filter(|def| *def == VIRUS).count(), 2);
                 for lane in 1..=5 {
                     if let Some(unit) = s.unit(P2, lane)
                         && unit.def_id == VIRUS

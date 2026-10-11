@@ -191,12 +191,19 @@ mod tests {
                 // The Fiender on top went in; the Big Felinor under it stays in its lane.
                 assert!(fused(&s));
                 s.expect_in_zone(top.id.as_str(), "gone");
-                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(BIG_FELINOR.to_string()));
+                assert_eq!(
+                    s.unit(P2, 1).map(|unit| unit.def_id),
+                    Some(BIG_FELINOR.to_string())
+                );
             }
 
             #[test]
             fn r23_never_an_immutable_enemy_permanent() {
-                let mut s = table("taotie-immutable-meal", json!([]), json!([{ "def": WALL, "lane": 1 }]));
+                let mut s = table(
+                    "taotie-immutable-meal",
+                    json!([]),
+                    json!([{ "def": WALL, "lane": 1 }]),
+                );
 
                 s.end_turn();
 
@@ -242,8 +249,15 @@ mod tests {
                 assert!(keywords.contains("Can't attack"), "{keywords}");
                 let tags = serde_json::to_value(&def.tags).expect("JSON");
                 assert!(tags.as_array().expect("tags").contains(&json!("CN")), "{tags}");
-                assert!(tags.as_array().expect("tags").contains(&json!("Felinor")), "{tags}");
-                assert!(def.base.text.contains("Fuse a random enemy permanent"), "{}", def.base.text);
+                assert!(
+                    tags.as_array().expect("tags").contains(&json!("Felinor")),
+                    "{tags}"
+                );
+                assert!(
+                    def.base.text.contains("Fuse a random enemy permanent"),
+                    "{}",
+                    def.base.text
+                );
                 assert!(def.base.text.contains("Steal the Unit"), "{}", def.base.text);
                 assert_eq!(def.cost, CardCost::Fixed(4));
                 // The meal ceased to exist with no Death: never destroyed, never in a graveyard.
@@ -314,7 +328,10 @@ mod tests {
                 s.end_turn(); // 饕餮 eats the Saintess: 10/10.
                 assert!(!s.card(&felinor).radiant);
                 s.card_mut(id.as_str()).damage = 7;
-                s.play(ECLIPSE, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
+                s.play(
+                    ECLIPSE,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
+                );
 
                 // 饕餮 died, and the Saintess's Death it carried made p1's other Unit Radiant.
                 s.expect_in_zone(id.as_str(), "graveyard");

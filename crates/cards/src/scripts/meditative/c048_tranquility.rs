@@ -17,10 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|_ctx| {
-                vec![
-                    end_turn(json_as(json!({}))),
-                    make_hero_immune(json_as(json!({}))),
-                ]
+                vec![end_turn(json_as(json!({}))), make_hero_immune(json_as(json!({})))]
             })),
             ..Script::default()
         },
@@ -171,7 +168,10 @@ mod tests {
                     "tranquility-effect",
                     json!({ "hand": [ECLIPSE, FILLER], "library": [FILLER, FILLER] }),
                 );
-                s.play(ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                s.play(
+                    ECLIPSE,
+                    json!({ "targets": [{ "pick": "hero", "player": "p1" }] }),
+                );
                 s.expect_health(P1, 30);
             }
 
@@ -185,7 +185,11 @@ mod tests {
 
                 // p1 draws from an empty library on p2's turn: the fatigue hit is 0.
                 let events = apply_as(&mut s, P1, &[draw(json_as(json!({ "count": 2 })))]);
-                assert!(events.iter().any(|event| matches!(event, GameEvent::Fatigue { .. })));
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Fatigue { .. }))
+                );
 
                 s.expect_health(P1, 30);
             }
@@ -223,7 +227,9 @@ mod tests {
                 apply_as(
                     &mut s,
                     P1,
-                    &[set_health(json_as(json!({ "to": { "of": "selfHero" }, "value": 10 })))],
+                    &[set_health(json_as(
+                        json!({ "to": { "of": "selfHero" }, "value": 10 }),
+                    ))],
                 );
                 s.expect_health(P1, 10);
             }
@@ -238,7 +244,9 @@ mod tests {
                 apply_as(
                     &mut s,
                     P2,
-                    &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))],
+                    &[damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                    ))],
                 );
                 s.expect_health(P1, 30);
                 // … and is gone as p1's next turn begins: a hit lands again.
@@ -247,7 +255,9 @@ mod tests {
                 apply_as(
                     &mut s,
                     P2,
-                    &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 5 })))],
+                    &[damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 5 }),
+                    ))],
                 );
                 s.expect_health(P1, 25);
             }
@@ -262,15 +272,19 @@ mod tests {
                 }));
 
                 // p1 casts it on p2's turn: there is no turn of p1's to end.
-                let events =
-                    apply_as(&mut s, P1, &[cast_new(json_as(json!({ "def": TRANQUILITY })))]);
+                let events = apply_as(&mut s, P1, &[cast_new(json_as(json!({ "def": TRANQUILITY })))]);
 
-                assert!(events.iter().any(|event| matches!(event, GameEvent::CardResolved { .. })));
+                assert!(
+                    events
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::CardResolved { .. }))
+                );
                 assert_eq!(s.state().active, P2);
-                assert!(!events.iter().any(|event| matches!(
-                    event,
-                    GameEvent::TurnEnded { .. }
-                )));
+                assert!(
+                    !events
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::TurnEnded { .. }))
+                );
                 // The immunity still applies.
                 assert_eq!(jackioh_engine::damage::hero_damage_cap(s.state(), P1), Some(0));
             }

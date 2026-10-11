@@ -158,7 +158,10 @@ mod tests {
                         let mut ctx = make_context(
                             &mut sink,
                             None,
-                            HookOptions { controller: Some(P1), ..HookOptions::default() },
+                            HookOptions {
+                                controller: Some(P1),
+                                ..HookOptions::default()
+                            },
                         );
                         apply_effects(&[cast_new(json_as(json!({ "def": BOT })))], &mut ctx);
                     }
@@ -175,7 +178,11 @@ mod tests {
                 let mut s = board("devin-locked", json!([]));
                 lock_zone(
                     s.state_mut(),
-                    ZoneSlot { player: P1, row: Row::Units, lane: 3 },
+                    ZoneSlot {
+                        player: P1,
+                        row: Row::Units,
+                        lane: 3,
+                    },
                 );
                 s.play(BOT, json!({ "zone": 1 }));
                 let lanes: Vec<i32> = units_of(&s, P1)
@@ -271,8 +278,7 @@ mod tests {
                     },
                 }));
                 s.play(BOT, json!({}));
-                let mut before: Vec<String> =
-                    units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
+                let mut before: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 before.sort();
                 assert_eq!(before.len(), 5);
                 // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill (no shield on
@@ -282,16 +288,14 @@ mod tests {
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
                 s.play(ECLIPSE, eclipse(&me));
-                let mut after: Vec<String> =
-                    units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
+                let mut after: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 after.sort();
                 assert_eq!(after.len(), 5);
                 let survivor: Vec<String> = before.into_iter().filter(|id| id != &me).collect();
                 for id in &survivor {
                     assert!(after.contains(id), "survivor {id} is still there");
                 }
-                let returned: Vec<String> =
-                    after.into_iter().filter(|id| !survivor.contains(id)).collect();
+                let returned: Vec<String> = after.into_iter().filter(|id| !survivor.contains(id)).collect();
                 assert_eq!(returned.len(), 1);
                 assert_eq!(s.card(returned[0].as_str()).def_id, BOT);
             }
