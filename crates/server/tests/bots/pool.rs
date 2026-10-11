@@ -11,10 +11,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, validate_deck};
 use jackioh_engine::wire::GameRecord;
+use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::now_ms;
 use jackioh_server::bots::pool::{
@@ -254,6 +256,73 @@ async fn r1448_decks_prefer_human_bo1_lists_legal() {
     // With no human list at all, every deck is the AI's, and still legal.
     let decks = draw_decks("decks-none", &[], &app.catalog);
     assert!((BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()));
+    assert!(decks.iter().all(|deck| queueable(&app.catalog, &deck.cards)));
+}
+
+/// Whether a player owning exactly `cards` could queue them for Best of 1: §9.4's validator, as the
+/// queue runs it.
+fn queueable(catalog: &Catalog, cards: &[String]) -> bool {
+    let mut owned: IndexMap<String, i32> = IndexMap::new();
+    for card in cards {
+        *owned.entry(card.clone()).or_insert(0) += 1;
+    }
+    validate_deck(&DeckInput {
+        deck: LoadoutDeck {
+            name: None,
+            cards: cards.to_vec(),
+        },
+        catalog: CatalogSnapshot {
+            version: catalog.version.clone(),
+            cards: catalog.defs.clone(),
+            banned: Some(catalog.banned.clone()),
+        },
+        collection: owned,
+    })
+    .ok
+}
+
+#[tokio::test]
+async fn r1448_decks_skip_a_list_no_player_could_queue() {
+    let app = empty_test_app().await;
+    let pool = playable();
+    let size = deck_size();
+    let legal: Vec<String> = pool[..size].to_vec();
+    // People's records can hold lists that no longer queue: one card short, one card past its copy
+    // limit, a card the catalog no longer has.
+    let short: Vec<String> = pool[size..size * 2 - 1].to_vec();
+    let over_copied: Vec<String> = vec![pool[size].clone(); size];
+    let mut unknown: Vec<String> = pool[size * 2..size * 3 - 1].to_vec();
+    unknown.push("no-such-card".to_string());
+    let illegal = [short, over_copied, unknown];
+    for cards in &illegal {
+        assert!(!queueable(&app.catalog, cards), "{cards:?} queues");
+    }
+    let patch = app.catalog.version.clone();
+    let mut records: Vec<GameRecord> = illegal
+        .iter()
+        .enumerate()
+        .map(|(i, cards)| record(&format!("live-bad-{i}"), "live", "bo1", "human", cards, &patch))
+        .collect();
+    records.push(record("live-good", "live", "bo1", "human", &legal, &patch));
+
+    for k in 0..10 {
+        let decks = draw_decks(&format!("decks-legal-{k}"), &records, &app.catalog);
+        assert!(
+            (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
+            "{} decks",
+            decks.len()
+        );
+        // The one legal human list is dealt; none of the others ever is, and every deck queues.
+        assert!(decks.iter().any(|deck| deck.cards == legal), "seed {k}");
+        for deck in &decks {
+            assert!(!illegal.contains(&deck.cards), "seed {k} dealt {:?}", deck.cards);
+            assert!(
+                queueable(&app.catalog, &deck.cards),
+                "seed {k} dealt {:?}",
+                deck.cards
+            );
+        }
+    }
 }
 
 #[tokio::test(start_paused = true)]

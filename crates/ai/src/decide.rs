@@ -5,7 +5,8 @@
 //!   3. the mulligan keeps the cheap cards.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, R1446).
+//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, and
+//!      then step 6 keeps off every line that wins this turn, R1446).
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
 //!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
 //!      and the best mean wins (a style with a temperature picks among them, R1446).
@@ -132,6 +133,31 @@ fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
     style.missed_lethal_chance > 0.0 && rng.chance(style.missed_lethal_chance)
 }
 
+/// R1446: the beam's lines a decision that passed over lethal may still play. The beam scores a won
+/// game far above anything else, so left alone it would find the same lethal the solver did; a
+/// missed lethal keeps off every line that wins on the determinization it was searched on and every
+/// line that opens with the solver's first lethal action. When that leaves nothing, every line.
+fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: PlayerId) -> Vec<Line> {
+    let lethal_key = action_key(first_lethal);
+    let kept: Vec<Line> = found
+        .iter()
+        .filter(|line| {
+            let wins = line
+                .end
+                .result
+                .as_ref()
+                .is_some_and(|result| result.winner.player() == Some(seat));
+            let opens_lethal = line
+                .actions
+                .first()
+                .is_some_and(|action| action_key(action) == lethal_key);
+            !wins && !opens_lethal
+        })
+        .cloned()
+        .collect();
+    if kept.is_empty() { found } else { kept }
+}
+
 /// R1446: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
 /// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
 /// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
@@ -233,18 +259,22 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal, verified on every determinization, unless the style passes over it (R1446).
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1446): then
+    // the search below plays on as if it had not seen it, kept off every line that wins this turn.
+    let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
-        && !passes_over_lethal(style, rng)
     {
-        return Plan::Searched {
-            action: first_lethal,
-            reason: DecisionReason::Lethal,
-            line: lethal,
-            score: AI_EVAL.win - f64::from(public.turn),
-            stopped_by: None,
-        };
+        if !passes_over_lethal(style, rng) {
+            return Plan::Searched {
+                action: first_lethal,
+                reason: DecisionReason::Lethal,
+                line: lethal,
+                score: AI_EVAL.win - f64::from(public.turn),
+                stopped_by: None,
+            };
+        }
+        passed_over = Some(first_lethal);
     }
 
     // 6. The beam on determinization 0, keeping enough nodes back to score the finalists after the
@@ -289,6 +319,11 @@ fn plan(
             stopped_by: Some(stopped_by),
         };
     }
+
+    let found = match &passed_over {
+        Some(first_lethal) => lines_missing_lethal(found, first_lethal, seat),
+        None => found,
+    };
 
     // Only a line's first action is ever played. The best lines (at most AI_SEARCH.linesPerAction
     // for any one first action) are scored after the opponent's reply on determinization 0; each

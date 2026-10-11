@@ -329,6 +329,23 @@ async fn r1447_the_closest_free_scheduled_bot_pairs() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn r1447_the_player_is_player_1_as_the_older_ticket_is() {
+    // Between two people the older ticket is p1 and goes first; a ticket past its fallback time is
+    // older than anyone who would come to pair with it, so a bot match seats the person p1 every time.
+    // A coin for the seats would put the person second about half of these.
+    let app = app_with_bots(true).await;
+    for round in 0..8 {
+        let (person, _) = new_person(&app, 1000.0).await;
+        let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+        let mode = if round % 2 == 0 { "bo1" } else { "random" };
+        ticket(&app, &person, 1000.0, past_any_fallback(), mode).await;
+        assert_eq!(try_pair(&app).await.expect("a sweep"), 1, "round {round}");
+        let row = fake(&app).await.tables.matches.last().cloned().expect("a match");
+        assert_eq!(row.players, (person, bot), "round {round} ({mode})");
+    }
+}
+
+#[tokio::test(start_paused = true)]
 async fn r1447_a_human_inside_the_window_pairs_first() {
     let app = app_with_bots(true).await;
     let (a, _) = new_person(&app, 1000.0).await;

@@ -250,8 +250,8 @@ which this process plays itself. Off, none of it runs: no bot is seated and the 
   rating; none for a player rated above every bot). The
   queue's sweep (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a
   ticket and its bot in one statement (`tickets_claim_for_bot`, single-shot like a pair's claim)
-  and starts the match, ranked, the bot's seat a coin from the seed (R1447); a start that fails
-  lets both go. Conquest never gets one.
+  and starts the match, ranked, the person p1 and first to act as the older ticket of a pair is
+  (R1447); a start that fails lets both go. Conquest never gets one.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
   budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its

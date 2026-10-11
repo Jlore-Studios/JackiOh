@@ -9,7 +9,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::testkit::{GameState, PLAYER_IDS, create_rng, json};
 
-use super::support::{AI, random_policy_states, register_cards, scenario};
+use super::support::{AI, act, random_policy_states, register_cards, scenario};
 
 /// p1 (the AI) on turn 9 with Pointmaster 7/1 ready on the field; p2 at 5 health, no Taunt.
 fn lethal_on_board() -> GameState {
@@ -100,15 +100,22 @@ fn r1446_missed_lethal_one_passes_over_the_solver() {
         .expect("the AI owes an action");
     assert_eq!(exact.reason, DecisionReason::Lethal);
 
-    let blind = AiStyle {
-        temperature: 0.0,
-        missed_lethal_chance: 1.0,
-    };
-    let mut options = AiOptions::with_budget(create_rng("style-lethal:ai", 0), AI_BUDGET);
-    let missed = decide_styled(&state, AI, &mut options, &blind).expect("the AI owes an action");
-    assert_ne!(missed.reason, DecisionReason::Lethal);
-    // The pass took one draw beyond the determinizations `decide` takes.
     let mut plain = AiOptions::new(create_rng("style-lethal:ai", 0));
     decide(&state, AI, &mut plain);
-    assert!(options.rng.cursor() > plain.rng.cursor());
+    for temperature in [0.0, 3.0] {
+        let blind = AiStyle {
+            temperature,
+            missed_lethal_chance: 1.0,
+        };
+        let mut options = AiOptions::with_budget(create_rng("style-lethal:ai", 0), AI_BUDGET);
+        let missed = decide_styled(&state, AI, &mut options, &blind).expect("the AI owes an action");
+        assert_ne!(missed.reason, DecisionReason::Lethal, "{temperature}");
+        // The search plays on as if it had not seen the lethal: not the solver's attack, and not a
+        // move that wins the game some other way.
+        assert_ne!(missed.action, exact.action, "{temperature}");
+        let after = act(&state, AI, &missed.action);
+        assert!(after.result.is_none(), "{temperature}: {:?} won", missed.action);
+        // The pass took one draw beyond the determinizations `decide` takes.
+        assert!(options.rng.cursor() > plain.rng.cursor(), "{temperature}");
+    }
 }

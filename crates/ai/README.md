@@ -51,7 +51,9 @@ lines one turn deeper after the opponent's reply (`reply.rs`) on every determini
 first action of the best mean. It re-plans after every action.
 
 `decide_styled` is `decide` under an `AiStyle` (R1446), the server's ladder bots' strength knob beside
-their budget: a `missed_lethal_chance` to pass over the lethal line the solver found, and a softmax
+their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
+keeps off every line that wins this turn, `lines_missing_lethal`, or it would find the same lethal),
+and a softmax
 `temperature`, in evaluation points, over the finalists' means (`pick_finalist`) instead of always the
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.

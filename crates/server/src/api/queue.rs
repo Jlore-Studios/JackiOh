@@ -732,8 +732,9 @@ async fn pair_with_bots(
 }
 
 /// R1447: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
-/// pair's. The seed is the server's (or R143's end-to-end one); the bot's seat is a coin from it
-/// (`{seed}:bot-seat`), so it goes first as often as a person would. Best of 1 plays the ticket's
+/// pair's. The seed is the server's (or R143's end-to-end one). The person is always p1 and goes
+/// first, the bot p2: between two people the older ticket is p1 (`start_paired_match`), and a ticket
+/// past its fallback time is older than anyone who would have come to pair with it. Best of 1 plays the ticket's
 /// frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`), with its
 /// portrait; All Random deals both seats as for two people (R258, R642), the bot's with no lean.
 /// The match is ranked (R604): a ticket the queue paired, whoever it was paired with.
@@ -744,12 +745,7 @@ async fn start_bot_match(
     match_id: &str,
 ) -> Result<(), ApiError> {
     let seed = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
-    let bot_first = jackioh_engine::Rng::new(&format!("{seed}:bot-seat"), 0).coin();
-    let (human_player, bot_player) = if bot_first {
-        (jackioh_engine::PlayerId::P2, jackioh_engine::PlayerId::P1)
-    } else {
-        (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2)
-    };
+    let (human_player, bot_player) = (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2);
     let random = ticket.mode == QueueMode::Random;
     let human = MatchSeat {
         profile_id: ticket.profile_id.clone(),
@@ -788,11 +784,7 @@ async fn start_bot_match(
                 portrait: Some(picked.portrait),
             }
         };
-        let seats = if bot_first {
-            (bot_seat, human)
-        } else {
-            (human, bot_seat)
-        };
+        let seats = (human, bot_seat);
 
         // §9.5's in-match state for the player; `tickets_claim_for_bot` put the bot in the match.
         let mut tx = app
