@@ -4792,6 +4792,8 @@
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-10-11T20:39:10Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38173494058",
       "self_check_findings": [],
       "started_at": "2026-10-11T20:45:29Z",
