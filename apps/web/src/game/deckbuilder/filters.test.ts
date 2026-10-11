@@ -616,8 +616,13 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+"]);
-    expect(FILTER_SETS.map(filterSetId)).toEqual(["db-filter-set-core", "db-filter-set-classic", "db-filter-set-classic-plus"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative"]);
+    expect(FILTER_SETS.map(filterSetId)).toEqual([
+      "db-filter-set-core",
+      "db-filter-set-classic",
+      "db-filter-set-classic-plus",
+      "db-filter-set-meditative",
+    ]);
   });
 
   it("a set chip keeps that set's cards and nothing else, and two chips keep both sets", () => {
@@ -634,7 +639,8 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(new Set(plus.map(setOf))).toEqual(new Set(["Classic+"]));
     expect(pool(["Core"])).toHaveLength(deckableIn(["Core"]));
     expect(pool(["Core", "Classic"])).toHaveLength(deckableIn(["Core", "Classic"]));
-    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+"]));
+    expect(pool(["Meditative"])).toHaveLength(deckableIn(["Meditative"]));
+    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative"]));
   });
 });
 

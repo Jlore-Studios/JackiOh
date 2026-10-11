@@ -6,6 +6,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
+import type { CardDefs } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { createGame, previewSets } from "../wasm/index.ts";
@@ -19,28 +20,44 @@ const MEDITATIVE = deckable("Meditative").slice(0, DECK_SIZE);
 const CORE = deckable("Core").slice(0, DECK_SIZE);
 const SIZES: readonly [number, number] = [DECK_SIZE, DECK_SIZE];
 
+/**
+ * Since v0.3.5 the catalog holds no set that has not shipped (the Meditative set shipped, R1420), so
+ * the readable pre-check's preview is proven on a fixture: Core's first cards copied into the reserved
+ * Boss set, which `SHIPPED_SETS` does not list, and a Boss token beside them.
+ */
+const BOSS_CATALOG: CardDefs = {
+  ...CATALOG,
+  ...Object.fromEntries(
+    CORE.map((id, at) => {
+      const boss = `boss-${String(at + 1).padStart(3, "0")}`;
+      return [boss, { ...CATALOG[id], id: boss, index: String(at + 1), set: "Boss" }];
+    }),
+  ),
+  "boss-t-1": { ...CATALOG[CORE[0] ?? ""], id: "boss-t-1", index: "1.1", set: "Boss", token: true },
+} as CardDefs;
+const BOSS = CORE.map((_, at) => `boss-${String(at + 1).padStart(3, "0")}`);
+
 describe("R1400 R1420's preview in the browser's development module", () => {
-  it("R1400 the premise: the catalog holds a deck's worth of a set that has not shipped", () => {
+  it("R1400 the premise: the Meditative set ships since v0.3.5, so its deck needs no preview", () => {
     expect(MEDITATIVE).toHaveLength(DECK_SIZE);
     expect(CORE).toHaveLength(DECK_SIZE);
+    expect(resolveDecks("a", "b", CATALOG, { a: MEDITATIVE, b: CORE })).toEqual({ decks: [MEDITATIVE, CORE] });
   });
 
   it("R1400 the hotseat's readable pre-check refuses an unshipped set's card until the set is previewed, and a token always", () => {
-    const decks = { a: MEDITATIVE, b: CORE };
-    expect(resolveDecks("a", "b", CATALOG, decks)).toEqual({ error: expect.stringContaining("has not shipped yet") });
-    expect(resolveDecks("a", "b", CATALOG, decks, SIZES, ["Meditative"])).toEqual({ decks: [MEDITATIVE, CORE] });
-    const token = DEFS.find((def) => def.set === "Meditative" && def.token)?.id ?? "";
-    expect(token).not.toBe("");
-    expect(resolveDecks("a", "b", CATALOG, { a: [...MEDITATIVE.slice(1), token], b: CORE }, SIZES, ["Meditative"])).toEqual({
+    const decks = { a: BOSS, b: CORE };
+    expect(resolveDecks("a", "b", BOSS_CATALOG, decks)).toEqual({ error: expect.stringContaining("has not shipped yet") });
+    expect(resolveDecks("a", "b", BOSS_CATALOG, decks, SIZES, ["Boss"])).toEqual({ decks: [BOSS, CORE] });
+    expect(resolveDecks("a", "b", BOSS_CATALOG, { a: [...BOSS.slice(1), "boss-t-1"], b: CORE }, SIZES, ["Boss"])).toEqual({
       error: expect.stringContaining("Token"),
     });
   });
 
-  it("R1400 the engine refuses such a deck until the module previews the set, and creates the game after", () => {
+  it("R1400 the engine creates a game of the shipped Meditative set with or without a preview", () => {
     const args = { seed: "r1400", decks: [MEDITATIVE, CORE] as const };
-    expect(() => createGame(args)).toThrow();
+    expect(createGame(args)).toEqual(expect.objectContaining({ seed: "r1400" }));
     previewSets([]);
-    expect(() => createGame(args)).toThrow();
+    expect(createGame(args)).toEqual(expect.objectContaining({ seed: "r1400" }));
     previewSets(["Meditative"]);
     expect(createGame(args)).toEqual(expect.objectContaining({ seed: "r1400" }));
   });
