@@ -1678,14 +1678,19 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r29_ranks_every_non_token_core_card_except_97_and_offers_the_top_three() {
+    fn r29_ranks_every_non_token_card_of_the_shipped_sets_except_97_and_offers_the_top_three() {
         let state = game("r29");
         let pool = candidate_defs();
 
         assert!(pool.len() > 3);
-        assert!(!pool.iter().any(|def| def.index == ZEPHYRS_INDEX));
+        assert!(
+            !pool
+                .iter()
+                .any(|def| def.set == SetName::Core && def.index == ZEPHYRS_INDEX)
+        );
         assert!(!pool.iter().any(|def| def.token || def.tags.contains(&Tag::Token)));
-        assert!(pool.iter().all(|def| def.set == SetName::Core));
+        // R1446: the pool names no set, so it is every set that ships.
+        assert!(pool.iter().all(|def| SHIPPED_SETS.contains(&def.set)));
 
         let ranked = rank(&state, P1, &ScorerOptions::default());
         assert_eq!(ranked.len(), pool.len());

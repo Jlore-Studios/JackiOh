@@ -2,10 +2,12 @@
 //!
 //! The Zephyrs scorer (SPEC §10.7's scorer bullet, R29, §8 #97; BUILD M3-T7).
 //!
-//! The candidate pool is pinned: this file registers its own small Core catalog, so every ranking
-//! below is a statement about a fixed state and a fixed pool, never about the weights' values
-//! (§10.7: "the weights are engine constants, tested against fixed states"). Tuning SCORER_WEIGHTS
-//! without changing the order of the priorities must leave this file green.
+//! The candidate pool is pinned: this file registers its own small catalog (Core, but for the cards a
+//! test adds from the other sets and one of a set that does not ship), so every ranking below is a
+//! statement about a fixed state and a fixed pool, never about the weights' values (§10.7: "the
+//! weights are engine constants, tested against fixed states"). Tuning SCORER_WEIGHTS without changing
+//! the order of the priorities must leave this file green. The pool is every set that ships (R1446),
+//! and no test lists those sets: each reads `SHIPPED_SETS`.
 
 use std::cmp::Ordering;
 
@@ -173,12 +175,12 @@ fn token() -> CardDef {
         json!({ "index": "T-scorer", "cost": 1, "attack": 9, "health": 9, "token": true }),
     )
 }
-/// R29: Core only.
-const OFF_SET: &str = "sco-off-set";
-fn off_set() -> CardDef {
+/// R1420, R1446: a card of a set that does not ship, better than anything above.
+const UNSHIPPED: &str = "sco-unshipped";
+fn unshipped() -> CardDef {
     def(
-        "off-set",
-        json!({ "index": "1", "cost": 1, "attack": 9, "health": 9, "set": "Classic" }),
+        "unshipped",
+        json!({ "index": "1", "cost": 1, "attack": 9, "health": 9, "set": SetName::Boss.as_str() }),
     )
 }
 
@@ -208,7 +210,7 @@ fn pool() -> Vec<CardDef> {
 
 fn defs() -> Vec<CardDef> {
     let mut defs = pool();
-    defs.extend([zephyrs(), token(), off_set()]);
+    defs.extend([zephyrs(), token(), unshipped()]);
     defs
 }
 
@@ -223,6 +225,22 @@ fn game(seed: &str, extra: &[CardDef]) -> GameState {
     state.turn = 3;
     state.active = P1;
     state
+}
+
+/// R1446: one 1/1 for 1 of each set that ships, all at index 7, read off `SHIPPED_SETS` so no test
+/// lists the sets. Their ids run against the catalog order (the last set's card has the lowest id), so
+/// only the id can be what orders them.
+fn one_of_each_shipped_set() -> Vec<CardDef> {
+    SHIPPED_SETS
+        .iter()
+        .enumerate()
+        .map(|(n, set)| {
+            def(
+                &format!("shipped-{}", SHIPPED_SETS.len() - 1 - n),
+                json!({ "index": "7", "set": set.as_str(), "attack": 1, "health": 1 }),
+            )
+        })
+        .collect()
 }
 
 fn ids(scored: &[Scored]) -> Vec<String> {
@@ -247,7 +265,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
     use super::*;
 
     #[test]
-    fn r29_ranks_every_non_token_core_definition_except_97_itself() {
+    fn r29_r1446_ranks_every_non_token_card_of_a_shipped_set_except_97_itself() {
         let state = game("scorer-pool", &[]);
 
         let mut candidates: Vec<String> = candidate_defs().iter().map(|entry| entry.id.clone()).collect();
@@ -259,7 +277,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert_eq!(ranked.len(), pool().len());
         assert!(!ids(&ranked).contains(&ZEPHYRS.to_string()));
         assert!(!ids(&ranked).contains(&TOKEN.to_string()));
-        assert!(!ids(&ranked).contains(&OFF_SET.to_string()));
+        assert!(!ids(&ranked).contains(&UNSHIPPED.to_string()));
     }
 
     #[test]
@@ -438,5 +456,129 @@ mod the_zephyrs_scorer_r29_m3_t7 {
             ids(&top_three(&state, P1, &radiant_picks())),
             vec![SLEEPER, BIG_BODY, CHARGER]
         );
+    }
+}
+
+mod r1446_the_perfect_pool {
+    use super::*;
+
+    #[test]
+    fn r1446_the_pool_is_every_non_token_card_of_every_set_that_ships_but_97() {
+        let extra = one_of_each_shipped_set();
+        let state = game("scorer-shipped-pool", &extra);
+
+        let mut candidates: Vec<String> = candidate_defs().iter().map(|entry| entry.id.clone()).collect();
+        candidates.sort();
+        let mut expected: Vec<String> = defs()
+            .into_iter()
+            .chain(extra.iter().cloned())
+            .filter(|entry| !entry.token && SHIPPED_SETS.contains(&entry.set) && entry.id != ZEPHYRS)
+            .map(|entry| entry.id)
+            .collect();
+        expected.sort();
+        assert_eq!(candidates, expected);
+        for set in SHIPPED_SETS {
+            assert!(
+                candidate_defs().iter().any(|entry| entry.set == set),
+                "{set} is in the pool"
+            );
+        }
+        assert!(!candidates.contains(&UNSHIPPED.to_string()));
+        assert_eq!(rank(&state, P1, &no_options()).len(), expected.len());
+    }
+
+    #[test]
+    fn r1446_a_set_that_has_not_shipped_joins_the_pool_under_preview_and_only_then() {
+        let state = game("scorer-preview", &[]);
+        let in_pool = || candidate_defs().iter().any(|entry| entry.id == UNSHIPPED);
+
+        assert!(!in_pool());
+        {
+            let _preview = preview_sets(&[SetName::Boss]);
+            assert!(in_pool());
+            // A 9/9 for 1 is the best stats per mana in the pool, so it ranks first once it is in.
+            assert_eq!(rank(&state, P1, &no_options())[0].def.id, UNSHIPPED);
+        }
+        assert!(!in_pool());
+        assert!(!ids(&rank(&state, P1, &no_options())).contains(&UNSHIPPED.to_string()));
+    }
+
+    #[test]
+    fn r1446_a_card_from_outside_core_ranks_first_when_only_it_enables_lethal() {
+        // A 5/1 Charge for 1 of the Classic set. p2 is at 5 with no board on either side: the Core 4/4
+        // Charge body falls 1 short, the 5-cost one is out of reach of 4 mana, so only this card is lethal.
+        const CLASSIC_CHARGER: &str = "sco-classic-charger";
+        let classic_charger = def(
+            "classic-charger",
+            json!({ "index": "10", "set": "Classic", "cost": 1, "attack": 5, "health": 1, "keywords": [{ "kind": "Charge" }] }),
+        );
+        let mut state = game("scorer-classic-lethal", &[classic_charger]);
+        state.players.p2.hero.health = 5;
+        state.players.p1.mana.current = 4;
+
+        let ranked = rank(&state, P1, &no_options());
+        assert_eq!(ranked[0].def.id, CLASSIC_CHARGER);
+        assert_eq!(ranked[0].def.set, SetName::Classic);
+        assert_eq!(ranked[0].priority, ScorePriority::Lethal);
+        let lethal: Vec<String> = ranked
+            .iter()
+            .filter(|entry| entry.priority == ScorePriority::Lethal)
+            .map(|entry| entry.def.id.clone())
+            .collect();
+        assert_eq!(lethal, vec![CLASSIC_CHARGER.to_string()]);
+        assert_eq!(top_three(&state, P1, &no_options())[0].def.id, CLASSIC_CHARGER);
+    }
+
+    #[test]
+    fn r1446_radiant_picks_score_the_radiant_face_of_a_card_of_any_shipped_set() {
+        // A Classic+ 0/1 whose Radiant face is a 40/40: low on the base face, first on radiant picks,
+        // ahead of the Core sleeper's 20/20.
+        const PLUS_SLEEPER: &str = "sco-plus-sleeper";
+        let plus_sleeper = def(
+            "plus-sleeper",
+            json!({ "index": "86", "set": "Classic+", "cost": 1, "attack": 0, "health": 1, "radiant": { "attack": 40, "health": 40 } }),
+        );
+        let state = game("scorer-plus-radiant", &[plus_sleeper]);
+
+        let base = ids(&rank(&state, P1, &no_options()));
+        assert_eq!(base[0], BIG_BODY);
+        assert!(index_of(&base, PLUS_SLEEPER) > 2);
+        let radiant = rank(&state, P1, &radiant_picks());
+        assert_eq!(radiant[0].def.id, PLUS_SLEEPER);
+        assert_eq!(radiant[0].def.set, SetName::ClassicPlus);
+        assert_eq!(
+            ids(&top_three(&state, P1, &radiant_picks())),
+            vec![PLUS_SLEEPER, SLEEPER, BIG_BODY]
+        );
+    }
+
+    #[test]
+    fn r1446_an_index_repeated_across_sets_is_settled_by_the_id() {
+        let extra = one_of_each_shipped_set();
+        let state = game("scorer-repeated-index", &extra);
+        let ranked = rank(&state, P1, &no_options());
+
+        let shipped: Vec<&Scored> = ranked
+            .iter()
+            .filter(|entry| entry.def.id.starts_with("sco-shipped-"))
+            .collect();
+        assert_eq!(shipped.len(), SHIPPED_SETS.len());
+        // One score and one index for all of them, so §5's index cannot order them.
+        assert!(
+            shipped
+                .iter()
+                .all(|entry| entry.score == shipped[0].score && entry.def.index == "7")
+        );
+        let order: Vec<String> = shipped.iter().map(|entry| entry.def.id.clone()).collect();
+        let mut by_id = order.clone();
+        by_id.sort();
+        assert_eq!(order, by_id);
+        // …and the catalog handed them over in the other order (set by set), so it is not the query's.
+        let handed: Vec<String> = candidate_defs()
+            .iter()
+            .filter(|entry| entry.id.starts_with("sco-shipped-"))
+            .map(|entry| entry.id.clone())
+            .collect();
+        assert_ne!(handed, by_id);
     }
 }

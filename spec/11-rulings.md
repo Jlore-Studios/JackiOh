@@ -225,4 +225,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R1445]] is a granted ability's quotation (the Meditative integration's house-style pass, 2026-10-11)**: [[R366]]'s labelled abilities that start their line are the card's own, and an ability a card grants another, Meditative #58's and #59's granted Deaths ([[R1107]]), is quoted inside the sentence that grants it, in double quotes, as #38 and C+ #14 quote theirs. It takes the next number after [[R1442]], R1439 being held for MD-G3. It edits nothing in the sections: [[§8]]'s cells are shorthand, and the catalog prints the quotation.
 
+**[[R1446]] is the perfect cards' pool (issue #577, patch v0.3.6, 2026-10-11)**: #97 Zephyrs and C+ #27 Zephrys Zealotism draw on every non-token card of every set that ships but their own, the designer's decision in the issue against the source notes' set limits, so a set joins both the day it ships. It takes the next number after [[R1445]]. It edits [[§5]], [[§8]], [[§10.7]], [[R29]], [[R380]], [[R387]] and [[R416]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.
