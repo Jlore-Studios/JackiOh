@@ -7977,5 +7977,694 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.5",
+    "date": "2026-10-11",
+    "title": "Patch v0.3.5: Meditative, the release: the set ships",
+    "source": "issue #496, issue #553, issue #575, PR #652",
+    "notes": "The Meditative set ships (R1420): its 102 cards and 30 tokens join every pool that names no set, the deck builder, the Almanac and random decks, and the AI's random decks keep the soft gate (R1390) until the AI is trained on them. The set's own mechanics are R800 to R1445's blocks. Core #95's and Classic+ #73's refs name Meditative #95, the Call to Chaos edition their texts name (R1249); no other card of an earlier set changes.",
+    "commits": [
+      "35eee095ae69d549bb10dd2e67e5ca1e3a9b7943"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "classicplus-073",
+        "name": "Call to Chaos (Classic+ Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "meditative-001",
+        "name": "Disruptive Disruptor",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-002",
+        "name": "Rampaging Rhino",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-003",
+        "name": "Jlockwork Machine",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-004",
+        "name": "Juicy Kumquat Melon",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-005",
+        "name": "Death by 1000 cuts",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-006",
+        "name": "Me no Likey",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-008",
+        "name": "Reach the Summit",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-009",
+        "name": "Joint Filing",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-010",
+        "name": "Double Counting",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-011",
+        "name": "Double Header",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-012",
+        "name": "Fear Mongerer",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-013",
+        "name": "Gatling Pea",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-014",
+        "name": "Prime Time",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-015",
+        "name": "Smelly Steven",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-016",
+        "name": "Trenful Trickster",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-017",
+        "name": "True Craft a Card",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-018",
+        "name": "Expedition12",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-019",
+        "name": "Expedition1234",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-019-1",
+        "name": "Temporal Rift",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-020",
+        "name": "Aestheticize the Game",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-021",
+        "name": "API Key Fishing",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-022",
+        "name": "Mind Games",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-022-1",
+        "name": "Fortify Mind",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-023",
+        "name": "Golly Bob Howdy",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-024",
+        "name": "Polymorph",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-025",
+        "name": "Blue-Eyes White Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-026",
+        "name": "Alternate Fate",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-027",
+        "name": "Clip-Farming Lawyer",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-028",
+        "name": "Shade-iris",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-028-1",
+        "name": "Ancient Curse",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-029",
+        "name": "Forbiddenous Factory",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-030",
+        "name": "Fickle E-Kitten",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-030-1",
+        "name": "Love Bomb",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-031",
+        "name": "The Conductor",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-033",
+        "name": "First Day of 学校",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-034",
+        "name": "高考",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-035",
+        "name": "RCTA (CN)",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-036",
+        "name": "CN Peptides",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-037",
+        "name": "CN in a bottle",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-038",
+        "name": "H1B Printer",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039",
+        "name": "赌石 Addict",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039-1",
+        "name": "Auspicious Rock",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039-2",
+        "name": "Jade",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039-3",
+        "name": "Dud",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039-4",
+        "name": "Red Jade",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-039-5",
+        "name": "Jade Beauty",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-041",
+        "name": "CN Smuggler",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-042",
+        "name": "CN Flea Market",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-043",
+        "name": "CN Jade Market",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-044",
+        "name": "CN Jade Well",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-045-1",
+        "name": "Knowledge Breaker Prime",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-046",
+        "name": "Conjure Intellect",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-047",
+        "name": "饕餮",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-048",
+        "name": "Tranquility",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-049",
+        "name": "YileGPT Tamed",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Unleashed",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-049-2",
+        "name": "Yile's Virus",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-049-3",
+        "name": "AI Girlfriend",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-050",
+        "name": "CN Tech",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-051",
+        "name": "Devin Bot",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-052",
+        "name": "Economic Anxiety",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-053",
+        "name": "Prestige",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-054",
+        "name": "Money Machine",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-055",
+        "name": "Dragon Fruit",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-056",
+        "name": "House Party",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-057",
+        "name": "Clip-Farming Critikal",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-058",
+        "name": "Permanent Underclassman",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-059",
+        "name": "Permanent Upperclassman",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-060",
+        "name": "Eschews",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-061",
+        "name": "Joon Jorker",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-062",
+        "name": "Small Time Recruits",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-063",
+        "name": "Skull of J'Nari",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-064",
+        "name": "Traitorous Blood",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-065",
+        "name": "Keymaster Keenus",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-066",
+        "name": "Fiery Waraxe",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-067",
+        "name": "Sentient Cat Ears",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-068",
+        "name": "Catnip",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-069",
+        "name": "The Maestro",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-070",
+        "name": "I'M WILL BE YOUR DOOM",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-070-1",
+        "name": "Ready… I'm",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-071",
+        "name": "Pareto Optimality",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-071-1",
+        "name": "The Cane",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-072",
+        "name": "The Banisher",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-073",
+        "name": "Plate Packer",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-074",
+        "name": "Montaña Giant",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-075",
+        "name": "Ever Growing Tree",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-076",
+        "name": "Do or Die",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-077",
+        "name": "Bulk Booster",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-078",
+        "name": "Occidentless Mandate",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-079",
+        "name": "Touched by KY",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-080",
+        "name": "Aluneth",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-081",
+        "name": "Deadman's Hand",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-082",
+        "name": "Medina Outfitter",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-083",
+        "name": "Medina Enforcer",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-084",
+        "name": "Volatility",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-085",
+        "name": "Playtester",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-086",
+        "name": "Mayor Medinamogger",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-088",
+        "name": "The True Sheep",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-089",
+        "name": "Jlarna",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-090",
+        "name": "Spell Basket",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-091",
+        "name": "Windfast",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-091-1",
+        "name": "Windfurious Prime",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-092",
+        "name": "Unan",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-093",
+        "name": "Growing Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-093-1",
+        "name": "Growing Felinor Sr",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-093-2",
+        "name": "Growing Felinor Sr Sr",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-093-3",
+        "name": "Growing Felinor Super Senior",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-094",
+        "name": "Shrinking Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-095-1",
+        "name": "CN Golem",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-096",
+        "name": "Meditative Journey",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-096-1",
+        "name": "Journey Complete",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097",
+        "name": "Jlockheed's Evil Blueprints",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-1",
+        "name": "Empty Plot",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-2",
+        "name": "Wishing Well",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-3",
+        "name": "School",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-4",
+        "name": "Mega Church",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-5",
+        "name": "Bunker",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-6",
+        "name": "University",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-7",
+        "name": "The Great Wall",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-8",
+        "name": "Prison",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-097-9",
+        "name": "Jlockheed's Headquarters",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-098",
+        "name": "Showdown",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-099",
+        "name": "Paranoia",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-100",
+        "name": "Greaser",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-101",
+        "name": "Gachaholic",
+        "kind": "added"
+      },
+      {
+        "id": "meditative-102",
+        "name": "Catboy Maid SSR+",
+        "kind": "added"
+      }
+    ]
   }
 ]
