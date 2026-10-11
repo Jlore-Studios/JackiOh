@@ -6,16 +6,16 @@
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
 //!   5. the exact lethal solver, verified on every determinization (a style may pass over it, and
-//!      then step 6 keeps off every line that wins this turn, R1447).
+//!      then step 6 keeps off every line that wins this turn, R1452).
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
 //!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
-//!      and the best mean wins (a style with a temperature picks among them, R1447).
+//!      and the best mean wins (a style with a temperature picks among them, R1452).
 //!   7. a fallback when nothing could be scored.
 //!
 //! Only the first action of the chosen line is played; the caller asks again after it, so the AI
 //! re-plans after every action and a plan that only one sampled world liked never gets past step one.
 //! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors.
-//! `decide_styled` is the same with an `AiStyle` (R1447): `decide` is it at `AI_STYLE_EXACT`, which
+//! `decide_styled` is the same with an `AiStyle` (R1452): `decide` is it at `AI_STYLE_EXACT`, which
 //! takes no draw of its own, so `decide`'s decisions and cursor are what they were before styles.
 //!
 //! Port of `packages/ai/src/decide.ts` (SURFACE §9). TS's `try`/`catch` is `catch_unwind` (an engine
@@ -127,13 +127,13 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
     entries
 }
 
-/// R1447: whether this decision passes over the lethal line the solver found. A style that never
+/// R1452: whether this decision passes over the lethal line the solver found. A style that never
 /// misses takes no draw.
 fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
     style.missed_lethal_chance > 0.0 && rng.chance(style.missed_lethal_chance)
 }
 
-/// R1447: the beam's lines a decision that passed over lethal may still play. The beam scores a won
+/// R1452: the beam's lines a decision that passed over lethal may still play. The beam scores a won
 /// game far above anything else, so left alone it would find the same lethal the solver did; a
 /// missed lethal keeps off every line that wins on the determinization it was searched on and every
 /// line that opens with the solver's first lethal action. When that leaves nothing, every line.
@@ -158,7 +158,7 @@ fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: Playe
     if kept.is_empty() { found } else { kept }
 }
 
-/// R1447: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
+/// R1452: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
 /// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
 /// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
 /// finalist whose running sum of weights passes it.
@@ -259,7 +259,7 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal, verified on every determinization, unless the style passes over it (R1447): then
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1452): then
     // the search below plays on as if it had not seen it, kept off every line that wins this turn.
     let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
@@ -427,7 +427,7 @@ pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Opt
     decide_styled(state, seat, options, &AI_STYLE_EXACT)
 }
 
-/// `decide` under `style` (R1447): the ladder bots' entry point. At `AI_STYLE_EXACT` it is
+/// `decide` under `style` (R1452): the ladder bots' entry point. At `AI_STYLE_EXACT` it is
 /// `decide`, draw for draw.
 pub fn decide_styled(
     state: &GameState,

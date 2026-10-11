@@ -1,4 +1,4 @@
-//! R1447 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
+//! R1452 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
 //! itself, deciding off the queue and moving at a human pace inside its clock, with server nonces
 //! (`srv-bot-…`, R270). It gets no disconnect grace (R744), never concedes or takes a draw (R188),
 //! emotes through its persona (R645), is rated as R610 rates a bot, and its match replays from
@@ -274,7 +274,7 @@ async fn concede(m: &BotMatch) {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_bot_mulligans_and_plays_without_a_socket() {
+async fn r1452_bot_mulligans_and_plays_without_a_socket() {
     let m = bot_match("seed-bot-plays", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     // The person ends their turn; the bot plays its turn and it comes back.
@@ -315,7 +315,7 @@ async fn r1447_bot_mulligans_and_plays_without_a_socket() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fallback() {
+async fn r1452_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fallback() {
     let m = bot_match("seed-bot-write", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-write", json!({ "type": "endTurn" })).await;
@@ -357,7 +357,7 @@ async fn r1447_a_move_whose_write_failed_is_decided_again_not_traded_for_the_fal
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_the_persons_actions_never_hold_the_bots_move_back() {
+async fn r1452_the_persons_actions_never_hold_the_bots_move_back() {
     let m = bot_match("seed-bot-stale", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-stale", json!({ "type": "endTurn" })).await;
@@ -395,7 +395,7 @@ async fn r1447_the_persons_actions_never_hold_the_bots_move_back() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_bot_seat_never_gets_a_grace() {
+async fn r1452_bot_seat_never_gets_a_grace() {
     let m = bot_match("seed-bot-grace", PlayerId::P2, PersonaName::Silent, false).await;
     // The person attached; the bot never will. No grace runs for either seat.
     for _ in 0..8 {
@@ -412,7 +412,7 @@ async fn r1447_bot_seat_never_gets_a_grace() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace() {
+async fn r1452_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace() {
     let (app, actor) =
         unopened_bot_match("seed-bot-absent", PlayerId::P2, PersonaName::Silent, false, &[]).await;
     actor.idle().await;
@@ -442,7 +442,7 @@ async fn r1447_r744_a_person_who_never_opens_a_bot_match_loses_after_the_grace()
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_r610_bot_match_rated_by_r610() {
+async fn r1452_r610_bot_match_rated_by_r610() {
     let m = bot_match("seed-bot-rated", PlayerId::P1, PersonaName::Silent, true).await;
     to_the_persons_turn(&m).await;
     concede(&m).await;
@@ -468,7 +468,7 @@ async fn r1447_r610_bot_match_rated_by_r610() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_bot_match_replays_from_seed_and_log() {
+async fn r1452_bot_match_replays_from_seed_and_log() {
     let m = bot_match("seed-bot-replay", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-end-1", json!({ "type": "endTurn" })).await;
@@ -499,7 +499,7 @@ async fn r1447_bot_match_replays_from_seed_and_log() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_restart_resumes_the_bot_seat() {
+async fn r1452_restart_resumes_the_bot_seat() {
     let m = bot_match("seed-bot-restart", PlayerId::P1, PersonaName::Silent, false).await;
     // The restart comes before the bot's mulligan lands: the move it was deciding is dropped.
     m.app.matches.stop(MATCH_ID).await;
@@ -534,7 +534,7 @@ async fn r1447_restart_resumes_the_bot_seat() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
+async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
     let m = bot_match("seed-bot-restart-mid", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     let turn = m.actor.snapshot().turn;
@@ -584,7 +584,7 @@ async fn r1447_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_bot_declines_a_draw_offer() {
+async fn r1452_bot_declines_a_draw_offer() {
     let m = bot_match("seed-bot-draw", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-offer", json!({ "type": "offerDraw" })).await;
@@ -616,7 +616,7 @@ async fn r1447_bot_declines_a_draw_offer() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_persona_greets_through_the_relay() {
+async fn r1452_persona_greets_through_the_relay() {
     // Balanced greets at the end of the mulligan every time (R645), from its pool within its dealt
     // hand (R1344): a seed whose hand holds one of the pool.
     let balanced = AI_PERSONAS
@@ -658,7 +658,7 @@ async fn r1447_persona_greets_through_the_relay() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_r1127_a_card_that_hears_emotes_hears_the_bots() {
+async fn r1452_r1127_a_card_that_hears_emotes_hears_the_bots() {
     // The person holds the testkit's Field Spell that hears emotes. Its card is the only test card
     // in the match, and the person plays it on their own turn, which they never end, so the bot
     // never decides while it is in play (the blocking pool's threads do not see the testkit).
@@ -736,7 +736,7 @@ async fn r1447_r1127_a_card_that_hears_emotes_hears_the_bots() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_bot_telemetry_is_ai() {
+async fn r1452_bot_telemetry_is_ai() {
     let m = bot_match("seed-bot-telemetry", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     concede(&m).await;

@@ -674,11 +674,11 @@ pub struct ThinkTimeFit {
 pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1447–R1449, R1451; #638). Every value is hand-set until the offline
+// Ladder bots (SPEC §9.5, §9.12, R1448, R1449, R1451, R1452; #638). Every value is hand-set until the offline
 // calibration and the think-time fit (R1442's `THINK_TIME_FITS`) replace it.
 // ---------------------------------------------------------------------------------------------
 
-/// R1447: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
+/// R1452: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
 /// softmax temperature over the finalists, in evaluation points, and the chance it passes over a
 /// lethal it found) and the rating its `bot_ratings` row is seeded with (R610). Always on the spec's
 /// resources: a strength is never a practice handicap (R180). The chance is rolled at each decision
@@ -693,7 +693,7 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R1447, R1449: the strengths a new bot is drawn from, weakest first. A bot keeps its index
+/// R1449, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
 pub const BOT_STRENGTHS: &[BotStrength] = &[
     BotStrength {
@@ -779,9 +779,9 @@ pub const BOT_ACTIVE_HOURS_MIN: i32 = 8;
 pub const BOT_ACTIVE_HOURS_MAX: i32 = 16;
 /// R1449: hours in the day a bot's schedule wraps around (UTC).
 pub const BOT_HOURS_PER_DAY: i32 = 24;
-/// R1447: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
+/// R1452: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
 pub const BOT_SPEED_MIN: f64 = 0.75;
-/// R1447: the slowest.
+/// R1452: the slowest.
 pub const BOT_SPEED_MAX: f64 = 1.35;
 /// R1449: the fewest Best-of-1 decks a bot carries.
 pub const BOT_DECKS_MIN: usize = 2;
@@ -809,30 +809,30 @@ pub const BOT_NAME_SECOND: &[&str] = &[
     "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle", "Dragon",
     "Muffin", "Noodle", "Sparrow",
 ];
-/// R1447: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
+/// R1452: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
 /// the mean of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_FIRST_MU: f64 = 8.7;
-/// R1447: the first move's prior, the standard deviation of `ln(think_ms)`.
+/// R1452: the first move's prior, the standard deviation of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_FIRST_SIGMA: f64 = 0.6;
-/// R1447: the prior for a bot's later moves of a turn: the mean of `ln(think_ms)`.
+/// R1452: the prior for a bot's later moves of a turn: the mean of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_LATER_MU: f64 = 7.8;
-/// R1447: the later moves' prior, the standard deviation of `ln(think_ms)`.
+/// R1452: the later moves' prior, the standard deviation of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_LATER_SIGMA: f64 = 0.7;
-/// R1447: the quickest a bot moves, decision included.
+/// R1452: the quickest a bot moves, decision included.
 pub const BOT_THINK_MIN_MS: i64 = 600;
-/// R1447: the longest it waits before a move.
+/// R1452: the longest it waits before a move.
 pub const BOT_THINK_MAX_MS: i64 = 30_000;
-/// R1447: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
+/// R1452: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
 /// out.
 pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
-/// R1447: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
+/// R1452: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
 /// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 /// R1449: how old a match a bot was claimed for may be and still be `open` (claimed, never
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;
-/// R1447: how long a bot waits to decide again when its move could not be written to the log, so a
+/// R1452: how long a bot waits to decide again when its move could not be written to the log, so a
 /// store that keeps failing is retried at this pace, never in a loop.
 pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 

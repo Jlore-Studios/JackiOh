@@ -856,7 +856,7 @@ pub async fn match_ranks(
         .ranked_standings(&build_season_id(&SeasonDeps::current()))
         .await?;
     let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
-    // R1447: a ladder bot holds no season row (R610), so its seat shows the rank its rating calls
+    // R1452: a ladder bot holds no season row (R610), so its seat shows the rank its rating calls
     // for, as a player's would be shown: nothing on the screen tells the two apart.
     let bots = (
         tx.ranked_bot(&row.players.0).await?,

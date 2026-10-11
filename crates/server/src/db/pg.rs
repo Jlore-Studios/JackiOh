@@ -4548,7 +4548,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1447–R1449, R1451, migration 0032)
+// The ladder bots (R1448, R1449, R1451, R1452, migration 0032)
 // ---------------------------------------------------------------------------
 
 fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {

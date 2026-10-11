@@ -7,7 +7,7 @@
 //! R1451 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
 //! gate like any live game; the bot's side is recorded as `ai` and read only when a query asks.
 //!
-//! R1447 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's; the match screen
+//! R1452 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's; the match screen
 //! shows the rank the bot's rating calls for.
 //!
 //! Everything runs through `try_pair` on tokio's paused clock, on the fake store, the real catalog and
@@ -646,7 +646,7 @@ async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_no_read_tells_a_bot_seat() {
+async fn r1452_no_read_tells_a_bot_seat() {
     let app = app_with_bots(true).await;
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -710,7 +710,7 @@ async fn r1447_no_read_tells_a_bot_seat() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1447_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
+async fn r1452_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
     // Jlorious takes the first JLORIOUS_SIZE placed Mythic players (R608): with exactly that many
     // nobody holds Mythic Grape, and one more is the first who does.
     for (in_mythic, shown) in [(JLORIOUS_SIZE, "golden"), (JLORIOUS_SIZE + 1, "mythic")] {

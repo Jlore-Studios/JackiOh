@@ -124,7 +124,7 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     }
 }
 
-/// R1447: the ladder bot at each home seat of a match between `players` (seat order), or none for a
+/// R1452: the ladder bot at each home seat of a match between `players` (seat order), or none for a
 /// person. The bots' rows are read only when a seat's profile is a bot's, inside the caller's
 /// transaction, so a match `start` makes and the same match `rebuild` folds read the same seats.
 async fn bots_of(
@@ -204,7 +204,7 @@ impl Registry {
                 Some(mode) => Some(mode),
                 None => t.matches_mode_of(&input.match_id).await?,
             };
-            // R1447: the ladder bot at either seat, which the actor plays.
+            // R1452: the ladder bot at either seat, which the actor plays.
             let bots = bots_of(&mut t, &players).await?;
             (boards, sampled, derived_mode, bots)
         })
@@ -288,7 +288,7 @@ impl Registry {
             let match_row = t.matches_get(match_id).await?;
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
-            // R1447: a restart resumes a bot's seat as it resumes the match.
+            // R1452: a restart resumes a bot's seat as it resumes the match.
             let bots = match &match_row {
                 Some(row) => bots_of(&mut t, &row.players).await?,
                 None => PerPlayer::new(None, None),

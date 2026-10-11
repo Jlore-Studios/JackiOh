@@ -32,7 +32,7 @@ pub struct SearchBudget {
     pub finalists: usize,
 }
 
-/// How a decision strays from the best line it found (R1447): the ladder bots' strength knob beside
+/// How a decision strays from the best line it found (R1452): the ladder bots' strength knob beside
 /// the budget. `AI_STYLE_EXACT` (both zero) strays never and takes no draw, which is `decide`'s.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -47,7 +47,7 @@ pub struct AiStyle {
 /// SURFACE §9: `decide`'s options; `budget` defaults to AI_BUDGET (`AiOptions::new`).
 pub struct AiOptions<'a> {
     /// The AI's own stream; determinize is its only consumer, with an `AiStyle`'s two draws under
-    /// `decide_styled` (R1447). The caller reads `rng.cursor()` back afterwards.
+    /// `decide_styled` (R1452). The caller reads `rng.cursor()` back afterwards.
     pub rng: Rng,
     pub budget: SearchBudget,
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.

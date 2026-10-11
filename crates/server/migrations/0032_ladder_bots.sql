@@ -1,9 +1,9 @@
 -- ============================================================================
--- Migration 0032: the ladder bots (SPEC §9.5, §9.12, R1447-R1449; issue #638)
+-- Migration 0032: the ladder bots (SPEC §9.5, §9.12, R1448, R1449, R1452; issue #638)
 -- ============================================================================
 -- A ranked Best of 1 or All Random ticket that waits past its fallback time
 -- with no person to pair with plays a ladder bot (R1448), which the server
--- seats and plays itself (R1447) out of a pool it keeps (R1449). A bot is a
+-- seats and plays itself (R1452) out of a pool it keeps (R1449). A bot is a
 -- profile like a person's, so every table that names a seat by profile id
 -- (matches, results, game_records, rated_games' sides) takes it as it is:
 --
@@ -43,7 +43,7 @@
 
 
 -- ----------------------------------------------------------------------------
--- 1. public.profiles.kind (R1447).
+-- 1. public.profiles.kind (R1452).
 -- ----------------------------------------------------------------------------
 alter table public.profiles
   add column if not exists kind text not null default 'human';
@@ -53,7 +53,7 @@ alter table public.profiles
   add constraint profiles_kind_check check (kind in ('human', 'bot'));
 
 comment on column public.profiles.kind is
-  $$R1447: whether a person or a ladder bot holds the profile. Server-only: no
+  $$R1452: whether a person or a ladder bot holds the profile. Server-only: no
   client role is granted it, so nothing a client reads tells a bot's seat from
   a person's.$$;
 
@@ -82,7 +82,7 @@ end;
 $$;
 
 comment on function app.forget_auth_user() is
-  'R1447: deletes the public.profiles row of a deleted auth.users identity, '
+  'R1452: deletes the public.profiles row of a deleted auth.users identity, '
   'the cascade the foreign key 0001 put on profiles.id gave before 0032 '
   'dropped it so a ladder bot can hold a profile with no auth user.';
 
@@ -116,7 +116,7 @@ end;
 $$;
 
 comment on function app.profile_needs_auth_user() is
-  'R1447: refuses a public.profiles row of kind human whose id is no '
+  'R1452: refuses a public.profiles row of kind human whose id is no '
   'auth.users identity, as the foreign key 0032 dropped did. A ladder bot''s '
   'profile (kind bot) has none.';
 
@@ -130,7 +130,7 @@ create trigger profiles_need_auth_user
 
 
 -- ----------------------------------------------------------------------------
--- 3. public.bots (R1447-R1449).
+-- 3. public.bots (R1448, R1449, R1452).
 -- ----------------------------------------------------------------------------
 create table if not exists public.bots (
   profile_id            uuid primary key references public.profiles(id) on delete cascade,
@@ -150,7 +150,7 @@ create table if not exists public.bots (
 );
 
 comment on table public.bots is
-  'R1447-R1449: one row per ladder bot profile (profiles.kind = bot): its '
+  'R1448, R1449, R1452: one row per ladder bot profile (profiles.kind = bot): its '
   'strength (an index into the server''s BOT_STRENGTHS), think-time speed, '
   'persona (R645), schedule (UTC hours), Best-of-1 decks and the catalog '
   'version they were dealt for, and when it was retired. Its rating is its '

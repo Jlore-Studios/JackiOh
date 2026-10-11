@@ -205,7 +205,7 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
 }
 
 /// R1451: the seats of a record the public figures count: a live game's people only, so a ladder
-/// bot's side (`ai`, R1447) is read only by a query that asks for it, and both seats of an AI
+/// bot's side (`ai`, R1452) is read only by a query that asks for it, and both seats of an AI
 /// development game (R378).
 fn counted_pilot(source: GameSource) -> PilotFilter {
     match source {
@@ -280,7 +280,7 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
 /// R1451: a ladder bot's game counts toward the gate like any live game, and its people's side
 /// toward the figures; the bot's side never does (`public_report`). That a bot game adds one deck
-/// where a person's adds two is a tell R1447 records and keeps.
+/// where a person's adds two is a tell R1452 records and keeps.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();

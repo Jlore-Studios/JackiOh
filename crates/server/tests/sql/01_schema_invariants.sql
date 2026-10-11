@@ -818,7 +818,7 @@ declare
     -- DEFINER for handle_new_user's reason: it reads every profile's username whichever role
     -- inserts the row (15 CHECK 8 asserts no client role may attach it to a table of its own).
     ['assign_default_username',     'definer'],
-    -- 0032, R1447: the two triggers that stand in for the foreign key to auth.users a bot's
+    -- 0032, R1452: the two triggers that stand in for the foreign key to auth.users a bot's
     -- profile cannot have, DEFINER for handle_new_user's reason: the role deleting from auth.users
     -- does not own public.profiles, and the role inserting a profile need not read auth.users.
     ['forget_auth_user',            'definer'],

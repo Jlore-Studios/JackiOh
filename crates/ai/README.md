@@ -50,7 +50,7 @@ same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 lines one turn deeper after the opponent's reply (`reply.rs`) on every determinization, and plays the
 first action of the best mean. It re-plans after every action.
 
-`decide_styled` is `decide` under an `AiStyle` (R1447), the server's ladder bots' strength knob beside
+`decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
 keeps off every line that wins this turn, `lines_missing_lethal`, or it would find the same lethal),
 and a softmax

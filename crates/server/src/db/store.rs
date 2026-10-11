@@ -179,7 +179,7 @@ store_union! {
 }
 
 store_union! {
-    /// R1447: who holds a profile: a person, or a ladder bot. Server-only (`profiles.kind`, migration
+    /// R1452: who holds a profile: a person, or a ladder bot. Server-only (`profiles.kind`, migration
     /// 0032, which no client role may read): no response carries it, so no read tells a bot's seat
     /// from a person's.
     #[derive(Default)]
@@ -194,7 +194,7 @@ store_union! {
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub id: String,
-    /// R1447: a person's profile, or a ladder bot's. Server-only, like the rating.
+    /// R1452: a person's profile, or a ladder bot's. Server-only, like the rating.
     #[serde(default)]
     pub kind: ProfileKind,
     /// The managed-auth user id.
@@ -814,7 +814,7 @@ pub struct BotDeck {
     pub portrait: String,
 }
 
-/// R1447–R1449: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
+/// R1448, R1449, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
 /// 0032), its profile's `created_at` and `current_match_id`, and its R610 rating. Server-only.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -823,7 +823,7 @@ pub struct BotRow {
     pub profile_id: String,
     /// Its index in `BOT_STRENGTHS`.
     pub strength: usize,
-    /// Its think times' multiplier (R1447).
+    /// Its think times' multiplier (R1452).
     pub speed: f64,
     pub persona: PersonaName,
     /// Its schedule (R1449): on from this hour of the day (UTC) for `active_hours` hours.
@@ -1806,7 +1806,7 @@ impl Tx<'_> {
         dispatch!(self, ranked_put_bot(bot))
     }
 
-    // bots (R1447–R1449, R1451, migration 0032): the ladder bots
+    // bots (R1448, R1449, R1451, R1452, migration 0032): the ladder bots
 
     /// R1449: every ladder bot, retired ones included, oldest profile first (ties on id).
     pub async fn bots_list(&mut self) -> StoreResult<Vec<BotRow>> {

@@ -147,7 +147,7 @@ pub struct PlayerStatsTableRow {
     pub updated_at: i64,
 }
 
-/// One row of `public.bots` (migration 0032, R1447–R1449): a ladder bot beside its profile.
+/// One row of `public.bots` (migration 0032, R1448, R1449, R1452): a ladder bot beside its profile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BotTableRow {
     pub profile_id: String,
@@ -2804,7 +2804,7 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1447–R1449, R1451, migration 0032)
+// The ladder bots (R1448, R1449, R1451, R1452, migration 0032)
 // ---------------------------------------------------------------------------
 
 /// R1449: every bot, its profile's `created_at` and match and its R610 rating beside its row,

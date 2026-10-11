@@ -6,7 +6,7 @@
 //!  - the match's mode (R257), read off its series, room or queue tickets (`matches_mode_of`);
 //!  - the patch the build's cards are (R388, `jackioh_cards::catalog_version()`);
 //!  - each seat's pilot: `human` for a person, even when the clock answered a prompt for one (R79's
-//!    `timeout`), and `ai` for a ladder bot (R1447, R1451), each on the seat its account plays as the
+//!    `timeout`), and `ai` for a ladder bot (R1451, R1452), each on the seat its account plays as the
 //!    game ends (R677);
 //!  - `source: "live"`, apart from the AI's development runs (R378).
 //!

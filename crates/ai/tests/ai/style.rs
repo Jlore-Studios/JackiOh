@@ -1,4 +1,4 @@
-//! `decide_styled` and its `AiStyle` (R1447): the server's ladder bots play below the AI's best by a
+//! `decide_styled` and its `AiStyle` (R1452): the server's ladder bots play below the AI's best by a
 //! softmax temperature over the finalists and a chance to pass over lethal. The exact style
 //! (`AI_STYLE_EXACT`) is `decide` itself, draw for draw, so nothing the browser or the gates play
 //! moves.
@@ -26,7 +26,7 @@ fn lethal_on_board() -> GameState {
 }
 
 #[test]
-fn r1447_exact_style_decides_as_decide() {
+fn r1452_exact_style_decides_as_decide() {
     // `decide` is `decide_styled` at the exact style, so comparing the two would prove nothing. What
     // keeps every practice game and gate where it was is that the exact style takes no draw of its
     // own: before styles, a decision's only draws were its determinizations', so the cursor must stand
@@ -62,7 +62,7 @@ fn r1447_exact_style_decides_as_decide() {
 }
 
 #[test]
-fn r1447_pick_finalist_zero_temperature_takes_the_first_best_without_a_draw() {
+fn r1452_pick_finalist_zero_temperature_takes_the_first_best_without_a_draw() {
     let mut rng = create_rng("style-pick-exact", 0);
     assert_eq!(pick_finalist(&[1.0, 3.0, 3.0, 2.0], 0.0, &mut rng), 1);
     assert_eq!(pick_finalist(&[4.0, 3.0], -1.0, &mut rng), 0);
@@ -73,7 +73,7 @@ fn r1447_pick_finalist_zero_temperature_takes_the_first_best_without_a_draw() {
 }
 
 #[test]
-fn r1447_pick_finalist_spreads_with_temperature() {
+fn r1452_pick_finalist_spreads_with_temperature() {
     let means = [10.0, 9.0, 0.0];
     let mut rng = create_rng("style-pick-spread", 0);
     let mut picked = [0usize; 3];
@@ -108,7 +108,7 @@ fn r1447_pick_finalist_spreads_with_temperature() {
 }
 
 #[test]
-fn r1447_missed_lethal_one_passes_over_the_solver() {
+fn r1452_missed_lethal_one_passes_over_the_solver() {
     let state = lethal_on_board();
     let exact = decide(&state, AI, &mut AiOptions::new(create_rng("style-lethal:ai", 0)))
         .expect("the AI owes an action");
