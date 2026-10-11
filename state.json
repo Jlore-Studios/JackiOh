@@ -5478,16 +5478,19 @@
         {
           "at": "2026-10-11T07:45:37Z",
           "minutes": 18.1
+        },
+        {
+          "at": "2026-10-11T12:52:37Z",
+          "minutes": 21.1
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-11T11:00:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-11T16:00:00Z",
+          "utilization": 0.4
         },
-        "observed_at": "2026-10-11T07:45:37Z",
-        "rejected_resets_at": "2026-10-11T11:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-11T12:52:37Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
