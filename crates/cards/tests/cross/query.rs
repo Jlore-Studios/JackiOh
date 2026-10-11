@@ -50,6 +50,20 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
+/// Meditative #102 Catboy Maid SSR+ (§8.8: a Lucky 1, 1/1 Unit), which the release's pools name but
+/// whose catalog entry has not landed with the rest of the set.
+const CATBOY_MAID: &str = "meditative-102";
+
+/// The ids of `wanted` the catalog holds: a §8.8 card a census names joins it from the day its
+/// entry lands, and until then the census is the catalog's.
+fn landed(wanted: &[&str]) -> Vec<String> {
+    wanted
+        .iter()
+        .filter(|id| CATALOG.get(**id).is_some())
+        .map(|id| (*id).to_string())
+        .collect()
+}
+
 /// Every token of every set (B2.1's census itself is catalog.rs's to prove).
 /// Every token a pool may name — all of them but Glitch, which is in none (R674).
 /// Every token of the sets that ship (R1420): like `non_token`, a pool that names no set reaches
@@ -818,26 +832,24 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         // The query a card script writes: `query::luck_based()`, which names no set (R1420). Since
         // the release (v0.3.5) it holds §8.8's Meditative #36 CN Peptides (Lucky 1 on its Radiant
         // face), #65 Keymaster Keenus (Lucky 1 among its every keyword, on both faces) and #86 Mayor
-        // Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight. §8.8's #102
-        // Catboy Maid SSR+ prints Lucky 1 too, and joins the list with its catalog entry, which has
-        // not landed.
+        // Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight, and #102 Catboy
+        // Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands.
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
-        assert_eq!(
-            ids(query(&luck_based())),
-            strings(&[
-                "core-004",
-                "core-023",
-                "core-042",
-                "classic-065",
-                "classicplus-025",
-                "classicplus-053",
-                "classicplus-065",
-                "classicplus-066",
-                "meditative-036",
-                "meditative-065",
-                "meditative-086",
-            ])
-        );
+        let mut pool = strings(&[
+            "core-004",
+            "core-023",
+            "core-042",
+            "classic-065",
+            "classicplus-025",
+            "classicplus-053",
+            "classicplus-065",
+            "classicplus-066",
+            "meditative-036",
+            "meditative-065",
+            "meditative-086",
+        ]);
+        pool.extend(landed(&[CATBOY_MAID]));
+        assert_eq!(ids(query(&luck_based())), pool);
         let expected: Vec<String> = ids(CATALOG
             .values()
             .filter(|def| set_is_open(def.set) && reads_as_luck_based(def)));
@@ -879,8 +891,8 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     /// The Meditative set's printed 1/1 Units (§8.8: #51 Devin Bot, #65 Keymaster Keenus, #67 Sentient
     /// Cat Ears, #82 Medina Outfitter, #88 The True Sheep, #91 Windfast, #93 Growing Felinor and #101
     /// Gachaholic; none of its tokens prints 1/1), which the pool takes once the set is open: since
-    /// the release (v0.3.5, R1420). §8.8's #102 Catboy Maid SSR+ is a 1/1 too, and joins the list
-    /// with its catalog entry, which has not landed.
+    /// the release (v0.3.5, R1420). §8.8's #102 Catboy Maid SSR+ is a 1/1 too, and joins from the day
+    /// its catalog entry lands.
     const MEDITATIVE_ONE_ONES: &[&str] = &[
         "meditative-051",
         "meditative-065",
@@ -897,6 +909,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         register();
         let mut expected = strings(ONE_ONE_POOL);
         expected.extend(strings(MEDITATIVE_ONE_ONES));
+        expected.extend(landed(&[CATBOY_MAID]));
         assert_eq!(
             ids(catalog.query(&q(json!({
                 "type": "Unit",
@@ -913,6 +926,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         let _guard = preview_sets(&[SetName::Meditative]);
         let mut expected = strings(ONE_ONE_POOL);
         expected.extend(strings(MEDITATIVE_ONE_ONES));
+        expected.extend(landed(&[CATBOY_MAID]));
         assert_eq!(
             ids(catalog.query(&q(json!({
                 "type": "Unit",
