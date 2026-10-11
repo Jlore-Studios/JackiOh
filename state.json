@@ -4789,6 +4789,7 @@
         "by": "`gemini` (medium) twice",
         "sha": "8ef8ae99966cabfc74d32db98e95fa71cd0ae3e6"
       },
+      "closed_at": "2026-10-11T20:51:02Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -4798,6 +4799,7 @@
       "interruptions": 0,
       "issue": 666,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-10-11T20:39:10Z",
