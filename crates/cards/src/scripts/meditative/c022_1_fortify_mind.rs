@@ -407,8 +407,19 @@ mod tests {
             assert_eq!(s.hand(P2).len(), 2);
             // Attack: 8 to the discarder's hero.
             s.expect_health(P2, 30 - 8);
-            // Defend: the opponent's hero gains 2 Armor.
+            // Defend: the opponent's hero is healed 8 (a hero has no maximum health, §3) and gains
+            // 2 Armor.
+            assert_eq!(s.state().players[P1].hero.health, 30 + 8);
             assert_eq!(s.view(P1).you.hero.armor, 2);
+            // A discard is no guess: nothing is judged, and the penalties fall on the discarder
+            // alone (R863): p1's turn has begun with a full refresh, no tax reaching p1.
+            assert!(
+                !s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Predicted { .. }))
+            );
+            let mana = s.state().players[P1].mana;
+            assert_eq!(mana.current, mana.max);
         }
 
         #[test]
@@ -484,41 +495,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn probe_temporary_discard() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [FILLER],
-                    "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
-                },
-                "p2": {
-                    "hand": [{ "def": FORTIFY }, FILLER, FILLER, FILLER],
-                    "library": [FILLER, FILLER, FILLER, FILLER],
-                },
-            }));
-            s.end_turn();
-            s.end_turn();
-            eprintln!("P1 mod: {}", s.state().players[P1].mana.next_turn_mod);
-            eprintln!("P2 mod: {}", s.state().players[P2].mana.next_turn_mod);
-            eprintln!("P1 hand: {}", s.hand(P1).len());
-            eprintln!("P2 hand: {}", s.hand(P2).len());
-            eprintln!("P1 health: {}", s.state().players[P1].hero.health);
-            eprintln!("P2 health: {}", s.state().players[P2].hero.health);
-            eprintln!("P1 armor: {}", s.view(P1).you.hero.armor);
-            eprintln!(
-                "predicted: {}",
-                s.events().iter().filter(|e| matches!(e, GameEvent::Predicted { .. })).count()
-            );
-            panic!("probe");
-        }
-
-        #[test]
         fn radiant_discarded_it_takes_no_penalty() {
             let mut s = table("greed", json!([]), json!([FILLER]), json!([]));
             // The linked Fortify is the only one in p2's hand: make it the Radiant face.
             s.card_mut(FORTIFY).radiant = true;
+            // It is p2's turn (`table` ended p1's): p2's end of turn, where Temporary discards it,
+            // with no clause to answer. The filler and p2's draw stay, and p2's next refresh is
+            // still to come, so a Greed tax would show.
             s.end_turn();
-            s.end_turn(); // p2's end of turn: Temporary discards it, with no clause to answer.
             assert!(s.events().iter().any(|event| matches!(
                 event,
                 GameEvent::Discarded { def_id, .. } if def_id == FORTIFY

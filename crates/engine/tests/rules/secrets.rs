@@ -270,3 +270,98 @@ fn r861_resolve_secret_reveals_once_and_removes_the_record() {
     );
     assert!(again.is_empty());
 }
+
+/// R862, R212: a card's graveyard trigger answers the discard that put it there. The report of where
+/// the discard landed (`enteredGraveyard`, B5 E5) is that same move, not a later one, so the card is
+/// on the stay the discard began (`stays::stands_where_it_landed`). Meditative #22.1's discard clause
+/// is the card that needs it; this fixture is its shape, prefixed `sc-` and indexed 862, so no
+/// shared fixture grows for it.
+mod r862_a_discard_clause_answers_its_own_discard {
+    use super::*;
+    use crate::rules::fixtures::catalog::spell_def;
+    use jackioh_engine::effects::{discard_from_hand, gain_hero_armor};
+    use jackioh_engine::triggers::{SettleOptions, settle};
+
+    const ARMOR: i32 = 3;
+
+    /// p1 holds a Spell whose graveyard trigger answers its own `discarded`: its controller gains
+    /// 3 Armor. The card's id comes back with the game.
+    fn clause_game(seed: &str) -> (GameState, String) {
+        let mut state = game(seed);
+        let def = spell_def(
+            862,
+            json!({ "id": "sc-clause", "index": "862", "name": "Discard Clause (fixture)" }),
+        );
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(def.id.clone(), def.clone());
+        register_catalog(catalog);
+        let script = Script {
+            graveyard_triggers: vec![TriggerDef::new(
+                "clause",
+                &[GameEventType::Discarded],
+                |ctx, event| {
+                    let GameEvent::Discarded { instance_id, .. } = event else {
+                        return vec![];
+                    };
+                    if !ctx.self_.as_ref().is_some_and(|card| &card.id == instance_id) {
+                        return vec![];
+                    }
+                    vec![gain_hero_armor(json_as(json!({ "amount": ARMOR })))]
+                },
+            )],
+            ..Script::default()
+        };
+        let mut scripts = registered_scripts().clone();
+        scripts.insert(
+            def.id.clone(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
+        register_scripts(scripts);
+        let card = new_instance(&mut state, &def.id, P1, Zone::Hand { player: P1 });
+        state.players[P1].hand.push(card.clone());
+        (state, card.id)
+    }
+
+    /// Discard the card from p1's hand as a rule does (`discard_from_hand`), then settle.
+    fn discard_and_settle(state: &mut GameState, id: &str) -> Vec<GameEvent> {
+        let card = find_instance(state, id).cloned().expect("the clause is in hand");
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut events = Vec::new();
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            discard_from_hand(&mut sink, &card);
+            settle(&mut sink, SettleOptions::default());
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    #[test]
+    fn r862_discarded_its_graveyard_trigger_answers_from_the_graveyard() {
+        let (mut state, id) = clause_game("secret-r862-clause");
+        let armor = state.players[P1].hero.armor;
+        let events = discard_and_settle(&mut state, &id);
+        // The discard, then the report of where it landed: one move, not two.
+        let reports: Vec<GameEventType> = events
+            .iter()
+            .filter(|event| {
+                matches!(event, GameEvent::Discarded { instance_id, .. }
+                    | GameEvent::EnteredGraveyard { instance_id, .. } if *instance_id == id)
+            })
+            .map(GameEvent::event_type)
+            .collect();
+        assert_eq!(
+            reports,
+            vec![GameEventType::Discarded, GameEventType::EnteredGraveyard]
+        );
+        assert_eq!(
+            find_instance(&state, &id).map(|card| card.zone.z()),
+            Some(ZoneName::Graveyard)
+        );
+        // The clause answered from the graveyard.
+        assert_eq!(state.players[P1].hero.armor, armor + ARMOR);
+    }
+}
