@@ -129,9 +129,13 @@ mod tests {
         #[test]
         fn r824_a_graveyard_dream_returns_now_and_can_be_played_again() {
             let mut s = scenario(json!({
-                "p1": side(json!({ "graveyard": [DREAM], "hand": [ID, SPARE] })),
+                "p1": side(json!({ "hand": [DREAM, ID, SPARE] })),
                 "p2": side(json!({})),
             }));
+            // Played this turn, the Dream lands return-flagged (R155); one set in the graveyard
+            // would not be a return Spell at all (R153).
+            s.play(DREAM, json!({}));
+            s.expect_in_zone(DREAM, "graveyard");
             s.play(ID, json!({}));
             s.expect_in_zone(DREAM, "hand");
             s.play(DREAM, json!({}));

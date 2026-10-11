@@ -686,9 +686,11 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     fn r382_a_fruit_pool_is_every_non_token_fruit_card_and_the_five_grapes_the_generating_card_excluded() {
         register();
         // Core #47 Fig of Life, Classic+'s Fruit cards and the Grapes (each after the card that defines
-        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool.
+        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool. A set that has not
+        // shipped is in no pool (R1420), so Meditative #55 Dragon Fruit joins it as the set ships.
         let expected: Vec<String> = CATALOG
             .values()
+            .filter(|def| set_is_open(def.set))
             .filter(|def| def.tags.contains(&Tag::Fruit) && (!def.token || GRAPES.contains(&def.id.as_str())))
             .map(|def| def.id.clone())
             .filter(|id| id != "classicplus-058")

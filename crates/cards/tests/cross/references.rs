@@ -309,10 +309,16 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             naming("Pancake token"),
             strings(&["classicplus-012", "classicplus-013"])
         );
-        // AI Slop and Claude's Datacenter make them; Scaling Law counts them.
+        // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #53
+        // Prestige adds one and #60 Eschews casts one (§8.8 rows 53 and 60, R1421).
         assert_eq!(
             naming("AI generated card"),
-            strings(&["classicplus-043", "classicplus-t-ai-02"])
+            strings(&[
+                "classicplus-043",
+                "classicplus-t-ai-02",
+                "meditative-053",
+                "meditative-060"
+            ])
         );
         // Balance patch 1 reworded Claude's Datacenter to "AI Generated card".
         assert_eq!(naming("AI Generated card"), strings(&["classicplus-078"]));

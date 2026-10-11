@@ -91,8 +91,10 @@ mod tests {
     mod meditative_021 {
         use super::*;
 
+        /// The seeds the tests below use came from this sweep: on every seed the paid roll takes the
+        /// hand whenever the base roll does, the same draw read against higher odds.
         #[test]
-        fn probe_fishing_seeds_temporary() {
+        fn paid_odds_take_every_hand_the_base_odds_take() {
             crate::register_all();
             for n in 0..300 {
                 let seed = format!("probe-{n}");
@@ -110,9 +112,7 @@ mod tests {
                 }));
                 t.play(FISHING, json!({ "embiggen": true }));
                 let paid_took = t.hand(P2).is_empty();
-                if base_took || paid_took {
-                    println!("seed {seed}: base_took={base_took} paid_took={paid_took}");
-                }
+                assert!(!base_took || paid_took, "seed {seed}: the base roll took the hand, the paid one did not");
             }
         }
 
@@ -120,7 +120,8 @@ mod tests {
         fn a_success_takes_their_whole_hand() {
             crate::register_all();
             let mut s = scenario(json!({
-                "seed": "TBD-success",
+                // This seed passes the base 2%.
+                "seed": "probe-32",
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },
                 "p2": { "hand": [FILLER, VANILLA], "field": [TIMMY] },
             }));
@@ -137,7 +138,8 @@ mod tests {
         fn a_failure_takes_nothing() {
             crate::register_all();
             let mut s = scenario(json!({
-                "seed": "TBD-failure",
+                // This seed fails the base 2% (and the paid 5%).
+                "seed": "probe-0",
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },
                 "p2": { "hand": [FILLER, VANILLA], "field": [TIMMY] },
             }));
@@ -153,7 +155,7 @@ mod tests {
             crate::register_all();
             // This seed fails the base 2% and passes the paid 5%: the same roll, two prices.
             let mut s = scenario(json!({
-                "seed": "TBD-paid",
+                "seed": "probe-5",
                 "p1": { "hand": [FISHING, TIMMY], "mana": 9, "field": [TIMMY] },
                 "p2": { "hand": [FILLER, VANILLA], "field": [TIMMY] },
             }));
@@ -172,13 +174,17 @@ mod tests {
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },
                 "p2": { "hand": [FILLER], "field": [TIMMY] },
             }));
+            let played = s.card(FISHING).id.clone();
             s.play(FISHING, json!({}));
-            s.expect_in_zone(FISHING, "graveyard");
+            s.expect_in_zone(&played, "graveyard");
 
             s.end_turn();
 
+            // A fresh card in hand, while the played one, named by its id (by its definition the
+            // new one in hand would answer), stays in the graveyard.
             assert_eq!(hand_copies(&s, FISHING), vec![false]);
-            s.expect_in_zone(FISHING, "graveyard");
+            assert!(s.hand(P1).iter().all(|card| card.id != played));
+            s.expect_in_zone(&played, "graveyard");
         }
 
         #[test]

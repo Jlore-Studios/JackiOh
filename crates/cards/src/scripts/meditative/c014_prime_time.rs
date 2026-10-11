@@ -198,7 +198,7 @@ mod tests {
         fn radiant_draws_every_prime_indexed_card_and_burns_the_overflow() {
             crate::register_all();
             let mut hand: Vec<Value> = vec![json!({ "def": PRIME, "radiant": true })];
-            hand.extend(vec![json!(TEN); 8]);
+            hand.extend(vec![json!(TEN); 9]);
             let mut s = scenario(json!({
                 "p1": {
                     "hand": hand,
@@ -214,8 +214,13 @@ mod tests {
             assert_eq!(s.hand(P1).len(), 10);
             let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
             assert_eq!(library, vec![EIGHT]);
-            let burned: Vec<String> =
-                s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+            // The graveyard holds the burned four and the resolved Prime Time itself.
+            let burned: Vec<String> = s
+                .pile(P1, "graveyard")
+                .iter()
+                .map(|card| card.def_id.clone())
+                .filter(|def| def != PRIME)
+                .collect();
             assert_eq!(burned.len(), 4);
             for def in [THREE, ELEVEN, MED_FIVE, NINETEEN] {
                 assert!(burned.contains(&def.to_string()), "{def} burns");

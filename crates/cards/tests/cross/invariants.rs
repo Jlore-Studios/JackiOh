@@ -680,3 +680,50 @@ mod r1062_fiery_waraxe_reanimated {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 }
+
+/// R1126: Pareto Optimality's attack animates The Cane on the other player's turn, which is an entry
+/// (R383); only its controller's start-of-turn animation enters nothing (R1062). Fuzz seed 9 of the
+/// M4 gate's short wave found the monitor reading the Pareto animation as the start-of-turn one.
+mod r1126_the_canes_pareto_animation {
+    use super::*;
+
+    const PARETO: &str = "meditative-071";
+    /// A 1/1 for (1) under p2's 4/4 for (1): the worse-scored play that sends the Cane.
+    const BAD: &str = "core-t-felinor";
+
+    #[test]
+    fn r1126_r1062_the_cane_animating_on_the_other_players_turn_enters_and_i4_stays_clean() {
+        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
+        let mut g = scenario(json!({
+            "p1": { "mana": 10, "hand": [PARETO], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": { "mana": 10, "hand": [VANILLA, BAD], "field": ["core-007"], "library": [VANILLA, VANILLA] },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        // The Cry summons the Cane on p1's turn: it enters, animated (R383).
+        g.play(PARETO, json!({}));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let cane = g
+            .card(PARETO)
+            .memory
+            .get("cane")
+            .and_then(|found| found.as_str().map(str::to_string))
+            .expect("Pareto remembers its Cane");
+        // It goes home at p1's cleanup.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // p2's worse play sends it: it animates on p2's turn, an entry, attacks and goes home.
+        g.play(BAD, json!({}));
+        assert!(
+            g.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Animated { instance_id, .. } if *instance_id == cane
+            )),
+            "the Cane animated for Pareto's attack"
+        );
+        assert_eq!(g.card(&cane).summoned_turn, Some(g.state().turn));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // At p1's next start of turn it animates on its own side, no entry (R1062).
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+}

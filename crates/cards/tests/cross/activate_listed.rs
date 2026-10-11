@@ -39,9 +39,12 @@ const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
+const YILES_VIRUS: &str = "meditative-049-2";
+const MAESTRO: &str = "meditative-069";
+const EVER_GROWING_TREE: &str = "meditative-075";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 21] = [
+const ACTIVATE_CARDS: [&str; 24] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -63,6 +66,9 @@ const ACTIVATE_CARDS: [&str; 21] = [
     HEADQUARTERS,
     GACHAHOLIC,
     ALUNETH,
+    YILES_VIRUS,
+    MAESTRO,
+    EVER_GROWING_TREE,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -991,5 +997,159 @@ mod m80_aluneth {
                 .iter()
                 .any(|event| matches!(event, GameEvent::EnteredGraveyard { .. }))
         );
+    }
+}
+
+mod m_n49_2_yiles_virus {
+    use super::*;
+
+    /// p1's Virus on its field with three spares in hand, so a discard leaves R82's auto-end away.
+    fn infected(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(YILES_VIRUS, radiant)], "hand": [STOCKPILE, FILLER, FILLER], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    fn discards_of(events: &[GameEvent]) -> usize {
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Discarded { .. }))
+            .count()
+    }
+
+    #[test]
+    fn r384_base_activate_destroys_it_and_its_death_discards_1() {
+        let mut s = infected(false);
+        let events = activate_listed(&mut s, YILES_VIRUS, any);
+        assert!(units(&s, P1).is_empty(), "the Virus destroyed itself");
+        assert_eq!(discards_of(&events), 1);
+        assert_eq!(s.hand(P1).len(), 2);
+    }
+
+    #[test]
+    fn r384_radiant_activate_destroys_it_and_its_death_discards_2() {
+        let mut s = infected(true);
+        let events = activate_listed(&mut s, YILES_VIRUS, any);
+        assert!(units(&s, P1).is_empty(), "the Virus destroyed itself");
+        assert_eq!(discards_of(&events), 2);
+        assert_eq!(s.hand(P1).len(), 1);
+    }
+}
+
+mod m_n69_the_maestro {
+    use super::*;
+
+    /// p1's Maestro with `counters` Plague Counters; p2 holds cards in every zone the Activate
+    /// reaches: two on the field, three in hand, three in the deck and two in the graveyard.
+    fn conducting(radiant: bool, counters: i32) -> Scenario {
+        scenario(json!({
+            "p1": {
+                "field": [{ "def": MAESTRO, "radiant": radiant, "counters": { "plague": counters } }],
+                "hand": [STOCKPILE],
+                "library": [X, X],
+            },
+            "p2": {
+                "field": [VANILLA, VANILLA],
+                "hand": [FILLER, FILLER, FILLER],
+                "library": [X, X, X],
+                "graveyard": [FILLER, FILLER],
+            },
+        }))
+    }
+
+    fn plague(s: &Scenario) -> i32 {
+        s.card(MAESTRO).counters.plague.unwrap_or(0)
+    }
+
+    /// p2's cards in each zone the Activate reaches: field, hand, deck, graveyard.
+    fn enemy_zones(s: &Scenario) -> [usize; 4] {
+        [
+            units(s, P2).len(),
+            s.hand(P2).len(),
+            s.pile(P2, "library").len(),
+            s.pile(P2, "graveyard").len(),
+        ]
+    }
+
+    #[test]
+    fn r384_it_is_not_listed_below_its_price() {
+        let s = conducting(false, 3);
+        let id = s.card(MAESTRO).id.clone();
+        assert!(listed(&s, &id).is_empty(), "the Activate needs 4 Plague Counters");
+    }
+
+    #[test]
+    fn r384_base_activate_spends_4_counters_and_exiles_1_from_each_enemy_zone_once_a_turn() {
+        let mut s = conducting(false, 8);
+        activate_listed(&mut s, MAESTRO, any);
+        assert_eq!(plague(&s), 4);
+        assert_eq!(enemy_zones(&s), [1, 2, 2, 1]);
+        let id = s.card(MAESTRO).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_spends_4_counters_and_exiles_2_from_each_enemy_zone_once_a_turn() {
+        let mut s = conducting(true, 8);
+        activate_listed(&mut s, MAESTRO, any);
+        assert_eq!(plague(&s), 4);
+        assert_eq!(enemy_zones(&s), [0, 1, 1, 0]);
+        let id = s.card(MAESTRO).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_n75_ever_growing_tree {
+    use super::*;
+
+    /// p1's Tree in its backrow with a spare in hand. Fused, its def id is the fusion's (R102), so
+    /// the instance is followed by its id.
+    fn planted(radiant: bool) -> (Scenario, String) {
+        let s = scenario(json!({
+            "p1": { "backrow": [on(EVER_GROWING_TREE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let id = s.card(EVER_GROWING_TREE).id.clone();
+        (s, id)
+    }
+
+    /// The Tree's def id now: a fusion of a picked Field Spell and the Tree.
+    fn grown(s: &Scenario, id: &str) -> String {
+        find_instance(s.state(), id)
+            .expect("the Tree is still on the field")
+            .def_id
+            .clone()
+    }
+
+    #[test]
+    fn r384_base_activate_fuses_a_random_field_spell_into_it_once_a_turn() {
+        let (mut s, id) = planted(false);
+        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fused { .. }))
+        );
+        assert_ne!(grown(&s, &id), EVER_GROWING_TREE);
+        assert!(!grown(&s, &id).contains('*'), "the base face fuses a base pick");
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_fuses_a_radiant_field_spell_into_it_once_a_turn() {
+        let (mut s, id) = planted(true);
+        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fused { .. }))
+        );
+        // R469's mark: the pick went in Radiant.
+        assert!(
+            grown(&s, &id).contains('*'),
+            "the fused id names a Radiant ingredient"
+        );
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }

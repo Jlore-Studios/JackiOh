@@ -32,8 +32,7 @@ use serde_json::{Map, Value};
 
 use jackioh_engine::{
     ActionBody, ActionType, Aim, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId, PromptKind,
-    RevealAt, Row,
-    Selection, ZoneChoice, is_emote_id, parse_aim,
+    RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;

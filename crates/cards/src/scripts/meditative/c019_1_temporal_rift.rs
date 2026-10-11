@@ -52,9 +52,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
 
+    /// p1's first turn (the scenario's default is turn 9), so the extra turn is turn 2 and its max
+    /// mana 2.
     fn board(hand: Value) -> Scenario {
         scenario(json!({
             "seed": "temporal-rift",
+            "turn": 1,
             "p1": {
                 "hand": hand,
                 "field": [VANILLA],
