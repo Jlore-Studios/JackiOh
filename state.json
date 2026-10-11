@@ -6918,14 +6918,18 @@
         {
           "at": "2026-10-11T23:45:16Z",
           "minutes": 2.6
+        },
+        {
+          "at": "2026-10-11T23:47:40Z",
+          "minutes": 19.7
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T04:20:00Z",
-          "utilization": 1.0
+          "utilization": 1.02
         },
-        "observed_at": "2026-10-11T23:45:16Z",
+        "observed_at": "2026-10-11T23:47:40Z",
         "rejected_resets_at": "2026-10-12T04:20:00Z",
         "status": "rejected"
       }
