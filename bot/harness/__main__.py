@@ -632,7 +632,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
         elif payload.get("action") == "labeled" and (payload.get("issue") or {}).get("number"):
             # #307: a method label (or `bot:approved` on a suggestion) starts triage. A person
             # gets METHOD_WAIT to set a difficulty and a priority, and then the issue is read
-            # again, so their labels count.
+            # again, so their labels count. Who put the label on (`sender`) stays: a person's
+            # method label hands on even an issue the bot opened.
             if not triage_mod.starts_triage(str((payload.get("label") or {}).get("name") or "")):
                 _output({"go": "false", "number": ""})
                 print("triage: skip: not a method label")
@@ -640,7 +641,8 @@ def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
             time.sleep(triage_mod.METHOD_WAIT.total_seconds())
             number = int(payload["issue"]["number"])
             try:
-                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(number)}
+                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(number),
+                           "sender": payload.get("sender") or {}}
             except (GitHubError, ValueError) as exc:
                 _output({"go": "false", "number": ""})
                 print(redact(f"triage: skip: #{number} could not be read: {exc}"))

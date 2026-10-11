@@ -384,8 +384,11 @@ set no issue type and never `human`, so triage types the issue and a method alwa
 
 - **Who:** the author must be an owner, member or collaborator, or on `.harness/trust.txt`, and not
   the bot. Anyone else's issue or pull request is left alone, so a stranger's text never reaches
-  the machine. The one issue of the bot's that goes is its own suggestion (`bot:suggestion`) once a
-  person approves it: its text is the bot's, and only someone with triage access can label it.
+  the machine. An issue of the bot's goes when it is its own suggestion (`bot:suggestion`) once a
+  person approves it, or when a person put the method label on it (the event's sender), so a
+  suggestion whose `bot:suggestion` a person swapped for `method:use-bot` goes too: its text is the
+  bot's, and only someone with triage access can label it. A method label the bot or an app put on
+  never does.
 - **When:** an issue is triaged only once it carries exactly one of `method:manual` and
   `method:use-bot` (`bot:approved`, a person's yes to a suggestion, counts as `method:use-bot`),
   two minutes after the label goes on (`triage.METHOD_WAIT`): the issue is read
