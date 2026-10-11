@@ -36,9 +36,14 @@ begin
   values (old_m, p1, p2, p1, 'concede', 2, 1000, 1016, 1000, 984, now() - interval '91 days');
 
   -- As service_role in `tests/db/run.sh` (the store's own call); here as the owner, since this
-  -- database grants service_role no table privileges.
-  select * into v_row from app.purge_expired_rows(now() - interval '30 days', cutoff);
+  -- database grants service_role no table privileges. The three-cutoff purge the server calls since
+  -- 0029; its third cutoff, the play telemetry's (R1442), is 16_play_telemetry.sql's to check.
+  select * into v_row from app.purge_expired_rows(now() - interval '30 days', cutoff,
+                                                  now() - interval '365 days');
 
+  if v_row.play_telemetry <> 0 then
+    raise exception 'FAIL (0013): the purge reports % telemetry rows, and none were written', v_row.play_telemetry;
+  end if;
   if v_row.match_actions <> 2 then
     raise exception 'FAIL (0013): the purge reports % actions, expected the old match''s 2', v_row.match_actions;
   end if;
