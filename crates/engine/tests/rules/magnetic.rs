@@ -108,31 +108,16 @@ fn immutable() -> CardDef {
     )
 }
 
-/// A 1/1 Magnetic Unit whose Cry destroys the chosen Unit: aimed at its own host, the host leaves
-/// before the fusion.
-fn assassin() -> CardDef {
-    def_of_kind(
-        "assassin",
-        1905,
-        json!({
-            "base": {
-                "attack": 1,
-                "health": 1,
-                "keywords": [{ "kind": "Magnetic" }],
-                "text": "Magnetic. Cry: destroy.",
-            },
-            "radiant": {
-                "attack": 2,
-                "health": 2,
-                "keywords": [{ "kind": "Magnetic" }],
-                "text": "Magnetic. Cry: destroy.",
-            },
-        }),
-    )
+/// An enemy 2/2 that answers a play's announce (§10.5 step 3a) by destroying the Unit in the zone
+/// the play named: aimed at a Magnetic play, its host leaves before the card is placed, let alone
+/// fused. (A Cry of the Magnetic card cannot reach the host: the host lies dormant beneath it while
+/// the Cry runs, R13, R1086, so a pick of it fizzles.)
+fn sentry() -> CardDef {
+    def_of_kind("sentry", 1905, json!({}))
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![host(), mag(), both(), immutable(), assassin()]
+    vec![host(), mag(), both(), immutable(), sentry()]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -153,11 +138,36 @@ fn scripts() -> IndexMap<String, CardScripts> {
             radiant: cry(json!({ "of": "enemyHero" }), 2),
         },
     );
+    let watch = || Script {
+        triggers: vec![
+            TriggerDef::new("mg-sentry", &[GameEventType::CardAnnounced], |ctx, event| {
+                let GameEvent::CardAnnounced {
+                    player,
+                    row: Some(row),
+                    lane: Some(lane),
+                    ..
+                } = event
+                else {
+                    return vec![];
+                };
+                let Some(host) = card_at(ctx.state, slot(*player, *row, *lane)) else {
+                    return vec![];
+                };
+                vec![jackioh_engine::effects::destroy(json_as(json!({
+                    "target": { "of": "instance", "instanceId": host.id },
+                })))]
+            })
+            .with_when(|ctx, event| {
+                matches!(event, GameEvent::CardAnnounced { player, .. } if *player != ctx.controller)
+            }),
+        ],
+        ..Script::default()
+    };
     scripts.insert(
-        assassin().id,
+        sentry().id,
         CardScripts {
-            base: cry(json!({ "of": "chosen" }), 99),
-            radiant: cry(json!({ "of": "chosen" }), 99),
+            base: watch(),
+            radiant: watch(),
         },
     );
     scripts
@@ -320,11 +330,9 @@ fn r1086_resolves_on_top_then_fuses_host_kept() {
     assert_eq!(fused.damage, 1);
     assert_eq!(fused.summoned_turn, Some(7));
     assert!(fused.exertion.attacked);
-    // The top card is Gone with no Death: no `destroyed` names it.
-    assert!(matches!(
-        find_instance(&next, &mag.id).expect("the top card").zone,
-        Zone::Gone { .. }
-    ));
+    // The top card ceased to exist with no Death: it is in no pile (R86), and no `destroyed`
+    // names it.
+    assert!(find_instance(&next, &mag.id).is_none());
     assert!(
         events_of_type(&result.events, GameEventType::Destroyed)
             .iter()
@@ -338,24 +346,25 @@ fn r1086_resolves_on_top_then_fuses_host_kept() {
 fn r1086_nothing_fuses_when_the_host_left_first() {
     let mut state = playing("magnetic-host-left");
     let host_card = in_hand(&mut state, &host().id, PlayerId::P1, 1).remove(0);
-    let assassin = in_hand(&mut state, &assassin().id, PlayerId::P1, 1).remove(0);
+    let mag = in_hand(&mut state, &mag().id, PlayerId::P1, 1).remove(0);
     flush(&mut state, PlayerId::P1, 10);
-    let state = act(&state, play_input(&host_card.id, 1, false, Value::Null));
-
-    // The Cry destroys the host it stands on: with the host gone, nothing fuses.
-    let host_id = host_card.id.clone();
-    let result = act_result(
-        &state,
-        play_input(
-            &assassin.id,
-            1,
-            true,
-            json!([{ "pick": "instance", "instanceId": host_id }]),
-        ),
+    let mut state = act(&state, play_input(&host_card.id, 1, false, Value::Null));
+    put(
+        &mut state,
+        &sentry().id,
+        slot(PlayerId::P2, Row::Units, 1),
+        json!({}),
     );
+    let hero_before = state.players.p2.hero.health;
+
+    // The sentry destroys the host as the Magnetic play is announced: with the host gone, the card
+    // lands in the emptied zone, its Cry still runs, and nothing fuses.
+    let host_id = host_card.id.clone();
+    let result = act_result(&state, play_input(&mag.id, 1, true, Value::Null));
     assert_eq!(result.error, None);
     let next = result.state;
 
+    assert_eq!(next.players.p2.hero.health, hero_before - 2);
     assert!(fused_events(&result.events).is_empty());
     assert!(
         events_of_type(&result.events, GameEventType::Destroyed)
@@ -364,10 +373,10 @@ fn r1086_nothing_fuses_when_the_host_left_first() {
                 |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &host_id)
             )
     );
-    // The assassin stays the pile's top.
+    // The Magnetic card stays the pile's top.
     assert_eq!(
         card_at(&next, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.id.clone()),
-        Some(assassin.id.clone())
+        Some(mag.id.clone())
     );
     assert!(matches!(
         find_instance(&next, &host_id).expect("the host").zone,

@@ -549,11 +549,13 @@ mod r946 {
     #[test]
     fn r946_a_lane_watch_answers_resolved_plays_and_summons_in_its_lane_only_this_turn() {
         jackioh_cards::register_all();
+        // Felinor Fiender has Stack (§3.2), so each play below goes onto the taken lane-2 zone.
+        const FIENDER: &str = "core-092";
         let mut s = scenario(json!({
             "seed": "benders-watch",
             "p1": {
                 "mana": 10,
-                "hand": [{ "def": "meditative-098", "radiant": true }, { "def": VANILLA }, { "def": "core-069" }, FILLER],
+                "hand": [{ "def": "meditative-098", "radiant": true }, { "def": FIENDER }, { "def": FIENDER }, { "def": "core-069" }, FILLER],
                 "library": [{ "def": VANILLA }, FILLER, FILLER],
             },
             "p2": { "hand": [FILLER], "library": library() },
@@ -565,12 +567,13 @@ mod r946 {
         assert_eq!(summoned.def_id, VANILLA);
         assert_eq!(books(&s), 1, "one Book for the summon");
         // … a play into the lane answers again …
-        s.play(VANILLA, json!({ "zone": 2 }));
+        s.play(FIENDER, json!({ "zone": 2 }));
+        assert_eq!(s.unit(P1, 2).expect("the pile's top").def_id, FIENDER);
         assert_eq!(books(&s), 2, "one Book for the played card");
         // … and next turn the watch is gone.
         s.end_turn();
         s.end_turn();
-        s.play(VANILLA, json!({ "zone": 2 }));
+        s.play(FIENDER, json!({ "zone": 2 }));
         assert_eq!(books(&s), 2, "no Book after the turn");
     }
 }
