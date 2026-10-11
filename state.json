@@ -4485,12 +4485,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "38164833557",
+            "tier": "strong"
+          }
+        ],
         "sha": "93374b7b006525b221cca78908c3465bca34c558",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "673": {
