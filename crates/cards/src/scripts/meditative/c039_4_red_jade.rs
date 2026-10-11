@@ -82,4 +82,14 @@ mod tests {
             .collect();
         assert_eq!(order, vec!["summoned", "radiantSet"]);
     }
+
+    #[test]
+    fn jade_reads_through_param() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+        set_param(s.card_mut(ID), "jade", 3);
+        s.play(ID, json!({}));
+        assert_eq!(s.view(P1).you.jade, Some(3));
+        assert!(beauties(&s).is_empty(), "3 crosses no threshold");
+    }
 }

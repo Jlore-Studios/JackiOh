@@ -140,4 +140,83 @@ mod tests {
         assert!(worse_never, "Lucky 2 keeps the best of three");
         assert!(better_once, "over 30 seeds some roll improves");
     }
+
+    #[test]
+    fn r18_a_hero_immunity_does_not_stop_it() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [ID, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        // MD-C21's hero immunity stops damage, and lose health is no damage (R18).
+        s.state_mut().players[P1].mods.push(PlayerModifier {
+            id: "immune".to_string(),
+            expiry: ModifierExpiry::Never,
+            kind: ModifierKind::HeroImmune,
+        });
+        s.play(ID, json!({}));
+        s.expect_health(P1, 28);
+    }
+
+    #[test]
+    fn r960_over_many_seeds_the_odds_hold_at_20_70_and_10() {
+        crate::register_all();
+        let odds: Vec<(&str, i32)> =
+            AUSPICIOUS_ROCK_ODDS.iter().map(|row| (row.def_id, row.percent)).collect();
+        assert_eq!(odds, vec![(DUD, 20), (JADE, 70), (RED_JADE, 10)]);
+        const ROLLS: usize = 600;
+        let mut counts = [0usize; 3];
+        for n in 0..ROLLS {
+            let mut s = scenario(json!({
+                "seed": format!("rock-odds-{n}"),
+                "p1": { "hand": [ID, FILLER] },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.play(ID, json!({}));
+            counts[rank(&rolled(&s)) as usize] += 1;
+        }
+        // Each share within six points of its odds (over four standard deviations at 600 rolls).
+        for (count, (def, percent)) in counts.iter().zip(odds) {
+            let share = (*count * 100) as f64 / ROLLS as f64;
+            assert!((share - percent as f64).abs() <= 6.0, "{def}: {share}% against {percent}%");
+        }
+    }
+
+    #[test]
+    fn life_reads_through_param() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [ID, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        set_param(s.card_mut(ID), "life", 5);
+        s.play(ID, json!({}));
+        s.expect_health(P1, 25);
+    }
+
+    #[test]
+    fn r987_feng_shuis_luck_joins_the_roll() {
+        // M #40's Luck 1 gives the base Rock a second roll, keeping the better.
+        crate::register_all();
+        const FENG_SHUI: &str = "meditative-040";
+        let mut worse_never = true;
+        let mut better_once = false;
+        for n in 0..30 {
+            let seed = format!("rock-luck-{n}");
+            let mut plain = scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+            plain.play(ID, json!({}));
+            let mut lucky = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [ID, FILLER], "backrow": [FENG_SHUI] },
+                "p2": { "hand": [FILLER] },
+            }));
+            assert_eq!(luck_of(lucky.state(), P1), 1);
+            lucky.play(ID, json!({}));
+            let (without, with) = (rank(&rolled(&plain)), rank(&rolled(&lucky)));
+            worse_never &= with >= without;
+            better_once |= with > without;
+        }
+        assert!(worse_never, "Luck keeps the best of the rolls");
+        assert!(better_once, "over 30 seeds some roll improves");
+    }
 }

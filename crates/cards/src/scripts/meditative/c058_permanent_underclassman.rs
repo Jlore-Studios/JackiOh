@@ -115,6 +115,39 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
+    /// Apply `effects` as `controller`'s, outside any card (a steal, a transform, a copy, a cast).
+    fn run_as(s: &mut Scenario, effects: &[Effect], controller: PlayerId) {
+        let mut events = Vec::new();
+        let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+        let mut rng = Rng::new(&seed, cursor);
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions { controller: Some(controller), ..HookOptions::default() },
+            );
+            apply_effects(effects, &mut ctx);
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+    }
+
+    /// The Book cards in `seat`'s hand.
+    fn books_of(s: &Scenario, seat: PlayerId) -> Vec<CardInstance> {
+        s.hand(seat)
+            .into_iter()
+            .filter(|card| crate::card_def(&card.def_id).tags.contains(&Tag::Book))
+            .collect()
+    }
+
+    /// p1 plays the base Underclassman into lane 1; the summoned Unit stands in lane 2.
+    fn summoned(seed: &str) -> (Scenario, CardInstance) {
+        let mut s = casting(seed, false);
+        s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
+        let unit = s.unit("p1", 2).expect("the summoned Unit");
+        (s, unit)
+    }
+
     /// The granted lines on p1's Unit in `lane`, as the client reads them.
     fn granted_lines(s: &Scenario, lane: usize) -> Vec<String> {
         let view: Value =
@@ -164,6 +197,156 @@ mod tests {
             let added = books(&s);
             assert_eq!(added.len(), 1);
             assert!(added[0].radiant);
+        }
+
+        #[test]
+        fn the_summoned_unit_runs_no_cry() {
+            // Find a seed whose pick prints a Cry: the summon runs none of it (§6.3 Summon).
+            let (s, unit) = (0..400)
+                .map(|n| summoned(&format!("underclassman-cry-{n}")))
+                .find(|(_, unit)| crate::card_def(&unit.def_id).base.text.contains("Cry:"))
+                .expect("some seed summons a (1) Unit with a Cry");
+            assert!(s.state().pending.is_none(), "no Cry prompt opened");
+            let p1_units = (1..=UNIT_ZONES).filter(|lane| s.unit("p1", *lane).is_some()).count();
+            assert_eq!(p1_units, 2, "only the Underclassman and {} stand", unit.def_id);
+            let summons = s
+                .last_events()
+                .iter()
+                .filter(|event| event.event_type() == GameEventType::Summoned)
+                .count();
+            assert_eq!(summons, 1, "the summoned Unit's Cry summoned nothing more");
+        }
+
+        #[test]
+        fn a_cast_underclassman_runs_its_cry_too() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "underclassman-cast",
+                "p1": { "hand": [FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            run_as(
+                &mut s,
+                &[cast_new(CastNewArgs {
+                    def: UNDERCLASSMAN.into(),
+                    radiant: None,
+                    how: CastHow::default(),
+                })],
+                PlayerId::P1,
+            );
+            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UNDERCLASSMAN.to_string()));
+            let unit = s.unit("p1", 2).expect("the cast Cry summoned a Unit");
+            assert_eq!(crate::card_def(&unit.def_id).cost, CardCost::Fixed(1));
+            assert_eq!(granted_lines(&s, 2).len(), 1);
+            kill(&mut s, &unit);
+            assert_eq!(books(&s).len(), 1);
+        }
+
+        #[test]
+        fn the_grant_survives_a_vanilla() {
+            let (mut s, unit) = summoned("underclassman-vanilla");
+            run_as(
+                &mut s,
+                &[vanilla(json_as(json!({ "instanceId": unit.id })))],
+                PlayerId::P1,
+            );
+            assert!(s.card(&unit.id).vanilla, "the Vanilla applied");
+            assert_eq!(granted_lines(&s, 2).len(), 1);
+            kill(&mut s, &unit);
+            assert_eq!(books(&s).len(), 1);
+        }
+
+        #[test]
+        fn the_grant_survives_a_copy() {
+            let (mut s, unit) = summoned("underclassman-copy");
+            run_as(
+                &mut s,
+                &[summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": unit.id } })))],
+                PlayerId::P1,
+            );
+            let copy = s.unit("p1", 3).expect("the copy");
+            assert_eq!(copy.def_id, unit.def_id);
+            assert_ne!(copy.id, unit.id);
+            assert_eq!(copy.grants, s.card(&unit.id).grants);
+            assert_eq!(granted_lines(&s, 3).len(), 1);
+            kill(&mut s, &copy);
+            assert_eq!(books(&s).len(), 1, "the copy's Death adds the Book");
+        }
+
+        #[test]
+        fn r1107_the_grant_survives_a_json_round_trip() {
+            let (mut s, unit) = summoned("underclassman-json");
+            let round: GameState =
+                serde_json::from_value(serde_json::to_value(s.state()).expect("serialises"))
+                    .expect("deserialises");
+            assert_eq!(find_instance(&round, &unit.id).and_then(|card| card.grants.clone()), unit.grants);
+            *s.state_mut() = round;
+            assert_eq!(granted_lines(&s, 2).len(), 1);
+            kill(&mut s, &unit);
+            assert_eq!(books(&s).len(), 1, "the round-tripped grant still runs");
+        }
+
+        #[test]
+        fn the_grant_is_lost_when_the_unit_leaves_the_field() {
+            let (mut s, unit) = summoned("underclassman-leave");
+            kill(&mut s, &unit);
+            assert_eq!(books(&s).len(), 1);
+            // In the graveyard it carries no grant (R78).
+            let gone = s
+                .pile("p1", "graveyard")
+                .into_iter()
+                .find(|card| card.id == unit.id)
+                .expect("the summoned Unit in the graveyard");
+            assert_eq!(gone.grants, None);
+        }
+
+        #[test]
+        fn the_grant_is_lost_when_the_unit_is_transformed() {
+            let (mut s, unit) = summoned("underclassman-transform");
+            run_as(
+                &mut s,
+                &[transform(json_as(json!({ "instanceId": unit.id, "defId": VANILLA })))],
+                PlayerId::P1,
+            );
+            let now = s.unit("p1", 2).expect("the transformed Unit");
+            assert_eq!(now.def_id, VANILLA);
+            assert_eq!(now.grants, None);
+            assert!(granted_lines(&s, 2).is_empty());
+            kill(&mut s, &now);
+            assert!(books(&s).is_empty(), "a transformed Unit adds no Book");
+        }
+
+        #[test]
+        fn r1107_stolen_it_adds_the_book_to_its_new_controller() {
+            let (mut s, unit) = summoned("underclassman-steal");
+            run_as(
+                &mut s,
+                &[steal(json_as(json!({ "instanceId": unit.id })))],
+                PlayerId::P2,
+            );
+            assert_eq!(s.card(&unit.id).controller, PlayerId::P2);
+            let stolen = s.card(&unit.id).clone();
+            kill(&mut s, &stolen);
+            assert_eq!(books_of(&s, PlayerId::P2).len(), 1, "the Book goes to the new controller");
+            assert!(books_of(&s, PlayerId::P1).is_empty());
+        }
+
+        #[test]
+        fn r386_books_reads_through_param() {
+            crate::register_all();
+            let mut s = casting("underclassman-param", false);
+            step_param(s.card_mut(UNDERCLASSMAN), "books", 1);
+            s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
+            let unit = s.unit("p1", 2).expect("the summoned Unit");
+            kill(&mut s, &unit);
+            assert_eq!(books(&s).len(), 2, "a Buffed {{books}} adds two");
+        }
+
+        #[test]
+        fn the_radiant_face_is_6_6() {
+            let mut s = casting("underclassman-stats", true);
+            s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
+            s.expect_stats(UNDERCLASSMAN, json!({ "attack": 6, "health": 6 }));
         }
 
         #[test]

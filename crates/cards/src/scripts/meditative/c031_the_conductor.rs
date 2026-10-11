@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn r944_the_hand_cap_burns_the_overflow_and_the_draw_limit_stops_the_rest() {
+    fn r944_the_hand_cap_burns_the_overflow() {
         // Hand cap: p1 holds 9 fillers plus the Conductor (10, at the cap once it is played …).
         crate::register_all();
         let mut hand = vec![json!({ "def": CONDUCTOR })];
@@ -158,27 +158,6 @@ mod tests {
         let burned: Vec<_> = s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == VANILLA).collect();
         assert_eq!(burned.len(), 1, "the overflow burns");
         assert!(s.hand(P1).into_iter().any(|card| card.def_id == VANILLA), "the first draw lands");
-
-        // Draw limit: Palantir on p2's field lets p1 draw 1 this turn.
-        let mut s = conducting(
-            "conductor-limit",
-            false,
-            json!([{ "def": VANILLA, "created": true }, { "def": VANILLA, "created": true }, { "def": VANILLA, "created": true }]),
-        );
-        {
-            // Palantir is a Field Spell: it acts from p2's backrow.
-            let state = s.state_mut();
-            let lane = first_free_zone(state, P2, Row::Backrow).expect("room");
-            let mut card = new_instance(state, PALANTIR, P2, zone_of(lane));
-            assert!(place_on_field(state, &mut card, lane, Default::default()));
-        }
-        let mark = s.events().len();
-        s.play(CONDUCTOR, json!({}));
-        assert_eq!(s.pile(P1, "library").len(), 2, "the limit stops the rest");
-        assert!(
-            s.events()[mark..].iter().any(|event| matches!(event, GameEvent::DrawLimited { .. })),
-            "the limit is reported"
-        );
     }
 
     #[test]
@@ -227,5 +206,178 @@ mod tests {
         assert!(prime.is_some(), "a Prime card was shuffled in and drawn");
         assert_eq!(prime.expect("drawn").created, Some(true), "it is Created");
         let _ = mark;
+    }
+
+    #[test]
+    fn r457_the_draw_limit_stops_the_rest() {
+        // Draw limit: Palantir on p2's field lets p1 draw 1 this turn.
+        let mut s = conducting(
+            "conductor-limit",
+            false,
+            json!([{ "def": VANILLA, "created": true }, { "def": VANILLA, "created": true }, { "def": VANILLA, "created": true }]),
+        );
+        {
+            // Palantir is a Field Spell: it acts from p2's backrow.
+            let state = s.state_mut();
+            let lane = first_free_zone(state, P2, Row::Backrow).expect("room");
+            let mut card = new_instance(state, PALANTIR, P2, zone_of(lane));
+            assert!(place_on_field(state, &mut card, lane, Default::default()));
+        }
+        let mark = s.events().len();
+        s.play(CONDUCTOR, json!({}));
+        assert_eq!(s.pile(P1, "library").len(), 2, "the limit stops the rest");
+        assert!(
+            s.events()[mark..].iter().any(|event| matches!(event, GameEvent::DrawLimited { .. })),
+            "the limit is reported"
+        );
+    }
+
+
+    #[test]
+    fn deft() {
+        crate::register_all();
+        let def = crate::card_def(CONDUCTOR);
+        assert!(def.base.keywords.contains(&Keyword::Deft));
+        assert!(def.radiant.keywords.contains(&Keyword::Deft));
+    }
+
+    #[test]
+    fn r944_a_cast_conductor_draws_them_too() {
+        // "Cry (played or cast)": a Conductor cast by an effect runs the same Cry.
+        let mut s = conducting(
+            "conductor-cast",
+            false,
+            json!([{ "def": VANILLA, "created": true }, FILLER]),
+        );
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                );
+                apply_effects(&[cast_new(json_as(json!({ "def": CONDUCTOR })))], &mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+        let library = s.pile(P1, "library");
+        assert_eq!(def_ids(&library), vec![FILLER.to_string()], "the Created card was drawn");
+        assert!(s.hand(P1).iter().any(|card| card.def_id == VANILLA && card.created == Some(true)));
+    }
+
+    #[test]
+    fn r944_dealt_cards_stay() {
+        let mut s = conducting("conductor-dealt", false, json!([VANILLA, FILLER, VANILLA]));
+        let hand_before = s.hand(P1).len();
+        s.play(CONDUCTOR, json!({}));
+        // No Created card: nothing is drawn, and the dealt cards stay in their order.
+        assert_eq!(s.hand(P1).len(), hand_before - 1);
+        assert_eq!(
+            def_ids(&s.pile(P1, "library")),
+            vec![VANILLA.to_string(), FILLER.to_string(), VANILLA.to_string()]
+        );
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Drawn { .. })));
+    }
+
+    #[test]
+    fn r943_the_flag_survives_a_json_round_trip_and_every_zone() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "conductor-zones",
+            "p1": {
+                "mana": 10,
+                "hand": [{ "def": CONDUCTOR }, { "def": HIT_JOB }, FILLER],
+                "library": [{ "def": VANILLA, "created": true }, FILLER, FILLER],
+            },
+            "p2": { "hand": [FILLER], "library": self::library() },
+        }));
+        let marked = s.pile(P1, "library")[0].id.clone();
+        let round_trip = |state: &GameState| -> GameState {
+            let text = serde_json::to_string(state).expect("the state serialises");
+            serde_json::from_str(&text).expect("the state parses")
+        };
+        let is_marked =
+            |state: &GameState| find_instance(state, &marked).expect("the card").created == Some(true);
+        // The library, through a JSON round trip.
+        assert!(is_marked(&round_trip(s.state())));
+        // The hand, drawn by the Conductor.
+        s.play(CONDUCTOR, json!({}));
+        assert!(matches!(s.card(&marked).zone, Zone::Hand { .. }));
+        assert!(is_marked(&round_trip(s.state())));
+        // The field.
+        s.play(&marked, json!({}));
+        assert!(matches!(s.card(&marked).zone, Zone::Field { .. }));
+        assert!(is_marked(&round_trip(s.state())));
+        // The graveyard.
+        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": marked }] }));
+        s.expect_in_zone(&marked, "graveyard");
+        assert!(is_marked(&round_trip(s.state())));
+    }
+
+    #[test]
+    fn r310_the_owners_list_marks_created_cards() {
+        let s = conducting(
+            "conductor-list",
+            false,
+            json!([{ "def": VANILLA, "created": true }, VANILLA, FILLER]),
+        );
+        let list = own_library_view(s.state(), P1);
+        let vanillas: Vec<(Option<bool>, i32)> = list
+            .cards
+            .iter()
+            .filter(|entry| entry.def_id == VANILLA)
+            .map(|entry| (entry.created, entry.count))
+            .collect();
+        // The Created Vanilla groups apart from the dealt one, and only it is marked.
+        assert_eq!(vanillas.len(), 2, "{vanillas:?}");
+        assert!(vanillas.contains(&(Some(true), 1)));
+        assert!(vanillas.contains(&(None, 1)));
+        assert!(
+            list.cards.iter().filter(|entry| entry.def_id == FILLER).all(|entry| entry.created.is_none())
+        );
+    }
+
+    #[test]
+    fn radiant_is_14_18() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "conductor-stats",
+            "p1": {
+                "field": [{ "def": CONDUCTOR, "lane": 1 }, { "def": CONDUCTOR, "radiant": true, "lane": 2 }],
+                "hand": [FILLER],
+            },
+            "p2": { "hand": [FILLER] },
+        }));
+        let base = s.unit(P1, 1).expect("the base Conductor");
+        let radiant = s.unit(P1, 2).expect("the Radiant Conductor");
+        s.expect_stats(&base.id, json!({ "attack": 7, "health": 9 }));
+        s.expect_stats(&radiant.id, json!({ "attack": 14, "health": 18 }));
+    }
+
+    #[test]
+    fn r1421_the_radiant_prime_is_a_prime_token() {
+        let _preview = preview_sets(&[SetName::Meditative]);
+        for n in 0..10 {
+            let mut s = conducting(&format!("conductor-prime-{n}"), true, json!([FILLER, FILLER]));
+            let mark = s.events().len();
+            s.play(CONDUCTOR, json!({}));
+            let drawn: Vec<CardInstance> = s
+                .hand(P1)
+                .into_iter()
+                .filter(|card| card.def_id != FILLER)
+                .collect();
+            assert_eq!(drawn.len(), 1, "one Prime drawn: {:?}", def_ids(&drawn));
+            let def = crate::card_def(&drawn[0].def_id);
+            assert!(def.token, "{} is a Prime token", def.id);
+            assert!(def.tags.contains(&Tag::Prime), "{} is Prime", def.id);
+            assert!(
+                s.events()[mark..].iter().any(|event| matches!(event, GameEvent::Drawn { .. })),
+                "drawn by the same Cry"
+            );
+        }
     }
 }

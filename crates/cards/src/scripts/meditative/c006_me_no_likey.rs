@@ -202,5 +202,110 @@ mod tests {
             // Twice the Menace's 3.
             s.expect_mana(P1, 15);
         }
+
+        #[test]
+        fn r386_radiant_multiple_reads_through_param() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": LIKELY, "radiant": true }, FILLER], "mana": 9, "field": [MENACE] },
+                "p2": { "hand": [FILLER] },
+            }));
+            step_param(s.card_mut(LIKELY), "multiple", 1);
+
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+
+            // Three times the Menace's 3.
+            s.expect_mana(P1, 18);
+        }
+
+        #[test]
+        fn r13_only_the_top_of_a_pile_is_a_legal_target() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [LIKELY, FILLER],
+                    "mana": 9,
+                    "field": [FODDER, { "def": MENACE, "stack": true }],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let dormant = s.card(FODDER).id.clone();
+
+            s.expect_refused(|s| {
+                s.play(LIKELY, json!({ "targets": [{ "pick": "instance", "instanceId": dormant }] }))
+            });
+            // The top of the pile is the gift.
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            assert_eq!(s.card(MENACE).controller, P2);
+        }
+
+        #[test]
+        fn r15_it_lands_in_its_own_lane_when_that_is_free() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [FODDER, { "def": MENACE, "lane": 3 }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let menace = s.card(MENACE).id.clone();
+
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+
+            assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(menace));
+        }
+
+        #[test]
+        fn r15_else_their_first_free_unit_zone() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
+                "p2": { "hand": [FILLER], "field": [FODDER, FODDER] },
+            }));
+            let menace = s.card(MENACE).id.clone();
+
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+
+            // Lane 1 is taken on their side, so the leftmost free one, lane 3.
+            assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(menace));
+        }
+
+        #[test]
+        fn r171_it_is_summoning_sick_for_them() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let menace = s.card(MENACE).id.clone();
+
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+
+            let gift = s.card(&menace).clone();
+            assert_eq!(gift.summoned_turn, Some(s.state().turn));
+            assert!(is_sick(s.state(), &gift), "an entry: summoning sick for its new controller");
+        }
+
+        #[test]
+        fn control_changed_is_reported_publicly() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let menace = s.card(MENACE).id.clone();
+
+            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+
+            let changed: Vec<Value> = s
+                .last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::ControlChanged { .. }))
+                .map(js)
+                .collect();
+            assert_eq!(changed.len(), 1);
+            assert!(matches_object(
+                &changed[0],
+                &json!({ "type": "controlChanged", "instanceId": menace, "controller": "p2", "row": "units", "lane": 1 })
+            ));
+        }
     }
 }

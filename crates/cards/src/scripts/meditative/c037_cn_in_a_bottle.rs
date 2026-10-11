@@ -68,6 +68,62 @@ mod tests {
         json!(vec!["core-005"; count])
     }
 
+    /// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor
+    /// written back.
+    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) {
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                );
+                apply_effects(effects, &mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+    }
+
+    /// p1 with a filler in hand and room for more; p2 holds a filler.
+    fn quiet(seed: &str) -> Scenario {
+        crate::register_all();
+        scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [FILLER], "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }))
+    }
+
+    /// A bottle added to p1's hand; the card that took its place.
+    fn add_bottle(s: &mut Scenario, radiant: bool) -> CardInstance {
+        apply_for_p1(s, &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE, "radiant": radiant })))]);
+        s.hand(P1).last().cloned().expect("the replacement")
+    }
+
+    /// The decks of a dealt game: p1's holds one bottle.
+    fn decks() -> (Vec<String>, Vec<String>) {
+        let rest = [
+            "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+            "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-016", "core-017",
+            "core-019", "core-020", "core-025",
+        ];
+        let mut mine = vec![BOTTLE.to_string()];
+        mine.extend(rest.iter().map(|id| id.to_string()));
+        let mut theirs = vec!["core-026".to_string()];
+        theirs.extend(rest.iter().map(|id| id.to_string()));
+        (mine, theirs)
+    }
+
+    fn bottle_transformed(events: &[GameEvent]) -> bool {
+        events
+            .iter()
+            .any(|event| matches!(event, GameEvent::Transformed { from_def_id, .. } if from_def_id == BOTTLE))
+    }
+
     mod m37_cn_in_a_bottle {
         use super::*;
 
@@ -151,6 +207,143 @@ mod tests {
                 assert!(script().radiant.cry.is_none());
                 assert!(script().base.enters_hand.is_some());
                 assert!(script().radiant.enters_hand.is_some());
+            }
+
+            #[test]
+            fn r925_an_add_replaces_it_in_place() {
+                let mut s = quiet("bottle-add");
+                let new_card = add_bottle(&mut s, false);
+                assert_eq!(s.hand(P1).len(), 2);
+                assert_ne!(new_card.def_id, BOTTLE);
+                assert!(new_card.radiant);
+                assert_eq!(new_card.chinese, Some(true));
+                assert!(s.events().iter().any(|event| matches!(event, GameEvent::AddedToHand { .. })));
+            }
+
+            #[test]
+            fn r925_the_opening_deal_and_a_mulligan_replacement_replace_it() {
+                crate::register_all();
+                let (mut dealt, mut replaced) = (0, 0);
+                for n in 0..200 {
+                    let options: CreateGameOptions = json_as(json!({
+                        "seed": format!("bottle-deal-{n}"),
+                        "decks": [decks().0, decks().1],
+                    }));
+                    let begun = begin_game(&create_game(&options));
+                    assert!(begun.state.players.p1.hand.iter().all(|card| card.def_id != BOTTLE));
+                    if bottle_transformed(&begun.events) {
+                        dealt += 1;
+                        continue;
+                    }
+                    if replaced > 0 {
+                        continue;
+                    }
+                    // Not dealt: p1 sends its whole hand back, so the bottle may come as a replacement.
+                    let kept: Vec<String> =
+                        begun.state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
+                    let mut state = begun.state;
+                    for (player, keep) in [(P1, Vec::new()), (P2, kept)] {
+                        let action: Action = json_as(json!({
+                            "type": "mulligan",
+                            "keep": keep,
+                            "playerId": player,
+                            "nonce": format!("bottle-mulligan-{n}-{player}"),
+                        }));
+                        let result = reduce(&state, &action);
+                        assert!(result.error.is_none(), "{:?}", result.error);
+                        if bottle_transformed(&result.events) {
+                            replaced += 1;
+                        }
+                        state = result.state;
+                    }
+                    assert!(state.players.p1.hand.iter().all(|card| card.def_id != BOTTLE));
+                }
+                assert!(dealt > 0, "some seed deals the bottle");
+                assert!(replaced > 0, "some mulligan draws the bottle");
+            }
+
+            #[test]
+            fn r387_the_new_card_is_a_non_token_card_of_any_set_but_never_itself() {
+                let mut s = quiet("bottle-sweep");
+                let mut sets: Vec<SetName> = Vec::new();
+                for _ in 0..60 {
+                    let new_card = add_bottle(&mut s, false);
+                    let def = crate::card_def(&new_card.def_id);
+                    assert_ne!(def.id, BOTTLE, "never itself (R387)");
+                    assert!(!def.token, "{} is a token", def.id);
+                    if !sets.contains(&def.set) {
+                        sets.push(def.set);
+                    }
+                    s.state_mut().players.p1.hand.pop();
+                }
+                assert!(sets.len() > 1, "of any set: {sets:?}");
+            }
+
+            #[test]
+            fn r97_the_new_card_is_hidden_from_the_opponent() {
+                let mut s = quiet("bottle-hidden");
+                let new_card = add_bottle(&mut s, false);
+                let theirs = serde_json::to_string(&s.view(P2)).expect("the view serialises");
+                assert!(!theirs.contains(&new_card.id), "p2 never reads the new card's id");
+                assert!(!theirs.contains(&new_card.def_id), "p2 never reads {}", new_card.def_id);
+                let mine = serde_json::to_string(&s.view(P1)).expect("the view serialises");
+                assert!(mine.contains(&new_card.def_id), "p1 reads its own card");
+            }
+
+            #[test]
+            fn r673_the_new_card_is_generated_for_glitch() {
+                // With Glitch's odds at certainty, the replacement is a Glitch.
+                let mut s = quiet("bottle-glitch");
+                s.state_mut().system_plays =
+                    Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
+                let new_card = add_bottle(&mut s, false);
+                assert_eq!(new_card.def_id, GLITCH_DEF_ID);
+            }
+
+            #[test]
+            fn r151_the_new_card_runs_its_own_arrival_hooks() {
+                // A Heroic Power rolls its power as it arrives (R43): one that replaces a bottle has.
+                const HEROIC_POWER: &str = "core-098";
+                let mut s = quiet("bottle-arrives");
+                let mut found = None;
+                for _ in 0..3000 {
+                    let new_card = add_bottle(&mut s, false);
+                    if new_card.def_id == HEROIC_POWER {
+                        found = Some(new_card);
+                        break;
+                    }
+                    s.state_mut().players.p1.hand.pop();
+                }
+                let power = found.expect("some bottle becomes a Heroic Power");
+                assert!(power.memory.get("power").is_some_and(Value::is_string), "{:?}", power.memory);
+            }
+
+            #[test]
+            fn r926_a_cast_or_a_random_play_of_it_does_nothing() {
+                // Played from a hand it was put in, it resolves with no effect.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "bottle-play",
+                    "p1": { "hand": [{ "def": BOTTLE }, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let held = s.hand(P1).into_iter().find(|card| card.def_id == BOTTLE).expect("the bottle");
+                let before = s.state().players[P1].clone();
+                s.play(&held.id, json!({}));
+                s.expect_in_zone(&held.id, "graveyard");
+                let after = &s.state().players[P1];
+                assert_eq!(after.hand.len(), before.hand.len() - 1, "nothing added");
+                assert_eq!(after.library.len(), before.library.len(), "nothing drawn");
+                assert_eq!(after.hero, before.hero);
+                // Cast at random by an effect, it does nothing either.
+                let mut s = quiet("bottle-random-cast");
+                let before = s.state().players[P1].clone();
+                apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": BOTTLE, "random": true })))]);
+                let after = &s.state().players[P1];
+                assert_eq!(after.hand.len(), before.hand.len());
+                assert_eq!(after.library.len(), before.library.len());
+                assert_eq!(after.hero, before.hero);
+                assert!(!bottle_transformed(s.events()));
             }
         }
 

@@ -58,8 +58,15 @@ mod tests {
     const DEVILS_PACT: &str = "classic-023"; // (5) Spell: Cry discards your own cards at random.
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005"; // (1) Spell.
+    const FORTIFY_MIND: &str = "meditative-022-1"; // (0) Temporary Spell.
+    const PICKLE: &str = "classic-008"; // (1) Spell: three questions, "they discard" among them.
+    const JAMMED: &str = "core-036"; // (1) Spell: destroy a backrow card.
+    const P2: PlayerId = PlayerId::P2;
 
     use crate::js;
+    use jackioh_engine::effects::{discard, discard_from_hand, discard_hand, discard_random, discard_random_cards};
+    use jackioh_engine::resolve::{HookOptions, cast_card, make_context};
+    use jackioh_engine::triggers::{SettleOptions, settle};
 
     fn backrow(def: &str, radiant: bool) -> Value {
         json!({ "def": def, "radiant": radiant, "faceUp": true, "lane": 1 })
@@ -203,6 +210,174 @@ mod tests {
 
             assert_eq!(s.hand(P1).len(), 3);
             s.expect_mana(P1, 10);
+        }
+
+        /// Apply one effect as `controller`'s, the way `resolve.rs` runs a hook's effects.
+        fn run_as(s: &mut Scenario, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
+            let mut events: Vec<GameEvent> = Vec::new();
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions { controller: Some(controller), ..Default::default() },
+                );
+                (effect.apply)(&mut ctx);
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            events
+        }
+
+        /// p2 to act, p1 guarded by a face-up Disruptor and holding three cards.
+        fn guarded() -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "active": "p2",
+                "p1": { "hand": [VANILLA, VANILLA, VANILLA], "backrow": [backrow(DISRUPTOR, false)] },
+                "p2": { "hand": [BOOK_OF_PAIN, FILLER], "mana": 9 },
+            }))
+        }
+
+        fn ids(cards: &[CardInstance]) -> Vec<String> {
+            cards.iter().map(|card| card.id.clone()).collect()
+        }
+
+        #[test]
+        fn r800_random_chosen_and_whole_hand_discards_move_nothing_and_draw_no_rng() {
+            let mut s = guarded();
+            let hand = ids(&s.hand(P1));
+            let cursor = s.state().rng_cursor;
+
+            let random = run_as(&mut s, discard_random(json_as(json!({ "count": 2, "player": "enemy" }))), P2);
+            assert_eq!(random, vec![GameEvent::DiscardPrevented { player: P1, count: 2 }]);
+            assert_eq!(s.state().rng_cursor, cursor, "a random discard draws no random number");
+
+            let chosen = run_as(
+                &mut s,
+                discard(json_as(json!({ "target": { "of": "instance", "instanceId": hand[0] } }))),
+                P2,
+            );
+            assert_eq!(chosen, vec![GameEvent::DiscardPrevented { player: P1, count: 1 }]);
+
+            let whole = run_as(&mut s, discard_hand(json_as(json!({ "player": "enemy" }))), P2);
+            assert_eq!(whole, vec![GameEvent::DiscardPrevented { player: P1, count: 3 }]);
+
+            assert_eq!(ids(&s.hand(P1)), hand, "no card moved");
+            assert!(s.pile(P1, "graveyard").is_empty());
+            // `discardPrevented` is public: both seats see it.
+            assert!(js(&GameEvent::DiscardPrevented { player: P1, count: 3 })["player"] == "p1");
+        }
+
+        #[test]
+        fn r800_r384_r450_a_discard_paid_as_a_price_still_happens() {
+            let mut s = guarded();
+            assert!(jackioh_engine::draw::discard_guarded(s.state(), P1));
+            let mut events: Vec<GameEvent> = Vec::new();
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            let kept = s.hand(P1)[0].clone();
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                // An Activate's random discard (R384), then a targeting cost's (R450).
+                discard_random_cards(&mut sink, P1, 1);
+                discard_from_hand(&mut sink, &kept);
+            }
+            assert_eq!(count(&events, "discarded"), 2);
+            assert_eq!(count(&events, "discardPrevented"), 0);
+            assert_eq!(s.hand(P1).len(), 1);
+            assert_eq!(s.pile(P1, "graveyard").len(), 2);
+            assert!(ids(&s.pile(P1, "graveyard")).contains(&kept.id));
+        }
+
+        #[test]
+        fn r800_r637_temporarys_discard_at_your_own_end_of_turn_is_untouched() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [FORTIFY_MIND, VANILLA],
+                    "backrow": [backrow(DISRUPTOR, false)],
+                    "library": [VANILLA, VANILLA],
+                },
+                "p2": { "hand": [FILLER], "library": [VANILLA, VANILLA] },
+            }));
+            let temporary = s.card(FORTIFY_MIND).id.clone();
+
+            s.end_turn();
+
+            s.expect_in_zone(&temporary, "graveyard");
+            assert_eq!(count(s.events(), "discardPrevented"), 0);
+        }
+
+        #[test]
+        fn r800_pickle_offers_no_discard_option_against_you() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "hand": [VANILLA, VANILLA],
+                    "library": [VANILLA, VANILLA],
+                    "backrow": [backrow(DISRUPTOR, false)],
+                },
+                "p2": { "hand": [PICKLE, FILLER], "library": [VANILLA, VANILLA], "mana": 9 },
+            }));
+
+            s.play(PICKLE, json!({}));
+
+            let pending = s.state().pending.clone().expect("Pickle's question is open");
+            let offered: Vec<String> = pending
+                .options
+                .iter()
+                .map(|option| match &option.selection {
+                    Selection::Mode { option } => option.clone(),
+                    _ => "?".to_string(),
+                })
+                .collect();
+            assert_eq!(offered, vec!["exile", "draw"]);
+        }
+
+        #[test]
+        fn r800_leaving_the_field_lifts_it() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "hand": [VANILLA, VANILLA, VANILLA], "backrow": [backrow(DISRUPTOR, false)] },
+                "p2": { "hand": [JAMMED, BOOK_OF_PAIN, FILLER], "mana": 9 },
+            }));
+            let disruptor = s.card(DISRUPTOR).id.clone();
+
+            s.play(JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": disruptor }] }));
+            s.expect_in_zone(&disruptor, "graveyard");
+            s.play(BOOK_OF_PAIN, json!({}));
+
+            assert_eq!(s.hand(P1).len(), 1, "the discard happens once it has left");
+            assert_eq!(count(s.last_events(), "discardPrevented"), 0);
+        }
+
+        #[test]
+        fn r1_radiant_cry_fires_when_cast() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
+                    "mana": 3,
+                    "library": [VANILLA, VANILLA],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let disruptor = s.card(DISRUPTOR).clone();
+            let mut events: Vec<GameEvent> = Vec::new();
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                cast_card(&mut sink, &disruptor, Default::default());
+                settle(&mut sink, SettleOptions::default());
+            }
+
+            s.expect_in_zone(&disruptor, "field");
+            // A cast is free: 3 kept, plus the Cry's temporary 2; the draw took one card.
+            s.expect_mana(P1, 5);
+            assert_eq!(s.pile(P1, "library").len(), 1);
+            assert_eq!(s.hand(P1).len(), 2);
         }
     }
 }
