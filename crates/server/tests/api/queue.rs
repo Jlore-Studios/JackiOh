@@ -16,6 +16,7 @@
 //!  - **R264**: a profile in a series that is not over can neither queue nor be paired.
 //!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
 //!    newest set, and only that seat's.
+//!  - **R1450**: a start whose cleanup fails too is released by the reaper once the grace has run.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, so `enqueuedAt` and the widening
 //! window are set by this file rather than by the host clock (`app::now_ms()` reads tokio's clock).
@@ -46,8 +47,11 @@ use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::api::queue::{e2e_seed_count, try_pair};
+use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
-use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, rating_window};
+use jackioh_server::config::{
+    MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS, rating_window,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
 
@@ -1291,6 +1295,56 @@ mod a_paired_match_whose_start_fails {
 
         // Free means free: the claimed ticket is never open, so a fresh enqueue is not blocked.
         fake(&app).await.on_call = None;
+        let (_, again) = enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
+        assert_eq!(again["status"], "open");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1450_a_start_whose_cleanup_fails_too_is_released_by_the_reaper_once_the_grace_has_run() {
+        let app = test_app().await;
+        let one = active_profile(&app, "stranded-a", 1000.0).await;
+        let two = active_profile(&app, "stranded-b", 1000.0).await;
+        let [first, second, _] = decks_from();
+        let deck_a = save_deck_for(&app, "stranded-a", &first, "stranded-a's deck").await;
+        let deck_b = save_deck_for(&app, "stranded-b", &second, "stranded-b's deck").await;
+
+        enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
+        record_calls(&mut *fake(&app).await, |seen, method| {
+            method == "matches.create"
+                || (method == "profiles.setInMatch"
+                    && seen.iter().any(|previous| previous == "matches.create"))
+        });
+
+        assert_eq!(
+            enqueue_with(&app, &two, json!({ "mode": "bo1", "deckId": deck_b }))
+                .await
+                .0,
+            500
+        );
+        fake(&app).await.on_call = None;
+
+        let stranded_a = in_match_of(&app, "stranded-a").await;
+        let stranded_b = in_match_of(&app, "stranded-b").await;
+        assert!(stranded_a.is_string());
+        assert_eq!(stranded_a, stranded_b);
+
+        assert_eq!(
+            enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a }))
+                .await
+                .0,
+            409
+        );
+
+        tokio::time::advance(Duration::from_secs((OPEN_MATCH_REAP_GRACE_SECONDS - 10) as u64)).await;
+        assert_eq!(reap_open_matches(&app).await.unwrap(), 0);
+        assert_eq!(in_match_of(&app, "stranded-a").await, stranded_a);
+        assert_eq!(in_match_of(&app, "stranded-b").await, stranded_b);
+
+        tokio::time::advance(Duration::from_secs(20)).await;
+        assert_eq!(reap_open_matches(&app).await.unwrap(), 1);
+        assert_eq!(in_match_of(&app, "stranded-a").await, Value::Null);
+        assert_eq!(in_match_of(&app, "stranded-b").await, Value::Null);
+
         let (_, again) = enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
         assert_eq!(again["status"], "open");
     }
