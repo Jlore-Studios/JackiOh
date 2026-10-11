@@ -1247,6 +1247,7 @@ describe("the glossary (B26)", () => {
     inPlay: false,
     vanilla: false,
     gained: [],
+    grants: [],
     printed: null,
   };
   const ORDER: GlossaryTermId[] = ["Death", "Cry", "Lifesteal", "Taunt", "Rush"];

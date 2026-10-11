@@ -137,7 +137,13 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
 
   it("B41 lineFor gives a unit's play and death text in the voice each hook names", () => {
     const entry = CARD_AUDIO.cards["core-004"];
-    if (entry?.kind !== "unit" || entry.play?.voice === undefined || entry.death?.voice === undefined) {
+    if (
+      entry?.kind !== "unit" ||
+      entry.play?.voice === undefined ||
+      entry.death?.voice === undefined ||
+      !("text" in entry.play) ||
+      !("text" in entry.death)
+    ) {
       throw new Error("core-004 should be a unit with a play and a death line in the shipped file");
     }
 
@@ -149,7 +155,9 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     // docs/polish/2-sound.md, Personas: core-016 is the hustler with `rate 170, pbas 32`, once a
     // per-card override and now the voice `hustler-hitman` (R655).
     const entry = CARD_AUDIO.cards["core-016"];
-    if (entry?.kind !== "spell" || entry.cast?.voice === undefined) throw new Error("core-016 should be a spell with a cast line");
+    if (entry?.kind !== "spell" || entry.cast?.voice === undefined || !("text" in entry.cast)) {
+      throw new Error("core-016 should be a spell with a cast line");
+    }
     const hustler = CARD_AUDIO.voices.hustler;
     if (hustler === undefined || hustler.backend === "sapi") throw new Error("no say voice hustler");
 

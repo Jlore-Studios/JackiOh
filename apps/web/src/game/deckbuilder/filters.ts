@@ -21,6 +21,7 @@
 import { CATALOG } from "@jackioh/cards";
 import {
   SHIPPED_SETS,
+  setShips,
   fillParams,
   type CardCost,
   type CardDef,
@@ -32,6 +33,7 @@ import {
 } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { isGlitch } from "../../cards/glitch.ts";
 import { poolFrom } from "./loadout.ts";
 import { almanacShelf } from "./shelf.ts";
 

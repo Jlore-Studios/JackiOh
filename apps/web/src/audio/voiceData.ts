@@ -432,7 +432,8 @@ export function lineFor(
     return emoteLineFor(table, emotePortraitOf(defId), line as VoiceEmoteId);
   }
   const assignment = hookFor(table, defId, line);
-  if (assignment?.voice === undefined) return null;
+  // R1088: only a trigger lists lines; any other hook speaks its one text.
+  if (assignment?.voice === undefined || !("text" in assignment)) return null;
   const persona = table.voices[assignment.voice];
   return persona === undefined ? null : { text: assignment.text, persona };
 }

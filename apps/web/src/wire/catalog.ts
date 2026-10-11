@@ -122,7 +122,7 @@ export type Keyword =
   /** A Unit may attack and switch position in the same turn (R49). */
   | { kind: "Deft" }
   /** R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing. */
-  | { kind: "Untributable" };
+  | { kind: "Untributable" }
   /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-MAGNETIC). */
   | { kind: "Magnetic" };
 
