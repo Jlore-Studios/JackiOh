@@ -69,8 +69,14 @@ attribution is required when they play in the game.
 | `mythic-zephrys-zealotism` | `apps/web/public/audio/music/mythic-zephrys-zealotism.m4a` | Theme of Classic+ #27 Zephrys Zealotism: choir, organ, timpani | 29.2 s |
 | `mythic-twice-forward` | `apps/web/public/audio/music/mythic-twice-forward.m4a` | Theme of Classic+ #74 Twice Forward One Step Backwards: a waltz for clarinet and bassoon | 28.0 s |
 | `mythic-portal-to-the-past` | `apps/web/public/audio/music/mythic-portal-to-the-past.m4a` | Theme of Classic+ #29 Portal to the Past: music box, viola, strings | 30.5 s |
+| `mythic-reach-the-summit` | `apps/web/public/audio/music/mythic-reach-the-summit.m4a` | Theme of Meditative #8 Reach the Summit: the motif climbing the pentatonic on a pan flute, dulcimer, kalimba, timpani | 23.5 s |
+| `mythic-true-craft-a-card` | `apps/web/public/audio/music/mythic-true-craft-a-card.m4a` | Theme of Meditative #17 True Craft a Card: dulcimer, kalimba, marimba, woodblocks, a bell | 22.8 s |
+| `mythic-aestheticize-the-game` | `apps/web/public/audio/music/mythic-aestheticize-the-game.m4a` | Theme of Meditative #20 Aestheticize the Game: a 3/4 garden, flute over harp and bowed pad, kalimba | 22.3 s |
+| `mythic-yilegpt-tamed` | `apps/web/public/audio/music/mythic-yilegpt-tamed.m4a` | Theme of Meditative #49 YileGPT Tamed: a square lead answered by a dulcimer, synth bass, crystal | 21.5 s |
+| `mythic-pareto-optimality` | `apps/web/public/audio/music/mythic-pareto-optimality.m4a` | Theme of Meditative #71 Pareto Optimality: piccolo over a marimba ostinato, woodblocks, a side stick | 21.5 s |
+| `mythic-evil-blueprints` | `apps/web/public/audio/music/mythic-evil-blueprints.m4a` | Theme of Meditative #97 Jlockheed's Evil Blueprints: a march for synth brass, strings, bassoon, bells | 22.8 s |
 | `legendary-1` | `apps/web/public/audio/music/legendary-1.m4a` | Shared entrance theme of the Core and Classic Legendaries: a brass fanfare over timpani, celesta glint | 29.0 s |
-| `legendary-2` | `apps/web/public/audio/music/legendary-2.m4a` | Shared entrance theme of the Classic+ Legendaries: a brass fanfare over timpani, piccolo glint | 29.0 s |
+| `legendary-2` | `apps/web/public/audio/music/legendary-2.m4a` | Shared entrance theme of the Classic+ and Meditative Legendaries: a brass fanfare over timpani, piccolo glint | 29.0 s |
 | `intro-core-052` | `apps/web/public/audio/music/intro-core-052.m4a` | Intro of #52 Silly Silas (Legendary): bassoon, pizzicato, tuba, F major, 4/4 at 126 | 4.8 s |
 | `intro-core-083` | `apps/web/public/audio/music/intro-core-083.m4a` | Intro of #83 Transmogulate (Legendary): celesta, strings, cello, A-flat lydian, 4/4 at 104 | 5.6 s |
 | `intro-core-085` | `apps/web/public/audio/music/intro-core-085.m4a` | Intro of #85 Unlicensed Experimentation (Legendary): whistle, string tremolo, contrabass, G-flat phrygian, 4/4 at 100 | 5.8 s |
@@ -129,6 +135,38 @@ attribution is required when they play in the game.
 | `intro-classicplus-075` | `apps/web/public/audio/music/intro-classicplus-075.m4a` | Intro of Classic+ #75 J-lease J-Jungle EX-plorer (Legendary): pan flute, marimba, double bass, F mixolydian, 4/4 at 120 | 5.0 s |
 | `intro-classicplus-075-1` | `apps/web/public/audio/music/intro-classicplus-075-1.m4a` | Intro of Classic+ #75.1 J-lease J-Jungle EX-plorer Pack (token printed Legendary): celesta, strings, cello, G dorian, 4/4 at 110 | 5.4 s |
 | `intro-classicplus-078` | `apps/web/public/audio/music/intro-classicplus-078.m4a` | Intro of Classic+ #78 Claude's Datacenter (Legendary): FM piano, warm pad, synth bass, C dorian, 4/4 at 116 | 5.1 s |
+| `intro-meditative-007` | `apps/web/public/audio/music/intro-meditative-007.m4a` | Intro of Meditative #7 Introspection (Legendary): pan flute, choir, cello, F lydian, 4/4 at 100 | 5.8 s |
+| `intro-meditative-008` | `apps/web/public/audio/music/intro-meditative-008.m4a` | Intro of Meditative #8 Reach the Summit (Mythic): pan flute, strings, contrabass, D major, 4/4 at 108 | 5.4 s |
+| `intro-meditative-011` | `apps/web/public/audio/music/intro-meditative-011.m4a` | Intro of Meditative #11 Double Header (Legendary): oboe, choir, cello, E-flat major, 4/4 at 104 | 5.6 s |
+| `intro-meditative-017` | `apps/web/public/audio/music/intro-meditative-017.m4a` | Intro of Meditative #17 True Craft a Card (Mythic): dulcimer, marimba, pizzicato, A major, 4/4 at 112 | 5.3 s |
+| `intro-meditative-020` | `apps/web/public/audio/music/intro-meditative-020.m4a` | Intro of Meditative #20 Aestheticize the Game (Mythic): flute, harp, cello, E-flat major, 3/4 at 112 | 5.8 s |
+| `intro-meditative-026` | `apps/web/public/audio/music/intro-meditative-026.m4a` | Intro of Meditative #26 Alternate Fate (Legendary): clarinet, choir, cello, E lydian, 3/4 at 116 | 5.7 s |
+| `intro-meditative-039-4` | `apps/web/public/audio/music/intro-meditative-039-4.m4a` | Intro of Meditative #39.4 Red Jade (token printed Mythic): dulcimer, strings, double bass, D dorian, 4/4 at 124 | 4.9 s |
+| `intro-meditative-039-5` | `apps/web/public/audio/music/intro-meditative-039-5.m4a` | Intro of Meditative #39.5 Jade Beauty (token printed Mythic): dulcimer, strings, double bass, G-flat dorian, 4/4 at 111 | 5.3 s |
+| `intro-meditative-040` | `apps/web/public/audio/music/intro-meditative-040.m4a` | Intro of Meditative #40 Feng Shui (Legendary): dulcimer, strings, double bass, G major, 4/4 at 104 | 5.6 s |
+| `intro-meditative-042` | `apps/web/public/audio/music/intro-meditative-042.m4a` | Intro of Meditative #42 CN Flea Market (Legendary): dulcimer, xylophone, double bass, C major, 4/4 at 124 | 4.9 s |
+| `intro-meditative-045` | `apps/web/public/audio/music/intro-meditative-045.m4a` | Intro of Meditative #45 Knowledge Breaker (Legendary): dulcimer, strings, double bass, E dorian, 3/4 at 145 | 4.7 s |
+| `intro-meditative-045-1` | `apps/web/public/audio/music/intro-meditative-045-1.m4a` | Intro of Meditative #45.1 Knowledge Breaker Prime (token printed Legendary): dulcimer, strings, double bass, C dorian, 3/4 at 118 | 5.6 s |
+| `intro-meditative-047` | `apps/web/public/audio/music/intro-meditative-047.m4a` | Intro of Meditative #47 饕餮 (Legendary): tuba, trombone, contrabass, C phrygian, 4/4 at 100 | 5.8 s |
+| `intro-meditative-049` | `apps/web/public/audio/music/intro-meditative-049.m4a` | Intro of Meditative #49 YileGPT Tamed (Mythic): square lead, polysynth, synth bass, E dorian, 4/4 at 120 | 5.0 s |
+| `intro-meditative-049-1` | `apps/web/public/audio/music/intro-meditative-049-1.m4a` | Intro of Meditative #49.1 YileGPT Unleashed (token printed Mythic): saw lead, polysynth, synth bass, E minor, 4/4 at 140 | 4.4 s |
+| `intro-meditative-049-2` | `apps/web/public/audio/music/intro-meditative-049-2.m4a` | Intro of Meditative #49.2 Yile's Virus (token printed Mythic): square lead, polysynth, synth bass, F phrygian, 4/4 at 132 | 4.6 s |
+| `intro-meditative-049-3` | `apps/web/public/audio/music/intro-meditative-049-3.m4a` | Intro of Meditative #49.3 AI Girlfriend (token printed Mythic): electric piano, vibraphone, fingered bass, C major, 4/4 at 100 | 5.8 s |
+| `intro-meditative-051` | `apps/web/public/audio/music/intro-meditative-051.m4a` | Intro of Meditative #51 Devin Bot (Legendary): square lead, polysynth, synth bass, F dorian, 4/4 at 132 | 4.6 s |
+| `intro-meditative-063` | `apps/web/public/audio/music/intro-meditative-063.m4a` | Intro of Meditative #63 Skull of J'Nari (Legendary): oboe, choir, cello, B major, 3/4 at 127 | 5.3 s |
+| `intro-meditative-065` | `apps/web/public/audio/music/intro-meditative-065.m4a` | Intro of Meditative #65 Keymaster Keenus (Legendary): trumpet, strings, contrabass, G major, 4/4 at 112 | 5.3 s |
+| `intro-meditative-071` | `apps/web/public/audio/music/intro-meditative-071.m4a` | Intro of Meditative #71 Pareto Optimality (Mythic): piccolo, pizzicato, F harmonic minor, 4/4 at 120 | 5.0 s |
+| `intro-meditative-071-1` | `apps/web/public/audio/music/intro-meditative-071-1.m4a` | Intro of Meditative #71.1 The Cane (token printed Mythic): dulcimer, strings, double bass, F dorian, 4/4 at 116 | 5.1 s |
+| `intro-meditative-075` | `apps/web/public/audio/music/intro-meditative-075.m4a` | Intro of Meditative #75 Ever Growing Tree (Legendary): flute, choir, cello, A-flat major, 4/4 at 102 | 5.7 s |
+| `intro-meditative-079` | `apps/web/public/audio/music/intro-meditative-079.m4a` | Intro of Meditative #79 Touched by KY (Legendary): vibraphone, celesta, fretless bass, D-flat lydian, 4/4 at 99 | 5.8 s |
+| `intro-meditative-080` | `apps/web/public/audio/music/intro-meditative-080.m4a` | Intro of Meditative #80 Aluneth (Legendary): whistle, steel guitar, double bass, D mixolydian, 4/4 at 117 | 5.1 s |
+| `intro-meditative-086` | `apps/web/public/audio/music/intro-meditative-086.m4a` | Intro of Meditative #86 Mayor Medinamogger (Legendary): trumpet, strings, contrabass, D-flat dorian, 4/4 at 117 | 5.1 s |
+| `intro-meditative-087` | `apps/web/public/audio/music/intro-meditative-087.m4a` | Intro of Meditative #87 Tatches the Totem (Legendary): dulcimer, strings, double bass, G-flat dorian, 3/4 at 134 | 5.0 s |
+| `intro-meditative-095` | `apps/web/public/audio/music/intro-meditative-095.m4a` | Intro of Meditative #95 Call to Chaos (Meditative Edition) (Legendary): dulcimer, xylophone, tuba, D dorian, 4/4 at 140 | 4.4 s |
+| `intro-meditative-095-1` | `apps/web/public/audio/music/intro-meditative-095-1.m4a` | Intro of Meditative #95.1 CN Golem (token printed Legendary): tuba, trombone, contrabass, D dorian, 4/4 at 128 | 4.8 s |
+| `intro-meditative-097` | `apps/web/public/audio/music/intro-meditative-097.m4a` | Intro of Meditative #97 Jlockheed's Evil Blueprints (Mythic): synth brass, strings, contrabass, C minor, 4/4 at 112 | 5.3 s |
+| `intro-meditative-097-8` | `apps/web/public/audio/music/intro-meditative-097-8.m4a` | Intro of Meditative #97.8 Prison (token printed Legendary): trombone, string tremolo, contrabass, B-flat harmonic minor, 4/4 at 105 | 5.6 s |
+| `intro-meditative-097-9` | `apps/web/public/audio/music/intro-meditative-097-9.m4a` | Intro of Meditative #97.9 Jlockheed's Headquarters (token printed Mythic): synth brass, strings, contrabass, A-flat dorian, 4/4 at 109 | 5.4 s |
 
 ## Third-party material
 
