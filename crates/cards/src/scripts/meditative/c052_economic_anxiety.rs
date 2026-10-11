@@ -153,6 +153,7 @@ mod tests {
         let goliath = s.unit(P1, 1).unwrap().id;
         let victim = s.unit(P2, 1).unwrap().id;
         s.attack(&goliath, &victim);
+        eprintln!("DEBUG {:#?}", s.last_events());
         // 7 + 3 into a 4/4 Human: 6 tramples over to the hero, not 3.
         s.expect_in_zone(&victim, "graveyard");
         s.expect_health(P2, 30 - 6);
@@ -195,7 +196,12 @@ mod tests {
 
     #[test]
     fn r1120_the_displayed_attack_never_changes() {
-        let mut s = anxiety_game();
+        crate::register_all();
+        // A big Felinor (3/10) into a Human 4/4: it survives the strike back.
+        let mut s = scenario(json!({
+            "p1": { "field": [BIG], "backrow": [ID] },
+            "p2": { "field": [VANILLA] },
+        }));
         let felinor = s.unit(P1, 1).unwrap().id;
         let unit_attack = |s: &Scenario, id: &str| {
             s.view(P1)

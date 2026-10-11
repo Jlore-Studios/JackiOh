@@ -55,7 +55,11 @@ mod tests {
     }
 
     fn upgrades(events: &[GameEvent]) -> Vec<GameEvent> {
-        events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).cloned().collect()
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Upgraded { .. }))
+            .cloned()
+            .collect()
     }
 
     use jackioh_engine::effects::{TuneDirection, buff, tune_multiplier_of, tune_once};
@@ -76,7 +80,10 @@ mod tests {
             let mut ctx = make_context(
                 &mut sink,
                 None,
-                HookOptions { controller: Some(P1), ..HookOptions::default() },
+                HookOptions {
+                    controller: Some(P1),
+                    ..HookOptions::default()
+                },
             );
             tune_once(&mut ctx, &card, direction, true);
         }
@@ -94,7 +101,10 @@ mod tests {
             let mut ctx = make_context(
                 &mut sink,
                 None,
-                HookOptions { controller: Some(P1), ..HookOptions::default() },
+                HookOptions {
+                    controller: Some(P1),
+                    ..HookOptions::default()
+                },
             );
             apply_effects(&effects, &mut ctx);
         }
@@ -117,9 +127,7 @@ mod tests {
             "p1": p1,
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
-        let id = s
-            .state()
-            .players[P1]
+        let id = s.state().players[P1]
             .hand
             .iter()
             .chain(s.state().players[P1].library.iter())
@@ -127,7 +135,9 @@ mod tests {
             .find(|card| card.def_id == VOLATILITY)
             .map(|card| card.id.clone())
             .expect("the Volatility");
-        s.card_mut(id.as_str()).granted_keywords.extend(keywords.iter().cloned());
+        s.card_mut(id.as_str())
+            .granted_keywords
+            .extend(keywords.iter().cloned());
         (s, id)
     }
 
@@ -161,7 +171,9 @@ mod tests {
             )
             .expect("the fusion");
         }
-        s.card_mut(kept.id.as_str()).granted_keywords.extend(keywords.iter().cloned());
+        s.card_mut(kept.id.as_str())
+            .granted_keywords
+            .extend(keywords.iter().cloned());
         (s, kept.id)
     }
 
@@ -192,7 +204,12 @@ mod tests {
             assert_eq!(def.rarity, Rarity::Common);
             assert!(def.tags.is_empty());
             assert_eq!(
-                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+                [
+                    def.base.attack,
+                    def.base.health,
+                    def.radiant.attack,
+                    def.radiant.health
+                ],
                 [Some(3), Some(3), Some(6), Some(6)]
             );
             assert!(def.params.is_none() || def.params.as_ref().is_some_and(Vec::is_empty));
@@ -209,7 +226,10 @@ mod tests {
                 })
             );
             assert_eq!(
-                scripts.radiant.static_flags.and_then(|flags| flags.tune_multiplier),
+                scripts
+                    .radiant
+                    .static_flags
+                    .and_then(|flags| flags.tune_multiplier),
                 Some(TuneMultiplier {
                     upgrade: Some(VOLATILITY_RADIANT_BUFF_MULTIPLIER),
                     degrade: None,
@@ -239,7 +259,10 @@ mod tests {
                 let ups = upgrades(s.events());
                 assert_eq!(ups.len(), 1, "one application is one event (seed {seed})");
                 match &ups[0] {
-                    GameEvent::Upgraded { change: TuningChange::Stats { attack, health }, .. } => {
+                    GameEvent::Upgraded {
+                        change: TuningChange::Stats { attack, health },
+                        ..
+                    } => {
                         assert_eq!(attack + health, 2 * TUNE_STAT_TOTAL);
                         stats += 1;
                     }
@@ -250,7 +273,10 @@ mod tests {
                         assert_eq!(also.as_ref().map(Vec::len), Some(1));
                         keyword += 1;
                     }
-                    GameEvent::Upgraded { change: TuningChange::Cost { delta }, .. } => {
+                    GameEvent::Upgraded {
+                        change: TuningChange::Cost { delta },
+                        ..
+                    } => {
                         // Cost (1), doubled to −2, floored at (0): −1 is what moved.
                         assert_eq!(*delta, -1);
                         cost += 1;
@@ -346,7 +372,10 @@ mod tests {
                 let armor = s.stats(id.as_str()).armor;
                 let events = tune(&mut s, &id, TuneDirection::Degrade);
                 assert_eq!(
-                    events.iter().filter(|event| matches!(event, GameEvent::Degraded { .. })).count(),
+                    events
+                        .iter()
+                        .filter(|event| matches!(event, GameEvent::Degraded { .. }))
+                        .count(),
                     1,
                     "still one `degraded` event"
                 );
@@ -359,7 +388,10 @@ mod tests {
                             assert_ne!(moved.kind(), KeywordKind::CantAttack, "never a harmful one");
                         }
                         assert!(
-                            s.stats(id.as_str()).keywords.iter().any(|k| k.kind() == KeywordKind::CantAttack),
+                            s.stats(id.as_str())
+                                .keywords
+                                .iter()
+                                .any(|k| k.kind() == KeywordKind::CantAttack),
                             "Can't attack stays"
                         );
                         keyword_seen = true;
@@ -381,8 +413,16 @@ mod tests {
             for zone in ["hand", "library", "field"] {
                 let (s, id) = volatile(&format!("vol-zone-{zone}"), zone, false, &[]);
                 let card = s.card(id.as_str()).clone();
-                assert_eq!(tune_multiplier_of(s.state(), &card, TuneDirection::Upgrade), 2, "{zone}");
-                assert_eq!(tune_multiplier_of(s.state(), &card, TuneDirection::Degrade), 2, "{zone}");
+                assert_eq!(
+                    tune_multiplier_of(s.state(), &card, TuneDirection::Upgrade),
+                    2,
+                    "{zone}"
+                );
+                assert_eq!(
+                    tune_multiplier_of(s.state(), &card, TuneDirection::Degrade),
+                    2,
+                    "{zone}"
+                );
             }
             // A Buff in the deck is doubled as it is in hand.
             let mut seen = false;
@@ -477,7 +517,10 @@ mod tests {
                 let ups = upgrades(s.events());
                 assert_eq!(ups.len(), 1);
                 match &ups[0] {
-                    GameEvent::Upgraded { change: TuningChange::Stats { attack, health }, .. } => {
+                    GameEvent::Upgraded {
+                        change: TuningChange::Stats { attack, health },
+                        ..
+                    } => {
                         assert_eq!(attack + health, 3 * TUNE_STAT_TOTAL);
                         tripled += 1;
                     }

@@ -119,7 +119,9 @@ mod tests {
     }
 
     fn fused(s: &Scenario) -> bool {
-        s.events().iter().any(|event| matches!(event, GameEvent::Fused { .. }))
+        s.events()
+            .iter()
+            .any(|event| matches!(event, GameEvent::Fused { .. }))
     }
 
     mod m75_ever_growing_tree {
@@ -218,7 +220,11 @@ mod tests {
                 let tree = s.card(TREE).id.clone();
                 s.activate(tree.as_str(), json!({}));
                 assert_eq!(parts_of(&s, &tree)[0], WEAPONS);
-                assert_eq!(s.stats(VANILLA).attack, 8, "the fused aura reaches the Unit at once");
+                assert_eq!(
+                    s.stats(VANILLA).attack,
+                    8,
+                    "the fused aura reaches the Unit at once"
+                );
                 s.end_turn();
                 s.end_turn();
                 assert_eq!(s.stats(VANILLA).attack, 8, "and keeps working");
@@ -250,7 +256,9 @@ mod tests {
                 assert_eq!(s.hand(P1).len(), hand, "no card drawn");
                 assert_eq!(s.pile(P1, "library").len(), library);
                 assert!(
-                    !s.events().iter().any(|event| matches!(event, GameEvent::Drawn { .. })),
+                    !s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Drawn { .. })),
                     "no draw event"
                 );
             }
@@ -264,13 +272,19 @@ mod tests {
                 assert_eq!(parts_of(&s, &tree)[0], THRIVE);
                 // The Tree's use is spent, so the fused Activate is refused this turn.
                 s.expect_refused(|s| {
-                    s.activate(tree.as_str(), json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }))
+                    s.activate(
+                        tree.as_str(),
+                        json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
+                    )
                 });
                 // Next turn the fused Activate spends the one use, and the Tree's own is refused.
                 s.end_turn();
                 s.end_turn();
                 let hand = s.hand(P1).len();
-                s.activate(tree.as_str(), json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }));
+                s.activate(
+                    tree.as_str(),
+                    json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
+                );
                 assert_eq!(s.hand(P1).len(), hand + 1, "the fused Activate drew");
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({ "ability": "grow" })));
             }
@@ -291,7 +305,10 @@ mod tests {
                 assert!(!is_animated(s.state(), s.card(tree.as_str())));
                 s.end_turn();
                 s.end_turn();
-                assert!(is_animated(s.state(), s.card(tree.as_str())), "animated at the next start");
+                assert!(
+                    is_animated(s.state(), s.card(tree.as_str())),
+                    "animated at the next start"
+                );
                 assert_eq!(s.stats(tree.as_str()).attack, 3);
             }
         }
@@ -316,8 +333,10 @@ mod tests {
 
                 assert!(fused(&s));
                 // R469's mark: the pick went in Radiant.
-                let def_id =
-                    find_instance(s.state(), &tree).expect("the fused Tree").def_id.clone();
+                let def_id = find_instance(s.state(), &tree)
+                    .expect("the fused Tree")
+                    .def_id
+                    .clone();
                 assert!(def_id.contains('*'), "the fused id names a Radiant ingredient");
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({})));
             }

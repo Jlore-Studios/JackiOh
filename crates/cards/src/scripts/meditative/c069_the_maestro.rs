@@ -41,8 +41,7 @@ fn exile_ability(price: i32, exiles: i32) -> ActivationDecl {
         targets: Vec::new(),
         modes: Vec::new(),
         can_activate: Some(condition_hook(move |c| {
-            plague_on(c.self_)
-                >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
+            plague_on(c.self_) >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
         })),
         has: None,
         run: hook(move |ctx| {
@@ -241,7 +240,9 @@ mod tests {
             activate_exile(&mut s);
             let maestro = s.unit("p1", 1).expect("the Maestro");
             assert_eq!(plague(&s, &maestro.id), 0, "the counters are removed");
-            let units = (1..=UNIT_ZONES).filter(|lane| s.unit("p2", *lane).is_some()).count();
+            let units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p2", *lane).is_some())
+                .count();
             assert_eq!(units, 2);
             assert_eq!(s.hand("p2").len(), 2);
             assert_eq!(s.pile("p2", "library").len(), 3);
@@ -299,9 +300,9 @@ mod tests {
         fn r386_price_and_exiles_read_through_param() {
             let mut s = full_enemy("maestro-param", false, 3);
             let maestro = s.unit("p1", 1).expect("the Maestro");
-            // A Buff of the price makes it 3, and of exiles 2 per zone.
-            step_param(s.card_mut(&maestro.id), "price", 1);
-            step_param(s.card_mut(&maestro.id), "exiles", 1);
+            // The price set to 3 and exiles to 2 per zone: the Activate reads both off the card.
+            set_param(s.card_mut(&maestro.id), "price", 3);
+            set_param(s.card_mut(&maestro.id), "exiles", 2);
             activate_exile(&mut s);
             assert_eq!(plague(&s, &maestro.id), 0);
             assert_eq!(exiled_of(&s).len(), 8);

@@ -319,7 +319,10 @@ mod tests {
             }));
             let kpop = must_unit(&s, "p2", 1);
             let kinds = |s: &Scenario| -> Vec<KeywordKind> {
-                keywords_of(s.state(), s.card(&kpop.id)).iter().map(|keyword| keyword.kind()).collect()
+                keywords_of(s.state(), s.card(&kpop.id))
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect()
             };
             assert!(kinds(&s).contains(&KeywordKind::DivineShield));
             s.play(PRESTIGE, pick(&kpop.id));
@@ -341,11 +344,17 @@ mod tests {
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
-            let held = s.hand("p1").into_iter().find(|card| card.def_id == MR_TOKEN).expect("Mr Token");
+            let held = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.def_id == MR_TOKEN)
+                .expect("Mr Token");
             s.play(PRESTIGE, pick(&held.id));
             // Played now, it runs its base Cry: one Rush Token, not the Radiant face's three.
             s.play(&held.id, json!({ "zone": 1 }));
-            let p1_units = (1..=UNIT_ZONES).filter(|lane| s.unit("p1", *lane).is_some()).count();
+            let p1_units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p1", *lane).is_some())
+                .count();
             assert_eq!(p1_units, 2, "Mr Token and one Rush Token");
             assert!(!must_unit(&s, "p1", 1).radiant);
         }
@@ -360,7 +369,11 @@ mod tests {
                 assert_eq!(added.len(), 1);
                 let def = crate::card_def(&added[0].def_id);
                 assert!(def.token, "an AI generated card is a token (R1421)");
-                assert!(added[0].def_id.starts_with("classicplus-t-ai-"), "{}", added[0].def_id);
+                assert!(
+                    added[0].def_id.starts_with("classicplus-t-ai-"),
+                    "{}",
+                    added[0].def_id
+                );
                 // The opponent never reads which.
                 let seen = serde_json::to_string(&s.view(PlayerId::P2)).expect("the view serialises");
                 assert!(!seen.contains(&added[0].def_id), "p2 reads {}", added[0].def_id);
@@ -390,11 +403,19 @@ mod tests {
                     .filter(|event| event["type"] == json!("deradianted"))
                     .collect()
             };
-            let held = s.hand("p1").into_iter().find(|card| card.def_id == VANILLA).expect("held");
+            let held = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.def_id == VANILLA)
+                .expect("held");
             s.play(PRESTIGE, pick(&held.id));
             let seen = deradianted(&s);
             assert_eq!(seen.len(), 1);
-            assert_eq!(seen[0]["instanceId"], json!("hidden"), "a hand card's stays hidden");
+            assert_eq!(
+                seen[0]["instanceId"],
+                json!("hidden"),
+                "a hand card's stays hidden"
+            );
             let unit = must_unit(&s, "p1", 1);
             s.play(PRESTIGE, pick(&unit.id));
             // The view keeps the earlier action's events too: the new one comes last.
@@ -415,12 +436,20 @@ mod tests {
         #[test]
         fn r1104_radiant_leaves_the_opponents_exile_untouched() {
             let mut s = casting("prestige-exile", true);
-            let mut card = new_instance(s.state_mut(), VANILLA, PlayerId::P2, Zone::Exile { player: PlayerId::P2 });
+            let mut card = new_instance(
+                s.state_mut(),
+                VANILLA,
+                PlayerId::P2,
+                Zone::Exile { player: PlayerId::P2 },
+            );
             card.radiant = true;
             s.state_mut().players.p2.exile.push(card);
             s.play(PRESTIGE, json!({}));
             assert!(!must_unit(&s, "p2", 1).radiant);
-            assert!(s.pile("p2", "exile").iter().all(|card| card.radiant), "the exile stays Radiant");
+            assert!(
+                s.pile("p2", "exile").iter().all(|card| card.radiant),
+                "the exile stays Radiant"
+            );
         }
 
         #[test]

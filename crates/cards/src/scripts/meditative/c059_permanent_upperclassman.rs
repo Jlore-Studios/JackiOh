@@ -115,7 +115,10 @@ mod tests {
             let mut ctx = make_context(
                 &mut sink,
                 None,
-                HookOptions { controller: Some(controller), ..HookOptions::default() },
+                HookOptions {
+                    controller: Some(controller),
+                    ..HookOptions::default()
+                },
             );
             apply_effects(effects, &mut ctx);
         }
@@ -124,7 +127,10 @@ mod tests {
 
     /// The fused cards in `seat`'s hand.
     fn fused_of(s: &Scenario, seat: PlayerId) -> Vec<CardInstance> {
-        s.hand(seat).into_iter().filter(|card| card.def_id.starts_with("t-")).collect()
+        s.hand(seat)
+            .into_iter()
+            .filter(|card| card.def_id.starts_with("t-"))
+            .collect()
     }
 
     /// p1 plays the Upperclassman (`radiant_face`) into lane 1; the summoned Unit stands in lane 2.
@@ -160,7 +166,10 @@ mod tests {
             .unwrap_or_default()
             .into_iter()
             .map(|ingredient| {
-                (crate::card_def(&ingredient.def_id).clone(), ingredient.radiant == Some(true))
+                (
+                    crate::card_def(&ingredient.def_id).clone(),
+                    ingredient.radiant == Some(true),
+                )
             })
             .collect();
         (def, parts)
@@ -168,7 +177,10 @@ mod tests {
 
     /// The fused cards in p1's hand (transient `t-` definitions).
     fn fused(s: &Scenario) -> Vec<CardInstance> {
-        s.hand("p1").into_iter().filter(|card| card.def_id.starts_with("t-")).collect()
+        s.hand("p1")
+            .into_iter()
+            .filter(|card| card.def_id.starts_with("t-"))
+            .collect()
     }
 
     /// The granted lines on p1's Unit in `lane`, as the client reads them.
@@ -193,8 +205,14 @@ mod tests {
             let mut s = casting("upperclassman", false);
             s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
             // The Upperclassman stands in lane 1, so the summon takes the leftmost open zone (R64).
-            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UPPERCLASSMAN.to_string()));
-            assert!(granted_lines(&s, 1).is_empty(), "the Upperclassman itself gains nothing");
+            assert_eq!(
+                s.unit("p1", 1).map(|unit| unit.def_id),
+                Some(UPPERCLASSMAN.to_string())
+            );
+            assert!(
+                granted_lines(&s, 1).is_empty(),
+                "the Upperclassman itself gains nothing"
+            );
             let summoned = s.unit("p1", 2).expect("the summoned Unit");
             assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(4));
             assert!(!summoned.radiant);
@@ -205,7 +223,11 @@ mod tests {
             // A fused definition is transient, held in the state, not the catalog (R77).
             let def = def_of(Some(s.state()), &made[0].def_id).clone();
             assert!(!def.token, "the fused card is a non-token (R102)");
-            assert_eq!(def.type_, CardType::Spell, "the Book comes first, so the fused type falls back to it");
+            assert_eq!(
+                def.type_,
+                CardType::Spell,
+                "the Book comes first, so the fused type falls back to it"
+            );
             let ingredients: Vec<String> = def
                 .ingredients
                 .clone()
@@ -217,7 +239,11 @@ mod tests {
             assert!(crate::card_def(&ingredients[0]).tags.contains(&Tag::Book));
             assert!(crate::card_def(&ingredients[1]).tags.contains(&Tag::Ai));
             // (min(sum,4)): the fused card costs no more than 4.
-            assert!(cost_now(s.state(), &made[0]) <= 4, "{}", cost_now(s.state(), &made[0]));
+            assert!(
+                cost_now(s.state(), &made[0]) <= 4,
+                "{}",
+                cost_now(s.state(), &made[0])
+            );
         }
 
         #[test]
@@ -228,7 +254,9 @@ mod tests {
                 .find(|(_, unit)| crate::card_def(&unit.def_id).base.text.contains("Cry:"))
                 .expect("some seed summons a (4) Unit with a Cry");
             assert!(s.state().pending.is_none(), "no Cry prompt opened");
-            let p1_units = (1..=UNIT_ZONES).filter(|lane| s.unit("p1", *lane).is_some()).count();
+            let p1_units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p1", *lane).is_some())
+                .count();
             assert_eq!(p1_units, 2, "only the Upperclassman and {} stand", unit.def_id);
             let summons = s
                 .last_events()
@@ -291,7 +319,12 @@ mod tests {
             let (mut s, unit) = mortal("upperclassman-burn", false);
             // Fill p1's hand to the cap.
             while s.hand("p1").len() < HAND_CAP as usize {
-                let card = new_instance(s.state_mut(), FILLER, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+                let card = new_instance(
+                    s.state_mut(),
+                    FILLER,
+                    PlayerId::P1,
+                    Zone::Hand { player: PlayerId::P1 },
+                );
                 s.state_mut().players.p1.hand.push(card);
             }
             let events = kill(&mut s, &unit);
@@ -337,7 +370,10 @@ mod tests {
             assert_eq!(made.len(), 1);
             let (def, parts) = fused_parts(&s, &made[0]);
             assert_eq!(parts.len(), 2);
-            assert!(parts.iter().all(|(_, radiant)| *radiant), "both ingredients Radiant");
+            assert!(
+                parts.iter().all(|(_, radiant)| *radiant),
+                "both ingredients Radiant"
+            );
             // Each went in on its Radiant face, so the fused text is both Radiant texts.
             let joined: Vec<&str> = parts.iter().map(|(part, _)| part.radiant.text.as_str()).collect();
             assert_eq!(def.radiant.text, joined.join("\n"));

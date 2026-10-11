@@ -116,9 +116,11 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Buffed { instance_id, attack, health } => {
-                    Some((instance_id.clone(), *attack, *health))
-                }
+                GameEvent::Buffed {
+                    instance_id,
+                    attack,
+                    health,
+                } => Some((instance_id.clone(), *attack, *health)),
                 _ => None,
             })
             .collect()
@@ -141,7 +143,10 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     None,
-                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(effects, &mut ctx);
             }
@@ -243,8 +248,9 @@ mod tests {
                 }));
                 let trap = s.backrow(P2, 1).expect("the face-down trap");
                 // CN before the play resolves, as a mid-resolution grant would leave it.
-                find_instance_mut(s.state_mut(), &trap.id).expect("the trap").granted_tags =
-                    Some(vec![Tag::Cn]);
+                find_instance_mut(s.state_mut(), &trap.id)
+                    .expect("the trap")
+                    .granted_tags = Some(vec![Tag::Cn]);
                 s.play(RCTA, pick(&trap.id));
                 let unchanged = s.card(&trap.id).clone();
                 assert_eq!(unchanged.chinese, None);
@@ -285,7 +291,10 @@ mod tests {
                 assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
                 assert!(!crate::card_def(VANILLA).tags.contains(&Tag::Cn));
                 let pool = jackioh_engine::catalog::query(&json_as(json!({ "tags": ["CN"] })));
-                assert!(!pool.iter().any(|def| def.id == VANILLA), "a pool reads the printed tags");
+                assert!(
+                    !pool.iter().any(|def| def.id == VANILLA),
+                    "a pool reads the printed tags"
+                );
                 // M 78's filter: "exile every non-CN permanent" spares it. (M 34's scopes are proven
                 // in its own file, r923_a_granted_cn_unit_survives_and_is_buffed.)
                 let mandate = "meditative-078";
@@ -300,7 +309,10 @@ mod tests {
             fn r923_kept_in_every_zone_and_by_a_copy_dropped_by_a_transform() {
                 // Kept by a copy.
                 let (mut s, victim) = granted("rcta-copy");
-                apply_for_p1(&mut s, &[summon_copy(json_as(json!({ "of": instance(&victim) })))]);
+                apply_for_p1(
+                    &mut s,
+                    &[summon_copy(json_as(json!({ "of": instance(&victim) })))],
+                );
                 let copy = s.unit(P1, 2).expect("the copy");
                 assert_eq!(copy.granted_tags, Some(vec![Tag::Cn]));
                 // Kept in a hand.
@@ -308,14 +320,19 @@ mod tests {
                 assert!(matches!(s.card(&victim).zone, Zone::Hand { .. }));
                 assert_eq!(s.card(&victim).granted_tags, Some(vec![Tag::Cn]));
                 // Kept in a graveyard.
-                apply_for_p1(&mut s, &[destroy(json_as(json!({ "target": instance(&copy.id) })))]);
+                apply_for_p1(
+                    &mut s,
+                    &[destroy(json_as(json!({ "target": instance(&copy.id) })))],
+                );
                 s.expect_in_zone(&copy.id, "graveyard");
                 assert_eq!(s.card(&copy.id).granted_tags, Some(vec![Tag::Cn]));
                 // Dropped by a Transform.
                 let (mut s, victim) = granted("rcta-transform");
                 apply_for_p1(
                     &mut s,
-                    &[transform(json_as(json!({ "target": instance(&victim), "defId": "core-003" })))],
+                    &[transform(json_as(
+                        json!({ "target": instance(&victim), "defId": "core-003" }),
+                    ))],
                 );
                 let changed = s.unit(P1, 1).expect("the transformed unit");
                 assert_eq!(changed.def_id, "core-003");
@@ -328,7 +345,11 @@ mod tests {
                 let (mut s, victim) = granted("rcta-chinese");
                 assert_eq!(s.card(&victim).chinese, Some(true));
                 let read = |s: &Scenario| {
-                    (tags_of(s.state(), s.card(&victim)), s.stats(&victim), legal_actions(s.state(), P1))
+                    (
+                        tags_of(s.state(), s.card(&victim)),
+                        s.stats(&victim),
+                        legal_actions(s.state(), P1),
+                    )
                 };
                 let flagged = read(&s);
                 // The flag alone changes no read: unflagged, the card has the same tags, stats and

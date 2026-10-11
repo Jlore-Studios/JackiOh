@@ -144,7 +144,11 @@ mod tests {
             let ai = stall(&s)[5].clone();
             let def = crate::card_def(&ai);
             let price = 10 * query_cost(&def) + 5;
-            assert_eq!(subsystems::yuan_price(&def, false), price, "{ai} prints no rarity: Common");
+            assert_eq!(
+                subsystems::yuan_price(&def, false),
+                price,
+                "{ai} prints no rarity: Common"
+            );
             if price <= 50 {
                 assert_eq!(cost_of(&s, &format!("mode:{ai}")), Some(price));
             }
@@ -176,7 +180,12 @@ mod tests {
         #[test]
         fn r1001_the_base_face_never_barters() {
             let s = opened("market-no-barter", false, &[json!(FILLER)]);
-            assert!(!pending(&s).options.iter().any(|option| option.key.starts_with("instance:")));
+            assert!(
+                !pending(&s)
+                    .options
+                    .iter()
+                    .any(|option| option.key.starts_with("instance:"))
+            );
         }
 
         #[test]
@@ -186,7 +195,10 @@ mod tests {
             let theirs = s.view(P2);
             assert!(matches!(theirs.pending, Some(PendingView::Elsewhere(_))));
             let text = serde_json::to_string(&theirs).expect("a view serialises");
-            assert!(!stall.iter().any(|id| text.contains(id.as_str())), "no lot reaches p2");
+            assert!(
+                !stall.iter().any(|id| text.contains(id.as_str())),
+                "no lot reaches p2"
+            );
             s.answer(json!([format!("mode:{ROCK}")]));
             let text = serde_json::to_string(&s.view(P2)).expect("a view serialises");
             assert!(!text.contains(ROCK), "the bought Rock arrives hidden");
@@ -205,10 +217,16 @@ mod tests {
                     } else {
                         def.rarity
                     };
-                    let rank = [Rarity::Common, Rarity::Rare, Rarity::Epic, Rarity::Legendary, Rarity::Mythic]
-                        .iter()
-                        .position(|listed| *listed == rarity)
-                        .expect("a ranked rarity") as i32
+                    let rank = [
+                        Rarity::Common,
+                        Rarity::Rare,
+                        Rarity::Epic,
+                        Rarity::Legendary,
+                        Rarity::Mythic,
+                    ]
+                    .iter()
+                    .position(|listed| *listed == rarity)
+                    .expect("a ranked rarity") as i32
                         + 1;
                     let price = 10 * query_cost(&def) + 5 * rank;
                     assert_eq!(subsystems::yuan_price(&def, false), price, "{lot}");
@@ -225,7 +243,10 @@ mod tests {
                 let s = opened(&format!("market-within-{n}"), false, &[]);
                 let open = pending(&s);
                 let budget = open.budget.expect("a budget");
-                assert!(open.options.iter().any(|option| option.key == "none"), "Leave is offered");
+                assert!(
+                    open.options.iter().any(|option| option.key == "none"),
+                    "Leave is offered"
+                );
                 for lot in stall(&s) {
                     let price = subsystems::yuan_price(&crate::card_def(&lot), false);
                     let offered = cost_of(&s, &format!("mode:{lot}")).is_some();
@@ -242,8 +263,16 @@ mod tests {
             // The cast left HAND_CAP - 1 cards: a Rock fills the last slot.
             s.answer(json!([format!("mode:{ROCK}")]));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
-            let keys: Vec<String> = pending(&s).options.iter().map(|option| option.key.clone()).collect();
-            assert!(keys.iter().all(|key| key == "none" || key.starts_with("instance:")), "{keys:?}");
+            let keys: Vec<String> = pending(&s)
+                .options
+                .iter()
+                .map(|option| option.key.clone())
+                .collect();
+            assert!(
+                keys.iter()
+                    .all(|key| key == "none" || key.starts_with("instance:")),
+                "{keys:?}"
+            );
             assert!(keys.contains(&"none".to_string()));
         }
 
@@ -255,8 +284,11 @@ mod tests {
                 assert_eq!(pending(&s).kind, PromptKind::Market, "the prompt reopens");
                 assert_eq!(pending(&s).budget, Some(budget));
             }
-            let rocks: Vec<CardInstance> =
-                s.hand(P1).into_iter().filter(|card| card.def_id == ROCK).collect();
+            let rocks: Vec<CardInstance> = s
+                .hand(P1)
+                .into_iter()
+                .filter(|card| card.def_id == ROCK)
+                .collect();
             assert_eq!(rocks.len(), 2);
             for rock in rocks {
                 assert!(!rock.radiant);
@@ -280,7 +312,11 @@ mod tests {
             let text = serde_json::to_string(s.state()).expect("the state serialises");
             let copy: GameState = serde_json::from_str(&text).expect("the state parses");
             assert_eq!(
-                copy.pending.expect("open").resume.data.get(subsystems::MARKET_STALL_KEY),
+                copy.pending
+                    .expect("open")
+                    .resume
+                    .data
+                    .get(subsystems::MARKET_STALL_KEY),
                 pending(&s).resume.data.get(subsystems::MARKET_STALL_KEY)
             );
         }
@@ -293,8 +329,12 @@ mod tests {
                 "p1": { "hand": [ID, ID, FILLER], "library": [FILLER, FILLER] },
                 "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
             }));
-            let markets: Vec<String> =
-                s.hand(P1).iter().filter(|card| card.def_id == ID).map(|card| card.id.clone()).collect();
+            let markets: Vec<String> = s
+                .hand(P1)
+                .iter()
+                .filter(|card| card.def_id == ID)
+                .map(|card| card.id.clone())
+                .collect();
             s.play(&markets[0], json!({}));
             s.answer(json!([format!("mode:{ROCK}")]));
             assert_eq!(pending(&s).budget, Some(40));
@@ -315,7 +355,10 @@ mod tests {
             );
             assert_eq!(timed.error, None);
             assert!(timed.state.pending.is_none() || timed.state.active == P2);
-            assert!(timed.state.players.p1.hand.len() <= hand + 1, "nothing was bought");
+            assert!(
+                timed.state.players.p1.hand.len() <= hand + 1,
+                "nothing was bought"
+            );
             assert!(!timed.state.players.p1.hand.iter().any(|card| card.def_id == ROCK));
         }
 
@@ -338,13 +381,26 @@ mod tests {
 
         #[test]
         fn r1001_the_radiant_face_barters_a_hand_card_for_its_price_doubled_if_radiant() {
-            let mut s = opened("market-barter", true, &[json!({ "def": FILLER, "radiant": true })]);
+            let mut s = opened(
+                "market-barter",
+                true,
+                &[json!({ "def": FILLER, "radiant": true })],
+            );
             let traded = s.hand(P1)[0].clone();
             let price = subsystems::yuan_price(&crate::card_def(FILLER), true);
             let key = format!("instance:{}", traded.id);
-            assert_eq!(cost_of(&s, &key), Some(-price), "a barter's price is written negative");
+            assert_eq!(
+                cost_of(&s, &key),
+                Some(-price),
+                "a barter's price is written negative"
+            );
             s.answer(json!([key]));
-            assert!(s.state().players[P1].exile.iter().any(|card| card.id == traded.id));
+            assert!(
+                s.state().players[P1]
+                    .exile
+                    .iter()
+                    .any(|card| card.id == traded.id)
+            );
             assert_eq!(pending(&s).budget, Some(80 + price));
         }
 
@@ -363,7 +419,11 @@ mod tests {
 
         #[test]
         fn r1001_one_barter_per_hand_card_a_base_card_at_its_plain_price() {
-            let mut s = opened("market-barters", true, &[json!(FILLER), json!(FILLER), json!("core-008")]);
+            let mut s = opened(
+                "market-barters",
+                true,
+                &[json!(FILLER), json!(FILLER), json!("core-008")],
+            );
             let hand = s.hand(P1);
             let barters: Vec<String> = pending(&s)
                 .options
@@ -380,7 +440,12 @@ mod tests {
             s.answer(json!([format!("instance:{}", traded.id)]));
             assert_eq!(pending(&s).budget, Some(80 + price), "a base card is not doubled");
             // The bartered card is gone: no second barter for it.
-            assert!(!pending(&s).options.iter().any(|option| option.key == format!("instance:{}", traded.id)));
+            assert!(
+                !pending(&s)
+                    .options
+                    .iter()
+                    .any(|option| option.key == format!("instance:{}", traded.id))
+            );
         }
     }
 }

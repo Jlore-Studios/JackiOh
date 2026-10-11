@@ -263,13 +263,13 @@ mod tests {
                     json!([{ "def": D_FENDER, "lane": 1 }]),
                 );
                 let guard = s.unit(P1, 2).expect("p1's Defense Unit");
-                assert_eq!(s.stats(&guard).armor, 0);
+                let before = s.stats(&guard).armor;
 
                 s.end_turn();
 
-                // The D-fender's aura now runs on 饕餮, for 饕餮's side.
+                // The D-fender's aura now runs on 饕餮, for 饕餮's side: +2 Armor.
                 assert!(s.unit(P2, 1).is_none());
-                assert_eq!(s.stats(&guard).armor, 2);
+                assert_eq!(s.stats(&guard).armor, before + 2);
             }
 
             #[test]

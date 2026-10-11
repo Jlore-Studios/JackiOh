@@ -85,9 +85,9 @@ mod tests {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Degraded { instance_id, change, .. } if *change != TuningChange::None => {
-                    Some(instance_id.clone())
-                }
+                GameEvent::Degraded {
+                    instance_id, change, ..
+                } if *change != TuningChange::None => Some(instance_id.clone()),
                 _ => None,
             })
             .collect()
@@ -154,7 +154,12 @@ mod tests {
         #[test]
         fn r1042_cry_nerfs_every_other_cn_or_ky_card_on_fields_hands_decks() {
             let mut s = spread("breaker-cry", false);
-            let breaker = s.hand(P1).iter().find(|card| card.def_id == BREAKER).cloned().unwrap();
+            let breaker = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == BREAKER)
+                .cloned()
+                .unwrap();
             let before_p1 = cnky_ids(&s, P1);
             let before_p2 = cnky_ids(&s, P2);
             assert_eq!(before_p1.len(), 3);
@@ -200,8 +205,16 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
             }));
-            let vanilla = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
-            s.play(&vanilla.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let vanilla = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
+            s.play(
+                &vanilla.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             assert!(s.state().pending.is_none());
             // The opponent's turn passes quietly; ours reveals with no prompt (no Cry to run).
             s.end_turn();
@@ -240,11 +253,13 @@ mod tests {
                 let breaker = s.unit(P1, 2).expect("the Breaker");
                 // Hit Job destroys it (the Radiant face's Divine Shield stops damage, not a
                 // destroy): its Death shuffles exactly one Prime.
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": breaker.id }] }));
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": breaker.id }] }),
+                );
                 s.expect_in_zone(&breaker, "graveyard");
                 let library = s.pile(P1, "library");
-                let primes: Vec<_> =
-                    library.iter().filter(|card| card.def_id == PRIME).collect();
+                let primes: Vec<_> = library.iter().filter(|card| card.def_id == PRIME).collect();
                 assert_eq!(primes.len(), 1);
                 assert_eq!(primes[0].radiant, radiant_face);
             }
@@ -279,8 +294,16 @@ mod tests {
                 "p1": { "mana": 5, "hand": [BIGOT, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
                 "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA] },
             }));
-            let bigot = s.hand(P1).iter().find(|card| card.def_id == BIGOT).cloned().unwrap();
-            s.play(&bigot.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let bigot = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == BIGOT)
+                .cloned()
+                .unwrap();
+            s.play(
+                &bigot.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             assert!(s.state().pending.is_none(), "no target is asked");
             s.expect_mana(P1, 3);
             assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
@@ -303,8 +326,16 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
             }));
-            let set = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
-            s.play(&set.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let set = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
+            s.play(
+                &set.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             s.end_turn().end_turn();
             assert!(s.backrow(P1, 2).is_none());
             assert_eq!(s.unit(P1, 3).expect("the leftmost open zone").def_id, set.def_id);
@@ -320,8 +351,16 @@ mod tests {
                 "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA, VANILLA] },
             }));
             let enemy = s.unit(P2, 1).expect("the enemy").id;
-            let bigot = s.hand(P1).iter().find(|card| card.def_id == BIGOT).cloned().unwrap();
-            s.play(&bigot.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let bigot = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == BIGOT)
+                .cloned()
+                .unwrap();
+            s.play(
+                &bigot.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             s.end_turn().end_turn();
             // The Cry's pick is asked as a prompt at the reveal.
             let open = s.state().pending.clone().expect("the Cry asks for its target");
@@ -346,8 +385,16 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA] },
             }));
-            let set = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
-            s.play(&set.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let set = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
+            s.play(
+                &set.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             s.end_turn().end_turn();
             // Every unit zone is full: it turns face-up and waits in the backrow.
             let waiting = s.backrow(P1, 2).expect("still in the backrow");
@@ -355,7 +402,10 @@ mod tests {
             assert_eq!(waiting.face_up, Some(true));
             // A zone opens; at the next start of turn it animates.
             let blocker = s.unit(P1, 5).expect("lane 5").id;
-            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": blocker }] }));
+            s.play(
+                HIT_JOB,
+                json!({ "targets": [{ "pick": "instance", "instanceId": blocker }] }),
+            );
             s.end_turn().end_turn();
             assert!(s.backrow(P1, 2).is_none());
             assert_eq!(s.unit(P1, 5).expect("it animated").def_id, set.def_id);
@@ -368,10 +418,21 @@ mod tests {
                 "p1": { "mana": 8, "hand": [VANILLA, HIT_JOB, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
                 "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
             }));
-            let set = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
-            s.play(&set.id, json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            let set = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
+            s.play(
+                &set.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "startOfNextTurn" }),
+            );
             let breaker = s.unit(P1, 1).expect("the Breaker").id;
-            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }));
+            s.play(
+                HIT_JOB,
+                json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }),
+            );
             s.expect_in_zone(&breaker, "graveyard");
             s.end_turn().end_turn();
             assert_eq!(s.unit(P1, 2).expect("it still reveals").def_id, set.def_id);
@@ -386,7 +447,10 @@ mod tests {
                 "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }] },
             }));
             let breaker = s.unit(P1, 2).expect("the Breaker").id;
-            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }));
+            s.play(
+                HIT_JOB,
+                json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }),
+            );
             s.expect_in_zone(&breaker, "graveyard");
             let library = s.pile(P1, "library");
             assert_eq!(library.len(), LIBRARY_CAP as usize, "the cap holds");
@@ -402,7 +466,12 @@ mod tests {
                 "p1": { "mana": 8, "hand": [VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
                 "p2": { "mana": 8, "hand": [VANILLA], "library": [VANILLA] },
             }));
-            let enemy = s.hand(P2).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
+            let enemy = s
+                .hand(P2)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
             let plays: Vec<ActionBody> = legal_actions(s.state(), P2)
                 .into_iter()
                 .filter(|action| {
@@ -410,9 +479,11 @@ mod tests {
                 })
                 .collect();
             assert!(!plays.is_empty());
-            assert!(plays.iter().all(|action| {
-                matches!(action, ActionBody::Play { face_down: None, .. })
-            }));
+            assert!(
+                plays
+                    .iter()
+                    .all(|action| { matches!(action, ActionBody::Play { face_down: None, .. }) })
+            );
         }
     }
 
@@ -425,7 +496,12 @@ mod tests {
             let def = crate::card_def(BREAKER);
             assert!(def.radiant.keywords.contains(&Keyword::DivineShield));
             let mut s = spread("breaker-cry-radiant", true);
-            let breaker = s.hand(P1).iter().find(|card| card.def_id == BREAKER).cloned().unwrap();
+            let breaker = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == BREAKER)
+                .cloned()
+                .unwrap();
             let before_p1 = cnky_ids(&s, P1);
             let before_p2 = cnky_ids(&s, P2);
             s.play(&breaker.id, json!({ "zone": 2 }));
@@ -437,4 +513,3 @@ mod tests {
         }
     }
 }
-

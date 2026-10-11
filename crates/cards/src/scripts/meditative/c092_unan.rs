@@ -63,7 +63,10 @@ mod tests {
     const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: deal 1 damage to all Units.
 
     fn redirects(s: &Scenario) -> usize {
-        s.events().iter().filter(|event| matches!(event, GameEvent::Redirected { .. })).count()
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Redirected { .. }))
+            .count()
     }
 
     mod m92_unan {
@@ -79,7 +82,12 @@ mod tests {
                 assert_eq!(def.cost, CardCost::Fixed(3));
                 assert_eq!(def.rarity, Rarity::Rare);
                 assert_eq!(
-                    [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+                    [
+                        def.base.attack,
+                        def.base.health,
+                        def.radiant.attack,
+                        def.radiant.health
+                    ],
                     [Some(3), Some(13), Some(6), Some(26)]
                 );
                 assert_eq!(def.base.keywords, vec![Keyword::Armor { n: 3 }]);
@@ -91,10 +99,7 @@ mod tests {
                 assert_eq!(guard.len(), 1);
                 assert_eq!(guard[0].id, "92-lethal-guard");
                 assert_eq!(guard[0].on, ReplacementMoment::LethalHit);
-                assert_eq!(
-                    guard[0].instead.redirect,
-                    Some(InsteadRedirect::SelfCard)
-                );
+                assert_eq!(guard[0].instead.redirect, Some(InsteadRedirect::SelfCard));
             }
 
             #[test]
@@ -111,10 +116,9 @@ mod tests {
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
                 assert_eq!(s.stats(UNAN).health, 13 - 6);
                 assert!(
-                    s.events().iter().any(|event| matches!(
-                        event,
-                        GameEvent::Redirected { .. }
-                    )),
+                    s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Redirected { .. })),
                     "a redirect was emitted"
                 );
             }
@@ -191,7 +195,12 @@ mod tests {
                 s.attack(STRIKER, GHOST);
                 // The Shield takes the 9: nothing lethal, nothing caught.
                 assert_eq!(s.card(GHOST).damage, 0);
-                assert!(!s.stats(GHOST).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield));
+                assert!(
+                    !s.stats(GHOST)
+                        .keywords
+                        .iter()
+                        .any(|k| k.kind() == KeywordKind::DivineShield)
+                );
                 assert_eq!(s.stats(UNAN).health, 13);
                 assert_eq!(redirects(&s), 0);
             }
@@ -236,14 +245,15 @@ mod tests {
                 let first = s.unit(P1, 1).unwrap().id;
                 let second = s.unit(P1, 2).unwrap().id;
                 s.end_turn();
-                // The ally's lethal 9 goes to the first Unan as 6, lethal to its 3 left, so the
-                // second catches it: 6 through its own Armor 3 is 3. Each catches the hit once.
+                // The ally's lethal 9 would reach the first Unan as 6, lethal to its 3 left, so the
+                // second catches the hit: a new instance of the 9 through its own Armor 3, 6. Each
+                // Unan catches the hit once.
                 s.attack(STRIKER, ALLY);
                 assert_eq!(redirects(&s), 2, "two redirects, then the cap: each Unan once");
                 assert_eq!(s.card(ALLY).damage, 0);
                 s.expect_in_zone(&first, "field");
                 assert_eq!(s.card(first.as_str()).damage, 10);
-                assert_eq!(s.stats(second.as_str()).health, 13 - 3);
+                assert_eq!(s.stats(second.as_str()).health, 13 - 6);
             }
 
             #[test]

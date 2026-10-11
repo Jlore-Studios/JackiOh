@@ -22,7 +22,11 @@ fn gaokao(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let times = param(&*ctx, "times");
-            let (destroy_side, buff_side) = if radiant { ("enemy", "self") } else { ("any", "any") };
+            let (destroy_side, buff_side) = if radiant {
+                ("enemy", "self")
+            } else {
+                ("any", "any")
+            };
             vec![
                 destroy_all(json_as(json!({
                     "side": destroy_side,
@@ -120,7 +124,14 @@ mod tests {
                 s.play(GAOKAO, json!({}));
                 // Neither tag on either side: both Vanillas and the face-down Honeypot are gone
                 // (besides the resolved Spell itself).
-                for card in s.state().players.p1.graveyard.iter().chain(s.state().players.p2.graveyard.iter()) {
+                for card in s
+                    .state()
+                    .players
+                    .p1
+                    .graveyard
+                    .iter()
+                    .chain(s.state().players.p2.graveyard.iter())
+                {
                     assert!(
                         ["core-008", "core-060", GAOKAO].contains(&card.def_id.as_str()),
                         "{}",
@@ -150,7 +161,10 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 let victim = s.unit(P1, 1).expect("the Vanilla");
-                s.play(RCTA, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+                s.play(
+                    RCTA,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+                );
                 s.play(GAOKAO, json!({}));
                 let standing = s.unit(P1, 1).expect("the granted unit stands");
                 assert_eq!(standing.id, victim.id);
@@ -202,12 +216,18 @@ mod tests {
                 }));
                 // The Vanilla is Immune to Spells.
                 let shielded = s.unit(P1, 2).expect("the Vanilla").id;
-                s.card_mut(&shielded).granted_keywords.push(Keyword::ImmuneToSpells);
+                s.card_mut(&shielded)
+                    .granted_keywords
+                    .push(Keyword::ImmuneToSpells);
                 s.play(GAOKAO, json!({}));
                 assert_eq!(s.unit(P1, 1).expect("the Wall stands").def_id, WALL);
                 assert_eq!(s.unit(P1, 2).expect("the Immune Vanilla stands").id, shielded);
                 assert_eq!(s.unit(P1, 3).expect("M 25 stands").def_id, FELINOR);
-                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Destroyed { .. })));
+                assert!(
+                    !s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Destroyed { .. }))
+                );
             }
 
             #[test]
@@ -252,9 +272,11 @@ mod tests {
                     .events()
                     .iter()
                     .filter_map(|event| match event {
-                        GameEvent::Upgraded { instance_id, hidden_from, .. } if *instance_id == trap => {
-                            Some(hidden_from.clone())
-                        }
+                        GameEvent::Upgraded {
+                            instance_id,
+                            hidden_from,
+                            ..
+                        } if *instance_id == trap => Some(hidden_from.clone()),
                         _ => None,
                     })
                     .collect();

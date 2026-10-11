@@ -136,7 +136,10 @@ mod tests {
                     assert_ne!(pick, INTELLECT);
                 }
                 // Each card still as it was added: at its printed cost, on its base face.
-                for card in got.iter().filter(|card| picks.iter().any(|(id, _)| *id == card.id)) {
+                for card in got
+                    .iter()
+                    .filter(|card| picks.iter().any(|(id, _)| *id == card.id))
+                {
                     assert_eq!(card.cost_override, None);
                     assert!(!card.radiant);
                 }

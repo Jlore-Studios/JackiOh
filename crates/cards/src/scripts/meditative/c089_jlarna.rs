@@ -154,7 +154,10 @@ mod tests {
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 1 })));
                 let id = s.card(ID).id.clone();
                 assert!(
-                    legal_actions(s.state(), P1).iter().map(js).all(|action| action["instanceId"] != json!(id)),
+                    legal_actions(s.state(), P1)
+                        .iter()
+                        .map(js)
+                        .all(|action| action["instanceId"] != json!(id)),
                     "unaffordable even with the line it would open",
                 );
             }
@@ -311,10 +314,16 @@ mod tests {
                 assert_eq!(crate::upgrade_number(&mut s, ID, "credit"), 5);
                 assert_eq!(credit_available(s.state(), P1), 5);
                 assert_eq!(crate::upgrade_number(&mut s, ID, "instalments"), 5);
-                for lane in 1..=4 {
-                    s.play(VANILLA, json!({ "zone": lane }));
-                }
-                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1, 0]));
+                // Borrow 5: two (1)s and a (3) Hit Job; 5 instalments of 1, not 2, 1, 1, 1.
+                s.play(VANILLA, json!({ "zone": 1 }));
+                s.play(VANILLA, json!({ "zone": 2 }));
+                let target = s.unit(P1, 1).unwrap().id;
+                s.play(
+                    FILLER,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": target }] }),
+                );
+                assert_eq!(owed_mana_of(s.state(), P1), 5);
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1, 1]));
             }
         }
 
@@ -349,7 +358,10 @@ mod tests {
                         .clone()
                 };
                 assert_eq!((number("credit").base, number("credit").radiant), (4, 4));
-                assert_eq!((number("instalments").base, number("instalments").radiant), (4, 4));
+                assert_eq!(
+                    (number("instalments").base, number("instalments").radiant),
+                    (4, 4)
+                );
                 let entry = registered_entry(ID).expect("registered");
                 let flags = |face: &Script| face.static_flags.clone().unwrap_or_default();
                 assert_eq!(flags(&entry.base).credit_line, Some(4));

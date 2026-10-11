@@ -93,7 +93,10 @@ mod tests {
         );
         let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(2));
-        assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier), Some(3));
+        assert_eq!(
+            s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier),
+            Some(3)
+        );
     }
 
     mod base {
@@ -281,7 +284,10 @@ mod tests {
             let ghost_now = s.unit(P2, 1).expect("the Ghost stands");
             assert_eq!(ghost_now.damage, 0);
             assert!(
-                !s.stats(&ghost).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield),
+                !s.stats(&ghost)
+                    .keywords
+                    .iter()
+                    .any(|k| k.kind() == KeywordKind::DivineShield),
                 "its Shield took the hit"
             );
             // Then the Ghost's 5 reaches the Bunker through its Armor 3.
@@ -293,7 +299,10 @@ mod tests {
             // Burn's 2 at the Unit across from the Bunker is 2, not 6.
             let mut s = bunker_against(json!([{ "def": BIG_ATTACKER, "lane": 1 }]));
             let big = s.unit(P2, 1).unwrap().id;
-            s.play(BURN, json!({ "targets": [{ "pick": "instance", "instanceId": big }] }));
+            s.play(
+                BURN,
+                json!({ "targets": [{ "pick": "instance", "instanceId": big }] }),
+            );
             assert_eq!(s.unit(P2, 1).unwrap().damage, 2);
         }
 

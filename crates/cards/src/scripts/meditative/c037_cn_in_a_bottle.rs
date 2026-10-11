@@ -79,7 +79,10 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     None,
-                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(effects, &mut ctx);
             }
@@ -101,7 +104,12 @@ mod tests {
 
     /// A bottle added to p1's hand; the card that took its place.
     fn add_bottle(s: &mut Scenario, radiant: bool) -> CardInstance {
-        let _ = apply_for_p1(s, &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE, "radiant": radiant })))]);
+        let _ = apply_for_p1(
+            s,
+            &[jackioh_engine::effects::add_to_hand(json_as(
+                json!({ "defId": BOTTLE, "radiant": radiant }),
+            ))],
+        );
         s.hand(P1).last().cloned().expect("the replacement")
     }
 
@@ -156,8 +164,7 @@ mod tests {
                 // The filler drawn after it lands behind it: the replacement kept its place.
                 assert_eq!(hand[2].def_id, FILLER);
                 // The opponent sees a count, never the card (R97).
-                let view: Value =
-                    serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
                 assert_eq!(view["opponent"]["hand"], json!({ "count": 3 }));
             }
 
@@ -201,7 +208,11 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
-                let held = s.hand(P1).into_iter().find(|card| card.def_id == BOTTLE).expect("the bottle");
+                let held = s
+                    .hand(P1)
+                    .into_iter()
+                    .find(|card| card.def_id == BOTTLE)
+                    .expect("the bottle");
                 assert_eq!(effective_cost(s.state(), &held, Default::default()), 0);
                 // And neither face runs a cry: a cast resolves with no effect (MD-B19).
                 assert!(script().base.cry.is_none());
@@ -230,7 +241,15 @@ mod tests {
                         "decks": [decks().0, decks().1],
                     }));
                     let begun = begin_game(&create_game(&options));
-                    assert!(begun.state.players.p1.hand.iter().all(|card| card.def_id != BOTTLE));
+                    assert!(
+                        begun
+                            .state
+                            .players
+                            .p1
+                            .hand
+                            .iter()
+                            .all(|card| card.def_id != BOTTLE)
+                    );
                     if bottle_transformed(&begun.events) {
                         dealt += 1;
                         continue;
@@ -239,8 +258,14 @@ mod tests {
                         continue;
                     }
                     // Not dealt: p1 sends its whole hand back, so the bottle may come as a replacement.
-                    let kept: Vec<String> =
-                        begun.state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
+                    let kept: Vec<String> = begun
+                        .state
+                        .players
+                        .p2
+                        .hand
+                        .iter()
+                        .map(|card| card.id.clone())
+                        .collect();
                     let mut state = begun.state;
                     for (player, keep) in [(P1, Vec::new()), (P2, kept)] {
                         let action: Action = json_as(json!({
@@ -285,7 +310,11 @@ mod tests {
                 let new_card = add_bottle(&mut s, false);
                 let theirs = serde_json::to_string(&s.view(P2)).expect("the view serialises");
                 assert!(!theirs.contains(&new_card.id), "p2 never reads the new card's id");
-                assert!(!theirs.contains(&new_card.def_id), "p2 never reads {}", new_card.def_id);
+                assert!(
+                    !theirs.contains(&new_card.def_id),
+                    "p2 never reads {}",
+                    new_card.def_id
+                );
                 let mine = serde_json::to_string(&s.view(P1)).expect("the view serialises");
                 assert!(mine.contains(&new_card.def_id), "p1 reads its own card");
             }
@@ -294,8 +323,7 @@ mod tests {
             fn r673_the_new_card_is_generated_for_glitch() {
                 // With Glitch's odds at certainty, the replacement is a Glitch.
                 let mut s = quiet("bottle-glitch");
-                s.state_mut().system_plays =
-                    Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
+                s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
                 let new_card = add_bottle(&mut s, false);
                 assert_eq!(new_card.def_id, GLITCH_DEF_ID);
             }
@@ -315,7 +343,11 @@ mod tests {
                     s.state_mut().players.p1.hand.pop();
                 }
                 let power = found.expect("some bottle becomes a Heroic Power");
-                assert!(power.memory.get("power").is_some_and(Value::is_string), "{:?}", power.memory);
+                assert!(
+                    power.memory.get("power").is_some_and(Value::is_string),
+                    "{:?}",
+                    power.memory
+                );
             }
 
             #[test]
@@ -327,7 +359,11 @@ mod tests {
                     "p1": { "hand": [{ "def": BOTTLE }, FILLER], "library": filler(4) },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
-                let held = s.hand(P1).into_iter().find(|card| card.def_id == BOTTLE).expect("the bottle");
+                let held = s
+                    .hand(P1)
+                    .into_iter()
+                    .find(|card| card.def_id == BOTTLE)
+                    .expect("the bottle");
                 let before = s.state().players[P1].clone();
                 s.play(&held.id, json!({ "x": 1 }));
                 s.expect_in_zone(&held.id, "graveyard");
@@ -338,7 +374,10 @@ mod tests {
                 // Cast at random by an effect, it does nothing either.
                 let mut s = quiet("bottle-random-cast");
                 let before = s.state().players[P1].clone();
-                let events = apply_for_p1(&mut s, &[cast_new(json_as(json!({ "def": BOTTLE, "random": true })))]);
+                let events = apply_for_p1(
+                    &mut s,
+                    &[cast_new(json_as(json!({ "def": BOTTLE, "random": true })))],
+                );
                 let after = &s.state().players[P1];
                 assert_eq!(after.hand.len(), before.hand.len());
                 assert_eq!(after.library.len(), before.library.len());

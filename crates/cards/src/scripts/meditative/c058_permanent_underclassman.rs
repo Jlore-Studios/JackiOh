@@ -125,7 +125,10 @@ mod tests {
             let mut ctx = make_context(
                 &mut sink,
                 None,
-                HookOptions { controller: Some(controller), ..HookOptions::default() },
+                HookOptions {
+                    controller: Some(controller),
+                    ..HookOptions::default()
+                },
             );
             apply_effects(effects, &mut ctx);
         }
@@ -170,8 +173,14 @@ mod tests {
             let mut s = casting("underclassman", false);
             s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
             // The Underclassman stands in lane 1, so the summon takes the leftmost open zone (R64).
-            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UNDERCLASSMAN.to_string()));
-            assert!(granted_lines(&s, 1).is_empty(), "the Underclassman itself gains nothing");
+            assert_eq!(
+                s.unit("p1", 1).map(|unit| unit.def_id),
+                Some(UNDERCLASSMAN.to_string())
+            );
+            assert!(
+                granted_lines(&s, 1).is_empty(),
+                "the Underclassman itself gains nothing"
+            );
             let summoned = s.unit("p1", 2).expect("the summoned Unit");
             assert_eq!(crate::card_def(&summoned.def_id).cost, CardCost::Fixed(1));
             assert!(!summoned.radiant);
@@ -207,7 +216,9 @@ mod tests {
                 .find(|(_, unit)| crate::card_def(&unit.def_id).base.text.contains("Cry:"))
                 .expect("some seed summons a (1) Unit with a Cry");
             assert!(s.state().pending.is_none(), "no Cry prompt opened");
-            let p1_units = (1..=UNIT_ZONES).filter(|lane| s.unit("p1", *lane).is_some()).count();
+            let p1_units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p1", *lane).is_some())
+                .count();
             assert_eq!(p1_units, 2, "only the Underclassman and {} stand", unit.def_id);
             let summons = s
                 .last_events()
@@ -235,7 +246,10 @@ mod tests {
                 })],
                 PlayerId::P1,
             );
-            assert_eq!(s.unit("p1", 1).map(|unit| unit.def_id), Some(UNDERCLASSMAN.to_string()));
+            assert_eq!(
+                s.unit("p1", 1).map(|unit| unit.def_id),
+                Some(UNDERCLASSMAN.to_string())
+            );
             let unit = s.unit("p1", 2).expect("the cast Cry summoned a Unit");
             assert_eq!(crate::card_def(&unit.def_id).cost, CardCost::Fixed(1));
             assert_eq!(granted_lines(&s, 2).len(), 1);
@@ -262,7 +276,9 @@ mod tests {
             let (mut s, unit) = summoned("underclassman-copy");
             run_as(
                 &mut s,
-                &[summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": unit.id } })))],
+                &[summon_copy(json_as(
+                    json!({ "of": { "of": "instance", "instanceId": unit.id } }),
+                ))],
                 PlayerId::P1,
             );
             let copy = s.unit("p1", 3).expect("the copy");
@@ -280,7 +296,10 @@ mod tests {
             let round: GameState =
                 serde_json::from_value(serde_json::to_value(s.state()).expect("serialises"))
                     .expect("deserialises");
-            assert_eq!(find_instance(&round, &unit.id).and_then(|card| card.grants.clone()), unit.grants);
+            assert_eq!(
+                find_instance(&round, &unit.id).and_then(|card| card.grants.clone()),
+                unit.grants
+            );
             *s.state_mut() = round;
             assert_eq!(granted_lines(&s, 2).len(), 1);
             kill(&mut s, &unit);
@@ -306,7 +325,9 @@ mod tests {
             let (mut s, unit) = summoned("underclassman-transform");
             run_as(
                 &mut s,
-                &[transform(json_as(json!({ "instanceId": unit.id, "defId": VANILLA })))],
+                &[transform(json_as(
+                    json!({ "instanceId": unit.id, "defId": VANILLA }),
+                ))],
                 PlayerId::P1,
             );
             let now = s.unit("p1", 2).expect("the transformed Unit");
@@ -328,7 +349,11 @@ mod tests {
             assert_eq!(s.card(&unit.id).controller, PlayerId::P2);
             let stolen = s.card(&unit.id).clone();
             kill(&mut s, &stolen);
-            assert_eq!(books_of(&s, PlayerId::P2).len(), 1, "the Book goes to the new controller");
+            assert_eq!(
+                books_of(&s, PlayerId::P2).len(),
+                1,
+                "the Book goes to the new controller"
+            );
             assert!(books_of(&s, PlayerId::P1).is_empty());
         }
 
@@ -364,14 +389,17 @@ mod tests {
             }));
             // Four units stand; the Underclassman takes the last lane and its summon fizzles.
             s.play(UNDERCLASSMAN, json!({ "zone": UNIT_ZONES }));
-            let standing: Vec<String> =
-                (1..=UNIT_ZONES).filter_map(|lane| s.unit("p1", lane).map(|unit| unit.def_id)).collect();
-            assert_eq!(standing, [VANILLA, VANILLA, VANILLA, VANILLA, UNDERCLASSMAN].map(str::to_string));
+            let standing: Vec<String> = (1..=UNIT_ZONES)
+                .filter_map(|lane| s.unit("p1", lane).map(|unit| unit.def_id))
+                .collect();
+            assert_eq!(
+                standing,
+                [VANILLA, VANILLA, VANILLA, VANILLA, UNDERCLASSMAN].map(str::to_string)
+            );
             let view: Value =
                 serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
             let units = view["you"]["units"].as_array().cloned().unwrap_or_default();
-            let grants: Vec<&Value> =
-                units.iter().filter_map(|unit| unit.get("grants")).collect();
+            let grants: Vec<&Value> = units.iter().filter_map(|unit| unit.get("grants")).collect();
             assert!(grants.is_empty(), "{grants:?}");
         }
     }

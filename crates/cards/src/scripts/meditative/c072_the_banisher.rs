@@ -89,10 +89,7 @@ mod tests {
         let big = s.unit(P2, 2).unwrap().id;
         let ours = s.unit(P1, 2).unwrap().id;
         s.attack(&big, &ours);
-        assert_eq!(
-            exiled_and_destroyed(&s),
-            (vec![big.clone()], vec![ours.clone()])
-        );
+        assert_eq!(exiled_and_destroyed(&s), (vec![big.clone()], vec![ours.clone()]));
         s.expect_in_zone(&big, "exile");
         s.expect_in_zone(&ours, "graveyard");
     }
@@ -129,7 +126,10 @@ mod tests {
         s.attack(&banisher, &saintess);
         let (exiled, destroyed) = exiled_and_destroyed(&s);
         assert_eq!(exiled, vec![saintess.clone()]);
-        assert!(!destroyed.contains(&saintess), "no `destroyed` for the exiled Unit");
+        assert!(
+            !destroyed.contains(&saintess),
+            "no `destroyed` for the exiled Unit"
+        );
         s.expect_in_zone(&saintess, "exile");
         assert!(!s.unit(P2, 2).unwrap().radiant, "its Death never ran");
     }
@@ -152,7 +152,12 @@ mod tests {
         s.expect_in_zone(&defender, "exile");
         assert!(s.unit(P2, 1).is_none(), "Reborn summoned nothing back");
         assert!(
-            s.state().players[P2].units.iter().flatten().flatten().all(|card| card.def_id != "core-003"),
+            s.state().players[P2]
+                .units
+                .iter()
+                .flatten()
+                .flatten()
+                .all(|card| card.def_id != "core-003"),
             "no Reborn copy anywhere on the field"
         );
     }
@@ -228,7 +233,12 @@ mod tests {
             "p1": { "field": [{ "def": ID, "radiant": true }] },
         }));
         s.expect_stats(ID, json!({ "attack": 4, "health": 2 }));
-        assert!(s.stats(ID).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Cleave));
+        assert!(
+            s.stats(ID)
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Cleave)
+        );
     }
 
     #[test]
@@ -242,10 +252,14 @@ mod tests {
         let banisher = s.unit(P1, 1).unwrap().id;
         let middle = s.unit(P2, 2).unwrap().id;
         s.attack(&banisher, &middle);
-        let exiled: Vec<String> = s.events().iter().filter_map(|event| match event {
-            GameEvent::Exiled { instance_id, .. } => Some(instance_id.clone()),
-            _ => None,
-        }).collect();
+        let exiled: Vec<String> = s
+            .events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Exiled { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
         assert_eq!(exiled.len(), 3, "the hit and both cleaves exiled: {exiled:?}");
     }
 }

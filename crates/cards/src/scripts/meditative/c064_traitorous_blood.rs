@@ -16,9 +16,7 @@ pub const ID: &str = "meditative-064";
 /// A declared, unforced attack by one of the controller's enemies that has somewhere to go.
 fn enemy_declared_with_neighbour(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let GameEvent::AttackDeclared {
-        attacker_id,
-        forced,
-        ..
+        attacker_id, forced, ..
     } = event
     else {
         return false;
@@ -234,7 +232,9 @@ mod tests {
         s.start_turn();
         let events = s.last_events().to_vec();
         assert!(
-            events.iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
             "the forced attacks were made: {:?}",
             kinds_of(&events)
         );
@@ -317,7 +317,11 @@ mod tests {
         assert!(s.unit(P2, 1).is_none() && s.unit(P2, 2).is_none());
         let copies: Vec<CardInstance> = (1..=UNIT_ZONES).filter_map(|lane| s.unit(P1, lane)).collect();
         assert_eq!(copies.len(), 2);
-        assert!(copies.iter().all(|copy| copy.def_id == SCARAB && copy.controller == P1));
+        assert!(
+            copies
+                .iter()
+                .all(|copy| copy.def_id == SCARAB && copy.controller == P1)
+        );
     }
 
     #[test]
@@ -351,7 +355,9 @@ mod tests {
         s.attack(&foe, "hero");
         // The Vanilla's 4 destroyed the 1/1 Scarab; the Blood's controller gets a fresh copy of it.
         s.expect_in_zone(&foe, "field");
-        let copy = s.unit(P1, 1).unwrap_or_else(|| panic!("p1 should hold the copied Scarab"));
+        let copy = s
+            .unit(P1, 1)
+            .unwrap_or_else(|| panic!("p1 should hold the copied Scarab"));
         assert_eq!(copy.def_id, SCARAB);
         assert!(!copy.radiant);
     }

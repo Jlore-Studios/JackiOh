@@ -13,7 +13,9 @@ pub const ID: &str = "meditative-039-4";
 
 fn red_jade() -> Script {
     Script {
-        cry: Some(hook(|ctx| vec![add_jade(json_as(json!({ "amount": param(&*ctx, "jade") })))])),
+        cry: Some(hook(|ctx| {
+            vec![add_jade(json_as(json!({ "amount": param(&*ctx, "jade") })))]
+        })),
         ..Script::default()
     }
 }
@@ -40,7 +42,10 @@ mod tests {
     const FILLER: &str = "core-008";
 
     fn beauties(s: &Scenario) -> Vec<CardInstance> {
-        (1..=5).filter_map(|lane| s.unit(P1, lane)).filter(|unit| unit.def_id == BEAUTY).collect()
+        (1..=5)
+            .filter_map(|lane| s.unit(P1, lane))
+            .filter(|unit| unit.def_id == BEAUTY)
+            .collect()
     }
 
     #[test]

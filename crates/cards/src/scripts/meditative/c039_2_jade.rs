@@ -112,7 +112,11 @@ mod tests {
                 .into_iter()
                 .filter(|event| matches!(event, GameEvent::JadeChanged { .. }))
                 .collect();
-            assert_eq!(seen, vec![GameEvent::JadeChanged { player: P1, value: 1 }], "{viewer}");
+            assert_eq!(
+                seen,
+                vec![GameEvent::JadeChanged { player: P1, value: 1 }],
+                "{viewer}"
+            );
         }
     }
 

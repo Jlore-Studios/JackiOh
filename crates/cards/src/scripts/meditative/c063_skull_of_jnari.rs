@@ -153,7 +153,9 @@ mod tests {
             const FIELD_SPELL: &str = "core-073";
 
             fn p1_units(s: &Scenario) -> usize {
-                (1..=UNIT_ZONES).filter(|lane| s.unit(P1, *lane).is_some()).count()
+                (1..=UNIT_ZONES)
+                    .filter(|lane| s.unit(P1, *lane).is_some())
+                    .count()
             }
 
             #[test]
@@ -226,7 +228,11 @@ mod tests {
                 let seen = serde_json::to_string(&view).expect("the view serialises");
                 // The arrival is public…
                 assert!(
-                    view.opponent.units.iter().flatten().any(|unit| unit.def_id == VANILLA),
+                    view.opponent
+                        .units
+                        .iter()
+                        .flatten()
+                        .any(|unit| unit.def_id == VANILLA),
                     "p2 sees the summoned Vanilla"
                 );
                 // …and nothing else of the hand it came from.

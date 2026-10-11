@@ -335,7 +335,10 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     None,
-                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(effects, &mut ctx);
             }
@@ -402,7 +405,9 @@ mod tests {
         let verdicts: Vec<FengShuiOutcome> = events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::FengShui { outcome, player: P1, .. } => Some(*outcome),
+                GameEvent::FengShui {
+                    outcome, player: P1, ..
+                } => Some(*outcome),
                 _ => None,
             })
             .collect();
@@ -483,10 +488,17 @@ mod tests {
                 },
             }));
             s.play(WOOD, json!({}));
-            let played = s.hand(P1).into_iter().find(|card| card.def_id == spell).expect("the Spell").id;
+            let played = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id == spell)
+                .expect("the Spell")
+                .id;
             s.play(&played, json!({}));
             assert!(
-                s.events().iter().any(|event| matches!(event, GameEvent::Countered { .. })),
+                s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Countered { .. })),
                 "{spell} is countered"
             );
             let card = s.card(&played).clone();
@@ -528,7 +540,10 @@ mod tests {
             outcome: FengShuiOutcome::Positive,
         };
         for viewer in [P1, P2] {
-            assert!(s.view(viewer).events.contains(&wanted), "{viewer} reads the judgement whole");
+            assert!(
+                s.view(viewer).events.contains(&wanted),
+                "{viewer} reads the judgement whole"
+            );
         }
     }
 
@@ -541,13 +556,18 @@ mod tests {
         crate::register_all();
         let def = crate::card_def(ID);
         for text in [&def.base.text, &def.radiant.text] {
-            assert!(!text.contains("10") && !text.contains("20") && !text.contains("Brittle"), "{text}");
+            assert!(
+                !text.contains("10") && !text.contains("20") && !text.contains("Brittle"),
+                "{text}"
+            );
         }
     }
 
     #[test]
     fn r986_elements_match_no_tag_filter() {
-        for glyph in ["水", "火", "木", "金", "土", "Water", "Fire", "Wood", "Metal", "Earth"] {
+        for glyph in [
+            "水", "火", "木", "金", "土", "Water", "Fire", "Wood", "Metal", "Earth",
+        ] {
             assert!(glyph.parse::<Tag>().is_err(), "{glyph} is no tag");
         }
         // While it stands, a card's tags are its printed ones.
@@ -562,12 +582,17 @@ mod tests {
         const ROCK: &str = "meditative-039-1";
         const ROLLS: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
         let rank = |s: &Scenario| -> usize {
-            s.hand(P1).iter().find_map(|card| ROLLS.iter().position(|id| *id == card.def_id)).expect("a roll")
+            s.hand(P1)
+                .iter()
+                .find_map(|card| ROLLS.iter().position(|id| *id == card.def_id))
+                .expect("a roll")
         };
         let (mut worse_never, mut better_once) = (true, false);
         for n in 0..30 {
             let seed = format!("meditative-040-luck-roll-{n}");
-            let mut plain = scenario(json!({ "seed": seed, "p1": { "hand": [ROCK, "core-005"] }, "p2": { "hand": ["core-005"] } }));
+            let mut plain = scenario(
+                json!({ "seed": seed, "p1": { "hand": [ROCK, "core-005"] }, "p2": { "hand": ["core-005"] } }),
+            );
             plain.play(ROCK, json!({}));
             let mut lucky = scenario(json!({
                 "seed": seed,
@@ -578,7 +603,10 @@ mod tests {
             worse_never &= rank(&lucky) >= rank(&plain);
             better_once |= rank(&lucky) > rank(&plain);
         }
-        assert!(worse_never && better_once, "Luck 1 is a second roll, the better kept");
+        assert!(
+            worse_never && better_once,
+            "Luck 1 is a second roll, the better kept"
+        );
         // A pool pick is no roll: H1B Printer prints the same card with Feng Shui standing or not.
         const PRINTER: &str = "meditative-038";
         let printed = |with_judge: bool| -> Vec<String> {

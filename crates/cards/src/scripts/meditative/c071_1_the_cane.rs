@@ -83,7 +83,12 @@ mod tests {
         assert_eq!(def.cost, CardCost::Fixed(2));
         assert!(def.token);
         assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+            [
+                def.base.attack,
+                def.base.health,
+                def.radiant.attack,
+                def.radiant.health
+            ],
             [Some(3), Some(1), Some(6), Some(2)]
         );
         let kinds = |face: &CardFace| {
@@ -135,7 +140,10 @@ mod tests {
         let events = strike_and_return(&mut s);
         let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
         assert!(kinds.contains(&"attackDeclared"), "the Cane attacked: {kinds:?}");
-        assert!(!kinds.contains(&"deanimated"), "the Cane stayed a Unit: {kinds:?}");
+        assert!(
+            !kinds.contains(&"deanimated"),
+            "the Cane stayed a Unit: {kinds:?}"
+        );
         assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(ID.to_string()));
     }
 
@@ -151,7 +159,10 @@ mod tests {
         }));
         let events = strike_and_return(&mut s);
         let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
-        assert!(!kinds.contains(&"attackDeclared"), "no room, no attack: {kinds:?}");
+        assert!(
+            !kinds.contains(&"attackDeclared"),
+            "no room, no attack: {kinds:?}"
+        );
         assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(ID.to_string()));
     }
 
@@ -190,10 +201,15 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     None,
-                    HookOptions { controller: Some(PlayerId::P2), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(PlayerId::P2),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(
-                    &[destroy(json_as(json!({ "target": { "of": "instance", "instanceId": cane } })))],
+                    &[destroy(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": cane } }),
+                    ))],
                     &mut ctx,
                 );
             }
@@ -227,8 +243,15 @@ mod tests {
         }));
         s.end_turn();
         s.play("core-t-felinor", json!({}));
-        let kinds: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
-        assert!(!kinds.contains(&"attackDeclared"), "the stray Cane stays home: {kinds:?}");
+        let kinds: Vec<&str> = s
+            .last_events()
+            .iter()
+            .map(|event| event.event_type().as_str())
+            .collect();
+        assert!(
+            !kinds.contains(&"attackDeclared"),
+            "the stray Cane stays home: {kinds:?}"
+        );
         assert_eq!(s.backrow(P1, 2).map(|card| card.def_id), Some(ID.to_string()));
     }
 

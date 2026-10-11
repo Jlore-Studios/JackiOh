@@ -79,11 +79,7 @@ fn pareto_optimality(radiant_cane: bool, hears_emotes: bool) -> Script {
         non_optimal_play,
     )];
     if hears_emotes {
-        triggers.push(answering(
-            "paretoEmote",
-            GameEventType::Emoted,
-            opponent_emoted,
-        ));
+        triggers.push(answering("paretoEmote", GameEventType::Emoted, opponent_emoted));
     }
     Script {
         cry: Some(hook(move |_ctx| {
@@ -178,7 +174,14 @@ mod tests {
         assert_eq!(cane.def_id, CANE);
         assert!(!cane.radiant);
         assert!(
-            matches!(cane.zone, Zone::Field { player: PlayerId::P1, row: Row::Units, lane: 2 }),
+            matches!(
+                cane.zone,
+                Zone::Field {
+                    player: PlayerId::P1,
+                    row: Row::Units,
+                    lane: 2
+                }
+            ),
             "the Cane animated into its lane's unit zone, not {:?}",
             cane.zone
         );
@@ -187,7 +190,11 @@ mod tests {
         assert!(
             matches!(
                 s.card(&cane_id).zone,
-                Zone::Field { player: PlayerId::P1, row: Row::Backrow, lane: 2 }
+                Zone::Field {
+                    player: PlayerId::P1,
+                    row: Row::Backrow,
+                    lane: 2
+                }
             ),
             "the Cane went home to backrow lane 2, not {:?}",
             s.card(&cane_id).zone
@@ -201,7 +208,12 @@ mod tests {
         // The 1/1 under the 4/4 at the same price: the worse-scored play sends the Cane, which
         // animates for the one forced attack and goes home after it, it being p2's turn.
         s.play(BAD, json!({}));
-        s.expect_events(json!(["cardResolved", "animated", "attackDeclared", "deanimated"]));
+        s.expect_events(json!([
+            "cardResolved",
+            "animated",
+            "attackDeclared",
+            "deanimated"
+        ]));
         let forced = s.last_events().iter().any(|event| {
             matches!(event, GameEvent::AttackDeclared { attacker_id, forced: true, .. } if *attacker_id == cane)
         });
@@ -246,9 +258,9 @@ mod tests {
         s.play(ID, json!({}));
         assert_eq!(remembered_cane(&s, ID), None);
         assert!(
-            !s.last_events().iter().any(
-                |event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == CANE)
-            ),
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == CANE)),
             "no Cane was summoned"
         );
         s.end_turn();
@@ -306,7 +318,10 @@ mod tests {
             let mut ctx = make_context(
                 &mut sink,
                 None,
-                HookOptions { controller: Some(controller), ..HookOptions::default() },
+                HookOptions {
+                    controller: Some(controller),
+                    ..HookOptions::default()
+                },
             );
             apply_effects(effects, &mut ctx);
         }
@@ -333,11 +348,18 @@ mod tests {
         let mut s = pareto_game(false);
         let events = run_as(
             &mut s,
-            &[cast_new(CastNewArgs { def: BAD.into(), radiant: None, how: CastHow::default() })],
+            &[cast_new(CastNewArgs {
+                def: BAD.into(),
+                radiant: None,
+                how: CastHow::default(),
+            })],
             P2,
         );
         let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();
-        assert!(!kinds.contains(&"attackDeclared"), "a cast sends nothing: {kinds:?}");
+        assert!(
+            !kinds.contains(&"attackDeclared"),
+            "a cast sends nothing: {kinds:?}"
+        );
     }
 
     #[test]
@@ -349,21 +371,30 @@ mod tests {
         }));
         s.play(ID, json!({}));
         s.end_turn();
-        let spell = s.hand(P2).into_iter().find(|card| card.def_id == SPELL).expect("the Spell").id;
+        let spell = s
+            .hand(P2)
+            .into_iter()
+            .find(|card| card.def_id == SPELL)
+            .expect("the Spell")
+            .id;
         assert!(
             !subsystems::pareto::judge_play(s.state(), P2, &spell),
             "the Spell scores below the 4/4, so only the counter keeps the Cane home"
         );
         s.play(&spell, json!({}));
         assert!(last_kinds(&s).contains(&"countered"), "{:?}", last_kinds(&s));
-        assert!(!attacked(&s), "a countered play sends nothing: {:?}", last_kinds(&s));
+        assert!(
+            !attacked(&s),
+            "a countered play sends nothing: {:?}",
+            last_kinds(&s)
+        );
     }
 
     #[test]
     fn the_judgement_survives_a_json_round_trip_and_replays_the_same() {
         let mut s = pareto_game(false);
-        let round: GameState =
-            serde_json::from_value(serde_json::to_value(s.state()).expect("serialises")).expect("deserialises");
+        let round: GameState = serde_json::from_value(serde_json::to_value(s.state()).expect("serialises"))
+            .expect("deserialises");
         s.play(BAD, json!({}));
         let first = jackioh_engine::replay::hash_state(s.state());
         assert!(attacked(&s));
@@ -379,7 +410,9 @@ mod tests {
         let cane = remembered_cane(&s, ID).expect("Pareto remembers its Cane");
         run_as(
             &mut s,
-            &[exile(json_as(json!({ "target": { "of": "instance", "instanceId": cane } })))],
+            &[exile(json_as(
+                json!({ "target": { "of": "instance", "instanceId": cane } }),
+            ))],
             P1,
         );
         s.expect_in_zone(&cane, "exile");
@@ -395,7 +428,15 @@ mod tests {
                 .iter()
                 .any(|body| matches!(body, ActionBody::Emote { .. }))
         );
-        s.expect_refused(|s| s.act(ActionBody::Emote { emote: EmoteId::Greetings }, P2, "greetings"));
+        s.expect_refused(|s| {
+            s.act(
+                ActionBody::Emote {
+                    emote: EmoteId::Greetings,
+                },
+                P2,
+                "greetings",
+            )
+        });
     }
 
     #[test]

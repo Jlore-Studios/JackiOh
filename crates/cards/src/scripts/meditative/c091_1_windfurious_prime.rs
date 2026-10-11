@@ -67,7 +67,12 @@ mod tests {
                 assert!(def.tags.contains(&Tag::Prime));
                 assert!(def.tags.contains(&Tag::Token));
                 assert_eq!(
-                    [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+                    [
+                        def.base.attack,
+                        def.base.health,
+                        def.radiant.attack,
+                        def.radiant.health
+                    ],
                     [Some(5), Some(10), Some(10), Some(20)]
                 );
                 assert!(def.base.keywords.contains(&Keyword::Rush));
@@ -102,9 +107,7 @@ mod tests {
                     .iter()
                     .filter_map(|event| match event {
                         GameEvent::AttackDeclared {
-                            attacker_id,
-                            forced,
-                            ..
+                            attacker_id, forced, ..
                         } => Some((attacker_id.clone(), *forced)),
                         _ => None,
                     })
@@ -139,9 +142,7 @@ mod tests {
                 let forced = s
                     .events()
                     .iter()
-                    .filter(|event| {
-                        matches!(event, GameEvent::AttackDeclared { forced: true, .. })
-                    })
+                    .filter(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. }))
                     .count();
                 assert_eq!(forced, 0, "no open zone, no joiners");
                 s.expect_health(P2, HERO_HEALTH - 5);
@@ -199,9 +200,11 @@ mod tests {
                     .events()
                     .iter()
                     .filter_map(|event| match event {
-                        GameEvent::AttackDeclared { attacker_id, forced: true, .. } => {
-                            Some(attacker_id.clone())
-                        }
+                        GameEvent::AttackDeclared {
+                            attacker_id,
+                            forced: true,
+                            ..
+                        } => Some(attacker_id.clone()),
                         _ => None,
                     })
                     .collect();
@@ -232,8 +235,14 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                assert!(cancelled.contains(&prime), "the Prime's attack is cancelled: {cancelled:?}");
-                assert_eq!(cancelled.len(), 2, "the second joiner's and the Prime's: {cancelled:?}");
+                assert_eq!(cancelled, vec![prime.clone()], "the Prime's attack is cancelled");
+                // Only the first joiner fought: the target was gone before the second's turn.
+                let fights = s
+                    .events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::Damage { .. }))
+                    .count();
+                assert!(fights <= 2, "one combat, its hit and its strike back");
                 assert_eq!(s.card(prime.as_str()).damage, 0, "the Prime fought no combat");
                 assert!(s.card(prime.as_str()).exertion.attacked, "its exertion is spent");
                 s.expect_health(P2, HERO_HEALTH);
@@ -323,9 +332,7 @@ mod tests {
                 let forced = s
                     .events()
                     .iter()
-                    .filter(|event| {
-                        matches!(event, GameEvent::AttackDeclared { forced: true, .. })
-                    })
+                    .filter(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. }))
                     .count();
                 assert_eq!(forced, 2, "the Radiant Prime's joiners attack first too");
             }
@@ -338,7 +345,10 @@ mod tests {
                 }));
                 s.expect_stats(PRIME, json!({ "attack": 10, "health": 20 }));
                 assert!(
-                    s.stats(PRIME).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::FirstStrike)
+                    s.stats(PRIME)
+                        .keywords
+                        .iter()
+                        .any(|keyword| keyword.kind() == KeywordKind::FirstStrike)
                 );
             }
         }

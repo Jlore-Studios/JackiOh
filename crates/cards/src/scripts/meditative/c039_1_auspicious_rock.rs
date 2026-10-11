@@ -25,7 +25,9 @@ fn rock_cry() -> Script {
     Script {
         cry: Some(hook(|ctx| {
             vec![
-                lose_health(json_as(json!({ "player": "self", "amount": param(&*ctx, "life") }))),
+                lose_health(json_as(
+                    json!({ "player": "self", "amount": param(&*ctx, "life") }),
+                )),
                 add_rolled(json_as(json!({ "table": ROCK_TABLE }))),
             ]
         })),
@@ -61,7 +63,10 @@ mod tests {
 
     /// The rolled token's rank, worst to best (R960): Dud < Jade < Red Jade.
     fn rank(def_id: &str) -> i64 {
-        [DUD, JADE, RED_JADE].iter().position(|id| *id == def_id).map_or(-1, |i| i as i64)
+        [DUD, JADE, RED_JADE]
+            .iter()
+            .position(|id| *id == def_id)
+            .map_or(-1, |i| i as i64)
     }
 
     fn rolled(s: &Scenario) -> String {
@@ -98,7 +103,11 @@ mod tests {
 
         let def = rolled(&s);
         assert!(rank(&def) >= 0, "{def} is a Dud, a Jade or a Red Jade");
-        let card = s.hand(P1).into_iter().find(|card| card.def_id == def).expect("the roll");
+        let card = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == def)
+            .expect("the roll");
         assert!(!card.radiant, "the roll lands on its base face");
         // Uncast: it sits in the hand, and no Jade Counter moved for a Jade.
         assert!(rank(&def) != 1 || s.view(P1).you.jade.unwrap_or(0) == 0);
@@ -116,9 +125,15 @@ mod tests {
         s.play(ID, json!({}));
 
         assert_eq!(s.hand(P1).len(), 10);
-        let burned: Vec<String> =
-            s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
-        assert!(burned.iter().any(|def| rank(def) >= 0), "the roll burned: {burned:?}");
+        let burned: Vec<String> = s
+            .pile(P1, "graveyard")
+            .into_iter()
+            .map(|card| card.def_id)
+            .collect();
+        assert!(
+            burned.iter().any(|def| rank(def) >= 0),
+            "the roll burned: {burned:?}"
+        );
     }
 
     #[test]
@@ -128,9 +143,12 @@ mod tests {
         let mut better_once = false;
         for n in 0..30 {
             let seed = format!("rock-lucky-{n}");
-            let mut base = scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+            let mut base =
+                scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
             base.play(ID, json!({}));
-            let mut lucky = scenario(json!({ "seed": seed, "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
+            let mut lucky = scenario(
+                json!({ "seed": seed, "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }),
+            );
             lucky.play(ID, json!({}));
             let (plain, gifted) = (rank(&rolled(&base)), rank(&rolled(&lucky)));
             assert!(plain >= 0 && gifted >= 0);
@@ -161,8 +179,10 @@ mod tests {
     #[test]
     fn r960_over_many_seeds_the_odds_hold_at_20_70_and_10() {
         crate::register_all();
-        let odds: Vec<(&str, i32)> =
-            AUSPICIOUS_ROCK_ODDS.iter().map(|row| (row.def_id, row.percent)).collect();
+        let odds: Vec<(&str, i32)> = AUSPICIOUS_ROCK_ODDS
+            .iter()
+            .map(|row| (row.def_id, row.percent))
+            .collect();
         assert_eq!(odds, vec![(DUD, 20), (JADE, 70), (RED_JADE, 10)]);
         const ROLLS: usize = 600;
         let mut counts = [0usize; 3];
@@ -178,7 +198,10 @@ mod tests {
         // Each share within six points of its odds (over four standard deviations at 600 rolls).
         for (count, (def, percent)) in counts.iter().zip(odds) {
             let share = (*count * 100) as f64 / ROLLS as f64;
-            assert!((share - percent as f64).abs() <= 6.0, "{def}: {share}% against {percent}%");
+            assert!(
+                (share - percent as f64).abs() <= 6.0,
+                "{def}: {share}% against {percent}%"
+            );
         }
     }
 
@@ -203,7 +226,8 @@ mod tests {
         let mut better_once = false;
         for n in 0..30 {
             let seed = format!("rock-luck-{n}");
-            let mut plain = scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+            let mut plain =
+                scenario(json!({ "seed": seed, "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
             plain.play(ID, json!({}));
             let mut lucky = scenario(json!({
                 "seed": seed,

@@ -275,13 +275,14 @@ mod tests {
             assert!(jackioh_engine::draw::discard_guarded(s.state(), P1));
             let mut events: Vec<GameEvent> = Vec::new();
             let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-            let kept = s.hand(P1)[0].clone();
-            {
+            let kept = {
                 let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
                 // An Activate's random discard (R384), then a targeting cost's (R450).
                 discard_random_cards(&mut sink, P1, 1);
+                let kept = sink.state.players.p1.hand[0].clone();
                 discard_from_hand(&mut sink, &kept);
-            }
+                kept
+            };
             assert_eq!(count(&events, "discarded"), 2);
             assert_eq!(count(&events, "discardPrevented"), 0);
             assert_eq!(s.hand(P1).len(), 1);

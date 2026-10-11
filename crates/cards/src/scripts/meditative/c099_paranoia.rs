@@ -101,7 +101,12 @@ mod tests {
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
             }));
             let before = s.hand(P1).len();
-            let paranoia = s.hand(P1).iter().find(|card| card.def_id == PARANOIA).cloned().unwrap();
+            let paranoia = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == PARANOIA)
+                .cloned()
+                .unwrap();
             s.play(&paranoia.id, json!({}));
             // Played one, drew one.
             assert_eq!(s.hand(P1).len(), before);
@@ -120,11 +125,19 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
             }));
-            let spell = s.hand(P1).iter().find(|card| card.def_id == STOCKPILE).cloned().unwrap();
+            let spell = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == STOCKPILE)
+                .cloned()
+                .unwrap();
             let mut timings: Vec<String> = set_plays(&s, &spell.id)
                 .iter()
                 .map(|action| match action {
-                    ActionBody::Play { face_down: Some(timing), .. } => format!("{timing:?}"),
+                    ActionBody::Play {
+                        face_down: Some(timing),
+                        ..
+                    } => format!("{timing:?}"),
                     _ => unreachable!(),
                 })
                 .collect();
@@ -132,7 +145,12 @@ mod tests {
             timings.dedup();
             assert_eq!(timings, vec!["EndOfNextTurn", "EndOfThisTurn", "StartOfNextTurn"]);
             // A Unit gets no Spell permission.
-            let unit = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
+            let unit = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == VANILLA)
+                .cloned()
+                .unwrap();
             assert_eq!(set_plays(&s, &unit.id), vec![]);
         }
 
@@ -148,10 +166,18 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
             }));
-            let eclipse = s.hand(P1).iter().find(|card| card.def_id == ECLIPSE).cloned().unwrap();
+            let eclipse = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == ECLIPSE)
+                .cloned()
+                .unwrap();
             let health = s.state().players.p2.hero.health;
             // Setting the Spell deals nothing: its text waits for the reveal.
-            s.play(&eclipse.id, json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }));
+            s.play(
+                &eclipse.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }),
+            );
             assert_eq!(s.state().players.p2.hero.health, health);
             // Revealed, it deals its 3 to the chosen hero: its damage is a Trap's, so Solarius's
             // Spell Damage +2 adds nothing (MD-E17).
@@ -176,15 +202,29 @@ mod tests {
         }
 
         fn set(s: &mut Scenario, def: &str, timing: &str) -> String {
-            let card = s.hand(P1).iter().find(|card| card.def_id == def).cloned().unwrap();
-            s.play(&card.id, json!({ "zone": 2, "row": "backrow", "faceDown": timing }));
+            let card = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == def)
+                .cloned()
+                .unwrap();
+            s.play(
+                &card.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": timing }),
+            );
             // A set card takes a fresh id (R1040).
             s.backrow(P1, 2).expect("the set card").id
         }
 
         /// The card of `def` in p1's graveyard, if one is there.
         fn in_grave(s: &Scenario, def: &str) -> Option<CardInstance> {
-            s.state().players.p1.graveyard.iter().find(|card| card.def_id == def).cloned()
+            s.state()
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .find(|card| card.def_id == def)
+                .cloned()
         }
 
         #[test]
@@ -193,7 +233,14 @@ mod tests {
             let mana = s.state().players.p1.mana.current;
             set(&mut s, ECLIPSE, "endOfThisTurn");
             assert_eq!(s.state().players.p1.mana.current, mana - 1, "Lunar Eclipse's (1)");
-            let by_type = s.state().players.p1.turn_log.played_by_type.clone().unwrap_or_default();
+            let by_type = s
+                .state()
+                .players
+                .p1
+                .turn_log
+                .played_by_type
+                .clone()
+                .unwrap_or_default();
             assert_eq!(by_type.get(&CardType::Trap), Some(&1), "a Trap play: {by_type:?}");
             assert_eq!(by_type.get(&CardType::Spell), None);
             // The opponent sees a face-down card and its cost, nothing more.
@@ -206,8 +253,12 @@ mod tests {
         #[test]
         fn r1044_it_counts_as_a_trap_play_for_trap_discounts() {
             // Cloaked Toe Cracker: "Aura: Your Traps cost (0)." The set Spell is free.
-            let mut s =
-                paranoid("paranoia-discount", json!([ECLIPSE, VANILLA]), json!([TOE_CRACKER]), json!({}));
+            let mut s = paranoid(
+                "paranoia-discount",
+                json!([ECLIPSE, VANILLA]),
+                json!([TOE_CRACKER]),
+                json!({}),
+            );
             let mana = s.state().players.p1.mana.current;
             set(&mut s, ECLIPSE, "endOfThisTurn");
             assert_eq!(s.state().players.p1.mana.current, mana, "priced as a Trap: (0)");
@@ -227,7 +278,9 @@ mod tests {
             s.expect_in_zone(&eclipse, "field");
             s.expect_in_zone(&counter, "field");
             assert!(
-                !s.events().iter().any(|event| matches!(event, GameEvent::Countered { .. })),
+                !s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Countered { .. })),
                 "nothing was countered"
             );
         }
@@ -242,7 +295,10 @@ mod tests {
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&eclipse, "field");
             s.end_turn();
-            assert_eq!(s.state().pending.as_ref().map(|p| p.kind), Some(PromptKind::Target));
+            assert_eq!(
+                s.state().pending.as_ref().map(|p| p.kind),
+                Some(PromptKind::Target)
+            );
             answer_hero(&mut s);
             assert_eq!(s.state().players.p2.hero.health, health - 3);
             assert!(in_grave(&s, ECLIPSE).is_some());
@@ -274,7 +330,10 @@ mod tests {
             set(&mut s, HIT_JOB, "endOfThisTurn");
             s.end_turn();
             assert!(s.state().pending.is_none(), "no prompt: it fizzled");
-            assert!(in_grave(&s, HIT_JOB).is_some(), "the Spell lands in the graveyard");
+            assert!(
+                in_grave(&s, HIT_JOB).is_some(),
+                "the Spell lands in the graveyard"
+            );
         }
 
         #[test]
@@ -358,14 +417,28 @@ mod tests {
                 },
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
             }));
-            let eclipse = s.hand(P1).iter().find(|card| card.def_id == ECLIPSE).cloned().unwrap();
+            let eclipse = s
+                .hand(P1)
+                .iter()
+                .find(|card| card.def_id == ECLIPSE)
+                .cloned()
+                .unwrap();
             let health = s.state().players.p2.hero.health;
-            s.play(&eclipse.id, json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }));
+            s.play(
+                &eclipse.id,
+                json!({ "zone": 2, "row": "backrow", "faceDown": "endOfThisTurn" }),
+            );
             s.end_turn();
             // First resolution asks with a prompt; so does the Echo repeat.
-            assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Target)
+            );
             answer_hero(&mut s);
-            assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Target)
+            );
             answer_hero(&mut s);
             assert_eq!(s.state().players.p2.hero.health, health - 6);
         }

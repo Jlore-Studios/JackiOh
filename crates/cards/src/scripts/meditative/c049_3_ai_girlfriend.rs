@@ -378,6 +378,11 @@ mod tests {
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
                 let girlfriend = s.unit(P1, 1).expect("animated");
                 step_param(s.card_mut(&girlfriend), "times", 1);
+                eprintln!(
+                    "DEBUG {:?} {:?}",
+                    s.card(&girlfriend).tuning,
+                    s.view(P1).you.units[0].as_ref().map(|unit| unit.params.clone())
+                );
 
                 s.start_turn();
 

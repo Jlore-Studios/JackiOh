@@ -28,9 +28,7 @@ fn draw_created() -> Effect {
         cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
             created_in_library(ctx.state, ctx.controller)
         }),
-        each: Arc::new(|instance_id: &str| {
-            draw_from_library(json_as(json!({ "instanceId": instance_id })))
-        }),
+        each: Arc::new(|instance_id: &str| draw_from_library(json_as(json!({ "instanceId": instance_id })))),
     })
 }
 
@@ -129,10 +127,21 @@ mod tests {
         let health_before = s.state().players[P1].hero.health;
         s.play(CONDUCTOR, json!({}));
         // The Curse cast on draw (take 7), then the top-of-deck replacement draw.
-        assert_eq!(s.state().players[P1].hero.health, health_before - 7, "the Curse is cast");
-        assert!(s.pile(P1, "library").is_empty(), "the replacement draw took the top");
+        assert_eq!(
+            s.state().players[P1].hero.health,
+            health_before - 7,
+            "the Curse is cast"
+        );
+        assert!(
+            s.pile(P1, "library").is_empty(),
+            "the replacement draw took the top"
+        );
         assert_eq!(s.hand(P1).len(), 2, "Conductor played, replacement in hand");
-        assert_eq!(s.hand(P1)[1].def_id, FILLER, "the replacement draw is the top card");
+        assert_eq!(
+            s.hand(P1)[1].def_id,
+            FILLER,
+            "the replacement draw is the top card"
+        );
     }
 
     #[test]
@@ -155,9 +164,16 @@ mod tests {
         s.play(CONDUCTOR, json!({}));
         // Nine in hand after the play, two draws: the first lands (10), the second burns.
         assert_eq!(s.hand(P1).len(), 10, "the cap holds");
-        let burned: Vec<_> = s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == VANILLA).collect();
+        let burned: Vec<_> = s
+            .pile(P1, "graveyard")
+            .into_iter()
+            .filter(|card| card.def_id == VANILLA)
+            .collect();
         assert_eq!(burned.len(), 1, "the overflow burns");
-        assert!(s.hand(P1).into_iter().any(|card| card.def_id == VANILLA), "the first draw lands");
+        assert!(
+            s.hand(P1).into_iter().any(|card| card.def_id == VANILLA),
+            "the first draw lands"
+        );
     }
 
     #[test]
@@ -174,15 +190,25 @@ mod tests {
             "p2": { "hand": [FILLER], "library": self::library() },
         }));
         s.play(CONDUCTOR, json!({}));
-        let drawn = s.hand(P1).into_iter().find(|card| card.def_id == VANILLA).expect("drawn");
+        let drawn = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .expect("drawn");
         assert_eq!(drawn.created, Some(true), "the draw keeps the instance");
         let drawn_id = drawn.id.clone();
         s.play(VANILLA, json!({}));
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": drawn_id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": drawn_id }] }),
+        );
         s.play(RECYCLE, json!({}));
         // Recycle also draws 1, so the Vanilla is in the hand or back in the library — marked either way.
         let state = s.state();
-        let in_hand = state.players[P1].hand.iter().any(|card| card.id == drawn_id && card.created == Some(true));
+        let in_hand = state.players[P1]
+            .hand
+            .iter()
+            .any(|card| card.id == drawn_id && card.created == Some(true));
         let in_library = created_in_library(state, P1).contains(&drawn_id);
         assert!(in_hand || in_library, "the shuffled-back card keeps its mark");
         if in_library {
@@ -202,7 +228,9 @@ mod tests {
         s.play(CONDUCTOR, json!({}));
         // The shuffled-in Prime is Created, so the same Cry draws it.
         let hand = s.hand(P1);
-        let prime = hand.iter().find(|card| tags_of(s.state(), card).contains(&Tag::Prime));
+        let prime = hand
+            .iter()
+            .find(|card| tags_of(s.state(), card).contains(&Tag::Prime));
         assert!(prime.is_some(), "a Prime card was shuffled in and drawn");
         assert_eq!(prime.expect("drawn").created, Some(true), "it is Created");
         let _ = mark;
@@ -227,11 +255,12 @@ mod tests {
         s.play(CONDUCTOR, json!({}));
         assert_eq!(s.pile(P1, "library").len(), 2, "the limit stops the rest");
         assert!(
-            s.events()[mark..].iter().any(|event| matches!(event, GameEvent::DrawLimited { .. })),
+            s.events()[mark..]
+                .iter()
+                .any(|event| matches!(event, GameEvent::DrawLimited { .. })),
             "the limit is reported"
         );
     }
-
 
     #[test]
     fn deft() {
@@ -257,7 +286,10 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     None,
-                    HookOptions { controller: Some(P1), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(&[cast_new(json_as(json!({ "def": CONDUCTOR })))], &mut ctx);
             }
@@ -265,8 +297,16 @@ mod tests {
         }
         s.state_mut().rng_cursor = rng.cursor();
         let library = s.pile(P1, "library");
-        assert_eq!(def_ids(&library), vec![FILLER.to_string()], "the Created card was drawn");
-        assert!(s.hand(P1).iter().any(|card| card.def_id == VANILLA && card.created == Some(true)));
+        assert_eq!(
+            def_ids(&library),
+            vec![FILLER.to_string()],
+            "the Created card was drawn"
+        );
+        assert!(
+            s.hand(P1)
+                .iter()
+                .any(|card| card.def_id == VANILLA && card.created == Some(true))
+        );
     }
 
     #[test]
@@ -280,7 +320,11 @@ mod tests {
             def_ids(&s.pile(P1, "library")),
             vec![VANILLA.to_string(), FILLER.to_string(), VANILLA.to_string()]
         );
-        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Drawn { .. })));
+        assert!(
+            !s.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Drawn { .. }))
+        );
     }
 
     #[test]
@@ -313,7 +357,10 @@ mod tests {
         assert!(matches!(s.card(&marked).zone, Zone::Field { .. }));
         assert!(is_marked(&round_trip(s.state())));
         // The graveyard.
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": marked }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": marked }] }),
+        );
         s.expect_in_zone(&marked, "graveyard");
         assert!(is_marked(&round_trip(s.state())));
     }
@@ -337,7 +384,10 @@ mod tests {
         assert!(vanillas.contains(&(Some(true), 1)));
         assert!(vanillas.contains(&(None, 1)));
         assert!(
-            list.cards.iter().filter(|entry| entry.def_id == FILLER).all(|entry| entry.created.is_none())
+            list.cards
+                .iter()
+                .filter(|entry| entry.def_id == FILLER)
+                .all(|entry| entry.created.is_none())
         );
     }
 
@@ -375,7 +425,9 @@ mod tests {
             assert!(def.token, "{} is a Prime token", def.id);
             assert!(def.tags.contains(&Tag::Prime), "{} is Prime", def.id);
             assert!(
-                s.events()[mark..].iter().any(|event| matches!(event, GameEvent::Drawn { .. })),
+                s.events()[mark..]
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Drawn { .. })),
                 "drawn by the same Cry"
             );
         }

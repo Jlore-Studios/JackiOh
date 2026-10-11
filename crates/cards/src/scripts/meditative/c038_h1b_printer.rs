@@ -88,9 +88,11 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player, instance_id, def_id }
-                    if *player == P1 && !drawn.contains(&instance_id) =>
-                {
+                GameEvent::AddedToHand {
+                    player,
+                    instance_id,
+                    def_id,
+                } if *player == P1 && !drawn.contains(&instance_id) => {
                     Some((instance_id.clone(), def_id.clone()))
                 }
                 _ => None,
@@ -115,15 +117,17 @@ mod tests {
                 let made: Vec<&CardInstance> =
                     hand.iter().filter(|card| !before.contains(&card.id)).collect();
                 assert_eq!(made.len(), 2);
-                let printed = made.into_iter().find(|card| card.radiant).expect("the printed card");
+                let printed = made
+                    .into_iter()
+                    .find(|card| card.radiant)
+                    .expect("the printed card");
                 assert_ne!(printed.def_id, PRINTER, "never itself (R387)");
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert!(!crate::card_def(&printed.def_id).token);
                 assert_eq!(printed.chinese, None);
                 assert_eq!(printed.cost_override, None);
                 // Hidden from the opponent: a count, never the card.
-                let view: Value =
-                    serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
                 assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
             }
 
@@ -138,8 +142,7 @@ mod tests {
                 let ids: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.end_turn();
                 let held = s.hand(P1);
-                let fresh: Vec<&CardInstance> =
-                    held.iter().filter(|card| !ids.contains(&card.id)).collect();
+                let fresh: Vec<&CardInstance> = held.iter().filter(|card| !ids.contains(&card.id)).collect();
                 // The turn draw plus the one printed card.
                 assert_eq!(fresh.len(), 2);
                 assert_eq!(fresh.iter().filter(|card| card.radiant).count(), 1);
@@ -230,7 +233,10 @@ mod tests {
                 let held = s.hand(P1);
                 let made: Vec<&CardInstance> =
                     held.iter().filter(|card| !before.contains(&card.id)).collect();
-                let printed = made.into_iter().find(|card| card.radiant).expect("the printed card");
+                let printed = made
+                    .into_iter()
+                    .find(|card| card.radiant)
+                    .expect("the printed card");
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert_eq!(printed.cost_override, Some(0));
                 assert_eq!(printed.chinese, None);

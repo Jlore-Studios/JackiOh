@@ -366,8 +366,9 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1022_the_discount_is_gone_once_it_reaches_a_graveyard() {
-                // A Yile's Virus's Death discards it: in the graveyard it costs its printed (10).
+            fn r1022_the_discount_ends_as_the_card_leaves_hand_and_deck() {
+                // A Yile's Virus's Death discards it. YileGPT Unleashed is a token, so it reaches no
+                // graveyard: it ceases to exist (R11) and its discount with it.
                 let mut s = scenario(json!({
                     "seed": "unleashed-discount-graveyard",
                     "p1": {
@@ -383,8 +384,8 @@ mod tests {
 
                 s.activate(&virus, json!({}));
 
-                s.expect_in_zone(id.as_str(), "graveyard");
-                assert_eq!(s.card(id.as_str()).cost_mod, 0);
+                s.expect_in_zone(id.as_str(), "gone");
+                assert!(s.hand(P1).is_empty());
             }
         }
 
