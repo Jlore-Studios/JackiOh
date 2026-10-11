@@ -4920,14 +4920,14 @@
     "what": "build #638 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-11T21:51:02Z",
+    "at": "2026-10-11T22:01:29Z",
     "notes": [
-      "deleted the retired label `method:manual`",
-      "deleted the retired label `method:use-bot`",
-      "deleted the retired label `bot:approved`",
-      "deleted the retired label `bot:needs-review`",
-      "deleted the retired label `large patch`",
-      "deleted the retired label `Info`"
+      "created the label `bot:approved`",
+      "created the label `bot:needs-review`",
+      "created the label `Info`",
+      "created the label `method:manual`",
+      "created the label `method:use-bot`",
+      "created the label `large patch`"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
