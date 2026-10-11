@@ -13339,6 +13339,39 @@
       "text": "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and deck. Add {cards|AI generated card|AI generated cards} to your hand."
     }
   },
+  "meditative-054": {
+    "id": "meditative-054",
+    "index": "54",
+    "name": "Money Machine",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "price",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 52,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Shuffle The Coin into each player's deck.\nActivate: Spend ({price}). Tribute this. Either player may activate this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Shuffle The Coin into your opponent's deck and a Radiant The Coin into yours.\nActivate: Spend ({price}). Tribute this. Either player may activate this."
+    }
+  },
   "meditative-055": {
     "id": "meditative-055",
     "index": "55",

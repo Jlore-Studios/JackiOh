@@ -1475,6 +1475,9 @@
     "meditative-053": { // Prestige
       cast: { voice: "diva", text: "Darling, true class never fades." },
     },
+    "meditative-054": { // Money Machine
+      cast: { voice: "hustler", text: "Cha-ching! Everybody gets a little something." },
+    },
     "meditative-055": { // Dragon Fruit
       cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
     },
