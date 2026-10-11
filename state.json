@@ -4734,15 +4734,8 @@
     "what": "build #669 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-11T19:46:47Z",
-    "notes": [
-      "queued #638 from an assignment nothing answered",
-      "#666 needs a plan",
-      "#667 needs a plan",
-      "#668 needs a plan",
-      "#669 needs a plan",
-      "started a night run, as a lane was free: #668 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-11T20:01:02Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
