@@ -527,10 +527,14 @@ mod tests {
         #[test]
         fn a_full_hand_burns_the_return() {
             crate::register_all();
+            // Ten other cards beside it, so after its play the hand is full (§2.4). They are cards of
+            // their own: clones of the Summit pushed into the hand would share its instance id.
+            let mut hand = vec![json!(SUMMIT)];
+            hand.extend([FILLER; 10].iter().map(|def| json!(def)));
             let mut s = scenario(json!({
                 "seed": "summit-burn",
                 "p1": {
-                    "hand": [SUMMIT],
+                    "hand": hand,
                     "field": [VANILLA],
                     "library": [FILLER, FILLER, FILLER, FILLER],
                     "mana": 10,
@@ -539,12 +543,10 @@ mod tests {
             }));
             let summit = s.card(SUMMIT).clone();
             s.play(SUMMIT, json!({}));
-            for _ in 0..10 {
-                s.state_mut().players.p1.hand.push(summit.clone());
-            }
             assert_eq!(s.hand(P1).len(), 10);
             s.end_turn();
             s.expect_in_zone(&summit, "graveyard");
+            assert_eq!(s.hand(P1).len(), 10);
         }
 
         #[test]
