@@ -720,6 +720,24 @@ pub const AUSPICIOUS_ROCK_ODDS: &[RollOdds] = &[
     },
 ];
 
+/// R1106 (MD-D10): Meditative #54 Money Machine's hidden roll for the card it shuffles into its
+/// controller's deck: The Coin 89, Jade 10, Red Jade 1, ordered worst to best. Unprinted, as R673's
+/// Glitch odds are; a distribution, so config and not params: the odds must add to 100.
+pub const MONEY_MACHINE_ODDS: &[RollOdds] = &[
+    RollOdds {
+        def_id: "core-t-coin",
+        percent: 89,
+    },
+    RollOdds {
+        def_id: "meditative-039-2",
+        percent: 10,
+    },
+    RollOdds {
+        def_id: "meditative-039-4",
+        percent: 1,
+    },
+];
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).

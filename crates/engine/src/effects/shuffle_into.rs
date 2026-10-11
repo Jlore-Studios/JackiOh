@@ -6,10 +6,11 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::draw::shuffle_into_library;
+use crate::draw::{ShuffleInOutcome, shuffle_into_library};
 use crate::enchantments::united_enchantments;
+use crate::own_library::hide_from_owner;
 use crate::script::Effect;
-use crate::state::{CardInstance, GameState, find_instance, new_instance};
+use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::tuning::copy_tuning;
 use crate::wire::Zone;
 
@@ -61,6 +62,11 @@ pub struct ShuffleIntoArgs {
     /// a random position. Absent is the shuffle.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position: Option<crate::ownership::LibraryEnd>,
+    /// R1106 (MD-D10, Meditative #54 Money Machine): the card goes in unseen, so its owner's list
+    /// counts it as unknown until it leaves (R312's `hide_from_owner`), not with what it is (R311).
+    /// Absent is the open shuffle-in every other card makes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unseen: Option<bool>,
 }
 
 /// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
@@ -80,12 +86,19 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             if let Some(memory) = &args.memory {
                 card.memory.extend(memory.clone());
             }
-            match args.position {
+            let outcome = match args.position {
                 None => shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref()),
                 Some(end) => {
                     crate::draw::put_into_library(ctx, &mut card, false, args.copy_of.as_deref(), end)
                 }
             };
+            // R1106: an unseen card's record is cleared once it lies in the library.
+            if args.unseen == Some(true)
+                && outcome == ShuffleInOutcome::Library
+                && let Some(live) = find_instance_mut(ctx.state, &card.id)
+            {
+                hide_from_owner(live);
+            }
         }
     })
 }

@@ -113,14 +113,30 @@ mod tests {
                 let s = cast("intellect-base", false, false);
                 let got = added(&s);
                 assert_eq!(got.len(), 3);
-                for (card, tag) in got.iter().zip(["KY", "CN", "Book"]) {
+                // What each pick added, as `addedToHand` names it: a card may change once in the
+                // hand (M #37 CN in a Bottle transforms as it arrives), so the hand alone cannot say.
+                let picks: Vec<(String, String)> = s
+                    .events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::AddedToHand {
+                            player,
+                            instance_id,
+                            def_id,
+                        } if *player == P1 => Some((instance_id.clone(), def_id.clone())),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(picks.len(), 3);
+                for ((_, pick), tag) in picks.iter().zip(["KY", "CN", "Book"]) {
                     assert!(
-                        pool_ids(json!({ "tags": [tag] })).contains(&card.def_id),
-                        "{} is no {} card",
-                        card.def_id,
-                        tag
+                        pool_ids(json!({ "tags": [tag] })).contains(pick),
+                        "{pick} is no {tag} card"
                     );
-                    assert_ne!(card.def_id, INTELLECT);
+                    assert_ne!(pick, INTELLECT);
+                }
+                // Each card still as it was added: at its printed cost, on its base face.
+                for card in got.iter().filter(|card| picks.iter().any(|(id, _)| *id == card.id)) {
                     assert_eq!(card.cost_override, None);
                     assert!(!card.radiant);
                 }

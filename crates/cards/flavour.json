@@ -1151,6 +1151,9 @@
   "meditative-053": {
     "flavour": "Old money never sparkles. It gleams."
   },
+  "meditative-054": {
+    "flavour": "It prints money for everyone. It just prints a little more for whoever owns it."
+  },
   "meditative-055": {
     "flavour": "Scaly outside, speckled inside, and a little smug about both."
   },
@@ -1342,5 +1345,8 @@
   },
   "meditative-101": {
     "flavour": "One more pull. The next one is the one. It has to be."
+  },
+  "meditative-102": {
+    "flavour": "Two percent drop rate. One hundred percent nyaa."
   }
 }

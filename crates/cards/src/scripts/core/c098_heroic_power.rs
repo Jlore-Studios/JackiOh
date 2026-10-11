@@ -908,8 +908,8 @@ mod tests {
                     let offered = offered_ids(&s);
                     assert_eq!(offered.len(), 3, "Discover {step}");
                     for id in &offered {
-                        let cost = def_json(id)["cost"].clone();
-                        assert!(cost.as_i64().is_some_and(|price| price <= i64::from(max_cost)), "{id}");
+                        // R65: the cost a pool reads out of play, so an X card (C+ #69 Buff Billy) is 0.
+                        assert!(query_cost(&crate::card_def(id)) <= max_cost, "{id}");
                     }
                     s.answer(json!(must(offered.first().cloned(), "an offered Unit")));
                 }
