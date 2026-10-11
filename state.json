@@ -4234,6 +4234,13 @@
     "650": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T16:10:17Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "easy rule line 3 fails: the change cites R768 (new constant doc, test titles), and line 8: the cache size is a design choice the plan had to make"
+      },
       "handoff": {
         "at": "2026-10-11T15:45:57Z",
         "family": "gemini",
