@@ -5,8 +5,9 @@
 //! catalog drifts, the failure names the exact card that appeared or vanished. An index repeats across
 //! sets since patch v0.2.0 ("43" is a Core, a Classic and a Classic+ card, B2.2), so pools are named by
 //! id; and a pool that names no set draws from every set that ships (R380, R1420, B2.6), in catalog
-//! order: Core, then Classic, then Classic+, then Meditative (since v0.3.5), each by §5 index. Each pool test also states, in words and in code, the
-//! argument object the card script must pass — that is the part the card files are going to copy.
+//! order: Core, then Classic, then Classic+, then Meditative (since v0.3.5), each by §5 index. Each
+//! pool test also states, in words and in code, the argument object the card script must pass — that
+//! is the part the card files are going to copy.
 //!
 //! `query` reads the *registered* catalog (`crates/engine/src/catalog.rs`), which in a real game is
 //! registered by `register_all()` in `crates/cards/src/lib.rs`; here we register the catalog data

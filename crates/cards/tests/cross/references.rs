@@ -167,7 +167,8 @@ fn names(text: &str, name: &str) -> bool {
 
 /// Every catalog id a card's base or Radiant text names, in catalog order. R1249: a card of a set that
 /// ships names no card of a set that has not (R1420), so its shipped `refs` stay as they are until
-/// that set ships ("Call to Chaos" on Core #95 and C+ #73 reaches Meditative #95 then).
+/// that set ships ("Call to Chaos" on Core #95 and C+ #73 reached Meditative #95 when it shipped, in
+/// v0.3.5).
 fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
@@ -394,11 +395,13 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r1249_a_card_of_a_set_that_ships_names_no_card_of_a_set_that_has_not() {
+    fn r1249_the_patch_that_ships_meditative_adds_its_95_to_the_refs_of_core_95_and_classic_plus_73() {
         let card = |id: &str| CATALOG.get(id).unwrap_or_else(|| panic!("{id} in the catalog"));
         let meditative = card("meditative-095");
-        assert!(!set_ships(meditative.set));
-        // Core #95 and C+ #73 say "Call to Chaos", which names Meditative #95 only once its set ships.
+        // Core #95 and C+ #73 say "Call to Chaos", which names Meditative #95 once its set ships: since
+        // v0.3.5, whose fragment claims both cards' refs (R646). A later set held back (R1420) is named
+        // by no shipped card's refs the same way until it ships, which `named_by` reads.
+        assert!(set_ships(meditative.set));
         for shipped in ["core-095", "classicplus-073"] {
             let named = named_by(card(shipped));
             assert!(
@@ -406,11 +409,15 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "{shipped} names its own pool"
             );
             assert!(
-                !named.contains(&meditative.id),
-                "{shipped} names no unshipped card"
+                named.contains(&meditative.id),
+                "{shipped} names Meditative #95, whose set ships"
+            );
+            assert!(
+                card(shipped).refs.iter().flatten().any(|id| *id == meditative.id),
+                "{shipped}'s refs list Meditative #95"
             );
         }
-        // A card of a set that has not shipped names every card its texts name, shipped or not.
+        // Meditative #95 names every card its texts name, of any set.
         let named = named_by(meditative);
         for id in [
             "core-095",
