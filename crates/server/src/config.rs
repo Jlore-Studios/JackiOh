@@ -675,7 +675,10 @@ pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 /// R1446: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
 /// softmax temperature over the finalists, in evaluation points, and the chance it passes over a
 /// lethal it found) and the rating its `bot_ratings` row is seeded with (R610). Always on the spec's
-/// resources: a strength is never a practice handicap (R180).
+/// resources: a strength is never a practice handicap (R180). The chance is rolled at each decision
+/// that finds a lethal, and the bot decides again after every move, so a bot that passed over one
+/// often finds it again before the turn ends: it misses a lethal for the whole turn less often than
+/// the chance says, which calibration (R610's ratings) takes in as it takes in everything else.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BotStrength {
     pub budget: jackioh_ai::SearchBudget,
@@ -759,7 +762,8 @@ pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
 /// R1447: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
-/// R1447: the longest; each ticket's wait is drawn from its id between the two, inclusive.
+/// R1447: the longest; each ticket's wait is drawn from its id and the server's key between the
+/// two, inclusive.
 pub const BOT_FALLBACK_MAX_SECONDS: i64 = 40;
 /// R1447: a player is not paired with a bot they faced in this many of their last games.
 pub const BOT_RECENT_OPPONENTS: usize = 5;

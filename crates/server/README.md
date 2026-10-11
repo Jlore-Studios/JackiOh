@@ -241,11 +241,12 @@ and prints one `ThinkTimeFit` row per bucket, to paste by hand into `config.rs`'
 ## Ladder bots (§9.5, §9.12, R1446–R1449)
 
 With `LADDER_BOTS=on`, a ranked Best of 1 or All Random ticket that has waited past its fallback
-time (15–40 s, drawn from its id) with no person inside its window is seated against a ladder bot,
-which this process plays itself. Off, none of it runs: no bot is seated and the pool is never sized.
+time (15–40 s, drawn from its id and a key the server keeps to itself) with no person inside its
+window is seated against a ladder bot, which this process plays itself. Off, none of it runs: no bot
+is seated and the pool is never sized.
 
-- `bots::fallback` is pure: which waiting ticket may have a bot (`fallback_due`) and which bot it
-  gets (`choose_bot`: in the pool, on its schedule, in no match, not one of the player's last
+- `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
+  and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match, not one of the player's last
   `BOT_RECENT_OPPONENTS`, for Best of 1 holding decks dealt for this catalog, the closest in
   rating; none for a player rated above every bot). The
   queue's sweep (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a

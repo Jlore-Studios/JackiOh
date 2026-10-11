@@ -4,8 +4,8 @@
 //! moves.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_STYLE_EXACT, AiOptions, AiStyle, DecisionReason, ai_to_act, decide, decide_styled,
-    pick_finalist,
+    AI_BUDGET, AI_STYLE_EXACT, AiOptions, AiStyle, DecisionReason, DeterminizeOptions, ai_to_act, decide,
+    decide_styled, determinize, pick_finalist, redact,
 };
 use jackioh_engine::testkit::{GameState, PLAYER_IDS, create_rng, json};
 
@@ -27,24 +27,38 @@ fn lethal_on_board() -> GameState {
 
 #[test]
 fn r1446_exact_style_decides_as_decide() {
-    let mut compared = 0;
+    // `decide` is `decide_styled` at the exact style, so comparing the two would prove nothing. What
+    // keeps every practice game and gate where it was is that the exact style takes no draw of its
+    // own: before styles, a decision's only draws were its determinizations', so the cursor must stand
+    // exactly where that many determinizations of the redacted state leave the same rng.
+    let mut searched = 0;
     for seed in ["style-exact-1", "style-exact-2"] {
         for state in random_policy_states(seed, 7, 140) {
             for seat in PLAYER_IDS {
                 if !ai_to_act(&state, seat) {
                     continue;
                 }
-                let mut plain = AiOptions::new(create_rng(&format!("{seed}:ai"), 0));
-                let mut styled = AiOptions::new(create_rng(&format!("{seed}:ai"), 0));
-                let a = decide(&state, seat, &mut plain);
-                let b = decide_styled(&state, seat, &mut styled, &AI_STYLE_EXACT);
-                assert_eq!(a, b, "{seed} {seat}");
-                assert_eq!(plain.rng.cursor(), styled.rng.cursor(), "{seed} {seat}");
-                compared += 1;
+                let mut options = AiOptions::new(create_rng(&format!("{seed}:ai"), 0));
+                let decision = decide_styled(&state, seat, &mut options, &AI_STYLE_EXACT)
+                    .expect("the AI owes an action");
+                let public = redact(&state, seat);
+                let mut alone = create_rng(&format!("{seed}:ai"), 0);
+                for _ in 0..decision.stats.determinizations {
+                    determinize(&public, seat, &mut alone, DeterminizeOptions::default());
+                }
+                assert_eq!(
+                    options.rng.cursor(),
+                    alone.cursor(),
+                    "{seed} {seat}: {:?} took a draw of its own",
+                    decision.reason
+                );
+                if decision.stats.determinizations > 0 {
+                    searched += 1;
+                }
             }
         }
     }
-    assert!(compared > 10, "only {compared} decisions compared");
+    assert!(searched > 10, "only {searched} searched decisions checked");
 }
 
 #[test]

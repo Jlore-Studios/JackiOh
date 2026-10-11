@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 
 use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, validate_deck};
 use jackioh_engine::wire::GameRecord;
+use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::now_ms;
@@ -24,8 +25,9 @@ use jackioh_server::bots::pool::{
 };
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
-    BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX,
-    BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, PersonaName,
+    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_POOL_MAX, BOT_POOL_MIN,
+    BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
+    MATCHMAKER_SWEEP_INTERVAL_SECONDS, PersonaName,
 };
 use jackioh_server::db::store::{BotRow, Ticket};
 use jackioh_server::username::normalize_username;
@@ -253,10 +255,18 @@ async fn r1448_decks_prefer_human_bo1_lists_legal() {
         );
     }
 
-    // With no human list at all, every deck is the AI's, and still legal.
+    // With no human list at all, every deck is one All Random would deal a player (R1447: no shadow
+    // ban and no soft gate, which would tell the bot's deck from a person's), and still legal.
     let decks = draw_decks("decks-none", &[], &app.catalog);
     assert!((BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()));
     assert!(decks.iter().all(|deck| queueable(&app.catalog, &deck.cards)));
+    let dealt: Vec<Vec<String>> = (0..BOT_DECK_DRAW_ATTEMPTS)
+        .map(|index| deal_random_deck(&format!("decks-none:deck:{index}"), None))
+        .collect();
+    assert!(
+        decks.iter().all(|deck| dealt.contains(&deck.cards)),
+        "every deck is a player's random deal"
+    );
 }
 
 /// Whether a player owning exactly `cards` could queue them for Best of 1: §9.4's validator, as the

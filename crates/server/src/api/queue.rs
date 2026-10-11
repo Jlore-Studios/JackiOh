@@ -734,9 +734,10 @@ async fn pair_with_bots(
 /// R1447: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
 /// pair's. The seed is the server's (or R143's end-to-end one). The person is always p1 and goes
 /// first, the bot p2: between two people the older ticket is p1 (`start_paired_match`), and a ticket
-/// past its fallback time is older than anyone who would have come to pair with it. Best of 1 plays the ticket's
-/// frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`), with its
-/// portrait; All Random deals both seats as for two people (R258, R642), the bot's with no lean.
+/// past its fallback time is older than anyone who would have come to pair with it. Best of 1 plays
+/// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
+/// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
+/// lean.
 /// The match is ranked (R604): a ticket the queue paired, whoever it was paired with.
 async fn start_bot_match(
     app: &Arc<App>,

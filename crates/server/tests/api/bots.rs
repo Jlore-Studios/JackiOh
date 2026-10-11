@@ -25,7 +25,7 @@ use tokio::sync::MutexGuard;
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::app::{App, load_server_env, now_ms};
-use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, hour_of};
+use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_seconds_keyed, hour_of};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, JLORIOUS_SIZE,
     RANK_PLACEMENT_GAMES,
@@ -254,6 +254,36 @@ fn r1447_fallback_time_is_15_to_40_s_and_stable() {
         seen_max |= seconds == BOT_FALLBACK_MAX_SECONDS;
     }
     assert!(seen_min && seen_max, "both ends of the range are drawn");
+}
+
+#[test]
+fn r1447_no_client_can_work_out_the_fallback_time() {
+    // What a client holds: its ticket's id (`ticketId`), the range, and the engine's `Rng`, which runs
+    // in its browser. A time drawn from those alone would tell it the moment a bot would come.
+    let span = i32::try_from(BOT_FALLBACK_MAX_SECONDS - BOT_FALLBACK_MIN_SECONDS + 1).expect("a small range");
+    let from_the_id_alone = |id: &str| {
+        BOT_FALLBACK_MIN_SECONDS
+            + i64::from(jackioh_engine::Rng::new(&format!("{id}:bot-fallback"), 0).int(span))
+    };
+    let ids: Vec<String> = (0..2_000)
+        .map(|k| format!("00000000-0000-4000-8000-{k:012}"))
+        .collect();
+    let guessed = ids
+        .iter()
+        .filter(|id| fallback_seconds(id) == from_the_id_alone(id))
+        .count();
+    // A guess agrees about one time in 26 by chance; anything near every time is a leak.
+    assert!(
+        guessed < ids.len() / 4,
+        "{guessed} of {} guessed from the id alone",
+        ids.len()
+    );
+    // The server's key is what the time turns on.
+    let differs = ids
+        .iter()
+        .filter(|id| fallback_seconds_keyed("key-a", id) != fallback_seconds_keyed("key-b", id))
+        .count();
+    assert!(differs > ids.len() / 2, "only {differs} times moved with the key");
 }
 
 #[tokio::test(start_paused = true)]

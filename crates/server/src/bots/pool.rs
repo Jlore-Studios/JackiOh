@@ -11,9 +11,10 @@
 //! R610 rating seeded from it), a think speed, a persona (R645's weights), the hours it is on, an
 //! account age, and a username drawn from two word lists or, for `BOT_DEFAULT_USERNAME_SHARE` of them,
 //! the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
-//! people took into live Best-of-1 games, shuffled, then the AI's own decks (`build_ai_deck`), each
-//! kept only when it is legal (`validate_deck`, against a collection of its own cards: a bot owns
-//! nothing and needs nothing), and dealt again whenever the catalog version changes.
+//! people took into live Best-of-1 games, shuffled, then random decks dealt as a player's All Random
+//! deck is (`deal_random_deck`: no shadow ban, no soft gate, R1447), each kept only when it is legal
+//! (`validate_deck`, against a collection of its own cards: a bot owns nothing and needs nothing),
+//! and dealt again whenever the catalog version changes.
 //!
 //! `release_stale_starts`, which the queue's sweeper runs every sweep whatever `LADDER_BOTS` says,
 //! lets go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a
@@ -23,11 +24,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck};
 use jackioh_engine::wire::{GameMode, GameRecord, GameSource, PLAYER_IDS, Pilot, SourceFilter};
-use jackioh_engine::{DECK_SIZE, Rng, pick_portrait_from_seed};
+use jackioh_engine::{Rng, pick_portrait_from_seed};
 
+use crate::actor::engine::deal_random_deck;
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -193,8 +194,9 @@ fn human_bo1_decklists(records: &[GameRecord]) -> Vec<Vec<String>> {
 }
 
 /// R1448: two or three legal Best-of-1 decks for the bot seeded `seed`: the patch's human decklists
-/// first (shuffled from the seed), then the AI's own, trying at most `BOT_DECK_DRAW_ATTEMPTS` in all,
-/// each with a portrait dealt from the seed.
+/// first (shuffled from the seed), then random decks dealt as a player's are (All Random's deal, with
+/// no shadow ban and no soft gate, R1447), trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with
+/// a portrait dealt from the seed.
 pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<BotDeck> {
     jackioh_cards::register_all();
     let mut rng = Rng::new(&format!("{seed}:decks"), 0);
@@ -207,11 +209,7 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<
     let mut candidates = rng.shuffle(&human_bo1_decklists(records));
     candidates.truncate(BOT_DECK_DRAW_ATTEMPTS);
     for index in candidates.len()..BOT_DECK_DRAW_ATTEMPTS {
-        candidates.push(build_ai_deck(
-            &mut Rng::new(&format!("{seed}:deck:{index}"), 0),
-            DECK_SIZE,
-            &AiDeckOptions::default(),
-        ));
+        candidates.push(deal_random_deck(&format!("{seed}:deck:{index}"), None));
     }
     let mut input = DeckInput {
         deck: LoadoutDeck {
