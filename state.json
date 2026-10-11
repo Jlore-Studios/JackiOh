@@ -3974,7 +3974,9 @@
     },
     "638": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6115136032"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3999,9 +4001,7 @@
       "run_id": "38185168470",
       "started_at": "2026-10-11T23:41:19Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6115136032"
-      ]
+      "taken_asks": []
     },
     "642": {
       "action": "revise",
