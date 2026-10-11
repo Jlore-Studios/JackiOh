@@ -1,5 +1,5 @@
 // Fits card text in its box (docs/polish/6-cards.md, Surface B): tiers start smaller and `useFitText` sets `--cf-fit`, which cards.css applies.
-// Rules text retries full size, then `data-long`, before clamping at FIT_FLOOR_PX.
+// Rules text retries full size, then `data-long`, then `data-longest`, before clamping at FIT_FLOOR_PX.
 // Fits batch layout reads and park while `content-visibility: auto` skips a holder.
 
 import { useLayoutEffect, type RefObject } from "react";
@@ -34,6 +34,8 @@ const CLAMP_LINES_PROPERTY = "--cf-clamp-lines";
 const CLAMPED = "data-clamped";
 /** On the face (`.cf`): the rules box has taken the long layout. */
 export const LONG_ATTRIBUTE = "data-long";
+/** On the face, with `data-long`: the long layout still printed under the floor, so the art gives up more (#617). */
+export const LONGEST_ATTRIBUTE = "data-longest";
 /** The face element a rules box asks for the long layout. */
 const FACE_SELECTOR = ".cf";
 /** CardFace's base text and radiant-clause halves of a rules box. */
@@ -138,6 +140,7 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   if (yield* read(() => element.clientWidth === 0 && element.clientHeight === 0)) {
     if (element.hasAttribute(CLAMPED)) element.removeAttribute(CLAMPED);
     if (face?.hasAttribute(LONG_ATTRIBUTE) === true) face.removeAttribute(LONG_ATTRIBUTE);
+    if (face?.hasAttribute(LONGEST_ATTRIBUTE) === true) face.removeAttribute(LONGEST_ATTRIBUTE);
     element.style.removeProperty(SCALE_PROPERTY);
     return;
   }
@@ -146,6 +149,7 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   element.style.removeProperty(CLAMP_LINES_PROPERTY);
   element.style.removeProperty(SCALE_PROPERTY);
   face?.removeAttribute(LONG_ATTRIBUTE);
+  face?.removeAttribute(LONGEST_ATTRIBUTE);
 
   const { floorPx } = options;
   // No reachable floor: shrink to fit, then clamp only past FIT_MIN.
@@ -161,9 +165,11 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   element.style.setProperty(SCALE_PROPERTY, "1");
   if (yield* readable(element, yield* search(element), floorPx)) return;
 
-  // 2. The long layout gives the text more room.
+  // 2. The long layout gives the text more room, and the longest layout more again.
   if (face !== null) {
     face.setAttribute(LONG_ATTRIBUTE, "true");
+    if (yield* readable(element, yield* search(element), floorPx)) return;
+    face.setAttribute(LONGEST_ATTRIBUTE, "true");
     if (yield* readable(element, yield* search(element), floorPx)) return;
   }
 

@@ -36,6 +36,7 @@ import {
   englishProblems,
   nextGame,
   noteProblems,
+  owedPromptKind,
   playStep,
   printedCost,
   replacedOnArrival,
@@ -124,6 +125,10 @@ function drive(game: Game, budget: number): void {
   if (budget <= 0 || game.toPlay.size === 0) return;
   cy.settled();
   cy.jackioh().then((handle: JackiOhDevHandle) => {
+    // A prompt the step will answer: the board draws it once the animations queued before it have
+    // run, which `cy.settled()` cannot see before they start, so wait on the prompt itself (#617).
+    const owed = owedPromptKind(handle as Handle);
+    if (owed !== null) cy.get(`[data-testid="prompt-modal"][data-prompt-kind="${owed}"]`, { timeout: timeouts.view }).should("exist");
     cy.document({ log: false }).then((doc) => {
       const step = playStep(handle as Handle, game.toPlay, doc);
       Cypress.log({ name: "step", message: `${game.label}: ${JSON.stringify(step)}` });

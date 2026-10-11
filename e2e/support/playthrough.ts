@@ -59,6 +59,21 @@ function dispatched(handle: Handle, body: ActionBody, seat: PlayerId): string | 
 }
 
 /**
+ * The prompt kind the next step will answer, when it is one: the seat that owes the move holds the
+ * device and its view holds a prompt for it. The spec waits on the board to draw that prompt before
+ * the step reads it, since the board swaps its view only once the animations before it have run.
+ */
+export function owedPromptKind(handle: Handle): string | null {
+  const state = handle.state as unknown as StateLike;
+  if (state.result !== null && state.result !== undefined) return null;
+  const seat = seatToAct(state);
+  if (handle.seat !== seat) return null;
+  if (state.mulligan !== undefined && state.mulligan[seat]?.keep === null) return null;
+  const view = handle.view() as unknown as ViewLike;
+  return view.pending?.forYou === true ? (view.pending.kind ?? null) : null;
+}
+
+/**
  * One step of the game, as the header says. `toPlay` is the set of definition ids still to be played;
  * the step plays one of them when it can and never anything else. `doc` is read for the open prompt's
  * `data-prompt-kind`, so the spec can check the board showed the prompt the view holds.
