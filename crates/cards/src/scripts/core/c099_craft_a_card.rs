@@ -387,10 +387,11 @@ mod tests {
         #[test]
         fn r60_the_second_discover_can_offer_the_card_the_first_one_gave_over_the_seeds() {
             crate::register_all();
-            // Proves the second pool is not narrowed: some seed offers the first pick again.
+            // Proves the second pool is not narrowed: some seed offers the first pick again. Re-pinned for
+            // v0.3.5: the Meditative set joins the pool, so a repeat is rarer; the first is now seed 90.
             let mut offered_again = false;
             let mut n = 0;
-            while n < 40 && !offered_again {
+            while n < 120 && !offered_again {
                 let mut s = craft_scenario(CraftOpts { seed: Some(format!("craft-repeat-{n}")), ..CraftOpts::default() });
                 s.play(CRAFT, json!({}));
                 let first = open(&s);
@@ -523,7 +524,9 @@ mod tests {
         #[test]
         fn r77_the_crafted_card_is_playable_and_it_is_the_fused_card_that_lands() {
             crate::register_all();
-            let (mut s, _) = craft(CraftOpts::default());
+            // A seed whose fused card needs no Tribute to play. Re-pinned for v0.3.5: the Meditative set
+            // joins the pool, and the default seed now fuses a Tribute 3 Unit (M #57) into the card.
+            let (mut s, _) = craft(CraftOpts { seed: Some("craft-0".to_string()), ..CraftOpts::default() });
             let fused = fused_def_of(s.state());
             let card = must(
                 s.hand(P1).into_iter().find(|entry| entry.def_id == fused.id),

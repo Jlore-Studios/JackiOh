@@ -225,6 +225,8 @@ mod tests {
         p1: Option<Value>,
         p2: Option<Value>,
         radiant_cursor: Option<u32>,
+        /// A base roll pinned by its cursor rather than by the effect's name.
+        cursor: Option<u32>,
         chain: Option<i32>,
     }
 
@@ -265,12 +267,34 @@ mod tests {
         if let Some(chain) = opts.chain {
             set_memory(&mut s, CHAOS, subsystems::CHAOS_CHAIN_KEY, json!(chain));
         }
-        s.state_mut().rng_cursor = match opts.radiant_cursor {
-            Some(cursor) => cursor,
-            None => cursor_for(must(effect, "a base effect to pin")),
+        s.state_mut().rng_cursor = match (opts.radiant_cursor, opts.cursor) {
+            (Some(cursor), _) | (None, Some(cursor)) => cursor,
+            (None, None) => cursor_for(must(effect, "a base effect to pin")),
         };
         s.play(CHAOS, json!({}));
         s
+    }
+
+    /// The first cursor whose base roll is "cast a random Call to Chaos" AND whose cast is #95 itself.
+    /// The pool is every Call to Chaos of every set (R380) and the edition is a later draw of the same
+    /// rng, so pinning the roll alone does not pin the edition. Re-pinned for v0.3.5: the Meditative
+    /// set joins the pool (its own edition, Meditative #95).
+    fn recast_of_core_cursor() -> u32 {
+        for cursor in 0..CURSOR_SEARCH {
+            if rolled_at(cursor).as_deref() != Some("recast") {
+                continue;
+            }
+            let s = chaos(None, ChaosOpts { cursor: Some(cursor), ..ChaosOpts::default() });
+            if events_of(&s, "cardPlayed").get(1).is_some_and(|event| event["defId"] == CHAOS) {
+                return cursor;
+            }
+        }
+        panic!("no cursor below {CURSOR_SEARCH} rolls \"recast\" into #95 itself from seed \"{SEED}\"");
+    }
+
+    /// `chaos` with the base roll "recast" pinned to a cast of #95 itself.
+    fn recast_of_core(opts: ChaosOpts) -> Scenario {
+        chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor()), ..opts })
     }
 
     fn events_json(s: &Scenario) -> Vec<Value> {
@@ -634,7 +658,10 @@ mod tests {
                 if js(&crate::card_def(&card.def_id))["type"] == "Field Spell" {
                     assert!(matches_object(seen, &json!({ "faceDown": false, "defId": card.def_id })));
                 } else {
-                    assert_eq!(seen, &json!({ "faceDown": true, "cost": 1 }));
+                    // R351: the cost the controller's own view shows, and nothing else. Re-pinned for
+                    // v0.3.5: the Meditative set joins the pool, so the seed no longer deals only
+                    // (1) Cost Traps; the cost is read off the card rather than assumed.
+                    assert_eq!(seen, &json!({ "faceDown": true, "cost": effective(&s, card) }));
                 }
             }
         }
@@ -642,7 +669,7 @@ mod tests {
         #[test]
         fn s8_4_10_10_casts_a_random_call_to_chaos_free_counted_as_a_play_its_script_run_r70() {
             crate::register_all();
-            let mut s = chaos(Some("recast"), ChaosOpts::default());
+            let mut s = recast_of_core(ChaosOpts::default());
             let plays = chaos_plays(&s);
             assert_eq!(plays.len(), 2);
             // R70: "a cast is free … with cost paid 0".
@@ -707,10 +734,7 @@ mod tests {
         #[test]
         fn r28_one_below_the_cap_casts_exactly_one_more_and_that_cast_is_the_last() {
             crate::register_all();
-            let mut s = chaos(
-                Some("recast"),
-                ChaosOpts { chain: Some(CALL_TO_CHAOS_CHAIN_CAP - 1), ..ChaosOpts::default() },
-            );
+            let mut s = recast_of_core(ChaosOpts { chain: Some(CALL_TO_CHAOS_CHAIN_CAP - 1), ..ChaosOpts::default() });
             let plays = chaos_plays(&s);
             assert_eq!(plays.len(), 2);
             // The card it cast is AT the cap, so whatever that one rolled, it cast nothing further — the
@@ -736,10 +760,10 @@ mod tests {
         #[test]
         fn r28_the_counter_is_instance_state_so_two_calls_in_one_turn_do_not_share_it() {
             crate::register_all();
-            let s = chaos(
-                Some("recast"),
-                ChaosOpts { p1: Some(json!({ "hand": [CHAOS, CHAOS], "mana": 8 })), ..ChaosOpts::default() },
-            );
+            let s = recast_of_core(ChaosOpts {
+                p1: Some(json!({ "hand": [CHAOS, CHAOS], "mana": 8 })),
+                ..ChaosOpts::default()
+            });
             assert_eq!(chaos_plays(&s).len(), 2);
             // The second copy still carries no counter: nothing global was spent on the first chain.
             let second = must(s.hand(P1).into_iter().next(), "the second #95");

@@ -1,6 +1,7 @@
 //! #57 Conjure KY (SPEC §8.3): Spell, cost 2, tag KY. "Add 3 random KY cards to your hand" /
 //! radiant "2 random plus 2 random Radiant KY cards". Engine cell: "KY pool = #31, #51, #82 (no
-//! tokens, not #57); repeats allowed" — and every set's KY cards (R380).
+//! tokens, not #57); repeats allowed" — and every set's KY cards (R380), Classic+'s and, since
+//! v0.3.5, Meditative's.
 //!
 //! The pool is §5.1's one query: `{ tags: ["KY"] }` already leaves out the Token-tagged KY card
 //! ("random pools never include Token-tagged cards"), and `excludeDefId` is §5.1's other half: never
@@ -67,14 +68,21 @@ mod tests {
         g.hand(P1).iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// R380: the KY tag of every set — Core #31, #51, #82 and Classic+ #41, #42, #62 — no token, never #57.
-    const KY_POOL: [&str; 6] = [
+    /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62 and Meditative #34
+    /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
+    /// tribes) — no token, never #57. Re-pinned for v0.3.5: the Meditative set joins the pool.
+    const KY_POOL: [&str; 11] = [
         "core-031",
         "core-051",
         "core-082",
         "classicplus-041",
         "classicplus-042",
         "classicplus-062",
+        "meditative-034",
+        "meditative-038",
+        "meditative-045",
+        "meditative-079",
+        "meditative-087",
     ];
 
     /// The def ids `crate::query::pool` returns (SPEC §5.1).
@@ -94,7 +102,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_and_classic_n41_n42_n62() {
+        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_and_meditative_n34_n38_n45_n79_n87() {
             crate::register_all();
             assert_eq!(pool_ids("core-057", json!({ "tags": ["KY"] })), KY_POOL);
         }
@@ -106,10 +114,15 @@ mod tests {
 
             assert!(!ids.iter().any(|id| id == "core-051-1"));
             assert!(!ids.iter().any(|id| id == "classicplus-042-1"));
+            assert!(!ids.iter().any(|id| id == "meditative-045-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
-            // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift) are only reachable by naming the token
-            // pool, which this card never does.
-            assert_eq!(query_ids(json!({ "tags": ["KY", "Token"] })), ["core-051-1", "classicplus-042-1"]);
+            // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
+            // Prime) are only reachable by naming the token pool, which this card never does. Re-pinned
+            // for v0.3.5: the Meditative set joins the pool.
+            assert_eq!(
+                query_ids(json!({ "tags": ["KY", "Token"] })),
+                ["core-051-1", "classicplus-042-1", "meditative-045-1"]
+            );
         }
     }
 

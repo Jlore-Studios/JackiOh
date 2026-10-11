@@ -132,7 +132,11 @@ mod tests {
                 .into_iter()
                 .collect();
             sets.sort();
-            assert_eq!(sets, vec!["Classic".to_string(), "Classic+".to_string(), "Core".to_string()]);
+            // Re-pinned for v0.3.5: the Meditative set joins the pool.
+            assert_eq!(
+                sets,
+                vec!["Classic".to_string(), "Classic+".to_string(), "Core".to_string(), "Meditative".to_string()]
+            );
         }
 
         #[test]

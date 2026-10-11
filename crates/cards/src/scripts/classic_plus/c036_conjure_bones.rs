@@ -127,7 +127,9 @@ mod tests {
             let s = cast(false, false, None);
             let own = view(&s, P1)["you"]["ownLibrary"].clone();
             let cards = own["cards"].as_array().cloned().unwrap_or_default();
-            assert!(cards.contains(&json!({ "defId": BONE_STORM, "radiant": false, "count": 7 })));
+            // The Bone Storms are effect-made, so R943 marks them Created. Re-pinned for v0.3.5: the
+            // Meditative set ships, so R943's Created mark is live.
+            assert!(cards.contains(&json!({ "defId": BONE_STORM, "radiant": false, "count": 7, "created": true })));
             assert_eq!(own["unknown"], 0);
         }
 
@@ -180,7 +182,8 @@ mod tests {
             assert_eq!(storms.len(), 7);
             assert!(storms.iter().all(|card| card.radiant));
             let listed = view(&s, P1)["you"]["ownLibrary"]["cards"].as_array().cloned().unwrap_or_default();
-            assert!(listed.contains(&json!({ "defId": BONE_STORM, "radiant": true, "count": 7 })));
+            // R943: Created (re-pinned for v0.3.5: the Meditative set ships, so the mark is live).
+            assert!(listed.contains(&json!({ "defId": BONE_STORM, "radiant": true, "count": 7, "created": true })));
         }
 
         #[test]
