@@ -47,9 +47,10 @@ mod tests {
     fn r1062_at_your_next_start_of_turn_it_attacks_the_hero() {
         crate::register_all();
         let _open = preview_sets(&[SetName::Meditative]);
+        // Libraries, so neither turn's draw costs a fatigue hit.
         let mut s = scenario(json!({
-            "p1": { "hand": [{ "def": WARAXE }, FILLER], "health": 27 },
-            "p2": { "hand": [FILLER], "health": 27 },
+            "p1": { "hand": [{ "def": WARAXE }, FILLER], "library": [FILLER, FILLER], "health": 27 },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "health": 27 },
         }));
         s.play(WARAXE, json!({ "zone": 1 }));
         s.end_turn().end_turn();
@@ -70,9 +71,12 @@ mod tests {
     #[test]
     fn radiant_6_4_pierce_ignores_hero_armor() {
         crate::register_all();
+        // It attacks from its next start of turn under R1062, live while the set is open (R1420).
+        let _open = preview_sets(&[SetName::Meditative]);
+        // Libraries, so neither turn's draw costs a fatigue hit.
         let mut s = scenario(json!({
-            "p1": { "hand": [{ "def": WARAXE, "radiant": true }, FILLER] },
-            "p2": { "hand": [FILLER], "armor": 3 },
+            "p1": { "hand": [{ "def": WARAXE, "radiant": true }, FILLER], "library": [FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "armor": 3 },
         }));
         s.play(WARAXE, json!({ "zone": 1 }));
         s.expect_stats(WARAXE, json!({ "attack": 6, "health": 4 }));

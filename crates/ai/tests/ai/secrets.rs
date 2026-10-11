@@ -13,12 +13,13 @@ use super::support::{AI, HUMAN, register_cards, scenario};
 
 const MIND_GAMES: &str = "meditative-022";
 
-/// p1 keeps Greed, p2 keeps Attack: one secret each, both unrevealed.
+/// p1 keeps Greed, p2 keeps Attack: one secret each, both unrevealed. p1 also holds a Stockpile, so
+/// its turn does not end by itself once Mind Games resolves (R82) and `end_turn` ends p1's turn.
 fn played() -> GameState {
     register_cards();
     let mut s = scenario(json!({
         "seed": "secret-ai",
-        "p1": { "hand": [{ "def": MIND_GAMES }], "library": ["core-005", "core-005", "core-005"], "mana": 10 },
+        "p1": { "hand": [{ "def": MIND_GAMES }, "core-005"], "library": ["core-005", "core-005", "core-005"], "mana": 10 },
         "p2": { "hand": [{ "def": MIND_GAMES }], "library": ["core-005", "core-005", "core-005"], "mana": 10 },
     }));
     s.play(MIND_GAMES, json!({ "modes": ["greed"] }));

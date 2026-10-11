@@ -105,12 +105,7 @@ mod r943_a_hidden_cards_created_flag_goes_with_its_face {
         let base = scenario(json!({ "seed": "observe-created", "p1": p1_side(), "p2": p2_side() }))
             .state()
             .clone();
-        let mut changed = clone(&base);
-        let side = &mut changed.players[PlayerId::P2];
-        for card in side.hand.iter_mut().chain(side.library.iter_mut()) {
-            card.created = Some(true);
-        }
-        let unit_id = side
+        let unit_id = base.players[PlayerId::P2]
             .units
             .iter()
             .flatten()
@@ -119,9 +114,17 @@ mod r943_a_hidden_cards_created_flag_goes_with_its_face {
             .unwrap_or_else(|| panic!("expected a unit"))
             .id
             .clone();
-        find_instance_mut(&mut changed, &unit_id)
+        // The public unit is marked on both sides, so the two true states differ only in the
+        // hidden cards' marks.
+        let mut base = base;
+        find_instance_mut(&mut base, &unit_id)
             .expect("the unit is on the field")
             .created = Some(true);
+        let mut changed = clone(&base);
+        let side = &mut changed.players[PlayerId::P2];
+        for card in side.hand.iter_mut().chain(side.library.iter_mut()) {
+            card.created = Some(true);
+        }
         let hidden = hidden_instance_ids(&changed, AI);
         let public = redact(&changed, AI);
         for id in &hidden {

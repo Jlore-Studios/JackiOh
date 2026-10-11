@@ -867,7 +867,7 @@ mod fill_your_board_r64_s7_m3_t1 {
 // fillBoardRandom (R1080) and summonRandomFromHand (R1083).
 // ---------------------------------------------------------------------------
 
-/// Two 1/1 Unit fixtures, so the random pool below holds exactly two definitions.
+/// Two 1/1 Unit fixtures, so the random pool below holds more than one definition.
 fn one_one(name: &str, index: i32) -> CardDef {
     def_of_kind(
         name,
@@ -920,10 +920,15 @@ mod r1080_fill_board_random {
             RunOptions::default(),
         );
 
-        // Lanes 2, 4 and 5 each drew their own pick, left to right; every pick is a printed 1/1.
+        // Lanes 2, 4 and 5 each drew their own pick, left to right; every pick is a printed 1/1
+        // Unit. The pool is every one the catalog holds (the shared combat fixtures' 1/1s beside
+        // `uno` and `dos`), so each pick is read off its printed face rather than named.
         assert_eq!(summoned_lanes(&events), vec![2, 4, 5]);
+        let catalog = registered_catalog();
         for def_id in summoned_def_ids(&events) {
-            assert!(def_id == "sm-uno" || def_id == "sm-dos");
+            let def = &catalog[&def_id];
+            assert_eq!(def.type_, CardType::Unit, "{def_id}");
+            assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)), "{def_id}");
         }
         let lanes = lanes_of(&state, PlayerId::P1, Row::Units);
         assert_eq!(lanes[0], json!("sm-crier"));
