@@ -82,12 +82,12 @@ class AutoMergeTests(unittest.TestCase):
         self.assertNotEqual(plan_mod.make(h.ctx).get("number"), 30)
 
     def test_with_only_its_builder_set_up_it_waits_for_that_models_second_review(self):
-        h = Harness(self, env=secrets(), machine=("gpt",), at=DAY)
+        h = Harness(self, env=secrets(), machine=("agy",), at=DAY)
         h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer(APPROVE)}))
         comment = h.gh.bot_comments(12)[-1]
-        self.assertIn("`gpt` (medium) approved it, so it waits for a strong or medium model's "
+        self.assertIn("`gemini` (medium) approved it, so it waits for a strong or medium model's "
                       "review (the same medium model may review it again)", comment)
         self.assertNotIn("No subscription that could give that review is set up", comment)
 
@@ -115,7 +115,8 @@ class SecondReviewTests(unittest.TestCase):
             self.assertEqual((planned["action"], planned["number"]), ("review", pr))
             seen.append(planned["provider"])
             Deliverer(h.ctx, planned, empty_out(h, f"died-{attempt}"), h.deliver_repo).run()
-        self.assertEqual(seen, ["agy", "gpt"])  # each death backs its subscription off
+        # Each death backs its subscription off; gpt, weak, reviews no medium item.
+        self.assertEqual(seen, ["agy", "muse"])
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED})
         self.assertIn("died 2 times", h.gh.bot_comments(pr)[-1])
 
