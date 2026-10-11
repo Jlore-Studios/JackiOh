@@ -3,7 +3,8 @@
 //! gate plays them, and checked against oracles it does not use:
 //!
 //!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
-//!    first turn's draw), and The Coin is in the second seat's;
+//!    first turn's draw, and with any card that turn's start discarded), and The Coin is in the
+//!    second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
 //!    replacement (C #23 Devil's Pact, R449); #96 My Pawn plays out a turn inside an attack's action
@@ -308,7 +309,32 @@ mod summarize_game_over_real_cards_s9_11 {
                                 p1.remove(at);
                             }
                         }
-                        opening = Some(PerPlayer::new(p1, hand(&result.state, PlayerId::P2)));
+                        // A card turn 1 took from a hand before the step ended was in the opening hand
+                        // all the same: #21 Hinder, cast on its draw, discards one (§2.4). A discarded
+                        // card the step did not draw goes back.
+                        let mut p2 = hand(&result.state, PlayerId::P2);
+                        let drawn_here: Vec<&String> = events[from..]
+                            .iter()
+                            .filter_map(|event| match event {
+                                GameEvent::Drawn { instance_id, .. } => Some(instance_id),
+                                _ => None,
+                            })
+                            .collect();
+                        for event in &events[from..] {
+                            if let GameEvent::Discarded {
+                                instance_id,
+                                def_id,
+                                owner,
+                            } = event
+                                && !drawn_here.contains(&instance_id)
+                            {
+                                match owner {
+                                    PlayerId::P1 => p1.push(def_id.clone()),
+                                    PlayerId::P2 => p2.push(def_id.clone()),
+                                }
+                            }
+                        }
+                        opening = Some(PerPlayer::new(p1, p2));
                     }
                     begun = true;
                     drawn.p1.extend(step.kept.p1);
