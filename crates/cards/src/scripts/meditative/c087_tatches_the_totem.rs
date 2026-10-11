@@ -253,7 +253,9 @@ mod tests {
                 s.play(VANILLA, json!({}));
                 let theirs = s.view(P2);
                 let theirs_json = serde_json::to_value(&theirs).expect("a view is JSON");
-                assert_eq!(theirs_json["opponent"]["units"][0]["defId"], TATCHES);
+                // The Vanilla takes lane 1 and Tatches the leftmost open zone after it (R64).
+                assert_eq!(theirs_json["opponent"]["units"][0]["defId"], VANILLA);
+                assert_eq!(theirs_json["opponent"]["units"][1]["defId"], TATCHES);
                 let shown = theirs_json["events"].as_array().cloned().unwrap_or_default();
                 assert!(shown.iter().any(|event| event["type"] == "summoned" && event["defId"] == TATCHES));
             }
