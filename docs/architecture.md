@@ -108,7 +108,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 
 | Table | Client read | Policy | Client write |
 | --- | --- | --- | --- |
-| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0031), which marks a ladder bot's profile, is in no client grant (R1446) |
+| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0032), which marks a ladder bot's profile, is in no client grant (R1446) |
 | `invite_codes` | **none** | no policy | none — a readable code row defeats the gate (§9.8) |
 | `code_attempts` | **none** | no policy | none |
 | `cards` | all rows | `true` | none — the catalog is static data (§9.4) |
@@ -621,8 +621,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
-   `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_ladder_bots.sql` — and records them in
-   `app.migrations`. Expected result: 29 tables
+   `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
+   `0032_ladder_bots.sql` — and records them in `app.migrations`. Expected result: 29 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -659,7 +659,9 @@ step that is not yet implemented says which BUILD task delivers it.
    the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server
    a deploy replaces. 0030 comes with the patch that ships the
    Meditative set (R1420): it widens the `cards` tag check once more, with the set's one new tag,
-   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411). 0031 is the ladder bots
+   Wincon, so `seed-catalog` can write its 102 cards and 30 tokens (R1411). 0031 puts the results' and the
+   rated games' reason checks back with the set's two endings, `alt-win` and `won-by-effect`, so a game the
+   set ends records its result (R1412). 0032 is the ladder bots
    (R1446–R1448): `profiles.kind`, `human` for every existing profile and `bot` for a ladder bot's,
    which no client role may read; the server-only `bots` table, one row per bot's profile, with RLS
    on and no policy or grant; and the profile's foreign key to `auth.users` swapped for triggers, so

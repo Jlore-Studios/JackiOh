@@ -1,4 +1,4 @@
--- The ladder bots (migration 0031, SPEC §9.12, R1446-R1448; issue #638). Runs last, after
+-- The ladder bots (migration 0032, SPEC §9.12, R1446-R1448; issue #638). Runs last, after
 -- 16_play_telemetry.sql; profile 1 is active by then (03 activated it).
 \set ON_ERROR_STOP on
 

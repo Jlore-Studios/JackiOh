@@ -185,10 +185,12 @@ mod tests {
         }
 
         #[test]
-        fn s5_1_the_ky_pool_is_core_n31_n51_n82_and_classic_n41_n42_n62_the_token_tagged_ky_cards_are_never_offered() {
+        fn s5_1_the_ky_pool_is_core_n31_n51_n82_classic_n41_n42_n62_and_meditative_n34_n38_n45_n79_n87_the_token_tagged_ky_cards_are_never_offered()
+        {
             crate::register_all();
             // The pool #57 Conjure KY generates from: the KY tag of every set (R380), minus tokens, minus
-            // the generator.
+            // the generator. Re-pinned for v0.3.5: the Meditative set joins the pool (§8.8 #34 高考,
+            // #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY, #87 Tatches the Totem).
             assert_eq!(
                 ids(crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))),
                 vec![
@@ -198,6 +200,11 @@ mod tests {
                     "classicplus-041".to_string(),
                     "classicplus-042".to_string(),
                     "classicplus-062".to_string(),
+                    "meditative-034".to_string(),
+                    "meditative-038".to_string(),
+                    "meditative-045".to_string(),
+                    "meditative-079".to_string(),
+                    "meditative-087".to_string(),
                 ]
             );
             assert!(!ids(crate::query::query(&json_as(json!({ "tags": ["KY"] })))).contains(&"core-051-1".to_string()));

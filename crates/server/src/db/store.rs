@@ -180,7 +180,7 @@ store_union! {
 
 store_union! {
     /// R1446: who holds a profile: a person, or a ladder bot. Server-only (`profiles.kind`, migration
-    /// 0031, which no client role may read): no response carries it, so no read tells a bot's seat
+    /// 0032, which no client role may read): no response carries it, so no read tells a bot's seat
     /// from a person's.
     #[derive(Default)]
     pub enum ProfileKind {
@@ -815,7 +815,7 @@ pub struct BotDeck {
 }
 
 /// R1446–R1448: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
-/// 0031), its profile's `created_at` and `current_match_id`, and its R610 rating. Server-only.
+/// 0032), its profile's `created_at` and `current_match_id`, and its R610 rating. Server-only.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BotRow {
@@ -1797,7 +1797,7 @@ impl Tx<'_> {
         dispatch!(self, ranked_put_bot(bot))
     }
 
-    // bots (R1446–R1449, migration 0031): the ladder bots
+    // bots (R1446–R1449, migration 0032): the ladder bots
 
     /// R1448: every ladder bot, retired ones included, oldest profile first (ties on id).
     pub async fn bots_list(&mut self) -> StoreResult<Vec<BotRow>> {

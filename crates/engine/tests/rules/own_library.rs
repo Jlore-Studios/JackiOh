@@ -128,6 +128,15 @@ fn entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
     }
 }
 
+/// An entry of cards an effect minted into the library: Created (R943), unlike the dealt cards
+/// `set_library` lays down.
+fn created_entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
+    LibraryEntryView {
+        created: Some(true),
+        ..entry(def_id, radiant, count)
+    }
+}
+
 fn to_json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("serialises")
 }
@@ -363,7 +372,7 @@ mod r311_what_the_owner_was_shown_going_in {
             list_of(&state, P1),
             LibraryView {
                 cards: vec![
-                    entry(&virus().id, true, 1),
+                    created_entry(&virus().id, true, 1),
                     entry(&alpha().id, false, 1),
                     entry(&beta().id, false, 1)
                 ],
@@ -460,7 +469,7 @@ mod r312_cards_the_owner_was_never_shown {
         assert_eq!(
             list_of(&state, P1),
             LibraryView {
-                cards: vec![entry(&alpha().id, false, 1)],
+                cards: vec![created_entry(&alpha().id, false, 1)],
                 unknown: 2
             }
         );
@@ -524,5 +533,99 @@ mod r312_cards_the_owner_was_never_shown {
             }
         );
         assert!(!to_json(&view_for(&state, P1)).contains(&format!("\"{}\"", alpha().id)));
+    }
+}
+
+/// R1106 (MD-D10, Meditative #54 Money Machine): a card shuffled in `unseen` is no card its owner
+/// was shown going in, so the list counts it as unknown (R312), and the shuffle names it to nobody.
+mod r1106_a_card_shuffled_in_unseen_is_unknown_to_its_owner {
+    use super::*;
+
+    /// The list's named entries as `(def id, radiant, count)` and its unknown count: what the owner
+    /// is told of each card, whatever else marks the entry.
+    fn told(list: &LibraryView) -> (Vec<(String, bool, i32)>, i32) {
+        let named = list
+            .cards
+            .iter()
+            .map(|entry| (entry.def_id.clone(), entry.radiant, entry.count))
+            .collect();
+        (named, list.unknown)
+    }
+
+    #[test]
+    fn r1106_an_unseen_shuffle_in_counts_as_unknown_and_an_open_one_beside_it_is_listed() {
+        let mut state = game("own-library-unseen");
+        set_library(&mut state, P1, &[alpha().id, beta().id]);
+        let events = run(
+            &mut state,
+            shuffle_into(json_as(
+                json!({ "defId": virus().id, "count": 1, "radiant": true, "unseen": true }),
+            )),
+            P1,
+        );
+        assert_eq!(
+            events
+                .iter()
+                .map(|event| event.event_type().as_str())
+                .collect::<Vec<_>>(),
+            vec!["shuffledIn"]
+        );
+        assert_eq!(
+            told(&list_of(&state, P1)),
+            (vec![(alpha().id, false, 1), (beta().id, false, 1)], 1)
+        );
+        // It is in the library all the same, on the face it was given, and no seat reads it.
+        assert!(
+            state
+                .players
+                .p1
+                .library
+                .iter()
+                .any(|card| card.def_id == virus().id && card.radiant && card.known_as.is_none())
+        );
+        for viewer in [P1, P2] {
+            assert!(!to_json(&view_for(&state, viewer)).contains(&format!("\"{}\"", virus().id)));
+        }
+
+        // An open shuffle-in beside it is listed as ever (R311).
+        run(
+            &mut state,
+            shuffle_into(json_as(json!({ "defId": virus().id, "count": 1 }))),
+            P1,
+        );
+        assert_eq!(
+            told(&list_of(&state, P1)),
+            (
+                vec![
+                    (virus().id, false, 1),
+                    (alpha().id, false, 1),
+                    (beta().id, false, 1)
+                ],
+                1
+            )
+        );
+    }
+
+    #[test]
+    fn r1106_r80_an_unseen_card_a_full_library_refuses_is_not_created() {
+        let mut state = game("own-library-unseen-full");
+        let full: Vec<String> = (0..LIBRARY_CAP).map(|_| alpha().id).collect();
+        set_library(&mut state, P1, &full);
+        let events = run(
+            &mut state,
+            shuffle_into(json_as(
+                json!({ "defId": virus().id, "count": 1, "unseen": true }),
+            )),
+            P1,
+        );
+        assert_eq!(state.players.p1.library.len() as i32, LIBRARY_CAP);
+        assert!(events.iter().any(|event| matches!(
+            event,
+            GameEvent::LibraryOverflow {
+                outcome: LibraryOverflowOutcome::NotCreated,
+                ..
+            }
+        )));
+        assert_eq!(list_of(&state, P1).unknown, 0);
     }
 }

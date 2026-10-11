@@ -90,13 +90,35 @@ mod tests {
 
     const SPIRITUALLY: &str = "meditative-032";
     const FILLER: &str = "core-005";
-    /// Shipped non-token CN cards the pools may draw (R387 keeps this card out).
-    const CN_IDS: [&str; 5] = [
+    /// Shipped non-token CN cards the pools may draw (R387 keeps this card out): SPEC §8's CN rows of
+    /// every set that ships, the Meditative set's among them since it ships (R380, R1420).
+    const CN_IDS: [&str; 26] = [
         "core-080",
         "core-090",
         "classicplus-004",
         "classicplus-023",
         "classicplus-076",
+        "meditative-033",
+        "meditative-034",
+        "meditative-035",
+        "meditative-036",
+        "meditative-037",
+        "meditative-038",
+        "meditative-039",
+        "meditative-040",
+        "meditative-041",
+        "meditative-042",
+        "meditative-043",
+        "meditative-044",
+        "meditative-045",
+        "meditative-047",
+        "meditative-049",
+        "meditative-050",
+        "meditative-055",
+        "meditative-078",
+        "meditative-087",
+        "meditative-101",
+        "meditative-102",
     ];
 
     fn filler(count: usize) -> Value {

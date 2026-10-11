@@ -122,14 +122,15 @@ type OverflowGame = { label: string; game: () => RealGame; seed: number; prefer:
  * The games (R180 handicaps, validated by the engine): p1 draws three a turn from 30 cards with a
  * nine-card opening hand, so its hand fills and burns, while p2's 6-card deck runs dry and fatigues;
  * and p1's 60-card deck (R80's cap, #33 and #90 in it) plays #33 whenever it can, so its library
- * reaches the cap and refuses the copies. The seeds were picked to reach them within the caps.
+ * reaches the cap and refuses the copies. The seeds were picked to reach them within the caps; v0.3.5's
+ * cheaper Meditative cards let p1 empty its hand in seeds 1 and 2, so seed 3 joins them for the burn.
  */
 function overflowGames(): OverflowGame[] {
   const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 6, extraDrawsPerTurn: 2 };
   const short: Handicap = { ...HUMAN_HANDICAP, deckSize: 6 };
   const capped: Handicap = { ...HUMAN_HANDICAP, deckSize: LIBRARY_CAP };
   const games: OverflowGame[] = [];
-  for (const seed of [1, 2]) {
+  for (const seed of [1, 2, 3]) {
     games.push({
       label: `hand-${String(seed)}`,
       game: () => realGame(`overflow-hand-${String(seed)}`, [cheapest(30), cheapest(short.deckSize)], { p1: burner, p2: short }),

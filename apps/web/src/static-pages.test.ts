@@ -61,7 +61,8 @@ function fixtureCatalog(): CardDefs {
     ...(FIXTURE_SNAPSHOTS[V3] ?? {}),
     "classic-777": { ...card, id: "classic-777", index: "777", name: "Card Added Later" },
     [GLITCH_DEF_ID]: { ...card, id: GLITCH_DEF_ID, index: "T", name: "Glitch" },
-    "meditative-001": { ...card, id: "meditative-001", index: "1", name: "Unreleased Monk", set: "Meditative" },
+    // A set the catalog could hold before it ships (R1420): Boss is reserved and not in SHIPPED_SETS.
+    "boss-001": { ...card, id: "boss-001", index: "1", name: "Unreleased Boss", set: "Boss" },
   };
 }
 
@@ -119,7 +120,7 @@ describe("the static pages", () => {
     const ids = [...doc.querySelectorAll("article")].map((article) => article.id);
     expect(ids).toContain("classic-777");
     expect(ids).not.toContain(GLITCH_DEF_ID);
-    expect(ids).not.toContain("meditative-001");
+    expect(ids).not.toContain("boss-001");
     const bolt = fixtureDef(V3, "core-002");
     const text = doc.getElementById("core-002")?.textContent ?? "";
     expect(text).toContain(fillParams(bolt, "base"));

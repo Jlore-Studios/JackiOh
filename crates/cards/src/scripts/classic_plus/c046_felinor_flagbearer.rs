@@ -261,11 +261,13 @@ mod tests {
             assert_eq!(prime.len(), 1);
             assert!(!prime[0].radiant);
             let listed = s.view(P1).you.own_library.map(|library| library.cards).unwrap_or_default();
+            // The Prime is effect-made, so R943 marks it Created. Re-pinned for v0.3.5: the Meditative
+            // set ships, so R943's Created mark is live.
             assert!(listed.contains(&LibraryEntryView {
                 def_id: PRIME.to_string(),
                 radiant: false,
                 count: 1,
-                created: None,
+                created: Some(true),
             }));
             let id = prime.first().map(|card| card.id.clone()).unwrap_or_else(|| "?".to_string());
             assert!(!serde_json::to_string(&s.view(P2)).expect("serialises").contains(&id));

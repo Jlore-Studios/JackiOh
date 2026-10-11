@@ -286,7 +286,7 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            "seed": "craft-453", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380)
+            "seed": "craft-9344", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4, "backrow": [GIFTED] },
             "p2": { "hand": [RENO], "field": [PANTHER] },
         }));

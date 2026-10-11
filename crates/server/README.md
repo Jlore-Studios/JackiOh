@@ -277,7 +277,7 @@ is seated and the pool is never sized.
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off.
 
-Migration 0031 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
+Migration 0032 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
 it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,
 decks and when it retired; RLS on with no policy and no client grant), and swaps the profile's
 foreign key to `auth.users` for triggers: inserting a person's profile still needs its auth user

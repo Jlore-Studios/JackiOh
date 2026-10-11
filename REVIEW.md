@@ -124,7 +124,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 | §4.1–4.2 | Exertion, positions, sickness, 0-attack, Taunt filter, forced attacks | M2-T1, T2, T4 tests; R6, R7, R20, R49, R53 |
 | §4.4 Pipeline | One ordered test per step (0–10, and 4a) | M2-T3, one per step, in order |
 | §4.5 State check | Simultaneous deaths, Death order, Reborn, Indestructible would-destroy | M2-T5 tests; R8, R46, R47 |
-| §5 Catalog | `catalog.test.ts` diffs against §8 including rarity counts per set: Core 35/37/16/7/5, Classic 42/25/13/9/1, Classic+ 13/25/25/13/2 and §5.3 corrections | Green |
+| §5 Catalog | `crates/cards/tests/cross/catalog.rs` diffs against §8 including rarity counts per set: Core 32/40/16/7/5, Classic 35/26/18/10/1, Classic+ 13/24/25/13/3, Meditative 29/29/22/16/6 (as `cargo jackioh catalog check` prints them) and §5.3 corrections | Green |
 | §5.2 Radiant | On-field conversion keeps damage and buffs, no Cry re-fire, copies inherit flag | R22, R57 tests |
 | §6 Keywords | Every state-changing §6.3 verb is exported from the effects module (BUILD M3-T1); keyword set computation per §10.4 | M3-T1, M3-T4 tests; `grep -h "^pub fn" crates/engine/src/effects/*.rs` against §6.3's verb list — files are grouped by family, so check the functions and not the file names |
 | §6.2 Triggers | Ordering (active player, lanes, backrow), traps first, opponent-turn prompts pause the action | M3-T2 tests |
@@ -133,7 +133,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 ### B3 Card conformance (SPEC §8, BUILD §3 M4)
 
 1. `cargo build -p jackioh-cards` succeeds: `crates/cards/build.rs` refuses a catalog id with no script file and a script whose `ID` the catalog lacks.
-2. Count script files: one per catalog entry, 318 since issue #170 (`ls crates/cards/src/scripts/*/*.rs | wc -l`: 111 in `core/`, the rest in `classic/` and `classic_plus/`). Each holds its tests in a `#[cfg(test)] mod tests`; `grep -L "mod tests" crates/cards/src/scripts/*/*.rs` lists the files without one, and each listed token must be tested in the file of the card that makes it.
+2. Count script files: one per catalog entry, 450 since the Meditative set shipped (issue #553; `ls crates/cards/src/scripts/*/*.rs | wc -l`: 111 in `core/`, 91 in `classic/`, 116 in `classic_plus/` and 132 in `meditative/`). Each holds its tests in a `#[cfg(test)] mod tests`; `grep -L "mod tests" crates/cards/src/scripts/*/*.rs` lists the files without one, and each listed token must be tested in the file of the card that makes it.
 3. For every card in the BUILD M4-T4 table, open its script file and confirm each "must-pass" clause is a distinct `#[test]` in its `mod tests`, base and radiant both present. A card whose tests skip a clause is MAJOR; a card whose implementation contradicts its §8 row is BLOCKER.
 4. Deep-read 15 scripts against their §8 rows: the fixed set #3, #9, #12, #18, #22, #31, #41, #52, #60, #85, #92, #93, #95, #96, #98, plus 5 more chosen with `seed % 100` from the current commit hash. Record for each: hook used, primitives used, prompt kinds declared, any behaviour not in the spec.
 5. Subsystems: `fuse`, `rotation`, `scorer`, `ai_policy`, `hero_power`, `combo_index`, `call_to_chaos`, `lethal` (`crates/engine/src/subsystems/`) each have a test module in `crates/engine/tests/rules/` and the acceptance cases in BUILD M3-T7.
@@ -165,7 +165,7 @@ Every spec BUILD M8 lists exists under `e2e/cypress/e2e/` with the listed assert
 
 - `cargo jackioh fuzz` green: it reports 1,000 seeds, 0 panics, 0 replay mismatches, 0 invariant violations, 0 games over the action bound; `cargo jackioh fuzz --handicap` the same.
 - `cargo jackioh golden check` green: the 240 traces recorded from the TypeScript engine and the hotseat fixture replay with the same hashes.
-- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `a798906b`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
+- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `5c3d578c`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
 
 ---
 

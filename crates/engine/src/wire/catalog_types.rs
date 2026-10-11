@@ -239,7 +239,12 @@ string_union! {
 /// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
 /// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
 /// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 3] = [SetName::Core, SetName::Classic, SetName::ClassicPlus];
+pub const SHIPPED_SETS: [SetName; 4] = [
+    SetName::Core,
+    SetName::Classic,
+    SetName::ClassicPlus,
+    SetName::Meditative,
+];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).

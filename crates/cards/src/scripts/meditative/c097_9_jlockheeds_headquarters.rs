@@ -73,8 +73,9 @@ pub fn script() -> CardScripts {
 // draws nothing; radiant 0/50, Activate 2 (a second use fills what the first left empty), and the Units are
 // Radiant".
 //
-// The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockheed's Lobbyist (C+ #48)
-// and Jlockheed's J15 Fighter (C+ #51); the Headquarters is a token and never its own pick (§5.1, R387).
+// The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockheed's Lobbyist
+// (C+ #48), Jlockheed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
+// set shipping (R1420); the Headquarters is a token and never its own pick (§5.1, R387).
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a use.
 #[cfg(test)]
 mod tests {
@@ -88,7 +89,7 @@ mod tests {
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420).
-    const JLOCKEED_UNITS: [&str; 3] = ["core-013", "classicplus-048", "classicplus-051"];
+    const JLOCKEED_UNITS: [&str; 4] = ["core-013", "classicplus-048", "classicplus-051", "meditative-087"];
 
     fn slot(lane: i32) -> ZoneSlot {
         ZoneSlot {
@@ -168,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_three_the_tests_name() {
+    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_four_the_tests_name() {
         crate::register_all();
         let pool: Vec<String> = crate::CATALOG
             .values()
@@ -226,7 +227,7 @@ mod tests {
         }
 
         #[test]
-        fn r1261_r60_repeats_allowed_and_all_three_reached() {
+        fn r1261_r60_repeats_allowed_and_all_four_reached() {
             let mut seen: Vec<String> = Vec::new();
             let mut repeated = false;
             for n in 0..12 {

@@ -21,7 +21,7 @@ const MANA_WELL: &str = "core-006";
 const TIMMY: &str = "core-011";
 const POSTDOC: &str = "core-061";
 const SORCERER: &str = "core-068";
-const PALANTIR: &str = "classic-004";
+const INFINISCEPTER: &str = "classic-007";
 const HEROIC_POWER: &str = "core-098";
 const VANILLA: &str = "core-008";
 const HIT_JOB: &str = "core-016";
@@ -561,11 +561,12 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
         assert!(g.state().players.p1.locks.backrow[0]);
 
         // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
-        // and "the current occupant is unaffected" (§3.2). This seed draws Classic #4 Palantir.
+        // and "the current occupant is unaffected" (§3.2). This seed draws Classic #7 InfiniScepter, a
+        // Legendary Field Spell (re-pinned for v0.3.5: the Meditative set joins the pool).
         g.play(TRANSMOGULATE, json!({}));
         assert_eq!(
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()),
-            Some(PALANTIR.to_string())
+            Some(INFINISCEPTER.to_string())
         );
         g.expect_in_zone(power.as_str(), "gone");
     }

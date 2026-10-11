@@ -147,7 +147,7 @@ pub struct PlayerStatsTableRow {
     pub updated_at: i64,
 }
 
-/// One row of `public.bots` (migration 0031, R1446–R1448): a ladder bot beside its profile.
+/// One row of `public.bots` (migration 0032, R1446–R1448): a ladder bot beside its profile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BotTableRow {
     pub profile_id: String,
@@ -203,7 +203,7 @@ pub struct FakeTables {
     pub action_timings: Vec<ActionTimingRow>,
     pub emote_events: Vec<EmoteEventRow>,
     pub match_signals: Vec<MatchSignalRow>,
-    // The ladder bots' table (`public.bots`, migration 0031): one row per bot's profile.
+    // The ladder bots' table (`public.bots`, migration 0032): one row per bot's profile.
     pub ladder_bots: Vec<BotTableRow>,
 }
 
@@ -2424,7 +2424,7 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
         return false;
     }
-    // 0031: a bot's row goes with its profile.
+    // 0032: a bot's row goes with its profile.
     keep_only(&mut tables.ladder_bots, |row| row.profile_id != profile_id);
     // 0029, R1442: the play telemetry of every seat the profile held goes; the opponent's stays.
     let held: IndexSet<(String, PlayerId)> = tables
@@ -2747,7 +2747,7 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1446–R1449, migration 0031)
+// The ladder bots (R1446–R1449, migration 0032)
 // ---------------------------------------------------------------------------
 
 /// R1448: every bot, its profile's `created_at` and match and its R610 rating beside its row,

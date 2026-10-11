@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0031) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0032) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -90,10 +90,12 @@ use crate::username::{render_username, username_key};
 pub type PgTx<'a> = Transaction<'a, Postgres>;
 
 /// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`): one
-/// hero died, a player conceded, or a player's disconnect grace ran out. The other four
-/// (`both-heroes-dead`, `draw-accepted`, `turn-cap`, `match-ceiling`) are draws. `results_record_for`
-/// reads a winnerless decisive row as the deleted winner's (migration 0012).
-const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect"];
+/// hero died, a player conceded, a player's disconnect grace ran out, or an effect won the game for
+/// one player (`won-by-effect`, R1412). The others (`both-heroes-dead`, `draw-accepted`, `turn-cap`,
+/// `match-ceiling`) are draws, and `alt-win` is either: two players holding an alternative win draw
+/// (R850). `results_record_for` reads a winnerless decisive row as the deleted winner's (migration
+/// 0012).
+const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect", "won-by-effect"];
 
 // ---------------------------------------------------------------------------
 // The role the server acts as
@@ -4529,7 +4531,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1446–R1449, migration 0031)
+// The ladder bots (R1446–R1449, migration 0032)
 // ---------------------------------------------------------------------------
 
 fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
@@ -4573,7 +4575,7 @@ fn small(value: i64, what: &str) -> Result<i16, StoreError> {
     i16::try_from(value).map_err(|_| StoreError::from(format!("a bot's {what} is out of range: {value}")))
 }
 
-/// R1448: the bot's profile, its row and its R610 rating. Migration 0031's
+/// R1448: the bot's profile, its row and its R610 rating. Migration 0032's
 /// `profile_needs_auth_user` lets a profile of kind `bot` in with no auth user, and 0028's
 /// `profiles_assign_default_username` names it the lowest free `Player#n`, as any new profile.
 pub async fn bots_create(t: &mut PgTx<'_>, bot: &NewBot) -> Result<(), StoreError> {

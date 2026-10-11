@@ -95,7 +95,7 @@ mod s5_1_a_random_pool_never_offers_the_card_that_generated_it {
         register_all();
         // Craft a Card at this cursor Discovers #54 Straaza and then #56 Jilliax (a keyword-only body).
         const SEED: &str = "craft-straaza";
-        const CRAFT_CURSOR: u32 = 1384; // pools of every set (R380)
+        const CRAFT_CURSOR: u32 = 2094; // pools of every set (R380; re-pinned for v0.3.5: the Meditative set joins the pool)
         let mut added: Vec<String> = Vec::new();
         for cursor in 0..200 {
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": [CRAFT, MENACE], "mana": 8 } }));

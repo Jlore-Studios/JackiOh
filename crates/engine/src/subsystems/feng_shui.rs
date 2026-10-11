@@ -3,8 +3,8 @@
 //! ME-ELEMENT: every card has an element, the Hetu (河图) element of its index's last digit (R980:
 //! 1 and 6 水, 2 and 7 火, 3 and 8 木, 4 and 9 金, 5 and 0 土; no digit is 土; a fused card takes
 //! its first ingredient's). Each player's last face-up play is recorded (R982, at §10.5 step 4 by
-//! `play_counts::record_play`, only while the Meditative set is open). At step 3 each Feng Shui on
-//! the field judges the play from its player's last record (R981): positive when the last element
+//! `play_counts::record_play`, in every game since the Meditative set shipped). At step 3 each Feng
+//! Shui on the field judges the play from its player's last record (R981): positive when the last element
 //! generates the new one (木→火→土→金→水→木), negative when it overcomes it (木→土→水→火→金→木),
 //! neutral otherwise and on a first play. A positive play is made Radiant there (R983, read through
 //! `rewards` by step 1's `play_made_radiant`, as R214 fixes Gifted Program's); a negative one is
@@ -22,7 +22,7 @@ use crate::config::{
     ELEMENT_WITHOUT_DIGIT, FENG_SHUI_DAMAGE, GENERATING_CYCLE, HETU_ELEMENTS, OVERCOMING_CYCLE,
 };
 use crate::state::{CardInstance, GameState};
-use crate::wire::{CardElement, FengShuiOutcome, PLAYER_IDS, PlayerId, PreviewValue, SetName};
+use crate::wire::{CardElement, FengShuiOutcome, PLAYER_IDS, PlayerId, PreviewValue};
 
 /// R983: one Feng Shui's judgement of a play, fixed at §10.5 step 1 (as R214 fixes Gifted
 /// Program's) and carried on the play's run to steps 3 and 7. `source_id` is the judging Feng
@@ -152,12 +152,12 @@ pub fn rewards(state: &GameState, player: PlayerId, card: &CardInstance) -> bool
         .any(|verdict| verdict.outcome == FengShuiOutcome::Positive)
 }
 
-/// R982: record the element of `player`'s face-up play of `card`, beside R451's records — only
-/// while the Meditative set is open, so a shipped game never carries it (D14). Ignores R451's
-/// AI-card skip: the hidden rule never reveals a hidden card either way, and the record is its
-/// memory.
+/// R982: record the element of `player`'s face-up play of `card`, beside R451's records — in every
+/// game since the Meditative set shipped (v0.3.5; before it, only while the set was previewed,
+/// D14). Ignores R451's AI-card skip: the hidden rule never reveals a hidden card either way, and
+/// the record is its memory.
 pub fn record_element(state: &mut GameState, player: PlayerId, card: &CardInstance) {
-    if !judged(state, card) || !crate::catalog::set_is_open(SetName::Meditative) {
+    if !judged(state, card) {
         return;
     }
     let element = element_of(state, &card.def_id);

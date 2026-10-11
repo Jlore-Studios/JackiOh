@@ -120,7 +120,7 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
     fn r174_r78_a_crafted_lava_golem_twisted_sorcerer_that_tributes_its_own_target_leaves_that_card_in_the_graveyard_undamaged_8_conventions()
      {
         let mut g = scenario(json!({
-            "seed": "r3craft-1990", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380)
+            "seed": "r3craft-272", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": {
                 "hand": [CRAFT_A_CARD, RENO],
                 "mana": 4,

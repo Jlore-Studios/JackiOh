@@ -183,8 +183,11 @@ mod tests {
                 let list = &mine["you"]["ownLibrary"];
                 assert_eq!(list["unknown"], json!(0));
                 let cards = list["cards"].as_array().expect("the owner's library list has cards");
-                assert!(cards.contains(&json!({ "defId": VANILLA, "radiant": true, "count": 1 })));
-                assert!(cards.contains(&json!({ "defId": ID, "radiant": false, "count": 1 })));
+                // The copies are fresh cards, so Created (R943); the dealt card is not.
+                let vanilla = json!({ "defId": VANILLA, "radiant": true, "created": true, "count": 1 });
+                let this = json!({ "defId": ID, "radiant": false, "created": true, "count": 1 });
+                assert!(cards.contains(&vanilla));
+                assert!(cards.contains(&this));
                 assert!(cards.contains(&json!({ "defId": FILLER, "radiant": false, "count": 1 })));
                 // p2 reads p1's library as a count, and the shuffle-ins as hidden cards.
                 let theirs = view(&s, P2);

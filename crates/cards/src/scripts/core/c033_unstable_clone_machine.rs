@@ -504,7 +504,9 @@ mod tests {
             let list = &mine["you"]["ownLibrary"];
             assert_eq!(list["unknown"], json!(0));
             let cards = list["cards"].as_array().expect("the owner's library list has cards");
-            assert!(cards.contains(&json!({ "defId": "core-015", "radiant": true, "count": 3 })));
+            // The copies are effect-made, so R943 marks them Created; the dealt card carries no mark.
+            // Re-pinned for v0.3.5: the Meditative set ships, so R943's Created mark is live.
+            assert!(cards.contains(&json!({ "defId": "core-015", "radiant": true, "count": 3, "created": true })));
             assert!(cards.contains(&json!({ "defId": "core-025", "radiant": false, "count": 1 })));
             // p2 reads p1's library as a count and nothing else.
             let theirs = view_json(&s, "p2");

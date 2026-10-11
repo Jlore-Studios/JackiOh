@@ -67,7 +67,8 @@ pub fn script() -> CardScripts {
 
 // #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
 // backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
-// Base pool: #18, #41, #60, #71, #96 and Classic+ #22 (R380's one format); radiant: every trap of
+// Base pool: #18, #41, #60, #71, #96, Classic #10, Classic+ #22 and, since v0.3.5, Meditative #64 and
+// #68 (R380's one format); radiant: every trap of
 // every set, #85 included, summoned Radiant and hidden from the opponent, face and all (R33, R97, R177).
 #[cfg(test)]
 mod tests {
@@ -83,9 +84,20 @@ mod tests {
     const SIPHON_SQUAD: &str = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
 
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
-    /// #71, #96 and Classic+ #22 Blood Moon, the one new Cost (1) Trap (docs/classic-sets.md B2.6).
-    const TRAP_POOL: [&str; 7] =
-        ["core-018", "core-041", "core-060", "core-071", "core-096", "classic-010", "classicplus-022"];
+    /// #71, #96, Classic #10, Classic+ #22 Blood Moon, the one new Cost (1) Trap (docs/classic-sets.md
+    /// B2.6), and Meditative #64 Traitorous Blood and #68 Catnip (a Field Trap). Re-pinned for v0.3.5:
+    /// the Meditative set joins the pool.
+    const TRAP_POOL: [&str; 9] = [
+        "core-018",
+        "core-041",
+        "core-060",
+        "core-071",
+        "core-096",
+        "classic-010",
+        "classicplus-022",
+        "meditative-064",
+        "meditative-068",
+    ];
 
     fn query_ids(args: Value) -> Vec<String> {
         crate::register_all();

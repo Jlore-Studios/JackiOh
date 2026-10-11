@@ -55,6 +55,16 @@ mod tests {
 
     const CORE_CHAOS: &str = "core-095";
     const PLUS_CHAOS: &str = "classicplus-073";
+    /// The Call to Chaos pool of the sets that ship, in catalog order: #95, C+ #73 and, the
+    /// Meditative set shipping, this card (R1240, R1420).
+    const EDITIONS: [&str; 3] = [CORE_CHAOS, PLUS_CHAOS, ID];
+    /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1 and M #91.1.
+    const PRIME_TOKENS: [&str; 4] = [
+        "classicplus-038-1",
+        "classicplus-046-1",
+        "meditative-045-1",
+        "meditative-091-1",
+    ];
     const JADE_BEAUTY: &str = "meditative-039-5";
     const GOLEM: &str = "meditative-095-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -284,8 +294,8 @@ mod tests {
                 let def = crate::card_def(&card.def_id);
                 assert!(def.tags.contains(&Tag::Cn));
                 assert!(!def.token);
-                // R1420: the Meditative CN cards are not in a pool before their set ships.
-                assert_ne!(def.set, SetName::Meditative);
+                // R380, R1420: CN cards of every set that ships, the Meditative set's included.
+                assert!(SHIPPED_SETS.contains(&def.set));
                 assert_eq!(cost_of(&s, card), CHAOS_MED_COST);
             }
         }
@@ -300,7 +310,7 @@ mod tests {
                 let def = crate::card_def(&card.def_id);
                 assert!(def.tags.contains(&Tag::Prime));
                 assert!(def.token);
-                assert_ne!(def.set, SetName::Meditative);
+                assert!(PRIME_TOKENS.contains(&card.def_id.as_str()), "{}", card.def_id);
                 assert_eq!(cost_of(&s, card), CHAOS_MED_COST);
             }
         }
@@ -400,11 +410,12 @@ mod tests {
             // The opponent's start of turn casts nothing.
             s.end_turn();
             assert!(casts(&s).is_empty());
-            // The caster's next start of turn casts one Call to Chaos of a set that ships (R1420).
+            // The caster's next start of turn casts one Call to Chaos of a set that ships (R1420),
+            // this edition among them now its set ships.
             s.end_turn();
             let cast = casts(&s);
             assert!(!cast.is_empty());
-            assert!(cast[0] == CORE_CHAOS || cast[0] == PLUS_CHAOS);
+            assert!(EDITIONS.contains(&cast[0].as_str()), "{}", cast[0]);
             assert_eq!(last_of(&s, "cardPlayed")[0]["costPaid"], json!(0));
             assert_eq!(subsystems::eternal_effects_held(s.state(), P1), 1);
         }
@@ -467,26 +478,23 @@ mod tests {
                 assert_eq!(cast[0]["costPaid"], json!(0));
                 editions.push(cast[0]["defId"].as_str().unwrap_or("").to_string());
             }
-            // R1420: before the Meditative set ships the pool holds the two editions that ship.
-            assert!(editions.iter().all(|id| id == CORE_CHAOS || id == PLUS_CHAOS));
+            // R1240, R1420: the Meditative set ships, so the pool holds all three editions, and
+            // these seeds cast this one too (re-pinned for v0.3.5: the Meditative set joins the pool).
+            assert!(editions.iter().all(|id| EDITIONS.contains(&id.as_str())), "{editions:?}");
+            assert!(editions.iter().any(|id| id == ID), "{editions:?}");
         }
 
         #[test]
-        fn r1240_under_preview_the_pool_holds_this_card() {
+        fn r1240_once_its_set_ships_the_pool_holds_this_card() {
             crate::register_all();
-            let pool = || -> Vec<String> {
+            // No preview: the Meditative set ships (R1420), so the pool that names no set holds
+            // all three editions, in catalog order.
+            let shipped: Vec<String> =
                 jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
                     .iter()
                     .map(|def| def.id.clone())
-                    .collect()
-            };
-            let shipped = pool();
-            assert!(shipped.contains(&CORE_CHAOS.to_string()) && shipped.contains(&PLUS_CHAOS.to_string()));
-            assert!(!shipped.contains(&ID.to_string()));
-            let _preview = preview_sets(&[SetName::Meditative]);
-            let previewed = pool();
-            assert!(previewed.contains(&ID.to_string()));
-            assert_eq!(previewed.len(), 3);
+                    .collect();
+            assert_eq!(shipped, EDITIONS.map(String::from).to_vec());
         }
     }
 

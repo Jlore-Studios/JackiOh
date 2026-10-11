@@ -4174,7 +4174,39 @@ mod profiles_remove {
         assert_eq!(kept["sides"][1]["profileId"], other.id.as_str());
     }
 
-    both_stores!(removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match);
+    /// R1412: an effect that won the game (Meditative #8) always had a winner, so once that winner
+    /// deletes their account the game is still the other player's loss, not a draw. Postgres empties
+    /// the winner's seat (`on delete set null`), so `DECISIVE_REASONS` is what keeps it a loss there.
+    async fn r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &gone.id, &other.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [gone.id, other.id],
+            "winnerProfileId": gone.id,
+            "reason": "won-by-effect",
+            "turns": 9,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert_eq!(
+            j(&q!(harness, t => t.results_record_for(&other.id))),
+            json!({ "wins": 0, "losses": 1, "draws": 0 })
+        );
+    }
+
+    both_stores!(
+        removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
+        r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
+    );
 }
 
 mod purge_expired {
@@ -4525,7 +4557,7 @@ mod r1442_play_telemetry {
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1446–R1448, migration 0031)
+// The ladder bots (R1446–R1448, migration 0032)
 // ---------------------------------------------------------------------------
 
 mod bots {

@@ -3234,7 +3234,8 @@
       "core-095",
       "core-t-rush",
       "core-095-1",
-      "classicplus-073"
+      "classicplus-073",
+      "meditative-095"
     ],
     "loc": 3,
     "base": {
@@ -10254,7 +10255,8 @@
     "refs": [
       "classicplus-073-1",
       "core-095",
-      "classicplus-073"
+      "classicplus-073",
+      "meditative-095"
     ],
     "loc": 3,
     "base": {
@@ -13339,6 +13341,39 @@
       "text": "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and deck. Add {cards|AI generated card|AI generated cards} to your hand."
     }
   },
+  "meditative-054": {
+    "id": "meditative-054",
+    "index": "54",
+    "name": "Money Machine",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "price",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 52,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Shuffle The Coin into each player's deck.\nActivate: Spend ({price}). Tribute this. Either player may activate this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Shuffle The Coin into your opponent's deck and a Radiant The Coin into yours.\nActivate: Spend ({price}). Tribute this. Either player may activate this."
+    }
+  },
   "meditative-055": {
     "id": "meditative-055",
     "index": "55",
@@ -15826,6 +15861,43 @@
       "health": 2,
       "keywords": [],
       "text": "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+    }
+  },
+  "meditative-102": {
+    "id": "meditative-102",
+    "index": "102",
+    "name": "Catboy Maid SSR+",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 38,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 2
+        }
+      ],
+      "text": "Lucky 2\nCry: Draw 1-2. Add 1-10 to your Jade Counter."
     }
   }
 }

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0031: the ladder bots (SPEC §9.5, §9.12, R1446-R1448; issue #638)
+-- Migration 0032: the ladder bots (SPEC §9.5, §9.12, R1446-R1448; issue #638)
 -- ============================================================================
 -- A ranked Best of 1 or All Random ticket that waits past its fallback time
 -- with no person to pair with plays a ladder bot (R1447), which the server
@@ -35,7 +35,7 @@
 -- (service_role, BYPASSRLS) is the only reader and writer.
 --
 -- Apply order: ... -> 0001 (`public.profiles`) -> ... -> 0022 (column grants,
--- `public.bot_ratings`) -> ... -> 0028 -> 0029 -> 0030 -> 0031.
+-- `public.bot_ratings`) -> ... -> 0029 -> 0030 -> 0031 -> 0032.
 -- Safe to re-apply: add-column-if-not-exists, drop-constraint-if-exists,
 -- create-or-replace of the three functions, drop-and-create of both triggers,
 -- create-if-not-exists, comment-on and revoke are all idempotent.
@@ -83,7 +83,7 @@ $$;
 
 comment on function app.forget_auth_user() is
   'R1446: deletes the public.profiles row of a deleted auth.users identity, '
-  'the cascade the foreign key 0001 put on profiles.id gave before 0031 '
+  'the cascade the foreign key 0001 put on profiles.id gave before 0032 '
   'dropped it so a ladder bot can hold a profile with no auth user.';
 
 revoke execute on function app.forget_auth_user() from public;
@@ -117,7 +117,7 @@ $$;
 
 comment on function app.profile_needs_auth_user() is
   'R1446: refuses a public.profiles row of kind human whose id is no '
-  'auth.users identity, as the foreign key 0031 dropped did. A ladder bot''s '
+  'auth.users identity, as the foreign key 0032 dropped did. A ladder bot''s '
   'profile (kind bot) has none.';
 
 revoke execute on function app.profile_needs_auth_user() from public;

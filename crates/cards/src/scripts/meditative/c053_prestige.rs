@@ -36,12 +36,16 @@ fn target_checks() -> IndexMap<&'static str, TargetCheck> {
             if !candidate.radiant {
                 return false;
             }
-            if matches!(candidate.zone, Zone::Field { row: Row::Backrow, .. })
-                && matches!(
-                    card_type_of(a.state, candidate),
-                    CardType::Trap | CardType::FieldTrap
-                )
-                && candidate.face_up != Some(true)
+            if matches!(
+                candidate.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    ..
+                }
+            ) && matches!(
+                card_type_of(a.state, candidate),
+                CardType::Trap | CardType::FieldTrap
+            ) && candidate.face_up != Some(true)
                 && candidate.revealed != Some(true)
             {
                 return false;
@@ -65,10 +69,7 @@ fn prestige(radiant: bool) -> Script {
         targets: targets(),
         target_checks: target_checks(),
         cry: Some(hook(move |ctx| {
-            vec![
-                clear_radiant(RadiantTarget::default()),
-                add_ai(ctx, radiant),
-            ]
+            vec![clear_radiant(RadiantTarget::default()), add_ai(ctx, radiant)]
         })),
         ..Script::default()
     }
@@ -83,14 +84,11 @@ fn prestige_radiant(radiant: bool) -> Script {
             let mut effects: Vec<Effect> = permanents_on_field(ctx.state, enemy)
                 .iter()
                 .filter(|card| card.controller == enemy && card.radiant)
-                .map(|card| {
-                    clear_radiant(json_as(json!({ "instanceId": card.id })))
-                })
+                .map(|card| clear_radiant(json_as(json!({ "instanceId": card.id }))))
                 .collect();
-            for card in ctx.state.players[enemy]
-                .hand
-                .iter()
-                .chain(ctx.state.players[enemy].library.iter())
+            for card in [OffFieldZone::Hand, OffFieldZone::Library]
+                .into_iter()
+                .flat_map(|zone| zone_cards(ctx.state, enemy, zone))
                 .filter(|card| card.radiant)
             {
                 effects.push(clear_radiant(json_as(json!({ "instanceId": card.id }))));
@@ -198,13 +196,21 @@ mod tests {
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
-            let held = s.hand("p1").into_iter().find(|card| card.def_id == VANILLA).expect("the Radiant hand card");
+            let held = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.def_id == VANILLA)
+                .expect("the Radiant hand card");
             assert!(held.radiant);
             s.play(
                 PRESTIGE,
                 json!({ "targets": [{ "pick": "instance", "instanceId": held.id }] }),
             );
-            let cleared = s.hand("p1").into_iter().find(|card| card.id == held.id).expect("still in hand");
+            let cleared = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.id == held.id)
+                .expect("still in hand");
             assert!(!cleared.radiant);
             assert_eq!(ai_cards(&s).len(), 1);
         }

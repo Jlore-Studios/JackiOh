@@ -22,7 +22,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
     PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
-    Selection, SetName, Tag, Tuning, Zone, ZoneRef, string_union,
+    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1490,8 +1490,9 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
-    /// R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written only
-    /// while the Meditative set is open, so a shipped game never carries it (D14).
+    /// R982: the element of the player's last face-up play (Meditative #40 Feng Shui), written in
+    /// every game since the Meditative set shipped (v0.3.5; before it, only while the set was
+    /// previewed, D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_element: Option<CardElement>,
@@ -1773,9 +1774,10 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
-        // R943: Created only while the Meditative set is open, so a shipped game's state never
-        // carries the mark (D14) — the same gate as R982's last element.
-        created: crate::catalog::set_is_open(SetName::Meditative).then_some(true),
+        // R943: every instance minted after the deal is Created; `new_dealt_instance` clears the
+        // mark. Written in every game since the Meditative set shipped (v0.3.5; before it, only
+        // while the set was previewed, D14).
+        created: Some(true),
         set_as: None,
         granted_tags: None,
         grants: None,
@@ -1785,8 +1787,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
 }
 
 /// MD-B6, R943: the dealt deck cards — `build_game`'s deck loop and a Glitch reset's new deal —
-/// are never Created. Every other `new_instance` call mints a Created card while the Meditative set
-/// is open (D14).
+/// are never Created. Every other `new_instance` call mints a Created card.
 pub fn new_dealt_instance(
     state: &mut impl NextId,
     def_id: &str,
@@ -2105,7 +2106,7 @@ mod tests {
                 "id": "c7", "defId": "core-001", "owner": "p2", "controller": "p2", "radiant": false,
                 "zone": { "z": "hand", "player": "p2" }, "damage": 0, "buffs": { "attack": 0, "health": 0 },
                 "grantedKeywords": [], "vanilla": false, "costMod": 0, "counters": {}, "memory": {},
-                "exertion": { "attacked": false, "switched": false }
+                "exertion": { "attacked": false, "switched": false }, "created": true
             })
         );
         assert_eq!(serde_json::from_value::<CardInstance>(json).unwrap(), card);

@@ -6,7 +6,7 @@
 //! - `fallback`: which waiting ticket pairs with a bot, and with which (R1447).
 //! - `pool`: how many bots there are, who they are and what they play (R1448).
 //!
-//! A bot is a profile of kind `bot` (server-only, migration 0031) with a `bots` row and an R610
+//! A bot is a profile of kind `bot` (server-only, migration 0032) with a `bots` row and an R610
 //! rating. Nothing a client reads tells its seat from a person's (CLAUDE.md rule 7, R1446).
 
 pub mod fallback;
