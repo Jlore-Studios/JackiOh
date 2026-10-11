@@ -5,7 +5,8 @@
 //!            — cards 1, discount 1
 //!   Engine:  "A player effect for the rest of the game (§10.1): a `never`-expiry player modifier on the
 //!            caster that acts at their start of turn, among the start-of-turn triggers (R62). The pool
-//!            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51."
+//!            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51, M #87,
+//!            M #97."
 //!
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's
@@ -70,7 +71,18 @@ mod tests {
     const CONTRACT: &str = "classicplus-052";
     const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
     const FILLER: &str = "core-005";
-    const POOL: [&str; 5] = ["classic-004", "classicplus-048", "classicplus-051", "core-013", "core-014"];
+    /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51
+    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockheed's Evil Blueprints (§8.8).
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool.
+    const POOL: [&str; 7] = [
+        "classic-004",
+        "classicplus-048",
+        "classicplus-051",
+        "core-013",
+        "core-014",
+        "meditative-087",
+        "meditative-097",
+    ];
 
     use crate::scenario;
 
@@ -190,7 +202,7 @@ mod tests {
         }
 
         #[test]
-        fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_and_c_n48_n51_never_this_card() {
+        fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_c_n48_n51_and_meditative_n87_n97_never_this_card() {
             let mut seen: IndexSet<String> = IndexSet::new();
             for i in 0..60 {
                 let mut s = signed(false, Some(&format!("contract-{i}")), None, None);
