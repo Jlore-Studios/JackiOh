@@ -5935,19 +5935,23 @@
         {
           "at": "2026-10-11T16:10:14Z",
           "minutes": 11.7
+        },
+        {
+          "at": "2026-10-11T16:55:34Z",
+          "minutes": 21.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-11T20:50:00Z",
-          "utilization": 0.19
+          "utilization": 0.91
         },
-        "observed_at": "2026-10-11T16:10:14Z",
+        "observed_at": "2026-10-11T16:55:34Z",
         "seven_day": {
           "resets_at": "2026-10-17T05:00:00Z",
-          "utilization": 0.41
+          "utilization": 0.47
         },
-        "status": "allowed"
+        "status": "allowed_warning"
       }
     },
     "claude-3": {
