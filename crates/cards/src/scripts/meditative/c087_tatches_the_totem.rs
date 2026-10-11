@@ -289,7 +289,7 @@ mod tests {
                             GameEvent::Upgraded { instance_id, .. } => Some(instance_id.clone()),
                             _ => None,
                         })
-                        .last()
+                        .next_back()
                         .expect("the Buff");
                     if hand.contains(&buffed) {
                         hand_hit = true;
