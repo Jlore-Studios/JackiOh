@@ -84,17 +84,24 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
     }
     // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's. Their worth is
     // the damage they soak, which `face_threat` and the reply already count, so here they count for
-    // only `positionGrants`. A unit's own Taunt, printed or granted (`card_keywords` leaves the
-    // position's grant out), is kept in full, and the Armor discount applies only when Armor is on the
-    // body, so an Indestructible unit, whose Taunt is gone, still discounts its position Armor.
+    // only `positionGrants`. With `defenseOwnTauntKept` a unit's own Taunt, printed or granted
+    // (`card_keywords` leaves the position's grant out), is kept in full, and the Armor discount
+    // applies only when Armor is on the body, so an Indestructible unit, whose Taunt is gone, still
+    // discounts its position Armor. Without it (the frozen baseline), every Taunt in Defense Position
+    // is discounted with a point of Armor.
     if view.position == Position::Def {
-        if has_keyword(&view.keywords, KeywordKind::Taunt)
-            && !has_keyword(&card_keywords(state, unit), KeywordKind::Taunt)
-        {
-            value -= (1.0 - w.position_grants) * weights.taunt;
-        }
-        if view.armor > 0 {
-            value -= (1.0 - w.position_grants) * w.armor_point;
+        let taunts = has_keyword(&view.keywords, KeywordKind::Taunt);
+        if !w.defense_own_taunt_kept {
+            if taunts {
+                value -= (1.0 - w.position_grants) * (weights.taunt + w.armor_point);
+            }
+        } else {
+            if taunts && !has_keyword(&card_keywords(state, unit), KeywordKind::Taunt) {
+                value -= (1.0 - w.position_grants) * weights.taunt;
+            }
+            if view.armor > 0 {
+                value -= (1.0 - w.position_grants) * w.armor_point;
+            }
         }
     }
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's

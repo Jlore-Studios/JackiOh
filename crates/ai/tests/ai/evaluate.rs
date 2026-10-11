@@ -9,7 +9,7 @@
 //! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
-use jackioh_ai::{AI_EVAL, NextSwing, evaluate, face_threat, unit_worth};
+use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
     PlayerId, Value, Winner, json,
@@ -308,6 +308,20 @@ mod evaluate_the_strength_passs_terms {
                 10,
             );
         }
+    }
+
+    #[test]
+    fn greedy_eval_still_discounts_a_taunt_units_own_taunt_in_defense_position() {
+        // The frozen baseline: Midrange Menace in Defense Position loses a Taunt and a point of Armor.
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let unit = first_unit(&defense);
+        let w = GREEDY_EVAL;
+        let body = w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
+        assert_close(
+            unit_worth(&defense, &unit, &w),
+            body - (1.0 - w.position_grants) * (w.keyword.taunt + w.armor_point),
+            10,
+        );
     }
 
     #[test]
