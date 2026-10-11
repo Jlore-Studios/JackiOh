@@ -4251,6 +4251,7 @@
         "tier": "strong",
         "why": "Line 5 (no rules work) was the one in doubt. It holds because pool() reuses the engine's existing pub catalog::excluding_def_id, so only crates/cards/src/query.rs and a test in crates/cards/tests/ change, and nothing in crates/engine/src/."
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-10-11T18:13:45Z",
         "family": "claude",
@@ -4267,7 +4268,9 @@
       "planned_at": "2026-10-11T18:14:04Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 672,
       "provider": "devin",
+      "question": "",
       "run_id": "38162965968",
       "started_at": "2026-10-11T18:15:03Z",
       "stop_requested": false,
