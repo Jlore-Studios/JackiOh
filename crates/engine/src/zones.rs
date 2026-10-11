@@ -400,6 +400,14 @@ pub fn accepts_stack_card(
     slot.row == Row::Units || carried_at(state, slot).is_none()
 }
 
+/// MD-F12, R1281: whether this slot is an active stack base for `player`.
+pub fn stack_base_at(state: &GameState, player: PlayerId, slot: &ZoneSlot) -> bool {
+    slot.row == Row::Units
+        && slot.player == player
+        && card_at(state, *slot).is_some_and(|card| flags_of(state, card).stack_base == Some(true))
+        && accepts_stack_card(state, slot, Default::default())
+}
+
 /// Everything in a zone, top card first, so a move that lifts whole zones (#52's rotation, #87's board
 /// swap) sets each down whole (§3.2): a unit zone's pile, or a backrow zone's carried Unit, its top
 /// card and the dormant cards beneath (B5 E21, R446). Copies, for the mover to set down.
@@ -459,6 +467,10 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
 /// (R446). Its face, not where it stands: an animated card in a unit zone is a Unit there (R383) but
 /// never a Unit face, so it never lands on a carrier.
 fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
+    // R1040: a Unit set face-down under Knowledge Breaker's Aura stands in the backrow as a Field Trap.
+    if instance.set_as.is_some() {
+        return false;
+    }
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
     face.type_.unwrap_or(def.type_) == CardType::Unit
@@ -716,6 +728,24 @@ pub fn place_on_field(
             side.backrow[index] = Some(placed);
         }
     }
+    true
+}
+
+/// R638, R13: places a card beneath the top card of a unit zone pile.
+/// This is no arrival (R638), and the card lies dormant (R13).
+pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slot: ZoneSlot) -> bool {
+    if slot.row != Row::Units {
+        return false;
+    }
+    let Some(pile) = pile_at_mut(state, slot) else {
+        return false;
+    };
+    if pile.is_empty() {
+        return false;
+    }
+    instance.controller = slot.player;
+    instance.zone = zone_of(slot);
+    pile.insert(1, instance.clone());
     true
 }
 
@@ -1020,6 +1050,10 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             pile.remove(at);
             // R212: a move of a card that left a pile's top ends that removal's Stack note.
             note_moved(state, &instance.id);
+            // R1140: and a card leaving a hand ends its stay there, which a hand watch was aimed at.
+            if zone == OffFieldZone::Hand {
+                forget_hand_watch(state, &instance.id);
+            }
             // R155: §5.1's end-of-turn return belongs to the Spell its own play landed in the graveyard
             // (§10.5 step 7). A card that leaves the graveyard has spent that landing, so whatever puts
             // it back there this turn — a discard (#76), a burn — is no play of its, and it stays (R153).
@@ -1051,12 +1085,15 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
 /// Patch v0.2.0 adds three more that persist in every zone (R385, R386, B5 E39): `tuning` (what
 /// Degrade, Upgrade and KY's Constant changed), `brittle` (the Brittle count) and `enchantments` —
 /// none of them is touched here. The one exception is a Brittle count that has crumbled its card, which
-/// is spent and goes (R441, `brittle_count::drop_spent_brittle`).
+/// is spent and goes (R441, `brittle_count::drop_spent_brittle`). ME-CN's `chinese` flag persists the
+/// same way: nothing removes it (R1300). So do the tags an effect granted (R923).
 pub fn reset_instance(instance: &mut CardInstance) {
     drop_spent_brittle(instance);
     instance.damage = 0;
     instance.buffs = AttackHealth { attack: 0, health: 0 };
     instance.granted_keywords = Vec::new();
+    // ME-GRANT (MD-D13): granted Death abilities are lost with the card leaving the field (R78).
+    instance.grants = None;
     instance.vanilla = false;
     instance.counters = Counters::default();
     instance.memory = Default::default();
@@ -1078,16 +1115,20 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.embiggened = None;
     instance.divine_shield_spent = None;
     instance.marked_destroyed = None;
+    instance.marked_exiled = None;
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
+    instance.set_as = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or an exile pile is its printed card again, its price
 /// included — `costMod` (a discount, a surcharge, a Degrade's or Upgrade's cost step, KY's Constant's
 /// cost) and `costOverride` (a "(0)" given in a hand) both go, so it costs its printed cost (R65), or a
 /// fused card its fused definition's (R77). Its Radiant face, its `tuning`, its Brittle and times-played
-/// counts and its enchantments are what the card is or what happened to it, not a price, and stay.
+/// counts, its enchantments, its `chinese` flag (R1300) and its granted tags (R923) are what the card
+/// is or what happened to it, not a price, and stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
@@ -1107,6 +1148,30 @@ fn forget_watchers(state: &mut GameState, instance_id: &str) {
     state
         .delayed
         .retain(|effect| effect.watch.as_deref() != Some(instance_id));
+}
+
+/// R1140: a card leaving a hand ends its stay there. Every delayed effect watching it there
+/// (`DelayedEffect.handWatch`, Meditative #76) stops watching it, and one left watching nothing is
+/// dropped, so a card that comes back to a hand is a new stay nobody watches (R174) and its mark goes
+/// at the next sweep (`marks::sweep_marks`). Called by every removal from a hand: `remove_from_any_zone`
+/// and a play taking the card out of the hand (`play_steps::take_from_play_source`).
+pub fn forget_hand_watch(state: &mut GameState, instance_id: &str) {
+    if !state.delayed.iter().any(|effect| {
+        effect
+            .hand_watch
+            .as_ref()
+            .is_some_and(|ids| ids.iter().any(|id| id == instance_id))
+    }) {
+        return;
+    }
+    for effect in &mut state.delayed {
+        if let Some(ids) = effect.hand_watch.as_mut() {
+            ids.retain(|id| id != instance_id);
+        }
+    }
+    state
+        .delayed
+        .retain(|effect| effect.hand_watch.as_ref().is_none_or(|ids| !ids.is_empty()));
 }
 
 /// The zones a queue entry names when the card answered from the field (`triggers::queue_trigger`).
@@ -1533,8 +1598,12 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     left_the_field(state, &current.id);
     let turn = state.turn;
     let unit_face = row == Row::Units || is_unit_face(state, &current);
+    // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
+    // a Unit or a Spell face never stands there on its own.
+    let set_as = current.set_as.filter(|_| row == Row::Backrow);
     if let Some(live) = find_instance_mut(state, &current.id) {
         reset_instance(live);
+        live.set_as = set_as;
         live.controller = player;
         live.summoned_turn = Some(turn);
         if unit_face {

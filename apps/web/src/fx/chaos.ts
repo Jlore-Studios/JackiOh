@@ -2,8 +2,9 @@
 //
 // The engine reports the roll as `chaosRolled { player, instanceId, defId, effects }`, each effect as
 // the clause its card prints (the engine's `label`: `CHAOS_EFFECTS` in subsystems/callToChaos.ts,
-// `CHAOS_PLUS_EFFECTS` in callToChaosPlus.ts), in the order they resolve, on both seats (R97 redacts
-// only the card, never the roll). This module is the client's whole reading of it:
+// `CHAOS_PLUS_EFFECTS` in callToChaosPlus.ts, `CHAOS_MED_EFFECTS` in call_to_chaos_meditative.rs), in
+// the order they resolve, on both seats (R97 redacts only the card, never the roll). This module is
+// the client's whole reading of it:
 // - `chaosRollOf` is the one adapter onto the event, so a rename is one line;
 // - `CHAOS_EFFECT_NAMES` turns a clause into the short words a reel shows, per edition, in v0.2.0's
 //   words: "Deck" (R373), "(3) Cost" as the noun and "cost (2) less" as the verb (R432);
@@ -31,9 +32,10 @@ import {
 } from "./constants.ts";
 import type { FxAnchor, FxChaosCue, FxChaosLine, FxCue } from "./types.ts";
 
-/** The two editions (catalog ids). */
+/** The three editions (catalog ids). */
 export const CHAOS_CORE = "core-095";
 export const CHAOS_CLASSIC_PLUS = "classicplus-073";
+export const CHAOS_MEDITATIVE = "meditative-095";
 
 /** Each edition's effects, the clause the engine names → the words a reel shows, in the card's order. */
 export const CHAOS_EFFECT_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
@@ -59,6 +61,18 @@ export const CHAOS_EFFECT_NAMES: Readonly<Record<string, Readonly<Record<string,
     "Nerf every card on your opponent's field and in their hand three times": "Nerf the enemy's field and hand 3 times",
     "Summon a Classic Golem": "Summon a Classic Golem",
     "Replace your deck with random Call to Chaos cards, which cost (0)": "Replace the Deck with Calls to Chaos",
+    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
+  },
+  [CHAOS_MEDITATIVE]: {
+    "Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0)": "Fuse the hand, add 2 copies, all (0) Cost",
+    "Add 3 random CN cards to your hand, which cost (0)": "Add 3 (0) Cost CN cards",
+    "Add 2 random Prime cards to your hand, which cost (0)": "Add 2 (0) Cost Prime cards",
+    "Your hero gains 8 Armor and you heal it 8": "Hero gains 8 Armor and heals 8",
+    "Summon a Jade Beauty": "Summon a Jade Beauty",
+    "Summon 3 random Acclaimed cards": "Summon 3 random Acclaimed cards",
+    "Bounce every enemy permanent, then Nerf each card bounced": "Bounce the enemy's field, then Nerf it",
+    "Summon a CN Golem": "Summon a CN Golem",
+    "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos": "Each turn, cast a random Call to Chaos",
     "Cast a random Call to Chaos": "Cast a random Call to Chaos",
   },
 };

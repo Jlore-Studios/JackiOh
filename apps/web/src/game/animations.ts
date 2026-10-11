@@ -371,6 +371,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "radiant" },
     target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
   },
+  // The gold glow goes out, stats swap back. The `zone` payload says where the card is standing.
+  deradianted: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
+  },
   // Card spins and shows its new face. Pre-update the old instance is the one on the board.
   transformed: {
     animation: "jk-spin-face",
@@ -469,6 +476,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "mana" },
     target: (e, view) => animTestid.mana(sideOf(view, e.player)),
   },
+  // Mana paid for a play or an activation; `manaChanged` sounds it.
+  manaSpent: {
+    animation: "jk-crystal-fill",
+    durationMs: 150,
+    testid: "mana-<side>",
+    target: (e, view) => animTestid.mana(sideOf(view, e.player)),
+  },
   // Banner "Your turn" / "Opponent's turn".
   turnStarted: {
     animation: "jk-banner",
@@ -521,6 +535,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     durationMs: 300,
     testid: "draw-toast",
     target: () => animTestid.drawToast,
+  },
+  // MD-D29, R1127: the emoter's hero shakes — the emote layer shows the emote itself (R644), so the
+  // game animation only marks who sent it, and resolves instantly on an existing keyframe.
+  emoted: {
+    animation: "jk-loss-pop",
+    durationMs: 0,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
   // Result overlay. BUILD's Duration column is "—": the overlay is terminal, nothing renders
   // behind it and nothing waits on it, so its duration is 0 and the entry resolves instantly.
@@ -725,6 +747,31 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R983: a Feng Shui judged a play; the turn banner shows 吉 or 凶, the view after it the rewarded
+  // or punished card.
+  fengShui: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
+  // ME-CN, R1301: the card pulses as its words turn Chinese; the view after it draws them so. Only
+  // the language changed, so no effect decorates it.
+  translated: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R800: a discard a discard guard stopped — the hand shakes once; nothing leaves it.
+  discardPrevented: {
+    animation: "jk-fatigue",
+    durationMs: 300,
+    testid: "hand-<side>",
+    fx: { recipe: "fizzle" },
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
   // R1361, R1363 (MN05): the Armor took the whole hit. The target braces with a steel glint and no
   // number, since nothing was dealt, and the effects layer blooms a shield over it (fx/shield.ts).
   damageAbsorbed: {
@@ -736,6 +783,33 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       const side = heroSide(view, e.targetId);
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
+  },
+  // R961 (Meditative #39.2): the Jade Counter rose; the hero's Jade badge ticks, no fx.
+  jadeChanged: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // ME-SECRET (MB05, R860–R864): a secret is kept, revealed or judged. The badge by the hero
+  // fades in or out — no number, no effects-layer work (FX "—"): the badge itself is the change.
+  secretChosen: {
+    animation: "jk-badge-fade",
+    durationMs: 300,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  secretRevealed: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  predicted: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
 };
 
@@ -1197,6 +1271,7 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
   numberChanged: ["value"],
   cardAnnounced: ["cardType"],
   radiantSet: ["zone"],
+  deradianted: ["zone"],
   libraryOverflow: ["radiant"],
 };
 

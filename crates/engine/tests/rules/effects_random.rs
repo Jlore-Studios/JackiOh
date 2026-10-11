@@ -26,8 +26,10 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::config::FUSE_COST_CAP;
-use jackioh_engine::effects::{exile, flip_coin_keyword, flip_coins, fuse_cards, radiant_chance, rotate};
-use jackioh_engine::layers::unit_view;
+use jackioh_engine::effects::{
+    exile, flip_coin_keyword, flip_coins, fuse_cards, grant_keywords_random_unit, radiant_chance, rotate,
+};
+use jackioh_engine::layers::{keywords_of, unit_view};
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
@@ -35,6 +37,7 @@ use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use jackioh_engine::zones::{card_at, lock_zone};
 
+use super::fixtures::feng_shui::{FS, register_feng_shui};
 use super::fixtures::harness::{new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
@@ -272,6 +275,62 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
             of_type(&ran.events, "buffed"),
             vec![json!({ "type": "buffed", "instanceId": unit.id, "attack": 4, "health": 1 })]
         );
+    }
+
+    /// R1440: a flipper with Lucky 1 (given to it, R1438) flips each coin twice and keeps heads if
+    /// either lands heads, so five coins take ten draws and land the heads the seed's pairs predict.
+    /// Gary's rider is one more coin, rolled the same way: two draws.
+    #[test]
+    fn r1440_a_flipper_with_lucky_1_takes_two_draws_a_coin_and_keeps_heads() {
+        let mut state = game("coins-known");
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &unit.id)
+            .expect("gary is on the field")
+            .granted_keywords
+            .push(Keyword::Lucky { n: 1 });
+        let flipper = live(&state, &unit.id).clone();
+
+        let ran = run(
+            &mut state,
+            &[coins(json!({
+                "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 }, "perTails": { "health": 1 }
+            }))],
+            with_self(&flipper),
+        );
+
+        assert_eq!(draws(&ran), 10);
+        let mut predicted = Rng::new("coins-known", 0);
+        let heads = (0..5)
+            .filter(|_| {
+                let first = predicted.coin();
+                let second = predicted.coin();
+                first || second
+            })
+            .count() as i32;
+        // "coins-known" at cursor 0 flips T H H H H H T …: the first three pairs land heads.
+        assert!(heads >= 3);
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth {
+                attack: heads,
+                health: 5 - heads
+            }
+        );
+
+        let rider = flip_coin_keyword(json_as(json!({
+            "target": { "of": "self" },
+            "headsKeyword": { "kind": "Divine Shield" },
+            "tailsKeyword": { "kind": "Rush" },
+        })));
+        let before = state.rng_cursor;
+        let flipper = live(&state, &unit.id).clone();
+        let ran = run(&mut state, &[rider], with_self(&flipper));
+        assert_eq!(ran.cursor - before, 2);
     }
 
     #[test]
@@ -689,6 +748,34 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
 
         assert!(theirs.iter().all(|card| live(&state, &card.id).radiant));
         assert!(!mine.iter().any(|card| live(&state, &card.id).radiant));
+    }
+
+    #[test]
+    fn r987_luck_adds_a_roll_to_radiant_chance_for_its_controller_only() {
+        let run_for = |controller: PlayerId| -> Ran {
+            let mut state = game("eug-luck");
+            // After `game()`: `new_game` resets the registry, so the judge registers here.
+            register_feng_shui();
+            set_library(&mut state, PlayerId::P1, &bodies(6));
+            set_library(&mut state, PlayerId::P2, &bodies(6));
+            put(
+                &mut state,
+                &FS.judge.id,
+                slot(PlayerId::P1, Row::Backrow, 1),
+                json!({}),
+            );
+            run(
+                &mut state,
+                &[chance(json!({ "zone": "library", "chance": 0.3 }))],
+                RunOptions {
+                    controller: Some(controller),
+                    ..Default::default()
+                },
+            )
+        };
+        // p1's Luck 1 doubles the six rolls; p2 rolls as before.
+        assert_eq!(draws(&run_for(PlayerId::P1)), 12);
+        assert_eq!(draws(&run_for(PlayerId::P2)), 6);
     }
 }
 
@@ -1204,5 +1291,64 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
         assert!(of_type(&ran.events, "controlChanged").is_empty());
         // The card that stayed on this side still rotated.
         assert_eq!(where_is(&state, &stayer), "p1 units 2");
+    }
+}
+
+/// R1085 (M #65 Radiant): `grantKeywordsRandomUnit` grants a named list to one random acting Unit.
+mod r1085_grant_keywords_random_unit {
+    use super::*;
+
+    fn granting() -> Effect {
+        grant_keywords_random_unit(json_as(json!({
+            "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }],
+        })))
+    }
+
+    fn has(keyword_kinds: &[KeywordKind], kind: KeywordKind) -> bool {
+        keyword_kinds.contains(&kind)
+    }
+
+    #[test]
+    fn r1085_grants_every_keyword_to_one_random_unit() {
+        let mut state = game("grant-keywords");
+        let first = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+
+        let ran = run(&mut state, &[granting()], as_p1());
+
+        // One pick, and exactly one of the two Units holds both keywords afterwards.
+        assert_eq!(draws(&ran), 1);
+        let kinds_of = |id: &str| -> Vec<KeywordKind> {
+            keywords_of(&state, live(&state, id))
+                .iter()
+                .map(|keyword| keyword.kind())
+                .collect()
+        };
+        let first_kinds = kinds_of(&first.id);
+        let second_kinds = kinds_of(&second.id);
+        let first_has = has(&first_kinds, KeywordKind::Taunt) && has(&first_kinds, KeywordKind::Rush);
+        let second_has = has(&second_kinds, KeywordKind::Taunt) && has(&second_kinds, KeywordKind::Rush);
+        assert!(first_has ^ second_has);
+        assert_eq!(of_type(&ran.events, "keywordGranted").len(), 2);
+    }
+
+    #[test]
+    fn r1085_r129_no_unit_no_draw() {
+        let mut state = game("grant-keywords-empty");
+
+        let ran = run(&mut state, &[granting()], as_p1());
+
+        assert!(ran.events.is_empty());
+        assert_eq!(draws(&ran), 0);
     }
 }

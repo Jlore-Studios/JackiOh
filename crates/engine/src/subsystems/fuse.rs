@@ -51,14 +51,18 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP};
-use crate::script::{
-    ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
-    EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
-    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun,
-    WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
+use crate::config::{
+    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
 };
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use crate::script::{
+    ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
+    ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
+    FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod,
+    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TuneMultiplier,
+    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, read_hook, target_check,
+    would_counter_hook,
+};
+use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
     AttackHealth, CardCost, CardDef, CardFace, CardType, FusedIngredient, GameEvent, Keyword, KeywordKind,
     PlayerId, Rarity, Selection, SetName, Tag, TargetDecl, Zone, ZoneName, keyword_key,
@@ -278,6 +282,9 @@ fn fused_face(ingredients: &[CardInstance], defs: &[CardDef], radiant: bool, for
             .map(|face| face.text.as_str())
             .collect::<Vec<&str>>()
             .join("\n"),
+        // ME-GRANT: a fused face grants nothing itself; the fused script's grant map (R102) is what
+        // a grant it carries resolves through.
+        grants: None,
     }
 }
 
@@ -508,6 +515,7 @@ fn build_def(
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
+        craft: None,
         base: fused_face(ingredients, defs, false, forced),
         radiant: fused_face(ingredients, defs, true, forced),
     }
@@ -973,6 +981,28 @@ fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option
     }
 }
 
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply.
+/// None when no ingredient names one; otherwise each direction is the product of the ingredients
+/// that name it, and a direction none names is none.
+fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> Option<TuneMultiplier> {
+    let defined: Vec<TuneMultiplier> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    let product = |read: fn(&TuneMultiplier) -> Option<i32>| {
+        let factors: Vec<i32> = defined.iter().filter_map(read).collect();
+        if factors.is_empty() {
+            None
+        } else {
+            Some(factors.iter().product())
+        }
+    };
+    Some(TuneMultiplier {
+        upgrade: product(|flags| flags.upgrade),
+        degrade: product(|flags| flags.degrade),
+    })
+}
+
 /// `summed_count` for a flag that holds only a number (`echoGrant`).
 fn summed_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     let defined: Vec<i32> = values.into_iter().flatten().collect();
@@ -1025,11 +1055,29 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                     _ => Some(concat(tagged)),
                 },
                 copies_last_spell: flags(|f| f.copies_last_spell),
+                judges_plays: flags(|f| f.judges_plays),
+                hears_emotes: flags(|f| f.hears_emotes),
+                exiles_on_damage: flags(|f| f.exiles_on_damage),
+                tune_multiplier: multiplied_tune(defined.iter().map(|f| f.tune_multiplier)),
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
+                random_targets: flags(|f| f.random_targets),
+                attack_from_hand: flags(|f| f.attack_from_hand),
+                bounce_attacker: flags(|f| f.bounce_attacker),
+                attack_joiners: flags(|f| f.attack_joiners),
+                stack_base: flags(|f| f.stack_base),
+                stack_base_buffs: numbers(|f| f.stack_base_buffs),
+                tribute_cheap: numbers(|f| f.tribute_cheap),
+                lane_multiplier: numbers(|f| f.lane_multiplier),
+                credit_line: numbers(|f| f.credit_line),
+                credit_instalments: numbers(|f| f.credit_instalments),
+                credit_lapses: flags(|f| f.credit_lapses),
+                no_natural_mana: flags(|f| f.no_natural_mana),
+                feng_shui: flags(|f| f.feng_shui),
+                luck: summed_number(defined.iter().map(|f| f.luck)),
             })
         }
     }
@@ -1082,39 +1130,97 @@ fn combine_objects(records: &[Script]) -> Script {
         cry: None,
         death: hooks(|s| s.death.clone(), "death"),
         start_of_game: hooks(|s| s.start_of_game.clone(), "startOfGame"),
+        enters_hand: hooks(|s| s.enters_hand.clone(), "entersHand"),
         resume: combine_resume(records),
         delayed: hooks(|s| s.delayed.clone(), "delayed"),
         set_stat: None,
         start_of_turn: hooks(|s| s.start_of_turn.clone(), "startOfTurn"),
         end_of_turn: hooks(|s| s.end_of_turn.clone(), "endOfTurn"),
+        // ME-GRANT (MD-D13): a fused card merges its ingredients' grant maps (R102); the keys name
+        // their definition (`<defId>#<key>`), so they never collide.
+        grants: {
+            let mut grants: IndexMap<&'static str, Hook> = IndexMap::new();
+            for record in records {
+                for (key, hook) in &record.grants {
+                    grants.insert(*key, hook.clone());
+                }
+            }
+            grants
+        },
         aura: None,
+        attack_mods: None,
         triggers: lists_of_triggers(|s| s.triggers.clone()),
         on_play_hook: hooks(|s| s.on_play_hook.clone(), "onPlayHook"),
         hand_triggers: lists_of_triggers(|s| s.hand_triggers.clone()),
         static_flags: combine_static_flags(records),
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
+        // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
+        secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
         preview: eager_condition(records.iter().map(|s| s.preview.clone()).collect()),
         activations: concat(records.iter().map(|s| s.activations.clone())),
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
+        face_down_play: eager_read(records.iter().map(|s| s.face_down_play.clone()).collect()),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
+        discard_guard: eager_read(records.iter().map(|s| s.discard_guard.clone()).collect()),
         replacements: concat(records.iter().map(|s| s.replacements.clone())),
         hero_guard: eager_read(records.iter().map(|s| s.hero_guard.clone()).collect()),
         conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
+        after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         plague_multiplier: None,
+        echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),
         tribute_when: None,
         would_counter: None,
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
+        turn_hook_extra: None,
+        cry_death_extra: None,
     }
+}
+
+/// MD-D4, R1120: a fusion carries every ingredient's combat-only attack modifiers — attacks added,
+/// Poisonous or-ed — each read with its own ingredient as the source, as `fused_aura` reads.
+fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
+    let hooks: Vec<Option<AttackModHook>> =
+        faces.iter().map(|face| face.script.attack_mods.clone()).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(attack_mod_hook(move |args| {
+        let mut out = AttackMod::default();
+        for (index, hook) in hooks.iter().enumerate() {
+            let Some(hook) = hook else {
+                continue;
+            };
+            let recorded =
+                crate::scripts::ingredients_of(args.self_).is_some_and(|records| records.len() > index);
+            if !recorded {
+                let got = hook(args);
+                out.attack += got.attack;
+                out.poisonous = out.poisonous || got.poisonous;
+                continue;
+            }
+            let card = crate::scripts::as_ingredient(args.self_, index);
+            let got = hook(AttackModArgs {
+                state: args.state,
+                self_: &card,
+                radiant: args.radiant,
+                attacker: args.attacker,
+                defender: args.defender,
+            });
+            out.attack += got.attack;
+            out.poisonous = out.poisonous || got.poisonous;
+        }
+        out
+    }))
 }
 
 /// One ingredient's script, ready to be combined: without its `cost` hook, because R77 fixes the
@@ -1122,7 +1228,7 @@ fn combine_objects(records: &[Script]) -> Script {
 /// members that return no list (`setStat`, summed like every other stat R77 sums; `conditionMet`,
 /// R195's yellow glow, which answers a boolean, so the ingredients' hooks are or-ed (R196);
 /// `tributeWhen` and `wouldCounter` (R403, R667), or-ed the same way; `plagueMultiplier` (R471), which
-/// multiplies), each combined on its own; and with its trigger ids namespaced, so two ingredients that
+/// multiplies; `attackMods` (R1120), summed the same way; `echoX` (R802), the larger), each combined on its own; and with its trigger ids namespaced, so two ingredients that
 /// both call a trigger "turn-end" stay two distinct conditions on the fused card — each running in its
 /// ingredient's place (R102), so a question it asks comes back to its own step — and its Activate
 /// abilities run in its place (R102, R384).
@@ -1142,7 +1248,10 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
         condition_met: None,
         tribute_when: None,
         plague_multiplier: None,
+        echo_x: None,
         would_counter: None,
+        turn_hook_extra: None,
+        cry_death_extra: None,
         triggers: namespaced(&script.triggers),
         hand_triggers: namespaced(&script.hand_triggers),
         deck_triggers: namespaced(&script.deck_triggers),
@@ -1256,6 +1365,32 @@ fn fused_set_stat(scripts: &[&Script]) -> Option<SetStatHook> {
     }
 }
 
+/// R802: a computed Echo X on a fused card. A number in `staticFlags` takes the larger of the
+/// ingredients' (`combine_static_flags`), so the computed one does too, each hook asked about the fused
+/// card at its own ingredient's price (`as_ingredient`, R102).
+fn fused_echo_x(scripts: &[&Script]) -> Option<EchoXHook> {
+    let hooks: Vec<Option<EchoXHook>> = scripts.iter().map(|script| script.echo_x.clone()).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(read_hook(move |args| {
+        hooks
+            .iter()
+            .enumerate()
+            .fold(0, |largest, (index, echo_x)| match echo_x {
+                None => largest,
+                Some(echo_x) => {
+                    let card = crate::scripts::as_ingredient(args.self_, index);
+                    largest.max(echo_x(HookArgs {
+                        state: args.state,
+                        self_: &card,
+                        radiant: args.radiant,
+                    }))
+                }
+            })
+    }))
+}
+
 /// R471: "Plague Counters placed on this are doubled" (Classic #27). Each ingredient's text multiplies
 /// what is placed on the fused card, so two such texts multiply: a Pestilent Slime fused onto a
 /// Pestilent Slime quadruples, as two doublings in a row do. Each hook is asked about the fused card
@@ -1282,6 +1417,35 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
                             self_: &card,
                             radiant: args.radiant,
                         })
+                }
+            })
+    }))
+}
+
+/// R820: a trigger multiplier (Meditative #9, #10). Multipliers never stack, so a fused card carrying
+/// two such texts gives the higher of its ingredients' extras, not their sum, as two cards on the field
+/// do. Each hook is asked about the fused card at its own ingredient's price (`as_ingredient`, R102).
+fn fused_highest_extra(
+    scripts: &[&Script],
+    read: fn(&Script) -> Option<TriggerExtraHook>,
+) -> Option<TriggerExtraHook> {
+    let hooks: Vec<Option<TriggerExtraHook>> = scripts.iter().map(|script| read(script)).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(read_hook(move |args| {
+        hooks
+            .iter()
+            .enumerate()
+            .fold(TRIGGER_EXTRA_NONE, |highest, (index, extra)| match extra {
+                None => highest,
+                Some(extra) => {
+                    let card = crate::scripts::as_ingredient(args.self_, index);
+                    highest.max(extra(HookArgs {
+                        state: args.state,
+                        self_: &card,
+                        radiant: args.radiant,
+                    }))
                 }
             })
     }))
@@ -1490,8 +1654,12 @@ fn fused_script(
     combined.set_stat = fused_set_stat(&scripts);
     combined.condition_met = fused_condition_met(&scripts);
     combined.aura = fused_aura(&faces);
+    combined.attack_mods = fused_attack_mods(&faces);
     combined.cry = fused_cry(&faces);
     combined.plague_multiplier = fused_plague_multiplier(&scripts);
+    combined.echo_x = fused_echo_x(&scripts);
+    combined.turn_hook_extra = fused_highest_extra(&scripts, |script| script.turn_hook_extra.clone());
+    combined.cry_death_extra = fused_highest_extra(&scripts, |script| script.cry_death_extra.clone());
     combined
 }
 
@@ -1735,8 +1903,9 @@ fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &Card
 }
 
 /// R102, B3.4 rule 4, R443: what a fusion's card carries of its ingredients' instance data — their
-/// tuning summed (`tuning::sum_tunings`) and their enchantments united. A Brittle count is a counter,
-/// which a Fuse keeps only on the kept card as it keeps its other counters (R77).
+/// tuning summed (`tuning::sum_tunings`) and their enchantments united — and their granted tags
+/// united (MD-B15, R923). A Brittle count is a counter, which a Fuse keeps only on the kept card as
+/// it keeps its other counters (R77).
 fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     let tunings: Vec<_> = ingredients
         .iter()
@@ -1744,6 +1913,34 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
         .collect();
     card.tuning = crate::tuning::sum_tunings(&tunings);
     card.enchantments = crate::enchantments::united_enchantments(ingredients);
+    // MD-B15, R923: a Fuse unites the granted tags of every ingredient, the kept card itself
+    // included, in order — and carries none when no ingredient has any.
+    let mut seen: IndexSet<Tag> = IndexSet::new();
+    for tags in std::iter::once(card.granted_tags.clone().unwrap_or_default()).chain(
+        ingredients
+            .iter()
+            .map(|ingredient| ingredient.granted_tags.clone().unwrap_or_default()),
+    ) {
+        for tag in tags {
+            seen.insert(tag);
+        }
+    }
+    card.granted_tags = if seen.is_empty() {
+        None
+    } else {
+        Some(seen.into_iter().collect())
+    };
+    // ME-GRANT (MD-D13): a Fuse unites the granted Death abilities of every ingredient, the kept
+    // card itself included, in order — and carries none when no ingredient has any.
+    let mut united: Vec<Grant> = card.grants.clone().unwrap_or_default();
+    for ingredient in ingredients {
+        for grant in ingredient.grants.clone().unwrap_or_default() {
+            if !united.contains(&grant) {
+                united.push(grant);
+            }
+        }
+    }
+    card.grants = if united.is_empty() { None } else { Some(united) };
 }
 
 /// The terms a crafted hand card is made on (TS `craftInHand`'s `terms`).
@@ -1774,6 +1971,14 @@ fn craft_in_hand(
     }
     // R102, B3.4 rule 4, R443: as `keep_instance`'s.
     carry_instance_data(&mut card, ingredients);
+    // ME-CN, R1300: a newly made fused card is Chinese when any ingredient was (a kept instance keeps
+    // its own flag, as it keeps its id).
+    if ingredients
+        .iter()
+        .any(|ingredient| ingredient.chinese == Some(true))
+    {
+        card.chinese = Some(true);
+    }
     for ingredient in ingredients {
         crate::zones::cease_to_exist(sink.state, &mut ingredient.clone());
     }

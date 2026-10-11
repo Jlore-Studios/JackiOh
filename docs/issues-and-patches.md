@@ -152,8 +152,8 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
   for players. Code nothing reaches yet is fine. A changed card, rule or screen waits for the last
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
   version, keep a draft PR to main open, and land the whole thing as the last part. A new set may
-  instead be built on main behind the release gate (R1420), as the Meditative set is (#496,
-  `docs/meditative-set.md` M3). Its cards are in the catalog but in no pool, deck, list or patch
+  instead be built on main behind the release gate (R1420), as the Meditative set was (#496,
+  `docs/meditative-set.md` M3, shipped by #553). Its cards are in the catalog but in no pool, deck, list or patch
   until its last part adds the set to `SHIPPED_SETS`, so its parts need no fragment, move no golden
   trace and can merge in any order. Work under the same tracker that players should see as soon as
   it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.

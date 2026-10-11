@@ -164,7 +164,7 @@ mod tests {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AttackDeclared { attacker_id, target_id, forced } if attacker_id == id => {
+                GameEvent::AttackDeclared { attacker_id, target_id, forced, .. } if attacker_id == id => {
                     Some((target_id.clone(), *forced))
                 }
                 _ => None,

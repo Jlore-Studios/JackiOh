@@ -84,6 +84,7 @@ const VARIETY_SALT = 0x2545f491;
 const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
   classicplus: 0x5921ab01,
+  meditative: 0x16056737,
 };
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;

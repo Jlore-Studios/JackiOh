@@ -25,7 +25,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::HAND_CAP;
 use crate::draw::DrawOutcome;
 use crate::own_library::hide_from_owner;
 use crate::preview::is_face_down;
@@ -115,7 +114,8 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
     let mut card = live(sink.state, card);
     // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4): the same test, read before
     // the move, names where it went.
-    let burns = sink.state.players[card.owner].hand.len() as i32 >= HAND_CAP;
+    let burns =
+        sink.state.players[card.owner].hand.len() as i32 >= crate::query::hand_cap_of(sink.state, card.owner);
     crate::draw::add_to_hand(sink, &mut card);
     Some(if burns { TakenTo::Burned } else { TakenTo::Hand })
 }

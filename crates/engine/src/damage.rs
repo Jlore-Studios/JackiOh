@@ -61,6 +61,11 @@ pub struct DamageFlags {
     pub lifesteal: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample: Option<bool>,
+    /// MD-D4, R1120: the effect states that its own damage has Poisonous, as `lifesteal` states
+    /// Lifesteal — so a combat strike an attack modifier gilded destroys its Unit target (step 7)
+    /// without the source having the keyword. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poisonous: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -141,7 +146,7 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
 /// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
 /// card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's hero
 /// guards read.
-fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
         .into_iter()
         .cloned()
@@ -179,7 +184,8 @@ fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
 
 /// §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
 /// in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
-/// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins.
+/// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins. A hero immune
+/// to damage (Meditative #48, MD-C21) caps every hit at 0.
 pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
@@ -192,6 +198,14 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
             .iter()
             .filter_map(|guard| guard.cap.map(|cap| cap.max(0))),
     );
+    // MD-C21: immunity is a cap of 0, so it wins over every other cap.
+    if state.players[player]
+        .mods
+        .iter()
+        .any(|modifier| matches!(modifier.kind, ModifierKind::HeroImmune))
+    {
+        caps.push(0);
+    }
     caps.into_iter().min()
 }
 
@@ -325,14 +339,21 @@ pub fn deal_damage(sink: &mut DamageSink<'_>, args: DamageArgs) -> i32 {
     }
     // E6: before step 1, a Spell's hit is raised by its controller's Spell Damage.
     let raised = amount_in + spell_damage_for(sink.state, args.source.as_ref());
-    land_hit(sink, &args, raised, 0)
+    land_hit(sink, &args, raised, 0, &[])
 }
 
 /// §4.4 from step 1, for a hit already raised by Spell Damage. A Trample excess (step 9) and a
 /// redirected hit (E9) are new instances of the same hit, so they come back in here rather than
 /// through `deal_damage`, which would raise them a second time. `redirects` counts how often this hit
-/// has moved hero already (`DAMAGE_REDIRECT_CAP`).
-fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redirects: u32) -> i32 {
+/// has moved already (`DAMAGE_REDIRECT_CAP`); `caught` names the guards that have caught it, so each
+/// catches a given hit once (R1204, R460).
+fn land_hit(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    amount_in: i32,
+    redirects: u32,
+    caught: &[String],
+) -> i32 {
     let source = args.source.as_ref();
     let target = &args.target;
     let flags = args.flags.as_ref();
@@ -405,13 +426,20 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         && sink.state.players[*player].hero.health - amount <= 0
     {
         let source_id = source.map(|card| card.id.clone());
-        let to = crate::replacements::lethal_hit_window(sink, *player, amount, source_id);
+        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
         if let Some(to) = to {
+            // R1204: the hit the guard catches is never caught again by the same guard — and a
+            // hero-to-hero redirect changes controllers, so the old side's catchers can never answer
+            // the new walk anyway. Only a Unit destination names its catcher.
+            let mut next_caught: Vec<String> = caught.to_vec();
+            if let DamageTarget::Unit { instance } = &to {
+                next_caught.push(instance.id.clone());
+            }
             let redirected = DamageArgs {
-                target: DamageTarget::Hero { player: to },
+                target: to,
                 ..args.clone()
             };
-            return land_hit(sink, &redirected, amount_in, redirects + 1);
+            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
         }
     }
 
@@ -444,6 +472,32 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         return 0;
     }
 
+    // ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too. A hit that alone would leave a Unit
+    // nothing has killed yet (R42) at 0 or less — judged after steps 0 to 4, so a Divine Shield
+    // that took the hit and an Indestructible that takes nothing never open it — meets the
+    // replacements, which may send it to a guard as a new instance from the same source, through
+    // the guard's own pipeline.
+    if let Some(live) = &unit
+        && amount > 0
+        && redirects < DAMAGE_REDIRECT_CAP
+        && !already_killed(sink.state, live)
+        && crate::layers::unit_view(sink.state, live).health - amount <= 0
+    {
+        let source_id = source.map(|card| card.id.clone());
+        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
+        if let Some(to) = to {
+            let mut next_caught: Vec<String> = caught.to_vec();
+            if let DamageTarget::Unit { instance } = &to {
+                next_caught.push(instance.id.clone());
+            }
+            let redirected = DamageArgs {
+                target: to,
+                ..args.clone()
+            };
+            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
+        }
+    }
+
     // Step 5: apply, capping what a Trample source deals to a unit at its health (R63).
     let mut dealt = amount;
     let mut trample_excess = 0;
@@ -473,7 +527,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
                 amount: trample_excess,
                 flags: args.flags,
             };
-            land_hit(sink, &excess, trample_excess, 0);
+            land_hit(sink, &excess, trample_excess, 0, caught);
         }
         return 0;
     }
@@ -507,7 +561,8 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
     // Step 7: Poisonous destroys a damaged unit.
     if let (Some(live), Some(source_card)) = (&unit, source)
         && dealt >= 1
-        && source_has(sink.state, Some(source_card), KeywordKind::Poisonous)
+        && (source_has(sink.state, Some(source_card), KeywordKind::Poisonous)
+            || flags.is_some_and(|flags| flags.poisonous == Some(true)))
         && let Some(card) = find_instance_mut(sink.state, &live.id)
     {
         card.marked_destroyed = Some(true);
@@ -517,6 +572,18 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
             let killer = crate::kill_credit::credited_killer_id(source_card, card);
             card.last_damaged_by = Some(killer);
         }
+    }
+
+    // MD-D31, R1124: exile on damage rides beside Poisonous — when the source's card exiles on
+    // damage, the damaged Unit is marked, and the next state check exiles it ahead of deaths (§4.5
+    // step 1). A hit the pipeline stopped (Divine Shield, Indestructible, the zero rule) never
+    // reaches here, so none of them is exiled.
+    if let (Some(live), Some(source_card)) = (&unit, source)
+        && dealt >= 1
+        && crate::scripts::flags_of(sink.state, source_card).exiles_on_damage == Some(true)
+        && let Some(card) = find_instance_mut(sink.state, &live.id)
+    {
+        card.marked_exiled = Some(true);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt. R85: an effect
@@ -530,7 +597,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
     }
 
     // Step 9: Trample sends the excess to the target's controller's hero as its own instance — of the
-    // same hit, so not raised again by Spell Damage.
+    // same hit, so not raised again by Spell Damage. R1204: the excess keeps the hit's catchers.
     if trample_excess > 0 {
         let excess = DamageArgs {
             source: args.source.clone(),
@@ -540,7 +607,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
             amount: trample_excess,
             flags: args.flags,
         };
-        land_hit(sink, &excess, trample_excess, 0);
+        land_hit(sink, &excess, trample_excess, 0, caught);
     }
 
     dealt

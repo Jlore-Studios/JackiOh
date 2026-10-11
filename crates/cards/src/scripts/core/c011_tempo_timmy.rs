@@ -51,6 +51,7 @@ mod tests {
             cry,
             death,
             start_of_game,
+            enters_hand,
             resume,
             delayed,
             set_stat,
@@ -63,6 +64,7 @@ mod tests {
             static_flags,
             targets,
             modes,
+            secret_modes,
             condition_met,
             preview,
             activations,
@@ -72,22 +74,31 @@ mod tests {
             targeting_discards,
             records_play_as,
             draw_limit,
+            discard_guard,
             replacements,
             hero_guard,
+            attack_mods,
             conditional_keywords,
             after_attack,
+            after_attacked,
             plague_multiplier,
+            echo_x,
             deck_triggers,
             graveyard_triggers,
             quests,
             tribute_when,
             would_counter,
             start_of_opponent_turn,
+            face_down_play,
+            turn_hook_extra,
+            cry_death_extra,
+            grants,
         } = script;
         cost.is_none()
             && cry.is_none()
             && death.is_none()
             && start_of_game.is_none()
+            && enters_hand.is_none()
             && resume.is_empty()
             && delayed.is_none()
             && set_stat.is_none()
@@ -100,6 +111,7 @@ mod tests {
             && static_flags.is_none()
             && targets.is_empty()
             && modes.is_empty()
+            && !secret_modes
             && condition_met.is_none()
             && preview.is_none()
             && activations.is_empty()
@@ -109,17 +121,25 @@ mod tests {
             && targeting_discards.is_none()
             && records_play_as.is_none()
             && draw_limit.is_none()
+            && discard_guard.is_none()
             && replacements.is_empty()
             && hero_guard.is_none()
+            && attack_mods.is_none()
             && conditional_keywords.is_none()
             && after_attack.is_none()
+            && after_attacked.is_none()
             && plague_multiplier.is_none()
+            && echo_x.is_none()
             && deck_triggers.is_empty()
             && graveyard_triggers.is_empty()
             && quests.is_none()
             && tribute_when.is_none()
             && would_counter.is_none()
             && start_of_opponent_turn.is_none()
+            && face_down_play.is_none()
+            && turn_hook_extra.is_none()
+            && cry_death_extra.is_none()
+            && grants.is_empty()
     }
 
     fn kinds(keywords: &[Keyword]) -> Vec<&'static str> {

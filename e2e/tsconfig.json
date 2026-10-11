@@ -21,6 +21,8 @@
       "@jackioh/cards": ["../apps/web/src/wire/cards.ts"],
       "@jackioh/cards/catalog.json": ["../crates/cards/catalog.json"],
       "@jackioh/cards/flavour.json": ["../crates/cards/flavour.json"],
+      "@jackioh/cards/chinese.json": ["../crates/cards/chinese.json"],
+      "@jackioh/cards/chinese-terms.json": ["../crates/cards/chinese-terms.json"],
       "@jackioh/ai": ["../apps/web/src/wire/ai.ts"],
       "@jackioh/ai/config": ["../apps/web/src/wire/ai.ts"],
       "@jackioh/server-config": ["../apps/web/src/wire/serverConfig.ts"]

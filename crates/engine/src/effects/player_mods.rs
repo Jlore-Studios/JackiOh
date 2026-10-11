@@ -20,9 +20,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::config::HAND_CAP_MAX;
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
 use crate::state::{ModifierExpiry, ModifierKind};
+use crate::wire::opponent_of;
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -57,5 +59,61 @@ pub fn add_player_modifier(args: AddPlayerModifierArgs) -> Effect {
         // function takes the context directly and no state write moves into this file.
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_modifier(ctx, player, args.mod_.expiry.clone(), args.mod_.kind.clone());
+    })
+}
+
+/// `setHandCap`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SetHandCapArgs {
+    /// The hand size, held to 0..=`HAND_CAP_MAX`.
+    pub cap: i32,
+    /// Whose hand, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// ME-HANDCAP, R1143 (Meditative #79 Touched by KY): "for the rest of the game, your hand size is N".
+/// A setting, not an increase: the latest one wins, a second of the same changes nothing, and it lasts
+/// whatever becomes of the card that set it. Every rule that reads the hand cap reads it
+/// (`query::hand_cap_of`). A hand already above a lowered size keeps its cards; only what arrives
+/// next is burned. Public in both views (`SideView.handCap`), so it says so with no event.
+pub fn set_hand_cap(args: SetHandCapArgs) -> Effect {
+    Effect::new("setHandCap", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        ctx.state.players[player].hand_cap = Some(args.cap.clamp(0, HAND_CAP_MAX));
+    })
+}
+
+/// `makeHeroImmune`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MakeHeroImmuneArgs {
+    /// Whose hero it covers, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// MD-C21 (Meditative #48 Tranquility): this player's hero is immune to damage until their next
+/// turn begins — a `HeroImmune` player modifier, read as a cap of 0 at §4.4 step 3.
+///
+/// Expiry is R757's Armor Up expiry: made on this player's turn it lasts through the opponent's
+/// next turn (`nextTurnOf` the opponent), so the cleanup ending that turn takes it off as this
+/// player's next turn begins. Made on the opponent's turn there is no turn of theirs to cover, so
+/// it ends at that turn's cleanup.
+pub fn make_hero_immune(args: MakeHeroImmuneArgs) -> Effect {
+    Effect::new("makeHeroImmune", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let expiry = if ctx.sink.state.active == player {
+            ModifierExpiry::NextTurnOf {
+                player: opponent_of(player),
+                from_turn: ctx.sink.state.turn,
+            }
+        } else {
+            ModifierExpiry::ThisTurn {
+                turn: ctx.sink.state.turn,
+            }
+        };
+        add_modifier(ctx, player, expiry, ModifierKind::HeroImmune);
     })
 }

@@ -178,7 +178,8 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// deck-builder needs the registered catalog, and this module is the one path to it.
 ///
 /// R1372: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
-/// (R1370); `None` deals the deck R258 always dealt for that seed.
+/// (R1370); `None` deals the deck R258 always dealt for that seed. A player's deck is dealt from every
+/// set, the AI's soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
     registered();
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
@@ -189,6 +190,7 @@ pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
         &AiDeckOptions {
             banned: Some(vec![]),
             lean_set: lean,
+            gated_sets: Some(vec![]),
             ..AiDeckOptions::default()
         },
     )

@@ -24,4 +24,12 @@ resume: Resume,
  * (`zones::move_to_zone`), so a card that comes back — bounced and replayed, or a Reborn body — is a
  * new arrival the effect never chose, and R76's "fizzles if the target has left the field" holds.
  */
-watch?: string, };
+watch?: string, 
+/**
+ * R1140 (ME-HANDMARK, Meditative #76 Do or Die): the hand cards this effect is aimed at, in the
+ * order it picked them. Each is dropped the moment its stay in that hand ends
+ * (`zones::forget_hand_watch`), and the entry with it once none is left; as it runs, its step
+ * reads the ones still watched (`effects::delay::HAND_WATCH_KEY`). Absent on every other entry,
+ * so a game that never watches a hand hashes as it did before this field existed (D14).
+ */
+handWatch?: Array<string>, };

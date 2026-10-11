@@ -116,7 +116,9 @@ type PracticeGame = {
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
 function isForbiddenAiAction(action: ActionBody): boolean {
-  if (action.type === "concede" || action.type === "offerDraw") return true;
+  // MD-D29, R1127: the persona's emote is no AI decision — it arrives on its own request, and the
+  // random policy never emotes, so the gate answers it, never the search.
+  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote") return true;
   return action.type === "answerDraw" && action.accept;
 }
 
@@ -129,13 +131,15 @@ function messageOf(cause: unknown): string {
  * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
  * ruling, printed as given. R1373: a random deck the player asked to lean on the newest set leans on
  * the newest set that ships (R1371), resolved here, where the deck is dealt; the AI's own deck never
- * leans.
+ * leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
+ * (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
     case "random":
       return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
         banned: [],
+        gatedSets: [],
         ...(choice.leanNewest === true ? { leanSet: newestShippedSet() } : {}),
       });
     case "preset": {

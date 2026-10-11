@@ -43,6 +43,8 @@ export const GAME_OVER_REASONS = [
   "disconnect",
   "match-ceiling",
   "voided",
+  "alt-win",
+  "won-by-effect",
 ] as const satisfies readonly GameOverReason[];
 
 type NoneMissing<T extends never> = T;

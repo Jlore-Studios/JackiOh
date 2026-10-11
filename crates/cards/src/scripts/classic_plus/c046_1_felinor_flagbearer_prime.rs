@@ -31,7 +31,8 @@ pub fn script() -> CardScripts {
                     unit.controller == ctx.self_.controller
                         && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
                         && unit.id != ctx.self_.id
-                        && def_of(Some(ctx.state), &unit.def_id).tags.contains(&Tag::Felinor)
+                        // MD-B15, R923: a granted Felinor tag counts.
+                        && tags_of(ctx.state, unit).contains(&Tag::Felinor)
                 }),
                 mod_: StatMod {
                     attack: Some(amount),
@@ -150,6 +151,19 @@ mod tests {
                     .count(),
                 1
             );
+        }
+
+        #[test]
+        fn r923_a_granted_felinor_gets_the_prime_aura() {
+            crate::register_all();
+            let mut s = muster(false, json!([{ "def": VANILLA, "lane": 2 }]));
+            s.play(PRIME, json!({ "zone": 4 }));
+            // Four Primes stand; the Vanilla is untouched until it counts as Felinor (MD-B15).
+            let vanilla = s.unit(P1, 2).expect("the Vanilla");
+            s.expect_stats(&vanilla, json!({ "attack": 4, "health": 4 }));
+            find_instance_mut(s.state_mut(), &vanilla.id).expect("the unit").granted_tags =
+                Some(vec![Tag::Felinor]);
+            s.expect_stats(&vanilla, json!({ "attack": 8, "health": 8 }));
         }
 
         #[test]

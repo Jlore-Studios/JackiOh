@@ -16,7 +16,10 @@ src/
                         The inspect overlays in play show the printed text beside a face wherever the two
                         differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
                         `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
-                        R660). Real art follows art/ART.md, which art/convention.test.ts holds
+                        R660). A card the view marks Chinese (`CardView.chinese`, ME-CN) draws its name, text,
+                        type line, tags, keywords and glossary in a match from `@jackioh/cards/chinese.json` and
+                        `chinese-terms.json` (chinese.ts, R1301, R1303); its Radiant marks are compared character
+                        by character (R1302). Real art follows art/ART.md, which art/convention.test.ts holds
                         public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's

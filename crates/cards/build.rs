@@ -52,12 +52,15 @@ fn main() {
     println!("cargo:rerun-if-changed={}", catalog_path.display());
     println!("cargo:rerun-if-changed={}", patches_path.display());
     println!("cargo:rerun-if-changed={}", scripts_dir.display());
+    let win_rates_path = manifest.join("data").join("win_rates.json");
+    println!("cargo:rerun-if-changed={}", win_rates_path.display());
 
     let catalog_ids = read_catalog_ids(&catalog_path);
     let version = read_catalog_version(&patches_path);
     println!("cargo:rustc-env=JACKIOH_CATALOG_VERSION={version}");
 
     let mut problems: Vec<String> = Vec::new();
+    check_win_rates(&win_rates_path, &mut problems);
     let files = find_card_files(&scripts_dir, &mut problems);
 
     // Every ID names a catalog card, and no two files claim one.
@@ -117,6 +120,62 @@ fn read_catalog_ids(path: &Path) -> Vec<String> {
         .unwrap_or_else(|| panic!("{}: not a JSON object", path.display()));
     // serde_json without `preserve_order` sorts keys; the order is not used, only membership.
     object.keys().cloned().collect()
+}
+
+/// ME-STATS (Meditative #50 CN Tech): `data/win_rates.json` holds `{ patch, source, cards }`,
+/// and the build fails, naming the path, unless `patch` is a string, `source` is `live` or
+/// `provisional`, every row id is unique, and every row reads `0 <= wins <= games`.
+fn check_win_rates(path: &Path, problems: &mut Vec<String>) {
+    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let value: serde_json::Value =
+        serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let table = value
+        .as_object()
+        .unwrap_or_else(|| panic!("{}: not a JSON object", path.display()));
+    if table.get("patch").and_then(|patch| patch.as_str()).is_none() {
+        problems.push(format!("{}: \"patch\" must be a string", path.display()));
+    }
+    if !matches!(
+        table.get("source").and_then(|source| source.as_str()),
+        Some("live") | Some("provisional")
+    ) {
+        problems.push(format!(
+            "{}: \"source\" must be \"live\" or \"provisional\"",
+            path.display()
+        ));
+    }
+    let mut seen: Vec<&str> = Vec::new();
+    for row in table
+        .get("cards")
+        .and_then(|cards| cards.as_array())
+        .into_iter()
+        .flatten()
+    {
+        let id = row.get("id").and_then(|id| id.as_str()).unwrap_or("");
+        let wins = row.get("wins").and_then(|wins| wins.as_i64());
+        let games = row.get("games").and_then(|games| games.as_i64());
+        if id.is_empty() {
+            problems.push(format!("{}: a win-rate row has no string \"id\"", path.display()));
+            continue;
+        }
+        if seen.contains(&id) {
+            problems.push(format!(
+                "{0}: win-rate row \"{id}\" is listed twice",
+                path.display()
+            ));
+        }
+        seen.push(id);
+        match (wins, games) {
+            (Some(wins), Some(games)) if 0 <= wins && wins <= games => {}
+            _ => problems.push(format!(
+                "{0}: win-rate row \"{id}\" must read 0 <= wins <= games",
+                path.display()
+            )),
+        }
+    }
+    if table.get("cards").and_then(|cards| cards.as_array()).is_none() {
+        problems.push(format!("{}: \"cards\" must be an array", path.display()));
+    }
 }
 
 /// The `version` of `patches.json`'s last entry: the newest shipped patch (SURFACE §7.4, §11.3).

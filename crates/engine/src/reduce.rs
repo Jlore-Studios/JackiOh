@@ -7,6 +7,8 @@
 //! refused for — come from the same place, so a client's greyed-out button and the reducer's error
 //! can never disagree (§9.3):
 //!
+//!   emote            → `emoted`, legal only while a card hears it (MD-D29, R1127)
+//!
 //!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
 //!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
@@ -62,7 +64,7 @@ use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_
 use crate::state::{
     AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance,
 };
-use crate::subsystems::activate::{ActivateAction, activate_ability, activate_actions_for};
+use crate::subsystems::activate::{ActivateAction, abilities_of, activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
 use crate::subsystems::hero_power::power_ability_of;
@@ -173,6 +175,23 @@ fn attack(
         return Err(EngineError::new(format!("no unit {attacker_id} you control")));
     };
 
+    // R1200: while a Mayor acts the attack names no target — the sentinel `"random"` — and the
+    // engine draws it from the attacker's legal ones. The sentinel with no Mayor, or a named
+    // target while a Mayor acts, is refused.
+    if target_id == crate::config::RANDOM_ATTACK_TARGET {
+        if !crate::random_targets::targets_random(sink.state) {
+            return Err(EngineError::new(format!("no target {target_id}")));
+        }
+        let Some(target) = crate::random_targets::draw_attack_target(sink.state, &mut *sink.rng, &attacker)
+        else {
+            return Err(EngineError::new(format!("no target {target_id}")));
+        };
+        return declare_attack(sink, &attacker, &target).map(|_| ());
+    }
+    if crate::random_targets::targets_random(sink.state) {
+        return Err(EngineError::new("targets are drawn at random while a Mayor acts"));
+    }
+
     let Some(target) = attack_target_of(sink.state, player, target_id) else {
         return Err(EngineError::new(format!("no target {target_id}")));
     };
@@ -264,7 +283,30 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
         }
         ActionBody::Play { .. } => {
             let play = PlayAction::from_body(&action.body).expect("a play action body is a PlayAction");
+            // MD-D28, R1125: judged on the pre-play state, ahead of §10.5 step 1, from the player's
+            // own concealed view.
+            if crate::subsystems::pareto::watching(sink.state, action.player_id) {
+                let optimal =
+                    crate::subsystems::pareto::judge_play(sink.state, action.player_id, &play.instance_id);
+                let turn = sink.state.turn;
+                sink.state.play_judgement = Some(crate::state::PlayJudgement {
+                    instance_id: play.instance_id.clone(),
+                    optimal,
+                    turn,
+                });
+            }
             run_play_steps(sink, action.player_id, &play).map(|_| ())
+        }
+        ActionBody::Emote { emote } => {
+            // MD-D29, R1127: an emote reaches the board only while a card hears it.
+            if !crate::query::emotes_heard(sink.state, action.player_id) {
+                return Err(EngineError::new("no card hears emotes"));
+            }
+            sink.events.push(GameEvent::Emoted {
+                player: action.player_id,
+                emote: *emote,
+            });
+            Ok(())
         }
         ActionBody::SwitchPosition { instance_id } => switch_action(sink, action.player_id, instance_id),
         ActionBody::Attack {
@@ -373,13 +415,19 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             }
             // R79: the AI policy answers, and it never concedes (R84), so the draw is over the prompt's
             // own answers — the concede R211 also offers is not one of them.
-            let answers: Vec<ActionBody> = legal_actions(sink.state, who)
-                .into_iter()
-                .filter(|body| body.action_type() != ActionType::Concede)
-                .collect();
-            let index = sink.rng.int(answers.len() as i32);
-            let Some(pick) = answers.get(index.max(0) as usize).cloned() else {
-                return Ok(());
+            // R1002: a timeout leaves a night market, drawing nothing.
+            let pick = if let Some(leave) = crate::subsystems::night_market::leave_answer(sink.state) {
+                leave
+            } else {
+                let answers: Vec<ActionBody> = legal_actions(sink.state, who)
+                    .into_iter()
+                    .filter(|body| body.action_type() != ActionType::Concede)
+                    .collect();
+                let index = sink.rng.int(answers.len() as i32);
+                let Some(pick) = answers.get(index.max(0) as usize).cloned() else {
+                    return Ok(());
+                };
+                pick
             };
             apply_action(sink, &Action::new(pick, who, action.nonce.clone()))?;
             if !turn_clock {
@@ -561,7 +609,9 @@ fn auto_end_due(state: &GameState) -> bool {
         return false;
     }
     let walk = each_legal_action(state, player, &mut |action| match action.action_type() {
-        ActionType::EndTurn | ActionType::Concede | ActionType::OfferDraw => ControlFlow::Continue(()),
+        ActionType::EndTurn | ActionType::Concede | ActionType::OfferDraw | ActionType::Emote => {
+            ControlFlow::Continue(())
+        }
         _ => ControlFlow::Break(()),
     });
     walk.is_continue()
@@ -756,6 +806,15 @@ fn each_legal_action(
         visit(ActionBody::AnswerDraw { accept: false })?;
     }
 
+    // MD-D29, R1127: either seat may emote while a card hears it — past the prompt and mulligan
+    // windows above, so never with one open. Otherwise `reduce` refuses it, and other games never
+    // list it.
+    if crate::query::emotes_heard(state, player) {
+        for emote in crate::wire::EMOTE_IDS.iter() {
+            visit(ActionBody::Emote { emote: *emote })?;
+        }
+    }
+
     if state.active != player || state.phase != Phase::Main {
         return visit(ActionBody::Concede);
     }
@@ -774,12 +833,24 @@ fn each_legal_action(
         }
     }
 
+    // R1200: while a Mayor acts each attack is listed once per attacker with no target — the
+    // reducer draws it — so the client asks for none.
+    let random = crate::random_targets::targets_random(state);
     for unit in active_units_of(state, player) {
-        for target in attack_targets(state, unit) {
-            visit(ActionBody::Attack {
-                attacker_id: unit.id.clone(),
-                target_id: attack_target_id(&target),
-            })?;
+        if random {
+            if !attack_targets(state, unit).is_empty() {
+                visit(ActionBody::Attack {
+                    attacker_id: unit.id.clone(),
+                    target_id: crate::config::RANDOM_ATTACK_TARGET.to_string(),
+                })?;
+            }
+        } else {
+            for target in attack_targets(state, unit) {
+                visit(ActionBody::Attack {
+                    attacker_id: unit.id.clone(),
+                    target_id: attack_target_id(&target),
+                })?;
+            }
         }
         if can_switch(state, unit) {
             visit(ActionBody::SwitchPosition {
@@ -796,6 +867,26 @@ fn each_legal_action(
                 for activation in activation_actions(state, player, card) {
                     visit(activation)?;
                 }
+            }
+        }
+    }
+
+    // MD-D9: an ability either player may use is offered to the other seat too, off the opponent's
+    // cards. A card with no either-player ability is skipped before its choices are built, so a
+    // shipped card lists nothing new here.
+    for row in [Row::Units, Row::Backrow] {
+        for zone_ref in slots_of(opponent_of(player), row) {
+            let Some(card) = card_at(state, zone_ref) else {
+                continue;
+            };
+            let open = abilities_of(state, card)
+                .iter()
+                .any(|decl| decl.cost.is_some_and(|cost| cost.either_player == Some(true)));
+            if !open {
+                continue;
+            }
+            for activation in activation_actions(state, player, card) {
+                visit(activation)?;
             }
         }
     }

@@ -86,6 +86,10 @@ pub struct GiveFromHandArgs {
     pub cards: Option<GiveFromHandCards>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i32>,
+    /// R1140 (Meditative #76 Do or Die): the cards by instance id instead of `cards` — those of them
+    /// still in that hand, in hand order.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ids: Option<Vec<String>>,
     #[serde(flatten)]
     pub riders: TakenRiders,
 }
@@ -94,27 +98,32 @@ pub struct GiveFromHandArgs {
 /// the enemy, so the taker is this card's controller; `from: "self"` gives your own cards away. `cards` names
 /// which: `"chosen"` the ones the step's prompt picked, `"unchosen"` every other card of that hand
 /// (Classic #9: "they keep one card of their choice and give you the rest" — their own hand pick, then
-/// this), `"all"` the whole hand, `"random"` `count` different cards at random (R60). Hand order,
-/// snapshotted first, so the cap burns the last of them.
+/// this), `"all"` the whole hand, `"random"` `count` different cards at random (R60). `ids` names them
+/// by instance id instead (R1140's watched cards), and a card no longer in that hand is not taken.
+/// Hand order, snapshotted first, so the cap burns the last of them.
 pub fn give_from_hand(args: GiveFromHandArgs) -> Effect {
     Effect::new("giveFromHand", move |ctx| {
         let from = player_of(ctx, args.from.unwrap_or(PlayerSpec::Enemy));
         let hand: Vec<CardInstance> = ctx.sink.state.players[from].hand.clone();
         let chosen = chosen_ids(ctx);
         let which = args.cards.unwrap_or(GiveFromHandCards::Chosen);
-        let taken: Vec<CardInstance> = match which {
-            GiveFromHandCards::All => hand,
-            GiveFromHandCards::Chosen => hand
-                .into_iter()
-                .filter(|card| chosen.contains(&card.id))
-                .collect(),
-            GiveFromHandCards::Unchosen => hand
-                .into_iter()
-                .filter(|card| !chosen.contains(&card.id))
-                .collect(),
-            GiveFromHandCards::Random => {
-                let count = args.count.unwrap_or(1).max(0) as usize;
-                ctx.sink.rng.shuffle(&hand).into_iter().take(count).collect()
+        let taken: Vec<CardInstance> = if let Some(ids) = &args.ids {
+            hand.into_iter().filter(|card| ids.contains(&card.id)).collect()
+        } else {
+            match which {
+                GiveFromHandCards::All => hand,
+                GiveFromHandCards::Chosen => hand
+                    .into_iter()
+                    .filter(|card| chosen.contains(&card.id))
+                    .collect(),
+                GiveFromHandCards::Unchosen => hand
+                    .into_iter()
+                    .filter(|card| !chosen.contains(&card.id))
+                    .collect(),
+                GiveFromHandCards::Random => {
+                    let count = args.count.unwrap_or(1).max(0) as usize;
+                    ctx.sink.rng.shuffle(&hand).into_iter().take(count).collect()
+                }
             }
         };
         for card in &taken {

@@ -2,6 +2,7 @@
 //! part 1; the files are part 17's.
 
 pub mod activate;
+pub mod alt_play;
 pub mod answer_key;
 pub mod decide;
 pub mod deck;
@@ -26,6 +27,7 @@ pub mod redact_play_records;
 pub mod redact_twice;
 pub mod reply;
 pub mod search;
+pub mod secrets;
 pub mod shadow_ban;
 pub mod support;
 pub mod surface;

@@ -171,6 +171,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   costChanged: { type: "costChanged", instanceId: "c11", cost: 0 },
   modifierChanged: { type: "modifierChanged", player: "p2", modifierId: "m4", added: true },
   radiantSet: { type: "radiantSet", instanceId: "u3", defId: UNIT, zone: { z: "field", player: "p1", row: "units", lane: 2 } },
+  deradianted: { type: "deradianted", instanceId: "u3", defId: UNIT, zone: { z: "field", player: "p1", row: "units", lane: 2 } },
   transformed: { type: "transformed", instanceId: "u3", fromDefId: UNIT, toDefId: TOKEN, newInstanceId: "c90" },
   fused: { type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "c91", defId: UNIT },
   positionSwitched: { type: "positionSwitched", instanceId: "u3", position: "DEF" },
@@ -182,6 +183,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   attackDeclared: { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false },
   attackCancelled: { type: "attackCancelled", attackerId: "u1", targetId: "u6", byInstanceId: "b5" },
   manaChanged: { type: "manaChanged", player: "p1", current: 3, max: 4 },
+  manaSpent: { type: "manaSpent", player: "p1", amount: 1, for: "activate" },
   turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
   turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
   turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -189,6 +191,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: SPELL, cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
@@ -213,8 +216,18 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
+  translated: { type: "translated", instanceId: "u6" },
+  // R800: a discard a discard guard stopped.
+  discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   // Patch v0.3.X (MN05).
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // Patch v0.3.X (Meditative #39.2, R961).
+  jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -243,6 +256,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   costChanged: null,
   modifierChanged: "notify",
   radiantSet: "radiant",
+  deradianted: "cancel",
+  manaSpent: null,
   transformed: "poof",
   fused: "fuse",
   positionSwitched: "whoosh",
@@ -261,6 +276,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   promptAnswered: null,
   drawOffered: "notify",
   drawAnswered: "cancel",
+  emoted: null,
   gameOver: "victory",
   // Patch v0.2.0.
   cardAnnounced: null,
@@ -285,8 +301,18 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   turnCutShort: "notify",
   marked: "brand",
   glitched: "whoosh",
+  fengShui: "radiant",
+  translated: null,
+  // R800: a discard a discard guard stopped sounds a soft cancel.
+  discardPrevented: "cancel",
   // Patch v0.3.X (MN05).
   damageAbsorbed: "armorRing",
+  // Patch v0.3.X (Meditative #39.2, R961).
+  jadeChanged: "uiClick",
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: "trapSet",
+  secretRevealed: "trapSting",
+  predicted: "notify",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -304,6 +330,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "keywordGranted",
   "counterChanged",
   "radiantSet",
+  "deradianted",
   "fused",
   "positionSwitched",
   "controlChanged",
@@ -328,6 +355,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "flickered",
   "drawLimited",
   "marked",
+  "discardPrevented",
   "damageAbsorbed",
 ];
 
@@ -534,6 +562,47 @@ describe("R204: which moments speak", () => {
       const event: GameEvent = { type: "summoned", player: "p1", instanceId: "c5", defId, row: "units", lane: 1 };
       expect(voices(event), defId).toEqual([]);
     }
+  });
+
+  it("R1088 the Skull's summon speaks one trigger line by the injected rng", () => {
+    const SKULL = "core-099";
+    const lines: CardAudioTable = {
+      ...LINES,
+      cards: {
+        ...LINES.cards,
+        [SKULL]: {
+          kind: "spell",
+          cast: { voice: "crone", text: "Come closer." },
+          trigger: { voice: "crone", lines: ["First.", "Second.", "Third."] },
+        },
+      },
+    };
+    const view = baseView();
+    view.you.units[0] = unit("p1", { instanceId: "s1", defId: SKULL });
+    const summoned: GameEvent = {
+      type: "summoned",
+      player: "p1",
+      instanceId: "c1",
+      defId: UNIT,
+      row: "units",
+      lane: 2,
+      sourceId: "s1",
+    };
+    // The injected rng picks the line: 0 the first, near-1 the last — and the summoned unit's own
+    // line is replaced, not added.
+    const first = { ...ctx({ lines, random: () => 0 }), view };
+    expect(ranked(summoned, first)).toEqual([`${SKULL}/trigger1!${String(VOICE_PRIORITY.play)}`]);
+    expect(shape(summoned, first)).toEqual([sfx("summon"), voice(SKULL, "trigger1", VOICE_DELAY_MS)].sort());
+    const last = { ...ctx({ lines, random: () => 0.99 }), view };
+    expect(ranked(summoned, last)).toEqual([`${SKULL}/trigger3!${String(VOICE_PRIORITY.play)}`]);
+    // The sentinel names nothing, and a source with no trigger changes nothing: the unit speaks
+    // its own line.
+    expect(ranked({ ...summoned, sourceId: HIDDEN_DEF_ID }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
+    expect(ranked({ ...summoned, sourceId: "c9" }, { ...ctx({ lines }), view })).toEqual([
+      `${UNIT}/play!${String(VOICE_PRIORITY.summon)}`,
+    ]);
   });
 
   it("R204 (B56) every line carries its priority: play and cast lines on a play, death and trap lines react", () => {
@@ -1480,5 +1549,13 @@ describe("R1366 a steal and a give", () => {
     const moved = unit("p2", { instanceId: "u6" });
     const view = baseView({ opponent: emptySide("p2", { units: [null, null, null, null, moved] }) });
     expect(cuesFor(control("p1", "steal"), ctx({ view }))).toEqual([{ kind: "sfx", id: "steal", params: { pan: LANE_PAN_MAX }, delayMs: 0 }]);
+  });
+});
+
+describe("R1044 your own set Unit sounds as a set", () => {
+  it("a cardPlayed carrying a formerId gives trapSet only, and never speaks", () => {
+    const event: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "h1", defId: HIDDEN_DEF_ID, costPaid: 2, formerId: "h1" };
+    expect(voices(event)).toEqual([]);
+    expect(shape(event)).toEqual([sfx("trapSet")]);
   });
 });

@@ -1154,3 +1154,26 @@ mod determinize_b12 {
         }
     }
 }
+
+mod r923_placeholder_carries_no_granted_tag {
+    use super::*;
+
+    /// MD-B15, R923: a granted tag is read by rules, so a placeholder — which stands in for a
+    /// card the seat cannot read — carries none.
+    #[test]
+    fn r923_a_placeholder_carries_no_granted_tag() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id)
+                .expect("the hidden card")
+                .granted_tags = Some(vec![Tag::Cn]);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.granted_tags, None, "{id}");
+        }
+    }
+}

@@ -19,10 +19,10 @@ import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 
 import {
   COST_BUCKETS,
+  DECK_CHIP_TAGS,
   DEFAULT_FILTER,
   FILTER_RARITIES,
   FILTER_SETS,
-  FILTER_TAGS,
   FILTER_TYPES,
   SORT_KEYS,
   toggled,
@@ -58,7 +58,7 @@ type FilterBarProps = {
   ownedUnavailable?: boolean;
   /** False leaves the "owned only" control out altogether (the almanac has no collection). */
   ownedControl?: boolean;
-  /** The tag chips, in order; the deck builder's `FILTER_TAGS` when absent. */
+  /** The tag chips, in order; the deck builder's `DECK_CHIP_TAGS` (R1381) when absent. */
   tags?: readonly Tag[];
 };
 
@@ -102,7 +102,7 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 }
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
-  const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = FILTER_TAGS } = props;
+  const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = DECK_CHIP_TAGS } = props;
 
   const setSets = (set: SetName) => {
     onFilter({ ...filter, sets: toggled(filter.sets, set) });

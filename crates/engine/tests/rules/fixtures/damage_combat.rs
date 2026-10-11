@@ -363,6 +363,11 @@ pub static veteran_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("veter
 pub static death_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("death-asker", 4742, 1, 1));
 /// #96 My Pawn's shape: cancels every declared attack (R44).
 pub static pawn: LazyLock<CardDef> = LazyLock::new(|| def("pawn", 4743, "Trap", json!({})));
+/// R1026: "After this is attacked": notes the attacker, whether the attack was forced, whether
+/// the attacker survived, and the zone this reads itself from (Meditative #49.3's shape).
+pub static defender: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender", 4744, 1, 6));
+/// R1026: the same, whose hook asks its controller before it finishes.
+pub static defender_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender-asker", 4745, 1, 6));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -409,6 +414,8 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         veteran_asker.clone(),
         death_asker.clone(),
         pawn.clone(),
+        defender.clone(),
+        defender_asker.clone(),
     ]
 });
 
@@ -907,6 +914,42 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         matches!(event, GameEvent::AttackDeclared { forced: false, .. })
                     }),
                 ],
+                ..Script::default()
+            }),
+        ),
+        (
+            defender.id.clone(),
+            both(Script {
+                after_attacked: Some(hook(|ctx| {
+                    let facts = after_attacked_of(&*ctx);
+                    let attacker = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.attacker_id.clone());
+                    let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
+                    let survived = js_bool(facts.as_ref().map(|facts| facts.attacker_survived));
+                    let zone = ctx.self_.as_ref().map_or("none", |card| card.zone.z().as_str());
+                    vec![note(format!("attacked:{attacker}:{forced}:{survived}:{zone}"))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            defender_asker.id.clone(),
+            both(Script {
+                after_attacked: Some(hook(|_ctx| {
+                    vec![
+                        note("attacked:before"),
+                        ask_controller("answered"),
+                        note("attacked:tail"),
+                    ]
+                })),
+                resume: IndexMap::from([(
+                    "answered",
+                    hook(|ctx| {
+                        let survived = js_bool(after_attacked_of(&*ctx).map(|facts| facts.attacker_survived));
+                        vec![note(format!("attacked:answered:{survived}"))]
+                    }),
+                )]),
                 ..Script::default()
             }),
         ),

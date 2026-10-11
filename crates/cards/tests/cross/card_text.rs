@@ -16,7 +16,7 @@
 //! `readPatches`) is compiled in with `include_str!` (a pure crate's tests read no files).
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_cards::{CATALOG, catalog_json};
+use jackioh_cards::{CATALOG, catalog_json, chinese_terms_json};
 use jackioh_engine::{CardDef, FaceKind, Keyword, KeywordKind, fill_params};
 use serde_json::{Map, Value, json};
 
@@ -65,7 +65,7 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's).
-const LABELS: &[&str] = &[
+pub(super) const LABELS: &[&str] = &[
     "Cry:",
     "Death:",
     "Start of turn:",
@@ -96,6 +96,12 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "classicplus-014 base",
     "classicplus-014 radiant",
     "classicplus-021 radiant",
+    "meditative-096-1 base",
+    "meditative-096-1 radiant",
+    "meditative-008 base",
+    "meditative-008 radiant",
+    "meditative-057 base",
+    "meditative-057 radiant",
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -371,12 +377,13 @@ fn your_turn_trigger(text: &str) -> bool {
     .any(|phrase| has_words(text, phrase, true))
 }
 
-/// `/^(Tribute|Echo) \d+$/`.
+/// `/^(Tribute \d+|Echo (\d+|X))$/`: a computed Echo X (R802) prints "Echo X".
 fn is_tribute_or_echo_count(item: &str) -> bool {
-    ["Tribute ", "Echo "].iter().any(|word| {
-        item.strip_prefix(word)
-            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
-    })
+    if let Some(n) = item.strip_prefix("Echo ") {
+        return !n.is_empty() && (n == "X" || n.bytes().all(|b| b.is_ascii_digit()));
+    }
+    item.strip_prefix("Tribute ")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// `/\.["”]?$/`.
@@ -384,10 +391,23 @@ fn ends_with_a_full_stop(line: &str) -> bool {
     line.ends_with('.') || line.ends_with(".\"") || line.ends_with(".\u{201d}")
 }
 
-/// Every R366 check a face fails, by name; empty when it passes them all.
+/// R1445: whether the text before a label ends on an opening double quote (`“`, or a `"` that opens
+/// a quote: an odd one), so the label opens a quoted ability the card grants.
+fn opens_a_quote(before: &str) -> bool {
+    before.ends_with('\u{201c}') || (before.ends_with('"') && before.matches('"').count() % 2 == 1)
+}
+
+/// Every R366 check a face fails, by name; empty when it passes them all. A face printed in Chinese
+/// is read by Chinese punctuation instead (R1302).
 fn failures(face: &Face) -> Vec<String> {
     let text = face.text.as_str();
     let keywords = &face.keywords;
+    // R988: a face printed in English that names the element glyphs (Meditative #40) is R366's
+    // English shape. A face is printed in Chinese when it is punctuated in Chinese — R1302 ends
+    // every other line with 。, so a Chinese face always is — not when it merely names a glyph.
+    if text.chars().any(is_cjk_punctuation) {
+        return cjk_failures(text, keywords);
+    }
     let mut out: Vec<String> = Vec::new();
     if says_library(text) {
         out.push("says library, not deck".to_string());
@@ -484,8 +504,122 @@ fn failures(face: &Face) -> Vec<String> {
             out.push(format!("does not end the line \"{line}\" with a full stop"));
         }
         for label in LABELS {
-            if matches!(line.find(label), Some(index) if index > 0) {
+            // R1445: a label that opens a double-quoted ability the card grants stays in its sentence.
+            if line
+                .match_indices(label)
+                .any(|(index, _)| index > 0 && !opens_a_quote(&line[..index]))
+            {
                 out.push(format!("does not start \"{label}\" on a line of its own"));
+            }
+        }
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1302 (MD-B13, ME-CN): a face printed in Chinese (Meditative #32's Radiant face, and every face of
+// the Chinese table, `chinese.rs`) is R366's shape in Chinese punctuation: the keyword list is joined
+// with "，" on a line of its own with no full stop, a labelled ability ("战吼：") starts a sentence of
+// its own, every other line ends with "。", and a cost stays "(N)". No ASCII "." "," ";" or ":" is
+// written, and no full-width bracket.
+// ---------------------------------------------------------------------------------------------
+
+/// R988: a character that punctuates a Chinese face: CJK punctuation (U+3000–U+303F) and the
+/// full-width forms (U+FF00–U+FFEF: "，", "："). The element glyphs are unified ideographs
+/// (U+3400–U+4DBF, U+4E00–U+9FFF), not punctuation, so an English face that names them is not
+/// punctuated in Chinese.
+pub(super) fn is_cjk_punctuation(c: char) -> bool {
+    matches!(c, '\u{3000}'..='\u{303f}' | '\u{ff00}'..='\u{ffef}')
+}
+
+/// `chinese-terms.json` (R1303), the frame's words in Chinese.
+pub(super) fn chinese_terms() -> Value {
+    serde_json::from_str(chinese_terms_json()).expect("crates/cards/chinese-terms.json is JSON")
+}
+
+/// How a printed keyword reads in Chinese text: its word with the number written on ("护甲7",
+/// "幸运1"), the Bread Token's "护甲X" and "法术伤害+2", as `keyword_label` reads the English.
+pub(super) fn chinese_keyword_label(keyword: &Keyword, terms: &Value) -> String {
+    let word = terms["keywords"][keyword.kind().as_str()]
+        .as_str()
+        .unwrap_or_else(|| panic!("chinese-terms.json has no keyword {}", keyword.kind().as_str()));
+    match keyword.n() {
+        None => word.to_string(),
+        Some(n) if keyword.kind() == KeywordKind::SpellDamage => format!("{word}+{n}"),
+        Some(0) if keyword.kind() == KeywordKind::Armor => format!("{word}X"),
+        Some(n) => format!("{word}{n}"),
+    }
+}
+
+/// `/^(献祭\d+|回响(\d+|X))$/`: a Tribute or Echo count in the keyword list, as
+/// `is_tribute_or_echo_count` (a computed Echo X, R802, prints "回响X").
+fn is_chinese_tribute_or_echo_count(item: &str) -> bool {
+    if let Some(n) = item.strip_prefix("回响") {
+        return !n.is_empty() && (n == "X" || n.bytes().all(|b| b.is_ascii_digit()));
+    }
+    item.strip_prefix("献祭")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// `/。[”」]?$/`.
+fn ends_with_a_chinese_full_stop(line: &str) -> bool {
+    line.ends_with('。') || line.ends_with("。”") || line.ends_with("。」")
+}
+
+/// Every R1302 check a Chinese face fails, by name; empty when it passes them all. `keywords` are the
+/// face's printed keywords, which the first line must list.
+pub(super) fn cjk_failures(text: &str, keywords: &[Keyword]) -> Vec<String> {
+    let terms = chinese_terms();
+    let ability_labels: Vec<&str> = LABELS
+        .iter()
+        .map(|label| {
+            terms["labels"][*label]
+                .as_str()
+                .unwrap_or_else(|| panic!("chinese-terms.json has no label {label}"))
+        })
+        .collect();
+    let mut out: Vec<String> = Vec::new();
+    let lines: Vec<&str> = if text.is_empty() {
+        Vec::new()
+    } else {
+        text.split('\n').collect()
+    };
+    let labels: Vec<String> = keywords
+        .iter()
+        .map(|keyword| chinese_keyword_label(keyword, &terms))
+        .collect();
+    let list_item =
+        |item: &str| labels.iter().any(|label| label == item) || is_chinese_tribute_or_echo_count(item);
+    let lead: Vec<&str> = lines.first().copied().unwrap_or("").split('，').collect();
+    let has_list = !lines.is_empty() && lead.iter().copied().all(list_item);
+    for label in &labels {
+        if !has_list || !lead.contains(&label.as_str()) {
+            out.push(format!("does not lead with its keyword {label}"));
+        }
+    }
+    for (at, line) in lines.iter().enumerate() {
+        if let Some(mark) = line.chars().find(|c| matches!(c, '.' | ',' | ';' | ':')) {
+            out.push(format!("writes the ASCII \"{mark}\" in \"{line}\""));
+        }
+        if line.contains(['（', '）']) {
+            out.push(format!("writes a full-width bracket in \"{line}\", not \"(N)\""));
+        }
+        if at == 0 && has_list {
+            if line.ends_with('。') {
+                out.push("ends its keyword line with a full stop".to_string());
+            }
+            continue;
+        }
+        if !ends_with_a_chinese_full_stop(line) {
+            out.push(format!("does not end the line \"{line}\" with \"。\""));
+        }
+        // A label opens its ability: at a line's start or after another label's words ("战吼和回合开始
+        // 时：", C+ #7's "Cry and start of turn:"), never after a sentence that ended on the line.
+        for label in &ability_labels {
+            for (index, _) in line.match_indices(label) {
+                if line[..index].ends_with(['。', '；']) {
+                    out.push(format!("does not start \"{label}\" on a line of its own"));
+                }
             }
         }
     }
@@ -706,6 +840,68 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             })
             .collect();
         assert_eq!(wrong, Vec::<String>::new());
+    }
+
+    #[test]
+    fn r1445_a_label_may_open_a_double_quoted_granted_ability_inside_a_line_and_only_the_granting_faces_quote_one()
+     {
+        let dummy_card = entries()[0];
+        let check = |text: &str| -> Vec<String> {
+            failures(&Face {
+                card: dummy_card,
+                face: FaceKind::Base,
+                text: text.to_string(),
+                keywords: Vec::new(),
+            })
+        };
+        let inside = "does not start \"Death:\" on a line of its own";
+        // Quoted in double quotes, the label first and the full stop inside: the granted card's text.
+        assert_eq!(
+            check("Cry: Summon a random (1) Unit. It gains \"Death: Add 1 random Book card to your hand.\""),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            check("Cry: Summon a Unit. It gains \u{201c}Death: Draw 1.\u{201d}"),
+            Vec::<String>::new()
+        );
+        // Unquoted, after a closing quote, or in single quotes, it is the card's own and starts a line.
+        assert!(
+            check("Cry: Summon a Unit. Death: Draw 1.")
+                .iter()
+                .any(|why| why == inside)
+        );
+        assert!(
+            check("Cry: Say \"hi.\"Death: Draw 1.")
+                .iter()
+                .any(|why| why == inside)
+        );
+        assert!(
+            check("Cry: Summon a Unit. It gains 'Death: Draw 1.'")
+                .iter()
+                .any(|why| why == inside)
+        );
+        // The faces that quote a label are the two that grant a Death (R1107), on both faces.
+        let quoting: Vec<String> = swept()
+            .iter()
+            .filter(|face| {
+                face.text.split('\n').any(|line| {
+                    LABELS.iter().any(|label| {
+                        line.match_indices(label)
+                            .any(|(index, _)| index > 0 && opens_a_quote(&line[..index]))
+                    })
+                })
+            })
+            .map(|face| format!("{} {}", face.card.id, face.face))
+            .collect();
+        assert_eq!(
+            sorted(quoting),
+            strings(&[
+                "meditative-058 base",
+                "meditative-058 radiant",
+                "meditative-059 base",
+                "meditative-059 radiant",
+            ])
+        );
     }
 
     #[test]
@@ -1467,6 +1663,90 @@ mod patch_v0_2_9_wording_issue_44 {
     }
 }
 
+mod r1302_a_face_printed_in_chinese {
+    use super::*;
+
+    /// A face of `card` that prints `text`, as `faces_of` builds one.
+    fn face(id: &str, text: &str, keywords: Vec<Keyword>) -> Face {
+        Face {
+            card: &CATALOG[id],
+            face: FaceKind::Base,
+            text: text.to_string(),
+            keywords,
+        }
+    }
+
+    #[test]
+    fn r1302_a_face_printed_in_chinese_is_read_by_chinese_punctuation() {
+        // Meditative #32's Radiant face (docs/meditative-set.md, #32), the first printed in Chinese.
+        let printed = "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。";
+        assert_eq!(failures(&face("core-005", printed, vec![])), Vec::<String>::new());
+        // The keyword list leads, joined with "，" and with no full stop; a label opens its line.
+        let lead = "嘲讽，护甲7\n亡语：抽一张牌。";
+        let keywords = vec![Keyword::Taunt, Keyword::Armor { n: 7 }];
+        assert_eq!(
+            failures(&face("core-005", lead, keywords.clone())),
+            Vec::<String>::new()
+        );
+        // C+ #7's "Cry and start of turn:": a label after another label's words is still its opening.
+        assert_eq!(
+            cjk_failures("战吼和回合开始时：召唤一个单位。", &[]),
+            Vec::<String>::new()
+        );
+        // R802's computed Echo X leads its list as an Echo count does (Meditative #5).
+        assert_eq!(
+            cjk_failures("回响X，吸血\n造成1点伤害。", &[Keyword::Lifesteal]),
+            Vec::<String>::new()
+        );
+        for wrong in [
+            "抽两张牌.",
+            "抽一张牌。战吼：抽一张牌。",
+            "法力值消耗为（0）。",
+            "抽一张牌",
+            "抽一张牌，然后,弃一张牌。",
+            "嘲讽，护甲7。\n亡语：抽一张牌。",
+        ] {
+            assert_ne!(
+                failures(&face("core-005", wrong, keywords.clone())),
+                Vec::<String>::new(),
+                "{wrong}"
+            );
+        }
+        assert!(
+            cjk_failures("亡语：抽一张牌。", &keywords)
+                .iter()
+                .any(|why| why.contains("嘲讽"))
+        );
+        // English stays English: a face with no Chinese character is read by R366's checks.
+        assert!(
+            failures(&face("core-005", "Draw a card", vec![]))
+                .iter()
+                .any(|why| why.contains("full stop"))
+        );
+    }
+
+    #[test]
+    fn r988_an_english_face_that_names_the_element_glyphs_is_read_as_english() {
+        // Meditative #40 names the five glyphs but is punctuated in English (R366): no Chinese
+        // punctuation, so both printed faces read as English and pass.
+        let faces: Vec<Face> = faces_of(&entries())
+            .into_iter()
+            .filter(|face| face.card.id == "meditative-040")
+            .collect();
+        assert_eq!(faces.len(), 2);
+        for face in &faces {
+            assert_eq!(failures(face), Vec::<String>::new(), "{}", face.text);
+        }
+        // And a punctuated face still reads as Chinese, glyphs or not: an ASCII comma fails the
+        // Chinese punctuation, never the English list.
+        assert!(
+            failures(&face("core-005", "抽一张牌,水。", vec![]))
+                .iter()
+                .any(|why| why.contains("ASCII"))
+        );
+    }
+}
+
 /// The hand-written matchers against the regular expressions they stand for, on the cases that tell
 /// a near miss from a match (not in the TS file, which had the regex engine).
 mod the_hand_written_patterns_read_as_their_regular_expressions {
@@ -1514,6 +1794,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
     fn the_line_patterns() {
         assert!(is_tribute_or_echo_count("Tribute 2"));
         assert!(!is_tribute_or_echo_count("Tribute X"));
+        assert!(is_tribute_or_echo_count("Echo X"));
         assert!(ends_with_a_full_stop("He said \"go.\""));
         assert!(ends_with_a_full_stop("He said \u{201c}go.\u{201d}"));
         assert!(!ends_with_a_full_stop("Draw 1"));

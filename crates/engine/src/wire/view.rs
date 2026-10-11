@@ -10,8 +10,12 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row};
-use crate::wire::events::{GameEvent, GameResult, Position};
+use crate::wire::actions::RevealAt;
+use crate::wire::catalog_types::{
+    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
+};
+use crate::wire::craft::CraftRecipe;
+use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice};
 use crate::wire::string_union;
 
 string_union! {
@@ -37,6 +41,17 @@ pub struct CardView {
     pub instance_id: String,
     pub def_id: String,
     pub radiant: bool,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
     /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
@@ -87,10 +102,20 @@ pub struct CardView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     /// B3.3, R385: the card's Brittle count, where the viewer may read the card and it has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    /// R980: the card's element (Meditative #40 Feng Shui), where the viewer may read the card and a
+    /// Feng Shui acts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     /// B3.4, R386: the card's declared numbers as they stand now (its face's `params`, moved by
     /// Degrade, Upgrade and KY's Constant), by key, which the client fills into the face's `{key}`s.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -377,9 +402,17 @@ pub struct UnitView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,
@@ -431,6 +464,28 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
+    /// MD-D5, R1121: the enemy Units an `attack_mods` entry would apply to if this Unit attacked them
+    /// now — the drag layer's yellow, beside the green legal glow (R195's sibling). Only on the
+    /// viewer's own attackers that may act now, and only when the list is non-empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub condition_targets: Option<Vec<String>>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
+    /// ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
+    /// (`grants::grant_texts`). Absent when it holds none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<Vec<String>>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -470,6 +525,17 @@ pub struct PublicBackrowView {
     pub instance_id: String,
     pub def_id: String,
     pub radiant: bool,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -492,6 +558,9 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,
@@ -522,6 +591,11 @@ pub struct PublicBackrowView {
     pub face_down: bool,
     #[serde(rename = "type")]
     pub type_: CardType,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     pub counters: BackrowCounters,
     pub owner: PlayerId,
     pub controller: PlayerId,
@@ -531,6 +605,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub unrevealed: Option<bool>,
+    /// ME-ALTPLAY (R1046): when a face-down play of yours reveals. Present on the controller's own
+    /// view only, never on the opponent's, and skipped when the card is not a face-down play (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub reveal_at: Option<RevealAt>,
     /// R243, §6.3 Vanilla: the backrow card's text is gone — a client stamps it as it stamps a
     /// vanilla unit. Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -691,6 +770,11 @@ pub struct LibraryEntryView {
     pub def_id: String,
     pub radiant: bool,
     pub count: i32,
+    /// MD-B6, R943: the entry's cards are Created (`CardInstance.created`, read off the live card
+    /// the owner's `known_as` record names). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
 }
 
 /// R310–R312: the viewer's own library as a list without order. `cards` holds what the viewer was
@@ -768,6 +852,47 @@ impl RowFlags {
     }
 }
 
+/// R1223–R1225: what the client shows of a credit line — how much more its controller can borrow
+/// (`available`, while a line acts), the instalment each coming refresh owes (`owed`, next first),
+/// the instalment the last refresh took (`locked`), and, while a lapsing face acts, whether the line
+/// was used this turn (`used`). Public: lenders are face-up field cards and the schedule is public.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CreditView {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub available: Option<i32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub owed: Vec<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub locked: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub used: Option<bool>,
+}
+
+/// ME-SECRET, R860: one secret of a side, as the viewer reads it — the choice only for its owner,
+/// or for anyone once revealed (R864).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretView {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub choice: Option<SecretChoice>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -807,12 +932,53 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub carried: Option<Vec<Option<UnitView>>>,
+    /// R1143: this seat's hand size, once an effect has set one for the rest of the game (Meditative #79);
+    /// public on both seats. Absent means `HAND_CAP`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
+    /// R1141: on the opponent's seat, how many cards of their hand carry a mark (Meditative #76's
+    /// pending steal) — never which: the viewer's own hand shows each mark on its card. Absent when
+    /// none does, on the viewer's own seat and once the game is over (both hands are revealed, R434).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_marked: Option<i32>,
+    /// R1223: this seat's credit line as the client shows it. Absent with no line, no debt and no
+    /// locked instalment, so a game without credit views as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub credit: Option<CreditView>,
     pub locks: RowFlags,
     /// R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
     /// Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the
     /// backrow zone an animated "Animated on your turn" card will return to is held the same way.
     pub reserved: RowFlags,
     pub fatigue_count: i32,
+    /// ME-JADE, R961: this seat's Jade Counter, shown to both seats beside its hero. Absent until it
+    /// first rises, so a game without a Jade sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub jade: Option<i32>,
+    /// R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
+    /// game without one serialises as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub extra_turns: Option<i32>,
+    /// R847 (Meditative #19.1): this player's once-a-game Temporal Rift flag. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub rift_extra_turn: Option<bool>,
+    /// ME-SECRET, R860: the secrets this side holds, the choice only where the viewer may read it.
+    /// Absent while none are held (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub secrets: Option<Vec<SecretView>>,
+    /// R987, Meditative #40 Feng Shui: the side's Luck for best-of rolls, read through
+    /// `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
+    /// game with no Feng Shui looks as it did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub luck: Option<i32>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.
@@ -834,7 +1000,8 @@ pub struct PendingPromptView {
     pub max: i32,
     pub prompt: String,
     /// B5 E18: a `pick` prompt's budget — the most the picked options' `cost`s may add up to
-    /// (Classic #44's "total cost of (5) or less"). Absent on every other prompt.
+    /// (Classic #44's "total cost of (5) or less") — or a `market` prompt's yuan left (R1000). Absent
+    /// on every other prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
@@ -908,7 +1075,8 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub lane: Option<i32>,
-    /// B5 E18: what this option counts against a `pick` prompt's `budget`.
+    /// B5 E18: what this option counts against the prompt's `budget`: a `pick` option's cost, a
+    /// `market` lot's price, a barter's yuan written negative (R1000, R1001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub cost: Option<i32>,
@@ -917,6 +1085,22 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
+    /// ME-CRAFT (Meditative #17, R880): the recipe a `craft` prompt's option offers. Only the
+    /// prompt's holder is ever sent it (§10.8). Optional and skipped when absent (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub recipe: Option<CraftRecipe>,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
+    /// MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
+    /// a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
 }
 
 /// R265, R266: the concurrent mulligan as one seat may see it.
@@ -995,6 +1179,17 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub defs: Option<IndexMap<String, CardDef>>,
+    /// R1200 (ME-RANDOMTARGETS): a Mayor acts on the field, so both players' declared targets,
+    /// `target` prompts and attack targets are drawn at random and the client asks for none.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub random_targets: Option<bool>,
+    /// MD-D29, R1127: an acting card of the opponent hears emotes, so the client's emote layer sends
+    /// them as `Emote` actions. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub emotes_heard: Option<bool>,
 }
 
 #[cfg(test)]

@@ -33,7 +33,7 @@ use crate::state_check::state_check;
 use crate::stays::exit_mark;
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::triggers::{SETTLE_PASS_CAP, SettleSink, dispatch_pending, run_queued_trigger};
-use crate::wire::{GameEvent, ZoneName, opponent_of};
+use crate::wire::{GameEvent, RedirectWhat, ZoneName, opponent_of};
 use crate::work::paused;
 use crate::zones::active_units_of;
 
@@ -260,6 +260,55 @@ pub fn cancel_attack(args: CancelAttackArgs) -> Effect {
             });
             (effect.apply)(ctx);
         }
+    })
+}
+
+/// `redirect_attack`'s arguments (TS's inline object).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RedirectAttackArgs {
+    /// The instance id the attack is re-aimed at.
+    pub to: String,
+    /// MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+    /// Unit it destroyed. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_destroyed: Option<bool>,
+}
+
+/// §6.3 Redirect, the attack half (MD-D19, R1122): inside §4.2 step 4's trap window, re-aim the open
+/// `declaredAttack` at another unit, so §4.3 resolves a combat between allies — the neighbour strikes
+/// back, and the death and kill rules hold as usual. §6.3's Spell-target half is
+/// `targeting_point.rs`'s; this is the same verb for attacks, setting `declared_attack.target_id`
+/// inside the window the way `cancel_attack` marks it.
+///
+/// On an open, uncancelled declaration only: outside a window, or on one already cancelled, this
+/// fizzles, which is also what keeps a trap that fires on some later dispatch of the same
+/// declaration from re-aiming a combat that has already happened.
+pub fn redirect_attack(args: RedirectAttackArgs) -> Effect {
+    Effect::new("redirectAttack", move |ctx| {
+        let Some(by_instance_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
+            return;
+        };
+        let controller = ctx.controller;
+        let Some(open) = ctx.state.declared_attack.as_mut() else {
+            return;
+        };
+        if open.cancelled {
+            return;
+        }
+
+        let from_id = open.target_id.clone();
+        open.target_id = args.to.clone();
+        open.redirected = Some(true);
+        if args.copy_destroyed == Some(true) {
+            open.copies_for = Some(controller);
+        }
+        ctx.events.push(GameEvent::Redirected {
+            what: RedirectWhat::Attack,
+            from_id,
+            to_id: args.to.clone(),
+            by_instance_id: Some(by_instance_id),
+        });
     })
 }
 

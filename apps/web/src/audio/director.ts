@@ -97,6 +97,8 @@ export function createSoundDirector(
   lines: CardAudioTable = CARD_AUDIO,
   card?: (defId: string) => CueCard | undefined,
   observe?: (event: GameEvent, view: PlayerView) => void,
+  // R1088: the client's own cosmetic rng for trigger lines, defaulting to `Math.random`.
+  rng: () => number = Math.random,
 ): SoundDirector {
   let seen: PlayerView | null = null;
   let owed: Owed[] = [];
@@ -125,6 +127,7 @@ export function createSoundDirector(
       newestView: () => seen,
       playing: () => plays[plays.length - 1] ?? null,
       castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
+      random: rng,
       ...(card === undefined ? {} : { card }),
     };
   }

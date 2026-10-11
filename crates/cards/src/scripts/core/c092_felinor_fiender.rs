@@ -47,7 +47,8 @@ fn felinors_of(state: &GameState, self_: &CardInstance) -> Vec<CardInstance> {
     let mut mine: Vec<CardInstance> = active_units_of(state, self_.controller).into_iter().cloned().collect();
     mine.extend(dormant_units_of(state, self_.controller).into_iter().cloned());
     mine.into_iter()
-        .filter(|unit| unit.id != self_.id && def_of(Some(state), &unit.def_id).tags.contains(&FELINOR))
+        // MD-B15, R923: a granted Felinor tag counts.
+        .filter(|unit| unit.id != self_.id && tags_of(state, unit).contains(&FELINOR))
         .collect()
 }
 
@@ -186,6 +187,22 @@ mod tests {
             }));
 
             s.expect_stats(FIENDER, json!({ "attack": 9, "maxHealth": 18 }));
+        }
+
+        #[test]
+        fn r923_a_granted_felinor_counts() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "core-092-granted",
+                "p1": { "field": [FIENDER, "core-008"], "hand": ["core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            s.expect_stats(FIENDER, json!({ "attack": 5, "maxHealth": 7, "health": 7 }));
+            // Grant the Vanilla Felinor: the Fiender sums it (MD-B15).
+            let vanilla = s.unit(P1, 2).expect("the Vanilla");
+            find_instance_mut(s.state_mut(), &vanilla.id).expect("the unit").granted_tags =
+                Some(vec![Tag::Felinor]);
+            s.expect_stats(FIENDER, json!({ "attack": 9, "maxHealth": 11, "health": 11 }));
         }
 
         #[test]

@@ -11,13 +11,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::config::{AUSPICIOUS_ROCK_ODDS, GRAPE_ODDS, RollOdds};
 use crate::draw::{DrawOutcome, draw_one};
 use crate::effects::add_to_hand::{AddToHandArgs, add_to_hand};
 use crate::effects::cost::{SetCostModArgs, SetCostOverrideArgs, set_cost_mod, set_cost_override};
 use crate::effects::damage::{DamageEffectArgs, DamageFlagArgs, damage};
 use crate::effects::heal::{HealArgs, heal};
+use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::effects::targets::{PlayerSpec, TargetSpec, player_of};
-use crate::numbers::{NumberedKey, numbered_keywords_on};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, PlayerId, Selection, ZoneName};
@@ -25,23 +26,18 @@ use crate::zones::{OffFieldZone, move_to_zone, report_graveyard_landing};
 
 // `rollGrape` lives beside `query` in `../catalog` now (R382's generic re-roll reads it there too);
 // still exported here, so `@jackioh/engine/effects` keeps one name for it.
-pub use crate::catalog::roll_grape;
+pub use crate::catalog::{roll_grape, roll_weighted};
 
 // ---------------------------------------------------------------------------------------------
 // Grapes (C+ #65, #66)
 // ---------------------------------------------------------------------------------------------
 
 /// §6.1: the Lucky X the card running the script has now — its running face's printed Lucky, as a
-/// Degrade or an Upgrade has moved it (B3.4's X change), 0 without one.
+/// Degrade or an Upgrade has moved it (B3.4's X change), plus any it was given (R1438), 0 without one.
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    let Some(own) = ctx.self_.as_ref() else {
-        return 0;
-    };
-    numbered_keywords_on(ctx.sink.state, own)
-        .into_iter()
-        .find(|keyword| keyword.key == NumberedKey::Lucky)
-        .map(|keyword| keyword.value)
-        .unwrap_or(0)
+    ctx.self_
+        .as_ref()
+        .map_or(0, |own| crate::query::lucky_on(ctx.sink.state, own))
 }
 
 /// `addRolledGrapes`' argument.
@@ -57,6 +53,67 @@ pub struct AddRolledGrapesArgs {
     pub player: Option<PlayerSpec>,
 }
 
+/// R960: which weighted table an `addRolled` rolls on.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum RollTable {
+    /// C+ #65, #66's Grapes (`GRAPE_ODDS`).
+    #[default]
+    Grapes,
+    /// Meditative #39.1 Auspicious Rock's roll (`AUSPICIOUS_ROCK_ODDS`).
+    AuspiciousRock,
+}
+
+impl RollTable {
+    /// The config table this names, worst to best.
+    fn odds(self) -> &'static [RollOdds] {
+        match self {
+            RollTable::Grapes => GRAPE_ODDS,
+            RollTable::AuspiciousRock => AUSPICIOUS_ROCK_ODDS,
+        }
+    }
+}
+
+/// `addRolled`'s argument: one weighted roll per `count` (default 1), each rolled and added before
+/// the next is rolled, so a fixed seed gives fixed cards in a fixed order (§10.7).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AddRolledArgs {
+    pub table: RollTable,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R960, MD-C1 (Meditative #39.1 Auspicious Rock): "Add one rolled card to your hand" — N
+/// independent rolls (R60) over `table`, each card created in the hand through §6.3's Add to hand,
+/// so a full hand burns it (§2.4, R4). `radiant` makes every card Radiant. The Lucky of the card
+/// running the script applies to every roll (the Rock's Radiant face prints Lucky 2), unless
+/// `lucky` names a number. ME-LUCK's player Luck (R987, MB11) adds to it.
+pub fn add_rolled(args: AddRolledArgs) -> Effect {
+    Effect::new("addRolled", move |ctx| {
+        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
+        let lucky = match args.lucky {
+            Some(lucky) => lucky + luck,
+            None => lucky_of(ctx) + luck,
+        };
+        add_rolled_from(
+            ctx,
+            args.table.odds(),
+            args.count.unwrap_or(1),
+            args.radiant,
+            lucky,
+            args.player,
+        );
+    })
+}
+
 /// C+ #65 Two Grapes, #66 Vine of Grapes: "Add N Grapes to your hand, each rolled" — N independent
 /// rolls (R60), each Grape created in the hand through §6.3's Add to hand, so a full hand burns it (§2.4,
 /// R4). `radiant` makes every Grape Radiant. The Lucky of the card running the script applies to every
@@ -66,32 +123,42 @@ pub struct AddRolledGrapesArgs {
 /// fixed order (§10.7).
 pub fn add_rolled_grapes(args: AddRolledGrapesArgs) -> Effect {
     Effect::new("addRolledGrapes", move |ctx| {
-        let count = args.count.max(0);
+        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = match args.lucky {
-            Some(lucky) => lucky,
-            None => lucky_of(ctx),
+            Some(lucky) => lucky + luck,
+            None => lucky_of(ctx) + luck,
         };
-        for _ in 0..count {
-            if ctx.sink.state.result.is_some() {
-                return;
-            }
-            let def_id = roll_grape(&mut *ctx.sink.rng, lucky);
-            if def_id.is_empty() {
-                return;
-            }
-            let add = add_to_hand(AddToHandArgs {
-                def_id: Some(def_id),
-                player: args.player,
-                radiant: if args.radiant == Some(true) {
-                    Some(true)
-                } else {
-                    None
-                },
-                ..AddToHandArgs::default()
-            });
-            (add.apply)(ctx);
-        }
+        add_rolled_from(ctx, GRAPE_ODDS, args.count, args.radiant, lucky, args.player);
     })
+}
+
+/// The shared loop behind `addRolledGrapes` and `addRolled`: `count` rolls over `table`, each
+/// added through §6.3's Add to hand before the next is rolled.
+fn add_rolled_from(
+    ctx: &mut EffectContext<'_>,
+    table: &[RollOdds],
+    count: i32,
+    radiant: Option<bool>,
+    lucky: i32,
+    player: Option<PlayerSpec>,
+) {
+    for _ in 0..count.max(0) {
+        if ctx.sink.state.result.is_some() {
+            return;
+        }
+        let def_id = roll_weighted(&mut *ctx.sink.rng, table, lucky);
+        if def_id.is_empty() {
+            return;
+        }
+        let add = add_to_hand(AddToHandArgs {
+            def_id: Some(def_id),
+            player,
+            radiant: if radiant == Some(true) { Some(true) } else { None },
+            ..AddToHandArgs::default()
+        });
+        (add.apply)(ctx);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -192,13 +259,18 @@ pub struct DrawPricedArgs {
     pub cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// Meditative #79 Radiant ("Draw 4 cards. Each becomes Radiant."): the card the draw put in the hand
+    /// becomes Radiant (§5.2, §6.3 Make Radiant).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
 }
 
 /// C+ #65.2 "Draw N. Each costs (1) less." / #65.3 "Draw N. Each costs (0).": ONE draw (§2.4 — "draw N"
 /// is N of these, one effect each, so a draw whose cast-on-draw card asks pauses the rest of the list
 /// and the answer makes the rest, R113), and the card that draw put in the hand takes the price: a
-/// `costMod` that stacks with every other modifier, or a `costOverride` (R65). A card cast on draw, a
-/// burned card, a fatigue draw and a limited draw take nothing (`cardThisDrawPutInHand`).
+/// `costMod` that stacks with every other modifier, or a `costOverride` (R65), and with `radiant` the
+/// Radiant face (Meditative #79). A card cast on draw, a burned card, a fatigue draw and a limited draw
+/// take nothing (`cardThisDrawPutInHand`, R596).
 pub fn draw_priced(args: DrawPricedArgs) -> Effect {
     Effect::new("drawPriced", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -207,6 +279,13 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
         let Some(card) = card_this_draw_put_in_hand(ctx, player, from, outcome) else {
             return;
         };
+        if args.radiant == Some(true) {
+            let made = set_radiant(RadiantTarget {
+                target: None,
+                instance_id: Some(card.id.clone()),
+            });
+            (made.apply)(ctx);
+        }
         let target = TargetSpec::Instance {
             instance_id: card.id.clone(),
         };

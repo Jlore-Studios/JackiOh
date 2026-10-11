@@ -47,6 +47,9 @@
 // - §6.3's Nerf and Buff, one row and one entry each, since a card prints one word or the other. Patch
 //   v0.3.4 (R1320) renamed them from Degrade and Upgrade, the names the engine keeps; a plain stat buff
 //   ("+2/+2") stays plain words, since matching is case-sensitive and "buff" is lower-case there.
+// - The Meditative set's words (R1384): §6.3's Exile, Hand size (matched in lower case, as #79 prints
+//   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
+//   words, so no card prints the row's name.
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -86,7 +89,12 @@ export type VerbTermId =
   | "Redirect"
   | "End the turn"
   | "Trigger a Cry"
-  | "Look at a hand";
+  | "Look at a hand"
+  | "Allure"
+  | "Jade Counter"
+  | "Exile"
+  | "Hand size"
+  | "Mark in a hand";
 /** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
 export type StatusTermId =
   | "Can't be in Defense Position"
@@ -176,11 +184,19 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit", { row: "Spell Damage X" }),
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
+  "Immune to tribal tag based hate": keyword(
+    "Immune to tribal tag based hate",
+    "Harmful effects that pick cards by a tribal tag can't target or affect it",
+  ),
   // R636, R637: the keyword rules patch (§6.1).
   Windfury: keyword("Windfury", "Can attack twice each turn"),
   Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
   // Patch v0.2.4 (issue #181, R49): Deft, #45 Deft Duelist's keyword.
   Deft: keyword("Deft", "Can attack and switch position in the same turn"),
+  // R1220: Untributable, Meditative #80 Aluneth's keyword.
+  Untributable: keyword("Untributable", "Can't be Tributed, by any cost or effect"),
+  // Meditative batch 16 (issue #532, R1086): Magnetic, M #65 and M #67's keyword.
+  Magnetic: keyword("Magnetic", "May be played onto one of your Units, fusing into it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -243,6 +259,17 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", {
     aliases: ["Look at your opponent's hand"],
   }),
+  Allure: verb(
+    "Allure",
+    "Marked enemy Units join your side at the start of your next turn, or die if you have no room",
+  ),
+  "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
+  // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
+  Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death"),
+  "Hand size": verb("Hand size", "How many cards a hand holds, set for the rest of the game", { aliases: ["hand size"] }),
+  "Mark in a hand": verb("Mark in a hand", "Mark cards in a hand; a later effect acts on the ones still there", {
+    aliases: ["Mark"],
+  }),
 
   // §5.2 Radiant: §6.3's "Make Radiant" rule, then §5.2's sentence about a card in hand or deck.
   Radiant: entry(
@@ -280,7 +307,10 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
+  "Immune to tribal tag based hate": "IT",
   Windfury: "WF",
   Temporary: "TE",
   Deft: "DE",
+  Untributable: "UT",
+  Magnetic: "MG",
 };

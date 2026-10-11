@@ -14,7 +14,8 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
     buff_cards, choose_mode, choose_target, chosen_tuning_number, damage, degrade, discover_number, draw,
-    enchant, gain_brittle, give_brittle, grant_keyword_cards, set_number, upgrade,
+    enchant, gain_brittle, give_brittle, grant_keyword_cards, remember, set_number, transform_random,
+    translate, upgrade,
 };
 use jackioh_engine::testkit::*;
 
@@ -394,6 +395,83 @@ pub static base_number: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// ME-CN, R1300: Meditative #32's "Get ready to learn Chinese": every card in both hands and both decks
+/// is shown in Chinese from now on.
+pub static translator: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "translator",
+        4427,
+        json!({
+            "type": "Spell",
+            "base": { "keywords": [], "text": "Translate" },
+            "radiant": { "keywords": [], "text": "Translate" },
+        }),
+    )
+});
+
+/// MD-B18, R925: a Unit that translates itself as it enters a hand.
+pub static greeter: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "greeter",
+        4428,
+        json!({
+            "base": { "keywords": [], "text": "When this enters your hand: translate it." },
+            "radiant": { "keywords": [], "text": "When this enters your hand: translate it." },
+        }),
+    )
+});
+
+/// MD-B18, R925: a Unit that remembers being dealt — its start-of-game clause runs on arrival (R151).
+pub static opener: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "opener",
+        4429,
+        json!({
+            "base": { "keywords": [], "text": "Opened." },
+            "radiant": { "keywords": [], "text": "Opened." },
+        }),
+    )
+});
+
+/// MD-B18, R925: Meditative #37's shape — a Spell that replaces itself in the hand with a random
+/// Radiant card, Chinese and costing (0), which then runs its own arrival hooks.
+pub static bottle: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "bottle",
+        4430,
+        json!({
+            "type": "Spell",
+            "base": { "keywords": [], "text": "When this enters your hand: replace it." },
+            "radiant": { "keywords": [], "text": "When this enters your hand: replace it." },
+        }),
+    )
+});
+
+/// R1160 (Meditative #84 Volatility's shape): a 3/4 (Radiant 6/8) at cost 2 whose Buffs and Nerfs
+/// are twice as effective (Radiant: Buffs three times, Nerfs plain). Next free index is 4431: the
+/// plan's 4427 is taken by `translator` (landed after the plan was written).
+pub static volatile: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "volatile",
+        4431,
+        json!({
+            "cost": 2,
+            "base": {
+                "attack": 3,
+                "health": 4,
+                "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }, { "kind": "Armor", "n": 3 }, { "kind": "Can't attack" }],
+                "text": "Buffs and Nerfs are twice as effective on this.",
+            },
+            "radiant": {
+                "attack": 6,
+                "health": 8,
+                "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }, { "kind": "Armor", "n": 3 }, { "kind": "Can't attack" }],
+                "text": "Buffs are three times as effective on this.",
+            },
+        }),
+    )
+});
+
 pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
@@ -422,6 +500,11 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         educator.clone(),
         radiant_number.clone(),
         base_number.clone(),
+        translator.clone(),
+        greeter.clone(),
+        opener.clone(),
+        bottle.clone(),
+        volatile.clone(),
     ]
 });
 
@@ -680,6 +763,76 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                 })),
                 ..Script::default()
             }),
+        ),
+        (
+            translator.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![translate(json_as(
+                        json!({ "scope": { "side": "any", "zones": ["hand", "library"] } }),
+                    ))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            greeter.id.clone(),
+            both(Script {
+                enters_hand: Some(hook(|_ctx| {
+                    vec![translate(json_as(json!({ "target": { "of": "self" } })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            opener.id.clone(),
+            both(Script {
+                start_of_game: Some(hook(|_ctx| {
+                    vec![remember(json_as(json!({ "key": "opened", "value": true })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            bottle.id.clone(),
+            both(Script {
+                enters_hand: Some(hook(|_ctx| {
+                    vec![transform_random(json_as(json!({
+                        "target": { "of": "self" },
+                        "query": { "defId": ["id-opener"] },
+                        "radiant": true,
+                        "chinese": true,
+                        "costOverride": 0,
+                        "arrives": true,
+                    })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            volatile.id.clone(),
+            CardScripts {
+                base: Script {
+                    static_flags: Some(StaticFlags {
+                        tune_multiplier: Some(TuneMultiplier {
+                            upgrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                            degrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                        }),
+                        ..StaticFlags::default()
+                    }),
+                    ..Script::default()
+                },
+                radiant: Script {
+                    static_flags: Some(StaticFlags {
+                        tune_multiplier: Some(TuneMultiplier {
+                            upgrade: Some(VOLATILITY_RADIANT_BUFF_MULTIPLIER),
+                            degrade: None,
+                        }),
+                        ..StaticFlags::default()
+                    }),
+                    ..Script::default()
+                },
+            },
         ),
     ])
 });

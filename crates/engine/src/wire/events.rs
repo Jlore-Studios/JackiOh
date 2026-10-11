@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName};
+use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
 string_union! {
@@ -101,6 +102,24 @@ string_union! {
 }
 
 string_union! {
+    /// ME-SECRET, R860: Mind Games' hidden choice (`secretRevealed.choice`, a Fortify Mind's `guess`).
+    pub enum SecretChoice {
+        Greed = "greed",
+        Attack = "attack",
+        Defend = "defend",
+    }
+}
+
+string_union! {
+    /// ME-SECRET, R864: a prediction's outcome (`predicted.outcome`).
+    pub enum PredictOutcome {
+        Won = "won",
+        Same = "same",
+        Lost = "lost",
+    }
+}
+
+string_union! {
     /// `redirected.what`.
     pub enum RedirectWhat {
         Damage = "damage",
@@ -116,6 +135,14 @@ string_union! {
         Swap = "swap",
         Boards = "boards",
         Void = "void",
+    }
+}
+
+string_union! {
+    /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
+    pub enum FengShuiOutcome {
+        Positive = "positive",
+        Negative = "negative",
     }
 }
 
@@ -227,6 +254,10 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
+        /// R1088: the card whose effect summoned it, for the client; no rule reads it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        source_id: Option<String>,
         /// R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -476,6 +507,11 @@ pub enum GameEvent {
         attacker_id: String,
         target_id: String,
         forced: bool,
+        /// ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
+        /// when a summoned substitute makes it. Absent otherwise.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        instead_of: Option<String>,
     },
     AttackCancelled {
         attacker_id: String,
@@ -490,6 +526,11 @@ pub enum GameEvent {
     TurnStarted {
         player: PlayerId,
         turn: i32,
+        /// R845 (Meditative #19.1): set on an extra turn's banner turn. Only ever `Some(true)`,
+        /// so a normal turn serialises exactly as before.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        extra: Option<bool>,
     },
     TurnEnded {
         player: PlayerId,
@@ -515,6 +556,12 @@ pub enum GameEvent {
     DrawAnswered {
         player: PlayerId,
         accept: bool,
+    },
+    /// MD-D29, R1127: `player` emoted — public, and it names no card. Nothing but a card that hears
+    /// emotes answers it; every other emote stays R643's cosmetic relay outside `reduce`.
+    Emoted {
+        player: PlayerId,
+        emote: EmoteId,
     },
     GameOver {
         winner: Winner,
@@ -714,6 +761,15 @@ pub enum GameEvent {
         player: PlayerId,
         outcome: GlitchOutcome,
     },
+    /// R983: the Feng Shui `source_id` judged the play of `instance_id` by `player` at §10.5 step 3:
+    /// `positive` (it was made Radiant) or `negative` (it was given Brittle 2, and the hit follows once
+    /// it has resolved). Public: only a face-up play is judged (R982), and a hidden id is redacted.
+    FengShui {
+        instance_id: String,
+        source_id: String,
+        player: PlayerId,
+        outcome: FengShuiOutcome,
+    },
     /// R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
     /// (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
     Marked {
@@ -721,6 +777,34 @@ pub enum GameEvent {
         mark: String,
         color: String,
         added: bool,
+    },
+    /// ME-CN, R1301: a card both players read is shown in Chinese from now on (`effects::translate`).
+    /// A card someone cannot read is translated silently (R440), so the id always names a readable card.
+    Translated {
+        instance_id: String,
+    },
+    /// R800: an effect's discard from `player`'s hand that a discard guard stopped — no card moved and no
+    /// random number was drawn. `count` is how many cards it would have taken. Public: it names no card.
+    DiscardPrevented {
+        player: PlayerId,
+        count: i32,
+    },
+    /// MD-D6 (Meditative #53 Prestige): De-Radiant cleared the card's Radiant flag. The face swaps
+    /// back while damage, buffs and tuning stay (§5.2's exception). Hidden per zone like `radiantSet`
+    /// (R440): a hand or deck card reads redacted, a face-up card openly.
+    Deradianted {
+        instance_id: String,
+        def_id: String,
+        zone: Zone,
+    },
+    /// MD-D26 (Meditative #69 The Maestro): `player` paid `amount` mana for a play's price or an
+    /// activation's price. Public: it names a player and a number, never a card. It is emitted only
+    /// while a card answers it, so a game with no listener serialises, hashes and replays as before.
+    ManaSpent {
+        player: PlayerId,
+        amount: i32,
+        #[serde(rename = "for")]
+        for_: ManaSpentFor,
     },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M8, MN05). Its BUILD M5-T4 row, `ANIMATIONS` and
@@ -736,6 +820,37 @@ pub enum GameEvent {
         target_id: String,
         absorbed: i32,
         combat: bool,
+    },
+    // -------------------------------------------------------------------------------------------
+    // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
+    // and `SOUND_CUES` rows came with it, and `viewFor` sends it to both seats as it is.
+    // -------------------------------------------------------------------------------------------
+    /// R961: a player's Jade Counter rose to `value` (`effects::jade`). Public: a player and a number.
+    JadeChanged {
+        player: PlayerId,
+        value: i32,
+    },
+    // -------------------------------------------------------------------------------------------
+    // Meditative MB05 (ME-SECRET, R860–R865)
+    // -------------------------------------------------------------------------------------------
+    /// R860: a secret was kept. Public only that it exists: the player and the id, never the choice.
+    SecretChosen {
+        player: PlayerId,
+        secret_id: String,
+    },
+    /// R864: a secret was revealed — by its reward resolving, or by a Fortify Mind judged against it.
+    /// Public: both players read the choice from here on.
+    SecretRevealed {
+        player: PlayerId,
+        secret_id: String,
+        choice: SecretChoice,
+    },
+    /// R864: a Fortify Mind's guess was judged against its linked secret. Public.
+    Predicted {
+        player: PlayerId,
+        secret_id: String,
+        guess: SecretChoice,
+        outcome: PredictOutcome,
     },
 }
 
@@ -758,11 +873,30 @@ fn is_zero(value: &i32) -> bool {
 )]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum TuningChange {
-    Cost { delta: i32 },
-    Stats { attack: i32, health: i32 },
-    Keyword { keyword: Keyword, added: bool },
-    X { key: String, delta: i32 },
-    Number { key: String, delta: i32 },
+    Cost {
+        delta: i32,
+    },
+    Stats {
+        attack: i32,
+        health: i32,
+    },
+    Keyword {
+        keyword: Keyword,
+        added: bool,
+        /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): the other keywords one multiplied
+        /// application moved. Never `Some(empty)`, so shipped games hash as before (D14).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        also: Option<Vec<Keyword>>,
+    },
+    X {
+        key: String,
+        delta: i32,
+    },
+    Number {
+        key: String,
+        delta: i32,
+    },
     None,
 }
 
@@ -811,6 +945,7 @@ string_union! {
         PromptAnswered = "promptAnswered",
         DrawOffered = "drawOffered",
         DrawAnswered = "drawAnswered",
+        Emoted = "emoted",
         GameOver = "gameOver",
         CardAnnounced = "cardAnnounced",
         Countered = "countered",
@@ -834,7 +969,16 @@ string_union! {
         TurnCutShort = "turnCutShort",
         Marked = "marked",
         Glitched = "glitched",
+        FengShui = "fengShui",
+        Translated = "translated",
+        DiscardPrevented = "discardPrevented",
+        Deradianted = "deradianted",
+        ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
+        JadeChanged = "jadeChanged",
+        SecretChosen = "secretChosen",
+        SecretRevealed = "secretRevealed",
+        Predicted = "predicted",
     }
 }
 
@@ -848,7 +992,8 @@ impl GameEvent {
     /// which reports what Armor took to the client (§10.10, §10.11) and which no rule reads. R1361: a
     /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
-    /// without its `how`, likewise the client's. So the state a game passes through, a frontier paused
+    /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
+    /// whose effect summoned it, which no rule reads. So the state a game passes through, a frontier paused
     /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
     /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
@@ -892,6 +1037,28 @@ impl GameEvent {
                 lane: *lane,
                 former_id: former_id.clone(),
                 how: None,
+            },
+            // R1088: `sourceId` is the client's, like `how` above, so the rules drop it.
+            GameEvent::Summoned {
+                player,
+                instance_id,
+                def_id,
+                row,
+                lane,
+                former_id,
+                source_id: _,
+                arrived_during,
+                exits_from,
+            } => GameEvent::Summoned {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                row: *row,
+                lane: *lane,
+                former_id: former_id.clone(),
+                source_id: None,
+                arrived_during: arrived_during.clone(),
+                exits_from: *exits_from,
             },
             other => other.clone(),
         }
@@ -942,6 +1109,7 @@ impl GameEvent {
             GameEvent::PromptAnswered { .. } => GameEventType::PromptAnswered,
             GameEvent::DrawOffered { .. } => GameEventType::DrawOffered,
             GameEvent::DrawAnswered { .. } => GameEventType::DrawAnswered,
+            GameEvent::Emoted { .. } => GameEventType::Emoted,
             GameEvent::GameOver { .. } => GameEventType::GameOver,
             GameEvent::CardAnnounced { .. } => GameEventType::CardAnnounced,
             GameEvent::Countered { .. } => GameEventType::Countered,
@@ -964,9 +1132,26 @@ impl GameEvent {
             GameEvent::DrawLimited { .. } => GameEventType::DrawLimited,
             GameEvent::TurnCutShort { .. } => GameEventType::TurnCutShort,
             GameEvent::Glitched { .. } => GameEventType::Glitched,
+            GameEvent::FengShui { .. } => GameEventType::FengShui,
             GameEvent::Marked { .. } => GameEventType::Marked,
+            GameEvent::Translated { .. } => GameEventType::Translated,
+            GameEvent::DiscardPrevented { .. } => GameEventType::DiscardPrevented,
+            GameEvent::Deradianted { .. } => GameEventType::Deradianted,
+            GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
+            GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
+            GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
+            GameEvent::Predicted { .. } => GameEventType::Predicted,
         }
+    }
+}
+
+string_union! {
+    /// MD-D26: what the spent mana paid for — a play's price or an activation's price.
+    pub enum ManaSpentFor {
+        Play = "play",
+        Activate = "activate",
     }
 }
 
@@ -991,6 +1176,10 @@ string_union! {
         MatchCeiling = "match-ceiling",
         /// R679: a Glitch voided the match — no winner, no result, no record (§2.5).
         Voided = "voided",
+        /// R850 (Meditative #8, #20): a player holding an alternative win won.
+        AltWin = "alt-win",
+        /// R850 (Meditative #8): an effect won the game for a player outright.
+        WonByEffect = "won-by-effect",
     }
 }
 
@@ -1022,7 +1211,10 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 66);
+        // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
+        // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
+        // `deradianted` (R1102) and `manaSpent` (R1109).
+        assert_eq!(GAME_EVENT_TYPES.len(), 76);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1065,6 +1257,8 @@ mod tests {
         );
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
         assert_eq!(event.event_type().as_str(), "damageAbsorbed");
-        assert_eq!(GAME_EVENT_TYPES.last(), Some(&GameEventType::DamageAbsorbed));
+        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
+        // secret events, R860–R865).
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
     }
 }

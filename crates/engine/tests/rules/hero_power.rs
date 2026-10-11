@@ -29,6 +29,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
+use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, sink_for, slot};
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
@@ -766,6 +767,28 @@ mod heroic_power_the_powers_r753_r758 {
         assert!(base.0 > 0);
         assert!(base.1 > 0);
         assert!(radiant.1 > base.1);
+    }
+
+    #[test]
+    fn r987_luck_gives_die_insect_s_base_face_a_second_pick() {
+        let picks = |judge: bool| -> u32 {
+            let mut state = game("r758-insect-luck");
+            // After `game()`: `new_game` resets the registry, so the judge registers here.
+            register_feng_shui();
+            let card = powered(&mut state, "insect", false, 1);
+            if judge {
+                put(&mut state, &FS.judge.id, slot(P1, Row::Backrow, 2), json!({}));
+            }
+            put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+            keep_turn(&mut state);
+            let cursor = state.rng_cursor;
+            let result = use_power(&state, &card, None);
+            assert_eq!(result.error, None);
+            result.state.rng_cursor - cursor
+        };
+        // The base face picks once; its controller's Luck 1 picks twice and keeps the better.
+        assert_eq!(picks(false), 1);
+        assert_eq!(picks(true), 2);
     }
 }
 

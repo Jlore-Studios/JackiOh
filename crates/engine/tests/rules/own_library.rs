@@ -124,6 +124,7 @@ fn entry(def_id: &str, radiant: bool, count: i32) -> LibraryEntryView {
         def_id: def_id.to_string(),
         radiant,
         count,
+        created: None,
     }
 }
 
