@@ -187,6 +187,8 @@ mod tests {
                 assert_eq!(virus.def_id, VIRUS);
                 assert!(virus.radiant);
 
+                // The Radiant Tamed is 4/12: a Radiant Bigot (12/2) kills it where a base one
+                // (6/1) would not.
                 let mut s = scenario(json!({
                     "seed": "tamed-radiant-death",
                     "p1": {
@@ -194,7 +196,7 @@ mod tests {
                         "library": [FILLER, FILLER],
                     },
                     "p2": {
-                        "field": [{ "def": BIGOT, "lane": 1 }],
+                        "field": [{ "def": BIGOT, "radiant": true, "lane": 1 }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
                     },
