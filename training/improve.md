@@ -14,12 +14,33 @@ is described in `training/README.md`; read it first.
    `TRAINING_IMPROVE`, `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
-3. Leave `crates/ai/src/shadow_ban.rs` alone: the shadow ban is the unban lane's. Do not raise
-   `AI_BUDGET` or `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit
-   (SPEC §9.9), so a stronger AI spends the same budget better.
+3. Leave `crates/ai/src/shadow_ban.rs` alone: the shadow ban is the unban lane's. Leave
+   `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` alone too: which sets the AI's decks are gated
+   from is a person's call (R1390). Do not raise `AI_BUDGET` or `AI_GATE_BUDGET`: the browser runs
+   the AI at that budget under a time limit (SPEC §9.9), so a stronger AI spends the same budget
+   better.
 4. Keep `cargo test -p jackioh-ai` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings`
    passing. Never weaken a test to make a change pass. The AI stays pure (CLAUDE.md rule 4): no
    clock, no I/O, no randomness but the `Rng` it is handed.
+
+## The Meditative set
+
+The Meditative set (102 cards, SPEC §8.8, `crates/cards/src/scripts/meditative/`) is the newest set and
+the one the AI has played least. Its cards bring new prompt kinds (the crafter, the market, the secret
+choice, the prediction), Jade, Luck, extra turns and wins by effect. Once issue #616 lifts R1390's soft
+gate (`AI_DECK_GATED_SETS` in `crates/ai/src/config.rs`, empty from then on), the gate's decks deal
+Meditative cards like any other: 102 of the 370, about a quarter of every deck. How the AI plays them is
+where a stronger AI is likeliest to come from, so look there first:
+
+- In the games you lose, look for the Meditative cards in play and in hand (`cargo jackioh trace`
+  prints a game turn by turn), and for the prompts they open that the AI answers badly.
+- `cargo jackioh sweep meditative-<nnn>` forces one card into AI decks at Easy and Hard and says
+  whether the AI played it, how often, and how the eval moved per play. Run it on a card before and
+  after a change aimed at it.
+- A change for one card or one family of them must not cost the rest: the gate is the whole deal.
+
+While `AI_DECK_GATED_SETS` still lists Meditative, the gate's games hold no Meditative card, so work on
+them cannot show in the gate yet. Spend those sessions on the rest of the AI.
 
 ## How you measure
 
