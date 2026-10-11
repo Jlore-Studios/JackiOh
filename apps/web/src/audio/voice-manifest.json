@@ -6,6 +6,10 @@
       "hash": "bcf8447e33af1e66",
       "bytes": 12776
     },
+    "classic-002-attack": {
+      "hash": "2401cfb8486323e6",
+      "bytes": 3470
+    },
     "classic-002-death": {
       "hash": "a72e0374b724bbd9",
       "bytes": 9692
@@ -25,6 +29,10 @@
     "classic-005-cast": {
       "hash": "cf48fbbf4aec5a38",
       "bytes": 11599
+    },
+    "classic-006-attack": {
+      "hash": "87ea2539e367b27c",
+      "bytes": 2583
     },
     "classic-006-death": {
       "hash": "793e0ecfb3935b67",
@@ -58,6 +66,10 @@
       "hash": "b4f2c524ef959c3f",
       "bytes": 9634
     },
+    "classic-013-attack": {
+      "hash": "91d66ae2983b8fc8",
+      "bytes": 11571
+    },
     "classic-013-death": {
       "hash": "a0b16cfdcad7d515",
       "bytes": 9573
@@ -69,6 +81,10 @@
     "classic-014-cast": {
       "hash": "967055b3e4f92141",
       "bytes": 13603
+    },
+    "classic-015-attack": {
+      "hash": "c6182338ef7e9915",
+      "bytes": 4520
     },
     "classic-015-death": {
       "hash": "277ed46e26ec06a8",
@@ -98,6 +114,10 @@
       "hash": "642ec5dbafae5c9c",
       "bytes": 8003
     },
+    "classic-021-attack": {
+      "hash": "539205c4f193c011",
+      "bytes": 4638
+    },
     "classic-021-death": {
       "hash": "4c2fc2e3c973157b",
       "bytes": 6944
@@ -105,6 +125,10 @@
     "classic-021-play": {
       "hash": "a376b7110300d3fe",
       "bytes": 8375
+    },
+    "classic-022-attack": {
+      "hash": "8b82d87bf8b3d5ae",
+      "bytes": 3577
     },
     "classic-022-death": {
       "hash": "3677676f66c02b65",
@@ -130,6 +154,10 @@
       "hash": "f908ae9f4b95d840",
       "bytes": 6075
     },
+    "classic-027-attack": {
+      "hash": "4d8e3a9f4bd61f45",
+      "bytes": 3509
+    },
     "classic-027-death": {
       "hash": "16dd2b1a7d5feb4a",
       "bytes": 3252
@@ -150,6 +178,10 @@
       "hash": "e22ae484657e0cfd",
       "bytes": 13014
     },
+    "classic-031-attack": {
+      "hash": "52fd0591ed0afd0e",
+      "bytes": 4083
+    },
     "classic-031-death": {
       "hash": "2586d05e5d2d7229",
       "bytes": 9998
@@ -161,6 +193,10 @@
     "classic-032-cast": {
       "hash": "f958e0479bac2d7d",
       "bytes": 10508
+    },
+    "classic-033-attack": {
+      "hash": "2ca0bb5f273ca7ac",
+      "bytes": 3795
     },
     "classic-033-death": {
       "hash": "eb8e841bdd283674",
@@ -194,6 +230,10 @@
       "hash": "85329266b1bbb25e",
       "bytes": 13018
     },
+    "classic-040-attack": {
+      "hash": "8633448567150d80",
+      "bytes": 3429
+    },
     "classic-040-death": {
       "hash": "61a3b5db29911df0",
       "bytes": 3487
@@ -201,6 +241,10 @@
     "classic-040-play": {
       "hash": "8a49665d00b366f1",
       "bytes": 11672
+    },
+    "classic-041-attack": {
+      "hash": "0e1bbb926a440fc2",
+      "bytes": 4980
     },
     "classic-041-death": {
       "hash": "ab9e0ec655f58eff",
@@ -222,6 +266,10 @@
       "hash": "587e5b58396ad6cc",
       "bytes": 11199
     },
+    "classic-045-attack": {
+      "hash": "cd53a9a98fba2154",
+      "bytes": 6162
+    },
     "classic-045-death": {
       "hash": "a22c6f1f5682c9af",
       "bytes": 6347
@@ -234,6 +282,10 @@
       "hash": "14c23d42915b9608",
       "bytes": 7544
     },
+    "classic-047-attack": {
+      "hash": "e96af62dbdadbeba",
+      "bytes": 4118
+    },
     "classic-047-death": {
       "hash": "9ca055dc7241a392",
       "bytes": 7936
@@ -241,6 +293,10 @@
     "classic-047-play": {
       "hash": "e2ad3629e8172bed",
       "bytes": 8014
+    },
+    "classic-048-attack": {
+      "hash": "010afe6bab7061dd",
+      "bytes": 3523
     },
     "classic-048-death": {
       "hash": "f0d8c88994774f67",
@@ -250,6 +306,10 @@
       "hash": "9c00b5ac1ff83807",
       "bytes": 8623
     },
+    "classic-049-attack": {
+      "hash": "83c59e904a30ac9c",
+      "bytes": 4550
+    },
     "classic-049-death": {
       "hash": "35f588a4217b53c1",
       "bytes": 12429
@@ -258,6 +318,10 @@
       "hash": "825ae8cbccb39fef",
       "bytes": 12424
     },
+    "classic-050-attack": {
+      "hash": "a19c43b6b898e3c6",
+      "bytes": 5136
+    },
     "classic-050-death": {
       "hash": "a028b17d24f4ef15",
       "bytes": 6420
@@ -265,6 +329,10 @@
     "classic-050-play": {
       "hash": "7d8a8a6d6a2c78c9",
       "bytes": 9758
+    },
+    "classic-051-attack": {
+      "hash": "9f769acafa1bf7ff",
+      "bytes": 3386
     },
     "classic-051-death": {
       "hash": "829090943ea249af",
@@ -277,6 +345,10 @@
     "classic-052-cast": {
       "hash": "9ad8456adeeb8cc5",
       "bytes": 12328
+    },
+    "classic-053-attack": {
+      "hash": "09969ccae64951ff",
+      "bytes": 4271
     },
     "classic-053-death": {
       "hash": "6caa4aa747142a2b",
@@ -294,6 +366,10 @@
       "hash": "2e8dfb5b14f99a11",
       "bytes": 10053
     },
+    "classic-056-attack": {
+      "hash": "5b5fd7ea55b8af7b",
+      "bytes": 2963
+    },
     "classic-056-death": {
       "hash": "0ae143f913763b30",
       "bytes": 9996
@@ -310,6 +386,10 @@
       "hash": "9a208243449d9d93",
       "bytes": 12289
     },
+    "classic-059-attack": {
+      "hash": "ed81af068d0cb6a2",
+      "bytes": 5738
+    },
     "classic-059-death": {
       "hash": "6e60fafcdb31e0b2",
       "bytes": 14050
@@ -321,6 +401,10 @@
     "classic-060-cast": {
       "hash": "8bbedf8f73ea7d57",
       "bytes": 5049
+    },
+    "classic-061-attack": {
+      "hash": "8fc585d39f8e1159",
+      "bytes": 4611
     },
     "classic-061-death": {
       "hash": "c7b662bc5b4618dd",
@@ -346,6 +430,10 @@
       "hash": "4c15ab4caf82580a",
       "bytes": 6005
     },
+    "classic-066-attack": {
+      "hash": "69101c4d53962d5a",
+      "bytes": 6380
+    },
     "classic-066-death": {
       "hash": "ba1cbfb4dd13b1aa",
       "bytes": 8412
@@ -353,6 +441,10 @@
     "classic-066-play": {
       "hash": "5c6bdd0322ef2c6e",
       "bytes": 9641
+    },
+    "classic-067-attack": {
+      "hash": "63b14df238c998a7",
+      "bytes": 4776
     },
     "classic-067-death": {
       "hash": "4b413258befacc12",
@@ -362,6 +454,10 @@
       "hash": "c537d5341212ad28",
       "bytes": 6525
     },
+    "classic-068-attack": {
+      "hash": "6cb1e6525858340a",
+      "bytes": 8102
+    },
     "classic-068-death": {
       "hash": "dce387041f4b7c3e",
       "bytes": 8331
@@ -369,6 +465,10 @@
     "classic-068-play": {
       "hash": "fbcbd7c820f8f8e9",
       "bytes": 8632
+    },
+    "classic-069-attack": {
+      "hash": "a77c32f9f0fd3dc8",
+      "bytes": 2976
     },
     "classic-069-death": {
       "hash": "9adf0cd7a64860ea",
@@ -382,6 +482,10 @@
       "hash": "2abf4038370dcf4e",
       "bytes": 6629
     },
+    "classic-071-attack": {
+      "hash": "95c0d4463ad09832",
+      "bytes": 4229
+    },
     "classic-071-death": {
       "hash": "d0aef03a8ac2d3be",
       "bytes": 8448
@@ -393,6 +497,10 @@
     "classic-072-cast": {
       "hash": "aeadc3fe715ead80",
       "bytes": 12542
+    },
+    "classic-073-attack": {
+      "hash": "c71c6c44cd63b475",
+      "bytes": 7336
     },
     "classic-073-death": {
       "hash": "880477ffe4c01123",
@@ -410,6 +518,10 @@
       "hash": "5b2d48113d77498f",
       "bytes": 7994
     },
+    "classic-076-attack": {
+      "hash": "0771bca3022176a1",
+      "bytes": 3014
+    },
     "classic-076-death": {
       "hash": "a3d7c1bd80812e50",
       "bytes": 4397
@@ -417,6 +529,10 @@
     "classic-076-play": {
       "hash": "c9a84315d196ef64",
       "bytes": 12462
+    },
+    "classic-077-attack": {
+      "hash": "59647806cba6449d",
+      "bytes": 6144
     },
     "classic-077-death": {
       "hash": "18bfa447f8486f95",
@@ -434,6 +550,10 @@
       "hash": "1aecd65a9555a36e",
       "bytes": 8313
     },
+    "classic-080-attack": {
+      "hash": "02404b0657d3dcaf",
+      "bytes": 3902
+    },
     "classic-080-death": {
       "hash": "f006117c42bfd07e",
       "bytes": 3189
@@ -445,6 +565,10 @@
     "classic-081-cast": {
       "hash": "4ffa632032d990a1",
       "bytes": 8988
+    },
+    "classic-082-attack": {
+      "hash": "203dc6ddf73b1dc6",
+      "bytes": 6673
     },
     "classic-082-death": {
       "hash": "7d557af358222987",
@@ -462,6 +586,10 @@
       "hash": "70b955b2e292fcfb",
       "bytes": 11091
     },
+    "classic-085-attack": {
+      "hash": "8c26295328c96402",
+      "bytes": 4205
+    },
     "classic-085-death": {
       "hash": "05b895236ef3c5ef",
       "bytes": 7478
@@ -469,6 +597,10 @@
     "classic-085-play": {
       "hash": "36c932b6b2b6ef1c",
       "bytes": 9276
+    },
+    "classic-086-attack": {
+      "hash": "1a3eb51e620f4aa1",
+      "bytes": 4553
     },
     "classic-086-death": {
       "hash": "f5517d03c207fa30",
@@ -485,6 +617,10 @@
     "classic-088-cast": {
       "hash": "ac2d307c8ce580f4",
       "bytes": 11818
+    },
+    "classic-089-attack": {
+      "hash": "8123d31b31ff77b0",
+      "bytes": 3069
     },
     "classic-089-death": {
       "hash": "9ce8cc32fcde05bf",
@@ -510,6 +646,10 @@
       "hash": "db9a40966b688a1f",
       "bytes": 9489
     },
+    "classicplus-003-attack": {
+      "hash": "af61e25882909c07",
+      "bytes": 3982
+    },
     "classicplus-003-death": {
       "hash": "518f9c2287d2a9a7",
       "bytes": 8070
@@ -517,6 +657,10 @@
     "classicplus-003-play": {
       "hash": "f7a38086d4a03b8b",
       "bytes": 8410
+    },
+    "classicplus-004-attack": {
+      "hash": "4ca4b8b5835e02d7",
+      "bytes": 3780
     },
     "classicplus-004-death": {
       "hash": "a26ed03a1c448cae",
@@ -526,6 +670,10 @@
       "hash": "9d0e4fb4394b86d0",
       "bytes": 6492
     },
+    "classicplus-005-attack": {
+      "hash": "b849864a23b5c7fb",
+      "bytes": 9223
+    },
     "classicplus-005-death": {
       "hash": "69335aeab83f3127",
       "bytes": 9338
@@ -533,6 +681,10 @@
     "classicplus-005-play": {
       "hash": "096c5199d7cac160",
       "bytes": 12099
+    },
+    "classicplus-006-attack": {
+      "hash": "baed5c26f7e34f97",
+      "bytes": 4483
     },
     "classicplus-006-death": {
       "hash": "ef308f6612ae3de5",
@@ -557,6 +709,10 @@
     "classicplus-010-cast": {
       "hash": "8bddbc0712bae571",
       "bytes": 9890
+    },
+    "classicplus-011-attack": {
+      "hash": "d451ee44e1d4fcdd",
+      "bytes": 7265
     },
     "classicplus-011-death": {
       "hash": "67b3410428924d81",
@@ -598,6 +754,10 @@
       "hash": "e92b514a86b384fb",
       "bytes": 9630
     },
+    "classicplus-012-attack": {
+      "hash": "9009015ca446fee0",
+      "bytes": 4454
+    },
     "classicplus-012-death": {
       "hash": "a99fa97eced2b450",
       "bytes": 7869
@@ -605,6 +765,10 @@
     "classicplus-012-play": {
       "hash": "a8fd4fe06f85a2a7",
       "bytes": 11615
+    },
+    "classicplus-013-attack": {
+      "hash": "6812ec520b996d81",
+      "bytes": 4407
     },
     "classicplus-013-death": {
       "hash": "af9000153d884be3",
@@ -630,6 +794,10 @@
       "hash": "bda6767bdc8417a5",
       "bytes": 9825
     },
+    "classicplus-018-attack": {
+      "hash": "9ae5f0221891c6e3",
+      "bytes": 3913
+    },
     "classicplus-018-death": {
       "hash": "ae40fb2016d6c3ae",
       "bytes": 3771
@@ -637,6 +805,10 @@
     "classicplus-018-play": {
       "hash": "9dfe5b3975d26672",
       "bytes": 8059
+    },
+    "classicplus-019-1-attack": {
+      "hash": "196081f10167c8b7",
+      "bytes": 7188
     },
     "classicplus-019-1-death": {
       "hash": "160e84ed828818c6",
@@ -646,6 +818,10 @@
       "hash": "981001469e089cf1",
       "bytes": 8218
     },
+    "classicplus-019-2-attack": {
+      "hash": "5be95d0bd46d2f97",
+      "bytes": 3990
+    },
     "classicplus-019-2-death": {
       "hash": "606dad6432ec768a",
       "bytes": 6840
@@ -653,6 +829,10 @@
     "classicplus-019-2-play": {
       "hash": "4d51cdfa0b5978e8",
       "bytes": 8436
+    },
+    "classicplus-019-3-attack": {
+      "hash": "ac0f2f4ca9ec713b",
+      "bytes": 4200
     },
     "classicplus-019-3-death": {
       "hash": "6dff2b95e36929ff",
@@ -662,6 +842,10 @@
       "hash": "dffcc326a6b184d8",
       "bytes": 4361
     },
+    "classicplus-019-4-attack": {
+      "hash": "3e085d615192f0e5",
+      "bytes": 8075
+    },
     "classicplus-019-4-death": {
       "hash": "b21bf70b70d9c8c5",
       "bytes": 6938
@@ -669,6 +853,10 @@
     "classicplus-019-4-play": {
       "hash": "44b55ff3b73ad825",
       "bytes": 9339
+    },
+    "classicplus-019-5-attack": {
+      "hash": "1aa28766c39cd3bd",
+      "bytes": 4093
     },
     "classicplus-019-5-death": {
       "hash": "0c782536864fe6aa",
@@ -681,6 +869,10 @@
     "classicplus-019-cast": {
       "hash": "5d2b1815e0211f77",
       "bytes": 10807
+    },
+    "classicplus-020-attack": {
+      "hash": "e4b29166551c4844",
+      "bytes": 3890
     },
     "classicplus-020-death": {
       "hash": "a673b0bc53530c03",
@@ -699,8 +891,8 @@
       "bytes": 6680
     },
     "classicplus-023-cast": {
-      "hash": "162a713c9ae844a0",
-      "bytes": 7481
+      "hash": "705f52e7b32e0a74",
+      "bytes": 11949
     },
     "classicplus-024-cast": {
       "hash": "3c290562ad50dce8",
@@ -709,6 +901,10 @@
     "classicplus-025-cast": {
       "hash": "7a83b33c89c07749",
       "bytes": 6665
+    },
+    "classicplus-026-attack": {
+      "hash": "fafb818bd4f24c2c",
+      "bytes": 3436
     },
     "classicplus-026-death": {
       "hash": "1d22f884248a2e96",
@@ -719,8 +915,12 @@
       "bytes": 8246
     },
     "classicplus-027-cast": {
-      "hash": "5d65602c40c5fa89",
-      "bytes": 8251
+      "hash": "a12753cdda6c0179",
+      "bytes": 11252
+    },
+    "classicplus-028-attack": {
+      "hash": "8380c21ec393e353",
+      "bytes": 6090
     },
     "classicplus-028-death": {
       "hash": "30a1dd859dedf670",
@@ -733,6 +933,10 @@
     "classicplus-029-cast": {
       "hash": "2c50ddd844cfbb57",
       "bytes": 11791
+    },
+    "classicplus-030-attack": {
+      "hash": "b6821e3a7b3ad260",
+      "bytes": 3396
     },
     "classicplus-030-death": {
       "hash": "6f2a37961c12733d",
@@ -782,6 +986,10 @@
       "hash": "ba5b2067e434a51f",
       "bytes": 15001
     },
+    "classicplus-037-attack": {
+      "hash": "0f52570fcf3e57d0",
+      "bytes": 12266
+    },
     "classicplus-037-death": {
       "hash": "3049366646e30c29",
       "bytes": 6602
@@ -789,6 +997,10 @@
     "classicplus-037-play": {
       "hash": "12ef244897d1d20b",
       "bytes": 14531
+    },
+    "classicplus-038-1-attack": {
+      "hash": "1c18e9d585d55d3f",
+      "bytes": 3538
     },
     "classicplus-038-1-death": {
       "hash": "5970e36336f6d10c",
@@ -798,6 +1010,10 @@
       "hash": "9df50eaede035276",
       "bytes": 11576
     },
+    "classicplus-038-attack": {
+      "hash": "4ea0d5e87722d269",
+      "bytes": 4324
+    },
     "classicplus-038-death": {
       "hash": "d47bbe81c9bbb066",
       "bytes": 3276
@@ -805,6 +1021,10 @@
     "classicplus-038-play": {
       "hash": "8cb7069bbc9c27a3",
       "bytes": 6304
+    },
+    "classicplus-039-attack": {
+      "hash": "edd5403e6e43d571",
+      "bytes": 2671
     },
     "classicplus-039-death": {
       "hash": "0d3e29538fb75e4f",
@@ -842,6 +1062,10 @@
       "hash": "5dc84d5a32900b0e",
       "bytes": 11287
     },
+    "classicplus-046-1-attack": {
+      "hash": "4b00992804147057",
+      "bytes": 3710
+    },
     "classicplus-046-1-death": {
       "hash": "52171829725e5675",
       "bytes": 8365
@@ -849,6 +1073,10 @@
     "classicplus-046-1-play": {
       "hash": "7ab4d4acd1ddaab4",
       "bytes": 6245
+    },
+    "classicplus-046-attack": {
+      "hash": "fd75f34a2d4747a7",
+      "bytes": 5941
     },
     "classicplus-046-death": {
       "hash": "e9bcfb3606687146",
@@ -862,6 +1090,10 @@
       "hash": "ec549f7eaa927b62",
       "bytes": 9348
     },
+    "classicplus-048-attack": {
+      "hash": "565b6d48b4fa33ed",
+      "bytes": 5554
+    },
     "classicplus-048-death": {
       "hash": "58b1cc0597232ac4",
       "bytes": 9180
@@ -869,6 +1101,10 @@
     "classicplus-048-play": {
       "hash": "f6ebdab55e240c29",
       "bytes": 8295
+    },
+    "classicplus-049-attack": {
+      "hash": "5a70e9e8f4b5d523",
+      "bytes": 4406
     },
     "classicplus-049-death": {
       "hash": "bc0c7c1f934f00d9",
@@ -881,6 +1117,10 @@
     "classicplus-050-cast": {
       "hash": "53ab2b11baa1ffe7",
       "bytes": 10328
+    },
+    "classicplus-051-attack": {
+      "hash": "30ecaa5c7a1ddab4",
+      "bytes": 3859
     },
     "classicplus-051-death": {
       "hash": "e53cbb9978a2cc8f",
@@ -938,6 +1178,10 @@
       "hash": "ce1373ba7d64728c",
       "bytes": 9292
     },
+    "classicplus-064-attack": {
+      "hash": "1800bd2a5708805f",
+      "bytes": 4301
+    },
     "classicplus-064-death": {
       "hash": "8003bd05e5d92e11",
       "bytes": 4261
@@ -982,6 +1226,10 @@
       "hash": "ecf2d4598ca4fd98",
       "bytes": 12312
     },
+    "classicplus-069-attack": {
+      "hash": "c52dd4f86f9d2323",
+      "bytes": 4496
+    },
     "classicplus-069-death": {
       "hash": "4fe719af679d62e9",
       "bytes": 4572
@@ -1001,6 +1249,10 @@
     "classicplus-072-cast": {
       "hash": "2476f5a8b65947a5",
       "bytes": 11573
+    },
+    "classicplus-073-1-attack": {
+      "hash": "b88ad40fbbbc731a",
+      "bytes": 5582
     },
     "classicplus-073-1-death": {
       "hash": "dba3551ffdbf7220",
@@ -1022,6 +1274,10 @@
       "hash": "44a742d05a1b46c9",
       "bytes": 6087
     },
+    "classicplus-075-attack": {
+      "hash": "80fd534bf19b0f24",
+      "bytes": 9225
+    },
     "classicplus-075-death": {
       "hash": "ee7ecf22423a57e0",
       "bytes": 5248
@@ -1030,6 +1286,10 @@
       "hash": "8c77691c071cddd7",
       "bytes": 10772
     },
+    "classicplus-076-1-attack": {
+      "hash": "80de42271cebde8b",
+      "bytes": 3906
+    },
     "classicplus-076-1-death": {
       "hash": "6c28afd51568935f",
       "bytes": 6135
@@ -1037,6 +1297,10 @@
     "classicplus-076-1-play": {
       "hash": "33efc1d3ef6f3b81",
       "bytes": 8731
+    },
+    "classicplus-076-attack": {
+      "hash": "92f05b90ee124890",
+      "bytes": 3220
     },
     "classicplus-076-death": {
       "hash": "d2b89a0410016e8f",
@@ -1054,6 +1318,10 @@
       "hash": "bb882e41fbd0a2db",
       "bytes": 6170
     },
+    "classicplus-t-ai-01-attack": {
+      "hash": "34cde5b3ff576e4e",
+      "bytes": 4386
+    },
     "classicplus-t-ai-01-death": {
       "hash": "8c625cf2f22cff89",
       "bytes": 8279
@@ -1061,6 +1329,10 @@
     "classicplus-t-ai-01-play": {
       "hash": "09974adb23622a49",
       "bytes": 6598
+    },
+    "classicplus-t-ai-02-attack": {
+      "hash": "ce57f1dce53b57b3",
+      "bytes": 3564
     },
     "classicplus-t-ai-02-death": {
       "hash": "bcc05cae908f3bf2",
@@ -2018,6 +2290,10 @@
       "hash": "5524c2c25470f2a1",
       "bytes": 10771
     },
+    "meditative-001-cast": {
+      "hash": "fcd90c5080b8f3ce",
+      "bytes": 12369
+    },
     "meditative-002-attack": {
       "hash": "5597bd912b5cde88",
       "bytes": 7984
@@ -2042,6 +2318,10 @@
       "hash": "910c23dfcfc56a7b",
       "bytes": 12402
     },
+    "meditative-004-cast": {
+      "hash": "384a98234dcef3a1",
+      "bytes": 9637
+    },
     "meditative-005-cast": {
       "hash": "e29184257c8527fe",
       "bytes": 13413
@@ -2050,9 +2330,21 @@
       "hash": "56f10831cf5b0efd",
       "bytes": 9885
     },
+    "meditative-007-cast": {
+      "hash": "5a475637a8b20645",
+      "bytes": 14393
+    },
     "meditative-008-cast": {
       "hash": "7bef79a710dcd505",
       "bytes": 11527
+    },
+    "meditative-009-cast": {
+      "hash": "e63d9507988c76ee",
+      "bytes": 11092
+    },
+    "meditative-010-cast": {
+      "hash": "f6b7a27d4663c24c",
+      "bytes": 12119
     },
     "meditative-011-cast": {
       "hash": "3f04866c47e2c1d6",
@@ -2098,6 +2390,18 @@
       "hash": "17008bc73d6e6f82",
       "bytes": 10768
     },
+    "meditative-016-attack": {
+      "hash": "a8bff51a6792adc5",
+      "bytes": 2686
+    },
+    "meditative-016-death": {
+      "hash": "1abc6315f51d9bd4",
+      "bytes": 5417
+    },
+    "meditative-016-play": {
+      "hash": "83a6f3bd1b0e4dd7",
+      "bytes": 8135
+    },
     "meditative-017-cast": {
       "hash": "25037c37d5fd47ae",
       "bytes": 9471
@@ -2122,6 +2426,14 @@
       "hash": "ebf6301c142a41d7",
       "bytes": 8679
     },
+    "meditative-022-1-cast": {
+      "hash": "0625de2238a85e17",
+      "bytes": 5554
+    },
+    "meditative-022-cast": {
+      "hash": "c9e82c28d52d7983",
+      "bytes": 12994
+    },
     "meditative-023-attack": {
       "hash": "9c341119e5aafe78",
       "bytes": 6214
@@ -2134,6 +2446,10 @@
       "hash": "bad659aa604e547b",
       "bytes": 11928
     },
+    "meditative-024-cast": {
+      "hash": "12be5cb30566d51c",
+      "bytes": 6111
+    },
     "meditative-025-attack": {
       "hash": "dd5fcbea6a6ae7aa",
       "bytes": 8889
@@ -2145,6 +2461,10 @@
     "meditative-025-play": {
       "hash": "181eb332ff1c9e44",
       "bytes": 9332
+    },
+    "meditative-026-cast": {
+      "hash": "203b5efa6032ba1f",
+      "bytes": 12911
     },
     "meditative-027-attack": {
       "hash": "041fbb420ae62c9c",
@@ -2302,6 +2622,30 @@
       "hash": "ca2ad4d38c81923f",
       "bytes": 9745
     },
+    "meditative-045-1-attack": {
+      "hash": "0ac250038c5d0ae7",
+      "bytes": 4546
+    },
+    "meditative-045-1-death": {
+      "hash": "0a03295d0229a595",
+      "bytes": 4743
+    },
+    "meditative-045-1-play": {
+      "hash": "ad1abbdfbf1f94a2",
+      "bytes": 6558
+    },
+    "meditative-045-attack": {
+      "hash": "279043cf89353f82",
+      "bytes": 4504
+    },
+    "meditative-045-death": {
+      "hash": "60e2e6bdb01094f2",
+      "bytes": 5858
+    },
+    "meditative-045-play": {
+      "hash": "df28a7be17ec1ef6",
+      "bytes": 8436
+    },
     "meditative-046-cast": {
       "hash": "84873349a789c4ba",
       "bytes": 14759
@@ -2322,6 +2666,18 @@
       "hash": "f39da59241a7dbd9",
       "bytes": 14808
     },
+    "meditative-049-1-attack": {
+      "hash": "7e1e97e30d1f20b6",
+      "bytes": 5576
+    },
+    "meditative-049-1-death": {
+      "hash": "13aebbc910ce3e5d",
+      "bytes": 6448
+    },
+    "meditative-049-1-play": {
+      "hash": "510d5aeb4275023f",
+      "bytes": 10707
+    },
     "meditative-049-2-attack": {
       "hash": "5c364162c4796479",
       "bytes": 7907
@@ -2338,6 +2694,18 @@
       "hash": "0fe47ba7fae7a8d0",
       "bytes": 13263
     },
+    "meditative-049-attack": {
+      "hash": "208b64876a48239d",
+      "bytes": 6515
+    },
+    "meditative-049-death": {
+      "hash": "71fe87bf811513c4",
+      "bytes": 8480
+    },
+    "meditative-049-play": {
+      "hash": "77aedfaa2a8aa52c",
+      "bytes": 10485
+    },
     "meditative-050-cast": {
       "hash": "6da7405b97fafc2b",
       "bytes": 14199
@@ -2353,6 +2721,10 @@
     "meditative-051-play": {
       "hash": "cea70c5043b010a5",
       "bytes": 12349
+    },
+    "meditative-052-cast": {
+      "hash": "f2c33337365c5be5",
+      "bytes": 6692
     },
     "meditative-053-cast": {
       "hash": "1aa8ac8926c1da79",
@@ -2442,6 +2814,10 @@
       "hash": "d707976327c56d7b",
       "bytes": 11767
     },
+    "meditative-064-cast": {
+      "hash": "856fcd0b6dbf8056",
+      "bytes": 5717
+    },
     "meditative-065-attack": {
       "hash": "5df9ff949c729b79",
       "bytes": 10002
@@ -2510,6 +2886,14 @@
       "hash": "c403a8ff383541d4",
       "bytes": 9485
     },
+    "meditative-071-1-cast": {
+      "hash": "fd6d0518c4376ae3",
+      "bytes": 4851
+    },
+    "meditative-071-cast": {
+      "hash": "786a393d2a517ca5",
+      "bytes": 7144
+    },
     "meditative-072-attack": {
       "hash": "54dcba8acaec9d9f",
       "bytes": 6905
@@ -2549,6 +2933,166 @@
     "meditative-075-cast": {
       "hash": "63d8732683818109",
       "bytes": 11179
+    },
+    "meditative-076-cast": {
+      "hash": "0b789a2546f09190",
+      "bytes": 8597
+    },
+    "meditative-077-cast": {
+      "hash": "4e420e39dc316cec",
+      "bytes": 10251
+    },
+    "meditative-078-cast": {
+      "hash": "96774193148d2a3f",
+      "bytes": 11891
+    },
+    "meditative-079-attack": {
+      "hash": "4bb75ff1da72c9ac",
+      "bytes": 4598
+    },
+    "meditative-079-death": {
+      "hash": "2503a373c32a36be",
+      "bytes": 9603
+    },
+    "meditative-079-play": {
+      "hash": "dad67a173270793d",
+      "bytes": 7604
+    },
+    "meditative-080-cast": {
+      "hash": "1896e1e7f9415257",
+      "bytes": 14675
+    },
+    "meditative-081-cast": {
+      "hash": "577a164e6e52d7c3",
+      "bytes": 14174
+    },
+    "meditative-082-attack": {
+      "hash": "d79320668f8e86ab",
+      "bytes": 5142
+    },
+    "meditative-082-death": {
+      "hash": "63adbf2d49706cc6",
+      "bytes": 3965
+    },
+    "meditative-082-play": {
+      "hash": "8a9b2fd81cdcd9b6",
+      "bytes": 12703
+    },
+    "meditative-083-attack": {
+      "hash": "12b1a50d85874c91",
+      "bytes": 6580
+    },
+    "meditative-083-death": {
+      "hash": "d03624887e362136",
+      "bytes": 4081
+    },
+    "meditative-083-play": {
+      "hash": "b039998e880ea77b",
+      "bytes": 9811
+    },
+    "meditative-084-attack": {
+      "hash": "4c8a4030f78f6432",
+      "bytes": 5400
+    },
+    "meditative-084-death": {
+      "hash": "e83cf26721f948f6",
+      "bytes": 6669
+    },
+    "meditative-084-play": {
+      "hash": "f62640783c94dfd5",
+      "bytes": 7035
+    },
+    "meditative-085-attack": {
+      "hash": "69b0ce3c5f6e771f",
+      "bytes": 5205
+    },
+    "meditative-085-death": {
+      "hash": "9ca0a555ac3cc6d2",
+      "bytes": 5426
+    },
+    "meditative-085-play": {
+      "hash": "7add5a1510b2eb3e",
+      "bytes": 6315
+    },
+    "meditative-086-attack": {
+      "hash": "65a2457739cbe8b5",
+      "bytes": 4818
+    },
+    "meditative-086-death": {
+      "hash": "7b12f1373f5ce24f",
+      "bytes": 11038
+    },
+    "meditative-086-play": {
+      "hash": "4954d13e55965fbf",
+      "bytes": 14115
+    },
+    "meditative-087-attack": {
+      "hash": "c84db380369ae725",
+      "bytes": 9581
+    },
+    "meditative-087-death": {
+      "hash": "a345c564a021bb02",
+      "bytes": 6303
+    },
+    "meditative-087-play": {
+      "hash": "fc5f741613e44ddd",
+      "bytes": 10233
+    },
+    "meditative-088-attack": {
+      "hash": "13f257f0cd4e499c",
+      "bytes": 3767
+    },
+    "meditative-088-death": {
+      "hash": "5898e313319731be",
+      "bytes": 4782
+    },
+    "meditative-088-play": {
+      "hash": "8ca7b2dc3676492b",
+      "bytes": 8427
+    },
+    "meditative-089-cast": {
+      "hash": "b2c8d07056070e8f",
+      "bytes": 10687
+    },
+    "meditative-090-cast": {
+      "hash": "dabecec512045eb1",
+      "bytes": 7593
+    },
+    "meditative-091-1-attack": {
+      "hash": "d016fd57e416595f",
+      "bytes": 4164
+    },
+    "meditative-091-1-death": {
+      "hash": "e6e035ead963d53a",
+      "bytes": 5888
+    },
+    "meditative-091-1-play": {
+      "hash": "4baf129482e0d9df",
+      "bytes": 6667
+    },
+    "meditative-091-attack": {
+      "hash": "6b135c798c7058c5",
+      "bytes": 7095
+    },
+    "meditative-091-death": {
+      "hash": "a2fb8c9bb9e74ba8",
+      "bytes": 5731
+    },
+    "meditative-091-play": {
+      "hash": "b3fd8c4c4770ac75",
+      "bytes": 6080
+    },
+    "meditative-092-attack": {
+      "hash": "0fad1044f9ab82ac",
+      "bytes": 4853
+    },
+    "meditative-092-death": {
+      "hash": "fa58a655de1a1912",
+      "bytes": 4562
+    },
+    "meditative-092-play": {
+      "hash": "976cd444df80b4e9",
+      "bytes": 5246
     },
     "meditative-093-1-attack": {
       "hash": "356212ab676f51d3",
@@ -2633,6 +3177,18 @@
     "meditative-096-cast": {
       "hash": "733c922a7aa86649",
       "bytes": 12591
+    },
+    "meditative-097-1-attack": {
+      "hash": "050c8ff15668fc59",
+      "bytes": 4810
+    },
+    "meditative-097-1-death": {
+      "hash": "83f389b68fdc2a87",
+      "bytes": 6214
+    },
+    "meditative-097-1-play": {
+      "hash": "6f8b1b53e5aedd39",
+      "bytes": 7050
     },
     "meditative-097-2-attack": {
       "hash": "d5444a43f6ee1c33",
@@ -2729,6 +3285,54 @@
     "meditative-097-9-play": {
       "hash": "8a9767d439580337",
       "bytes": 15399
+    },
+    "meditative-097-cast": {
+      "hash": "1c2c6b7147d27ea3",
+      "bytes": 8179
+    },
+    "meditative-098-cast": {
+      "hash": "73b86dbae250a40f",
+      "bytes": 8646
+    },
+    "meditative-099-cast": {
+      "hash": "5adba6ab3bbe4fc6",
+      "bytes": 11467
+    },
+    "meditative-100-attack": {
+      "hash": "5ab37b5e4944e14c",
+      "bytes": 4437
+    },
+    "meditative-100-death": {
+      "hash": "f0f690c2e66185cf",
+      "bytes": 7477
+    },
+    "meditative-100-play": {
+      "hash": "fef094927c03e03a",
+      "bytes": 13559
+    },
+    "meditative-101-attack": {
+      "hash": "46567fc0fdc44f2f",
+      "bytes": 3906
+    },
+    "meditative-101-death": {
+      "hash": "41a1ff82d29ae70c",
+      "bytes": 5384
+    },
+    "meditative-101-play": {
+      "hash": "3b5e13e4d69b3f01",
+      "bytes": 9823
+    },
+    "meditative-102-attack": {
+      "hash": "9dcd560504edbc84",
+      "bytes": 8120
+    },
+    "meditative-102-death": {
+      "hash": "950f9d013491877b",
+      "bytes": 7636
+    },
+    "meditative-102-play": {
+      "hash": "a2e0544bd4bd343e",
+      "bytes": 10510
     }
   }
 }
