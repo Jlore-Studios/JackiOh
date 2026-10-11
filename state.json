@@ -3524,6 +3524,13 @@
     "577": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-11T13:15:09Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "hard's 'engine rules (crates/engine/src/)': the code edit is small, but the scorer will dry-run about 200 cards (Meditative's among them) it has never scored, and a panic or hidden-information leak there means fixing engine code"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
