@@ -552,8 +552,16 @@ mod the_curve_and_the_theme_b23 {
 
 mod r1370_a_deck_that_leans_on_a_set {
     use super::*;
-    use jackioh_ai::build_ai_deck_traced;
+    use jackioh_ai::{AI_DECK_GATED_SETS, build_ai_deck_traced, ungated_lean};
     use jackioh_engine::testkit::{SHIPPED_SETS, SetName, newest_shipped_set};
+
+    /// The gate a literal's deck is dealt under (R1390): its `gatedSets`, else the AI's own soft gate.
+    fn gate_of(literal: &Value) -> Vec<SetName> {
+        match literal.get("gatedSets") {
+            Some(listed) => json_as(listed.clone()),
+            None => AI_DECK_GATED_SETS.to_vec(),
+        }
+    }
 
     /// ceil(size × share), as the deck builder rounds every floor.
     fn floor_of(size: i32, share: f64) -> usize {
@@ -578,13 +586,13 @@ mod r1370_a_deck_that_leans_on_a_set {
             .count()
     }
 
-    /// The tags a theme may be (at least `minThemeSize` cards of the pool `banned` leaves), each with
-    /// how many cards the pool holds of it.
-    fn themes(banned: &[String]) -> Vec<(String, usize)> {
+    /// The tags a theme may be (at least `minThemeSize` cards of the pool `banned` and the gate `gated`
+    /// leave), each with how many cards the pool holds of it.
+    fn themes(banned: &[String], gated: &[SetName]) -> Vec<(String, usize)> {
         register_cards();
         let pool: Vec<CardDef> = query(&CatalogQueryArgs::default())
             .into_iter()
-            .filter(|def| !banned.contains(&def.id))
+            .filter(|def| !banned.contains(&def.id) && !gated.contains(&def.set))
             .cloned()
             .collect();
         let mut counts: IndexMap<String, usize> = IndexMap::new();
@@ -603,9 +611,10 @@ mod r1370_a_deck_that_leans_on_a_set {
         themes
     }
 
-    /// Over `seeds` seeds: the deck is whole and distinct, at least `leanMinShare` of it is of `lean`,
-    /// at least `minUnitShare` of it are units, and a theme the pool holds enough cards of for its
-    /// floor is at least `themeMinShare` of it.
+    /// Over `seeds` seeds, with the deck leaning on `lean`: the deck is whole and distinct, at least
+    /// `leanMinShare` of it is of the set it leans on (`lean`, or under the AI's soft gate the newest
+    /// set that ships and is not gated, R1390), at least `minUnitShare` of it are units, and a theme
+    /// the pool holds enough cards of for its floor is at least `themeMinShare` of it.
     fn every_floor_holds(size: i32, base: Value, lean: SetName, theme: Option<(&str, usize)>, seeds: usize) {
         register_cards();
         let mut literal = base;
@@ -613,6 +622,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         if let Some((tag, _)) = theme {
             literal["theme"] = json!(tag);
         }
+        let leaned = ungated_lean(Some(lean), &gate_of(&literal))
+            .unwrap_or_else(|| panic!("{literal}: the gate leaves a set that ships"));
         let opts = options(literal.clone());
         for n in 1..=seeds {
             let deck = build_ai_deck(
@@ -624,7 +635,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             assert_eq!(deck.len(), size as usize, "{at}");
             assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size as usize, "{at}");
             assert!(
-                of_set(&deck, lean) >= floor_of(size, AI_DECK.lean_min_share),
+                of_set(&deck, leaned) >= floor_of(size, AI_DECK.lean_min_share),
                 "{at}: {deck:?}"
             );
             assert!(
@@ -805,11 +816,18 @@ mod r1370_a_deck_that_leans_on_a_set {
     fn r1370_at_20_cards_half_the_deck_is_of_the_newest_set_on_every_seed_with_no_theme_or_a_rolled_one() {
         let newest = newest_shipped_set();
         assert_eq!(floor_of(DECK_SIZE, AI_DECK.lean_min_share), 10);
-        // A human's random deck (nothing banned), with a theme rolled (absent) and with none (null).
-        every_floor_holds(DECK_SIZE, json!({ "banned": [] }), newest, None, SEEDS);
+        // A human's random deck (nothing banned and no gate, R1390), with a theme rolled (absent) and
+        // with none (null).
         every_floor_holds(
             DECK_SIZE,
-            json!({ "banned": [], "theme": null }),
+            json!({ "banned": [], "gatedSets": [] }),
+            newest,
+            None,
+            SEEDS,
+        );
+        every_floor_holds(
+            DECK_SIZE,
+            json!({ "banned": [], "gatedSets": [], "theme": null }),
             newest,
             None,
             SEEDS,
@@ -819,12 +837,12 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_at_20_cards_with_every_theme_the_pool_offers_the_lean_the_theme_and_the_units_all_hold() {
         let newest = newest_shipped_set();
-        let themes = themes(&[]);
+        let themes = themes(&[], &[]);
         assert!(themes.len() > 5, "{themes:?}");
         for (tag, in_pool) in &themes {
             every_floor_holds(
                 DECK_SIZE,
-                json!({ "banned": [] }),
+                json!({ "banned": [], "gatedSets": [] }),
                 newest,
                 Some((tag, *in_pool)),
                 40,
@@ -837,11 +855,13 @@ mod r1370_a_deck_that_leans_on_a_set {
      {
         let newest = newest_shipped_set();
         let banned: Vec<String> = SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect();
+        // The AI's own decks: its soft gate keeps their pool and their lean off a gated set (R1390),
+        // so a lean on the newest set lands on the newest set the gate leaves.
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let base = json!({ "manaCap": h.mana_cap });
             every_floor_holds(h.deck_size, base.clone(), newest, None, SEEDS);
-            for (tag, in_pool) in themes(&banned) {
+            for (tag, in_pool) in themes(&banned, AI_DECK_GATED_SETS) {
                 every_floor_holds(h.deck_size, base.clone(), newest, Some((&tag, in_pool)), 20);
             }
             // The shadow ban still applies to the AI's own decks (R186).
@@ -868,7 +888,13 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_every_shipped_set_can_be_leaned_on_not_only_the_newest() {
         for set in SHIPPED_SETS {
-            every_floor_holds(DECK_SIZE, json!({ "banned": [] }), set, None, 100);
+            every_floor_holds(
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [] }),
+                set,
+                None,
+                100,
+            );
         }
     }
 
@@ -882,14 +908,15 @@ mod r1370_a_deck_that_leans_on_a_set {
             .map(|def| def.id.clone())
             .collect();
         of_newest.sort();
-        // Ban all but six of the set's cards, short of the ten a 20-card deck owes.
+        // Ban all but six of the set's cards, short of the ten a 20-card deck owes. A player's deck, so
+        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere.
         let kept: Vec<String> = of_newest[..6].to_vec();
         let banned: Vec<String> = of_newest[6..].to_vec();
         for n in 1..=SEEDS {
             let deck = build_ai_deck(
                 &mut create_rng(&format!("r1370:short:{n}"), 0),
                 DECK_SIZE,
-                &options(json!({ "banned": banned, "leanSet": newest })),
+                &options(json!({ "banned": banned, "gatedSets": [], "leanSet": newest })),
             );
             assert_eq!(deck.len(), DECK_SIZE as usize, "seed {n}");
             for id in &kept {
@@ -901,21 +928,20 @@ mod r1370_a_deck_that_leans_on_a_set {
                 "seed {n}"
             );
         }
-        // A set the pool holds none of (Meditative, which has not shipped, R1420) gives none: the floor
+        // A set the pool holds none of (here the newest, every card of it banned) gives none: the floor
         // narrows nothing and no card weighs more, so with no theme the deck is the one dealt without it.
-        // A player's deck, so the AI's soft gate (R1390) does not move the lean elsewhere.
-        assert!(!jackioh_engine::testkit::set_ships(SetName::Meditative));
         for n in 1..=50 {
             let plain = build_ai_deck(
                 &mut create_rng(&format!("r1370:none:{n}"), 0),
                 DECK_SIZE,
-                &options(json!({ "banned": [], "gatedSets": [], "theme": null })),
+                &options(json!({ "banned": of_newest, "gatedSets": [], "theme": null })),
             );
             let leaning = build_ai_deck(
                 &mut create_rng(&format!("r1370:none:{n}"), 0),
                 DECK_SIZE,
-                &options(json!({ "banned": [], "gatedSets": [], "theme": null, "leanSet": "Meditative" })),
+                &options(json!({ "banned": of_newest, "gatedSets": [], "theme": null, "leanSet": newest })),
             );
+            assert_eq!(of_set(&plain, newest), 0, "seed {n}");
             assert_eq!(leaning, plain, "seed {n}");
         }
     }
@@ -930,7 +956,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                 build_ai_deck_traced(
                     &mut create_rng(&format!("r1370:forced:{n}"), 0),
                     DECK_SIZE,
-                    &options(json!({ "banned": [], "leanSet": newest })),
+                    &options(json!({ "banned": [], "gatedSets": [], "leanSet": newest })),
                 )
                 .lean_forced
                     > 0
@@ -1093,11 +1119,25 @@ mod r1390_the_ai_decks_soft_gate {
     #[test]
     fn r1390_an_empty_gate_deals_the_decks_dealt_before_it() {
         register_cards();
-        // Unpreviewed, no gated card is in the pool, so the AI's decks are the ones they always were:
-        // the default gate and an empty one deal the same deck and leave the rng at the same cursor.
+        // The gate is a filter on the pool and nothing more: gating a set deals exactly the deck that
+        // banning its every card would, and leaves the rng at the same cursor, so an empty gate, which
+        // filters nothing, deals what the draw dealt before the gate. Before the Meditative set shipped
+        // the default gate removed nothing; now that it ships the default gate is these bans.
+        let gated_ids: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| AI_DECK_GATED_SETS.contains(&def.set))
+            .map(|def| def.id.clone())
+            .collect();
+        assert!(
+            !gated_ids.is_empty(),
+            "the gated set ships, so the pool holds its cards"
+        );
+        let mut as_banned: Vec<String> = SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect();
+        as_banned.extend(gated_ids);
         for (tier, size, base) in ai_rules() {
             let mut empty = base.clone();
             empty["gatedSets"] = json!([]);
+            empty["banned"] = json!(as_banned);
             for n in 1..=GATE_SEEDS {
                 let seed = format!("r1390:empty:{tier}:{n}");
                 let mut gated_rng = create_rng(&seed, 0);
@@ -1110,9 +1150,8 @@ mod r1390_the_ai_decks_soft_gate {
                 assert_eq!(gated_rng.cursor(), empty_rng.cursor(), "{seed}");
             }
         }
-        // Previewed, an empty gate deals the set as the draw did before the gate: AI decks hold its
-        // cards, and a lean on it holds R1370's floor of them.
-        let _preview = preview_every_set();
+        // An empty gate deals the set as the draw did before the gate: AI decks hold its cards, and a
+        // lean on it holds R1370's floor of them.
         let mut dealt = 0;
         for n in 1..=GATE_SEEDS {
             let seed = format!("r1390:empty:previewed:{n}");

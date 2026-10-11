@@ -2,8 +2,10 @@
   "version": "v0.3.5",
   "title": "Patch v0.3.5: Meditative, the release: the set ships",
   "sources": "issue #496, issue #553, issue #575, PR #652",
-  "notes": "The Meditative set ships (R1420): its 102 cards and 30 tokens join every pool that names no set, the deck builder, the Almanac and random decks, and the AI's random decks keep the soft gate (R1390) until the AI is trained on them. The set's own mechanics are R800 to R1445's blocks; no card of an earlier set changes.",
+  "notes": "The Meditative set ships (R1420): its 102 cards and 30 tokens join every pool that names no set, the deck builder, the Almanac and random decks, and the AI's random decks keep the soft gate (R1390) until the AI is trained on them. The set's own mechanics are R800 to R1445's blocks. Core #95's and Classic+ #73's refs name Meditative #95, the Call to Chaos edition their texts name (R1249); no other card of an earlier set changes.",
   "cards": [
+    "core-095",
+    "classicplus-073",
     "meditative-001",
     "meditative-002",
     "meditative-003",
