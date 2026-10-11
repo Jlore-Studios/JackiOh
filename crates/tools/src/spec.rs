@@ -16,7 +16,7 @@
 //! ---
 //! ```
 //!
-//! `check` holds four rules:
+//! `check` holds six rules:
 //!
 //! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
 //! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id: a
@@ -27,10 +27,13 @@
 //! 3. every `r<n>` token of a Rust `fn` or `mod` name, and every `R<n>` cited in `crates/`,
 //!    `apps/web/src/` and `e2e/` (comments included, recursively), has a note;
 //! 4. every `[[…]]` link in `spec/` resolves: `[[R113]]` to a ruling note, `[[§10.3]]` to a section
-//!    heading, anything else to a note's file name. Links inside code are not links.
+//!    heading, anything else to a note's file name. Links inside code are not links;
+//! 5. every ruling note's `title` and `cards` are present and not empty;
+//! 6. `spec/INDEX.md` is what `index` writes from the notes as they stand (line endings aside), so
+//!    a note added or changed without `index` run again fails (#669).
 //!
 //! It reads ids, file names, headings and test names, never the wording (#133): a reworded sentence
-//! fails nothing. `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
+//! fails nothing, though a reworded `title` changes the index (rule 6). `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
 //! files that prove it, one line each.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -55,7 +58,7 @@ pub struct Args {
 
 #[derive(clap::Subcommand)]
 pub enum SpecCommand {
-    /// The four structural checks (SURFACE §15): ids and file names, proofs, citations, links.
+    /// The six structural checks (SURFACE §15): ids and file names, proofs, citations, links, titles and cards, the index.
     Check,
     /// Rewrite `spec/INDEX.md` from the ruling notes.
     Index,
@@ -108,6 +111,8 @@ struct RulingNote {
     stem: String,
     id: Option<String>,
     title: Option<String>,
+    /// What it affects, as plain text: cards, sections and rulings.
+    cards: Option<String>,
     proven_in: Vec<String>,
 }
 
@@ -204,18 +209,30 @@ fn parse_note(path: String, stem: String, text: &str) -> Result<RulingNote, Stri
         stem,
         id: None,
         title: None,
+        cards: None,
         proven_in: Vec::new(),
     };
     for (key, field) in fields {
         match (key.as_str(), field) {
             ("id", Field::Scalar(value)) => note.id = Some(value),
             ("title", Field::Scalar(value)) => note.title = Some(value),
+            ("cards", Field::Scalar(value)) => note.cards = Some(value),
             ("proven_in", Field::List(items)) => note.proven_in = items,
             ("proven_in", Field::Scalar(value)) => note.proven_in = vec![value],
             _ => {}
         }
     }
     Ok(note)
+}
+
+/// Rule 5's findings for one note: each of `title` and `cards` its front matter leaves out or
+/// empty (`spec/README.md`, Note format).
+fn unfilled_fields(note: &RulingNote) -> Vec<String> {
+    [("title", &note.title), ("cards", &note.cards)]
+        .into_iter()
+        .filter(|(_, value)| value.as_deref().is_none_or(|value| value.trim().is_empty()))
+        .map(|(field, _)| format!("{}: `{field}` is missing or empty in the front matter", note.path))
+        .collect()
 }
 
 /// Every ruling note under `spec/rulings/`, in file-name order.
@@ -828,6 +845,16 @@ fn check(root: &Path) -> Result<()> {
         }
     }
 
+    // 5. Every note fills in its `title` and `cards`.
+    problems.extend(notes.iter().flat_map(unfilled_fields));
+
+    // 6. spec/INDEX.md is what `index` writes from the notes. A note with no ruling id has no row
+    // to render, and rule 1 has named it already.
+    if let Ok(rendered) = render_index(&notes) {
+        let committed = fs::read_to_string(root.join("spec").join("INDEX.md")).ok();
+        problems.extend(index_problem(committed.as_deref(), &rendered));
+    }
+
     for problem in &problems {
         println!("{problem}");
     }
@@ -870,6 +897,21 @@ fn render_index(notes: &[RulingNote]) -> Result<String> {
     Ok(out)
 }
 
+/// Rule 6's finding: `None` when `spec/INDEX.md` as it stands (`committed`, `None` when the file is
+/// missing) is what `index` writes, `rendered`. Line endings aside: a checkout that turned them
+/// into `\r\n` is not stale, as `front_matter` reads such a note.
+fn index_problem(committed: Option<&str>, rendered: &str) -> Option<String> {
+    match committed {
+        Some(text) if text.replace("\r\n", "\n") == rendered => None,
+        Some(_) => Some(
+            "spec/INDEX.md is stale: run `cargo jackioh spec index` to rewrite it from the notes".to_string(),
+        ),
+        None => Some(
+            "spec/INDEX.md is missing: run `cargo jackioh spec index` to write it from the notes".to_string(),
+        ),
+    }
+}
+
 fn index(root: &Path) -> Result<()> {
     let notes = read_notes(root)?;
     let out = render_index(&notes)?;
@@ -900,6 +942,54 @@ mod tests {
                 "crates/cards/tests/cross/condition_active.rs".to_string()
             ]
         );
+        assert_eq!(note.cards.as_deref(), Some("§10.8, §10.9, #10"));
+    }
+
+    #[test]
+    fn names_a_note_without_a_title_or_cards() {
+        let path = "spec/rulings/R0195.md";
+        let note = |text: &str| parse_note(path.into(), "R0195".into(), text).unwrap();
+        let no_title = format!("{path}: `title` is missing or empty in the front matter");
+        let no_cards = format!("{path}: `cards` is missing or empty in the front matter");
+
+        assert!(unfilled_fields(&note(NOTE)).is_empty());
+        assert_eq!(
+            unfilled_fields(&note("---\nid: R195\nproven_in: []\n---\n")),
+            vec![no_title.clone(), no_cards.clone()]
+        );
+        assert_eq!(
+            unfilled_fields(&note(
+                "---\nid: R195\ntitle: \"  \"\ncards:\nproven_in: []\n---\n"
+            )),
+            vec![no_title, no_cards.clone()]
+        );
+        assert_eq!(
+            unfilled_fields(&note(
+                "---\nid: R195\ntitle: Glow\ncards: \"\"\nproven_in: []\n---\n"
+            )),
+            vec![no_cards]
+        );
+    }
+
+    #[test]
+    fn flags_a_missing_or_stale_index() {
+        let note = |text: &str| parse_note("spec/rulings/R0195.md".into(), "R0195".into(), text).unwrap();
+        let rendered = render_index(&[note(NOTE)]).unwrap();
+        assert_eq!(index_problem(Some(rendered.as_str()), &rendered), None);
+
+        let crlf = rendered.replace('\n', "\r\n");
+        assert_eq!(index_problem(Some(crlf.as_str()), &rendered), None);
+
+        let retitled = render_index(&[note(&NOTE.replace("glows yellow", "glows gold"))]).unwrap();
+        let stale = index_problem(Some(rendered.as_str()), &retitled).unwrap();
+        assert!(stale.contains("spec/INDEX.md is stale"));
+        assert!(stale.contains("run `cargo jackioh spec index`"));
+
+        assert!(index_problem(Some(INDEX_HEADER), &rendered).is_some());
+
+        let missing = index_problem(None, &rendered).unwrap();
+        assert!(missing.contains("spec/INDEX.md is missing"));
+        assert!(missing.contains("run `cargo jackioh spec index`"));
     }
 
     #[test]
