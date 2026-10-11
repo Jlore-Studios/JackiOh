@@ -4414,9 +4414,12 @@
         "sha": "aa353dffe05b3f9234fefe56d83f00700b0c93cc"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-11T16:43:09Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 648,
       "kind": "review",
       "pending_request": false,
