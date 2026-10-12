@@ -3372,10 +3372,10 @@
       "planned_at": "2026-10-12T06:10:35Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-2",
       "queued_at": "2026-10-12T13:27:24Z",
-      "run_id": "38250186363",
-      "started_at": "2026-10-12T12:41:03Z",
+      "run_id": "38256369867",
+      "started_at": "2026-10-12T13:33:05Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-639:refs/heads/bot/issue-639 failed (1): remote: fatal error in commit_ref"
@@ -4264,9 +4264,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T13:08:27Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38253510716",
-    "what": "build #711 on agy"
+    "at": "2026-10-12T13:33:05Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38256369867",
+    "what": "build #639 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-12T13:31:58Z",
