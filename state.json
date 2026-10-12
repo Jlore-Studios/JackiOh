@@ -5032,6 +5032,14 @@
         }
       }
     },
+    "759": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-12T22:41:06Z",
+      "issue": 724,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "88": {
       "action": "build",
       "died": 0,
