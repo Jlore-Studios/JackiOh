@@ -5,6 +5,7 @@ import { useEffect, useId, useState, type ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
 import type { SeriesView } from "../net/api.ts";
+import { conquestText } from "./conquestCopy.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -16,6 +17,8 @@ export const seriesPickerTestid = {
   choice: (slot: number): string => `series-pick-${String(slot)}`,
   /** Seals the pick (R331). */
   lockIn: "series-lock-in",
+  /** Inline reminder below lock-in button (R330, R331). */
+  lockInReminder: "series-lock-in-reminder",
   /** Pick-clock seconds remaining (R333). */
   clock: "series-pick-clock",
   /** Opponent pick status (R331). */
@@ -189,6 +192,9 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
       >
         {chosen === null ? t("Choose a deck") : t("Lock in {name}", { name: chosen.name })}
       </button>
+      <p className="lobby-note" data-testid={seriesPickerTestid.lockInReminder}>
+        {conquestText("lockInReminder")}
+      </p>
       <OpponentStatus picked={view.opponent.picked} />
       <Clock secondsLeft={secondsLeft} />
     </section>

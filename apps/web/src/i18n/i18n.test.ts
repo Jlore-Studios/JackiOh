@@ -10,9 +10,11 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { faceModel } from "../cards/model.ts";
 import { drawnInChinese } from "../cards/chinese.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
+import { conquestText } from "../routes/conquestCopy.ts";
 import { Flavour, showsEasterEgg } from "../cards/inspect/Flavour.tsx";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import {
@@ -47,6 +49,10 @@ describe("R711000 internationalisation and reader language", () => {
     // Missing entries fall back to the English key
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
+    // A screen's copy held in a table of English with `{name}`s reads with its numbers filled
+    expect(conquestText("winsNeeded")).toBe(
+      `Win a game with each of your ${String(SERIES_WINS_NEEDED)} decks to take the series (first to ${String(SERIES_WINS_NEEDED)} wins).`,
+    );
 
     expect(t("The English text governs.")).toBe("The English text governs.");
     expect(formatDay("2026-10-10")).toBe("2026-10-10");
@@ -67,6 +73,9 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
     // Parameter formatting
     expect(t("{seat} drew a card", { seat: t("You") })).toBe("你抽了一张牌");
+    expect(conquestText("winsNeeded")).toBe(
+      `用你的 ${String(SERIES_WINS_NEEDED)} 套卡组各赢一局即可拿下系列赛（先拿到 ${String(SERIES_WINS_NEEDED)} 场胜利者获胜）。`,
+    );
     // A finished sentence from the engine or the server matches the key its values were filled into
     expect(t("Your decks could not be loaded: offline")).toBe("无法加载卡组：offline");
     // ...and a token in parentheses matches only what stands inside them ("({cost}) Cost")

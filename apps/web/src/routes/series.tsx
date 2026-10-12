@@ -10,6 +10,8 @@ import { t } from "../i18n/i18n.ts";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
+import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
 import { SERIES_OUTCOME_HEADLINE } from "./SeriesBanner.tsx";
 import SeriesPicker, { deckStanding, seriesPickerTestid } from "./SeriesPicker.tsx";
 import "../auth/tavern.css";
@@ -38,6 +40,10 @@ export const seriesTestid = {
   result: "series-result",
   game: (gameNo: number): string => `series-game-${String(gameNo)}`,
   backToPlay: "series-back-to-play",
+  explainer: conquestExplainerTestid.explainer,
+  explainerDismiss: conquestExplainerTestid.dismiss,
+  explainerToggle: "conquest-explainer-toggle",
+  endReminder: "series-end-reminder",
 } as const;
 
 type SeriesResult = NonNullable<SeriesView["result"]>;
@@ -131,6 +137,12 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showExplainer, setShowExplainer] = useState(() => !isExplainerDismissed());
+
+  function onDismissExplainer(): void {
+    setExplainerDismissed(true);
+    setShowExplainer(false);
+  }
 
   // Request order keeps a stale poll from undoing a pick.
   const sent = useRef(0);
@@ -248,6 +260,21 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
       <BackLink to={paths.play} />
       <SeriesHero />
 
+      {showExplainer ? (
+        <ConquestExplainer onDismiss={onDismissExplainer} />
+      ) : (
+        <button
+          type="button"
+          className="link-button series-explainer-toggle"
+          data-testid={seriesTestid.explainerToggle}
+          onClick={() => {
+            setShowExplainer(true);
+          }}
+        >
+          {conquestText("toggleOpen")}
+        </button>
+      )}
+
       {actionError === null ? null : (
         <p className="notice" data-testid={seriesTestid.error} role="alert">
           {t(actionError)}
@@ -294,6 +321,11 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
               <span className="series-result__word">{t(SERIES_OUTCOME_HEADLINE[view.result.outcome])}</span>
               <p>{endReasonWords(view.result, view.winsNeeded, view.maxGames, { you: you.wins, opponent: opponent.wins })}</p>
               <p>{ratingWords(view.result)}</p>
+              {view.result.ranked && view.result.outcome !== "abandoned" ? (
+                <p className="lobby-note" data-testid={seriesTestid.endReminder}>
+                  {conquestText("seriesEndRatingReminder")}
+                </p>
+              ) : null}
               <a
                 className="button-primary play-cta"
                 href={paths.play}

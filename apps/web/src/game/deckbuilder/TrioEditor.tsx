@@ -25,6 +25,7 @@ import {
   TRIO_DELETE_CANCEL,
   TRIO_DELETE_CONFIRM,
   TRIO_EDITOR,
+  TRIO_L4_HINT,
   TRIO_NAME_INPUT,
   TRIO_VERDICT,
   WORKSHOP_BACK,
@@ -35,6 +36,7 @@ import {
 } from "./testids.ts";
 import { encodeTrioCode } from "./trioCode.ts";
 import { clampName, deckLabel, joinNames, trioLabel, trioSharedCards, trioSlots, trioVerdict } from "./workshop.ts";
+import { conquestText } from "../../routes/conquestCopy.ts";
 import type { TrioSlots } from "../../net/api.ts";
 
 export type TrioEditorProps = {
@@ -161,8 +163,8 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
           )}
         </div>
 
-        <p className="ws-hint">
-          {t("Three decks with no card in common make a trio for Conquest: win a game with each of them. You pick one before each game.")}
+        <p className="ws-hint" data-testid={TRIO_L4_HINT}>
+          {conquestText("trioL4Hint")}
         </p>
 
         <div className="ws-slots" role="group" aria-label={t("The trio's decks")}>
