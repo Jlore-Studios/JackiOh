@@ -44,6 +44,7 @@ import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity,
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
@@ -124,7 +125,7 @@ function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
   return (
     <span className="cf-text-tuning">
       {tuning.added.map((keyword) => (
-        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={`Gained ${keywordWords(face, keyword)}`}>
+        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={t("Gained {keyword}", { keyword: keywordWords(face, keyword) })}>
           <span className="cf-kw-sign" aria-hidden="true">
             +
           </span>
@@ -132,7 +133,7 @@ function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
         </span>
       ))}
       {tuning.removed.map((kind) => (
-        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={`Lost ${kindWords(face, kind)}`}>
+        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={t("Lost {keyword}", { keyword: kindWords(face, kind) })}>
           <span className="cf-kw-sign" aria-hidden="true">
             {MINUS}
           </span>
@@ -179,6 +180,7 @@ export function hasCrest(face: FaceModel): boolean {
 }
 
 export function CardFace({ face, layout = "full", className, lazyArt = false }: CardFaceProps): ReactElement {
+  useLocale();
   const settings = useCardSettings();
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -223,7 +225,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
         </span>
 
         {face.element != null && (
-          <span className="cf-element" data-testid="card-element" title={`Element ${face.element}`}>
+          <span className="cf-element" data-testid="card-element" title={t("Element {element}", { element: face.element })}>
             {face.element}
           </span>
         )}

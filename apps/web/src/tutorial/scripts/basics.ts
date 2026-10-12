@@ -244,8 +244,11 @@ export const script: LessonScript = {
     }),
     endTurnOn(3, {
       id: "end-3",
-      title: "Watch the Shredder",
-      text: "Shredder can't attack yet, but press End turn and watch: at the end of each of your turns it hits every enemy for 2.",
+      title: () => t("Watch the {name}", { name: readerCardName(SHREDDER, "Shredder") }),
+      text: () =>
+        t("{name} can't attack yet, but press End turn and watch: at the end of each of your turns it hits every enemy for 2.", {
+          name: readerCardName(SHREDDER, "Shredder"),
+        }),
     }),
     trade,
     info({
@@ -348,7 +351,7 @@ export const script: LessonScript = {
     }),
     tip({
       id: "shredder-fired",
-      title: "Shredder at work",
+      title: () => t("{name} at work", { name: readerCardName(SHREDDER, "Shredder") }),
       text: () =>
         t("At the end of turn, {name} hit every enemy unit and the enemy hero for 2. It does that every turn it stays.", {
           name: readerCardName(SHREDDER, "Jlockeed Shredder-10"),

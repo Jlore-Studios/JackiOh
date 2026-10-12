@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-import { t } from "../i18n/i18n.ts";
+import { formatDay, t } from "../i18n/i18n.ts";
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
@@ -27,7 +27,7 @@ export default function AccessibilityRoute(): ReactElement {
         </div>
         <h2>{t("Accessibility")}</h2>
         <p className="privacy-policy__updated" data-testid={accessibilityTestid.updated}>
-          {t("Last updated")} <time dateTime={ACCESSIBILITY_LAST_UPDATED}>{ACCESSIBILITY_LAST_UPDATED}</time>
+          {t("Last updated")} <time dateTime={ACCESSIBILITY_LAST_UPDATED}>{formatDay(ACCESSIBILITY_LAST_UPDATED)}</time>
         </p>
 
         <section aria-labelledby="a11y-goal">

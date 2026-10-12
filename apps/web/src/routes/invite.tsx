@@ -397,6 +397,15 @@ function InviteScreen({ account }: { account: Account }) {
 
   const helpId = `${INVITE_CODE_INPUT}-help`;
 
+  // Sentences with an address or a link inside: one entry each, split around what is inserted, so
+  // English keeps the text it always had.
+  const [confirmBefore = "", confirmAfter = ""] = t(
+    "Confirm your email address first: open the link we emailed to {address}, then check again here. If you already have, check again in a moment.",
+  ).split("{address}");
+  const [noCodeBefore = "", noCodeAfter = ""] = t(
+    "No code yet? Online play is invite-only for now, and the JackiOh team hands out the codes. In the meantime, {play}, which needs no code.",
+  ).split("{play}");
+
   return (
     <div className="app-shell invite-screen tavern">
       <div className="invite-screen__top">
@@ -492,9 +501,9 @@ function InviteScreen({ account }: { account: Account }) {
           {unverified && !done ? (
             <div className="notice invite-screen__unverified" data-testid={inviteTestid.unverified} role="status">
               <p>
-                {t("Confirm your email address first: open the link we emailed to")}{" "}
+                {confirmBefore}
                 <strong>{email === null ? t("your address") : <Address value={email} />}</strong>
-                {t(", then check again here. If you already have, check again in a moment.")}
+                {confirmAfter}
               </p>
               <div className="invite-screen__actions">
                 <button
@@ -629,11 +638,11 @@ function InviteScreen({ account }: { account: Account }) {
             // For whoever has no code yet: under Redeem, set apart like the sign-in board's links,
             // so it never stands between the field and the button.
             <p className="invite-screen__where" data-testid={inviteTestid.whereFrom}>
-              {t("No code yet? Online play is invite-only for now, and the JackiOh team hands out the codes. In the meantime,")}{" "}
+              {noCodeBefore}
               <a href={paths.practice} data-testid={inviteTestid.playAi} onClick={followInApp(paths.practice)}>
                 {t("play vs AI")}
               </a>
-              {t(", which needs no code.")}
+              {noCodeAfter}
             </p>
           )}
         </div>

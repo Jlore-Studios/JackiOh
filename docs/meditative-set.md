@@ -5050,7 +5050,10 @@ Each item is a part of its own (M10). Readings, with what exists today:
   seats, and must win at least 40; where it does not, the part improves the AI until it does. The
   results are recorded in [[§9.9]] and `crates/ai/generation.json`. As amended on #551: that training is
   deferred, and until it is done the AI's random decks hold no Meditative card, a soft gate lifted by
-  emptying `AI_DECK_GATED_SETS` ([[R1390]]).
+  emptying `AI_DECK_GATED_SETS` ([[R1390]]). As amended on #732 (which superseded #616): the gate is
+  lifted on a sweep of record over the set's 102 cards that may ban at most half of them and no card of
+  an earlier set ([[R732000]]), and an AI that beats random in at least 90 of 100; the match against
+  generation 0 was dropped, and the training lanes carry the work on ([[R732001]]).
 - **MN09 Polish.** The small polish found while the set is built, collected on its issue and done
   together near the end.
 
@@ -5164,7 +5167,8 @@ at 1,000 seeds and the AI's gates green; `cargo jackioh catalog check` holding M
 REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`. As amended on #551, MN08's
 sweep and arena result are not part of it: that training is deferred to issue #616, and until it is done
 the AI's random decks hold no Meditative card, a soft gate (`AI_DECK_GATED_SETS`) that #616 lifts by
-emptying the list once the AI meets MN08's bar ([[R1390]]).
+emptying the list once the AI meets MN08's bar ([[R1390]]). #732 superseded #616 and lifted it, on the
+bar as amended there ([[R732000]]).
 
 MB04's note for that migration (issue #520): it must also admit `alt-win` and `won-by-effect` in
 `results_reason_check` (0004) and `rated_games_reason_check` (0022), and `won-by-effect` joins

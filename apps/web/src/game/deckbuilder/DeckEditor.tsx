@@ -13,6 +13,8 @@ import { portraitOrDefault } from "@jackioh/shared";
 
 import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
+import { readerName } from "../../cards/chinese.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
@@ -48,6 +50,7 @@ import {
   deckLabel,
   deckVerdict,
   holdersOf,
+  joinNames,
   removeCard,
   trioLabel,
   triosHolding,
@@ -62,6 +65,9 @@ export const DECK_STATUS_MS = 2600;
 
 /** What the status line says once a deck reaches `DECK_SIZE` and the server has it (R256). */
 export const DECK_COMPLETE_SAVED = "Deck complete and saved";
+
+/** What the status line says, worded when it is drawn, so a language switch changes it too. */
+type StatusLine = { say: () => string };
 
 export type DeckEditorProps = {
   deck: DeckItem;
@@ -99,18 +105,14 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
   return null;
 }
 
-function joinNames(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
-}
-
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal } = props;
   const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
 
+  useLocale();
   const label = deckLabel(deck, limits.nameLength);
   const [compare, setCompare] = useState<Compare>(NO_COMPARE);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<StatusLine | null>(null);
   const [refusedCardId, setRefusedCardId] = useState<string | null>(null);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
   const [codeShown, setCodeShown] = useState(false);
@@ -140,7 +142,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     }
     if (saved) {
       setAwaitingComplete(false);
-      setStatus(DECK_COMPLETE_SAVED);
+      setStatus({ say: () => t(DECK_COMPLETE_SAVED) });
     }
   }, [awaitingComplete, saved, deck.cards.length]);
 
@@ -192,21 +194,29 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   );
   const code = useMemo(() => (codeShown ? encodeDeckCode(label, deck.cards, catalog) : ""), [codeShown, label, deck.cards, catalog]);
 
-  const nameOf = useCallback((cardId: string) => catalog.cards[cardId]?.name ?? cardId, [catalog]);
+  // The card's name in the reader's words, read when a status line is drawn, not when it is made.
+  const nameOf = useCallback(
+    (cardId: string) => {
+      const def = catalog.cards[cardId];
+      return def === undefined ? cardId : readerName(def);
+    },
+    [catalog],
+  );
 
   const add = useCallback(
     (cardId: string) => {
       const move = addCard(deck.cards, cardId, holders);
       if (!move.ok) {
         setRefusedCardId(cardId);
-        if (move.reason === "here") setStatus(`${nameOf(cardId)} is already in this deck.`);
-        else if (move.reason === "held") setStatus(`${nameOf(cardId)} is in ${move.holder.name}.`);
-        else setStatus(`${label} has ${String(DECK_SIZE)} cards. Take one out to add another.`);
+        if (move.reason === "here") setStatus({ say: () => t("{card} is already in this deck.", { card: nameOf(cardId) }) });
+        else if (move.reason === "held") setStatus({ say: () => t("{card} is in {deck}.", { card: nameOf(cardId), deck: move.holder.name }) });
+        else setStatus({ say: () => t("{deck} has {size} cards. Take one out to add another.", { deck: label, size: DECK_SIZE }) });
         return;
       }
       setRefusedCardId(null);
       onCards(move.cards);
-      setStatus(`${nameOf(cardId)} added · ${String(move.cards.length)}/${String(DECK_SIZE)}`);
+      const count = move.cards.length;
+      setStatus({ say: () => t("{card} added · {count}/{size}", { card: nameOf(cardId), count, size: DECK_SIZE }) });
       if (move.cards.length === DECK_SIZE) {
         setAwaitingComplete(true);
         onSaveNow();
@@ -221,7 +231,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       if (next === null) return;
       setRefusedCardId(null);
       onCards(next);
-      setStatus(`${nameOf(cardId)} removed · ${String(next.length)}/${String(DECK_SIZE)}`);
+      setStatus({ say: () => t("{card} removed · {count}/{size}", { card: nameOf(cardId), count: next.length, size: DECK_SIZE }) });
     },
     [deck.cards, nameOf, onCards],
   );
@@ -262,7 +272,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     setCodeShown(true);
     const text = encodeDeckCode(label, deck.cards, catalog);
     const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard;
-    const fallback = "Copy the code below to share this deck.";
+    const fallback: StatusLine = { say: () => t("Copy the code below to share this deck.") };
     if (clipboard === undefined || typeof clipboard.writeText !== "function") {
       setStatus(fallback);
       return;
@@ -270,7 +280,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     // The always-visible field is the fallback for unavailable clipboard access.
     clipboard.writeText(text).then(
       () => {
-        setStatus("Code copied. Paste it anywhere to share this deck.");
+        setStatus({ say: () => t("Code copied. Paste it anywhere to share this deck.") });
       },
       () => {
         setStatus(fallback);
@@ -295,6 +305,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
   const triosNamingIt = inTrios.length;
+  const conflictNames = joinNames([...new Set([...conflicts.values()].map((holder) => holder.name))]);
   const detail: BrowserDetail | null =
     detailCardId === null
       ? null
@@ -302,8 +313,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           cardId: detailCardId,
           meta: (
             <span className="db-detail-meta">
-              {detailPlace === null ? "Not in this deck" : detailPlace === "deck" ? "In this deck" : `In ${detailPlace.name}`}
-              {detailOwned === false ? " · not in your collection" : ""}
+              {detailPlace === null ? t("Not in this deck") : detailPlace === "deck" ? t("In this deck") : t("In {name}", { name: detailPlace.name })}
+              {detailOwned === false ? ` · ${t("not in your collection")}` : ""}
             </span>
           ),
           actions: (
@@ -317,7 +328,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 add(detailCardId);
               }}
             >
-              {`Add to ${label}`}
+              {t("Add to {deck}", { deck: label })}
             </button>
           ),
         };
@@ -325,7 +336,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const head = (
     <div className="ws-editor-head">
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
-        ← All decks
+        {t("← All decks")}
       </button>
       {/* Issue §8: the deck's portrait. The picker holds the whole roster and the previews;
           picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
@@ -336,7 +347,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
         }}
       />
       <label className="ws-name" htmlFor={nameId}>
-        <span className="ws-field-label">Deck name</span>
+        <span className="ws-field-label">{t("Deck name")}</span>
         <input
           id={nameId}
           className="ws-name-input"
@@ -356,14 +367,14 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       </label>
       {refusal === null ? null : (
         <p className="notice ws-save-error" data-testid={DECK_SAVE_ERROR} role="alert">
-          {refusal}
+          {t(refusal)}
         </p>
       )}
     </div>
   );
 
   return (
-    <section className="ws-editor ws-editor--deck" data-testid={DECK_EDITOR} data-deck={deck.id} aria-label={`Deck: ${label}`}>
+    <section className="ws-editor ws-editor--deck" data-testid={DECK_EDITOR} data-deck={deck.id} aria-label={t("Deck: {deck}", { deck: label })}>
       <div className="db-layout">
         <DeckSidebar
           deckName={label}
@@ -377,7 +388,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
         >
           <div className="ws-compare">
             <label className="ws-compare-pick">
-              <span className="ws-field-label">Compare with</span>
+              <span className="ws-field-label">{t("Compare with")}</span>
               <select
                 className="ws-select"
                 data-testid={DECK_COMPARE_SELECT}
@@ -388,19 +399,19 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 }}
               >
                 <option value="" disabled>
-                  {others.length === 0 ? "No other decks yet" : "Another deck or a trio…"}
+                  {others.length === 0 ? t("No other decks yet") : t("Another deck or a trio…")}
                 </option>
                 {inTrios.length === 0 ? null : (
-                  <optgroup label="Trios with this deck">
+                  <optgroup label={t("Trios with this deck")}>
                     {inTrios.map((trio) => (
                       <option key={trio.id} value={`trio:${trio.id}`}>
-                        {`${trioLabel(trio, limits.nameLength)}: its other decks`}
+                        {t("{trio}: its other decks", { trio: trioLabel(trio, limits.nameLength) })}
                       </option>
                     ))}
                   </optgroup>
                 )}
                 {others.length === 0 ? null : (
-                  <optgroup label="Other decks">
+                  <optgroup label={t("Other decks")}>
                     {others.map((other) => (
                       <option key={other.id} value={`deck:${other.id}`}>
                         {deckLabel(other, limits.nameLength)}
@@ -408,11 +419,11 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                     ))}
                   </optgroup>
                 )}
-                {compare.kind === "none" ? null : <option value="none">Stop comparing</option>}
+                {compare.kind === "none" ? null : <option value="none">{t("Stop comparing")}</option>}
               </select>
             </label>
             {compared.length === 0 ? null : (
-              <ul className="ws-chips" aria-label="Compared decks">
+              <ul className="ws-chips" aria-label={t("Compared decks")}>
                 {compared.map((other) => {
                   const otherLabel = deckLabel(other, limits.nameLength);
                   return (
@@ -421,7 +432,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                         type="button"
                         className="ws-chip-button"
                         data-testid={deckCompareChipId(other.id)}
-                        aria-label={`Stop comparing with ${otherLabel}`}
+                        aria-label={t("Stop comparing with {deck}", { deck: otherLabel })}
                         onClick={() => {
                           setCompare((current) => withoutComparedDeck(current, compared, other.id));
                         }}
@@ -435,18 +446,20 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               </ul>
             )}
             {compared.length === 0 ? null : (
-              <p className="ws-hint">Cards in these decks are marked in the pool and can’t be added here.</p>
+              <p className="ws-hint">{t("Cards in these decks are marked in the pool and can’t be added here.")}</p>
             )}
             {conflicts.size === 0 ? null : (
               <p className="ws-conflicts" data-testid={DECK_CONFLICTS} data-count={String(conflicts.size)}>
-                {`${String(conflicts.size)} ${conflicts.size === 1 ? "card here is" : "cards here are"} also in ${joinNames([...new Set([...conflicts.values()].map((holder) => holder.name))])}. They stay until you take them out.`}
+                {conflicts.size === 1
+                  ? t("{count} card here is also in {names}. They stay until you take them out.", { count: conflicts.size, names: conflictNames })
+                  : t("{count} cards here are also in {names}. They stay until you take them out.", { count: conflicts.size, names: conflictNames })}
               </p>
             )}
           </div>
 
           <section className="ws-verdict" data-testid={DECK_VERDICT} data-ready={verdict.ok ? "true" : "false"} aria-labelledby={verdictTitleId}>
             <h3 className="ws-verdict-title" id={verdictTitleId}>
-              {verdict.ok ? (collection === null ? "Complete" : "Ready to queue") : "Before you can queue this deck"}
+              {verdict.ok ? (collection === null ? t("Complete") : t("Ready to queue")) : t("Before you can queue this deck")}
             </h3>
             <ul
               className="db-errors"
@@ -464,18 +477,18 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                   data-card={issue.cardId}
                   data-source="client"
                 >
-                  {issue.message}
+                  {t(issue.message)}
                 </li>
               ))}
             </ul>
             {collection === null ? (
-              <p className="ws-hint">Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.</p>
+              <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
             ) : null}
           </section>
 
           <div className="ws-actions">
             <button type="button" className="ws-action" data-testid={DECK_COPY_CODE} onClick={copyCode}>
-              Copy code
+              {t("Copy code")}
             </button>
             <button
               type="button"
@@ -486,12 +499,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                 setConfirming(true);
               }}
             >
-              Delete deck
+              {t("Delete deck")}
             </button>
           </div>
           {codeShown ? (
             <label className="ws-code">
-              <span className="ws-field-label">Deck code</span>
+              <span className="ws-field-label">{t("Deck code")}</span>
               <input
                 className="ws-code-input"
                 data-testid={DECK_CODE_OUTPUT}
@@ -507,12 +520,14 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
               <p id={confirmTextId}>
                 {triosNamingIt === 0
-                  ? `Delete “${label}”? This can’t be undone.`
-                  : `Delete “${label}”? Its slot in ${String(triosNamingIt)} ${triosNamingIt === 1 ? "trio" : "trios"} will be empty. This can’t be undone.`}
+                  ? t("Delete “{deck}”? This can’t be undone.", { deck: label })
+                  : triosNamingIt === 1
+                    ? t("Delete “{deck}”? Its slot in {count} trio will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })
+                    : t("Delete “{deck}”? Its slot in {count} trios will be empty. This can’t be undone.", { deck: label, count: triosNamingIt })}
               </p>
               <div className="ws-confirm-actions">
                 <button type="button" className="ws-action ws-action--danger" data-testid={DECK_DELETE_CONFIRM} onClick={onDelete}>
-                  Delete
+                  {t("Delete")}
                 </button>
                 <button
                   ref={keepButton}
@@ -523,7 +538,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
                     setConfirming(false);
                   }}
                 >
-                  Keep it
+                  {t("Keep it")}
                 </button>
               </div>
             </div>
@@ -551,7 +566,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           status={
             // A non-blocking, polite toast keeps pool-side changes audible on phones (deckbuilder.css).
             <p className="db-deck-status" data-testid={DECK_STATUS} role="status" aria-live="polite">
-              {status ?? ""}
+              {status === null ? "" : status.say()}
             </p>
           }
           onInspect={openDetail}

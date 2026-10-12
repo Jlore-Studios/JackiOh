@@ -50,7 +50,7 @@ export function BackLink({
           navigate(to);
         }}
       >
-        {label ?? t("← Back")}
+        {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
       {showSettings ? <LanguageButton placement="nav" /> : null}

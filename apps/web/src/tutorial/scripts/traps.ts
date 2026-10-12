@@ -5,7 +5,8 @@
 import { COIN_DEF_ID } from "@jackioh/engine/config";
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
-import { yourMove } from "../advice.ts";
+import { t } from "../../i18n/i18n.ts";
+import { readerCardName, yourMove } from "../advice.ts";
 import type { CoachCtx, CoachStep, LessonScript } from "../coach.ts";
 import {
   freshOf,
@@ -33,6 +34,17 @@ const CHEAP_UNITS: Readonly<Record<string, string>> = {
   "core-015": "Me and Mr Token",
   "core-003": "Right-house defender",
 };
+
+/** A cheap unit's name as the reader reads it, or undefined for a card that is not one of them. */
+function cheapName(defId: string | undefined): string | undefined {
+  const english = defId === undefined ? undefined : CHEAP_UNITS[defId];
+  return defId === undefined || english === undefined ? undefined : readerCardName(defId, english);
+}
+
+const honeypot = (): string => readerCardName(HONEYPOT, "Bear Honeypot");
+const goingLong = (): string => readerCardName(GOING_LONG, "Going Long");
+const farm = (): string => readerCardName(FARM, "Rush Token Farm");
+const rushToken = (): string => readerCardName(RUSH_TOKEN, "Rush Token");
 
 function enemyFaceDown(ctx: CoachCtx): boolean {
   return ctx.view.opponent.backrow.some((card) => card !== null && card.faceDown);
@@ -95,8 +107,8 @@ const bait: CoachStep = {
   title: "Test the trap",
   text: (ctx) => {
     const card = baitIn(ctx);
-    const name = card === undefined ? "a cheap unit" : (CHEAP_UNITS[card.defId] ?? "a cheap unit");
-    return `That face-down card could be a trap. Test it with a cheap unit before you risk a good one: play ${name}.`;
+    const name = cheapName(card?.defId) ?? t("a cheap unit");
+    return t("That face-down card could be a trap. Test it with a cheap unit before you risk a good one: play {name}.", { name });
   },
   anchor: (ctx) => {
     const card = baitIn(ctx);
@@ -137,7 +149,7 @@ const tokenAttack: CoachStep = {
   id: "token-attack",
   kind: "act",
   title: "Tokens fight too",
-  text: "A token fights like any other unit. Attack with a Rush Token.",
+  text: () => t("A token fights like any other unit. Attack with a {token}.", { token: rushToken() }),
   anchor: { kind: "unit", side: "you", defId: RUSH_TOKEN },
   when: (ctx) => myMain(ctx) && tokenCanAttack(ctx),
   done: (ctx, since) => tokenAttacked(ctx, since),
@@ -156,16 +168,25 @@ const tokenAttack: CoachStep = {
 /** Names The Coin when the AI played it into the trap (§7: it costs 0). */
 function honeypotText(ctx: CoachCtx): string {
   const coin = ctx.view.opponent.graveyard.some((card) => card.defId === COIN_DEF_ID);
-  const what = coin ? "The AI played The Coin, which costs (0)" : "The AI played a (1) Cost or less card";
-  return `${what}, so your Bear Honeypot sprang on its turn and made two Rush Tokens. A trap that has fired goes to the graveyard.`;
+  const names = { trap: honeypot(), token: rushToken() };
+  return coin
+    ? t("The AI played {coin}, which costs (0), so your {trap} sprang on its turn and made two {token}s. A trap that has fired goes to the graveyard.", {
+        ...names,
+        coin: readerCardName(COIN_DEF_ID, "The Coin"),
+      })
+    : t("The AI played a (1) Cost or less card, so your {trap} sprang on its turn and made two {token}s. A trap that has fired goes to the graveyard.", names);
 }
 
 function enemyTrapText(ctx: CoachCtx): string {
   const sheepish = ctx.view.opponent.graveyard.some((card) => card.defId === SHEEPISH) || unitOf(ctx.view, "you", SHEEP) !== undefined;
-  if (!sheepish) return "The AI's face-down card was a trap, and your play set it off. Its zone is empty again.";
+  if (!sheepish) return t("The AI's face-down card was a trap, and your play set it off. Its zone is empty again.");
   const sheeped = [...ctx.view.events].reverse().find((event) => event.type === "transformed" && event.toDefId === SHEEP);
-  const name = sheeped?.type === "transformed" ? CHEAP_UNITS[sheeped.fromDefId] : undefined;
-  return `It was Sheepish, a trap: it turned ${name ?? "your unit"} into a 1/1 Sheep. Better to lose your cheapest unit than your best one.`;
+  const name = sheeped?.type === "transformed" ? cheapName(sheeped.fromDefId) : undefined;
+  return t("It was {trap}, a trap: it turned {name} into a 1/1 {sheep}. Better to lose your cheapest unit than your best one.", {
+    trap: readerCardName(SHEEPISH, "Sheepish"),
+    name: name ?? t("your unit"),
+    sheep: readerCardName(SHEEP, "Sheep"),
+  });
 }
 
 export const script: LessonScript = {
@@ -182,7 +203,7 @@ export const script: LessonScript = {
     info({
       id: "quickdraw",
       title: "Quickdraw",
-      text: "Going Long has Quickdraw: a Quickdraw card always starts in your opening hand, so you can plan on it.",
+      text: () => t("{name} has Quickdraw: a Quickdraw card always starts in your opening hand, so you can plan on it.", { name: goingLong() }),
       anchor: { kind: "handCard", defId: GOING_LONG },
       when: (ctx) => myMain(ctx),
       moot: (ctx, since) => since === null && inHand(ctx.view, GOING_LONG) === undefined,
@@ -190,13 +211,17 @@ export const script: LessonScript = {
     playCard({
       id: "set-trap",
       title: "Set a trap",
-      text: "Bear Honeypot is a Trap. Pay 1 mana and drag it into your backrow. It goes in face-down, so the AI can't see what it is.",
+      text: () =>
+        t("{name} is a Trap. Pay 1 mana and drag it into your backrow. It goes in face-down, so the AI can't see what it is.", { name: honeypot() }),
       defId: HONEYPOT,
     }),
     info({
       id: "trap-waits",
       title: "A hidden trap",
-      text: "The AI sees only the back of your card. Bear Honeypot springs by itself when the AI plays a (1) Cost or less card, even on its turn.",
+      text: () =>
+        t("The AI sees only the back of your card. {name} springs by itself when the AI plays a (1) Cost or less card, even on its turn.", {
+          name: honeypot(),
+        }),
       anchor: (ctx) => {
         const lane = myBackrowLane(ctx, HONEYPOT);
         return lane === undefined ? { kind: "backrow", side: "you" } : { kind: "backrow", side: "you", lane };
@@ -210,7 +235,11 @@ export const script: LessonScript = {
     playWhenDrawn({
       id: "field-spell",
       title: "A Field Spell",
-      text: "Rush Token Farm is a Field Spell. It stays face-up in your backrow and makes a Rush Token at the start of each of your turns.",
+      text: () =>
+        t("{name} is a Field Spell. It stays face-up in your backrow and makes a {token} at the start of each of your turns.", {
+          name: farm(),
+          token: rushToken(),
+        }),
       defId: FARM,
     }),
     tokenAttack,
@@ -218,7 +247,8 @@ export const script: LessonScript = {
     info({
       id: "farm-works",
       title: "The farm at work",
-      text: "At the start of turn, Rush Token Farm made a new Rush Token. A Field Spell keeps working, turn after turn.",
+      text: () =>
+        t("At the start of turn, {name} made a new {token}. A Field Spell keeps working, turn after turn.", { name: farm(), token: rushToken() }),
       anchor: (ctx) =>
         unitOf(ctx.view, "you", RUSH_TOKEN) === undefined ? { kind: "backrow", side: "you" } : { kind: "unit", side: "you", defId: RUSH_TOKEN },
       when: (ctx) => myMain(ctx) && farmWorked(ctx),
@@ -228,7 +258,8 @@ export const script: LessonScript = {
     playCard({
       id: "going-long",
       title: "Armor for your hero",
-      text: "Going Long is a Field Spell too. While it stays in your backrow, your hero has Armor 2: every hit on it is 2 smaller.",
+      text: () =>
+        t("{name} is a Field Spell too. While it stays in your backrow, your hero has Armor 2: every hit on it is 2 smaller.", { name: goingLong() }),
       defId: GOING_LONG,
     }),
     yourMove({ id: "move-3", title: "Your move" }),
@@ -248,7 +279,10 @@ export const script: LessonScript = {
     tip({
       id: "tokens",
       title: "Tokens",
-      text: "A Rush Token is a token: a unit another card makes. It is 3/3 with Rush. A token vanishes for good when it leaves the field.",
+      text: () =>
+        t("A {token} is a token: a unit another card makes. It is 3/3 with Rush. A token vanishes for good when it leaves the field.", {
+          token: rushToken(),
+        }),
       anchor: { kind: "unit", side: "you", defId: RUSH_TOKEN },
       // Show before the token prompt, not behind the trap bubbles on the AI's turn.
       when: (ctx) => myMain(ctx) && tokenCanAttack(ctx) && legalPlays(ctx, FARM).length === 0,
@@ -264,7 +298,8 @@ export const script: LessonScript = {
     tip({
       id: "armor",
       title: "Armor at work",
-      text: "Going Long's Armor 2 made that hit on your hero 2 smaller. It works on every hit, for as long as Going Long stays.",
+      text: () =>
+        t("{name}'s Armor 2 made that hit on your hero 2 smaller. It works on every hit, for as long as {name} stays.", { name: goingLong() }),
       anchor: { kind: "hero", side: "you" },
       when: (ctx) =>
         myBackrowLane(ctx, GOING_LONG) !== undefined &&

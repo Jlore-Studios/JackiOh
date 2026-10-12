@@ -43,7 +43,7 @@ import {
   type SocketFactory,
 } from "../game/net.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
-import { t } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -81,15 +81,15 @@ export const matchTestid = {
 export function connectionWords(state: ConnectionState): string {
   switch (state) {
     case "open":
-      return "Connected";
+      return t("Connected");
     case "connecting":
-      return "Connecting…";
+      return t("Connecting…");
     case "reconnecting":
-      return "Reconnecting…";
+      return t("Reconnecting…");
     case "refused":
-      return "This match isn\u2019t available";
+      return t("This match isn\u2019t available");
     case "closed":
-      return "Disconnected";
+      return t("Disconnected");
   }
 }
 
@@ -195,6 +195,7 @@ function useMatchRanks(token: string, matchId: string): MatchRanksResponse | nul
 }
 
 export default function MatchRoute({ matchId, token, socketFactory }: MatchRouteProps): ReactElement {
+  const locale = useLocale();
   const match = useMatch({
     matchId,
     token,
@@ -305,18 +306,18 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   const yourTurn = view !== null && view.result === null && view.active === view.viewer;
   useEffect(() => {
     document.title = yourTurn ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
-  }, [yourTurn, matchId]);
+  }, [yourTurn, matchId, locale]);
 
   if (view === null) {
     if (match.connection === "refused") {
       return (
         <ShellPanel testId={matchTestid.connecting}>
           <p className="notice" data-testid={matchTestid.refused} role="alert">
-            This match isn&rsquo;t available. It may have ended, or it may not be yours to join.
+            {t("This match isn’t available. It may have ended, or it may not be yours to join.")}
           </p>
           <div className="row">
             <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
-              Back to the lobby
+              {t("Back to the lobby")}
             </a>
           </div>
         </ShellPanel>
@@ -363,7 +364,11 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       aim={aim}
       trackStats
       // A refused socket's reason is the console's (above); the board says it in a player's words.
-      error={refusedWith === null ? match.error : `${connectionWords("refused")}. Head back to the lobby.`}
+      error={
+        refusedWith === null
+          ? match.error
+          : t("{reason}. Head back to the lobby.", { reason: connectionWords("refused") })
+      }
       resultActions={
         // A finished match's way on (Result.tsx): a rematch while the opponent is still here —
         // never for a series game, finished or not: the server refuses those (`series_game`),
@@ -380,7 +385,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
-            Back to lobby
+            {t("Back to lobby")}
           </button>
         </>
       }
@@ -398,7 +403,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       }
       matchStatus={
         <>
-          Online match · <ConnectionLine state={match.connection} />
+          {t("Online match")} · <ConnectionLine state={match.connection} />
           {DEV_ONLY ? (
             <>
               {" "}· match <code>{matchId}</code> · seat <code>{view.viewer}</code>
@@ -419,10 +424,10 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
-              {ranks.ranked ? "Ranked match" : "Unranked match"} · <Username name={ranks.seats.p1.username} />
-              {ranks.seats.p1.you ? " (you)" : ""} {rankWords(ranks.seats.p1.rank)} vs{" "}
+              {ranks.ranked ? t("Ranked match") : t("Unranked match")} · <Username name={ranks.seats.p1.username} />
+              {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
               <Username name={ranks.seats.p2.username} />
-              {ranks.seats.p2.you ? " (you)" : ""} {rankWords(ranks.seats.p2.rank)}
+              {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
             </p>
           ) : null}
         </>
@@ -430,7 +435,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       boardNotice={
         readOnly ? (
           <p className="board-read-only" data-testid={matchTestid.missingLegal} role="alert">
-            Your moves can&rsquo;t be sent from this board right now. Reload the page to rejoin the match.
+            {t("Your moves can’t be sent from this board right now. Reload the page to rejoin the match.")}
           </p>
         ) : null
       }

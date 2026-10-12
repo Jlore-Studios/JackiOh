@@ -40,6 +40,7 @@ import type { ReactElement } from "react";
 
 import { DEFAULT_PORTRAIT } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
@@ -94,7 +95,7 @@ export default function Hero(props: HeroProps): ReactElement {
   const portrait = emotes?.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
   const inspect = emotes?.inspect === true;
-  const portraitName = PORTRAIT_DEFS[portrait].def.name;
+  const portraitName = readerName(PORTRAIT_DEFS[portrait].def);
 
   const testId = testid.hero(side);
   const legal = isLegal(props.highlight, testId);
@@ -221,7 +222,7 @@ export default function Hero(props: HeroProps): ReactElement {
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
           <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
-            {hero.power.title}
+            {t(hero.power.title)}
             <span className="power-x">{hero.power.x}</span>
           </span>
         ))}
@@ -240,7 +241,7 @@ export default function Hero(props: HeroProps): ReactElement {
               data-used={power.usedThisTurn ? "true" : "false"}
               data-x={power.x}
             >
-              {power.title}
+              {t(power.title)}
               <span className="power-x">{power.x}</span>
             </span>
           ),
@@ -340,14 +341,14 @@ function PowerButton({
       data-flash={flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={live ? undefined : "true"}
       disabled={!live}
-      title={t("{power}: Activate, spend ({x})", { power: power.title, x: power.x })}
+      title={t("{power}: Activate, spend ({x})", { power: t(power.title), x: power.x })}
       onClick={(event) => {
         event.stopPropagation();
         if (!live) return;
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
     >
-      {power.title}
+      {t(power.title)}
       <span className="power-x">{power.x}</span>
     </button>
   );

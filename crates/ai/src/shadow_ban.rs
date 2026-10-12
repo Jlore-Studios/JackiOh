@@ -38,6 +38,16 @@
 //! were fused scripts composed on every lookup. training/history/sweep-2026-10-07.md lists them, with
 //! what the timeouts measured, as the unban lane's starting notes.
 //!
+//! Sweep of record for generation 9 (#732): 2026-10-12 (UTC), `cargo jackioh sweep` on `716cc6b`
+//! (`main` at `bf0f8e8` with R1390's gate lifted), pass 1 over the 102 Meditative card(s) at easy and
+//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 22 at-risk card(s), 24 seeds each
+//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
+//! pinned to their own cores, every card that timed out swept again with the machine to itself. It
+//! swept the Meditative set alone: R732000 keeps every card of an earlier set out of `SHADOW_BAN`, so
+//! `SHADOW_WATCH` keeps the 2026-10-07 sweep's rows for those sets and gains this sweep's Meditative
+//! ones. It filled `SHADOW_BAN` (31 of the 102, every one for `timeout`) and lifted the gate.
+//! training/history/sweep-2026-10-12.md has the report and what the timeouts measured.
+//!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
 
@@ -120,7 +130,141 @@
 /// `UNBANNED_PREFER` on the generation-4 precedent: a card the beam correctly never casts is a
 /// dead slot costing a fraction of a draw, and preferring it would deal that slot three times
 /// as often.
-pub const SHADOW_BAN: &[(&str, &str)] = &[];
+///
+/// Generation 9 (#732) added 31 entries, the sweep of record over the Meditative set, when it
+/// lifted R1390's gate: every one a Meditative card (R732000), every one for `timeout`, a decision
+/// over `AI_SWEEP.decision_ms` (2 s) at the browser's budget in a game the card was forced into. The
+/// slow games looked at closely were long ones whose hands had filled with cheap random spells and
+/// tokens, or in which a simulated step played out a whole turn (My Pawn), so a ban says the card leads
+/// the AI into a slow game, not necessarily that the card is hard to think about
+/// (training/history/sweep-2026-10-12.md). They are the unban lane's work: a faster search in those
+/// states lifts them, never a lower bar.
+pub const SHADOW_BAN: &[(&str, &str)] = &[
+    (
+        "meditative-006",
+        "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-011",
+        "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-012",
+        "timeout: easy: 11 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-016",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-017",
+        "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-021",
+        "timeout: hard: 5 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-025",
+        "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-029",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-030",
+        "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-031",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-033",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-041",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-045",
+        "timeout: hard: 31 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-047",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-049",
+        "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-051",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-058",
+        "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-063",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-067",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-068",
+        "timeout: easy: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-069",
+        "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-073",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-075",
+        "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-078",
+        "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-080",
+        "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-085",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-087",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-091",
+        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-092",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-096",
+        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+    (
+        "meditative-099",
+        "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+    ),
+];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -404,6 +548,46 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "core-099",
         "at risk: easy: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change -2.7; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -2.2",
+    ),
+    (
+        "meditative-022",
+        "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -4.8",
+    ),
+    (
+        "meditative-026",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 10.6",
+    ),
+    (
+        "meditative-038",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 1.8",
+    ),
+    (
+        "meditative-048",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, never played",
+    ),
+    (
+        "meditative-053",
+        "at risk: hard: pass 1 affordable on 21 turns over 8 games, played 1 time(s), mean evaluate change 0.0",
+    ),
+    (
+        "meditative-055",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, never played",
+    ),
+    (
+        "meditative-060",
+        "at risk: hard: pass 1 affordable on 28 turns over 8 games, never played",
+    ),
+    (
+        "meditative-077",
+        "at risk: hard: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change 3.3",
+    ),
+    (
+        "meditative-088",
+        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change -1.3; hard: pass 1 affordable on 6 turns over 8 games, never played",
+    ),
+    (
+        "meditative-098",
+        "at risk: easy: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
     ),
 ];
 

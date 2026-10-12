@@ -8,6 +8,7 @@ import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
 import { fillParams, type ActivationView, type CardView } from "@jackioh/shared";
 
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
 import { NO_HIGHLIGHT, namedAbility, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
@@ -35,9 +36,9 @@ function usesWords(usesLeft: number | null): string {
   return usesLeft === 1 ? t("1 use left this turn") : t("{count} uses left this turn", { count: String(usesLeft) });
 }
 
-/** The words as one sentence, ending in a single full stop however the label ended. */
+/** The words as one sentence, ending in a single full stop however the label ended ("。" for a Chinese reader). */
 function sentence(text: string): string {
-  return `${text.replace(/[\s.]+$/, "")}.`;
+  return `${text.replace(/[\s.。]+$/, "")}${t(".")}`;
 }
 
 function capitalised(text: string): string {
@@ -75,8 +76,8 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
         <ActivateButton
           key={activation.ability}
           card={card}
-          name={info.name}
-          label={abilityLabel(info, card, activation.label)}
+          name={drawnInChinese(card.chinese === true) ? chineseName(card.defId, info.name, info.def) : info.name}
+          label={t(abilityLabel(info, card, activation.label))}
           activation={activation}
           ability={namedAbility(activations.length, activation.ability)}
           highlight={props.highlight ?? NO_HIGHLIGHT}

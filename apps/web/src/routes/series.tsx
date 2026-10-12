@@ -240,7 +240,8 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const picking = view.status === "picking";
   const yourDecks = [...you.decks].sort((a, b) => a.slot - b.slot);
   const theirDecks = [...opponent.decks].sort((a, b) => a.slot - b.slot);
-  const deckName = (slot: number): string => you.decks.find((deck) => deck.slot === slot)?.name ?? `${t("Deck")} ${String(slot + 1)}`;
+  const deckName = (slot: number): string =>
+    you.decks.find((deck) => deck.slot === slot)?.name ?? t("Deck {number}", { number: String(slot + 1) });
 
   return (
     <div className="app-shell tavern lobby play-screen series" data-testid={seriesTestid.screen} data-status={view.status}>
@@ -358,9 +359,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                   data-testid={seriesTestid.opponentDeck(deck.slot)}
                   data-won={deck.won ? "true" : "false"}
                 >
-                  <span className="series-deck__name">
-                    {t("Deck")} {String(deck.slot + 1)}
-                  </span>
+                  <span className="series-deck__name">{t("Deck {number}", { number: String(deck.slot + 1) })}</span>
                   <span className="series-deck__standing">{deck.won ? t("won · locked") : t("not won yet")}</span>
                 </li>
               ))}

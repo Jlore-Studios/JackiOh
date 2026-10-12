@@ -17,10 +17,10 @@
 //! and the lean adds no rng draw.
 //!
 //! The soft gate (R1390): the random draw never deals a card of a set in `gated_sets`, whose default is
-//! `AI_DECK_GATED_SETS` (Meditative until the AI is trained on it), whatever ships or a thread
-//! previews; a player's random deck passes `Some(vec![])` and is dealt from every set, and a lean on a
-//! gated set leans on the newest set that ships and is not gated. An empty gate deals exactly what the
-//! draw dealt before it.
+//! `AI_DECK_GATED_SETS` (empty since issue #732 trained the AI on the Meditative set, which it held
+//! until then), whatever ships or a thread previews; a player's random deck passes `Some(vec![])` and
+//! is dealt from every set, and a lean on a gated set leans on the newest set that ships and is not
+//! gated. An empty gate deals exactly what the draw dealt before it.
 //!
 //! Port of `packages/ai/src/deck.ts` (SURFACE §9: `build_ai_deck(&mut Rng, i32, &AiDeckOptions)`). TS
 //! threw on a bad request; this panics with the same message.
@@ -154,8 +154,7 @@ pub struct AiDeckOptions {
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
-/// the newest set that ships and is not gated (Classic+ while Meditative is gated, before and after
-/// Meditative ships), else none.
+/// the newest set that ships and is not gated (Classic+ under a gate on Meditative), else none.
 pub fn ungated_lean(lean: Option<SetName>, gated: &[SetName]) -> Option<SetName> {
     let set = lean?;
     if !gated.contains(&set) {

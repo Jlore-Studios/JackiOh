@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace, costPhrase } from "../../cards/index.ts";
+import { chineseName, drawnInChinese } from "../../cards/chinese.ts";
 import { chaosNames, type ChaosRoll } from "../../fx/chaos.ts";
 import { FX_BANNER_TAIL_MS } from "../../fx/constants.ts";
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
@@ -342,8 +343,14 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         });
   const kind = play === null ? null : kindOf(play);
   const castBy = play?.castBy;
+  const castDefId = castBy?.defId ?? null;
+  const byInfo = castDefId === null ? undefined : lookup?.(castDefId, false);
+  const byEnglish = castDefId === null ? undefined : (byInfo?.name ?? view.defs?.[castDefId]?.name);
+  // The caster's name as the reader reads it: Chinese for a reader of Chinese (R711000).
   const byName =
-    castBy === undefined || castBy.defId === null ? undefined : (lookup?.(castBy.defId, false)?.name ?? view.defs?.[castBy.defId]?.name);
+    castDefId !== null && byEnglish !== undefined && drawnInChinese(false)
+      ? chineseName(castDefId, byEnglish, byInfo?.def ?? view.defs?.[castDefId])
+      : byEnglish;
   const said = play === null || kind === null || showing === null ? "" : saidOf(play, kind, showing.viewer, face?.name, byName);
 
   // Inline click-through keeps the board usable before its stylesheet loads.

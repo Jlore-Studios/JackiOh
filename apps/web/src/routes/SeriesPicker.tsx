@@ -83,7 +83,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
   }, [selected, openSlots]);
 
   if (pick !== null) {
-    const name = decks.find((deck) => deck.slot === pick)?.name ?? `${t("Deck")} ${String(pick + 1)}`;
+    const name = decks.find((deck) => deck.slot === pick)?.name ?? t("Deck {number}", { number: String(pick + 1) });
     return (
       <section
         className="lobby-card play-panel series-picker"

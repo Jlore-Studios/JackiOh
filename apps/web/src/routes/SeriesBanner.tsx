@@ -139,7 +139,7 @@ export function SeriesBanner({ series, matchId, gameOver }: SeriesBannerProps): 
             className="series-banner__pip"
             data-testid={seriesBannerTestid.yourDeck(deck.slot)}
             data-won={deck.won ? "true" : "false"}
-            title={`${deck.name}: ${deck.won ? t("won") : t("not won yet")}`}
+            title={t(deck.won ? "{name}: won" : "{name}: not won yet", { name: deck.name })}
           />
         ))}
       </span>

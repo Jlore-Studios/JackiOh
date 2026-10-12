@@ -22,7 +22,7 @@ export function tierName(tier: VisibleRank["tier"] | GrapeTier): string {
     case "mythic":
       return t("Mythic Grape");
     case "jlorious":
-      return "Jlorious";
+      return t("Jlorious");
   }
 }
 

@@ -262,6 +262,8 @@ type LobbyError = {
   message: string;
   issues: readonly string[];
   seriesId: string | null;
+  /** R264: the room's mode, worded at render (`roomModeMessage`) so a language switch rewords it. */
+  roomMode: QueueMode | null;
 };
 
 /** Keeps validator sentences verbatim. */
@@ -291,6 +293,7 @@ function errorOf(cause: unknown): LobbyError {
     issues:
       cause instanceof ApiRequestError && cause.code === LOADOUT_INVALID ? issueMessagesOf(cause.details) : [],
     seriesId: seriesIdOfError(cause),
+    roomMode: null,
   };
 }
 
@@ -309,6 +312,19 @@ export function roomLinkStatus(mode: QueueMode): string {
     thing: mode === "bo3" ? t("trio") : t("deck"),
   });
 }
+
+// The status line
+
+/**
+ * What the line under the header says, kept as a description and worded at render: a sentence kept
+ * as text would stay in the language it was said in when the reader switches.
+ */
+type Status =
+  | { kind: "queued"; mode: QueueMode }
+  | { kind: "roomLink"; mode: QueueMode }
+  | { kind: "found" }
+  | { kind: "left" }
+  | { kind: "ticket" };
 
 // Pairing watch
 
@@ -383,17 +399,17 @@ function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | n
         <span className="lobby-verdict__mark" aria-hidden="true">
           ✓
         </span>
-        Ready to queue
+        {t("Ready to queue")}
       </p>
     );
   }
   return (
     <div className="lobby-verdict" data-testid={playTestid.verdict} data-ready="false">
-      <p className="lobby-verdict__lead">Not ready yet. The server checks again when you queue:</p>
+      <p className="lobby-verdict__lead">{t("Not ready yet. The server checks again when you queue:")}</p>
       <ul>
         {result.errors.map((error, index) => (
           // The same message can repeat for two cards; the index keeps the keys apart.
-          <li key={`${String(index)}-${error.message}`}>{error.message}</li>
+          <li key={`${String(index)}-${error.message}`}>{t(error.message)}</li>
         ))}
       </ul>
     </div>
@@ -434,20 +450,20 @@ function DeckSummary({ deck }: { deck: SavedDeck }): ReactElement {
   const full = deck.cards.length === DECK_SIZE;
   return (
     <p className="play-pick-summary" data-full={full ? "true" : "false"}>
-      {String(deck.cards.length)} / {String(DECK_SIZE)} cards
+      {t("{count} / {size} cards", { count: String(deck.cards.length), size: String(DECK_SIZE) })}
     </p>
   );
 }
 
 function TrioSummary({ trio, decks }: { trio: SavedTrio; decks: readonly SavedDeck[] }): ReactElement {
   return (
-    <ul className="play-trio-decks" aria-label={`Decks in ${trio.name}`}>
+    <ul className="play-trio-decks" aria-label={t("Decks in {name}", { name: trio.name })}>
       {trio.deckIds.map((id, slot) => {
         const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
         return (
           // Slot identity distinguishes duplicate empty entries.
           <li key={`${String(slot)}-${id ?? "empty"}`} className="play-trio-deck" data-empty={deck === undefined}>
-            {deck === undefined ? "Empty slot" : deck.name}
+            {deck === undefined ? t("Empty slot") : deck.name}
           </li>
         );
       })}
@@ -513,15 +529,15 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
   return (
     <section className="lobby-card play-panel play-panel--rank" aria-labelledby="play-rank-heading">
       <h2 id="play-rank-heading" className="play-panel__heading">
-        Your rank
+        {t("Your rank")}
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank}>
-          {rankWords(rank.rank)} · Season {rank.season}
+          {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
-        Leaderboard →
+        {t("Leaderboard →")}
       </a>
     </section>
   );
@@ -541,6 +557,22 @@ export function queuedStatus(mode: QueueMode): string {
   );
 }
 
+/** The sentence a status description reads as, in the reader's language now. */
+function statusWords(status: Status): string {
+  switch (status.kind) {
+    case "queued":
+      return queuedStatus(status.mode);
+    case "roomLink":
+      return roomLinkStatus(status.mode);
+    case "found":
+      return t(MATCH_FOUND_STATUS);
+    case "left":
+      return t("Left the queue.");
+    case "ticket":
+      return t("Give your opponent this code. You will be taken to the game when they join.");
+  }
+}
+
 export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   useLocale();
   /** R765 resumes a queue left from another screen. */
@@ -551,9 +583,9 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   // Queue state takes precedence over a link hint and the saved choice.
   const [mode, setMode] = useState<QueueMode>(rejoined ?? link?.mode ?? stored.mode ?? "bo1");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(() => {
-    if (rejoined !== null) return queuedStatus(rejoined);
-    return link === null ? null : roomLinkStatus(mode);
+  const [status, setStatus] = useState<Status | null>(() => {
+    if (rejoined !== null) return { kind: "queued", mode: rejoined };
+    return link === null ? null : { kind: "roomLink", mode };
   });
   const [error, setError] = useState<LobbyError | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -593,7 +625,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     foundTarget.current = target;
     forgetQueued();
     setFound(true);
-    setStatus(MATCH_FOUND_STATUS);
+    setStatus({ kind: "found" });
     foundTimer.current = window.setTimeout(() => {
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
@@ -683,7 +715,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       rememberQueued(chosen.mode);
       refreshPopulation();
       // R505 status names the queue but never its population.
-      setStatus(queuedStatus(chosen.mode));
+      setStatus({ kind: "queued", mode: chosen.mode });
     });
   }
 
@@ -692,7 +724,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       await dequeue(token);
       forgetQueued();
       setWaiting(false);
-      setStatus("Left the queue.");
+      setStatus({ kind: "left" });
     });
   }
 
@@ -703,12 +735,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       const created = await createRoom(token, chosen);
       setRoom({ code: created.code, mode: created.mode });
       setWaiting(true);
-      setStatus("Give your opponent this code. You will be taken to the game when they join.");
+      setStatus({ kind: "ticket" });
     });
   }
 
   function dropLinkStatus(named: QueueMode): void {
-    setStatus((current) => (current === roomLinkStatus(named) ? null : current));
+    setStatus((current) => (current?.kind === "roomLink" && current.mode === named ? null : current));
   }
 
   function onJoin(event: FormEvent<HTMLFormElement>): void {
@@ -726,11 +758,14 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
         if (roomMode === null) throw cause;
         setMode(roomMode);
         dropLinkStatus(chosen.mode);
-        setError({ message: roomModeMessage(roomMode), issues: [], seriesId: null });
+        setError({ message: "", issues: [], seriesId: null, roomMode });
       }
     });
   }
 
+  // Split around the link, so each sentence is one entry and English reads as it always did.
+  const [noDecksBefore = "", noDecksAfter = ""] = t("You have no saved decks yet. {link}.").split("{link}");
+  const [noTriosBefore = "", noTriosAfter = ""] = t("You have no saved trios yet. {link}.").split("{link}");
   const noChoice = choice === null;
   const locked = waiting || found;
   const queued = waiting && room === null && !found;
@@ -744,27 +779,27 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <p className="play-hero__title">Play online</p>
-        <p className="play-hero__lead">Pick a mode, bring a deck, and find someone to play.</p>
+        <p className="play-hero__title">{t("Play online")}</p>
+        <p className="play-hero__lead">{t("Pick a mode, bring a deck, and find someone to play.")}</p>
       </header>
 
       {status !== null ? (
         <p
-          className={status === MATCH_FOUND_STATUS ? "notice play-status--found" : "notice"}
+          className={status.kind === "found" ? "notice play-status--found" : "notice"}
           data-testid={playTestid.status}
           role="status"
         >
-          {status}
+          {statusWords(status)}
         </p>
       ) : null}
       {error !== null ? (
         <div className="notice" data-testid={playTestid.error} role="alert">
           {error.issues.length === 0 ? (
-            <p>{error.message}</p>
+            <p>{error.roomMode === null ? t(error.message) : roomModeMessage(error.roomMode)}</p>
           ) : (
             <ul className="lobby-issues">
               {error.issues.map((issue, index) => (
-                <li key={`${String(index)}-${issue}`}>{issue}</li>
+                <li key={`${String(index)}-${issue}`}>{t(issue)}</li>
               ))}
             </ul>
           )}
@@ -774,7 +809,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               data-testid={playTestid.seriesLink}
               onClick={followInApp(paths.series(error.seriesId))}
             >
-              Go to your series →
+              {t("Go to your series →")}
             </a>
           )}
         </div>
@@ -785,7 +820,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             <span className="play-step" aria-hidden="true">
               1
             </span>
-            How do you want to play?
+            {t("How do you want to play?")}
           </h2>
           <fieldset
             className="lobby-modes"
@@ -794,7 +829,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             data-bo3={byMode?.bo3}
             data-random={byMode?.random}
           >
-            <legend className="lobby-modes__legend">Mode</legend>
+            <legend className="lobby-modes__legend">{t("Mode")}</legend>
             {QUEUE_MODES.map((option) => (
               <label
                 key={option}
@@ -816,10 +851,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                 />
                 <ModeIcon mode={option} />
                 <span className="lobby-mode__text">
-                  <span className="lobby-mode__name">{MODE_LABEL[option]}</span>
+                  <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
                 </span>
                 {byMode === undefined ? null : (
-                  <span className="play-mode-tile__waiting">{String(byMode[option])} waiting</span>
+                  <span className="play-mode-tile__waiting">
+                    {t("{count} waiting", { count: String(byMode[option]) })}
+                  </span>
                 )}
               </label>
             ))}
@@ -829,28 +866,30 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             <span className="play-step" aria-hidden="true">
               2
             </span>
-            {mode === "bo3" ? "Bring a trio" : mode === "bo1" ? "Bring a deck" : "No deck to bring"}
+            {mode === "bo3" ? t("Bring a trio") : mode === "bo1" ? t("Bring a deck") : t("No deck to bring")}
           </h2>
 
           {lobby.kind === "loading" && mode !== "random" ? (
             <p className="lobby-note" role="status">
-              Loading your decks…
+              {t("Loading your decks…")}
             </p>
           ) : null}
           {lobby.kind === "failed" && mode !== "random" ? (
             <p className="notice" role="alert">
-              Your decks could not be loaded: {lobby.message}
+              {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
             </p>
           ) : null}
 
           {data !== null && mode === "bo1" ? (
             data.decks.length === 0 ? (
               <p className="lobby-note">
-                You have no saved decks yet. <DecksLink>Build one in Decks</DecksLink>.
+                {noDecksBefore}
+                <DecksLink>{t("Build one in Decks")}</DecksLink>
+                {noDecksAfter}
               </p>
             ) : (
               <div className="play-pick">
-                <label htmlFor="play-deck">Your deck</label>
+                <label htmlFor="play-deck">{t("Your deck")}</label>
                 <select
                   id="play-deck"
                   ref={deckSelect}
@@ -876,11 +915,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
           {data !== null && mode === "bo3" ? (
             data.trios.length === 0 ? (
               <p className="lobby-note">
-                You have no saved trios yet. <DecksLink>Build one in Decks</DecksLink>.
+                {noTriosBefore}
+                <DecksLink>{t("Build one in Decks")}</DecksLink>
+                {noTriosAfter}
               </p>
             ) : (
               <div className="play-pick">
-                <label htmlFor="play-trio">Your trio</label>
+                <label htmlFor="play-trio">{t("Your trio")}</label>
                 <select
                   id="play-trio"
                   ref={trioSelect}
@@ -905,7 +946,9 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           {mode === "random" ? (
             <>
-              <p className="lobby-note">No deck needed: the server deals both of you one when the game starts.</p>
+              <p className="lobby-note">
+                {t("No deck needed: the server deals both of you one when the game starts.")}
+              </p>
               <LeanNewestToggle
                 checked={leanNewest}
                 disabled={locked}
@@ -927,7 +970,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               <span className="play-step" aria-hidden="true">
                 3
               </span>
-              Find a match
+              {t("Find a match")}
             </h2>
             {queued ? <Searching mode={mode} /> : null}
             <button
@@ -937,7 +980,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || noChoice || locked}
               onClick={onEnqueue}
             >
-              Find a match
+              {t("Find a match")}
             </button>
             <button
               type="button"
@@ -946,7 +989,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || found}
               onClick={onLeaveQueue}
             >
-              Leave the queue
+              {t("Leave the queue")}
             </button>
           </section>
 
@@ -954,9 +997,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">
             <h2 id="play-room-heading" className="play-panel__heading">
-              Play a friend
+              {t("Play a friend")}
             </h2>
-            <p className="lobby-note">A room plays the mode it was made with; the joiner picks for the same mode.</p>
+            <p className="lobby-note">
+              {t("A room plays the mode it was made with; the joiner picks for the same mode.")}
+            </p>
             <button
               type="button"
               className="play-room-create"
@@ -964,12 +1009,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || noChoice || locked}
               onClick={onCreateRoom}
             >
-              Create a room
+              {t("Create a room")}
             </button>
             {room === null ? null : <RoomTicket room={room} />}
 
             <form className="play-join" data-testid={playTestid.joinForm} onSubmit={onJoin}>
-              <label htmlFor="play-join-code">Join a room</label>
+              <label htmlFor="play-join-code">{t("Join a room")}</label>
               <div className="play-join__row">
                 <input
                   id="play-join-code"
@@ -977,7 +1022,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   value={joinCode}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Code"
+                  placeholder={t("Code")}
                   disabled={locked}
                   onChange={(event) => {
                     setJoinCode(event.target.value);
@@ -989,7 +1034,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   data-testid={playTestid.joinSubmit}
                   disabled={busy || noChoice || locked}
                 >
-                  Join
+                  {t("Join")}
                 </button>
               </div>
             </form>
@@ -997,11 +1042,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           <section className="lobby-card play-panel play-panel--practice" aria-labelledby="play-practice-heading">
             <h2 id="play-practice-heading" className="play-panel__heading">
-              Practice
+              {t("Practice")}
             </h2>
-            <p>A game against the AI, right here in your browser: no queue, no rating, three difficulties.</p>
+            <p>{t("A game against the AI, right here in your browser: no queue, no rating, three difficulties.")}</p>
             <a href={paths.practice} data-testid={playTestid.practice}>
-              Practice against the AI →
+              {t("Practice against the AI →")}
             </a>
           </section>
         </div>

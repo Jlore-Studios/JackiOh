@@ -19,9 +19,34 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
+import { readerName } from "../../cards/chinese.ts";
 import { t } from "../../i18n/i18n.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import { deckNameForSave, trioNameForSave, type DeckItem, type TrioItem } from "./sync.ts";
+
+// Words
+// The reader's language is read where these are called (never at module scope), so call them at render time.
+
+/** "Control", "Control and Midrange": a list of names as a sentence holds it. */
+export function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return t("{rest} and {last}", { rest: names.slice(0, -1).join(t(", ")), last: names.at(-1) ?? "" });
+}
+
+/** "1 card", "3 cards". */
+export function cardsWord(count: number): string {
+  return count === 1 ? t("{count} card", { count }) : t("{count} cards", { count });
+}
+
+/** Card names as the reader reads them, listed as a sentence: "Bigot, Fruit Bat and Coin Toss". */
+export function cardNames(ids: readonly string[], catalog: CatalogSnapshot): string {
+  return joinNames(
+    ids.map((id) => {
+      const def = catalog.cards[id];
+      return def === undefined ? id : readerName(def);
+    }),
+  );
+}
 
 // Names
 

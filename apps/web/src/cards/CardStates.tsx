@@ -4,7 +4,9 @@
 
 import { useState, type ReactElement } from "react";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { PILE_WORDS, stateBadges, type StateBadge, type StateBadgeKind } from "./cardState.ts";
+import { listSeparator } from "./chinese.ts";
 import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { Icon } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
@@ -37,6 +39,7 @@ function Badge({ badge }: { badge: StateBadge }): ReactElement {
 }
 
 export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement | null {
+  useLocale();
   const badges = stateBadges(face).filter((badge) => !omit.includes(badge.kind));
   if (badges.length === 0) return null;
   const folded = badges.slice(STATE_BADGES_SMALL_MAX);
@@ -46,7 +49,7 @@ export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement
         <Badge key={`${badge.kind}:${badge.words}`} badge={badge} />
       ))}
       {folded.length > 0 && (
-        <span className="cf-states-more" title={folded.map((badge) => badge.words).join("; ")} aria-hidden="true">
+        <span className="cf-states-more" title={folded.map((badge) => badge.words).join(listSeparator())} aria-hidden="true">
           +{folded.length}
         </span>
       )}
@@ -66,6 +69,7 @@ export function PileDepth({
   top?: FaceModel | null;
   className?: string;
 }): ReactElement | null {
+  useLocale();
   const [open, setOpen] = useState(false);
   if (buried <= 0) return null;
   const face = top ?? null;
@@ -75,8 +79,8 @@ export function PileDepth({
         type="button"
         className={className}
         data-buried={buried}
-        title={PILE_WORDS}
-        aria-label={`${PILE_WORDS}: show pile`}
+        title={t(PILE_WORDS)}
+        aria-label={t("{words}: show pile", { words: t(PILE_WORDS) })}
         onClick={(event) => {
           event.stopPropagation();
           setOpen(true);
@@ -85,7 +89,7 @@ export function PileDepth({
         {buried}
       </button>
       {open ? (
-        <StackSheet title={STACK_TITLE} top={face} topName={face?.name ?? STACK_UNKNOWN_NAME} buried={buried} onClose={() => setOpen(false)} />
+        <StackSheet title={t(STACK_TITLE)} top={face} topName={face?.name ?? t(STACK_UNKNOWN_NAME)} buried={buried} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );
