@@ -4170,6 +4170,13 @@
     "711": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T12:54:54Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone) is the one I am least sure of: part-of #698's status and same-file open PRs cannot be checked with no GitHub access"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
