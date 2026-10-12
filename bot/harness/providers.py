@@ -147,7 +147,7 @@ class Provider:
     id: str
     enabled: bool
     cli: str
-    #: The model family, for the review rule: two medium reviews must come from two families.
+    #: The model family, for the review rule: one review counts per family.
     family: str
     model: str
     effort: str
@@ -191,6 +191,9 @@ class Provider:
     #: The effort a fix pass runs at (#160, #317 part 12): a fix answers named findings, which
     #: needs less thought than the build. "" runs it at the seat's own effort.
     fix_effort: str = ""
+    #: The effort a review runs at (#695): a review checks a finished change, which needs
+    #: less thought than the build. "" runs it at `high`.
+    review_effort: str = ""
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -395,7 +398,8 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason", "usage_since",
-                  "lanes", "build_last", "easy_first", "off_hours", "fix_effort"}
+                  "lanes", "build_last", "easy_first", "off_hours", "fix_effort",
+                  "review_effort"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -518,6 +522,7 @@ def _provider(name: str, raw: Any) -> Provider:
         easy_first=bool(raw.get("easy_first", False)),
         off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
         fix_effort=str(raw.get("fix_effort") or ""),
+        review_effort=str(raw.get("review_effort") or ""),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )
@@ -632,8 +637,10 @@ def suspension(state: dict[str, Any], provider_id: str) -> dict[str, Any] | None
 
 
 def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, reset_at: str | None,
-               at: datetime, minutes: float = 0.0) -> None:
-    """Keep a run's newest usage reading, any refusal, and the minutes it spent."""
+               at: datetime, minutes: float = 0.0, tokens: dict | None = None,
+               cost_usd: float | None = None) -> None:
+    """Keep a run's newest usage reading, any refusal, the minutes it spent, and the tokens
+    and USD cost its calls reported (#695)."""
     entry = record(state, provider_id)
     if isinstance(usage, dict) and usage:
         entry["usage"] = {**usage, "observed_at": iso(at)}
@@ -654,6 +661,16 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         spent = list(entry.get("spent") or [])
         spent.append({"at": iso(at), "minutes": round(float(minutes), 1)})
         entry["spent"] = spent[-SPENT_KEEP:]
+    if isinstance(tokens, dict) and any(tokens.get(name) for name in ("input", "output")):
+        # A run's token counts and cost beside its minutes, for the statistics issue (#695).
+        counted = list(entry.get("tokens_spent") or [])
+        counted.append({"at": iso(at),
+                        "input": int(tokens.get("input") or 0),
+                        "output": int(tokens.get("output") or 0),
+                        "cache": int(tokens.get("cache_read") or 0)
+                        + int(tokens.get("cache_write") or 0),
+                        "cost": round(float(cost_usd or 0), 4)})
+        entry["tokens_spent"] = counted[-SPENT_KEEP:]
 
 
 #: A window at least this full in the last reading is taken to be why a refusal came.

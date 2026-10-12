@@ -97,6 +97,21 @@ def _clock(at: Any) -> str:
     return text[11:16] if len(text) >= 16 else text
 
 
+def _took(step: dict[str, Any]) -> str:
+    """A step's cost in one cell: its minutes, then its tokens and USD cost when the call
+    reported any (#695)."""
+    took = step.get("minutes")
+    text = f"{took} min" if isinstance(took, (int, float)) else ""
+    tokens = step.get("tokens") if isinstance(step.get("tokens"), dict) else {}
+    total = sum(int(tokens.get(name) or 0) for name in ("input", "output"))
+    if total > 0:
+        text = f"{text}, {total} tok" if text else f"{total} tok"
+    cost = step.get("cost_usd")
+    if isinstance(cost, (int, float)) and cost > 0:
+        text = f"{text}, ${cost:.2f}" if text else f"${cost:.2f}"
+    return text
+
+
 def step_rows(steps: list[dict[str, Any]]) -> list[str]:
     """One table row per step the work job recorded (`work.Worker._step`)."""
     rows = []
@@ -107,10 +122,8 @@ def step_rows(steps: list[dict[str, Any]]) -> list[str]:
         if what == "call":
             model = f" (`{step['model']}`)" if step.get("model") else ""
             what = f"{step.get('role') or 'call'}{model}"
-        took = step.get("minutes")
-        took = f"{took} min" if isinstance(took, (int, float)) else ""
         rows.append(f"| {n} | {_clock(step.get('at'))} | {_cell(what)} | {_cell(step.get('why'))} "
-                    f"| {took} | {_cell(step.get('outcome'))} |")
+                    f"| {_took(step)} | {_cell(step.get('outcome'))} |")
     if len(steps) > MAX_STEPS:
         rows.append(f"| … | | {len(steps) - MAX_STEPS} more steps | | | |")
     return rows
@@ -131,6 +144,15 @@ def section(result: dict[str, Any], *, provider: str, models: str, action: str, 
     minutes, calls = result.get("minutes"), result.get("model_calls")
     if minutes is not None or calls is not None:
         lines.append(f"Model calls: {calls or 0}, {minutes or 0} model minutes.")
+    tokens = result.get("tokens") if isinstance(result.get("tokens"), dict) else {}
+    total = sum(int(tokens.get(name) or 0) for name in ("input", "output"))
+    cost = result.get("cost_usd")
+    if total > 0 or (isinstance(cost, (int, float)) and cost > 0):
+        cached = int(tokens.get("cache_read") or 0) + int(tokens.get("cache_write") or 0)
+        lines.append(f"Tokens: {int(tokens.get('input') or 0)} in / "
+                     f"{int(tokens.get('output') or 0)} out / {cached} cached"
+                     + (f", ${float(cost):.2f}" if isinstance(cost, (int, float)) else "")
+                     + ".")
     if result.get("head"):
         lines.append(f"Its work ended at `{str(result['head'])[:12]}`"
                      + (f" on `{result['branch']}`." if result.get("branch") else "."))
