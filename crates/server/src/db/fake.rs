@@ -100,15 +100,15 @@ use crate::config::{
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCode, LastBoardEntry,
-    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StoreError, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome,
+    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus,
+    NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
+    RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
+    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    StoreError, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1074,6 +1074,30 @@ pub fn codes_count_attempts_by_ip(f: &mut FakeTx<'_>, ip_hash: &str, since: i64)
         .filter(|a| a.ip_hash == ip_hash && a.at >= since)
         .count();
     Ok(count as i64)
+}
+
+/// §9.8: one row per IP hash with an attempt at or after `since`, ordered by `ip_hash`. `accounts`
+/// counts distinct profiles, an attempt with no profile adding to `attempts` only, as
+/// `count(distinct profile_id)` does.
+pub fn codes_invite_clusters(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<InviteCluster>, StoreError> {
+    call(f, "codes.inviteClusters")?;
+    let mut by_hash: IndexMap<&str, (IndexSet<&str>, i64)> = IndexMap::new();
+    for attempt in f.tables().attempts.iter().filter(|a| a.at >= since) {
+        let (accounts, attempts) = by_hash.entry(attempt.ip_hash.as_str()).or_default();
+        if let Some(profile_id) = attempt.profile_id.as_deref() {
+            accounts.insert(profile_id);
+        }
+        *attempts += 1;
+    }
+    by_hash.sort_keys();
+    Ok(by_hash
+        .into_iter()
+        .map(|(ip_hash, (accounts, attempts))| InviteCluster {
+            ip_hash: ip_hash.to_owned(),
+            accounts: accounts.len() as i64,
+            attempts,
+        })
+        .collect())
 }
 
 /// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).

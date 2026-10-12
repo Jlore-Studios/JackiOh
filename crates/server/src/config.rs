@@ -236,6 +236,29 @@ pub const REDEMPTION_CIRCUIT_FAILURE_THRESHOLD: i64 = 100;
 pub const REDEMPTION_CIRCUIT_WINDOW_SECONDS: i64 = 600;
 
 // ---------------------------------------------------------------------------------------------
+// The invite-cluster watch (§9.8).
+// ---------------------------------------------------------------------------------------------
+
+// SPEC §9.8 (abuse surface): "Multi-accounting to farm rating: invite codes; watch for clusters of
+// accounts sharing an IP hash." `jackioh-server invite-clusters` is that watch: an offline report a
+// person reads, never a ban, because many people can share one address (a campus, a household, a
+// carrier's NAT). SPEC fixes no threshold or window, so these three are advisory defaults an
+// operator may override with the command's flags; none of them is a game rule, and the client reads
+// none of them.
+
+/// §9.8: how far back the watch counts attempts by default, in seconds. A week: farming rating
+/// takes accounts made over days, and a window of the rate limit's own hour (`CODE_ATTEMPT_WINDOW_SECONDS`)
+/// would never see a slow cluster. The same table also bounds the window: `code_attempts` rows are
+/// kept `CODE_ATTEMPT_RETENTION_DAYS`, so the flag takes at most that many days.
+pub const INVITE_CLUSTER_WINDOW_SECONDS: i64 = 7 * 24 * 3600;
+/// §9.8: how many distinct accounts one IP hash must be behind, by default, for the watch to list
+/// it. A household or a dorm room stays under it; a farm built to be worth the trouble does not.
+pub const INVITE_CLUSTER_MIN_ACCOUNTS: i64 = 6;
+/// §9.8: how many characters of an IP hash the report prints. Enough for an operator to tell two
+/// hashes apart and to find one in the table, too few to stand in for the hash itself.
+pub const INVITE_CLUSTER_HASH_PREFIX_LEN: usize = 8;
+
+// ---------------------------------------------------------------------------------------------
 // Matchmaking (§9.5, BUILD M7-T3).
 // ---------------------------------------------------------------------------------------------
 

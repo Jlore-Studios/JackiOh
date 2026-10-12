@@ -71,15 +71,15 @@ use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_STAR
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
-    EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow,
-    MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
-    RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
+    MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
+    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
+    RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
+    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -2266,6 +2266,34 @@ pub async fn codes_count_attempts_by_ip(
     .await
     .map_err(db_error)?;
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
+}
+
+/// §9.8: one row per IP hash with an attempt at or after `since`. `count(distinct profile_id)` skips
+/// the null profile of an attempt nobody was signed in for, as the fake does.
+pub async fn codes_invite_clusters(t: &mut PgTx<'_>, since: i64) -> Result<Vec<InviteCluster>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ip_hash, count(*)::int as attempts, count(distinct profile_id)::int as accounts
+           from public.code_attempts
+          where at >= ",
+        ts!("$1"),
+        "
+          group by ip_hash
+          order by ip_hash collate \"C\""
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            Ok(InviteCluster {
+                ip_hash: get(row, "ip_hash")?,
+                accounts: get::<i32>(row, "accounts").map(i64::from)?,
+                attempts: get::<i32>(row, "attempts").map(i64::from)?,
+            })
+        })
+        .collect()
 }
 
 pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {

@@ -302,6 +302,19 @@ pub struct CodeAttempt {
     pub at: i64,
 }
 
+/// §9.8's invite-cluster watch: what the attempt log holds for one IP hash in a window. `ip_hash` is
+/// the stored (peppered) hash in full; only `jackioh-server invite-clusters` shortens it, and
+/// nothing returns it to a client.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct InviteCluster {
+    pub ip_hash: String,
+    /// Distinct profiles that made an attempt from this hash; attempts with no profile are not counted.
+    pub accounts: i64,
+    /// Every attempt from this hash, whoever made it and however it ended.
+    pub attempts: i64,
+}
+
 store_union! {
     /// Exactly the strings `app.redeem_invite_code(uuid, text, text)` returns (migration 0001 §6).
     /// `not_pending` covers no such profile, banned and already active together: `codes.rs` tells
@@ -1492,6 +1505,13 @@ impl Tx<'_> {
 
     pub async fn codes_count_attempts_by_ip(&mut self, ip_hash: &str, since: i64) -> StoreResult<i64> {
         dispatch!(self, codes_count_attempts_by_ip(ip_hash, since))
+    }
+
+    /// §9.8: one row per IP hash with an attempt at or after `since`, ordered by `ip_hash`: how many
+    /// distinct accounts and how many attempts it made. Read only by the operator's
+    /// `invite-clusters` report; nothing acts on it.
+    pub async fn codes_invite_clusters(&mut self, since: i64) -> StoreResult<Vec<InviteCluster>> {
+        dispatch!(self, codes_invite_clusters(since))
     }
 
     /// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).

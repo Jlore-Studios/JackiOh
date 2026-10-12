@@ -80,6 +80,13 @@ target/release/jackioh-server                   # 4. serve (the default subcomma
   creates one: the plaintext goes to stdout once, the database stores its keyed hash. It validates
   the whole environment, because a `CODE_PEPPER` that differs from the running server's mints a code
   nobody can redeem.
+- **Invite clusters.** `invite-clusters [--window=<seconds>] [--min-accounts=<N>]` is SPEC §9.8's
+  watch for accounts sharing an IP hash: it reads `code_attempts` (`DATABASE_URL`) and prints a
+  Markdown table of every hash that at least N distinct accounts (default `INVITE_CLUSTER_MIN_ACCOUNTS`,
+  6) made an attempt from in the window (default `INVITE_CLUSTER_WINDOW_SECONDS`, a week; at most the 30
+  days the table is kept), with its account and attempt counts. It is read-only and advisory: nothing
+  is banned or disabled, since a campus or a carrier's NAT puts many honest players behind one hash,
+  and a hash is printed shortened to `INVITE_CLUSTER_HASH_PREFIX_LEN` characters.
 - **Seasons.** `season-start --dry-run` walks R609's season open and soft reset and rolls it back,
   printing the report; without the flag it commits. Re-running is safe.
 
