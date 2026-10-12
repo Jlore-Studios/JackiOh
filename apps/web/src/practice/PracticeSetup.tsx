@@ -16,6 +16,7 @@ import {
 import type { CardDefs } from "@jackioh/shared";
 
 import { LeanNewestToggle } from "../game/LeanNewest.tsx";
+import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { DeckPreview } from "./DeckPreview.tsx";
 import {
@@ -65,19 +66,21 @@ function savedHint(saved: SavedDecks): ReactElement | null {
     case "ready":
       return null;
     case "anonymous":
-      return <>Sign in and save a deck to play one of your own decks here.</>;
+      return <>{t("Sign in and save a deck to play one of your own decks here.")}</>;
     case "checking":
-      return <>Looking for your saved decks…</>;
+      return <>{t("Looking for your saved decks…")}</>;
     case "inactive":
-      return <>Your saved decks show up here once your account is active.</>;
+      return <>{t("Your saved decks show up here once your account is active.")}</>;
     case "none":
       return (
         <>
-          Save a deck in <a href={paths.decks}>Decks</a> to play one of your own decks here.
+          {t("Save a deck in ")}
+          <a href={paths.decks}>{t("Decks")}</a>
+          {t(" to play one of your own decks here.")}
         </>
       );
     case "unavailable":
-      return <>Your saved decks could not be loaded just now. The decks above still play.</>;
+      return <>{t("Your saved decks could not be loaded just now. The decks above still play.")}</>;
   }
 }
 
@@ -87,17 +90,17 @@ function previewFor(
 ): { title: string; identity: string; cards: readonly string[] | null } {
   switch (choice.kind) {
     case "random":
-      return { title: "Random deck", identity: RANDOM_DECK_IDENTITY, cards: null };
+      return { title: t("Random deck"), identity: t(RANDOM_DECK_IDENTITY), cards: null };
     case "preset": {
       const preset = presetById(choice.id);
       return preset === undefined
         ? { title: choice.id, identity: "", cards: null }
-        : { title: preset.name, identity: preset.identity, cards: preset.cards };
+        : { title: t(preset.name), identity: t(preset.identity), cards: preset.cards };
     }
     case "saved":
       return {
-        title: saved?.[choice.index - 1]?.name ?? `Saved deck ${String(choice.index)}`,
-        identity: "One of your saved decks, exactly as you saved it.",
+        title: saved?.[choice.index - 1]?.name ?? t("Saved deck {n}", { n: String(choice.index) }),
+        identity: t("One of your saved decks, exactly as you saved it."),
         cards: choice.cards,
       };
   }
@@ -107,6 +110,11 @@ function plural(count: number, one: string, many: string): string {
   return `${String(count)} ${count === 1 ? one : many}`;
 }
 
+/** A deck option as the reader reads it; a saved deck's name is its player's own and stays as written. */
+function optionLabel(value: string, label: string, saved: readonly PracticeSavedDeck[] | null): string {
+  return deckChoiceFromValue(value, saved)?.kind === "saved" ? label : t(label);
+}
+
 type TierStat = { key: string; label: string; value: string; ahead: boolean };
 
 function tierStats(handicap: Handicap): TierStat[] {
@@ -114,29 +122,34 @@ function tierStats(handicap: Handicap): TierStat[] {
   return [
     {
       key: "deck",
-      label: "Deck",
-      value: plural(handicap.deckSize, "card", "cards"),
+      label: t("Deck"),
+      value: plural(handicap.deckSize, t("card"), t("cards")),
       ahead: handicap.deckSize !== human.deckSize,
     },
     {
       key: "mana",
-      label: "Mana",
+      label: t("Mana"),
       value:
         handicap.manaBonus > 0
-          ? `+${String(handicap.manaBonus)}, up to ${String(handicap.manaCap)}`
-          : `up to ${String(handicap.manaCap)}`,
+          ? t("+{bonus}, up to {cap}", { bonus: String(handicap.manaBonus), cap: String(handicap.manaCap) })
+          : t("up to {cap}", { cap: String(handicap.manaCap) }),
       ahead: handicap.manaBonus !== human.manaBonus || handicap.manaCap !== human.manaCap,
     },
     {
       key: "hand",
-      label: "Opening hand",
-      value: handicap.extraOpeningCards > 0 ? `+${plural(handicap.extraOpeningCards, "card", "cards")}` : "as yours",
+      label: t("Opening hand"),
+      value:
+        handicap.extraOpeningCards > 0
+          ? handicap.extraOpeningCards === 1
+            ? t("+{count} card", { count: String(handicap.extraOpeningCards) })
+            : t("+{count} cards", { count: String(handicap.extraOpeningCards) })
+          : t("as yours"),
       ahead: handicap.extraOpeningCards !== human.extraOpeningCards,
     },
     {
       key: "draws",
-      label: "Draws",
-      value: `${String(DRAWS_PER_TURN + handicap.extraDrawsPerTurn)} per turn`,
+      label: t("Draws"),
+      value: `${String(DRAWS_PER_TURN + handicap.extraDrawsPerTurn)} ${t("per turn")}`,
       ahead: handicap.extraDrawsPerTurn !== human.extraDrawsPerTurn,
     },
   ];
@@ -167,7 +180,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
     <form className="practice-setup" data-testid={practiceTestid.setup} onSubmit={submit}>
       <fieldset className="practice-setup__difficulties">
         <legend className="practice-setup__legend">
-          <h2 className="practice-setup__heading">Choose your opponent</h2>
+          <h2 className="practice-setup__heading">{t("Choose your opponent")}</h2>
         </legend>
         <div className="practice-tiers">
           {DIFFICULTIES.map((d) => {
@@ -193,9 +206,9 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
                 </span>
                 <span className="practice-tier__heading">
                   <span className="practice-tier__name" id={nameId}>
-                    {DIFFICULTY_LABEL[d]}
+                    {t(DIFFICULTY_LABEL[d])}
                   </span>
-                  <span className="practice-tier__tagline">{DIFFICULTY_TAGLINE[d]}</span>
+                  <span className="practice-tier__tagline">{t(DIFFICULTY_TAGLINE[d])}</span>
                 </span>
                 <span className="practice-tier__stats" id={statsId}>
                   {tierStats(AI_DIFFICULTY[d]).map((stat) => (
@@ -215,7 +228,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
         <div className="practice-setup__deck">
           <h2 className="practice-setup__heading">
             <label className="practice-setup__deck-label" htmlFor={`${baseId}-deck`}>
-              Your deck
+              {t("Your deck")}
             </label>
           </h2>
           <span className="practice-select">
@@ -229,7 +242,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
             >
               {options.map((option) => (
                 <option key={option.value} value={option.value} disabled={option.disabled}>
-                  {option.label}
+                  {optionLabel(option.value, option.label, savedDecks)}
                 </option>
               ))}
             </select>
@@ -252,7 +265,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
         </div>
 
         <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start}>
-          Start game
+          {t("Start game")}
         </button>
       </div>
     </form>

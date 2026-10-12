@@ -3,23 +3,24 @@
 // position. Shared by the leaderboard, the account screen and the match screen so the three
 // cannot disagree about what a rank says.
 
+import { t } from "../i18n/i18n.ts";
 import type { GrapeTier, PeakBadge, VisibleRank } from "../net/api.ts";
 
 /** Every tier a rank can name, in a player's words. */
 export function tierName(tier: VisibleRank["tier"] | GrapeTier): string {
   switch (tier) {
     case "raisin":
-      return "Raisin";
+      return t("Raisin");
     case "rotten":
-      return "Rotten Grape";
+      return t("Rotten Grape");
     case "normal":
-      return "Normal Grape";
+      return t("Normal Grape");
     case "large":
-      return "Large Grape";
+      return t("Large Grape");
     case "golden":
-      return "Golden Grape";
+      return t("Golden Grape");
     case "mythic":
-      return "Mythic Grape";
+      return t("Mythic Grape");
     case "jlorious":
       return "Jlorious";
   }
@@ -41,13 +42,23 @@ export function divisionNumeral(division: number): string {
 
 /** What a player is shown as: placements, a tier with its division and pips, or a position. */
 export function rankWords(rank: VisibleRank): string {
-  if (rank.tier === "raisin") return `Raisin · ${String(rank.placementsPlayed)}/${String(rank.placementGames)} placements`;
-  if (rank.tier === "jlorious") return `Jlorious #${String(rank.position)}`;
-  return `${tierName(rank.tier)} ${divisionNumeral(rank.division)} · ${String(rank.pips)}/${String(rank.pipsPerDivision)} pips`;
+  if (rank.tier === "raisin") {
+    return t("Raisin · {played}/{games} placements", {
+      played: String(rank.placementsPlayed),
+      games: String(rank.placementGames),
+    });
+  }
+  if (rank.tier === "jlorious") return t("Jlorious #{position}", { position: String(rank.position) });
+  return t("{tier} {division} · {pips}/{total} pips", {
+    tier: tierName(rank.tier),
+    division: divisionNumeral(rank.division),
+    pips: String(rank.pips),
+    total: String(rank.pipsPerDivision),
+  });
 }
 
 /** A season's best, as the profile's badge shows it (R607). */
 export function badgeWords(badge: PeakBadge): string {
-  if (badge.tier === "jlorious") return `Jlorious #${String(badge.position)} · ${badge.seasonId}`;
+  if (badge.tier === "jlorious") return `${t("Jlorious #{position}", { position: String(badge.position) })} · ${badge.seasonId}`;
   return `${tierName(badge.tier)} ${divisionNumeral(badge.division)} · ${badge.seasonId}`;
 }

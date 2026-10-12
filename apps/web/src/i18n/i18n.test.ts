@@ -19,6 +19,7 @@ import {
   formatDateTime,
   formatDay,
   formatNumber,
+  formatSeconds,
   getLocale,
   resetLocaleForTests,
   setLocale,
@@ -49,6 +50,9 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("The English text governs.")).toBe("The English text governs.");
     expect(formatDay("2026-10-10")).toBe("2026-10-10");
     expect(formatNumber(1234)).toBe("1,234");
+    // The clock reads as `${n}s` always did: never grouped (the match ceiling is 7200s).
+    expect(formatSeconds(5)).toBe("5s");
+    expect(formatSeconds(7200)).toBe("7200s");
     expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString("en"));
 
     // 2. Switch to zh-CN
@@ -65,6 +69,7 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("The English text governs.")).toBe("以英文版本为准。");
     expect(formatDay("2026-10-10")).toBe("2026年10月10日");
     expect(formatNumber(1234)).toBe("1,234");
+    expect(formatSeconds(7200)).toBe("7200秒");
     expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString("zh-CN"));
   });
 

@@ -5,6 +5,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { t } from "../i18n/i18n.ts";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";
@@ -24,7 +25,7 @@ export const seriesBannerTestid = {
 
 function wonWords(decks: readonly { won: boolean }[]): string {
   const won = decks.filter((deck) => deck.won).length;
-  return `${String(won)} of ${String(decks.length)} decks have won`;
+  return t("{won} of {total} decks have won", { won: String(won), total: String(decks.length) });
 }
 
 type SeriesResult = NonNullable<SeriesView["result"]>;
@@ -86,12 +87,12 @@ export function useMatchSeries(token: string, matchId: string, gameOver: boolean
 
 export function nextStep(series: SeriesView, matchId: string): { href: string; label: string } | null {
   if (series.status === "over") return null;
-  const next = `Continue to game ${String(series.gameNo)}`;
+  const next = t("Continue to game {game}", { game: String(series.gameNo) });
   if (series.status === "picking") return { href: paths.series(series.id), label: next };
   const running = series.currentMatchId;
   if (running !== null && running !== matchId) return { href: paths.match(running), label: next };
   // Before the next game exists, return to the series pick.
-  return { href: paths.series(series.id), label: "Back to the series" };
+  return { href: paths.series(series.id), label: t("Back to the series") };
 }
 
 function WayOn({ series, matchId, testid }: { series: SeriesView; matchId: string; testid: string }): ReactElement {
@@ -99,7 +100,7 @@ function WayOn({ series, matchId, testid }: { series: SeriesView; matchId: strin
   if (step === null) {
     return (
       <a href={paths.series(series.id)} data-testid={testid} onClick={followInApp(paths.series(series.id))}>
-        See the series
+        {t("See the series")}
       </a>
     );
   }
@@ -125,35 +126,38 @@ export function SeriesBanner({ series, matchId, gameOver }: SeriesBannerProps): 
   return (
     <div className="series-banner" data-testid={seriesBannerTestid.banner} data-series-id={series.id}>
       <span className="series-banner__score">
-        Conquest · You {String(series.you.wins)} – {String(series.opponent.wins)} Opponent
+        {t("Conquest · You {you} – {them} Opponent", {
+          you: String(series.you.wins),
+          them: String(series.opponent.wins),
+        })}
       </span>
-      <span className="series-banner__decks" aria-label={`Your decks: ${wonWords(yours)}`}>
-        You
+      <span className="series-banner__decks" aria-label={t("Your decks: {standing}", { standing: wonWords(yours) })}>
+        {t("You")}
         {yours.map((deck) => (
           <span
             key={deck.slot}
             className="series-banner__pip"
             data-testid={seriesBannerTestid.yourDeck(deck.slot)}
             data-won={deck.won ? "true" : "false"}
-            title={`${deck.name}: ${deck.won ? "won" : "not won yet"}`}
+            title={`${deck.name}: ${deck.won ? t("won") : t("not won yet")}`}
           />
         ))}
       </span>
-      <span className="series-banner__decks" aria-label={`Their decks: ${wonWords(theirs)}`}>
-        Them
+      <span className="series-banner__decks" aria-label={t("Their decks: {standing}", { standing: wonWords(theirs) })}>
+        {t("Them")}
         {theirs.map((deck) => (
           <span
             key={deck.slot}
             className="series-banner__pip"
             data-testid={seriesBannerTestid.opponentDeck(deck.slot)}
             data-won={deck.won ? "true" : "false"}
-            title={`Deck ${String(deck.slot + 1)}: ${deck.won ? "won" : "not won yet"}`}
+            title={t(deck.won ? "Deck {slot}: won" : "Deck {slot}: not won yet", { slot: String(deck.slot + 1) })}
           />
         ))}
       </span>
       {gameOver && result !== null ? (
         <span data-testid={seriesBannerTestid.result} data-outcome={result.outcome}>
-          {SERIES_OUTCOME_HEADLINE[result.outcome]}
+          {t(SERIES_OUTCOME_HEADLINE[result.outcome])}
         </span>
       ) : null}
       {gameOver ? <WayOn series={series} matchId={matchId} testid={seriesBannerTestid.continue} /> : null}

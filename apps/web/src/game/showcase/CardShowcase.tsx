@@ -44,6 +44,7 @@ import {
   type ShowcaseKind,
 } from "./constants.ts";
 import { capQueue, chaosRollsIn, eventsSince, showcasePlays, type ShowcasePlay } from "./plan.ts";
+import { t } from "../../i18n/i18n.ts";
 import "./showcase.css";
 
 export type CardShowcaseProps = {
@@ -70,29 +71,38 @@ const CAPTION: Readonly<Record<Exclude<ShowcaseKind, "cast" | "multicast">, stri
 };
 
 function castCaption(play: ShowcasePlay, viewer: PlayerId): string {
-  if (play.player === viewer) return CAST_ON_DRAW_TEXT.you;
-  return play.defId === null ? CAST_ON_DRAW_TEXT.hidden : CAST_ON_DRAW_TEXT.opponent;
+  if (play.player === viewer) return t(CAST_ON_DRAW_TEXT.you);
+  return play.defId === null ? t(CAST_ON_DRAW_TEXT.hidden) : t(CAST_ON_DRAW_TEXT.opponent);
 }
 
 function multicastCaption(byName: string | undefined): string {
-  return byName === undefined ? MULTICAST_TEXT.unknown : `${MULTICAST_TEXT.by} ${byName}`;
+  return byName === undefined ? t(MULTICAST_TEXT.unknown) : t("Cast by {name}", { name: byName });
 }
 
 function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byName: string | undefined): string {
   if (kind === "cast") return castCaption(play, viewer);
-  return kind === "multicast" ? multicastCaption(byName) : CAPTION[kind];
+  return kind === "multicast" ? multicastCaption(byName) : t(CAPTION[kind]);
+}
+
+/** A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view hides. */
+function multicastSaid(byName: string | undefined, name: string | undefined, ordinal: string): string {
+  if (byName === undefined) {
+    return name === undefined ? t("A card cast a card ({ordinal})", { ordinal }) : t("A card cast {name} ({ordinal})", { name, ordinal });
+  }
+  return name === undefined
+    ? t("{by} cast a card ({ordinal})", { by: byName, ordinal })
+    : t("{by} cast {name} ({ordinal})", { by: byName, name, ordinal });
 }
 
 function saidOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, name: string | undefined, byName: string | undefined): string {
-  if (kind === "multicast") {
-    const ordinal = play.castBy?.ordinal ?? 1;
-    return `${byName ?? "A card"} ${MULTICAST_TEXT.said} ${name ?? "a card"} (${String(ordinal)})`;
-  }
+  if (kind === "multicast") return multicastSaid(byName, name, String(play.castBy?.ordinal ?? 1));
   if (kind === "cast") {
     const drew = castCaption(play, viewer);
-    return play.defId === null ? `${drew}: ${CAST_ON_DRAW_TEXT.said}` : `${drew} ${name ?? "a card"}: ${CAST_ON_DRAW_TEXT.said}`;
+    if (play.defId === null) return t("{drew}: cast on draw", { drew });
+    return name === undefined ? t("{drew} a card: cast on draw", { drew }) : t("{drew} {name}: cast on draw", { drew, name });
   }
-  return kind === "played" ? `${CAPTION.played} ${name ?? "a card"}` : CAPTION[kind];
+  if (kind !== "played") return t(CAPTION[kind]);
+  return name === undefined ? t("Opponent played a card") : t("Opponent played {name}", { name });
 }
 
 function effectsDrawing(): boolean {
@@ -351,7 +361,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         {said}
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.chaosLive} role="status" aria-live="polite">
-        {chaosSaid}
+        {t(chaosSaid)}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null
@@ -385,7 +395,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
                       className="facedown-cost facedown-cost--large"
                       data-testid={showcaseTestid.cost}
                       data-cost={showing.play.cost}
-                      title={costPhrase(showing.play.cost)}
+                      title={t(costPhrase(showing.play.cost))}
                     >
                       {showing.play.cost}
                     </span>
@@ -413,7 +423,7 @@ function CastOrdinal({ ordinal }: { ordinal: number }): ReactElement {
 function CastRibbon(): ReactElement {
   return (
     <span className="showcase-ribbon" data-testid={showcaseTestid.ribbon}>
-      {CAST_ON_DRAW_TEXT.ribbon}
+      {t(CAST_ON_DRAW_TEXT.ribbon)}
     </span>
   );
 }

@@ -176,14 +176,14 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
       {head}
       <section
         className="db-deck"
-        aria-label={`Cards in ${deckName}`}
+        aria-label={t("Cards in {deck}", { deck: deckName })}
         data-testid={DECK_DROP}
         data-list-open={listOpen ? "true" : "false"}
         onDragOver={allowDrop}
         onDrop={onDropCard}
       >
         <header className="db-deck-head">
-          <span className="db-deck-title">Cards</span>
+          <span className="db-deck-title">{t("Cards")}</span>
           <span
             className="db-deck-size"
             data-testid={DECK_COUNT}
@@ -204,7 +204,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
                 setListOpen((open) => !open);
               }}
             >
-              {listOpen ? "Hide list" : "Show list"}
+              {listOpen ? t("Hide list") : t("Show list")}
             </button>
           )}
           {/* How full the deck is, at a glance. Drawn only: the count beside it is the number. */}
@@ -230,7 +230,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
           ))}
         </ul>
         {cards.length === 0 ? (
-          <p className="db-deck-hint">Tap + on a card in the pool, or drag it here, to add it.</p>
+          <p className="db-deck-hint">{t("Tap + on a card in the pool, or drag it here, to add it.")}</p>
         ) : null}
       </section>
 

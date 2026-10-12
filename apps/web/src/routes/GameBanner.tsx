@@ -9,6 +9,7 @@
 import { useId, type ReactElement, type ReactNode } from "react";
 
 import { DISCONNECT_GRACE_SECONDS } from "@jackioh/server-config";
+import { t } from "../i18n/i18n.ts";
 import { MATCH_FOUND_STATUS, type LiveGame } from "../net/liveGame.ts";
 import { followInApp } from "./nav.tsx";
 import "./game-banner.css";
@@ -46,7 +47,7 @@ export function GameBanner({ testId, title, children, action, data = {} }: GameB
     <section className="notice game-banner" data-testid={testId} aria-labelledby={titleId} {...attributes}>
       <div className="game-banner__text">
         <h2 className="game-banner__title" id={titleId}>
-          {title}
+          {t(title)}
         </h2>
         <p className="game-banner__body">{children}</p>
       </div>
@@ -57,22 +58,22 @@ export function GameBanner({ testId, title, children, action, data = {} }: GameB
           data-testid={action.testId}
           onClick={followInApp(action.href)}
         >
-          {action.label}
+          {t(action.label)}
         </a>
       ) : (
         <button type="button" className="game-banner__action button-primary" data-testid={action.testId} onClick={action.onPress}>
-          {action.label}
+          {t(action.label)}
         </button>
       )}
     </section>
   );
 }
 
-/** What the live banner says, by the kind of game. */
+/** What the live banner says, by the kind of game; `{seconds}` is the disconnect grace. */
 const LIVE_WORDS: Readonly<Record<LiveGame["kind"], { title: string; body: string }>> = {
   match: {
     title: "You're in a game",
-    body: `Your online match is still on. If you stay away from it for ${String(DISCONNECT_GRACE_SECONDS)} seconds, you lose it.`,
+    body: "Your online match is still on. If you stay away from it for {seconds} seconds, you lose it.",
   },
   series: {
     title: "You're in a Conquest series",
@@ -91,7 +92,7 @@ export function LiveGameBanner({ game }: { game: LiveGame | null }): ReactElemen
       action={{ label: "Rejoin", testId: gameBannerTestid.rejoin, href: game.path }}
       data={{ kind: game.kind }}
     >
-      {words.body}
+      {t(words.body, { seconds: String(DISCONNECT_GRACE_SECONDS) })}
     </GameBanner>
   );
 }
@@ -102,7 +103,7 @@ export function QueueFound({ game }: { game: LiveGame | null }): ReactElement | 
   return (
     <div className="queue-found tavern">
       <p className="notice queue-found__notice" data-testid={gameBannerTestid.queueFound} data-kind={game.kind} role="status">
-        {MATCH_FOUND_STATUS}
+        {t(MATCH_FOUND_STATUS)}
       </p>
     </div>
   );

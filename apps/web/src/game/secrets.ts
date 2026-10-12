@@ -4,6 +4,8 @@
 
 import type { PredictOutcome, SecretChoice } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
+
 /** What a revealed choice is called: "Greed", "Attack", "Defend". */
 export const SECRET_WORDS: Record<SecretChoice, string> = {
   greed: "Greed",
@@ -23,5 +25,5 @@ export const PREDICTED_WORDS: Record<PredictOutcome, string> = {
  * seat, or anyone once revealed — and "Secret" otherwise.
  */
 export function secretBadgeText(choice?: SecretChoice): string {
-  return choice === undefined ? "Secret" : `Secret: ${SECRET_WORDS[choice]}`;
+  return choice === undefined ? t("Secret") : t("Secret: {choice}", { choice: t(SECRET_WORDS[choice]) });
 }

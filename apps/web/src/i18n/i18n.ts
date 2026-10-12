@@ -83,7 +83,7 @@ export function bestLocale(languages: readonly string[]): Locale {
   return DEFAULT_LOCALE;
 }
 
-type Pattern = { key: string; names: readonly string[]; regex: RegExp };
+type Pattern = { key: string; names: readonly string[]; regex: RegExp; literal: number };
 
 type State = {
   locale: Locale;
@@ -119,9 +119,14 @@ function patternsOf(dictionary: Dictionary): Pattern[] {
       names.push(match[1] ?? "");
       last = match.index + match[0].length;
     }
-    if (names.length > 0) patterns.push({ key, names, regex: new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s") });
+    if (names.length > 0) {
+      const regex = new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s");
+      patterns.push({ key, names, regex, literal: key.replace(TOKEN, "").length });
+    }
   }
-  return patterns;
+  // The most specific key first: "In the {mode} queue. …" is tried before a shorter key that would
+  // also match the same sentence.
+  return patterns.sort((a, b) => b.literal - a.literal);
 }
 
 function fill(text: string, params: Params): string {
@@ -270,9 +275,9 @@ export function formatNumber(value: number, options?: Intl.NumberFormatOptions):
   return new Intl.NumberFormat(state.locale, options).format(value);
 }
 
-/** A span of seconds as the clock reads it: "5s", "5秒". */
+/** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped, as `${n}s` never was. */
 export function formatSeconds(seconds: number): string {
-  return formatNumber(seconds, { style: "unit", unit: "second", unitDisplay: "narrow" });
+  return formatNumber(seconds, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false });
 }
 
 /** A moment (epoch ms, or a Date) as the reader's date and time. */

@@ -33,6 +33,7 @@ import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
@@ -110,12 +111,12 @@ export function poolCardLabel(
   owned: boolean | null = null,
   fresh = false,
 ): string {
-  const parts = [def.name, def.type, costText(def.cost), def.rarity];
-  if (fresh) parts.push("new");
-  if (place === "deck") parts.push("in this deck");
-  else if (place !== null) parts.push(`in ${place.name}, unavailable`);
-  if (owned === false) parts.push("not in your collection");
-  return `${parts.join(", ")}. Show details`;
+  const parts = [readerName(def), t(def.type), t(costText(def.cost)), t(def.rarity)];
+  if (fresh) parts.push(t("new"));
+  if (place === "deck") parts.push(t("in this deck"));
+  else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));
+  if (owned === false) parts.push(t("not in your collection"));
+  return t("{card}. Show details", { card: parts.join(", ") });
 }
 
 function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
@@ -177,7 +178,7 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
         </span>
         {fresh ? (
           <span className="db-new" data-new-set={def.set} aria-hidden="true">
-            New
+            {t("New")}
           </span>
         ) : null}
         {badge === null ? null : (
@@ -193,8 +194,8 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
           data-testid={addPoolId(cardId)}
           // Already placed: the same refusal a drag gets, so it still reports why, but says it is off.
           aria-disabled={place !== null}
-          aria-label={`Add ${def.name} to ${deck.deckName}`}
-          title={`Add to ${deck.deckName}`}
+          aria-label={t("Add {card} to {deck}", { card: readerName(def), deck: deck.deckName })}
+          title={`${t("Add to")} ${deck.deckName}`}
           onClick={() => {
             deck.onAdd(cardId);
           }}
@@ -226,7 +227,7 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
   const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET } = props;
 
   return (
-    <section className="db-pool" aria-label="Card pool" data-testid={CARD_POOL}>
+    <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
       {ids.map((cardId) => {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;

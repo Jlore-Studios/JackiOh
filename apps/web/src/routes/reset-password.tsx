@@ -17,6 +17,7 @@ import {
 } from "../auth/redirect.ts";
 import { resetTestid } from "../auth/testids.ts";
 import { confirmProblem, newPasswordProblem } from "../auth/validation.ts";
+import { t } from "../i18n/i18n.ts";
 import {
   AUTH_MESSAGES,
   AuthError,
@@ -118,14 +119,12 @@ export default function ResetPasswordRoute(): ReactElement {
             <div className="brand">
               <h1>JackiOh</h1>
             </div>
-            <h2>Reset your password</h2>
+            <h2>{t("Reset your password")}</h2>
           </div>
           <div className="auth-board__body">
             <div className="auth-no-link" data-testid={resetTestid.noLink}>
               <p className="notice" role="status">
-                This page needs the link from a password reset email. It may have been opened
-                already, in another tab, or left without saving. Ask for a new one, or sign in if
-                you remember your password.
+                {t("This page needs the link from a password reset email. It may have been opened already, in another tab, or left without saving. Ask for a new one, or sign in if you remember your password.")}
               </p>
               <div className="auth-actions">
                 <button
@@ -134,7 +133,7 @@ export default function ResetPasswordRoute(): ReactElement {
                   data-testid={resetTestid.requestNew}
                   onClick={requestNewLink}
                 >
-                  Email me a new link
+                  {t("Email me a new link")}
                 </button>
                 <button
                   type="button"
@@ -142,7 +141,7 @@ export default function ResetPasswordRoute(): ReactElement {
                   data-testid={resetTestid.backToSignIn}
                   onClick={backToSignIn}
                 >
-                  Back to sign in
+                  {t("Back to sign in")}
                 </button>
               </div>
             </div>
@@ -252,13 +251,12 @@ export default function ResetPasswordRoute(): ReactElement {
           <div className="brand">
             <h1>JackiOh</h1>
           </div>
-          <h2>Choose a new password</h2>
+          <h2>{t("Choose a new password")}</h2>
 
           {leaving === null ? null : (
             <div className="auth-link-error" data-testid={resetTestid.leaveConfirm} role="alert">
               <p className="notice">
-                Leave without saving? The link in your email works only once, so you would need to ask
-                for a new one.
+                {t("Leave without saving? The link in your email works only once, so you would need to ask for a new one.")}
               </p>
               <div className="auth-actions">
                 <button
@@ -269,25 +267,25 @@ export default function ResetPasswordRoute(): ReactElement {
                     setLeaving(null);
                   }}
                 >
-                  Stay and choose a password
+                  {t("Stay and choose a password")}
                 </button>
                 <button type="button" className="link-button" data-testid={resetTestid.leave} onClick={confirmLeave}>
-                  Leave without saving
+                  {t("Leave without saving")}
                 </button>
               </div>
             </div>
           )}
 
           <p className="auth-hint">
-            For{" "}
+            {t("For")}{" "}
             <strong data-testid={resetTestid.email}>
-              {recovery.email === null ? "your account" : <Address value={recovery.email} />}
+              {recovery.email === null ? t("your account") : <Address value={recovery.email} />}
             </strong>
           </p>
           {replaced === null ? null : (
             // Never silently: saving makes the reset account this browser's session (R193).
             <p className="auth-hint" data-testid={resetTestid.replaces}>
-              Saving signs this browser out of{" "}
+              {t("Saving signs this browser out of")}{" "}
               <strong>
                 <Address value={replaced} />
               </strong>
@@ -308,7 +306,7 @@ export default function ResetPasswordRoute(): ReactElement {
               readOnly
               hidden
             />
-            <label htmlFor="reset-password">New password</label>
+            <label htmlFor="reset-password">{t("New password")}</label>
             <div className="input-with-affix">
               <input
                 id="reset-password"
@@ -331,22 +329,22 @@ export default function ResetPasswordRoute(): ReactElement {
                 className="affix-button"
                 data-testid={resetTestid.togglePassword}
                 // One toggle shows or hides both fields, so the two can be compared by eye.
-                aria-label={showPassword ? "Hide passwords" : "Show passwords"}
+                aria-label={showPassword ? t("Hide passwords") : t("Show passwords")}
                 aria-pressed={showPassword}
                 onClick={() => {
                   setShowPassword((shown) => !shown);
                 }}
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("Hide") : t("Show")}
               </button>
             </div>
             {passwordError !== null ? (
               <p id="reset-password-error" className="auth-field-error" data-testid={resetTestid.passwordError}>
-                {passwordError}
+                {t(passwordError)}
               </p>
             ) : null}
 
-            <label htmlFor="reset-confirm">Type it again</label>
+            <label htmlFor="reset-confirm">{t("Type it again")}</label>
             <input
               id="reset-confirm"
               data-testid={resetTestid.confirm}
@@ -365,18 +363,18 @@ export default function ResetPasswordRoute(): ReactElement {
             />
             {confirmError !== null ? (
               <p id="reset-confirm-error" className="auth-field-error" data-testid={resetTestid.confirmError}>
-                {confirmError}
+                {t(confirmError)}
               </p>
             ) : null}
 
             <button type="submit" data-testid={resetTestid.submit} disabled={busy}>
-              {busy ? "Saving…" : "Save new password"}
+              {busy ? t("Saving…") : t("Save new password")}
             </button>
           </form>
 
           {error !== null ? (
             <p className="notice" data-testid={resetTestid.error} role="alert">
-              {error}
+              {t(error)}
             </p>
           ) : null}
 
@@ -388,7 +386,7 @@ export default function ResetPasswordRoute(): ReactElement {
                 data-testid={resetTestid.requestNew}
                 onClick={requestNewLink}
               >
-                Email me a new link
+                {t("Email me a new link")}
               </button>
             ) : null}
             <button
@@ -399,7 +397,7 @@ export default function ResetPasswordRoute(): ReactElement {
                 exitTo(paths.login);
               }}
             >
-              Back to sign in
+              {t("Back to sign in")}
             </button>
           </div>
         </div>

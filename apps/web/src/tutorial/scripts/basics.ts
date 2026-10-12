@@ -4,6 +4,7 @@
 import type { PlayerView, UnitView } from "@jackioh/shared";
 import { MAX_MANA } from "@jackioh/engine/config";
 
+import { t } from "../../i18n/i18n.ts";
 import { cardName, goodTrade, heroAttack, legalAttacksOf, sameMove, yourMove, zoneOf } from "../advice.ts";
 import type { CoachAnchor, CoachCtx, CoachStep, LessonScript } from "../coach.ts";
 import {
@@ -88,9 +89,13 @@ const attackHero: CoachStep = {
   title: "Attack the hero",
   text: (ctx) => {
     const choice = heroAttack(ctx);
-    const name = choice === undefined ? "Your unit" : cardName(ctx, choice.attacker.defId);
-    const damage = choice === undefined ? "its attack" : String(choice.attacker.attack);
-    return `${name} is ready: it glows green. Drag it onto the enemy hero to deal ${damage} damage. Any unit can attack any target, whatever its lane.`;
+    if (choice === undefined) {
+      return t("Your unit is ready: it glows green. Drag it onto the enemy hero to deal its attack damage. Any unit can attack any target, whatever its lane.");
+    }
+    return t("{name} is ready: it glows green. Drag it onto the enemy hero to deal {damage} damage. Any unit can attack any target, whatever its lane.", {
+      name: cardName(ctx, choice.attacker.defId),
+      damage: String(choice.attacker.attack),
+    });
   },
   anchor: { kind: "hero", side: "opponent" },
   when: (ctx) => myMain(ctx) && myTurnNumber(ctx.view) >= 2 && heroAttack(ctx) !== undefined,
@@ -110,10 +115,13 @@ const trade: CoachStep = {
   title: "Trade units",
   text: (ctx) => {
     const choice = goodTrade(ctx);
-    if (choice === undefined) return "Attack an enemy unit: both units hit each other at the same time.";
-    const a = cardName(ctx, choice.attacker.defId);
-    const b = cardName(ctx, choice.target.defId);
-    return `Attack a unit this time: drag ${a} onto the highlighted ${b}. Both hit each other at once, ${String(choice.dealt)} damage one way and ${String(choice.taken)} back.`;
+    if (choice === undefined) return t("Attack an enemy unit: both units hit each other at the same time.");
+    return t("Attack a unit this time: drag {attacker} onto the highlighted {target}. Both hit each other at once, {dealt} damage one way and {taken} back.", {
+      attacker: cardName(ctx, choice.attacker.defId),
+      target: cardName(ctx, choice.target.defId),
+      dealt: String(choice.dealt),
+      taken: String(choice.taken),
+    });
   },
   anchor: (ctx): CoachAnchor | null => {
     const choice = goodTrade(ctx);
@@ -144,7 +152,7 @@ export const script: LessonScript = {
     info({
       id: "your-hero",
       title: "Your hero",
-      text: (ctx) => `This is you: your hero, with ${String(ctx.view.you.hero.health)} health. If it ever drops to 0, you lose.`,
+      text: (ctx) => t("This is you: your hero, with {health} health. If it ever drops to 0, you lose.", { health: String(ctx.view.you.hero.health) }),
       anchor: { kind: "hero", side: "you" },
       // The first turn the player can act on: turn 1, unless a hand with nothing to play ended it (R82).
       when: (ctx) => myMain(ctx),
@@ -153,7 +161,9 @@ export const script: LessonScript = {
       id: "enemy-hero",
       title: "The enemy hero",
       text: (ctx) =>
-        `Across the board is the enemy hero. In this lesson it starts with ${String(ctx.view.opponent.hero.health)} health. Bring it down to 0 and you win.`,
+        t("Across the board is the enemy hero. In this lesson it starts with {health} health. Bring it down to 0 and you win.", {
+          health: String(ctx.view.opponent.hero.health),
+        }),
       anchor: { kind: "hero", side: "opponent" },
       when: (ctx) => myMain(ctx),
     }),
@@ -169,7 +179,11 @@ export const script: LessonScript = {
       title: "Mana",
       text: (ctx) => {
         const { current, max } = ctx.view.you.mana;
-        return `This is your mana: ${String(current)} of ${String(max)} left this turn. Cards cost mana. You get one more crystal each turn, up to ${String(MAX_MANA)}, and your mana refills every turn.`;
+        return t("This is your mana: {current} of {max} left this turn. Cards cost mana. You get one more crystal each turn, up to {cap}, and your mana refills every turn.", {
+          current: String(current),
+          max: String(max),
+          cap: String(MAX_MANA),
+        });
       },
       anchor: { kind: "mana" },
       when: (ctx) => myMain(ctx),
@@ -177,10 +191,10 @@ export const script: LessonScript = {
     info({
       id: "sick",
       title: "Not ready yet",
-      text: (ctx) => {
-        const name = unitOf(ctx.view, "you", VANILLA) === undefined ? "Your unit" : "Mr. Vanilla";
-        return `Units can't attack on the turn they arrive. ${name} will be ready on your next turn.`;
-      },
+      text: (ctx) =>
+        unitOf(ctx.view, "you", VANILLA) === undefined
+          ? t("Units can't attack on the turn they arrive. Your unit will be ready on your next turn.")
+          : t("Units can't attack on the turn they arrive. Mr. Vanilla will be ready on your next turn."),
       anchor: (ctx) => (unitOf(ctx.view, "you", VANILLA) === undefined ? { kind: "units", side: "you" } : { kind: "unit", side: "you", defId: VANILLA }),
       when: (ctx) => myMain(ctx) && unitsOf(ctx.view, "you").length > 0 && legalAttacksOf(ctx).length === 0,
       moot: (ctx, since) => since === null && (legalAttacksOf(ctx).length > 0 || myTurnNumber(ctx.view) > 2),
@@ -196,8 +210,14 @@ export const script: LessonScript = {
       title: "Two for one",
       text: (ctx) => {
         const cost = inHand(ctx.view, FELINORS)?.cost;
-        const costs = cost === undefined ? "" : ` costs (${String(cost)})`;
-        return `Your mana refilled with one more crystal: ${String(ctx.view.you.mana.max)} now. Duplicating Felinors${costs}: when you play it, it brings a copy of itself, two units from one card.`;
+        const max = String(ctx.view.you.mana.max);
+        if (cost === undefined) {
+          return t("Your mana refilled with one more crystal: {max} now. Duplicating Felinors: when you play it, it brings a copy of itself, two units from one card.", { max });
+        }
+        return t("Your mana refilled with one more crystal: {max} now. Duplicating Felinors costs ({cost}): when you play it, it brings a copy of itself, two units from one card.", {
+          max,
+          cost: String(cost),
+        });
       },
       defId: FELINORS,
     }),
@@ -259,11 +279,13 @@ export const script: LessonScript = {
       // AI attacks resolve with their losses, so one tip covers both.
       text: (ctx) => {
         const lost = freshOf(ctx, "destroyed").find((event) => event.owner === ctx.view.viewer);
-        const what =
-          lost === undefined
-            ? "The enemy attacked too."
-            : `The enemy attacked and destroyed your ${cardName(ctx, lost.defId)}: it went to your graveyard.`;
-        return `${what} Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.`;
+        if (lost === undefined) {
+          return t("The enemy attacked too. Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.");
+        }
+        return t(
+          "The enemy attacked and destroyed your {name}: it went to your graveyard. Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.",
+          { name: cardName(ctx, lost.defId) },
+        );
       },
       anchor: (ctx) =>
         freshOf(ctx, "destroyed").some((event) => event.owner === ctx.view.viewer) ? { kind: "graveyard", side: "you" } : { kind: "hero", side: "you" },
@@ -275,8 +297,13 @@ export const script: LessonScript = {
       title: "Defense Position",
       text: (ctx) => {
         const unit = unitsOf(ctx.view, "opponent").find((candidate) => candidate.position === "DEF");
-        const armor = unit === undefined || unit.armor === 0 ? "" : `, and it takes ${String(unit.armor)} less damage`;
-        return `The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first${armor}. More in lesson 2.`;
+        if (unit === undefined || unit.armor === 0) {
+          return t("The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first. More in lesson 2.");
+        }
+        return t(
+          "The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first, and it takes {armor} less damage. More in lesson 2.",
+          { armor: String(unit.armor) },
+        );
       },
       anchor: (ctx) => {
         const unit = unitsOf(ctx.view, "opponent").find((candidate) => candidate.position === "DEF");
@@ -293,8 +320,12 @@ export const script: LessonScript = {
       title: "A plain copy",
       text: (ctx) => {
         const copy = plainCopy(ctx.view);
-        const name = copy === undefined ? "unit" : cardName(ctx, copy.defId);
-        return `That enemy ${name} is a plain copy Prejudiced Postdoc made: the same stats, none of its text. One more body for you to deal with.`;
+        if (copy === undefined) {
+          return t("That enemy unit is a plain copy Prejudiced Postdoc made: the same stats, none of its text. One more body for you to deal with.");
+        }
+        return t("That enemy {name} is a plain copy Prejudiced Postdoc made: the same stats, none of its text. One more body for you to deal with.", {
+          name: cardName(ctx, copy.defId),
+        });
       },
       anchor: (ctx) => {
         const copy = plainCopy(ctx.view);
@@ -318,8 +349,11 @@ export const script: LessonScript = {
       title: "Heads or tails",
       text: (ctx) => {
         const buff = freshOf(ctx, "buffed").find((event) => [...unitsOf(ctx.view, "you"), ...unitsOf(ctx.view, "opponent")].some((unit) => unit.instanceId === event.instanceId && unit.defId === GARY));
-        const got = buff === undefined ? "" : ` This one got +${String(buff.attack)} attack and +${String(buff.health)} health.`;
-        return `Gary the Gambler flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails.${got}`;
+        if (buff === undefined) return t("Gary the Gambler flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails.");
+        return t(
+          "Gary the Gambler flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails. This one got +{attack} attack and +{health} health.",
+          { attack: String(buff.attack), health: String(buff.health) },
+        );
       },
       anchor: (ctx) => (unitOf(ctx.view, "you", GARY) === undefined ? { kind: "unit", side: "opponent", defId: GARY } : { kind: "unit", side: "you", defId: GARY }),
       when: (ctx) => freshOf(ctx, "summoned").some((event) => event.defId === GARY && event.row === "units"),
@@ -348,7 +382,8 @@ export const script: LessonScript = {
     tip({
       id: "enemy-low",
       title: "Almost there",
-      text: (ctx) => `The enemy hero is down to ${String(ctx.view.opponent.hero.health)} health. Look for units that can reach it this turn.`,
+      text: (ctx) =>
+        t("The enemy hero is down to {health} health. Look for units that can reach it this turn.", { health: String(ctx.view.opponent.hero.health) }),
       anchor: { kind: "hero", side: "opponent" },
       // Only show while the player can still attack this turn.
       when: (ctx) => myMain(ctx) && ctx.view.opponent.hero.health <= ENEMY_LOW_HEALTH && legalAttacksOf(ctx).length > 0,

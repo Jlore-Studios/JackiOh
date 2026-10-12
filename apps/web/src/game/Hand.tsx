@@ -36,6 +36,7 @@ import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side 
 import { useLanding } from "./drag/landing.ts";
 import { revealTestid } from "./reveal.ts";
 import { useSetting } from "../settings/index.ts";
+import { t } from "../i18n/i18n.ts";
 
 export type HandProps = {
   side: Side;
@@ -72,7 +73,7 @@ export function handEmptyTestid(side: Side): string {
 function EmptyHand({ side }: { side: Side }): ReactElement {
   return (
     <div className="hand-empty" data-testid={handEmptyTestid(side)}>
-      <span className="hand-empty-text">{HAND_EMPTY_TEXT}</span>
+      <span className="hand-empty-text">{t(HAND_EMPTY_TEXT)}</span>
     </div>
   );
 }
@@ -182,10 +183,10 @@ export default function Hand(props: HandProps): ReactElement {
       data-revealed={revealed && count > 0 ? "true" : undefined}
       data-hover-preview={yours ? (hoverPreviews ? "on" : "off") : undefined}
       data-marked={marked}
-      aria-label={`${side} hand`}
+      aria-label={side === "you" ? t("you hand") : t("opponent hand")}
     >
       <span className="pile">
-        <span className="pile-label">Hand</span>
+        <span className="pile-label">{t("Hand")}</span>
         <span className="pile-n" data-testid={`hand-count-${side}`}>
           {count}
         </span>
@@ -196,7 +197,8 @@ export default function Hand(props: HandProps): ReactElement {
         )}
         {marked === undefined ? null : (
           <span className="pile-marked" data-testid={`hand-marked-${side}`}>
-            {marked} marked
+            {marked}
+            {t(" marked")}
           </span>
         )}
       </span>

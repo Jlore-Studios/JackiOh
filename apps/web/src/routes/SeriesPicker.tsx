@@ -3,6 +3,7 @@
 
 import { useEffect, useId, useState, type ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import type { SeriesView } from "../net/api.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
@@ -29,9 +30,9 @@ export type SeriesPickerProps = {
 };
 
 export function deckStanding(deck: SeriesView["you"]["decks"][number]): string {
-  if (deck.won) return "Won · locked";
-  if (deck.games === 0) return "Not played yet";
-  return deck.games === 1 ? "Played once, not won" : `Played ${String(deck.games)} times, not won`;
+  if (deck.won) return t("Won · locked");
+  if (deck.games === 0) return t("Not played yet");
+  return deck.games === 1 ? t("Played once, not won") : t("Played {count} times, not won", { count: String(deck.games) });
 }
 
 function OpponentStatus({ picked }: { picked: boolean }): ReactElement {
@@ -42,7 +43,7 @@ function OpponentStatus({ picked }: { picked: boolean }): ReactElement {
       data-picked={picked ? "true" : "false"}
       role="status"
     >
-      {picked ? "Opponent has picked" : "Opponent is choosing…"}
+      {picked ? t("Opponent has picked") : t("Opponent is choosing…")}
     </p>
   );
 }
@@ -50,9 +51,10 @@ function OpponentStatus({ picked }: { picked: boolean }): ReactElement {
 function Clock({ secondsLeft }: { secondsLeft: number }): ReactElement {
   return (
     <p className="series-picker__clock">
-      Time left to pick:{" "}
+      {t("Time left to pick:")}{" "}
       <span className="series-clock" data-testid={seriesPickerTestid.clock} data-seconds={secondsLeft}>
-        {String(secondsLeft)} s
+        {String(secondsLeft)}
+        {t(" s")}
       </span>
     </p>
   );
@@ -81,7 +83,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
   }, [selected, openSlots]);
 
   if (pick !== null) {
-    const name = decks.find((deck) => deck.slot === pick)?.name ?? `Deck ${String(pick + 1)}`;
+    const name = decks.find((deck) => deck.slot === pick)?.name ?? `${t("Deck")} ${String(pick + 1)}`;
     return (
       <section
         className="lobby-card play-panel series-picker"
@@ -91,19 +93,25 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
         aria-labelledby={titleId}
       >
         <h2 id={titleId} className="play-panel__heading">
-          {`Game ${String(view.gameNo)}: your deck is in`}
+          {t("Game {game}: your deck is in", { game: String(view.gameNo) })}
         </h2>
         <div className="play-search">
           <span className="play-search__beacon" aria-hidden="true">
             <span className="play-search__ring" />
             <span className="play-search__ring play-search__ring--late" />
           </span>
-          <span className="play-search__text">Waiting for your opponent…</span>
+          <span className="play-search__text">{t("Waiting for your opponent…")}</span>
         </div>
         <p className="series-picker__sealed" role="status">
           {view.you.autoPick
-            ? `${name} is your last deck that hasn’t won, so it was picked for you for game ${String(view.gameNo)}.`
-            : `You’re playing ${name} in game ${String(view.gameNo)}. Your pick is sealed: your opponent sees only that you’ve picked.`}
+            ? t("{name} is your last deck that hasn’t won, so it was picked for you for game {game}.", {
+                name,
+                game: String(view.gameNo),
+              })
+            : t("You’re playing {name} in game {game}. Your pick is sealed: your opponent sees only that you’ve picked.", {
+                name,
+                game: String(view.gameNo),
+              })}
         </p>
         <OpponentStatus picked={view.opponent.picked} />
         <Clock secondsLeft={secondsLeft} />
@@ -124,15 +132,15 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
         <span className="play-step" aria-hidden="true">
           1
         </span>
-        {`Game ${String(view.gameNo)}: choose your deck`}
+        {t("Game {game}: choose your deck", { game: String(view.gameNo) })}
       </h2>
       <p className="lobby-note">
-        Pick a deck that hasn’t won yet. Once you lock it in it’s final, and your opponent sees only that you’ve picked —
-        neither of you sees the other’s deck until the game starts. If the clock runs out, your first deck that hasn’t won is
-        picked for you.
+        {t(
+          "Pick a deck that hasn’t won yet. Once you lock it in it’s final, and your opponent sees only that you’ve picked — neither of you sees the other’s deck until the game starts. If the clock runs out, your first deck that hasn’t won is picked for you.",
+        )}
       </p>
       <fieldset className="lobby-modes series-picker__decks">
-        <legend className="lobby-modes__legend">Your decks</legend>
+        <legend className="lobby-modes__legend">{t("Your decks")}</legend>
         {decks.map((deck) => {
           const isSelected = selected === deck.slot;
           return (
@@ -156,7 +164,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
               <DeckIcon />
               <span className="lobby-mode__text">
                 <span className="lobby-mode__name">{deck.name}</span>
-                <span className="lobby-mode__hint">{`${String(deck.cards.length)} cards`}</span>
+                <span className="lobby-mode__hint">{`${String(deck.cards.length)}${t(" cards")}`}</span>
               </span>
               <span className="play-mode-tile__waiting series-picker__standing" data-won={deck.won ? "true" : "false"}>
                 {deckStanding(deck)}
@@ -169,7 +177,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
         <span className="play-step" aria-hidden="true">
           2
         </span>
-        Lock it in
+        {t("Lock it in")}
       </h2>
       <button
         type="button"
@@ -180,7 +188,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
           if (chosen !== null) onLockIn(chosen.slot);
         }}
       >
-        {chosen === null ? "Choose a deck" : `Lock in ${chosen.name}`}
+        {chosen === null ? t("Choose a deck") : t("Lock in {name}", { name: chosen.name })}
       </button>
       <OpponentStatus picked={view.opponent.picked} />
       <Clock secondsLeft={secondsLeft} />

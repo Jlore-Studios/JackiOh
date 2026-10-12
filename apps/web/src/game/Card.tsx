@@ -69,6 +69,7 @@ import { isSpent, useActingSeat } from "./spent.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
+import { t } from "../i18n/i18n.ts";
 
 import "./facedown.css";
 import "./countered.css";
@@ -268,9 +269,9 @@ export default function Card(props: CardProps): ReactElement {
           key: testId ?? card.instanceId,
           face,
           ...(props.unrevealed === true
-            ? { note: UNREVEALED_NOTE }
+            ? { note: t(UNREVEALED_NOTE) }
             : card.counteredOnPlay === true
-              ? { note: COUNTERED_NOTE }
+              ? { note: t(COUNTERED_NOTE) }
               : {}),
         }
       : faceDown !== undefined
@@ -341,14 +342,14 @@ export default function Card(props: CardProps): ReactElement {
     // the backrow shows the cost the view gives it (R370), and opens what the view says of it.
     if (faceDown === undefined) {
       return (
-        <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label="Face-down card">
+        <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label={t("Face-down card")}>
           <CardBack />
         </div>
       );
     }
     // As for any card on the board, a click is the zone's (a target, say) and a resting mouse or a
     // long-press opens the overlay; the label says the same words for a screen reader.
-    const label = faceDownLabel(faceDown.cost);
+    const label = t(faceDownLabel(faceDown.cost));
     return (
       <>
         <div
@@ -438,14 +439,14 @@ export default function Card(props: CardProps): ReactElement {
         // reader. The film takes no pointer, and a click or drag on the badge still reaches the card
         // it sits in; under reduced motion it holds still as a plain green tint (countered.css).
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
-          <span className="countered-warning-badge" aria-hidden="true" title={COUNTERED_NOTE} />
-          <span className="countered-warning-sr">{COUNTERED_NOTE}</span>
+          <span className="countered-warning-badge" aria-hidden="true" title={t(COUNTERED_NOTE)} />
+          <span className="countered-warning-sr">{t(COUNTERED_NOTE)}</span>
         </span>
       )}
-      {position !== undefined && <span className="position-tag">{position}</span>}
+      {position !== undefined && <span className="position-tag">{t(position)}</span>}
 
       {counters?.plague !== undefined && (
-        <span className="counter counter-plague" data-counter="plague" title="Plague counters">
+        <span className="counter counter-plague" data-counter="plague" title={t("Plague counters")}>
           {counters.plague}
         </span>
       )}
@@ -457,7 +458,7 @@ export default function Card(props: CardProps): ReactElement {
           data-counter="grade"
           data-grade={counters.grade}
           data-grade-letter={counters.gradeLetter}
-          title={counters.gradeLetter === undefined ? "Grade counters" : `Grade ${counters.gradeLetter}`}
+          title={counters.gradeLetter === undefined ? t("Grade counters") : t("Grade {letter}", { letter: counters.gradeLetter })}
         >
           {counters.gradeLetter ?? counters.grade}
         </span>
@@ -465,25 +466,25 @@ export default function Card(props: CardProps): ReactElement {
 
       {props.unrevealed === true && (
         // R371: the tag says it in words and with the struck-through eye, never by colour alone.
-        <span className="unrevealed-tag" data-testid={testid.unrevealed(card.instanceId)} title={UNREVEALED_NOTE}>
+        <span className="unrevealed-tag" data-testid={testid.unrevealed(card.instanceId)} title={t(UNREVEALED_NOTE)}>
           <Icon name="eyeOff" />
-          <span className="unrevealed-tag-text">{FACE_DOWN_TAG}</span>
-          <span className="unrevealed-tag-sr">: your opponent can't see this card</span>
+          <span className="unrevealed-tag-text">{t(FACE_DOWN_TAG)}</span>
+          <span className="unrevealed-tag-sr">{t(": your opponent can't see this card")}</span>
         </span>
       )}
 
       {props.unrevealed === true && props.revealAt !== undefined && (
         // R1046: the owner's own reveal timing, in the same words the picker used.
-        <span className="reveal-at-badge" data-testid={testid.revealAt(card.instanceId)} title={REVEAL_AT_NOTE}>
-          <span className="reveal-at-badge-text">{REVEAL_AT_LABEL[props.revealAt]}</span>
+        <span className="reveal-at-badge" data-testid={testid.revealAt(card.instanceId)} title={t(REVEAL_AT_NOTE)}>
+          <span className="reveal-at-badge-text">{t(REVEAL_AT_LABEL[props.revealAt] ?? "")}</span>
         </span>
       )}
 
       {spent && (
         // #258: the "can't act yet" cue (spent.ts says which units wear it, spent.css draws it).
-        <span className="spent-badge" title={SPENT_NOTE}>
+        <span className="spent-badge" title={t(SPENT_NOTE)}>
           <span aria-hidden="true">Zz</span>
-          <span className="spent-badge-sr">{SPENT_NOTE}</span>
+          <span className="spent-badge-sr">{t(SPENT_NOTE)}</span>
         </span>
       )}
 
@@ -538,8 +539,8 @@ function SwitchButton({
       data-animating={animating?.get(testId)}
       aria-disabled={legal ? undefined : "true"}
       disabled={!legal}
-      title="Switch position"
-      aria-label="Switch position"
+      title={t("Switch position")}
+      aria-label={t("Switch position")}
       onClick={(event) => {
         event.stopPropagation();
         if (!legal) return;

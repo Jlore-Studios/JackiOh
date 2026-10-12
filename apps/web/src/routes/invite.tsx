@@ -17,6 +17,7 @@ import CodeField from "../auth/CodeField.tsx";
 import { deadlineAfter, useAddressCooldown, useSecondsUntil } from "../auth/cooldown.ts";
 import { INVITE_CODE_FORMAT, attemptsText, waitInWords } from "../auth/codeInput.ts";
 import { inviteTestid } from "../auth/testids.ts";
+import { t } from "../i18n/i18n.ts";
 import {
   ApiRequestError,
   getCodeStatus,
@@ -71,8 +72,8 @@ function isPausedRefusal(cause: unknown): boolean {
 
 /** Names both account and network without revealing which limit refused; the server error says what happened. */
 function waitText(leftMs: number | null): string {
-  if (leftMs === null) return "This account or network can try again in a few minutes.";
-  return `This account or network can try again in ${waitInWords(leftMs)}.`;
+  if (leftMs === null) return t("This account or network can try again in a few minutes.");
+  return t("This account or network can try again in {wait}.", { wait: waitInWords(leftMs) });
 }
 
 type StatusRead = { status: CodeStatusResponse; at: number };
@@ -403,9 +404,9 @@ function InviteScreen({ account }: { account: Account }) {
           <div className="invite-screen__account">
             {account.kind === "ready" ? (
               <span className="invite-screen__who">
-                Signed in as{" "}
+                {t("Signed in as")}{" "}
                 <span className="invite-screen__email" data-testid={inviteTestid.accountEmail}>
-                  {email ?? "an account with no email address"}
+                  {email ?? t("an account with no email address")}
                 </span>
               </span>
             ) : null}
@@ -432,46 +433,46 @@ function InviteScreen({ account }: { account: Account }) {
           <div className="brand">
             <h1>JackiOh</h1>
           </div>
-          <h2>{redeemed ? "You\u2019re in" : active ? "You\u2019re all set" : "Enter your invite code"}</h2>
+          <h2>{redeemed ? t("You\u2019re in") : active ? t("You\u2019re all set") : t("Enter your invite code")}</h2>
 
           {redeemed ? (
             <div className="notice" data-testid={inviteTestid.redeemed} role="status" tabIndex={-1} ref={redeemedRef}>
-              <p>Your invite code worked: online play is open. Build your decks, then find a match.</p>
+              <p>{t("Your invite code worked: online play is open. Build your decks, then find a match.")}</p>
               <a
                 className="button-primary"
                 href={paths.decks}
                 data-testid={inviteTestid.goToDecks}
                 onClick={followInApp(paths.decks)}
               >
-                Build your decks
+                {t("Build your decks")}
               </a>
             </div>
           ) : null}
 
           {account.kind === "error" ? (
             <div className="notice" role="alert">
-              <p>{account.message}</p>
+              <p>{t(account.message)}</p>
               <button
                 type="button"
                 onClick={() => {
                   account.retry?.();
                 }}
               >
-                Try again
+                {t("Try again")}
               </button>
             </div>
           ) : null}
 
           {active && !redeemed ? (
             <div className="notice">
-              <p data-testid={INVITE_NOT_NEEDED}>This account is already active and needs no invite code.</p>
+              <p data-testid={INVITE_NOT_NEEDED}>{t("This account is already active and needs no invite code.")}</p>
               <a
                 className="button-primary"
                 href={paths.decks}
                 data-testid={inviteTestid.goToDecks}
                 onClick={followInApp(paths.decks)}
               >
-                Go to your decks
+                {t("Go to your decks")}
               </a>
             </div>
           ) : null}
@@ -483,17 +484,17 @@ function InviteScreen({ account }: { account: Account }) {
               data-retry-after-ms={String(status?.retryAfterMs ?? 0)}
             >
               {pausedLeftMs !== null && pausedLeftMs > 0
-                ? `Invite code redemption is paused. Try again in ${waitInWords(pausedLeftMs)}.`
-                : "Invite code redemption is paused. Please try again later."}
+                ? t("Invite code redemption is paused. Try again in {wait}.", { wait: waitInWords(pausedLeftMs) })
+                : t("Invite code redemption is paused. Please try again later.")}
             </p>
           ) : null}
 
           {unverified && !done ? (
             <div className="notice invite-screen__unverified" data-testid={inviteTestid.unverified} role="status">
               <p>
-                Confirm your email address first: open the link we emailed to{" "}
-                <strong>{email === null ? "your address" : <Address value={email} />}</strong>, then check again here. If you already have,
-                check again in a moment.
+                {t("Confirm your email address first: open the link we emailed to")}{" "}
+                <strong>{email === null ? t("your address") : <Address value={email} />}</strong>
+                {t(", then check again here. If you already have, check again in a moment.")}
               </p>
               <div className="invite-screen__actions">
                 <button
@@ -503,7 +504,7 @@ function InviteScreen({ account }: { account: Account }) {
                   aria-busy={emailCheck === "checking"}
                   onClick={checkAgain}
                 >
-                  {emailCheck === "checking" ? "Checking…" : "Check again"}
+                  {emailCheck === "checking" ? t("Checking…") : t("Check again")}
                 </button>
                 <button
                   type="button"
@@ -513,20 +514,20 @@ function InviteScreen({ account }: { account: Account }) {
                   onClick={resend}
                 >
                   {resendBusy
-                    ? "Sending…"
+                    ? t("Sending…")
                     : resendWait > 0
-                      ? `Send again in ${String(resendWait)} s`
-                      : "Resend the confirmation email"}
+                      ? t("Send again in {seconds} s", { seconds: String(resendWait) })
+                      : t("Resend the confirmation email")}
                 </button>
               </div>
               {emailCheck === "unchanged" || emailCheck === "failed" ? (
                 <p data-testid={inviteTestid.checkResult} data-result={emailCheck} role="status">
                   {emailCheck === "unchanged"
-                    ? "Still not confirmed. Open the link we emailed, then check again."
-                    : "Couldn’t check just now. Try again in a moment."}
+                    ? t("Still not confirmed. Open the link we emailed, then check again.")
+                    : t("Couldn’t check just now. Try again in a moment.")}
                 </p>
               ) : null}
-              {resendNotice === null ? null : <p data-testid={inviteTestid.resendNotice}>{resendNotice}</p>}
+              {resendNotice === null ? null : <p data-testid={inviteTestid.resendNotice}>{t(resendNotice)}</p>}
             </div>
           ) : null}
         </div>
@@ -543,7 +544,7 @@ function InviteScreen({ account }: { account: Account }) {
             >
               {/* Named for a screen reader; on screen the title right above already says it. */}
               <label className="invite-screen__label" htmlFor={INVITE_CODE_INPUT}>
-                Invite code
+                {t("Invite code")}
               </label>
               <CodeField
                 id={INVITE_CODE_INPUT}
@@ -566,7 +567,7 @@ function InviteScreen({ account }: { account: Account }) {
               {/* One short line between the field and Redeem: the four groups and the count under
                   them already show the shape, so this only says what a paste may carry. */}
               <p className="invite-screen__help" id={helpId} data-testid={inviteTestid.help}>
-                Paste it as is: case and dashes don&rsquo;t matter.
+                {t("Paste it as is: case and dashes don’t matter.")}
               </p>
 
               {attemptsRemaining === undefined || rateLimit !== null ? null : (
@@ -589,7 +590,7 @@ function InviteScreen({ account }: { account: Account }) {
                 disabled={!canSubmit}
                 aria-busy={submitting}
               >
-                {submitting ? "Redeeming…" : "Redeem"}
+                {submitting ? t("Redeeming…") : t("Redeem")}
               </button>
             </form>
           )}
@@ -599,7 +600,7 @@ function InviteScreen({ account }: { account: Account }) {
             <div className="invite-screen__refusal">
               {error === null ? null : (
                 <p className="notice" data-testid={INVITE_ERROR} role="alert">
-                  {error}
+                  {t(error)}
                 </p>
               )}
               {rateLimit === null ? null : (
@@ -620,7 +621,7 @@ function InviteScreen({ account }: { account: Account }) {
             // The client's own sentence beside R145's, the same for every refused code: it says
             // nothing about which of the three kinds of failure this was.
             <p className="invite-screen__help" data-testid={inviteTestid.refused}>
-              Change the code to try again.
+              {t("Change the code to try again.")}
             </p>
           ) : null}
 
@@ -628,12 +629,11 @@ function InviteScreen({ account }: { account: Account }) {
             // For whoever has no code yet: under Redeem, set apart like the sign-in board's links,
             // so it never stands between the field and the button.
             <p className="invite-screen__where" data-testid={inviteTestid.whereFrom}>
-              No code yet? Online play is invite-only for now, and the JackiOh team hands out the
-              codes. In the meantime,{" "}
+              {t("No code yet? Online play is invite-only for now, and the JackiOh team hands out the codes. In the meantime,")}{" "}
               <a href={paths.practice} data-testid={inviteTestid.playAi} onClick={followInApp(paths.practice)}>
-                play vs AI
+                {t("play vs AI")}
               </a>
-              , which needs no code.
+              {t(", which needs no code.")}
             </p>
           )}
         </div>

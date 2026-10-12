@@ -16,6 +16,7 @@ import { CatalogContext, type CardLookup } from "./catalog.ts";
 import { touchHoldMode } from "./contract.ts";
 import { listedFace } from "./faces.ts";
 import { revealTestid } from "./reveal.ts";
+import { t } from "../i18n/i18n.ts";
 import "./reveal.css";
 
 /** R434: what the section and the dialog are called. */
@@ -33,7 +34,7 @@ export function theirHandEntries(lookup: CardLookup | null, view: PlayerView, ca
 }
 
 function cardsWord(count: number): string {
-  return count === 1 ? "1 card" : `${String(count)} cards`;
+  return count === 1 ? t("· 1 card") : t("· {count} cards", { count: String(count) });
 }
 
 function TheirCard({ card, face, index, touchHold }: { card: CardView; face: FaceModel | null; index: number; touchHold?: "sheet" | "preview" }): ReactElement {
@@ -43,7 +44,7 @@ function TheirCard({ card, face, index, touchHold }: { card: CardView; face: Fac
   if (face === null) {
     return (
       <li className="their-hand__item" style={style}>
-        <span className="their-hand__card" data-testid={revealTestid.theirHandCard(card.instanceId)} role="img" aria-label="Unknown card">
+        <span className="their-hand__card" data-testid={revealTestid.theirHandCard(card.instanceId)} role="img" aria-label={t("Unknown card")}>
           <CardBack />
         </span>
       </li>
@@ -56,7 +57,7 @@ function TheirCard({ card, face, index, touchHold }: { card: CardView; face: Fac
         className="their-hand__card"
         data-testid={revealTestid.theirHandCard(card.instanceId)}
         data-def-name={face.name}
-        aria-label={`${face.name}: show it large`}
+        aria-label={t("{name}: show it large", { name: face.name })}
         {...inspect.handlers}
         onClick={(event) => {
           inspect.openSheet(event.currentTarget);
@@ -74,12 +75,12 @@ export function TheirHand({ view, cards }: TheirHandProps): ReactElement {
   const lookup = useContext(CatalogContext);
   const entries = theirHandEntries(lookup, view, cards);
   return (
-    <section className="their-hand" data-testid={revealTestid.theirHand} data-count={cards.length} aria-label={THEIR_HAND_TITLE}>
+    <section className="their-hand" data-testid={revealTestid.theirHand} data-count={cards.length} aria-label={t(THEIR_HAND_TITLE)}>
       <h3 className="their-hand__title">
-        {THEIR_HAND_TITLE} <span className="their-hand__count">· {cardsWord(cards.length)}</span>
+        {t(THEIR_HAND_TITLE)} <span className="their-hand__count">{cardsWord(cards.length)}</span>
       </h3>
       {cards.length === 0 ? (
-        <p className="their-hand__empty">Their hand was empty.</p>
+        <p className="their-hand__empty">{t("Their hand was empty.")}</p>
       ) : (
         <ul className="their-hand__cards">
           {cards.map((card, index) => (
@@ -108,13 +109,13 @@ export function TheirHandButton({ view, cards }: TheirHandProps): ReactElement |
           setOpen(true);
         }}
       >
-        {THEIR_HAND_TITLE}
+        {t(THEIR_HAND_TITLE)}
       </button>
       {open ? (
         <CardListSheet
-          title={THEIR_HAND_TITLE}
+          title={t(THEIR_HAND_TITLE)}
           entries={theirHandEntries(lookup, view, cards)}
-          order={THEIR_HAND_ORDER}
+          order={t(THEIR_HAND_ORDER)}
           onClose={() => {
             setOpen(false);
           }}

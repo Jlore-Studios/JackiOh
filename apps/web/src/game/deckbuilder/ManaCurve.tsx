@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 
 import type { CatalogSnapshot } from "@jackioh/validator";
 
+import { t } from "../../i18n/i18n.ts";
 import { COST_BUCKETS, manaCurve } from "./filters.ts";
 import { DECK_CURVE } from "./testids.ts";
 
@@ -20,14 +21,14 @@ export default function ManaCurve({ cardIds, catalog }: ManaCurveProps): ReactEl
   const counts = manaCurve(cardIds, catalog);
   const tallest = Math.max(1, ...COST_BUCKETS.map((bucket) => counts[bucket]));
   // R432's noun: "(2) Cost: 3".
-  const summary = COST_BUCKETS.map((bucket) => `(${bucket}) Cost: ${String(counts[bucket])}`).join(", ");
+  const summary = COST_BUCKETS.map((bucket) => t("({cost}) Cost: {count}", { cost: bucket, count: String(counts[bucket]) })).join(", ");
 
   return (
     <div
       className="db-curve"
       data-testid={DECK_CURVE}
       role="img"
-      aria-label={`Mana curve. ${summary}`}
+      aria-label={t("Mana curve. {summary}", { summary })}
     >
       {COST_BUCKETS.map((bucket) => {
         const count = counts[bucket];

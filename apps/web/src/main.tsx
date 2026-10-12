@@ -64,7 +64,7 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
-import { initLocale, useLocale } from "./i18n/i18n.ts";
+import { initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -149,7 +149,7 @@ function HomeLink({ testId, label = "Home" }: { testId: string; label?: string }
       data-testid={testId}
       onClick={followInApp(paths.landing)}
     >
-      {label}
+      {t(label)}
     </a>
   );
 }
@@ -176,9 +176,10 @@ function SignOutButton(): ReactElement {
 function NotFound({ path }: { path: string }): ReactElement {
   return (
     <ShellPanel testId={shellTestid.notFound}>
-      <p className="notice">That page doesn&rsquo;t exist.</p>
+      <p className="notice">{t("That page doesn’t exist.")}</p>
       <p className="auth-hint">
-        There is nothing at <code>{path}</code>. The link may be wrong or out of date.
+        {t("There is nothing at")} <code>{path}</code>
+        {t(". The link may be wrong or out of date.")}
       </p>
       <div className="row">
         <HomeLink testId={shellTestid.notFoundHome} label="Back to the start" />
@@ -216,13 +217,13 @@ export function Loading({ what, slow = false, testId, children }: LoadingProps):
   return (
     <ShellPanel {...(testId === undefined ? {} : { testId })}>
       <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
-        {what}
+        {t(what)}
       </p>
       {children}
       {late ? (
         <>
           <p className="notice" data-testid={shellTestid.slow}>
-            This is taking a while. The server may be waking up, which can take up to a minute.
+            {t("This is taking a while. The server may be waking up, which can take up to a minute.")}
           </p>
           <div className="row">
             <HomeLink testId={shellTestid.home} />
@@ -255,8 +256,8 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
   return (
     <ShellPanel>
       <p className="notice" data-testid={shellTestid.error} role="alert">
-        {account.message}
-        {wait > 0 ? ` You can try again in ${String(wait)} s.` : null}
+        {t(account.message)}
+        {wait > 0 ? ` ${t("You can try again in {seconds} s.", { seconds: String(wait) })}` : null}
       </p>
       <div className="row">
         <button
@@ -269,7 +270,7 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
             account.retry?.();
           }}
         >
-          {wait > 0 ? `Try again in ${String(wait)} s` : "Try again"}
+          {wait > 0 ? t("Try again in {seconds} s", { seconds: String(wait) }) : t("Try again")}
         </button>
         <HomeLink testId={shellTestid.home} />
         <SignOutButton />
@@ -303,7 +304,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
     return (
       <ShellPanel testId={shellTestid.loadFailed}>
         <p className="notice" role="alert">
-          This screen didn&rsquo;t load. Check your connection, then reload the page.
+          {t("This screen didn’t load. Check your connection, then reload the page.")}
         </p>
         <div className="row">
           <button
@@ -314,10 +315,10 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
               window.location.reload();
             }}
           >
-            Reload
+            {t("Reload")}
           </button>
           <a className="button-secondary" href={paths.landing} data-testid={shellTestid.loadFailedHome}>
-            Home
+            {t("Home")}
           </a>
         </div>
       </ShellPanel>
@@ -401,7 +402,7 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
     return (
       <ShellPanel>
         <p className="notice" data-testid={shellTestid.error} role="alert">
-          This account is banned.
+          {t("This account is banned.")}
         </p>
         <div className="row">
           <HomeLink testId={shellTestid.home} />
