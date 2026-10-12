@@ -499,3 +499,115 @@ mod the_token_on_the_handshake {
         assert_eq!(plain.first_view().await["viewer"], "p1");
     }
 }
+
+mod a_finished_matchs_seats_may_reopen_its_socket {
+    //! §9.5: every ending clears both seats' in-match state, but the rematch window keeps a
+    //! finished match's seats coming back — presence is the opponent's socket being open, so a
+    //! seat that left may reopen its socket and read as here again. Anyone else is still
+    //! refused (§9.1).
+    use super::*;
+
+    use jackioh_server::app::now_ms;
+    use jackioh_server::db::store::MatchRow;
+
+    /// The finished match's clocks, as `tests/api/rematch.rs` seeds them.
+    fn clocks(now: i64) -> Value {
+        json!({
+            "turnDeadline": null,
+            "promptDeadline": null,
+            "graceDeadline": { "p1": null, "p2": null },
+            "ceilingAt": now + 3_600_000,
+        })
+    }
+
+    /// Two profiles with tokens and no in-match state, and the finished match between them:
+    /// exactly what a recorded result leaves behind. Returns the app and both seats' tokens.
+    async fn seed_finished_seats() -> (Arc<App>, String, String) {
+        let app = test_app().await;
+        let pool = playable();
+        let size = deck_size();
+        let mut tokens = Vec::new();
+        for k in [1, 2] {
+            let profile_id = format!("reopen-profile-{k}");
+            let user_id = format!("reopen-user-{k}");
+            tokens.push(add_user(&app, &user_id, &format!("{user_id}@example.test"), true));
+            fake(&app).lock().await.seed_profile(json!({
+                "id": profile_id,
+                "userId": user_id,
+                "status": "active",
+            }));
+        }
+        let now = now_ms();
+        let row: MatchRow = from(json!({
+            "id": "match-reopened",
+            "seed": "seed-reopened",
+            "players": ["reopen-profile-1", "reopen-profile-2"],
+            "decks": [pool[..size].to_vec(), pool[size..size * 2].to_vec()],
+            "catalogVersion": jackioh_cards::catalog_version(),
+            "ranked": false,
+            "status": "finished",
+            "createdAt": now,
+            "finishedAt": now,
+            "clocks": clocks(now),
+            "portraits": ["vanilla", "vanilla"],
+        }));
+        let mut tx = app.db.begin(None).await.expect("begin");
+        tx.matches_create(&row).await.expect("matches_create");
+        tx.commit().await.expect("commit");
+        let mut tokens = tokens.into_iter();
+        (
+            app,
+            tokens.next().expect("seat one's token"),
+            tokens.next().expect("seat two's token"),
+        )
+    }
+
+    /// `seed_finished_seats`'s app served on a real listener.
+    async fn serve_finished(app: Arc<App>) -> Listening {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let port = listener.local_addr().expect("a bound address").port();
+        let service = router(app).into_make_service_with_connect_info::<std::net::SocketAddr>();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, service).await.expect("the listener serves");
+        });
+        Listening { port, server }
+    }
+
+    #[tokio::test]
+    async fn a_seat_reopens_its_socket_on_its_finished_match() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, p2) = seed_finished_seats().await;
+        let listening = serve_finished(app).await;
+        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        assert_eq!(client.first_view().await["viewer"], "p2");
+    }
+
+    #[tokio::test]
+    async fn another_profiles_finished_match_is_still_refused() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, _p2) = seed_finished_seats().await;
+        let user_id = "reopen-user-3";
+        let token = add_user(&app, user_id, &format!("{user_id}@example.test"), true);
+        fake(&app).lock().await.seed_profile(json!({
+            "id": "reopen-profile-3",
+            "userId": user_id,
+            "status": "active",
+        }));
+        let listening = serve_finished(app).await;
+        let mut client = open(
+            listening.port,
+            &query("match-reopened", &token),
+            &[WS_SUBPROTOCOL],
+        )
+        .await
+        .open();
+        let refusal = client
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
+        assert_eq!(refusal["type"], "error");
+        assert_eq!(client.close_code().await, 4403);
+    }
+}

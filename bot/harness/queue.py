@@ -673,8 +673,8 @@ def waits_for(ctx: Context, threads: list[dict[str, Any]]) -> dict[int, list[int
     return waiting
 
 
-def candidates(ctx: Context, state: dict[str, Any],
-               skipped: list[str] | None = None) -> list[Candidate]:
+def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = None, *,
+               held_back: dict[int, str] | None = None) -> list[Candidate]:
     """Queued threads: forced requests first, then by priority tier, then second reviews,
     revisions, and the oldest builds.
 
@@ -684,7 +684,8 @@ def candidates(ctx: Context, state: dict[str, Any],
     was labelled again is taken again. A thread labelled `human` is left out, whatever model
     would take it, and so are a fullsend issue whose parts are still open (`open_parts`, #505),
     forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
-    each with a line in `skipped` when the caller keeps one."""
+    each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
+    when the caller keeps that (the status issue's queue)."""
     found: dict[int, Candidate] = {}
     human: set[int] = set()
     others: dict[int, str] = {}
@@ -747,6 +748,14 @@ def candidates(ctx: Context, state: dict[str, Any],
     waiting = waits_for(ctx, builds) if builds else {}
     for number in waiting:
         found.pop(number, None)
+    if held_back is not None:
+        held_back.update({number: "labelled `human`" for number in human})
+        held_back.update({number: f"it is {name}'s" for number, name in others.items()})
+        held_back.update({number: "its fullsend parts "
+                          f"{', '.join(f'#{n}' for n in parts)} are still open"
+                          for number, parts in parted.items()})
+        held_back.update({number: f"waits for {', '.join(f'#{n}' for n in blockers)} to close"
+                          for number, blockers in waiting.items()})
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
                        "tier" for number in sorted(human))

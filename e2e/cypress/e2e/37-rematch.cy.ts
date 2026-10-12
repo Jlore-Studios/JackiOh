@@ -25,6 +25,7 @@ import {
   type E2EAccount,
 } from "../../support/config.ts";
 import {
+  MATCH_RANKS,
   PLAY_DECK_SELECT,
   PLAY_QUEUE,
   PLAY_STATUS,
@@ -276,6 +277,7 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     });
 
     cy.get(ts(REMATCH_OFFER), { timeout: POLL_TIMEOUT_MS }).should("be.visible").and("not.be.disabled");
+    cy.get(ts(MATCH_RANKS), { timeout: timeouts.view }).should("contain.text", "Unranked match");
     cy.get(ts(REMATCH_DOUBLE)).should("be.disabled");
     cy.then(() => {
       refused(seatTwo, "POST", matchId, STAKE_DOUBLE).should((response) => {
@@ -376,6 +378,7 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
       ranksOf(seatOne, matchId).its("ranked").should("eq", true);
     });
 
+    cy.get(ts(MATCH_RANKS), { timeout: timeouts.view }).should("contain.text", "Ranked match");
     cy.get(ts(REMATCH_OFFER), { timeout: POLL_TIMEOUT_MS }).should("be.visible");
     cy.get(ts(REMATCH_DOUBLE)).should("not.be.disabled");
     cy.then(() => {

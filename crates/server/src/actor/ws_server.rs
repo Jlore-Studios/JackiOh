@@ -4,7 +4,8 @@
 //! the actor talks to. This file adds `socket_from_ws` (an axum WebSocket as a `Socket`; text frames
 //! only, a binary frame is answered with `error` and dropped) and `handle_match_socket` (the upgrade:
 //! authenticate through `app.auth`, apply §9.4's gate (`assert_active`), refuse unless the profile is
-//! in the match it asked for, §9.1). `handle` also bounds what an unauthenticated client costs: a
+//! in the match it asked for or holds a seat in it finished (§9.5's rematch window), §9.1). `handle`
+//! also bounds what an unauthenticated client costs: a
 //! frame over `MAX_FRAME_BYTES` closes the socket with 1009, and one client address holds at most
 //! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that stops answering is found and dropped: the
 //! pump pings every `WS_PING_INTERVAL_SECONDS` and drops a connection that has sent nothing for
@@ -37,6 +38,7 @@ use crate::config::{
     DEFAULT_TRUSTED_PROXY_HOPS, WS_IDLE_TIMEOUT_SECONDS, WS_MAX_CONNECTIONS_PER_ADDRESS,
     WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
+use crate::db::store::MatchStatus;
 
 /// SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves.
 pub const WS_PATH: &str = "/ws/match";
@@ -410,6 +412,26 @@ fn token_from(query: &[(String, String)]) -> Option<String> {
     query_param(query, "token").filter(|token| !token.is_empty())
 }
 
+/// Whether `profile_id` holds a seat in the finished match `match_id` (§9.5's rematch window).
+/// Anything else — no such match, a live one, or another profile's — reads as false, so the
+/// caller refuses exactly as before (§9.1).
+async fn seats_finished_match(
+    app: &Arc<App>,
+    match_id: &str,
+    profile_id: &str,
+) -> Result<bool, UpgradeFailure> {
+    let mut tx = app.db.begin(None).await?;
+    let found = tx.matches_get(match_id).await?;
+    tx.commit().await?;
+    let Some(match_row) = found else {
+        return Ok(false);
+    };
+    if match_row.status != MatchStatus::Finished {
+        return Ok(false);
+    }
+    Ok(match_row.players.0 == profile_id || match_row.players.1 == profile_id)
+}
+
 /// The authentication and the attach; any failure is reported to `refuse`.
 async fn upgrade_socket(
     app: &Arc<App>,
@@ -441,8 +463,13 @@ async fn upgrade_socket(
             "you are not in a match",
         ));
     };
-    // §9.1: a socket is only ever opened onto a match this profile is playing.
-    if profile.in_match_id.as_deref() != Some(match_id.as_str()) {
+    // §9.1: a socket is only ever opened onto a match this profile is playing — or one it
+    // played: §9.5 clears both seats' in-match state at every ending, but the rematch window
+    // keeps a finished match's seats coming back (presence is the opponent's socket being open,
+    // and a socket that comes back folds the actor again).
+    if profile.in_match_id.as_deref() != Some(match_id.as_str())
+        && !seats_finished_match(app, &match_id, &profile.id).await?
+    {
         return Err(UpgradeFailure::refused(
             WS_CLOSE.forbidden,
             "you are not in that match",
