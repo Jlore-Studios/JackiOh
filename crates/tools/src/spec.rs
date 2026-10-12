@@ -268,7 +268,7 @@ fn ruling_number(id: &str) -> Option<u64> {
     digits.parse().ok()
 }
 
-/// The file name a ruling's note must have, without `.md`: four digits, zero-padded.
+/// The file name a ruling's note must have, without `.md`: zero-padded to four digits at least (`R0195`, `R690000`).
 fn note_stem(number: u64) -> String {
     format!("R{number:04}")
 }
@@ -1015,6 +1015,23 @@ mod tests {
         assert_eq!(ruling_number("R195"), Some(195));
         assert_eq!(ruling_number("R"), None);
         assert_eq!(ruling_number("§10.3"), None);
+    }
+
+    #[test]
+    fn r690000_a_block_number_names_its_note_proof_and_index_row() {
+        let text = "---\nid: R690000\ntitle: A new ruling takes a number from its issue's block (issue #690)\ncards: \"§11\"\nproven_in:\n  - crates/tools/src/spec.rs\n---\n";
+        let block = parse_note("spec/rulings/R690000.md".into(), "R690000".into(), text).unwrap();
+        let number = block.id.as_deref().and_then(ruling_number).unwrap();
+        assert_eq!(number, 690_000);
+        assert_eq!(note_stem(number), block.stem);
+        assert!(unfilled_fields(&block).is_empty());
+        assert_eq!(name_tokens("r690000_x"), vec![690_000]);
+        let sequential = parse_note("spec/rulings/R0195.md".into(), "R0195".into(), NOTE).unwrap();
+        let out = render_index(&[block, sequential]).unwrap();
+        assert_eq!(
+            &out[INDEX_HEADER.len()..],
+            "| R195 | When a card glows yellow (`conditionActive`) | [R0195](rulings/R0195.md) | `crates/engine/tests/rules/condition_active.rs`, `crates/cards/tests/cross/condition_active.rs` |\n| R690000 | A new ruling takes a number from its issue's block (issue #690) | [R690000](rulings/R690000.md) | `crates/tools/src/spec.rs` |\n"
+        );
     }
 
     #[test]
