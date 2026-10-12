@@ -64,6 +64,12 @@
       "lines": [
         "@jgoetzmann-bot approved but make the tests work in the daily check only"
       ]
+    },
+    "c:6126907150": {
+      "at": "2026-10-12T15:03:41Z",
+      "lines": [
+        "/harness build you may edit the issue templates for this PR. Issue templates are low risk modifications"
+      ]
     }
   },
   "items": {
