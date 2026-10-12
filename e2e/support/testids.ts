@@ -667,3 +667,6 @@ export const REMATCH_DOUBLE = "rematch-double";
 export const REMATCH_INCOMING = "rematch-incoming";
 export const REMATCH_STATUS = "rematch-status";
 
+// R612's banner mirrors matchTestid in apps/web/src/routes/match.tsx: whether the game moves the rating.
+export const MATCH_RANKS = "match-ranks";
+
