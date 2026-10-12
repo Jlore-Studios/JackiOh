@@ -9,11 +9,13 @@
 
 use jackioh_engine::wire::{EMOTE_COOLDOWN_MS, EMOTE_IDS, EmoteId, GameEvent, PlayerId, PlayerView};
 use jackioh_server::bots::persona::{
-    AiEmote, EmotePersona, pick_persona, reply_key_of, roll_for_reply, roll_for_trigger,
+    AiEmote, EmotePersona, pick_bot_persona, pick_persona, reply_key_of, roll_delay, roll_for_reply,
+    roll_for_trigger,
 };
 use jackioh_server::config::{
-    AI_EMOTE, AI_PERSONAS, EMOTE_REPLY_KEYS, EMOTE_TRIGGERS, EmoteReplyKey, EmoteTrigger, PERSONA_NAMES,
-    PersonaCaps, PersonaName, PersonaRow, persona_spec,
+    AI_EMOTE, AI_PERSONAS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_PERSONA_WEIGHTS,
+    EMOTE_REPLY_KEYS, EMOTE_TRIGGERS, EmoteDelayFit, EmoteReplyKey, EmoteTrigger, PERSONA_DEAL_STEPS,
+    PERSONA_NAMES, PersonaCaps, PersonaName, PersonaRow, persona_spec,
 };
 use serde_json::{Value, json};
 
@@ -1275,4 +1277,113 @@ fn r1344_over_dealt_hands_nothing_any_persona_rolls_is_outside_its_hand() {
 fn r645_a_persona_can_live_in_a_match_actors_task() {
     fn assert_send<T: Send>(_: &T) {}
     assert_send(&session(PersonaName::Balanced, low()));
+}
+
+// ---------------------------------------------------------------------------------------------
+// R639000: a ladder bot's refit rows
+// ---------------------------------------------------------------------------------------------
+
+/// Two refit windows, apart from the practice AI's and from each other.
+const TRIGGER_WINDOW: EmoteDelayFit = EmoteDelayFit {
+    samples: 40,
+    min_ms: 1_200.0,
+    max_ms: 4_000.0,
+};
+const REPLY_WINDOW: EmoteDelayFit = EmoteDelayFit {
+    samples: 35,
+    min_ms: 2_000.0,
+    max_ms: 6_000.0,
+};
+
+fn ladder_session(persona: PersonaName, rng: Rng) -> EmotePersona {
+    session(persona, rng).with_delays(TRIGGER_WINDOW, REPLY_WINDOW)
+}
+
+#[test]
+fn r639000_the_refit_windows_feed_the_rolls_and_the_caps_and_rate_limit_hold() {
+    // Each delay is the window's floor plus the draw's share of its span, for each window.
+    for window in [
+        TRIGGER_WINDOW,
+        REPLY_WINDOW,
+        BOT_EMOTE_DELAY_FIT,
+        BOT_EMOTE_REPLY_DELAY_FIT,
+    ] {
+        for draw in [0.0, 0.25, 0.5, 0.999] {
+            assert_eq!(
+                roll_delay(&mut || draw, &window),
+                window.min_ms + draw * (window.max_ms - window.min_ms)
+            );
+        }
+    }
+    // Until a fit lands, the ladder's rows are the practice AI's.
+    for window in [BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT] {
+        if window.samples == 0 {
+            assert_eq!(
+                (window.min_ms, window.max_ms),
+                (AI_EMOTE.delay_min_ms, AI_EMOTE.delay_max_ms)
+            );
+        }
+    }
+    if BOT_PERSONA_WEIGHTS.samples == 0 {
+        assert_eq!(
+            BOT_PERSONA_WEIGHTS.weights,
+            PERSONA_NAMES.map(|persona| persona_spec(persona).weight)
+        );
+    }
+    // A new bot is dealt by the ladder's weights, on the deal's whole thousandths.
+    let mut steps = 0.0;
+    for (name, weight) in PERSONA_NAMES.iter().zip(BOT_PERSONA_WEIGHTS.weights) {
+        if weight > 0.0 {
+            assert_eq!(
+                pick_bot_persona(&mut || steps / PERSONA_DEAL_STEPS),
+                *name,
+                "{name:?}"
+            );
+        }
+        steps += (weight * PERSONA_DEAL_STEPS).round();
+    }
+
+    // A triggered emote waits inside the trigger window: the chance, the pool, then the delay.
+    let ai_turn = turn_view(SEAT, 5);
+    let mut triggered = ladder_session(PersonaName::Bm, seq(&[0.0, 0.0, 0.25]));
+    assert_eq!(
+        triggered.on_events(&[big_hit(FOE)], None, &ai_turn, 1_000),
+        vec![AiEmote {
+            emote: EmoteId::Laugh,
+            delay_ms: 1_200.0 + 0.25 * 2_800.0,
+        }]
+    );
+    // A reply waits inside the reply window.
+    let mut replying = ladder_session(PersonaName::Balanced, seq(&[0.0, 0.0, 0.75]));
+    replying.on_events(&[turn_started(FOE, 3)], None, &turn_view(FOE, 3), 1_000);
+    assert_eq!(
+        replying.on_player_emote(EmoteId::Greetings, 11_000),
+        vec![AiEmote {
+            emote: EmoteId::Greetings,
+            delay_ms: 2_000.0 + 0.75 * 4_000.0,
+        }]
+    );
+
+    // The caps hold: Balanced's one emote on its own turn, and nothing more that turn.
+    let mut capped = ladder_session(PersonaName::Balanced, low());
+    assert_eq!(
+        capped.on_events(&[turn_started(SEAT, 5), big_hit(FOE)], None, &ai_turn, 1_000),
+        vec![AiEmote {
+            emote: EmoteId::Laugh,
+            delay_ms: TRIGGER_WINDOW.min_ms,
+        }]
+    );
+    assert_eq!(
+        capped.on_events(&[big_hit(FOE)], Some(&ai_turn), &ai_turn, 11_000),
+        vec![]
+    );
+    // And R643's rate limit: two of BM's at one instant, the second dropped.
+    let mut fast = ladder_session(PersonaName::Bm, low());
+    assert_eq!(
+        fast.on_events(&[big_hit(FOE), big_hit(FOE)], None, &ai_turn, 1_000),
+        vec![AiEmote {
+            emote: EmoteId::Laugh,
+            delay_ms: TRIGGER_WINDOW.min_ms,
+        }]
+    );
 }

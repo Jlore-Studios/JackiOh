@@ -33,7 +33,7 @@ use crate::actor::engine::deal_random_deck;
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
-use crate::bots::persona::pick_persona;
+use crate::bots::persona::pick_bot_persona;
 use crate::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_HOURS_PER_DAY,
@@ -118,7 +118,7 @@ pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<S
     let mut rng = Rng::new(&format!("{seed}:bot"), 0);
     let strength = usize::try_from(rng.int(i32::try_from(BOT_STRENGTHS.len()).unwrap_or(1))).unwrap_or(0);
     let speed = BOT_SPEED_MIN + rng.next() * (BOT_SPEED_MAX - BOT_SPEED_MIN);
-    let persona = pick_persona(&mut || rng.next());
+    let persona = pick_bot_persona(&mut || rng.next());
     let active_from_hour = rng.int(BOT_HOURS_PER_DAY);
     let active_hours = i32::try_from(int_in(
         &mut rng,
