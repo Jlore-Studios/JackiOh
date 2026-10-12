@@ -4813,6 +4813,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-12T17:16:53Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38283995878",
       "self_check_findings": [],
       "started_at": "2026-10-12T17:25:15Z",
