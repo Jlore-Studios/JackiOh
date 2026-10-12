@@ -4269,8 +4269,10 @@
     "what": "build #711 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-12T13:21:11Z",
-    "notes": [],
+    "at": "2026-10-12T13:31:58Z",
+    "notes": [
+      "started a night run, as a lane was free: #639 (hard) is queued to build, for `claude-2`: build on `claude-2` (claude, `opus`, strong); review on `claude-2` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
