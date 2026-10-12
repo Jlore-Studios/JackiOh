@@ -4479,6 +4479,7 @@
       "provider": "claude-6",
       "question": "",
       "queued_at": "2026-10-12T21:09:21Z",
+      "rebuilt": true,
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
