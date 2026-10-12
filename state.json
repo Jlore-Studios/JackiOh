@@ -4845,6 +4845,13 @@
     "690": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T00:35:54Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "hard rule's 'design across crates' line was closest: it touches spec docs plus tools, but no crate behavior changes since the id parsing is already digit-agnostic, so medium holds"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
