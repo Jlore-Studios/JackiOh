@@ -5085,10 +5085,8 @@
     "what": "revise #692 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-12T02:28:09Z",
-    "notes": [
-      "started a night run, as a lane was free: #655 (hard) is queued to build, for `claude-7`: plan on `claude-7` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-12T02:42:28Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
