@@ -1,4 +1,4 @@
-// `/patch-notes` (R388): a public route, lazy like the others, with its tab title and canonical link,
+// `/patch-notes` (R388, R724000): a public route, lazy like the others, with its tab title and canonical link,
 // linked from the site footer, served by vercel.json (net/deploy-routes.test.ts reads `paths`) and
 // listed in the sitemap.
 
@@ -51,6 +51,20 @@ describe("R388 the /patch-notes route", () => {
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);
+  });
+
+  it("R724000 opens on the newest release line, the others shut", async () => {
+    at(paths.patchNotes);
+    render(<App />);
+    const sets = await screen.findAllByTestId(patchTestid.set, undefined, SLOW);
+    const shipped = await realPatchSource.patches();
+    const toggles = sets.map((set) => within(set).getByTestId(patchTestid.setToggle).getAttribute("aria-expanded"));
+    expect(toggles).toEqual(sets.map((_set, at) => (at === 0 ? "true" : "false")));
+    expect(sets.length).toBeGreaterThan(1);
+    // The newest patch sits in the open line, and no shut line lists a patch until it is opened.
+    expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    for (const set of sets.slice(1)) expect(within(set).queryAllByTestId(patchTestid.patch)).toEqual([]);
+    expect(screen.getByText(/Every JackiOh patch, set by set, newest first\./u)).toBeInTheDocument();
   });
 
   it("R388 has a tab title, a canonical link and a heading", () => {

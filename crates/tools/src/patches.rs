@@ -11,22 +11,28 @@
 //! ```
 //!
 //! - A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`: `{ version,
-//!   title, sources, notes, cards }`. `cards` lists the catalog ids the patch creates, changes or
-//!   removes (`--cards` says them; otherwise they are diffed from the working catalog against the
-//!   newest shipped snapshot); `version` is a bare patch number or a micro `vA.B.Y` (R650). Branches
-//!   never edit `patches.json`, the snapshots, `index.json` or `shipped.json`. The optional `date`
-//!   is checked and not stored: promotion dates the patch by the UTC date of the commit that added
-//!   the fragment.
+//!   title, sources, notes, player, cards }`. `cards` lists the catalog ids the patch creates, changes
+//!   or removes (`--cards` says them; otherwise they are diffed from the working catalog against the
+//!   newest shipped snapshot); `version` is a bare patch number or a micro `vA.B.Y` (R650). `player`
+//!   is the player note the Patch notes page shows (R724001): `{ title, new, balance, changes, text,
+//!   fixes }`, written into the fragment by hand, since no flag sets it, and kept when the fragment
+//!   is written again. Branches never edit `patches.json`, the snapshots, `index.json` or
+//!   `shipped.json`. The optional `date` is checked and not stored: promotion dates the patch by the
+//!   UTC date of the commit that added the fragment.
 //! - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
 //!   without exactly one fragment claiming it, when a claimed card does not differ, when a fragment's
 //!   version is neither a bare patch number nor a micro `vA.B.Y`, when a micro cannot be named after
-//!   the newest patch, when a fragment claims no card, or when its title, sources or notes is empty
-//!   (they become the shipped patch's, R388). CI runs it beside `catalog check`.
+//!   the newest patch, when a fragment claims no card, when its title, sources or notes is empty
+//!   (they become the shipped patch's, R388), or when a fragment's or a shipped patch's player note
+//!   has no title or no line, a blank line, a line over `PLAYER_LINE_MAX` characters, or a ruling,
+//!   an issue or card number or a § in its title or a line (R724001). CI runs it beside `catalog
+//!   check`.
 //! - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
 //!   appends the patch (its version, a micro named after the then-newest patch (R650), or
-//!   `<version>b`, `c`, … when that name already shipped), snapshots `catalog.json` as that commit
-//!   left it, records `{ version, commit, blob }` in `shipped.json`, deletes the fragment,
-//!   regenerates the derived files and bumps `CATALOG_VERSION`. Running it twice is running it once.
+//!   `<version>b`, `c`, … when that name already shipped) with the fragment's player note, snapshots
+//!   `catalog.json` as that commit left it, records `{ version, commit, blob }` in `shipped.json`,
+//!   deletes the fragment, regenerates the derived files and bumps `CATALOG_VERSION`. Running it
+//!   twice is running it once.
 //!   It needs full history (`fetch-depth: 0`) and writes nothing unless each adding commit's catalog
 //!   changed exactly the cards its fragment claims and the last one is `catalog.json` as it stands.
 //!   `.github/workflows/patches-ship.yml` runs it after every merge that touches `pending/`.
@@ -48,9 +54,10 @@ use indexmap::{IndexMap, IndexSet};
 
 use self::patch::bump_sites;
 use self::patches_io::{
-    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, ShippedEntry, check_fragments,
-    differing_ids, git_blob_hash, is_fragment_version, next_ship_name, read_fragments, read_patches,
-    read_shipped, read_snapshot, rebuild_derived, remove_file, snapshot_path, write_json,
+    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, ShippedEntry,
+    check_fragments, differing_ids, git_blob_hash, is_fragment_version, next_ship_name, player_note_problems,
+    read_fragments, read_patches, read_shipped, read_snapshot, rebuild_derived, remove_file, snapshot_path,
+    write_json,
 };
 use self::versions::resolve_version;
 use jackioh_engine::wire::{SetName, set_ships};
@@ -981,12 +988,14 @@ pub mod patch {
 /// The card patch history on disk (B4.2, R388, R646): `crates/cards/patches/`.
 ///
 /// ```text
-///   patches.json       every shipped patch in ship order: { version, date, title, source, notes, changes }
+///   patches.json       every shipped patch in ship order: { version, date, title, source, notes,
+///                      player, changes }; `player` is what players read (R724001)
 ///   <version>.json     the whole catalog as that patch left it (a snapshot, not a diff)
 ///   index.json         GENERATED: for each card id, the versions in which it was added or changed
 ///   shipped.json       every shipped patch's { version, commit, blob }: the commit that shipped it
 ///                      and its snapshot file's git blob hash, so the workflow writes data, not source
-///   pending/           one fragment per patch being built: { version, title, sources, notes, cards }
+///   pending/           one fragment per patch being built: { version, title, sources, notes, player,
+///                      cards }
 /// ```
 ///
 /// The order of patches is `patches.json`'s order and nothing else: a version is an opaque string,
@@ -1085,6 +1094,94 @@ pub mod patches_io {
         }
     }
 
+    /// R724001: what players read of a patch, apart from its record. A short title and one fact per
+    /// line under the page's fixed headings, in this order.
+    #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+    #[serde(rename_all = "camelCase")]
+    pub struct PlayerNote {
+        pub title: String,
+        /// Cards, tokens, keywords and tags the patch brings.
+        #[serde(default)]
+        pub new: Vec<String>,
+        /// A cost, stat, number or rarity moved, written from and to.
+        #[serde(default)]
+        pub balance: Vec<String>,
+        /// How a card or rule plays.
+        #[serde(default)]
+        pub changes: Vec<String>,
+        /// Wording only.
+        #[serde(default)]
+        pub text: Vec<String>,
+        #[serde(default)]
+        pub fixes: Vec<String>,
+    }
+
+    /// R724001: the longest line a player note may hold, in characters.
+    pub const PLAYER_LINE_MAX: usize = 200;
+
+    impl PlayerNote {
+        /// Every line, section by section in the note's order.
+        pub fn lines(&self) -> impl Iterator<Item = &String> {
+            self.new
+                .iter()
+                .chain(&self.balance)
+                .chain(&self.changes)
+                .chain(&self.text)
+                .chain(&self.fixes)
+        }
+    }
+
+    /// Whether `text` names a ruling: an `R` with no letter or digit before it, then ASCII digits
+    /// with no letter or digit after them ("R656", "(R1320)"; never "R2D2" or "Radiant").
+    fn cites_a_ruling(text: &str) -> bool {
+        let chars: Vec<char> = text.chars().collect();
+        (0..chars.len()).any(|at| {
+            if chars[at] != 'R' || (at > 0 && chars[at - 1].is_alphanumeric()) {
+                return false;
+            }
+            let digits = chars[at + 1..].iter().take_while(|c| c.is_ascii_digit()).count();
+            digits > 0 && chars.get(at + 1 + digits).is_none_or(|c| !c.is_alphanumeric())
+        })
+    }
+
+    /// R724001: every way a player note is not one players can read, or [] when it is. A note
+    /// carries a title and at least one line, and no line is blank, names a ruling, an issue or
+    /// card number or the spec, or runs past `PLAYER_LINE_MAX`.
+    pub fn player_note_problems(note: &PlayerNote) -> Vec<String> {
+        let mut problems = Vec::new();
+        if note.title.trim().is_empty() {
+            problems.push("has no title".to_string());
+        }
+        if note.lines().next().is_none() {
+            problems.push("has no line".to_string());
+        }
+        if note.lines().any(|line| line.trim().is_empty()) {
+            problems.push("has an empty line".to_string());
+        }
+        for text in std::iter::once(&note.title).chain(note.lines()) {
+            if cites_a_ruling(text) {
+                problems.push(format!("cites a ruling in \"{text}\""));
+            }
+            if text
+                .char_indices()
+                .any(|(at, c)| c == '#' && text[at + 1..].starts_with(|next: char| next.is_ascii_digit()))
+            {
+                problems.push(format!("cites an issue or card number in \"{text}\""));
+            }
+            if text.contains('§') {
+                problems.push(format!("cites the spec in \"{text}\""));
+            }
+        }
+        for line in note.lines() {
+            if line.chars().count() > PLAYER_LINE_MAX {
+                problems.push(format!(
+                    "has a line over {PLAYER_LINE_MAX} characters: \"{line}\""
+                ));
+            }
+        }
+        problems
+    }
+
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
     #[serde(rename_all = "camelCase")]
     pub struct PatchEntry {
@@ -1097,6 +1194,9 @@ pub mod patches_io {
         pub source: String,
         /// What the patch did, in the designer's and the players' words.
         pub notes: String,
+        /// R724001: what players read of the patch on the Patch notes page, apart from this record.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub player: Option<PlayerNote>,
         /// The first-parent commits that shipped this patch; new promotions carry one.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub commits: Option<Vec<String>>,
@@ -1310,6 +1410,10 @@ pub mod patches_io {
         pub sources: String,
         /// What the patch does, in the designer's and the players' words.
         pub notes: String,
+        /// R724001: what players will read of the patch, written by hand; it becomes the shipped
+        /// patch's `player`.
+        #[serde(default)]
+        pub player: PlayerNote,
         /// The catalog ids the patch creates, changes or removes, in catalog order.
         pub cards: Vec<String>,
     }
@@ -1567,6 +1671,10 @@ pub mod patches_io {
                     ));
                 }
             }
+            // Players read the note, never the record, so it ships ready to read (R724001).
+            for problem in player_note_problems(&fragment.player) {
+                problems.push(format!("pending/{name}'s player note {problem} (R724001)"));
+            }
             // A patch is a catalog change; one with none would bump the version over nothing (R650).
             if fragment.cards.is_empty() {
                 problems.push(format!(
@@ -1774,10 +1882,14 @@ pub struct FragmentArgs {
     pub sources: Option<String>,
     pub notes: Option<String>,
     pub cards: Option<Vec<String>>,
+    /// R724001: the player note. No flag sets it: it is written by hand in the fragment, and a
+    /// fragment written again keeps the one it holds.
+    pub player: Option<PlayerNote>,
 }
 
 /// Writes (or updates) the pending fragment for a patch being built. `cards` defaults to every
-/// catalog id that differs from the newest shipped snapshot, in catalog order.
+/// catalog id that differs from the newest shipped snapshot, in catalog order; `player` to the note
+/// the fragment already holds, or an empty one for `patches check` to name (R724001).
 pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<PendingFragment> {
     let paths = patch_paths(repo_root);
     let patches = read_patches(&paths.patches_json)?;
@@ -1790,19 +1902,26 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<P
         Some(cards) => cards.clone(),
         None => differing_ids(&newest_snapshot, &catalog),
     };
+    let path = patches_io::pending_path(&args.version, &paths.pending_dir)?;
+    // A fragment written again keeps the note written into it by hand (R724001).
+    let player = args.player.clone().unwrap_or_else(|| {
+        fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<PendingFragment>(&text).ok())
+            .map(|fragment| fragment.player)
+            .unwrap_or_default()
+    });
     let fragment = PendingFragment {
         version: args.version.clone(),
         title: args.title.clone(),
         sources: args.sources.clone().unwrap_or_default(),
         notes: args.notes.clone().unwrap_or_default(),
+        player,
         cards,
     };
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
-    write_json(
-        &patches_io::pending_path(&args.version, &paths.pending_dir)?,
-        &fragment,
-    )?;
+    write_json(&path, &fragment)?;
     Ok(fragment)
 }
 
@@ -1831,6 +1950,23 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
         }
         if let Err(error) = resolve_version(&fragment.version, &versions) {
             problems.push(format!("pending/{name} cannot ship: {error}"));
+        }
+    }
+    // Every shipped patch carries the note the Patch notes page shows for it (R724001).
+    for patch in &patches {
+        match &patch.player {
+            None => problems.push(format!(
+                "patches.json's {} has no player note (R724001)",
+                patch.version
+            )),
+            Some(note) => {
+                for problem in player_note_problems(note) {
+                    problems.push(format!(
+                        "patches.json's {}'s player note {problem} (R724001)",
+                        patch.version
+                    ));
+                }
+            }
         }
     }
     Ok(problems)
@@ -2077,6 +2213,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             title: fragment.title,
             source: fragment.sources,
             notes: fragment.notes,
+            player: Some(fragment.player),
             commits: Some(vec![commit.clone()]),
             reconstructed: Some(false),
             changes: Vec::new(),
@@ -2165,6 +2302,7 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
                 .map(str::to_string)
                 .collect()
         }),
+        player: None,
     })
 }
 
@@ -2467,6 +2605,15 @@ mod tests {
                 .collect()
         }
 
+        /// A player note players can read (R724001), for fixtures that test something else.
+        pub(super) fn test_note() -> PlayerNote {
+            PlayerNote {
+                title: "t".to_string(),
+                changes: vec!["A card changed.".to_string()],
+                ..PlayerNote::default()
+            }
+        }
+
         fn named(
             name: &str,
             version: &str,
@@ -2482,6 +2629,7 @@ mod tests {
                     title: title.to_string(),
                     sources: sources.to_string(),
                     notes: notes.to_string(),
+                    player: test_note(),
                     cards: strings(cards),
                 },
             }
@@ -2663,6 +2811,96 @@ mod tests {
             }
         }
 
+        // R724001: a fragment carries the note players read of its patch, and `patches check`
+        // holds it to one they can read: a title, at least one line, and no ruling, issue or card
+        // number, §, blank line or overlong line.
+        mod r724001_player_notes {
+            use super::*;
+
+            fn with_note(note: PlayerNote) -> Vec<NamedFragment> {
+                let mut files = vec![named("v0.2.5.json", "v0.2.5", "t", "s", "n", &["aaa"])];
+                files[0].fragment.player = note;
+                files
+            }
+
+            fn line(text: &str) -> PlayerNote {
+                PlayerNote {
+                    balance: vec![text.to_string()],
+                    ..test_note()
+                }
+            }
+
+            #[test]
+            fn r724001_a_fragment_needs_a_player_note_players_can_read() {
+                let newest = catalog_of(vec![card("aaa", 1)]);
+                let catalog = catalog_of(vec![card("aaa", 2)]);
+                let problems = |note: PlayerNote| check(&with_note(note), &catalog, &newest);
+                assert_eq!(problems(test_note()), Vec::<String>::new());
+                assert_eq!(
+                    problems(PlayerNote::default()),
+                    strings(&[
+                        "pending/v0.2.5.json's player note has no title (R724001)",
+                        "pending/v0.2.5.json's player note has no line (R724001)",
+                    ])
+                );
+                assert_eq!(
+                    problems(line("Hit Job costs (3) (R656).")),
+                    strings(&[
+                        "pending/v0.2.5.json's player note cites a ruling in \"Hit Job costs (3) (R656).\" (R724001)"
+                    ])
+                );
+                assert_eq!(
+                    problems(line("Fixed in #88.")),
+                    strings(&[
+                        "pending/v0.2.5.json's player note cites an issue or card number in \"Fixed in #88.\" (R724001)"
+                    ])
+                );
+                assert_eq!(
+                    problems(line("As §5 says.")),
+                    strings(&[
+                        "pending/v0.2.5.json's player note cites the spec in \"As §5 says.\" (R724001)"
+                    ])
+                );
+                assert_eq!(
+                    problems(line("   ")),
+                    strings(&["pending/v0.2.5.json's player note has an empty line (R724001)"])
+                );
+                let long = "a".repeat(PLAYER_LINE_MAX + 1);
+                assert_eq!(
+                    problems(line(&long)),
+                    vec![format!(
+                        "pending/v0.2.5.json's player note has a line over {PLAYER_LINE_MAX} characters: \"{long}\" (R724001)"
+                    )]
+                );
+                assert_eq!(problems(line(&"é".repeat(PLAYER_LINE_MAX))), Vec::<String>::new());
+                let titled = PlayerNote {
+                    title: "Follow-up to #724".to_string(),
+                    ..test_note()
+                };
+                assert_eq!(
+                    problems(titled),
+                    strings(&[
+                        "pending/v0.2.5.json's player note cites an issue or card number in \"Follow-up to #724\" (R724001)"
+                    ])
+                );
+            }
+
+            #[test]
+            fn r724001_reads_a_ruling_only_as_r_and_digits_alone() {
+                let flagged = |text: &str| {
+                    player_note_problems(&line(text))
+                        .iter()
+                        .any(|problem| problem.starts_with("cites a ruling"))
+                };
+                assert!(flagged("R656 aims harmful picks at enemies."));
+                assert!(flagged("Bounce means a permanent (R1320)."));
+                assert!(!flagged("R2D2 joins the pool."));
+                assert!(!flagged("Radiant Joro is a 2/2."));
+                assert!(!flagged("Jlockeed Shredder-10 gains the tag."));
+                assert!(!flagged("FR656 is no ruling."));
+            }
+        }
+
         mod r646_promotion_in_ship_order {
             use std::fs;
             use std::path::Path;
@@ -2739,6 +2977,7 @@ mod tests {
                     sources: Some(sources.to_string()),
                     notes: Some(notes.to_string()),
                     cards: cards.map(strings),
+                    player: Some(super::test_note()),
                     ..FragmentArgs::default()
                 }
             }
@@ -2750,6 +2989,7 @@ mod tests {
                     title: "base".to_string(),
                     source: "test".to_string(),
                     notes: notes.to_string(),
+                    player: Some(super::test_note()),
                     commits: None,
                     reconstructed: None,
                     changes,
@@ -3463,6 +3703,147 @@ mod tests {
                 );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
+            fn note() -> PlayerNote {
+                PlayerNote {
+                    title: "Hit Job tuned".to_string(),
+                    balance: vec!["Hit Job costs (3), up from (2).".to_string()],
+                    fixes: vec!["Hit Job's text names its cost.".to_string()],
+                    ..PlayerNote::default()
+                }
+            }
+
+            #[test]
+            fn r724001_ships_the_fragments_player_note_with_its_patch() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-ship-note-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let mut changed = base.clone();
+                changed.insert("aaa".to_string(), card("aaa", 2));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                let args = FragmentArgs {
+                    player: Some(note()),
+                    ..fragment_args("v0.2.5", "t", "s", "n", None)
+                };
+                write_fragment(root, &args).unwrap();
+                let fragment = read(&dir.join("pending/v0.2.5.json"));
+                let keys: Vec<String> = serde_json::from_str::<IndexMap<String, Json>>(&fragment)
+                    .unwrap()
+                    .into_keys()
+                    .collect();
+                assert_eq!(
+                    keys,
+                    strings(&["version", "title", "sources", "notes", "player", "cards"])
+                );
+                git(root, &["add", "-A"], None);
+                git(
+                    root,
+                    &["commit", "-q", "-m", "fragment v0.2.5"],
+                    Some("2026-10-01T12:00:00+00:00"),
+                );
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.5"]));
+                let patches = read_patches(&dir.join("patches.json")).unwrap();
+                let v25 = patches
+                    .iter()
+                    .find(|patch| patch.version == "v0.2.5")
+                    .expect("v0.2.5");
+                assert_eq!(v25.player, Some(note()));
+                // The record beside it is the fragment's, as before.
+                assert_eq!(
+                    (v25.title.as_str(), v25.source.as_str(), v25.notes.as_str()),
+                    ("t", "s", "n")
+                );
+                let written: Vec<IndexMap<String, Json>> =
+                    serde_json::from_str(&read(&dir.join("patches.json"))).unwrap();
+                let keys: Vec<&String> = written[1].keys().collect();
+                assert_eq!(
+                    keys,
+                    [
+                        "version",
+                        "date",
+                        "title",
+                        "source",
+                        "notes",
+                        "player",
+                        "commits",
+                        "reconstructed",
+                        "changes"
+                    ]
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
+            #[test]
+            fn r724001_writing_a_fragment_again_keeps_its_player_note() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-fragment-note-", &base);
+                let root = temp.path();
+                let mut changed = base.clone();
+                changed.insert("aaa".to_string(), card("aaa", 2));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                // A new fragment, written by the command line, which has no flag for the note: an
+                // empty one, which the check names until it is written by hand.
+                let blank = FragmentArgs {
+                    player: None,
+                    ..fragment_args("v0.2.5", "t", "s", "n", None)
+                };
+                assert_eq!(
+                    write_fragment(root, &blank).unwrap().player,
+                    PlayerNote::default()
+                );
+                assert_eq!(
+                    check_patches(root).unwrap(),
+                    strings(&[
+                        "pending/v0.2.5.json's player note has no title (R724001)",
+                        "pending/v0.2.5.json's player note has no line (R724001)",
+                    ])
+                );
+                let path = root.join("crates/cards/patches/pending/v0.2.5.json");
+                let mut fragment: PendingFragment = serde_json::from_str(&read(&path)).unwrap();
+                fragment.player = note();
+                write_files(
+                    root,
+                    &[("crates/cards/patches/pending/v0.2.5.json", json(&fragment))],
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                // Written again, as when its cards change, it keeps the note written into it.
+                changed.insert("bbb".to_string(), card("bbb", 2));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                let again = write_fragment(root, &blank).unwrap();
+                assert_eq!((again.player, again.cards), (note(), strings(&["aaa", "bbb"])));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
+            #[test]
+            fn r724001_check_names_a_shipped_patch_with_no_player_note() {
+                let base = catalog_of(vec![card("aaa", 1)]);
+                let temp = shipped_repo("jackioh-check-note-", &base);
+                let root = temp.path();
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                let mut patch = base_patch("n", Vec::new());
+                patch.player = None;
+                write_files(
+                    root,
+                    &[("crates/cards/patches/patches.json", json(&[patch.clone()]))],
+                );
+                assert_eq!(
+                    check_patches(root).unwrap(),
+                    strings(&["patches.json's v0.1.1 has no player note (R724001)"])
+                );
+                patch.player = Some(PlayerNote {
+                    title: "Patch v0.1.1".to_string(),
+                    changes: vec!["See R646.".to_string()],
+                    ..PlayerNote::default()
+                });
+                write_files(root, &[("crates/cards/patches/patches.json", json(&[patch]))]);
+                assert_eq!(
+                    check_patches(root).unwrap(),
+                    strings(&[
+                        "patches.json's v0.1.1's player note cites a ruling in \"See R646.\" (R724001)"
+                    ])
+                );
             }
         }
     }
@@ -4430,6 +4811,40 @@ mod tests {
                 assert_eq!(tokens, 9);
                 assert!(!snapshot("v0.1.0").contains_key("core-t-coin"));
                 assert!(snapshot("v0.1.0c").contains_key("core-t-coin"));
+            }
+        }
+
+        // R724001: every shipped patch carries the note the Patch notes page shows, apart from its
+        // record; issue #724 wrote the history's by hand.
+        mod r724001_the_shipped_history_s_player_notes {
+            use super::*;
+
+            #[test]
+            fn r724001_every_shipped_patch_carries_a_player_note_players_can_read() {
+                // The file is as `patches ship` writes it, so the next promotion rewrites no note.
+                let text = std::fs::read_to_string(patches_json()).expect("patches.json");
+                assert_eq!(
+                    format!("{}\n", crate::patches::js::stringify_pretty(&patches())),
+                    text
+                );
+                for patch in patches() {
+                    let Some(note) = &patch.player else {
+                        panic!("{} has no player note", patch.version);
+                    };
+                    assert_eq!(
+                        player_note_problems(note),
+                        Vec::<String>::new(),
+                        "{}",
+                        patch.version
+                    );
+                    // A short phrase, the version shown beside it.
+                    assert!(
+                        !note.title.contains(&patch.version),
+                        "{}: {}",
+                        patch.version,
+                        note.title
+                    );
+                }
             }
         }
     }

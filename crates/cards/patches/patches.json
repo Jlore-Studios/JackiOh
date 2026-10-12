@@ -5,6 +5,16 @@
     "title": "Core as first built",
     "source": "The initial commit (4626690)",
     "notes": "The Core set as first built: 100 cards and 9 tokens.",
+    "player": {
+      "title": "Core",
+      "new": [
+        "The Core set: 100 cards and 9 tokens."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-001",
@@ -559,6 +569,20 @@
     "title": "Core Set balance changes",
     "source": "Issue #1: commits 1539fa7 and cd780db; the designer's balance notes landed first as ba45d13 (PR #2), in the source notes",
     "notes": "#3 Right-house defender, #68's name, #81 Radiant Saintess (twice), and the Rush, Sheep, Felinor and Bread Tokens' Radiant faces.",
+    "player": {
+      "title": "Core balance changes",
+      "new": [],
+      "balance": [
+        "Right-house defender gains Taunt.",
+        "Radiant Saintess gains Reborn, and her Death, no longer her Cry, makes your other Units Radiant.",
+        "Radiant Rush Token is a 6/6, Radiant Sheep Token a 2/2 worth 3 Tributes, Radiant Felinor Token a 2/2, and Radiant Bread Token has Armor X."
+      ],
+      "changes": [],
+      "text": [
+        "Twisted Sorcerer's name is spelled right."
+      ],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-003",
@@ -635,6 +659,18 @@
     "title": "Call to Chaos's text and The Coin",
     "source": "Commits f5b94bc (PR #11, the edge-case hunt) and a17a9e8 (PR #14)",
     "notes": "#95 Call to Chaos's text; The Coin added for the player going second.",
+    "player": {
+      "title": "Call to Chaos and The Coin",
+      "new": [
+        "The Coin: the player going second gets one."
+      ],
+      "balance": [
+        "Call to Chaos (Core Edition)'s Rush Token roll summons five Radiant Rush Tokens, not five 5/5s."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-095",
@@ -657,6 +693,20 @@
     "title": "The Radiant pass",
     "source": "PR #18 (commit c219bb4), R275-R279",
     "notes": "Radiant faces meet one standard and print in full; the Jlockeed tag; cards list the cards they name (refs).",
+    "player": {
+      "title": "The Radiant pass",
+      "new": [
+        "The Jlockeed tag, on Jlockeed Shredder-10 and Jlockeed's Weapons."
+      ],
+      "balance": [],
+      "changes": [
+        "Every Radiant face meets one standard and prints its whole text.",
+        "Radiant 4-mana 7/7 is a 14/14, Radiant Chaos Golem and Radiant Ceaseless Void are 20/20s, and Radiant Duplicating Felinors has 6 Attack.",
+        "A card that names other cards links them, so you can read them from its text."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-001",
@@ -1488,6 +1538,24 @@
     "title": "Patch v0.1.1",
     "source": "Issue #27, PR #28 (commit 1005c50)",
     "notes": "Pierce, the card patches, Deck and Tribute, and face-down traps that show their cost: the Ghoul Token added and 105 entries changed.",
+    "player": {
+      "title": "Pierce, Deck and Tribute",
+      "new": [
+        "The Pierce keyword.",
+        "The Ghoul Token.",
+        "Heroic Power gains an eighth power, Stitching."
+      ],
+      "balance": [],
+      "changes": [
+        "An Indestructible Unit never has Taunt.",
+        "An X you choose is at least 1.",
+        "A face-down Trap shows its cost to both players."
+      ],
+      "text": [
+        "Cards and screens say Deck and Tribute."
+      ],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-001",
@@ -2475,6 +2543,24 @@
     "title": "Patch v0.2.0: Classic and Classic+",
     "source": "Issue #40; the design brief docs/classic-sets.md",
     "notes": "Two new sets, Classic (90 cards) and Classic+ (78 cards and 38 tokens), with the keywords Animated, Activate, Brittle, Degrade and Upgrade. Core: Hit Job costs (3); Flood, Collateral Damage, Big Felinor, Snom Bunny Mind Control and Twisting Nether cost (4); Masochism Mask costs (1); new text for Hinder, Carnivorous Cube, KY's Math Equation, Prem Panther, Sheepish, Bear Honeypot and Call to Chaos's Radiant face; every card writes a specific cost as \"(N) Cost\"; every card records its lines of code.",
+    "player": {
+      "title": "Classic and Classic+",
+      "new": [
+        "Two new sets: Classic, with 90 cards, and Classic+, with 78 cards and 38 tokens.",
+        "New keywords, among them Animated, Activate and Brittle, and the two tuning keywords now called Nerf and Buff."
+      ],
+      "balance": [
+        "Hit Job costs (3), up from (2).",
+        "Flood, Collateral Damage, Big Felinor, Snom Bunny Mind Control and Twisting Nether cost (4), up from (3).",
+        "Masochism Mask costs (1), down from (2)."
+      ],
+      "changes": [],
+      "text": [
+        "New text for seven Core cards, among them Hinder, Sheepish and Bear Honeypot.",
+        "Every card writes a specific cost as “(N) Cost”."
+      ],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-001",
@@ -4443,6 +4529,16 @@
     "title": "Patch v0.2.1: card text pass",
     "source": "#45",
     "notes": "Card text pass: consistent terminology and house style across Core, Classic and Classic+",
+    "player": {
+      "title": "Card text pass",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Consistent words and house style across Core, Classic and Classic+ card text."
+      ],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-017",
@@ -4645,6 +4741,24 @@
     "title": "Small set of mechanics changes",
     "source": "#149",
     "notes": "Classic+ #70 Chaos Machine never Upgrades itself (R585). Classic #33 Joro answers only a Spell's targeting (R651). A Grape any pool picks is re-rolled on GRAPE_ODDS (R382). Every card that uses Plague Tokens gains the Plague tag (17 cards). Classic+ #32.3 Blade Storm casts Whirlwind until a Unit dies, up to 30 rounds unshown (R652). Classic+ #50 Adaptive Growth standardized to +-2/2, Radiant +-3/3. Classic #10 Exile answers (2) or less on its base face.",
+    "player": {
+      "title": "Mechanics changes",
+      "new": [
+        "Every card that uses Plague Counters, then called Plague Tokens, gains the Plague tag."
+      ],
+      "balance": [
+        "Exile's base face counters a card of (2) Cost or less, up from (1).",
+        "Adaptive Growth's debuff matches its buff: −2/−2, and −3/−3 on its Radiant face."
+      ],
+      "changes": [
+        "Chaos Machine never Buffs itself.",
+        "Joro answers only a Spell's targeting.",
+        "Blade Storm casts Whirlwind until a Unit dies.",
+        "When a random pool picks a Grape, which Grape you get is rolled on the Grapes' own odds."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-091",
@@ -4838,6 +4952,19 @@
     "title": "Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses",
     "source": "Issue #113",
     "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant). Classic #52 Final Gambit's follow-up neither heals nor draws once its re-aimed hit has felled the enemy hero (R216), so one fused into a Field Trap that stays cannot re-aim its own fatigue for ever.",
+    "player": {
+      "title": "Animated Field Spells and Ivory Tower's fusion",
+      "new": [
+        "Eighteen Field Spells, Masochism Mask among them, gain Animated and a unit face (taken away again in v0.2.5)."
+      ],
+      "balance": [],
+      "changes": [
+        "Ivory Tower fuses the first Unit you stack onto it into itself.",
+        "Final Gambit neither heals nor draws once its redirected hit has defeated the enemy hero."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "changes": [
       {
         "id": "core-014",
@@ -5135,6 +5262,18 @@
     "title": "Patch v0.2.4: aimed random casts and the Deft keyword",
     "source": "#181, #206",
     "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
+    "player": {
+      "title": "Aimed random casts and Deft",
+      "new": [
+        "The Deft keyword: a Unit with it can attack and switch position in the same turn. Deft Duelist has it; it joins the random keyword pool."
+      ],
+      "balance": [],
+      "changes": [
+        "A random cast aims harmful picks at enemies and helpful ones at your side. Jogg's Box is unchanged."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d"
     ],
@@ -5194,6 +5333,18 @@
     "title": "Patch v0.2.5: undo the v0.2.3 animated additions",
     "source": "Issue #218",
     "notes": "Removes Animated and the unit faces from the eighteen Field Spells v0.2.3 animated; Ivory Tower's fusion (R653) and Final Gambit's R216 guard stay. Adds R657: an Animated card with no printed stats fights as a 0/1.",
+    "player": {
+      "title": "Field Spells stop coming to life",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The eighteen Field Spells v0.2.3 animated lose Animated and their unit faces.",
+        "Ivory Tower's fusion and Final Gambit's change from v0.2.3 stay.",
+        "An Animated card with no printed stats fights as a 0/1."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "1be5a28e08c3b6ef94b95b3845c908adaa86d14e"
     ],
@@ -5477,6 +5628,16 @@
     "title": "Book of Wildfire becomes a different Book at the end of your turn",
     "source": "#271",
     "notes": "Classic #55 Book of Wildfire gains \"End of turn: Become a different Book.\" (Radiant: \"… a different Radiant Book.\"): at the end of its owner's turn, while in hand, it becomes a random other Book (never Wildfire, never the Book it is), on its own face, which keeps swapping each turn (R671).",
+    "player": {
+      "title": "Book of Wildfire turns the page",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "At the end of your turn, a Book of Wildfire in your hand becomes a different random Book (Radiant: a Radiant one), never Wildfire and never the Book it already is."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "b26b1b9dde3f723528e60739caf5aee359a16c20"
     ],
@@ -5500,6 +5661,20 @@
     "title": "Patch v0.2.7: More card patches",
     "source": "#126",
     "notes": "Plastic Surgery can no longer be played with no Unit to target, though a cast with none still fizzles (R703). Craft a Card's Radiant face no longer draws a card. Crushing Walls now closes spiked walls in on lanes 1 and 5, and a card in your hand that Plague Chalice would counter now wears a green warning (R667).",
+    "player": {
+      "title": "Plastic Surgery, Craft a Card and two new effects",
+      "new": [],
+      "balance": [
+        "Radiant Craft a Card no longer draws a card."
+      ],
+      "changes": [
+        "Plastic Surgery can no longer be played with no Unit to target.",
+        "Crushing Walls shows its spiked walls closing in on lanes 1 and 5.",
+        "A card in your hand that Plague Chalice would counter wears a warning."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "533b4e2db58eaae47b0edd0eee6da6d7e12439f3"
     ],
@@ -5530,6 +5705,16 @@
     "title": "Patch v0.2.Y: the yellow condition glow for ten Core cards",
     "source": "#260",
     "notes": "The yellow 'condition met' glow (R662) for Bread and Butter, Bear Honeypot, Unlicensed Experimentation, My Pawn, Spiteful Stab and Ceaseless Void, and for the hand cards Quickstriker, Gifted Program and a Radiant /fullsend grant a condition to; Sheepish never glows. Only each script's line count moves; no card plays differently.",
+    "player": {
+      "title": "Condition glow for more Core cards",
+      "new": [
+        "The yellow “condition met” glow lights for more Core cards, such as Bread and Butter and Spiteful Stab. No card plays differently."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "80e7960ccaef1a8c0bb5c463eadacd8fd402d858"
     ],
@@ -5591,6 +5776,17 @@
     "title": "Patch v0.2.8: Easter egg, Glitch",
     "source": "#170",
     "notes": "A hidden token, Glitch: once a … in the System card has been played, each card generated into a hand or deck has n/10000 odds of being Glitch (R673). It is in no pool, the Almanac or the Deck Builder (R674), is always playable on its owner's turn (R675), and when played resets the match, swaps the seats, lays two other games' boards on the field, or voids the match (R676–R679).",
+    "player": {
+      "title": "Glitch",
+      "new": [
+        "A hidden token, Glitch: once Glitch in the System or Lag in the System has been played, any card generated into a hand or deck has a tiny chance to be Glitch.",
+        "Played, Glitch resets the match, swaps the seats, lays two other games' boards on the field, or voids the match."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "509e9a302ab71542a4e141fe7231c9743722bdba"
     ],
@@ -5609,6 +5805,16 @@
     "title": "Patch v0.2.Y: Buff Gary the Gambler",
     "source": "#323",
     "notes": "Gary the Gambler base and radiant Cries gain: flip a coin, heads Divine Shield, tails Rush",
+    "player": {
+      "title": "Gary the Gambler buffed",
+      "new": [],
+      "balance": [
+        "Gary the Gambler's Cry, on both faces, flips one more coin: heads gives him Divine Shield, tails gives him Rush."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "16724d26939a1a03779523f11461b41c57871ccb"
     ],
@@ -5632,6 +5838,21 @@
     "title": "Patch v0.2.9: rarity pass",
     "source": "#44",
     "notes": "Rarity pass over Classic and Classic+ (and Core #27, #28, #40, let rare by the designer): 15 rarity changes; Traps reveal; Plague Counters; Crop Dusting's Radiant face (3 counters, draw 3); Pocket Chaos costs (4) and its gift costs (1) less. Named v0.2.9, the next number: the designer's v0.2.2 label is kept in the issue.",
+    "player": {
+      "title": "Rarity pass",
+      "new": [],
+      "balance": [
+        "Fifteen rarity changes across Core, Classic and Classic+.",
+        "Pocket Chaos costs (4), up from (2), and each Pocket Chaos it passes on costs (1) less, until one would cost (0).",
+        "Radiant Crop Dusting places 3 Plague Counters on each permanent and draws 3."
+      ],
+      "changes": [],
+      "text": [
+        "Plague Tokens are renamed Plague Counters.",
+        "Many Traps' conditions read “Reveals when”."
+      ],
+      "fixes": []
+    },
     "commits": [
       "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22"
     ],
@@ -6044,6 +6265,27 @@
     "title": "Patch v0.2.10: Classic and Classic+ balance patch 1",
     "source": "#88",
     "notes": "Classic and Classic+ balance patch 1: random discards unless a card says of your choice (R682), a Bounce keyword for every return to hand (R692), Plague Counters of one effect on one chosen permanent (R689), Recruit skipping (X)-cost cards (R690), Locked zones refusing only plays (R688), Transform keeping battle position (R691), Reveal (R686), and per-card balance and text changes across Classic and Classic+.",
+    "player": {
+      "title": "Classic and Classic+ balance patch 1",
+      "new": [],
+      "balance": [
+        "Exile costs (1), down from (2). Last Hurrah costs (1), up from (0).",
+        "Plague Nuke and Felinor Fuser cost (4), up from (3). Argusland costs (3), up from (1).",
+        "BOOM! Big Max has 13 Attack, down from 26. Radiant Joro is a 2/2.",
+        "More balance and text changes across Classic and Classic+: open the cards below."
+      ],
+      "changes": [
+        "Discards are random unless a card says you choose.",
+        "Bounce is the keyword for a card returned to hand.",
+        "Placing Plague Counters with no card named puts them all on one permanent you choose.",
+        "Recruit skips (X) Cost cards unless nothing else matches.",
+        "A Locked zone refuses only plays: a summon, a move or a return still lands there.",
+        "A transformed Unit keeps its zone and battle position.",
+        "Reveal: a revealed Trap shows face-up to both players and still fires."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "a065f26ebfebf33dbf25801d4e06e6e334a80d96"
     ],
@@ -6628,6 +6870,18 @@
     "title": "Patch v0.2.Y: 3 new tags and naming conventions",
     "source": "#322",
     "notes": "Three new tags: Catalyst on Solarius and Felinor Flagbearer, Prime on the tokens their Deaths shuffle in, and Acclaimed on BOOM! Big Max and Wardrum. Solarius-Prime is now Solarius Prime, spaced like Felinor Flagbearer Prime, and Solarius's text names it so. No card plays differently.",
+    "player": {
+      "title": "Three new tags",
+      "new": [
+        "Catalyst on Solarius and Felinor Flagbearer, Prime on the tokens their Deaths shuffle in, and Acclaimed on BOOM! Big Max and Wardrum."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Solarius-Prime is now Solarius Prime. No card plays differently."
+      ],
+      "fixes": []
+    },
     "commits": [
       "ce4a741b706ac75a7104c73736cb568ddc40f33f"
     ],
@@ -6693,6 +6947,17 @@
     "title": "Patch v0.2.Y: Bounce keyword only applies to permanents",
     "source": "#354",
     "notes": "Bounce only for a permanent returned from the field (R746): Reoccurring Dream, Efficiency Dividend, KY's Math Equation, Ancient Acquisition, Recurring Felinor, Forever& and Whirlwind's Radiant face say \"Return … to hand\" again, as before v0.2.10; these seven cards play as before (the bounce destination is R747, an engine change that touches no card text)",
+    "player": {
+      "title": "Bounce is for permanents",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Bounce now means only a permanent returned to hand from the field.",
+        "Seven cards, such as Reoccurring Dream, say “Return … to hand” again and play as before."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "5234550417f490e87b65cbd9a7ae078ce707979c"
     ],
@@ -6768,6 +7033,21 @@
     "title": "Patch v0.2.10d: balance patch 1 follow-up",
     "source": "#355",
     "notes": "Follow-up to balance patch 1 (#88). A deck too short of other cards fills an opening hand with its Cast on Draw cards, which wait uncast and are cast at the start of the game (R748). Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the one that prints them (R749). The Power to Punish's Radiant face marks every enemy Unit it will destroy (R750). Core cards no longer say \"to a target\" or \"target <card>\" (R751).",
+    "player": {
+      "title": "Balance patch 1 follow-up",
+      "new": [],
+      "balance": [
+        "Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the face that prints them."
+      ],
+      "changes": [
+        "A deck too short of other cards fills an opening hand with its Cast on Draw cards, which are cast as the game starts.",
+        "Radiant The Power to Punish marks every enemy Unit it will destroy."
+      ],
+      "text": [
+        "Core cards no longer say “to a target”."
+      ],
+      "fixes": []
+    },
     "commits": [
       "ada067c48f78173e6b472fc9860b960b1ff30f15"
     ],
@@ -6913,6 +7193,19 @@
     "title": "Patch v0.2.11: the Heroic Power rework",
     "source": "issue #37 (MaxGoetzmann, 2026-09-30; scope narrowed to the rework on 2026-10-06)",
     "notes": "Heroic Power costs (0), and playing it uses nothing. Each of its thirteen powers is an Activate that spends its (X), once per turn: Expedition Map, Life Tap, Steady Shot, Ranching, Cat Cafe, Ping, Witness Value, Stitching, Armor Up (Tank Up on the Radiant face), Die Insect, KY Brainstorm, Pluck and Terminus Tricks, each with a Radiant face (R752–R761). Ping's target is chosen as it is activated, so it can be dragged onto its target. In play the card shows only the power it rolled.",
+    "player": {
+      "title": "The Heroic Power rework",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Heroic Power costs (0), and playing it uses nothing.",
+        "Each of its thirteen powers is an Activate that spends its (X), once per turn, and has a Radiant face.",
+        "Ping picks its target as it is activated, so you can drag it onto the target.",
+        "In play, Heroic Power shows only the power it rolled."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "d79927e13dfbeef7267501c7330ec6376c9f7b5c"
     ],
@@ -6939,6 +7232,19 @@
     "title": "Patch v0.3.1: card text pass",
     "source": "issue #480",
     "notes": "Text only; no card does anything new. Every Trap's condition reads \"Reveals when\". Twinspell says it goes to the graveyard, Book of Books that its Books are Temporary, League of Losers that Mid Loser's Cry fires, The House that its summon is random, and Book of Wildfire that the Book it becomes is random. Sheepish fires on any Unit once it resolves, Felinor Fiender keeps its own stats, Turtinator tributes another Unit, and Hired Shrimp's base face lets you guess any permanent. \"Miss\" Mrow steals, Lava Golem says it is the one summoned for your opponent, and GY is written out as graveyard.",
+    "player": {
+      "title": "Card text pass",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Text only: no card does anything new.",
+        "Every Trap's condition reads “Reveals when”.",
+        "Cards such as Twinspell, Sheepish, Turtinator and Lava Golem say more plainly what they do.",
+        "GY is written out as graveyard."
+      ],
+      "fixes": []
+    },
     "commits": [
       "70b6e415a2877480e62864e24801ed3694a8c173"
     ],
@@ -7130,6 +7436,17 @@
     "title": "Patch v0.3.2: more numbers for Upgrade and Degrade to move",
     "source": "issue #493",
     "notes": "111 more declared numbers on 80 cards (B3.4 rule 5, R386): damage, healing, draws, tokens, copies, buffs, Armor and mana given, discounts, set costs, thresholds and Heroic Power's powers, each printed as before, so a Degrade, an Upgrade or KY's Constant now has more to move.",
+    "player": {
+      "title": "More numbers to tune",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "111 more numbers on 80 cards can be moved by Nerf, Buff and KY's Constant: damage, healing, draws, Armor, mana, discounts, Heroic Power's powers and more.",
+        "Every card prints as before."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "d04709a05db17222b01f8c8ca41ba034861019c7"
     ],
@@ -7783,6 +8100,18 @@
     "title": "Patch v0.3.3: Heroic Power tunes only its current power, and a base-only number is tuned on the base face only",
     "source": "issue #556",
     "notes": "Heroic Power's numbers each belong to their power: Degrade, Upgrade and KY's Constant reach only the numbers of the power the card has now, and a number of another power keeps its tuning until a reroll brings that power back (R1430). Thirteen numbers only the base face prints, Life Tap's damage among them, are tuned on the base face only (R1431).",
+    "player": {
+      "title": "Heroic Power's numbers belong to its power",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Nerf, Buff and KY's Constant reach only the numbers of the power Heroic Power has now.",
+        "A number of another power keeps its tuning until a reroll brings that power back.",
+        "Thirteen numbers only a base face prints, Life Tap's damage among them, are tuned on the base face only."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "764bd0ad79ce2eff8768e7e1bc53d72169f2399f"
     ],
@@ -7900,6 +8229,18 @@
     "title": "Patch v0.3.4: Degrade is Nerf and Upgrade is Buff",
     "source": "issue #543",
     "notes": "Degrade is renamed Nerf and Upgrade is renamed Buff on every card that printed them, both faces, with their numbers kept: Withering Storm, Buff Billy, Chaos Machine, Book of Buff, Book of Nerf, Call to Chaos (Classic+ Edition), Fine-Tuning and Heroic Power's Radiant Steady Shot. Only the words change; the cards play as before (R1320).",
+    "player": {
+      "title": "Nerf and Buff",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "The two tuning keywords are renamed Nerf and Buff on both faces of every card that prints them, with their numbers kept.",
+        "Radiant Steady Shot, one of Heroic Power's powers, now says it permanently deals 2 more damage.",
+        "The cards play as before."
+      ],
+      "fixes": []
+    },
     "commits": [
       "858fcc5a33a33b9155f47031d05d620538c67858"
     ],
@@ -7984,6 +8325,18 @@
     "title": "Patch v0.3.5: Meditative, the release: the set ships",
     "source": "issue #496, issue #553, issue #575, PR #652",
     "notes": "The Meditative set ships (R1420): its 102 cards and 30 tokens join every pool that names no set, the deck builder, the Almanac and random decks, and the AI's random decks keep the soft gate (R1390) until the AI is trained on them. The set's own mechanics are R800 to R1445's blocks. Core #95's and Classic+ #73's refs name Meditative #95, the Call to Chaos edition their texts name (R1249); no other card of an earlier set changes.",
+    "player": {
+      "title": "Meditative",
+      "new": [
+        "The Meditative set: 102 cards and 30 tokens join the deck builder, the Almanac, random decks and every card pool that names no set."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Call to Chaos (Core Edition) and Call to Chaos (Classic+ Edition) link the Meditative Edition their text names."
+      ],
+      "fixes": []
+    },
     "commits": [
       "35eee095ae69d549bb10dd2e67e5ca1e3a9b7943"
     ],
@@ -8673,6 +9026,18 @@
     "title": "Patch v0.3.6: the perfect cards draw on every set that ships",
     "source": "issue #577",
     "notes": "Core #97 Zephyrs and Classic+ #27 Zephrys Zealotism no longer name a set: both draw on every non-token card of every set that ships but their own (R1446), Meditative included, and a later set joins them the day it ships. Zephyrs may offer Zephrys Zealotism and Zealotism may deal Zephyrs. Only the pools and the words change.",
+    "player": {
+      "title": "Zephyrs draw on every set",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Zephyrs and Zephrys Zealotism no longer name a set: each draws on every non-token card of every shipped set but itself, Meditative included.",
+        "A set that ships later joins them the day it ships.",
+        "Zephyrs may offer Zephrys Zealotism, and Zealotism may deal Zephyrs."
+      ],
+      "text": [],
+      "fixes": []
+    },
     "commits": [
       "10d856865bc8b319c8145dac17d6e143d32e4560"
     ],
