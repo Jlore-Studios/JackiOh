@@ -658,7 +658,8 @@ pub const TIMING_FIT_MIN_SAMPLES: usize = 30;
 /// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
 /// standard deviation `sigma` over `samples` moves of `action_kind` (an `ActionType` literal), made
 /// first or later in the turn, by players in `rank_bucket` (a `RankTier` literal; `None` for the
-/// moves no tier was read for).
+/// moves no tier was read for). R639000: `ln_legal_mean` is the mean of `ln(legal_count)` over the
+/// same moves, the complexity `THINK_COMPLEXITY_SLOPE` is measured from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThinkTimeFit {
     pub rank_bucket: Option<&'static str>,
@@ -667,11 +668,149 @@ pub struct ThinkTimeFit {
     pub samples: usize,
     pub mu: f64,
     pub sigma: f64,
+    pub ln_legal_mean: f64,
 }
 
 /// R1442: the think-time fits, pasted by hand from `jackioh-server timing-fit` (CLAUDE.md rule 9);
 /// the ladder bots (#636) read it. Empty until enough human games are recorded.
 pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
+
+// R639000: the rest of a person's habits a ladder bot copies, each one row that
+// `jackioh-server timing-fit` prints from the telemetry and a person pastes over the row here by
+// hand. A row with `samples: 0` is a hand-set prior, kept until a fit with
+// `TIMING_FIT_MIN_SAMPLES` behind it replaces it.
+
+/// R639000: one fitted number: `value`, over `samples` observations.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ScalarFit {
+    pub samples: usize,
+    pub value: f64,
+}
+
+/// R639000: how people concede. `share` of the players who lose concede at all; those who do never
+/// concede before turn `min_turn`, and concede once they stand `deficit` behind (the AI's evaluation
+/// from their side, negated, R1442), a threshold distributed normally with mean `deficit_mu` and
+/// standard deviation `deficit_sigma`, and only while they trail their opponent (`Standing.behind`).
+/// That deficit is not centred on an even board: it counts the enemy hero's health against the seat,
+/// so an even opening reads about 30 behind. `samples` is the concessions it was fitted on.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ConcedeFit {
+    pub samples: usize,
+    pub share: f64,
+    pub min_turn: i32,
+    pub deficit_mu: f64,
+    pub deficit_sigma: f64,
+}
+
+/// R639000: how people answer a draw offer: `accept_share` of `samples` seats offered one accepted.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DrawAnswerFit {
+    pub samples: usize,
+    pub accept_share: f64,
+}
+
+/// R639000: how often a person's clock runs out: `chance_per_turn` of `samples` own turns.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TimeoutFit {
+    pub samples: usize,
+    pub chance_per_turn: f64,
+}
+
+/// R639000: how people answer the end of a game that may be rematched (R672), over `samples` seats:
+/// `offer_share` offer a rematch the opponent never meets, and `accept_share` of the seats whose
+/// opponent offered first meet it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RematchFit {
+    pub samples: usize,
+    pub offer_share: f64,
+    pub accept_share: f64,
+}
+
+/// R639000, R645: the window an emote's delay is drawn from, uniformly, in ms, fitted over
+/// `samples` emotes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EmoteDelayFit {
+    pub samples: usize,
+    pub min_ms: f64,
+    pub max_ms: f64,
+}
+
+/// R639000, R645: the share of bots dealt each persona, in `PERSONA_NAMES` order, fitted over
+/// `samples` people's seats.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PersonaWeights {
+    pub samples: usize,
+    pub weights: [f64; 4],
+}
+
+/// R639000: how much longer a think time grows per unit of `ln(legal_count)` above its fit's
+/// `ln_legal_mean`, in `ln(think_ms)`: a board with more to do takes longer.
+pub const THINK_COMPLEXITY_SLOPE: ScalarFit = ScalarFit {
+    samples: 0,
+    value: 0.2,
+};
+
+/// R639000: how much longer the moves of a turn that wins take, in `ln(think_ms)`: a person counts
+/// the damage before they swing.
+pub const THINK_LETHAL_SHIFT: ScalarFit = ScalarFit {
+    samples: 0,
+    value: 0.4,
+};
+
+/// R639000: the concession model a ladder bot draws its temper from. The prior's threshold sits about
+/// 40 past an even opening's deficit, a game clearly lost.
+pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit {
+    samples: 0,
+    share: 0.4,
+    min_turn: 6,
+    deficit_mu: 70.0,
+    deficit_sigma: 20.0,
+};
+
+/// R639000: how often a ladder bot that stands behind accepts a draw offer.
+pub const BOT_DRAW_ANSWER_FIT: DrawAnswerFit = DrawAnswerFit {
+    samples: 0,
+    accept_share: 0.25,
+};
+
+/// R639000: how often a ladder bot lets its turn clock run out.
+pub const BOT_TIMEOUT_FIT: TimeoutFit = TimeoutFit {
+    samples: 0,
+    chance_per_turn: 0.01,
+};
+
+/// R639000: how often a ladder bot offers a rematch, and meets one.
+pub const BOT_REMATCH_FIT: RematchFit = RematchFit {
+    samples: 0,
+    offer_share: 0.15,
+    accept_share: 0.35,
+};
+
+/// R639000, R645: the window a ladder bot's triggered emote waits inside, after its trigger.
+pub const BOT_EMOTE_DELAY_FIT: EmoteDelayFit = EmoteDelayFit {
+    samples: 0,
+    min_ms: 800.0,
+    max_ms: 2500.0,
+};
+
+/// R639000, R645: the window a ladder bot's reply to a person's emote waits inside.
+pub const BOT_EMOTE_REPLY_DELAY_FIT: EmoteDelayFit = EmoteDelayFit {
+    samples: 0,
+    min_ms: 800.0,
+    max_ms: 2500.0,
+};
+
+/// R639000, R645: the weights a new ladder bot's persona is dealt by.
+pub const BOT_PERSONA_WEIGHTS: PersonaWeights = PersonaWeights {
+    samples: 0,
+    weights: [0.4, 0.25, 0.2, 0.15],
+};
+
+/// R639000: the quantiles of the observed delays an emote delay window runs between.
+pub const TIMING_FIT_DELAY_QUANTILES: (f64, f64) = (0.1, 0.9);
+
+/// R639000: the quantile of the turns people conceded on that a concession's `min_turn` is.
+pub const TIMING_FIT_CONCEDE_TURN_QUANTILE: f64 = 0.1;
 
 // ---------------------------------------------------------------------------------------------
 // Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). Every value is hand-set until the offline
@@ -818,6 +957,52 @@ pub const BOT_THINK_PRIOR_FIRST_SIGMA: f64 = 0.6;
 pub const BOT_THINK_PRIOR_LATER_MU: f64 = 7.8;
 /// R1452: the later moves' prior, the standard deviation of `ln(think_ms)`.
 pub const BOT_THINK_PRIOR_LATER_SIGMA: f64 = 0.7;
+
+/// R639000: a hand-set prior for one action kind (an `ActionType` literal) whatever its place in the
+/// turn, ahead of the first and later moves' priors, until `THINK_TIME_FITS` holds a fit for it: the
+/// mean and standard deviation of `ln(think_ms)`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThinkTimePrior {
+    pub action_kind: &'static str,
+    pub mu: f64,
+    pub sigma: f64,
+}
+
+/// R639000: the kinds a person takes longer or shorter over than a play: a mulligan (about 9 s,
+/// R266), a draw offer's answer and a concession.
+pub const BOT_THINK_PRIORS: &[ThinkTimePrior] = &[
+    ThinkTimePrior {
+        action_kind: "mulligan",
+        mu: 9.1,
+        sigma: 0.5,
+    },
+    ThinkTimePrior {
+        action_kind: "answerDraw",
+        mu: 8.0,
+        sigma: 0.6,
+    },
+    ThinkTimePrior {
+        action_kind: "concede",
+        mu: 8.3,
+        sigma: 0.6,
+    },
+];
+
+/// R639000: the `ln(legal_count)` the priors are centred on, as a fit's `ln_legal_mean` is.
+pub const BOT_THINK_PRIOR_LN_LEGAL_MEAN: f64 = 2.0;
+/// R639000: the shortest a bot's aim arrow shows before its targeted play or attack goes. Never
+/// under `AIM_RELAY_INTERVAL_MS`, so the relay sends the aim before the move.
+pub const BOT_AIM_LEAD_MIN_MS: i64 = 250;
+/// R639000: the longest.
+pub const BOT_AIM_LEAD_MAX_MS: i64 = 600;
+/// R639000: the shortest a bot stays on a finished ranked match (R672), present for a rematch.
+pub const BOT_REMATCH_LINGER_MIN_MS: i64 = 4_000;
+/// R639000: the longest; always well inside `REMATCH_OFFER_TTL_MS`.
+pub const BOT_REMATCH_LINGER_MAX_MS: i64 = 15_000;
+/// R639000: the shortest a bot waits before it offers a rematch, or meets a person's offer.
+pub const BOT_REMATCH_DELAY_MIN_MS: i64 = 1_500;
+/// R639000: the longest; always under `BOT_REMATCH_LINGER_MIN_MS`, so an offer goes inside the linger.
+pub const BOT_REMATCH_DELAY_MAX_MS: i64 = 3_500;
 /// R1452: the quickest a bot moves, decision included.
 pub const BOT_THINK_MIN_MS: i64 = 600;
 /// R1452: the longest it waits before a move.

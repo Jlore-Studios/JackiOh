@@ -301,7 +301,7 @@ fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
 }
 
 /// R263: forget the `open` skeleton `tickets_claim_pair` wrote, in its own transaction.
-async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
+pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
     let mut tx = app
         .db
         .begin(None)
