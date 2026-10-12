@@ -1,23 +1,32 @@
 # The AI training lanes
 
 Two lanes that keep improving JackiOh's AI (`crates/ai/`, SPEC §9.9), each a Devin session after
-another on the training box, each gated by a fixed number of games against the AI on `main`. They
+another on the training box, each gated by a fixed number of games against the AI on `main`, and
+nothing else: since generation 9 they play no games against random (R732001). They
 succeed #55's ladder (the Python `ladder/` that v0.3.0 replaced and deleted). The design is docs/v0.3.0/README.md §8; the interfaces are
 docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
 |---|---|---|
-| `improve` | a stronger AI: beat its predecessor in 75 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
-| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100. **Done at generation 8** (2026-10-10), which lifted the last ban | [`unban.md`](unban.md) |
+| `improve` | a stronger AI: beat its predecessor in 65 of 100 games | [`improve.md`](improve.md) |
+| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
 
-The unban lane is done. Generation 8 (`training/history/unban.jsonl`) removed the last entry of
-`SHADOW_BAN`, and no AI can keep strictly fewer cards out of its decks than none, so no unban
-promotion can pass again: `promote --lane unban` refuses to play its games (The gate), and a session
-on [`unban.md`](unban.md) stops before it does any work. Its service, `jackioh-train@unban`, idles:
-`loop.sh` starts no session while the parent bans no card, and looks again every
-`TRAIN_IDLE_SECONDS` (How a lane runs, step 2). The lane has work again once an entry is added to the
-table: #616's sweep of record does that for the Meditative cards the AI misplays when it lifts
-R1390's gate, and the first cycle after it starts a session.
+Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
+Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
+Meditative set into the AI's decks: it lifted R1390's gate after a sweep of record over the set's 102
+cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans are the unban
+lane's work now. The shadow ban holds Meditative cards only (R732000): no lane, sweep or person adds
+a card of an earlier set to it, and the lanes only ever remove entries.
+
+While the table is empty the unban lane idles: no AI can keep strictly fewer cards out of its decks
+than none, so `promote --lane unban` refuses to play its games (The gate), and `loop.sh` starts no
+session, looking again every `TRAIN_IDLE_SECONDS` (How a lane runs, step 2).
+
+The lanes played 100 games against SPEC §10.7's random policy too, needing 90, until generation 9,
+the first AI dealt the Meditative set, beat random in at least 90 of 100 (R732001). Since then they
+measure a candidate against its parent alone, at 65 of 100 for `improve` and 60 for `unban`. The
+daily quality gates (`cargo jackioh gate --full`) still hold the AI on `main` to their floor against
+random, so an AI that forgets how to beat random fails the daily run.
 
 ## How a lane runs
 
@@ -41,7 +50,7 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
      fewer bans, so a session could do nothing. The lane retitles its draft
      `AI gen <N> (unban): idle, the AI on main bans no card`, says so once in a comment, and looks
      again every `TRAIN_IDLE_SECONDS` (15 minutes). The first cycle after `main`'s AI bans a card
-     again starts a session. A sweep of record adds such bans, as #616's does for the Meditative set,
+     again starts a session. A sweep of record adds such bans, as #732's did for the Meditative set,
      and both standing prompts send the lanes to the Meditative cards first.
    - Otherwise push `ai/<lane>` as `main` plus an empty `[skip ci]` commit naming the session, and
      make the lane's pull request this session's draft, titled
@@ -95,28 +104,27 @@ The engine (`crates/engine`), the cards (`crates/cards`), every test outside `cr
 ## The gate
 
 `cargo jackioh promote --lane <lane> --parent-bin <parent> [--dry-run] [--verify]` plays
-`TRAINING_GAMES` (100) games against SPEC §10.7's random policy and 100 against the parent:
+`TRAINING_GAMES` (100) games against the parent:
 
 - game `k`'s seed is `<lane>:<tree>:<k>`, where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
-  the seeds name the AI being measured and committing `generation.json` does not move them; the
-  same seeds are played against both opponents;
+  the seeds name the AI being measured and committing `generation.json` does not move them;
 - the candidate sits p1 on odd games and p2 on even ones;
-- each seat's deck is `build_ai_deck` over all three sets minus its own AI's shadow ban, with no
-  handicap (Easy both). The random seat is dealt the candidate's ban list, as the quality gates
-  deal it;
+- each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
+  generation 9) minus its own AI's shadow ban, with no handicap (Easy both);
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
-| Lane | vs random | vs parent | Shadow bans |
-|---|---|---|---|
-| `improve` | ≥ 90 of 100 (`TRAINING_IMPROVE.vs_random`) | ≥ 75 of 100 (`TRAINING_IMPROVE.vs_parent`) | — |
-| `unban` | ≥ 90 of 100 (`TRAINING_UNBAN.vs_random`) | ≥ 65 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
+| Lane | vs parent | Shadow bans |
+|---|---|---|
+| `improve` | ≥ 65 of 100 (`TRAINING_IMPROVE.vs_parent`) | — |
+| `unban` | ≥ 60 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
 
-A draw is not a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a
-failed gate. The report (Markdown) goes to stdout.
+It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
+a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a failed gate. The
+report (Markdown) goes to stdout.
 
 Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
-none), so `promote --lane unban` says the lane is done and exits 1 before it plays a game, whatever
-the flag, writing nothing and printing no report.
+none), so `promote --lane unban` says the lane has nothing to do and exits 1 before it plays a game,
+whatever the flag, writing nothing and printing no report.
 
 - `--dry-run` measures and writes nothing. It runs on a working copy with uncommitted changes in
   `crates/ai/src` (on HEAD's seeds, and says so).
@@ -182,13 +190,18 @@ promotion of that lane, oldest first:
   the seeds (`<lane>:<tree>:1` … `:100`), so anyone can re-run the gate:
   `git checkout <parent> && cargo build --release -p jackioh-tools && cp target/release/jackioh /tmp/parent`,
   then on the promotion's commit `cargo jackioh promote --lane <lane> --parent-bin /tmp/parent --verify`.
-- `vsRandom`, `vsParent`: the candidate's wins out of `TRAINING_GAMES`.
+- `vsRandom`, `vsParent`: the candidate's wins out of `TRAINING_GAMES`. `vsRandom` is `null` from
+  generation 10 on: the lanes play no random games (R732001).
 - `shadowBan`, `parentShadowBan`: how many cards each AI keeps out of its own decks (R186).
 
 ```sh
 jq -r '[.generation, .date, .vsRandom, .vsParent, .shadowBan] | @tsv' training/history/*.jsonl
 git log --oneline -- crates/ai/generation.json   # every generation's pull request
 ```
+
+Generation 9 is not a lane's: it is #732's one-off measurement of the AI with the Meditative set in
+its decks (lane `meditative`, `training/history/meditative.jsonl`), against random and against
+generation 8, recorded when it lifted R1390's gate.
 
 Generation 0 is the port of the last TypeScript AI (before v0.3.0, `packages/ai` at `91cc43c`, which won 94 of 100
 against random, 35 of 50 against greedy and 47 of 50 as Hard against Easy). Its record says

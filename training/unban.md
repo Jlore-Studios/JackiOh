@@ -4,24 +4,27 @@ You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comm
 `crates/ai/src/`) so that it plays well with fewer shadow-banned cards. The shadow ban (R186,
 `crates/ai/src/shadow_ban.rs`) lists the cards the AI never deals into its own decks, because it
 played them badly. Your goal is to remove entries from it, teaching the AI to play those cards,
-while the AI still beats its predecessor, the AI on `main`, in at least 65 of 100 games and SPEC
-§10.7's random policy in at least 90 of 100. A promotion needs strictly fewer shadow bans than the
-parent's. The lane is described in `training/README.md`; read it first.
+while the AI still beats its predecessor, the AI on `main`, in at least 60 of 100 games. A promotion
+needs strictly fewer shadow bans than the parent's. The gate plays no games against random
+(R732001): generation 9 beat random in at least 90 of 100, and the daily quality gates still check
+that every AI on `main` does. The lane is described in `training/README.md`; read it first.
 
-## First: is the lane done?
+## First: is there anything to unban?
 
 Before anything else, open `crates/ai/src/shadow_ban.rs` and find `pub const SHADOW_BAN`. Generation
-8 (2026-10-10) removed its last entry. While it reads `pub const SHADOW_BAN: &[(&str, &str)] = &[];`
-the lane is done: no AI can keep strictly fewer cards out of its decks than none, so no promotion
-can pass, and `promote --lane unban` refuses to play its games. Then stop at once:
+8 (2026-10-10) removed the last ban on the earlier sets, and generation 9 (#732) banned the Meditative
+cards its sweep of record found the AI misplays. While the table reads
+`pub const SHADOW_BAN: &[(&str, &str)] = &[];` the lane has nothing to do: no AI can keep strictly
+fewer cards out of its decks than none, so no promotion can pass, and `promote --lane unban` refuses
+to play its games. Then stop at once:
 
 1. Run nothing that builds or plays games: no `promote`, `arena`, `sweep`, `trace` or `cargo test`.
 2. Change nothing and commit nothing, so the session leaves no promotion. (`loop.sh` starts no
    session while the table on `main` is empty, so a session sees this only when it began before
    the loop knew; the draft pull request stays a draft, and the loop idles from its next cycle.) Do not take up other work instead: `SHADOW_WATCH` is the sweep's (R390), and the
    `improve` lane is another lane's.
-3. Append one entry to `~/training-out/unban/attempts.md`: the date and "lane done: `SHADOW_BAN` is
-   empty; nothing tried".
+3. Append one entry to `~/training-out/unban/attempts.md`: the date and "nothing to unban:
+   `SHADOW_BAN` is empty; nothing tried".
 4. End the session.
 
 Everything below is for a table that still has entries.
@@ -35,7 +38,9 @@ Everything below is for a table that still has entries.
    `TRAINING_IMPROVE`, `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
-3. Only remove entries from `SHADOW_BAN`; never add one, and keep the table sorted by id. When you
+3. Only remove entries from `SHADOW_BAN`; never add one, and keep the table sorted by id. Above all
+   never add a card of an earlier set (Core, Classic, Classic+): the table holds Meditative cards
+   only (R732000), and a test fails on any other. When you
    remove one, say in the comment above the table which generation removed it and why the AI now
    plays it. `SHADOW_WATCH` is the sweep's (R390): leave it. Do not raise `AI_BUDGET` or
    `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit (SPEC §9.9). Leave
@@ -50,26 +55,27 @@ Everything below is for a table that still has entries.
 
 The Meditative set (102 cards, SPEC §8.8, `crates/cards/src/scripts/meditative/`) is the newest set and
 the one the AI has played least. Its cards bring new prompt kinds (the crafter, the market, the secret
-choice, the prediction), Jade, Luck, extra turns and wins by effect. For a while R1390's soft gate
-(`AI_DECK_GATED_SETS` in `crates/ai/src/config.rs`) kept every Meditative card out of the AI's decks.
-Issue #616 lifts it: it runs the sweep of record over the whole catalog, shadow-bans the Meditative
-cards the AI misplays (at most 20 of the 102) and empties the gate. From then on most of `SHADOW_BAN`
-is Meditative cards. They are this lane's first work, since each one unbanned is a card of the new set
-that the AI deals itself and plays:
+choice, the prediction), Jade, Luck, extra turns and wins by effect. For a while R1390's soft gate kept
+every Meditative card out of the AI's decks. Generation 9 (#732) lifted it after a sweep of record over
+the set, which shadow-banned the Meditative cards the AI misplays (at most half the set) and no card of
+an earlier set. So every entry of `SHADOW_BAN` is a Meditative card, and each one unbanned is a card
+of the new set that the AI deals itself and plays:
 
-- Take the `meditative-…` entries before any other, one card or one family at a time. Cards that share
-  a prompt kind or a subsystem (the market's cards, the Jade cards, the Luck cards) usually share a
-  fix.
+- Take the entries one card or one family at a time. Cards that share a prompt kind or a subsystem
+  (the market's cards, the Jade cards, the Luck cards) usually share a fix.
 - An entry's reason says what the sweep saw. `neverPlayed` is an evaluation blind spot: the beam never
   finds the line worth it, and the generation notes above the table show how earlier unbans priced
-  one. `selfHarm` and `selfKill` are misplays. `timeout` is a decision too slow at the browser's budget.
+  one. `selfHarm` and `selfKill` are misplays. `timeout` is a decision too slow at the browser's budget
+  (over two seconds): find what makes the search slow in the states the card brings about (many cheap
+  random spells in hand, a huge hand, a long game's state) and make it faster. That is most of
+  generation 9's table.
 - `cargo jackioh sweep meditative-<nnn>` runs R186's sweep on one card on your build: it forces the
   card into AI decks at Easy and Hard and says whether the AI played it and how it went. Check every
-  unban this way before the gate.
+  unban this way before the gate. A card leaves the table only when the sweep on your build no longer
+  flags it.
 
-While the gate still lists Meditative, the ban list holds no Meditative card, and work on one cannot
-promote. When `SHADOW_BAN` is empty the lane has nothing it could promote at all, and the loop starts no
-session until `main`'s AI bans a card again (`training/README.md`, How a lane runs).
+When `SHADOW_BAN` is empty the lane has nothing it could promote, and the loop starts no session until
+`main`'s AI bans a card again (`training/README.md`, How a lane runs).
 
 ## How you measure
 
@@ -79,10 +85,10 @@ Measure with
 cargo jackioh promote --lane unban --parent-bin ~/parent-jackioh --dry-run
 ```
 
-It plays 100 games against random and 100 against the parent (`~/parent-jackioh`, built from
-`main`; its seats keep the parent's own shadow ban, yours keep yours) and prints the gate's report:
-wins against each, the 90 and 65 needed, both ban counts, and draws and games without a result
-(neither counts as a win). A dry run measures your uncommitted change on the seeds of HEAD's
+It plays 100 games against the parent (`~/parent-jackioh`, built from `main`; its seats keep the
+parent's own shadow ban, yours keep yours) and prints the gate's report: wins, the 60 needed, both
+ban counts, and draws and games without a result (neither counts as a win). It plays no games
+against random. A dry run measures your uncommitted change on the seeds of HEAD's
 `crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them: check a
 change on other seeds too, for example
 
@@ -131,7 +137,7 @@ why it will go differently.
 
 1. Keep each attempt small: one card (or one family of cards) and the change that teaches the AI to
    play it. Before you start the next one, add an entry to `~/training-out/unban/attempts.md`: the
-   date, the card ids, what you changed and why, the dry run's numbers (vs random, vs parent, bans),
+   date, the card ids, what you changed and why, the dry run's numbers (vs parent, bans),
    and whether you kept or reverted it.
 2. The gate reads the AI from git, so a promotion is made in this order, and only this order:
    1. When a dry run passes, commit your `crates/ai` change:

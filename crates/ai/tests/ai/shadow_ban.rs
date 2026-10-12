@@ -1419,3 +1419,48 @@ mod v12 {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R732000: the shadow ban holds Meditative cards only, at most half of the set (issue #732)
+// ---------------------------------------------------------------------------------------------
+
+mod r732000_the_shadow_ban_holds_meditative_cards_only {
+    use super::*;
+
+    /// The Meditative set's non-token cards.
+    const MEDITATIVE_CARDS: usize = 102;
+    /// R732000: the most of them the table may hold, so that the AI deals itself at least half the set.
+    const MEDITATIVE_BAN_CAP: usize = MEDITATIVE_CARDS / 2;
+
+    #[test]
+    fn r732000_no_card_of_an_earlier_set_is_banned_and_at_most_half_the_meditative_set_is() {
+        jackioh_cards::register_all();
+        let meditative: Vec<String> = ai_pool()
+            .into_iter()
+            .filter(|id| def_of(None, id).set == SetName::Meditative)
+            .collect();
+        assert_eq!(meditative.len(), MEDITATIVE_CARDS);
+        for &(def_id, _) in SHADOW_BAN {
+            assert_eq!(
+                def_of(None, def_id).set,
+                SetName::Meditative,
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
+            );
+        }
+        assert!(
+            SHADOW_BAN.len() <= MEDITATIVE_BAN_CAP,
+            "{} of the {MEDITATIVE_CARDS} Meditative cards banned, more than half",
+            SHADOW_BAN.len()
+        );
+        assert!(MEDITATIVE_CARDS - SHADOW_BAN.len() >= MEDITATIVE_CARDS.div_ceil(2));
+    }
+
+    #[test]
+    fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
+        // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
+        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
+        assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
+        assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");
+    }
+}
