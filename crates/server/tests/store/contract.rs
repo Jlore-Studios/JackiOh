@@ -46,9 +46,9 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
-    GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
-    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
+    Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
     TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
@@ -1160,11 +1160,87 @@ mod codes {
         assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
+    /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
+    /// are not, and the window decides which attempts count. `accounts` is distinct profiles (a
+    /// second attempt by one adds to `attempts` only, and an attempt with no profile to neither
+    /// count of accounts), and the rows come back ordered by hash.
+    async fn lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each(
+        harness: &StoreHarness,
+    ) {
+        let now = harness.now();
+        let window = 3_600_000;
+        let shared = format!("ip-shared-{}", id());
+        let mut accounts = Vec::new();
+        for _ in 0..6 {
+            accounts.push(pending_profile(harness, None).await);
+        }
+        let log = |profile: Option<&Profile>, ip_hash: &str, at: i64| -> CodeAttempt {
+            from(json!({
+                "profileId": profile.map(|p| p.id.as_str()),
+                "ipHash": ip_hash,
+                "result": "rejected",
+                "reason": "missing",
+                "at": at,
+            }))
+        };
+        // Six accounts, one attempt each, from the shared hash; the first tries twice and one attempt
+        // is signed in as nobody.
+        for profile in &accounts {
+            let attempt = log(Some(profile), &shared, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+        let again = log(Some(&accounts[0]), &shared, now - 5);
+        let anonymous = log(None, &shared, now - 5);
+        q!(harness, t => t.codes_log_attempt(&again));
+        q!(harness, t => t.codes_log_attempt(&anonymous));
+        // A seventh account's attempt from the same hash, a second past the window.
+        let late_comer = pending_profile(harness, None).await;
+        let stale = log(Some(&late_comer), &shared, now - window - 1000);
+        q!(harness, t => t.codes_log_attempt(&stale));
+        // One account, six hashes, one attempt each.
+        let solo = pending_profile(harness, None).await;
+        let singles: Vec<String> = (0..6).map(|n| format!("ip-solo-{n}-{}", id())).collect();
+        for ip_hash in &singles {
+            let attempt = log(Some(&solo), ip_hash, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+
+        let cluster = |ip_hash: &str, accounts: i64, attempts: i64| InviteCluster {
+            ip_hash: ip_hash.to_owned(),
+            accounts,
+            attempts,
+        };
+        let expected = |shared_row: InviteCluster| {
+            let mut rows: Vec<InviteCluster> = singles.iter().map(|hash| cluster(hash, 1, 1)).collect();
+            rows.push(shared_row);
+            rows.sort_by(|a, b| a.ip_hash.cmp(&b.ip_hash));
+            rows
+        };
+
+        // Inside the window: six accounts and eight attempts behind the shared hash, and one account
+        // behind each of the others.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window)),
+            expected(cluster(&shared, 6, 8)),
+        );
+        // A window wide enough for the stale attempt counts its account too.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window - 2000)),
+            expected(cluster(&shared, 7, 9)),
+        );
+        // Past every attempt there is nothing to list.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now + 60_000)),
+            Vec::new()
+        );
+    }
+
     both_stores!(
         round_trips_a_code_by_its_hash,
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
 
