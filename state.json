@@ -4805,6 +4805,11 @@
     "744": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-12T17:27:50Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "feb4db2af6584eacabfe05c0f4e1235d51ce0620"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
