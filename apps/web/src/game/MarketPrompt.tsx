@@ -55,7 +55,7 @@ function Lot(props: { option: PendingOption; onPick: () => void }) {
         type="button"
         className="market-deal"
         data-testid={testId}
-        aria-label={`${props.option.label}, ${String(price)} yuan`}
+        aria-label={t("{name}, {price} yuan", { name: drawnInChinese(false) ? caption : props.option.label, price })}
         onClick={props.onPick}
         {...inspect.handlers}
       >
@@ -82,7 +82,7 @@ function Barter(props: { option: PendingOption; onPick: () => void }) {
         type="button"
         className="market-deal"
         data-testid={`prompt-option-${props.option.key}`}
-        aria-label={`Barter ${name} for ${String(gain)} yuan`}
+        aria-label={t("Barter {name} for {gain} yuan", { name, gain })}
         onClick={props.onPick}
       >
         <span className="market-caption">{name}</span>
@@ -130,7 +130,7 @@ export default function MarketPrompt(props: MarketProps) {
         data-animating={props.animating}
         role="dialog"
         aria-modal="true"
-        aria-label="Night market"
+        aria-label={t("Night market")}
         onKeyDown={onKeyDown}
       >
         <header className="market-header">
@@ -149,14 +149,14 @@ export default function MarketPrompt(props: MarketProps) {
             {t("Nothing on the stall you can buy.")}
           </p>
         ) : (
-          <ul className="market-stall" aria-label="The stall">
+          <ul className="market-stall" aria-label={t("The stall")}>
             {lots.map((option) => (
               <Lot key={option.key} option={option} onPick={() => pick(option.key)} />
             ))}
           </ul>
         )}
         {barters.length > 0 ? (
-          <section className="market-barters" aria-label="Barter from your hand">
+          <section className="market-barters" aria-label={t("Barter from your hand")}>
             <h3>{t("Barter from your hand")}</h3>
             <ul className="market-barter-list">
               {barters.map((option) => (

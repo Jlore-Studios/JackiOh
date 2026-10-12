@@ -6,7 +6,7 @@
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
-  RATING_WINDOW_UNCAPPED_AFTER_SECONDS,
+  RATING_WINDOW_FULL_AFTER_SECONDS,
   SERIES_POLL_SECONDS,
   SERIES_WINS_NEEDED,
 } from "../../../apps/web/src/wire/serverConfig.ts";
@@ -59,9 +59,9 @@ import {
 
 const MS_PER_SECOND = 1000;
 
-/** Allow the uncapped §9.5/R108 window, a sweep, poll, and render. */
+/** Allow the §9.5/R108 window to reach MAX_FAIR_GAP (R640001), a sweep, poll, and render. */
 const PAIRING_TIMEOUT_MS =
-  (RATING_WINDOW_UNCAPPED_AFTER_SECONDS + MATCHMAKER_SWEEP_INTERVAL_SECONDS + SERIES_POLL_SECONDS) *
+  (RATING_WINDOW_FULL_AFTER_SECONDS + MATCHMAKER_SWEEP_INTERVAL_SECONDS + SERIES_POLL_SECONDS) *
     MS_PER_SECOND +
   timeouts.view;
 

@@ -345,7 +345,7 @@ function Actions(): ReactElement {
           href={`${paths.hotseat}?seed=42&a=first20&b=first20`}
           data-testid={landingTestid.hotseat}
         >
-          Hotseat: both seats on this device
+          {t("Hotseat: both seats on this device")}
         </a>
       ) : null}
     </nav>

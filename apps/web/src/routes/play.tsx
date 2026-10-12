@@ -1,6 +1,7 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
-// R1372). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
-// Room links only prefill, queue counts stay on mode tiles, and rank never exposes its hidden rating.
+// R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
+// Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
+// and rank never exposes its hidden rating.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -47,6 +48,8 @@ import "./lobby.css";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
+/** Unit conversion, not configuration. */
+const SECONDS_PER_MINUTE = 60;
 
 /** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
 export const playTestid = {
@@ -67,8 +70,8 @@ export const playTestid = {
   deckSelect: "play-deck-select",
   trioSelect: "play-trio-select",
   verdict: "play-choice-verdict",
-  /** R505: queue counts belong on the mode tiles. */
-  population: "play-population",
+  /** R505, R640002: the last hour's games, under the mode tiles; each tile carries its own wait. */
+  recentGames: "play-recent-games",
   decksLink: "play-decks-link",
   seriesLink: "play-series-link",
   copyRoomCode: "play-copy-room-code",
@@ -89,6 +92,24 @@ const MODE_TESTID: Readonly<Record<QueueMode, string>> = {
 
 export function playModeTestid(mode: QueueMode): string {
   return MODE_TESTID[mode];
+}
+
+/** R640002: the expected wait on a mode's tile. */
+export function playWaitTestid(mode: QueueMode): string {
+  return `play-wait-${mode}`;
+}
+
+/** R640002: an expected wait the server counted, in seconds, as its tile says it. */
+export function waitWords(seconds: number): string {
+  if (seconds < SECONDS_PER_MINUTE) return t("Usually under {n} s", { n: String(seconds) });
+  return t("Usually under {n} min", { n: String(Math.ceil(seconds / SECONDS_PER_MINUTE)) });
+}
+
+/** R640002: the games that ended in the last hour, bot games among them. */
+export function recentGamesWords(games: number): string {
+  return games === 1
+    ? t("1 game played in the last hour")
+    : t("{count} games played in the last hour", { count: String(games) });
 }
 
 /** R330 calls wire mode `bo3` Conquest. */
@@ -605,7 +626,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const choice = choiceFor(mode, deck, trio, leanNewest);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
-  // Population is informational, never a blocker.
+  // The readout is informational, never a blocker.
   const refreshPopulation = useCallback((): void => {
     attempt(() => getPopulation(token)).then(setPopulation, () => undefined);
   }, [token]);
@@ -714,7 +735,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       // R765 queue state follows the player across routes.
       rememberQueued(chosen.mode);
       refreshPopulation();
-      // R505 status names the queue but never its population.
+      // R505, R640002: the status names the queue, never its readout.
       setStatus({ kind: "queued", mode: chosen.mode });
     });
   }
@@ -769,7 +790,8 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const noChoice = choice === null;
   const locked = waiting || found;
   const queued = waiting && room === null && !found;
-  const byMode = population?.byMode;
+  const expectedWait = population?.expectedWaitSeconds;
+  const games = population?.gamesLastHour ?? 0;
 
   return (
     <div className="app-shell tavern lobby play-screen" data-waiting={locked ? "true" : "false"}>
@@ -822,45 +844,47 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             </span>
             {t("How do you want to play?")}
           </h2>
-          <fieldset
-            className="lobby-modes"
-            data-testid={playTestid.population}
-            data-bo1={byMode?.bo1}
-            data-bo3={byMode?.bo3}
-            data-random={byMode?.random}
-          >
+          <fieldset className="lobby-modes">
             <legend className="lobby-modes__legend">{t("Mode")}</legend>
-            {QUEUE_MODES.map((option) => (
-              <label
-                key={option}
-                className="lobby-mode play-mode-tile"
-                data-selected={option === mode ? "true" : "false"}
-                data-mode={option}
-              >
-                <input
-                  type="radio"
-                  name="play-mode"
-                  value={option}
-                  checked={option === mode}
-                  data-testid={playModeTestid(option)}
-                  disabled={locked}
-                  onChange={() => {
-                    dropLinkStatus(mode);
-                    setMode(option);
-                  }}
-                />
-                <ModeIcon mode={option} />
-                <span className="lobby-mode__text">
-                  <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
-                </span>
-                {byMode === undefined ? null : (
-                  <span className="play-mode-tile__waiting">
-                    {t("{count} waiting", { count: String(byMode[option]) })}
+            {QUEUE_MODES.map((option) => {
+              const wait = expectedWait?.[option] ?? null;
+              return (
+                <label
+                  key={option}
+                  className="lobby-mode play-mode-tile"
+                  data-selected={option === mode ? "true" : "false"}
+                  data-mode={option}
+                >
+                  <input
+                    type="radio"
+                    name="play-mode"
+                    value={option}
+                    checked={option === mode}
+                    data-testid={playModeTestid(option)}
+                    disabled={locked}
+                    onChange={() => {
+                      dropLinkStatus(mode);
+                      setMode(option);
+                    }}
+                  />
+                  <ModeIcon mode={option} />
+                  <span className="lobby-mode__text">
+                    <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
                   </span>
-                )}
-              </label>
-            ))}
+                  {wait === null ? null : (
+                    <span className="play-mode-tile__waiting" data-testid={playWaitTestid(option)}>
+                      {waitWords(wait)}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </fieldset>
+          {games === 0 ? null : (
+            <p className="lobby-note" data-testid={playTestid.recentGames}>
+              {recentGamesWords(games)}
+            </p>
+          )}
 
           <h2 className="play-panel__heading play-panel__heading--sub">
             <span className="play-step" aria-hidden="true">

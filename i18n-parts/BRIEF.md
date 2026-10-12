@@ -130,3 +130,15 @@ you wrapped; the commands you ran and their results.
 - An earlier agent may have half-converted your files. Read each file whole and finish it.
 - A tutorial step's `title`/`text` may be a string (looked up by `textOf`, so the literal is a key:
   add it to your fragment) or a function returning a built `t(…)` line.
+
+## Run 9 additions
+
+- Every earlier fragment is merged into `apps/web/src/i18n/zh-CN.json` (about 1470 entries) and the
+  fragment files are gone. Read `zh-CN.json` for the words already chosen and stay consistent with
+  them. Write only your own fragment, named in your task.
+- Engine and server English reaches the screen complete (the values filled in by Rust). A key with
+  `{name}` tokens matches such a finished sentence whole (anchored, `{name}` matches any text), so
+  write the key as the Rust `format!` template with each `{}` placeholder named (`"Choose {n}
+  cards"`). Never write a key that is only tokens and punctuation (`"{a}: {b}"`): it would match
+  every sentence of that shape. A key with no tokens must be the exact sentence, punctuation
+  included.

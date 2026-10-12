@@ -104,6 +104,9 @@ const listeners = new Set<() => void>();
 
 const TOKEN = /\{(\w+)\}/g;
 
+/** The fewest words of its own a `{name}` key needs to match a finished sentence. */
+const MIN_PATTERN_WORDS = 2;
+
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -119,7 +122,9 @@ function patternsOf(dictionary: Dictionary): Pattern[] {
       names.push(match[1] ?? "");
       last = match.index + match[0].length;
     }
-    if (names.length > 0) {
+    // A key whose own words are fewer than two ("{n} cards") would take any sentence that ends the
+    // same way and leave it half translated, so it only ever answers its own calls.
+    if (names.length > 0 && (key.replace(TOKEN, " ").match(/\p{L}+/gu) ?? []).length >= MIN_PATTERN_WORDS) {
       const regex = new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s");
       patterns.push({ key, names, regex, literal: key.replace(TOKEN, "").length });
     }

@@ -32,7 +32,7 @@ import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKin
 
 import { costPhrase, useInspectTrigger } from "../cards/index.ts";
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
-import { useLocale } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
@@ -644,7 +644,7 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   const touchHold = touchHoldMode(view);
 
   return (
-    <ol ref={listRef} className="log" data-testid={testid.log} aria-label="Game log">
+    <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
       {lines.map((line, index) => (
         <Fragment key={line.key}>
           {index > 0 && line.type === "turnStarted" ? <li className="log-divider" role="separator" /> : null}

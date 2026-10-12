@@ -157,7 +157,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Content and availability",
       "<p>JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game " +
         "updates can change cards, mechanics, and progression.</p>",
-    ),
+    ) +
+    section("Ranked play", "<p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>"),
   [paths.accessibility]:
     section(
       "Our goal",

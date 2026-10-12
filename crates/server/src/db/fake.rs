@@ -107,8 +107,8 @@ use crate::db::store::{
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
     RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
     Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow,
-    StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    StoreError, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -190,6 +190,8 @@ pub struct FakeTables {
     // R1450: the reservations Postgres holds as open rows.
     pub reserved: Vec<ReservedMatch>,
     pub tickets: Vec<Ticket>,
+    /// R640002: `tickets.claimed_at`, by ticket id.
+    pub ticket_claims: IndexMap<String, i64>,
     pub results: Vec<ResultRow>,
     // TutorialTables: the table R320 adds (`public.tutorial_progress`, migration 0011): one row per profile.
     pub tutorial: Vec<TutorialProgressRow>,
@@ -1415,8 +1417,7 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .count() as i64)
 }
 
-/// R257: open tickets per mode, for the lobby's per-mode population. Every mode is present, in TS's
-/// order (`bo1`, `bo3`, `random`).
+/// R257: open tickets per mode. Every mode is present, in TS's order (`bo1`, `bo3`, `random`).
 pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
     call(f, "tickets.countOpenByMode")?;
     let mut counts: PerMode<i64> = PerMode::default();
@@ -1426,6 +1427,29 @@ pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, St
         }
     }
     Ok(counts)
+}
+
+/// R640002: the waits of the tickets claimed at or after `since`, oldest claim first, ties on id.
+pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
+    call(f, "tickets.recentWaits")?;
+    let tables = f.tables();
+    let mut claimed: Vec<(i64, &Ticket)> = tables
+        .tickets
+        .iter()
+        .filter(|ticket| ticket.status == TicketStatus::Matched)
+        .filter_map(|ticket| {
+            let claimed_at = *tables.ticket_claims.get(&ticket.id)?;
+            (claimed_at >= since).then_some((claimed_at, ticket))
+        })
+        .collect();
+    claimed.sort_by(|(a_at, a), (b_at, b)| a_at.cmp(b_at).then_with(|| a.id.cmp(&b.id)));
+    Ok(claimed
+        .into_iter()
+        .map(|(claimed_at, ticket)| TicketWait {
+            mode: ticket.mode,
+            waited_ms: (claimed_at - ticket.enqueued_at).max(0),
+        })
+        .collect())
 }
 
 /// §9.5: "both tickets are claimed in one atomic statement".
@@ -1455,6 +1479,8 @@ pub fn tickets_claim_pair(
         ticket.status = TicketStatus::Matched;
         ticket.match_id = Some(match_id.to_string());
     }
+    tables.ticket_claims.insert(a_id.to_string(), at);
+    tables.ticket_claims.insert(b_id.to_string(), at);
     tables.reserved.push(ReservedMatch {
         match_id: match_id.to_string(),
         claimed_at: at,
@@ -2758,7 +2784,9 @@ pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Resu
     Ok(())
 }
 
-/// Every row of a season, each with the player's current rating, in profile-id order.
+/// Every row of a season, each with the player's current rating, in profile-id order. R640000: a
+/// ladder bot's row carries the bot's own rating (R610), as Postgres's join reads it, and is
+/// marked `bot`.
 pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standings")?;
     let tables = f.tables();
@@ -2768,9 +2796,14 @@ pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<Seaso
         .filter(|row| row.season_id == season_id)
         .filter_map(|row| {
             let profile = tables.profiles.iter().find(|p| p.id == row.profile_id)?;
+            let bot = profile.kind == ProfileKind::Bot;
+            let own = bot
+                .then(|| tables.bots.iter().find(|rating| rating.bot_id == profile.id))
+                .flatten();
             Some(SeasonStanding {
                 rank: row.clone(),
-                rating: profile.rating,
+                rating: own.map_or(profile.rating, |rating| rating.glicko.rating),
+                bot,
             })
         })
         .collect();
@@ -3034,6 +3067,7 @@ pub fn tickets_claim_for_bot(
     };
     ticket.status = TicketStatus::Matched;
     ticket.match_id = Some(match_id.to_string());
+    tables.ticket_claims.insert(ticket_id.to_string(), at);
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
     }
@@ -3165,6 +3199,16 @@ pub fn results_count_active_humans(f: &mut FakeTx<'_>, since: i64) -> Result<i64
         .filter(|id| humans.contains(id))
         .collect();
     Ok(active.len() as i64)
+}
+
+/// R640002: the results that ended at or after `since`, games against a bot included.
+pub fn results_count_since(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
+    call(f, "results.countSince")?;
+    Ok(f.tables()
+        .results
+        .iter()
+        .filter(|row| row.ended_at >= since)
+        .count() as i64)
 }
 
 /// R611: one row per rated game. Rejects a second row for the same id.

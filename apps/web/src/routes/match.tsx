@@ -331,7 +331,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           {DEV_ONLY ? (
             <>
               {" "}
-              · match <code>{matchId}</code> · <code>{withoutToken(match.url)}</code>
+              · {t("match")} <code>{matchId}</code> · <code>{withoutToken(match.url)}</code>
             </>
           ) : null}
         </p>
@@ -406,7 +406,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           {t("Online match")} · <ConnectionLine state={match.connection} />
           {DEV_ONLY ? (
             <>
-              {" "}· match <code>{matchId}</code> · seat <code>{view.viewer}</code>
+              {" "}· {t("match")} <code>{matchId}</code> · {t("seat")} <code>{view.viewer}</code>
             </>
           ) : null}
         </>
