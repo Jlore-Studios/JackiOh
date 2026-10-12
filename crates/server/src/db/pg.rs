@@ -77,7 +77,7 @@ use crate::db::store::{
     PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
     RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, Ticket, TicketStatus,
+    SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
@@ -3239,6 +3239,32 @@ pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>
     Ok(counts)
 }
 
+/// R640002: the waits of the tickets claimed at or after `since`, a pair's or a bot's claim, oldest
+/// claim first, ties on id.
+pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select mode, enqueued_at, claimed_at from public.tickets
+          where status = 'claimed' and claimed_at >= ",
+        ts!("$1"),
+        " order by claimed_at, id"
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            let enqueued: OffsetDateTime = get(row, "enqueued_at")?;
+            let claimed: OffsetDateTime = get(row, "claimed_at")?;
+            Ok(TicketWait {
+                mode: queue_mode_of(&get::<String>(row, "mode")?)?,
+                waited_ms: (ms_of(claimed) - ms_of(enqueued)).max(0),
+            })
+        })
+        .collect()
+}
+
 /// §9.5: "both tickets are claimed in one atomic statement." That statement is
 /// `app.claim_ticket_pair` (migration 0004), which returns true only when it moved exactly two
 /// still-queued rows, so two matchers racing over one ticket cannot both win.
@@ -3310,11 +3336,18 @@ pub async fn tickets_claim_pair(
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
-    sqlx::query("update public.tickets set match_id = $3::uuid where id in ($1::uuid, $2::uuid)")
-        .bind(a_id)
-        .bind(b_id)
-        .bind(match_id)
-        .execute(&mut **t)
+    // R640002: the claim is stamped with the sweep's clock, as the fake stamps it, not the
+    // transaction's `now()` that `app.claim_ticket_pair` wrote: a wait runs from enqueue to here.
+    sqlx::query(concat!(
+        "update public.tickets set match_id = $3::uuid, claimed_at = ",
+        ts!("$4"),
+        " where id in ($1::uuid, $2::uuid)"
+    ))
+    .bind(a_id)
+    .bind(b_id)
+    .bind(match_id)
+    .bind(at)
+    .execute(&mut **t)
         .await
         .map_err(db_error)?;
     Ok(true)
@@ -4440,14 +4473,16 @@ pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> 
 
 /// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
 /// TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the rating, through their
-/// serde form.
+/// serde form. R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
 pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at, p.rating
+                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+                coalesce(b.rating, p.rating) as rating, p.kind
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
+           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text
           where r.season_id = $1::text
           order by r.profile_id",
     )
@@ -4459,10 +4494,12 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
         .map(|row| -> Result<SeasonStanding, StoreError> {
             let rank = to_season_rank(SeasonRankDbRow::read(row)?);
             let rating: f64 = get(row, "rating")?;
+            let kind: String = get(row, "kind")?;
             let mut standing =
                 serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
             if let Value::Object(fields) = &mut standing {
                 fields.insert(String::from("rating"), json!(rating));
+                fields.insert(String::from("bot"), json!(kind == "bot"));
             }
             from_json(standing)
         })
@@ -4781,12 +4818,16 @@ pub async fn tickets_claim_for_bot(
     if bot.is_none() {
         return Ok(false);
     }
-    let claimed = sqlx::query(
-        "update public.tickets set status = 'claimed', claimed_at = now()
+    // R640002: stamped with the sweep's clock, as `tickets_claim_pair` stamps a pair.
+    let claimed = sqlx::query(concat!(
+        "update public.tickets set status = 'claimed', claimed_at = ",
+        ts!("$2"),
+        "
           where id = $1::uuid and status = 'queued'
-          returning id",
-    )
+          returning id"
+    ))
     .bind(ticket_id)
+    .bind(at)
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -4951,6 +4992,20 @@ pub async fn results_count_active_humans(t: &mut PgTx<'_>, since: i64) -> Result
     .await
     .map_err(db_error)?;
     get(&row, "active")
+}
+
+/// R640002: the results that ended at or after `since`, games against a bot included.
+pub async fn results_count_since(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select count(*) as games from public.results where ended_at >= ",
+        ts!("$1")
+    ))
+    .bind(since)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    get(&row, "games")
 }
 
 /// R611's row, and R262's rate-once guard: `rated_games_pkey` refuses a second row for the same

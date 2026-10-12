@@ -245,8 +245,15 @@ pub const RATING_WINDOW_START: i64 = 100;
 pub const RATING_WINDOW_WIDEN_BY: i64 = 50;
 /// §9.5: the cadence, in seconds, at which the rating window widens.
 pub const RATING_WINDOW_WIDEN_EVERY_SECONDS: i64 = 10;
-/// §9.5: past this many seconds waited, the rating window is uncapped (any opponent qualifies).
-pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
+/// SPEC §11 R640001: the widest the rating window gets, in rating points: its width at the 60 s mark
+/// where it used to go uncapped. Two people further apart than this never pair, however long they
+/// wait; past it the empty-queue fallback (R1453) seats a bot instead.
+pub const MAX_FAIR_GAP: i64 = 400;
+/// R640001: the seconds a ticket waits before its window reaches `MAX_FAIR_GAP`. The gap is a whole
+/// number of widenings past `RATING_WINDOW_START`, so the window reaches it exactly at a widening.
+/// PUBLIC: e2e spec 19 reads it.
+pub const RATING_WINDOW_FULL_AFTER_SECONDS: i64 =
+    (MAX_FAIR_GAP - RATING_WINDOW_START) / RATING_WINDOW_WIDEN_BY * RATING_WINDOW_WIDEN_EVERY_SECONDS;
 
 // SPEC §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" — the exact cadence is
 // not fixed by SPEC.
@@ -255,20 +262,27 @@ pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
 // widen before being reconsidered, without hammering the ticket table.
 pub const MATCHMAKER_SWEEP_INTERVAL_SECONDS: i64 = 3;
 
+/// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
+/// claimed in it and the games that ended in it.
+pub const QUEUE_READOUT_WINDOW_SECONDS: i64 = 3600;
+/// R640002: the share of a mode's counted waits the expected wait is at least as long as: the upper
+/// quartile, so "usually under" holds for three waits in four.
+pub const QUEUE_WAIT_QUANTILE: f64 = 0.75;
+/// R640002: the fewest counted waits a mode needs before the readout states an expected wait.
+pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
+/// R640002: the expected wait is rounded up to the next multiple of this many seconds.
+pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
+
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
 ///
 /// At `waited_seconds = 0` this is `RATING_WINDOW_START`; it widens by `RATING_WINDOW_WIDEN_BY`
-/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS`, and returns `f64::INFINITY` (TS
-/// `Number.POSITIVE_INFINITY`) once `waited_seconds` passes `RATING_WINDOW_UNCAPPED_AFTER_SECONDS`
-/// (any opponent qualifies).
+/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS` and stops at `MAX_FAIR_GAP` (R640001), which it
+/// reaches at `RATING_WINDOW_FULL_AFTER_SECONDS`.
 pub fn rating_window(waited_seconds: f64) -> f64 {
-    if waited_seconds >= RATING_WINDOW_UNCAPPED_AFTER_SECONDS as f64 {
-        return f64::INFINITY;
-    }
     let clamped_wait = waited_seconds.max(0.0);
     let widen_steps = (clamped_wait / RATING_WINDOW_WIDEN_EVERY_SECONDS as f64).floor();
-    RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64
+    (RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64).min(MAX_FAIR_GAP as f64)
 }
 
 // ---------------------------------------------------------------------------------------------
