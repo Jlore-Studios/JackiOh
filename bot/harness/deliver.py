@@ -499,12 +499,23 @@ class Deliverer:
         comment."""
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
         rated = plan.get("rating") if isinstance(plan.get("rating"), dict) else None
-        if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
-            return ""
         labels = self._labels(number)
         record = self._record(number)
         if rating_source(labels, record) == "person":
             return ""
+        if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
+            # The planner left its rating line out (a weaker model may): the item routes as medium
+            # anyway, so say so on the thread instead of leaving it unlabelled. An earlier rating
+            # of the bot's own stands, and a later planner may raise this one.
+            if rating_source(labels, record) == "bot":
+                return ""
+            who, tier = self._planner()
+            self._set_difficulty(number, "medium", labels)
+            self._remember(number, difficulty_by={
+                "difficulty": "medium", "provider": self.provider.id, "tier": tier,
+                "at": iso(self.ctx.now()), "why": "the planner gave no rating line"})
+            return (f"{who} gave no rating, so it is `difficulty:medium`, which is how an unrated "
+                    "item is routed anyway.")
         wanted = str(rated["difficulty"])
         earlier = str((record.get("difficulty_by") or {}).get("difficulty") or "")
         if earlier in DIFFICULTIES and DIFFICULTIES.index(wanted) < DIFFICULTIES.index(earlier):

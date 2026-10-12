@@ -47,7 +47,8 @@ note in `spec/rulings/` plus a test named after it, checked by
   `Architecture: …`. A pull request's title becomes its squash commit's subject, and the `pr title`
   check fails one that breaks the convention; take your issue's title.
 - **Issues** open through the forms in `.github/ISSUE_TEMPLATE/`, which set the title, the type
-  labels and the issue type. Never add `bot:build` while relabelling: it queues a build.
+  labels and the issue type. Never add `bot:build` while relabelling: it queues a build. Give an
+  issue you open a `difficulty:*` label (`CLAUDE.md` rule 11).
 - **Pull requests** follow `.github/pull_request_template.md`: `Closes #n` or `Part of #n`, what
   changed, the tests run with their commands, the risks, the rulings and the patch version, and
   the gates. Commits on a branch say what they change; the squash commit takes the title.
