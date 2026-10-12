@@ -4275,6 +4275,16 @@
       "taken_asks": [],
       "verdict_rounds": 0
     },
+    "726": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-12T16:43:25Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false
+    },
     "727": {
       "action": "build",
       "asks": [],
