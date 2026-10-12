@@ -4240,6 +4240,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "731": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-12T13:03:25Z",
+      "issue": 724,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "88": {
       "action": "build",
       "died": 0,
