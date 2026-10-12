@@ -3,20 +3,24 @@
 //! so does the search's deadline; R188's guard names the concession and both draws; the fallback
 //! move ends the turn when it can and never concedes.
 //!
+//! R639000: the think time grows with the legal actions and on a lethal turn, a mulligan, a draw
+//! answer and a concession have priors of their own, and `play` concedes only at the bot's turn
+//! start and answers a draw offer by the bot's own roll.
+//!
 //! `jackioh_server::bots::seat`, on the real cards.
 
 use jackioh_engine::wire::PLAYER_IDS;
-use jackioh_engine::{Action, ActionBody, ActionType, Rng};
+use jackioh_engine::{Action, ActionBody, ActionType, GameState, PlayerId, Rng};
 use jackioh_server::actor::engine::{begin_game, create_game, create_game_args, reduce};
 use jackioh_server::bots::seat::{
-    THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, fallback_action, never_played, r188_forbidden,
-    think_ms,
+    BotJob, THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, fallback_action, never_played, play,
+    r188_forbidden, think_ms,
 };
-use jackioh_server::bots::signals::standard_normal;
+use jackioh_server::bots::signals::{accepts_draw, concedes, deficit, standard_normal};
 use jackioh_server::config::{
-    BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS,
-    BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS, ThinkTimeFit,
-    ThinkTimePrior,
+    BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS,
+    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS,
+    THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
 };
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
@@ -309,5 +313,108 @@ fn r639000_never_played_is_only_offers_and_emotes() {
         ActionBody::EndTurn,
     ] {
         assert!(!never_played(&body), "{body:?}");
+    }
+}
+
+/// A game on `seed` past both mulligans (each seat keeps its hand), ended turn by turn until it is
+/// at least `turn` and the first seat's: the active seat's main phase.
+fn opened_at(seed: &str, turn: i32) -> GameState {
+    let decks = decks();
+    let mut state = begin_game(&create_game(&create_game_args(seed, &decks, None, None, None))).state;
+    for seat in PLAYER_IDS {
+        let body = fallback_action(&state, seat).expect("a mulligan is owed");
+        let result = reduce(&state, &Action::new(body, seat, format!("keep-{seat}")));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        state = result.state;
+    }
+    let first = state.active;
+    let mut at = 0;
+    while state.turn < turn || state.active != first {
+        let result = reduce(
+            &state,
+            &Action::new(ActionBody::EndTurn, state.active, format!("end-{at}")),
+        );
+        assert!(result.error.is_none(), "{:?}", result.error);
+        state = result.state;
+        at += 1;
+    }
+    state
+}
+
+/// The job the actor hands `seat::play` for `seat`'s move on `state`, its R639000 rolls on `seed`.
+fn job(state: &GameState, seat: PlayerId, seed: &str, own_turn_start: bool) -> BotJob {
+    BotJob {
+        state: state.clone(),
+        seat,
+        home: seat,
+        seed: seed.to_string(),
+        strength: BOT_STRENGTHS[0],
+        speed: 1.0,
+        ai_rng: Rng::new(&format!("{seed}:bot-ai:{seat}"), 0),
+        timing_rng: Rng::new(&format!("{seed}:bot-timing:{seat}"), 0),
+        first_in_turn: own_turn_start,
+        own_turn_start,
+        aim_lead_ms: 0,
+        clock_left_ms: None,
+    }
+}
+
+/// The first of the seeds `{prefix}-{k}` that `wanted` holds for.
+fn seed_where(prefix: &str, wanted: impl Fn(&str) -> bool) -> String {
+    (0..10_000)
+        .map(|k| format!("{prefix}-{k}"))
+        .find(|seed| wanted(seed))
+        .unwrap_or_else(|| panic!("no {prefix} seed"))
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_far_behind_concedes_at_its_turn_start_and_only_then() {
+    let mut state = opened_at("seed-play-concede", BOT_CONCEDE_FIT.min_turn);
+    let bot = state.active;
+    // A hero on its last point, late in the game.
+    state.players[bot].hero.health = 1;
+    let behind = deficit(&state, bot);
+    assert!(behind > 0.0, "PREMISE: the bot stands behind ({behind})");
+    let conceding = |seed: &str| concedes(seed, bot, state.turn, behind, &BOT_CONCEDE_FIT);
+    let gives_up = seed_where("concede", conceding);
+    let plays_on = seed_where("stay", |seed| !conceding(seed));
+
+    // At its turn's start, the bot whose temper gives up here concedes, without a search.
+    let conceded = play(job(&state, bot, &gives_up, true)).await;
+    assert_eq!(conceded.body, Some(ActionBody::Concede));
+    assert_eq!(conceded.ai_cursor, 0, "no search ran");
+    // Past its turn's start it plays on, and so does one whose temper does not give up yet.
+    for (seed, own_turn_start) in [(&gives_up, false), (&plays_on, true)] {
+        let played = play(job(&state, bot, seed, own_turn_start)).await;
+        assert!(
+            played.body.is_some() && played.body != Some(ActionBody::Concede),
+            "{seed} at turn start {own_turn_start}: {:?}",
+            played.body
+        );
+        assert!(played.ai_cursor > 0, "the search ran");
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_answers_a_draw_offer_by_its_own_roll_not_the_searchs_decline() {
+    let mut state = opened_at("seed-play-draw", 1);
+    let person = state.active;
+    let bot = person.opponent();
+    state.players[bot].hero.health = 1;
+    let offered = reduce(
+        &state,
+        &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
+    );
+    assert!(offered.error.is_none(), "{:?}", offered.error);
+    let state = offered.state;
+    let behind = deficit(&state, bot);
+    assert!(behind > 0.0, "PREMISE: the bot stands behind ({behind})");
+    // `decide` declines every offer (R188); the bot's answer is its roll's, either way.
+    for accept in [true, false] {
+        let seed = seed_where("draw", |seed| {
+            accepts_draw(seed, bot, state.turn, behind, &BOT_DRAW_ANSWER_FIT) == accept
+        });
+        let body = play(job(&state, bot, &seed, false)).await.body;
+        assert_eq!(body, Some(ActionBody::AnswerDraw { accept }), "{seed}");
     }
 }

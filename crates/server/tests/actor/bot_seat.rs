@@ -22,7 +22,7 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::{EmoteId, Phase, PlayerId};
 use jackioh_engine::{ActionBody, ActionType, Rng, deal_emote_hand};
 use jackioh_server::actor::engine::{fold, fold_args, hash_state, legal_actions};
-use jackioh_server::actor::match_actor::MatchActor;
+use jackioh_server::actor::match_actor::{MatchActor, bot_moved_turns};
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
@@ -957,4 +957,80 @@ async fn r1452_bot_telemetry_is_ai() {
             .is_none_or(|rows| rows.iter().all(|row| row["seat"] != m.bot().as_str())),
         "{timings}"
     );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
+    // The bot's turn begins once (its first move's think time, its concession, its idle roll): a
+    // rebuild reads off the log the turn the bot last moved in, so its next move after a restart in
+    // the middle of its turn is a later move's, not a first one's.
+    let m = bot_match("seed-bot-mid-turn", PlayerId::P1, PersonaName::Silent, false).await;
+    let bot = m.bot();
+    to_the_persons_turn(&m).await;
+    submit(&m, "person-end-mid", json!({ "type": "endTurn" })).await;
+    let app = Arc::clone(&m.app);
+    let mut moved = false;
+    for _ in 0..WAIT_STEPS {
+        m.actor.idle().await;
+        let log = log_of(&app).await;
+        let ended = log
+            .iter()
+            .position(|(_, nonce, _)| nonce == "person-end-mid")
+            .expect("the person's end of turn");
+        if log[ended + 1..].iter().any(|(_, nonce, _)| bot_nonce(nonce)) {
+            moved = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    assert!(moved, "the bot never moved in its turn");
+    let snapshot = m.actor.snapshot();
+    assert!(
+        snapshot.active == bot && snapshot.result.is_none(),
+        "PREMISE: the bot's first move left its turn going: {:?}",
+        log_of(&app).await
+    );
+    let turn = snapshot.turn;
+    m.app.matches.stop(MATCH_ID).await;
+    let before = log_of(&app).await.len();
+
+    let row = q!(m.app, matches_get(MATCH_ID)).expect("the match row");
+    let log = q!(m.app, matches_actions(MATCH_ID));
+    assert_eq!(
+        bot_moved_turns(&row, &log, None)[bot],
+        Some(turn),
+        "the log says the bot has moved this turn"
+    );
+
+    let rebuilt_at = now_ms();
+    let revived = m
+        .app
+        .matches
+        .actor_for(&m.app, MATCH_ID)
+        .await
+        .expect("the rebuilt actor");
+    let state = revived.engine_state();
+    let socket = create_fake_socket();
+    revived.attach(m.person, socket.socket());
+    let mut next = None;
+    for _ in 0..WAIT_STEPS {
+        revived.idle().await;
+        let rows = rows_of(&app).await;
+        if let Some(found) = rows[before..]
+            .iter()
+            .find(|(_, action, _)| action["playerId"] == bot.as_str())
+        {
+            next = Some(found.clone());
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    let (_, action, at) = next.expect("the rebuilt bot's next move");
+    let kind: ActionType = from(action["type"].clone());
+    let legal = legal_actions(&state, bot).len();
+    // The rebuilt actor's timing stream starts over (R1452); the move is a later one of its turn.
+    let later = drawn_think_ms(&m.seed, bot, 0, kind, false, legal, None);
+    let first = drawn_think_ms(&m.seed, bot, 0, kind, true, legal, None);
+    assert_ne!(later, first, "PREMISE: the two priors draw apart");
+    assert_eq!(at - rebuilt_at, later, "{action}");
 }

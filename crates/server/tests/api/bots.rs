@@ -1001,3 +1001,29 @@ async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
     let status = rematch_status(&app, &finished, &token).await;
     assert_eq!(status["opponentHere"], json!(true), "{status}");
 }
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_that_means_to_answer_stays_until_its_answer_lands() {
+    // A person who reaches for the button as their linger runs out does not read as gone first: a
+    // bot meeting an offer made late in its linger stays on the match until its answer lands.
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let seed = seed_where(|plan| plan.accepts && !plan.offers);
+    let plan = rematch_plan(&seed, PlayerId::P2, &BOT_REMATCH_FIT);
+    let finished = bot_match_on(&app, &person, &bot, &seed).await;
+    concede_bot_match(&app, &person).await;
+
+    let early = 100;
+    pass(plan.linger_ms - early).await;
+    let offered = offer_rematch(&app, &finished, &token).await;
+    assert!(offered["matchId"].is_null(), "{offered}");
+    // Past the linger, the answer not yet in: still on the match.
+    pass(plan.reply_ms - early / 2).await;
+    let waiting = rematch_status(&app, &finished, &token).await;
+    assert!(waiting["matchId"].is_null(), "{waiting}");
+    assert_eq!(waiting["opponentHere"], json!(true), "{waiting}");
+    pass(early / 2).await;
+    let made = rematch_status(&app, &finished, &token).await;
+    assert!(made["matchId"].is_string(), "{made}");
+}

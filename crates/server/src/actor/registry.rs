@@ -26,7 +26,9 @@ use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
 
 use crate::actor::contracts::one_tx;
 use crate::actor::engine;
-use crate::actor::match_actor::{MatchActor, MatchActorInput, create_match_actor, last_boards_of};
+use crate::actor::match_actor::{
+    MatchActor, MatchActorInput, bot_moved_turns, create_match_actor, last_boards_of,
+};
 use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
@@ -276,6 +278,7 @@ impl Registry {
                 on_voided: Some(Registry::on_voided(app, &match_id)),
                 telemetry: None,
                 bots,
+                bot_moved_turn: PerPlayer::new(None, None),
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -327,6 +330,18 @@ impl Registry {
             }
             None => None,
         };
+        // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again. A
+        // fold that panics costs that alone: the bot reads its next move as its turn's first.
+        let has_bot = bots.p1.is_some() || bots.p2.is_some();
+        let bot_moved_turn = if has_bot && match_row.status == MatchStatus::Live {
+            std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(&match_row, &log, dealt_for(mode))))
+                .unwrap_or_else(|payload| {
+                    tracing::warn!(event = "bot.turns.replay_failed", matchId = %match_id, message = %panic_text(payload));
+                    PerPlayer::new(None, None)
+                })
+        } else {
+            PerPlayer::new(None, None)
+        };
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
             // longer reconstructs the match (§9.3). Rebuild anyway — a live match is better than a dead
@@ -344,6 +359,7 @@ impl Registry {
                 on_voided: Some(Registry::on_voided(app, match_id)),
                 telemetry,
                 bots,
+                bot_moved_turn,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

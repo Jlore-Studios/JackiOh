@@ -46,8 +46,14 @@ fn r639000_concede_draws_its_temper_once_and_waits_for_turn_and_deficit() {
         deficit_mu: -30.0,
         ..sure
     };
-    assert!(!concedes("temper-low", PlayerId::P1, 10, 0.0, &low), "never while even");
-    assert!(!concedes("temper-low", PlayerId::P1, 10, -5.0, &low), "never while ahead");
+    assert!(
+        !concedes("temper-low", PlayerId::P1, 10, 0.0, &low),
+        "never while even"
+    );
+    assert!(
+        !concedes("temper-low", PlayerId::P1, 10, -5.0, &low),
+        "never while ahead"
+    );
     assert!(concedes("temper-low", PlayerId::P1, 10, 0.5, &low));
 
     // No conceder ever concedes, however far behind.

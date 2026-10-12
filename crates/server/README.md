@@ -271,7 +271,9 @@ is seated and the pool is never sized.
   (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
   (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
   offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
-  (`never_played`).
+  (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
+  turn again.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
   `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
@@ -285,10 +287,10 @@ is seated and the pool is never sized.
   takes it down after.
 - Once a ranked match a bot played ends, the bot reads as present (`presence`) until its plan's
   linger ends (the plan is drawn under the lock that ends the game, so there is no gap while the
-  result is written), offers a normal rematch when its plan says once the result has landed, and meets a person's offer at their stakes
-  when its plan accepts and it is still there (`MatchActor::on_rematch_offer`, told by
-  `api/rematch.rs`'s `offer_as` through `Registry::get`); its offers go through the route's own path
-  (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
+  result is written), offers a normal rematch when its plan says once the result has landed, and
+  meets a person's offer at their stakes when its plan accepts and it is still there, staying until
+  its answer lands (`MatchActor::on_rematch_offer`, told by `api/rematch.rs`'s `offer_as` through
+  `Registry::get`); its offers go through the route's own path (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
   and not retired, whatever its schedule) and lets it go if the start fails.
 - `bots::persona` is the server's port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
   which stays for practice), its tables `config.rs`'s `AI_PERSONAS` and `AI_EMOTE`, drawing as the

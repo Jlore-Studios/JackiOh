@@ -75,6 +75,21 @@ const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
 /// §9.8: the action flood limit, measured over this window.
 const FLOOD_WINDOW_MS: i64 = 1000;
 
+/// R639000: a bot home's rematch answer on its way (`Core::bot_rematch_replying`), taken off when
+/// the task that sends it ends.
+struct Replying {
+    actor: Weak<Shared>,
+    home: PlayerId,
+}
+
+impl Drop for Replying {
+    fn drop(&mut self) {
+        if let Some(shared) = self.actor.upgrade() {
+            MatchActor { shared }.lock().bot_rematch_replying[self.home] = false;
+        }
+    }
+}
+
 /// TS `MatchActorInput`.
 pub struct MatchActorInput {
     /// TS `match` (a Rust keyword): the row as it stands.
@@ -91,6 +106,9 @@ pub struct MatchActorInput {
     pub telemetry: Option<Recorder>,
     /// R1452: the ladder bot at each home seat, which the actor plays itself; `None` for a person.
     pub bots: PerPlayer<Option<BotRow>>,
+    /// R639000: by home seat, the turn each bot last moved in, which a rebuild reads off `log`
+    /// (`bot_moved_turns`); a new match has none.
+    pub bot_moved_turn: PerPlayer<Option<i32>>,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -98,6 +116,47 @@ pub struct MatchActorInput {
 /// `(last_boards, glitch_boards)`.
 pub fn last_boards_of(match_row: &MatchRow) -> (Option<LastBoards>, Option<LastBoards>) {
     (match_row.last_boards.clone(), match_row.glitch_boards.clone())
+}
+
+/// R1452, R639000: by home seat, the turn of each bot's last move in `log` (its nonce `srv-bot-…`),
+/// as `on_bot_move` keeps it in memory, so an actor rebuilt in the middle of a bot's turn knows that
+/// turn had already begun: its first move's think time, its concession and its idle roll come only
+/// at a turn's start, not again after a restart. Folded step by step as `telemetry::replay` folds.
+pub fn bot_moved_turns(
+    match_row: &MatchRow,
+    log: &[MatchActionRow],
+    dealt: Option<Vec<PlayerId>>,
+) -> PerPlayer<Option<i32>> {
+    let (last_boards, glitch_boards) = last_boards_of(match_row);
+    let mut state = engine::fold(&engine::fold_args(
+        &match_row.seed,
+        &match_row.decks,
+        Vec::new(),
+        last_boards,
+        glitch_boards,
+        dealt,
+    ))
+    .state;
+    let bot_nonce = format!("{SERVER_NONCE_PREFIX}bot-");
+    let mut moved = PerPlayer::new(None, None);
+    for row in log {
+        let result = engine::reduce(&state, &row.action);
+        if result.error.is_some() {
+            continue;
+        }
+        if row.action.nonce.starts_with(&bot_nonce) {
+            // R677: the account that began in the other seat plays this one after a swap.
+            let player = row.action.player_id;
+            let home = if engine::snapshot(&state).seats_swapped {
+                player.opponent()
+            } else {
+                player
+            };
+            moved[home] = Some(state.turn);
+        }
+        state = result.state;
+    }
+    moved
 }
 
 /// One task on the actor's serialized queue (TS's `enqueue`d closures, named).
@@ -356,6 +415,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         on_voided,
         telemetry,
         bots,
+        bot_moved_turn,
     } = input;
     let seats = (
         MatchSeat {
@@ -456,7 +516,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         tiers: None,
         bot_thinking: PerPlayer::new(false, false),
         bot_cursors: PerPlayer::new((0, 0), (0, 0)),
-        bot_moved_turn: PerPlayer::new(None, None),
+        bot_moved_turn,
         personas,
         bot_views,
         bot_long_turn: PerPlayer::new(None, None),
@@ -1108,15 +1168,17 @@ impl MatchActor {
         };
         let deps = Arc::clone(&self.shared.deps);
         let match_id = self.shared.match_row.id.clone();
-        let actor = Arc::downgrade(&self.shared);
+        let replying = Replying {
+            actor: Arc::downgrade(&self.shared),
+            home: bot,
+        };
         let wait = Duration::from_millis(u64::try_from(reply_ms).unwrap_or(0));
         tokio::spawn(async move {
+            // Dropped however the task ends, a panic included, so the bot never stays for good.
+            let _replying = replying;
             tokio::time::sleep(wait).await;
             if let Err(error) = offer_for_bot(&deps, &match_id, bot, stakes).await {
                 tracing::warn!(event = "bot.rematch.failed", matchId = %match_id, home = %bot, message = %error.message);
-            }
-            if let Some(shared) = actor.upgrade() {
-                MatchActor { shared }.lock().bot_rematch_replying[bot] = false;
             }
         });
     }
@@ -1870,13 +1932,17 @@ impl MatchActor {
     /// rematch offer learns whether the opponent is still on the match. A seat is present while it
     /// holds a socket that is still open. R1452: a bot's seat holds none, and is present until the
     /// game ends, as a person playing it would be; R639000: after that it stays present until its
-    /// rematch plan's linger ends, as a person on the death screen is, and then reads as gone.
+    /// rematch plan's linger ends, or past it until an answer it is giving lands, as a person on the
+    /// death screen is, and then reads as gone.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();
         let playing_on = !core.finished && !core.voided;
         let now = now_ms();
-        let lingering =
-            |home: PlayerId| core.bot_rematch[home].is_some_and(|(_, until)| core.finished && now < until);
+        let lingering = |home: PlayerId| {
+            core.finished
+                && (core.bot_rematch_replying[home]
+                    || core.bot_rematch[home].is_some_and(|(_, until)| now < until))
+        };
         let open = |home: PlayerId| {
             core.sockets[home].as_ref().is_some_and(Socket::is_open)
                 || (self.shared.bots[home].is_some() && (playing_on || lingering(home)))
