@@ -10,6 +10,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
+import { t } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckEditor from "./DeckEditor.tsx";
@@ -93,13 +94,13 @@ export type DeckWorkshopProps = {
 export function syncWords(status: SyncStatus): string {
   switch (status.state) {
     case "saved":
-      return "Saved";
+      return t("Saved");
     case "saving":
-      return "Saving…";
+      return t("Saving…");
     case "offline":
-      return "Offline. Kept on this device.";
+      return t("Offline. Kept on this device.");
     case "error":
-      return status.message === null ? "Couldn’t save" : `Couldn’t save: ${status.message}`;
+      return status.message === null ? t("Couldn’t save") : t("Couldn’t save: {message}", { message: t(status.message) });
   }
 }
 
@@ -134,11 +135,11 @@ function Rail(props: RailProps): ReactElement {
   const trioReason = useId();
 
   return (
-    <nav ref={railRef} className="ws-rail" aria-label="Your decks and trios">
+    <nav ref={railRef} className="ws-rail" aria-label={t("Your decks and trios")}>
       <section className="ws-group" aria-labelledby={decksTitle}>
         <div className="ws-group-head">
           <h2 className="ws-group-title" id={decksTitle}>
-            Decks{" "}
+            {t("Decks")}{" "}
             <span className="ws-cap" data-testid={DECK_CAP} data-count={String(decks.length)} data-limit={String(limits.decks)}>
               {`${String(decks.length)}/${String(limits.decks)}`}
             </span>
@@ -152,7 +153,7 @@ function Rail(props: RailProps): ReactElement {
               aria-describedby={decksAtCap ? deckReason : undefined}
               onClick={onNewDeck}
             >
-              New deck
+              {t("New deck")}
             </button>
             <button
               type="button"
@@ -163,13 +164,13 @@ function Rail(props: RailProps): ReactElement {
                 onOpen({ kind: "import" });
               }}
             >
-              Import
+              {t("Import")}
             </button>
           </div>
         </div>
         {decksAtCap ? (
           <p className="ws-cap-note" id={deckReason} data-testid={DECK_CAP_REASON}>
-            {`You have ${String(limits.decks)} decks, the most you can keep. Delete one to make room.`}
+            {t("You have {count} decks, the most you can keep. Delete one to make room.", { count: limits.decks })}
           </p>
         ) : null}
         <ul className="ws-list" data-testid={DECK_LIST}>
@@ -188,13 +189,13 @@ function Rail(props: RailProps): ReactElement {
             />
           ))}
         </ul>
-        {decks.length === 0 ? <p className="ws-hint">No decks yet. Make one, or import a code someone shared.</p> : null}
+        {decks.length === 0 ? <p className="ws-hint">{t("No decks yet. Make one, or import a code someone shared.")}</p> : null}
       </section>
 
       <section className="ws-group" aria-labelledby={triosTitle}>
         <div className="ws-group-head">
           <h2 className="ws-group-title" id={triosTitle}>
-            Trios{" "}
+            {t("Trios")}{" "}
             <span className="ws-cap" data-testid={TRIO_CAP} data-count={String(trios.length)} data-limit={String(limits.trios)}>
               {`${String(trios.length)}/${String(limits.trios)}`}
             </span>
@@ -208,7 +209,7 @@ function Rail(props: RailProps): ReactElement {
               aria-describedby={triosAtCap ? trioReason : undefined}
               onClick={onNewTrio}
             >
-              New trio
+              {t("New trio")}
             </button>
             {/* R340: never off at a cap — the panel says exactly how many slots an import needs. */}
             <button
@@ -220,13 +221,13 @@ function Rail(props: RailProps): ReactElement {
                 onOpen({ kind: "trio-import" });
               }}
             >
-              Import trio
+              {t("Import trio")}
             </button>
           </div>
         </div>
         {triosAtCap ? (
           <p className="ws-cap-note" id={trioReason} data-testid={TRIO_CAP_REASON}>
-            {`You have ${String(limits.trios)} trios, the most you can keep. Delete one to make room.`}
+            {t("You have {count} trios, the most you can keep. Delete one to make room.", { count: limits.trios })}
           </p>
         ) : null}
         <ul className="ws-list" data-testid={TRIO_LIST}>
@@ -247,7 +248,7 @@ function Rail(props: RailProps): ReactElement {
           ))}
         </ul>
         {trios.length === 0 ? (
-          <p className="ws-hint">A trio is three decks with no card in common, for Conquest.</p>
+          <p className="ws-hint">{t("A trio is three decks with no card in common, for Conquest.")}</p>
         ) : null}
       </section>
     </nav>
@@ -267,6 +268,7 @@ type DeckRowProps = {
 function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onOpen }: DeckRowProps): ReactElement {
   const status = deckStatus(deckVerdict(deck, catalog, collection, nameLength), collection !== null);
   const label = deckLabel(deck, nameLength);
+  const words = { deck: label, count: deck.cards.length, size: DECK_SIZE, status: status.label };
   return (
     <li>
       <button
@@ -277,7 +279,9 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         data-status={status.kind}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
-        aria-label={`${label}, ${String(deck.cards.length)} of ${String(DECK_SIZE)} cards, ${status.label}${unsynced ? ", not saved yet" : ""}`}
+        aria-label={
+          unsynced ? t("{deck}, {count} of {size} cards, {status}, not saved yet", words) : t("{deck}, {count} of {size} cards, {status}", words)
+        }
         onClick={onOpen}
       >
         <span className="ws-row-name">{label}</span>
@@ -308,6 +312,7 @@ function TrioRow({ trio, decks, catalog, collection, nameLength, current, unsync
   const ready = trioVerdict(trio, decks, catalog, collection, nameLength).ok;
   const filled = trio.deckIds.filter((id) => id !== null && decks.some((deck) => deck.id === id)).length;
   const label = trioLabel(trio, nameLength);
+  const words = { trio: label, count: filled, size: trio.deckIds.length, status: ready ? t("ready for Conquest") : t("not ready") };
   return (
     <li>
       <button
@@ -317,14 +322,16 @@ function TrioRow({ trio, decks, catalog, collection, nameLength, current, unsync
         data-ready={ready ? "true" : "false"}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
-        aria-label={`${label}, ${String(filled)} of ${String(trio.deckIds.length)} decks, ${ready ? "ready for Conquest" : "not ready"}${unsynced ? ", not saved yet" : ""}`}
+        aria-label={
+          unsynced ? t("{trio}, {count} of {size} decks, {status}, not saved yet", words) : t("{trio}, {count} of {size} decks, {status}", words)
+        }
         onClick={onOpen}
       >
         <span className="ws-row-name">{label}</span>
         <span className="ws-row-meta">
-          <span className="ws-row-count">{`${String(filled)}/${String(trio.deckIds.length)} decks`}</span>
+          <span className="ws-row-count">{t("{count}/{size} decks", { count: filled, size: trio.deckIds.length })}</span>
           <span className="ws-chip" data-status={ready ? "ready" : "incomplete"}>
-            {ready ? "Ready" : "Not ready"}
+            {ready ? t("Ready") : t("Not ready")}
           </span>
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
@@ -416,12 +423,12 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   };
 
   const newDeck = (): void => {
-    const id = store.createDeck({ name: nextName("Deck", decks.map((deck) => deck.name)) });
+    const id = store.createDeck({ name: nextName((number) => t("Deck {number}", { number }), decks.map((deck) => deck.name)) });
     if (id !== null) openItem({ kind: "deck", id });
   };
 
   const newTrio = (): void => {
-    const id = store.createTrio({ name: nextName("Trio", trios.map((trio) => trio.name)) });
+    const id = store.createTrio({ name: nextName((number) => t("Trio {number}", { number }), trios.map((trio) => trio.name)) });
     if (id !== null) openItem({ kind: "trio", id });
   };
 
@@ -536,8 +543,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
       <div className="ws-empty" data-testid={WORKSHOP_EMPTY}>
         <p>
           {decks.length === 0
-            ? "Make your first deck, or import a code someone shared."
-            : "Pick a deck or a trio from the list to work on it."}
+            ? t("Make your first deck, or import a code someone shared.")
+            : t("Pick a deck or a trio from the list to work on it.")}
         </p>
       </div>
     );
@@ -547,7 +554,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
       <header className="db-header">
         <BackLink />
-        <h1 className="db-title">Decks</h1>
+        <h1 className="db-title">{t("Decks")}</h1>
         <SyncStatusLine status={snapshot.status} />
       </header>
 

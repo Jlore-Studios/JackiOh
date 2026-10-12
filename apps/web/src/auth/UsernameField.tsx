@@ -29,7 +29,7 @@ import {
   type OwnUsername,
   type UsernamePreview,
 } from "../net/api.ts";
-import { formatDateTime } from "../i18n/i18n.ts";
+import { formatDateTime, t } from "../i18n/i18n.ts";
 import Username from "./Username.tsx";
 import { usernameTestid } from "./testids.ts";
 
@@ -46,7 +46,7 @@ export const USERNAME_CHANGED = "That changed since you looked. Check the name a
 /** R1435: when the next change is allowed, in the player's own clock and locale. The preview's
  * cooldown refusal and the account page's cooldown line both say it. */
 export function nextChangeSentence(nextChangeAt: number): string {
-  return `You can change your username again on ${formatDateTime(nextChangeAt)}.`;
+  return t("You can change your username again on {date}.", { date: formatDateTime(nextChangeAt) });
 }
 
 /** The server's answer for one name exactly as typed; on screen only while the box still holds it. */
@@ -67,22 +67,28 @@ function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
   if (!preview.ok) {
     // The cooldown's end comes with the refusal (R1435), the time the server sent and not one the
     // field works out.
-    if (preview.reason === "cooldown") return <>{`${preview.message} ${nextChangeSentence(preview.nextChangeAt)}`}</>;
-    return <>{preview.message}</>;
+    if (preview.reason === "cooldown") return <>{`${t(preview.message)} ${nextChangeSentence(preview.nextChangeAt)}`}</>;
+    return <>{t(preview.message)}</>;
   }
   if (preview.tagged) {
+    // Split around the two names, so English keeps the text node it always had between them.
+    const [before = "", between = "", after = ""] = t("{base} is taken, so you’d be {username}").split(/\{base\}|\{username\}/);
     return (
       <>
+        {before}
         <Username name={preview.base} />
-        {" is taken, so you’d be "}
+        {between}
         <Username name={preview.username} />
+        {after}
       </>
     );
   }
+  const [before = "", after = ""] = t("You’d be {username}").split("{username}");
   return (
     <>
-      {"You’d be "}
+      {before}
       <Username name={preview.username} />
+      {after}
     </>
   );
 }
@@ -151,7 +157,7 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
 
   return (
     <form className="form-card username-field" noValidate onSubmit={save}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{t(label)}</label>
       <input
         id={id}
         data-testid={usernameTestid.input}
@@ -178,9 +184,14 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
         }}
       />
       <p className="auth-hint" id={hintId}>
-        {String(USERNAME_MIN_LENGTH)} to {String(USERNAME_MAX_LENGTH)} letters, digits or underscores. If someone
-        already has the name, you get a number after it. You can change it once every{" "}
-        {String(USERNAME_CHANGE_COOLDOWN_SECONDS / SECONDS_PER_HOUR)} hours.
+        {t(
+          "{min} to {max} letters, digits or underscores. If someone already has the name, you get a number after it. You can change it once every {hours} hours.",
+          {
+            min: String(USERNAME_MIN_LENGTH),
+            max: String(USERNAME_MAX_LENGTH),
+            hours: String(USERNAME_CHANGE_COOLDOWN_SECONDS / SECONDS_PER_HOUR),
+          },
+        )}
       </p>
       <div id={previewId} aria-live="polite">
         {current !== null ? (
@@ -194,18 +205,18 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
         ) : null}
         {current?.changed === true ? (
           <p className="username-field__changed" data-testid={usernameTestid.changed}>
-            {USERNAME_CHANGED}
+            {t(USERNAME_CHANGED)}
           </p>
         ) : null}
-        {asking ? <p className="auth-hint">Checking…</p> : null}
+        {asking ? <p className="auth-hint">{t("Checking…")}</p> : null}
       </div>
       {failed !== null ? (
         <p className="auth-field-error" data-testid={usernameTestid.error} role="alert">
-          {failed}
+          {t(failed)}
         </p>
       ) : null}
       <button type="submit" data-testid={usernameTestid.save} disabled={!canSave} aria-busy={saving}>
-        {saving ? "Saving…" : "Save"}
+        {saving ? t("Saving…") : t("Save")}
       </button>
     </form>
   );

@@ -33,10 +33,10 @@ import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
-import { readerName } from "../../cards/chinese.ts";
+import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
-import { t, useLocale } from "../../i18n/i18n.ts";
+import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -111,7 +111,9 @@ export function poolCardLabel(
   owned: boolean | null = null,
   fresh = false,
 ): string {
-  const parts = [readerName(def), t(def.type), t(costText(def.cost)), t(def.rarity)];
+  // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
+  const terms = CARD_TABLES[getLocale()]?.terms;
+  const parts = [readerName(def), terms?.types[def.type] ?? def.type, t(costText(def.cost)), terms?.rarities[def.rarity] ?? def.rarity];
   if (fresh) parts.push(t("new"));
   if (place === "deck") parts.push(t("in this deck"));
   else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));
@@ -195,7 +197,7 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
           // Already placed: the same refusal a drag gets, so it still reports why, but says it is off.
           aria-disabled={place !== null}
           aria-label={t("Add {card} to {deck}", { card: readerName(def), deck: deck.deckName })}
-          title={`${t("Add to")} ${deck.deckName}`}
+          title={t("Add to {deck}", { deck: deck.deckName })}
           onClick={() => {
             deck.onAdd(cardId);
           }}

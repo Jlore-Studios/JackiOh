@@ -31,7 +31,6 @@ import { createPlayTracker, type PlayTracker } from "../runs.ts";
 import ChaosBanner from "./ChaosBanner.tsx";
 import {
   CAST_ON_DRAW_TEXT,
-  CHAOS_TEXT,
   MULTICAST_TEXT,
   SHOWCASE_BURST_MS,
   SHOWCASE_FADE_MS,
@@ -130,7 +129,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const lookup = useContext(CatalogContext);
   const [showing, setShowing] = useState<Showing | null>(null);
   const [chaos, setChaos] = useState<ChaosShowing | null>(null);
-  const [chaosSaid, setChaosSaid] = useState("");
+  const [chaosSaid, setChaosSaid] = useState<readonly string[] | null>(null);
   const current = useRef<Showing | null>(null);
   const waiting = useRef<ShowcasePlay[]>([]);
   const seen = useRef(new Map<PlayerId, readonly GameEvent[]>());
@@ -185,7 +184,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const announceChaos = useCallback((roll: ChaosRoll) => {
     const names = chaosNames(roll);
     counter.current += 1;
-    setChaosSaid(`${CHAOS_TEXT.said}: ${names.join(", ")}`);
+    setChaosSaid(names);
     setChaos({ names, seq: counter.current, holdMs: chaosHoldMs(getFxSettings().speed), still: !effectsDrawing() });
   }, []);
 
@@ -361,7 +360,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         {said}
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.chaosLive} role="status" aria-live="polite">
-        {t(chaosSaid)}
+        {chaosSaid === null ? "" : t("Call to Chaos rolled: {names}", { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null

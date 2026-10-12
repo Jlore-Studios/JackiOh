@@ -26,10 +26,10 @@ export default function TermsRoute(): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Terms of service</h2>
+        <h2>{t("Terms of service")}</h2>
         <p className="privacy-policy__governing">{t("The English text governs.")}</p>
         <p className="privacy-policy__updated" data-testid={termsTestid.updated}>
-          Last updated <time dateTime={TERMS_LAST_UPDATED}>{TERMS_LAST_UPDATED}</time>
+          {t("Last updated")} <time dateTime={TERMS_LAST_UPDATED}>{TERMS_LAST_UPDATED}</time>
         </p>
 
         <section aria-labelledby="terms-use">

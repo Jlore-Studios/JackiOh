@@ -24,6 +24,7 @@ import {
   resetLocaleForTests,
   setLocale,
   t,
+  words,
 } from "./i18n.ts";
 import LanguageButton from "./LanguageButton.tsx";
 import zhCN from "./zh-CN.json";
@@ -63,8 +64,15 @@ describe("R711000 internationalisation and reader language", () => {
     // Missing entries fall back to English
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
-    // Plurals / parameter formatting
+    // Parameter formatting
     expect(t("{count} waiting", { count: 3 })).toBe("3人在等待");
+    // A finished sentence from the engine or the server matches the key its values were filled into
+    expect(t("Your decks could not be loaded: offline")).toBe("无法加载卡组：offline");
+    // Plurals: a `{ one, other }` entry picks its category by Intl.PluralRules over `count`
+    const plural = { one: "{count} card", other: "{count} cards" };
+    expect(words(plural, "en", { count: 1 })).toBe("{count} card");
+    expect(words(plural, "en", { count: 2 })).toBe("{count} cards");
+    expect(words(plural, "zh-CN", { count: 1 })).toBe("{count} cards");
     // Governing legal notice and date helpers
     expect(t("The English text governs.")).toBe("以英文版本为准。");
     expect(formatDay("2026-10-10")).toBe("2026年10月10日");

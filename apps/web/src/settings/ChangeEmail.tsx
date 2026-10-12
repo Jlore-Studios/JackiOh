@@ -8,6 +8,7 @@ import { emailProblem, normalizeEmail } from "../auth/validation.ts";
 import { AUTH_MESSAGES, AUTH_NOTICES, AuthError, authConfig, requestEmailChange } from "../net/auth.ts";
 import { renewAfterUnauthorized } from "../net/gate.ts";
 import { readSession } from "../net/session.ts";
+import { t } from "../i18n/i18n.ts";
 import "./changeEmail.css";
 
 type Phase =
@@ -65,6 +66,8 @@ export default function ChangeEmail(): ReactElement | null {
   const session = readSession();
   if (session === null || authConfig() === null) return null;
   const currentEmail = tokenEmail(session.accessToken);
+  // "Signed in as a@b.c.": split around the address, so English keeps the text nodes it had.
+  const [signedInBefore = "", signedInAfter = ""] = t("Signed in as {email}.").split("{email}");
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -100,11 +103,13 @@ export default function ChangeEmail(): ReactElement | null {
       }}
     >
       <label className="settings-email__label" htmlFor={changeEmailTestid.input}>
-        Change email
+        {t("Change email")}
       </label>
       {currentEmail != null ? (
         <p className="settings-account__status">
-          Signed in as <strong>{currentEmail}</strong>.
+          {signedInBefore}
+          <strong>{currentEmail}</strong>
+          {signedInAfter}
         </p>
       ) : null}
       <input
@@ -114,7 +119,7 @@ export default function ChangeEmail(): ReactElement | null {
         type="email"
         autoComplete="email"
         inputMode="email"
-        placeholder="New email address"
+        placeholder={t("New email address")}
         value={value}
         aria-invalid={phase.kind === "failed" ? true : undefined}
         aria-describedby={phase.kind === "failed" ? changeEmailTestid.error : undefined}
@@ -129,16 +134,16 @@ export default function ChangeEmail(): ReactElement | null {
         data-testid={changeEmailTestid.submit}
         disabled={phase.kind === "sending"}
       >
-        {phase.kind === "sending" ? "Sending…" : "Send confirmation link"}
+        {phase.kind === "sending" ? t("Sending…") : t("Send confirmation link")}
       </button>
       {phase.kind === "sent" ? (
         <p className="settings-account__status" data-testid={changeEmailTestid.sent} role="status">
-          {AUTH_NOTICES.emailChangeSent}
+          {t(AUTH_NOTICES.emailChangeSent)}
         </p>
       ) : null}
       {phase.kind === "failed" ? (
         <p className="settings-account__status settings-email__error" id={changeEmailTestid.error} data-testid={changeEmailTestid.error} role="alert">
-          {phase.message}
+          {t(phase.message)}
         </p>
       ) : null}
     </form>

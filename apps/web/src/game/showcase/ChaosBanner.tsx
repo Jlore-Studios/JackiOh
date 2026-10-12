@@ -23,7 +23,7 @@ export default function ChaosBanner({ names, seq }: ChaosBannerProps): ReactElem
       <ol className="chaos-banner-lines">
         {names.map((name, index) => (
           <li key={`${String(index)}:${name}`} className="chaos-banner-line" data-testid={showcaseTestid.chaosLine}>
-            {name}
+            {t(name)}
           </li>
         ))}
       </ol>

@@ -71,14 +71,17 @@ function savedHint(saved: SavedDecks): ReactElement | null {
       return <>{t("Looking for your saved decks…")}</>;
     case "inactive":
       return <>{t("Your saved decks show up here once your account is active.")}</>;
-    case "none":
+    case "none": {
+      // Split around the link, so English keeps the text nodes it always had.
+      const [before = "", after = ""] = t("Save a deck in {decks} to play one of your own decks here.").split("{decks}");
       return (
         <>
-          {t("Save a deck in ")}
+          {before}
           <a href={paths.decks}>{t("Decks")}</a>
-          {t(" to play one of your own decks here.")}
+          {after}
         </>
       );
+    }
     case "unavailable":
       return <>{t("Your saved decks could not be loaded just now. The decks above still play.")}</>;
   }
@@ -106,8 +109,8 @@ function previewFor(
   }
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${String(count)} ${count === 1 ? one : many}`;
+function cardCount(count: number): string {
+  return count === 1 ? t("{count} card", { count: String(count) }) : t("{count} cards", { count: String(count) });
 }
 
 /** A deck option as the reader reads it; a saved deck's name is its player's own and stays as written. */
@@ -123,7 +126,7 @@ function tierStats(handicap: Handicap): TierStat[] {
     {
       key: "deck",
       label: t("Deck"),
-      value: plural(handicap.deckSize, t("card"), t("cards")),
+      value: cardCount(handicap.deckSize),
       ahead: handicap.deckSize !== human.deckSize,
     },
     {
@@ -149,7 +152,7 @@ function tierStats(handicap: Handicap): TierStat[] {
     {
       key: "draws",
       label: t("Draws"),
-      value: `${String(DRAWS_PER_TURN + handicap.extraDrawsPerTurn)} ${t("per turn")}`,
+      value: t("{count} per turn", { count: String(DRAWS_PER_TURN + handicap.extraDrawsPerTurn) }),
       ahead: handicap.extraDrawsPerTurn !== human.extraDrawsPerTurn,
     },
   ];

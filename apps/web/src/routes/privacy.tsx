@@ -47,10 +47,10 @@ export default function PrivacyRoute(): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Privacy policy</h2>
+        <h2>{t("Privacy policy")}</h2>
         <p className="privacy-policy__governing">{t("The English text governs.")}</p>
         <p className="privacy-policy__updated" data-testid={privacyTestid.updated}>
-          Last updated <time dateTime={PRIVACY_LAST_UPDATED}>{PRIVACY_LAST_UPDATED}</time>
+          {t("Last updated")} <time dateTime={PRIVACY_LAST_UPDATED}>{PRIVACY_LAST_UPDATED}</time>
         </p>
 
         <section aria-labelledby="privacy-who">

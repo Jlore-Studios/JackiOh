@@ -15,6 +15,8 @@ import type { EmoteId, PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, PORTRAIT_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { getAudioEngine } from "../audio/index.ts";
+import { readerName } from "../cards/chinese.ts";
+import { t } from "../i18n/i18n.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { emoteShowInfo, playEmote } from "./play.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
@@ -37,6 +39,7 @@ function PortraitTile({
   onPreview: () => void;
 }): ReactElement {
   const { def } = PORTRAIT_DEFS[portrait];
+  const name = readerName(def);
   return (
     <div className="portrait-tile" data-portrait={portrait} data-selected={selected ? "true" : undefined}>
       <button
@@ -44,11 +47,11 @@ function PortraitTile({
         className="portrait-pick"
         data-testid={`portrait-pick-${portrait}`}
         aria-pressed={selected}
-        title={`${def.name} — ${PORTRAITS[portrait].flavour}`}
+        title={t("{name} — {flavour}", { name, flavour: t(PORTRAITS[portrait].flavour) })}
         onClick={onPick}
       >
         <PortraitArt portrait={portrait} />
-        <span className="portrait-name">{def.name}</span>
+        <span className="portrait-name">{name}</span>
       </button>
       <button
         type="button"
@@ -57,7 +60,7 @@ function PortraitTile({
         aria-expanded={previewing}
         onClick={onPreview}
       >
-        Preview
+        {t("Preview")}
       </button>
     </div>
   );
@@ -126,18 +129,18 @@ export function PortraitPicker({
         data-testid="portrait-current"
         aria-expanded={open}
         aria-haspopup="dialog"
-        title={`Hero portrait: ${def.name}`}
+        title={t("Hero portrait: {name}", { name: readerName(def) })}
         onClick={() => {
           setOpen((was) => !was);
         }}
       >
         <PortraitArt portrait={portrait} />
-        <span className="portrait-current-label">Portrait</span>
+        <span className="portrait-current-label">{t("Portrait")}</span>
       </button>
 
       {open ? (
-        <div className="portrait-menu" role="dialog" aria-label="Choose a hero portrait">
-          <div className="portrait-grid" role="listbox" aria-label="Portraits">
+        <div className="portrait-menu" role="dialog" aria-label={t("Choose a hero portrait")}>
+          <div className="portrait-grid" role="listbox" aria-label={t("Portraits")}>
             {PORTRAIT_IDS.map((id) => (
               <PortraitTile
                 key={id}
@@ -160,7 +163,7 @@ export function PortraitPicker({
               <span className="portrait-preview-show">
                 {show === null ? null : <EmoteShow key={show.key} show={show} />}
               </span>
-              <div className="portrait-preview-lines" role="group" aria-label={`${PORTRAIT_DEFS[previewing].def.name}'s emotes`}>
+              <div className="portrait-preview-lines" role="group" aria-label={t("{name}'s emotes", { name: readerName(PORTRAIT_DEFS[previewing].def) })}>
                 {VOICE_EMOTE_IDS.map((emote) => (
                   <button
                     key={emote}
@@ -171,19 +174,19 @@ export function PortraitPicker({
                       preview(emote, previewing);
                     }}
                   >
-                    {VOICE_LABEL[emote]}
+                    {t(VOICE_LABEL[emote])}
                   </button>
                 ))}
               </div>
-              <div className="portrait-preview-emojis" role="group" aria-label="Emoji">
+              <div className="portrait-preview-emojis" role="group" aria-label={t("Emoji")}>
                 {EMOJI_EMOTE_IDS.map((emote) => (
                   <button
                     key={emote}
                     type="button"
                     className="emote-item emote-emoji-pick"
                     data-testid={`emote-preview-${emote}`}
-                    title={EMOJI_LABEL[emote]}
-                    aria-label={EMOJI_LABEL[emote]}
+                    title={t(EMOJI_LABEL[emote])}
+                    aria-label={t(EMOJI_LABEL[emote])}
                     onClick={() => {
                       preview(emote, previewing);
                     }}

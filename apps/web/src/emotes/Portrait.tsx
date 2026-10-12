@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type CSSProperties, type DOMAttributes, ty
 
 import type { PortraitId } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
 import { PORTRAIT_REACT_MS } from "./config.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
 
@@ -74,11 +75,11 @@ export function HeroPortrait({
       {/* The badges sit on the art itself (issue §1): health lower right, armor lower left. The
           elements are the same `hero-health`/`hero-armor` the board always drew — their classes,
           `data-health`/`data-armor` and clamps are unchanged, only their parent moved. */}
-      <span className="hero-health" data-health={health} title="Health">
+      <span className="hero-health" data-health={health} title={t("Health")}>
         {Math.max(0, health)}
       </span>
       {armor > 0 && (
-        <span className="hero-armor" data-armor={armor} title="Hero armor">
+        <span className="hero-armor" data-armor={armor} title={t("Hero armor")}>
           {armor}
         </span>
       )}
@@ -87,7 +88,7 @@ export function HeroPortrait({
           className="hero-luck"
           data-testid="hero-luck"
           data-luck={luck}
-          title={`Luck ${luck}: every roll your cards make that keeps a best rolls ${luck} more times`}
+          title={t("Luck {luck}: every roll your cards make that keeps a best rolls {luck} more times", { luck: String(luck) })}
         >
           {luck}
         </span>

@@ -14,6 +14,7 @@
 
 import { useState, type ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { skipUsernamePrompt } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
@@ -38,6 +39,10 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
   const leaving = useSigningOut();
   const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "You’re Player#7 for now. …": split around the name, so English keeps the text nodes it had.
+  const [heldBefore = "", heldAfter = ""] = t(
+    "You’re {name} for now. Pick the name other players will see; you can change it later on your account page.",
+  ).split("{name}");
 
   const skip = (): void => {
     if (skipping) return;
@@ -62,10 +67,11 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Choose your username</h2>
+        <h2>{t("Choose your username")}</h2>
         <p>
-          You&rsquo;re <Username name={name} /> for now. Pick the name other players will see; you can change it
-          later on your account page.
+          {heldBefore}
+          <Username name={name} />
+          {heldAfter}
         </p>
         <UsernameField
           token={token}
@@ -77,7 +83,7 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
         />
         {error !== null ? (
           <p className="notice" data-testid={usernameTestid.promptError} role="alert">
-            {error}
+            {t(error)}
           </p>
         ) : null}
         <div className="row">
@@ -89,7 +95,7 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
             aria-busy={skipping}
             onClick={skip}
           >
-            {skipping ? "Skipping…" : "Skip for now"}
+            {skipping ? t("Skipping…") : t("Skip for now")}
           </button>
           <button
             type="button"

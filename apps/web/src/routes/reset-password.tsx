@@ -239,6 +239,10 @@ export default function ResetPasswordRoute(): ReactElement {
     navigate(target);
   }
 
+  // Sentences with an address inside: one entry each, split around it, so English keeps its text nodes.
+  const [forBefore = "", forAfter = ""] = t("For {account}").split("{account}");
+  const [replacesBefore = "", replacesAfter = ""] = t("Saving signs this browser out of {address}.").split("{address}");
+
   return (
     <div className="app-shell auth-screen tavern" data-testid={resetTestid.screen}>
       <BackLink
@@ -277,19 +281,20 @@ export default function ResetPasswordRoute(): ReactElement {
           )}
 
           <p className="auth-hint">
-            {t("For")}{" "}
+            {forBefore}
             <strong data-testid={resetTestid.email}>
               {recovery.email === null ? t("your account") : <Address value={recovery.email} />}
             </strong>
+            {forAfter}
           </p>
           {replaced === null ? null : (
             // Never silently: saving makes the reset account this browser's session (R193).
             <p className="auth-hint" data-testid={resetTestid.replaces}>
-              {t("Saving signs this browser out of")}{" "}
+              {replacesBefore}
               <strong>
                 <Address value={replaced} />
               </strong>
-              .
+              {replacesAfter}
             </p>
           )}
         </div>

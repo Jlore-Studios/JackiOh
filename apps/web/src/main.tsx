@@ -174,12 +174,17 @@ function SignOutButton(): ReactElement {
 
 /** A path the client serves nothing at. Said in a player's words; the path is shown, never followed. */
 function NotFound({ path }: { path: string }): ReactElement {
+  // Split around the path, so the sentence is one entry and English reads as it always did.
+  const [nothingBefore = "", nothingAfter = ""] = t("There is nothing at {path}. The link may be wrong or out of date.").split(
+    "{path}",
+  );
   return (
     <ShellPanel testId={shellTestid.notFound}>
       <p className="notice">{t("That page doesn’t exist.")}</p>
       <p className="auth-hint">
-        {t("There is nothing at")} <code>{path}</code>
-        {t(". The link may be wrong or out of date.")}
+        {nothingBefore}
+        <code>{path}</code>
+        {nothingAfter}
       </p>
       <div className="row">
         <HomeLink testId={shellTestid.notFoundHome} label="Back to the start" />

@@ -19,6 +19,7 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
+import { t } from "../../i18n/i18n.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import { deckNameForSave, trioNameForSave, type DeckItem, type TrioItem } from "./sync.ts";
 
@@ -39,11 +40,14 @@ export function trioLabel(trio: TrioItem, nameLength: number): string {
   return trioNameForSave(trio.name, nameLength);
 }
 
-/** `Deck 1`, `Deck 2`, …: the first `<prefix> <n>` no existing name uses. */
-export function nextName(prefix: string, taken: readonly string[]): string {
+/**
+ * `Deck 1`, `Deck 2`, …: the first `<prefix> <n>` no existing name uses. Given a function instead of
+ * a prefix, each candidate is `prefix(n)` (the reader's words for "Deck {n}", R711000).
+ */
+export function nextName(prefix: string | ((number: number) => string), taken: readonly string[]): string {
   const used = new Set(taken.map((name) => name.trim().toLowerCase()));
   for (let number = 1; ; number += 1) {
-    const candidate = `${prefix} ${String(number)}`;
+    const candidate = typeof prefix === "string" ? `${prefix} ${String(number)}` : prefix(number);
     if (!used.has(candidate.toLowerCase())) return candidate;
   }
 }
@@ -80,15 +84,16 @@ export type DeckStatus = { kind: DeckStatusKind; label: string };
 
 /**
  * The deck row's chip: "Ready" (may queue), "Incomplete" (L2), "N not owned" (L5 only) or "Needs a
- * fix" (anything else). With no collection a legal deck is "Complete", not "Ready".
+ * fix" (anything else). With no collection a legal deck is "Complete", not "Ready". The label is in
+ * the reader's language, so call it at render time.
  */
 export function deckStatus(verdict: LoadoutResult, collectionKnown: boolean): DeckStatus {
-  if (verdict.ok) return collectionKnown ? { kind: "ready", label: "Ready" } : { kind: "complete", label: "Complete" };
+  if (verdict.ok) return collectionKnown ? { kind: "ready", label: t("Ready") } : { kind: "complete", label: t("Complete") };
   const rules = verdict.errors.map((issue) => issue.rule);
-  if (rules.includes("L2")) return { kind: "incomplete", label: "Incomplete" };
+  if (rules.includes("L2")) return { kind: "incomplete", label: t("Incomplete") };
   const unowned = rules.filter((rule) => rule === "L5").length;
-  if (unowned > 0 && unowned === rules.length) return { kind: "unowned", label: `${String(unowned)} not owned` };
-  return { kind: "invalid", label: "Needs a fix" };
+  if (unowned > 0 && unowned === rules.length) return { kind: "unowned", label: t("{count} not owned", { count: unowned }) };
+  return { kind: "invalid", label: t("Needs a fix") };
 }
 
 /** A trio's three slots as decks, an empty slot (or one naming a deck that is gone) as null. */

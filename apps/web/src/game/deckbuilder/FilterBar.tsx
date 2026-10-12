@@ -17,6 +17,8 @@ import { useId, useState, type ReactElement } from "react";
 
 import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 
+import { CARD_TABLES } from "../../cards/chinese.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import {
   COST_BUCKETS,
   DECK_CHIP_TAGS,
@@ -103,6 +105,10 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
   const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = DECK_CHIP_TAGS } = props;
+  // The type, tag and rarity chips print the card frame's own words in the reader's language
+  // (cards/chinese.ts, R1303); a language with no card table reads the catalog's English.
+  const locale = useLocale();
+  const terms = CARD_TABLES[locale]?.terms;
 
   const setSets = (set: SetName) => {
     onFilter({ ...filter, sets: toggled(filter.sets, set) });
@@ -132,15 +138,15 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
       data-testid={DB_FILTERS}
       data-expanded={expanded ? "true" : "false"}
       role="search"
-      aria-label="Filter the card pool"
+      aria-label={t("Filter the card pool")}
     >
       <div className="db-filter-row db-filter-row--top">
         <input
           type="search"
           className="db-search"
           data-testid={DB_SEARCH}
-          placeholder="Search name, text, keyword, tag…"
-          aria-label="Search cards"
+          placeholder={t("Search name, text, keyword, tag…")}
+          aria-label={t("Search cards")}
           value={filter.search}
           onChange={(event) => {
             onFilter({ ...filter, search: event.target.value });
@@ -157,13 +163,13 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 onFilter({ ...filter, ownedOnly: event.target.checked });
               }}
             />
-            <span>Owned only</span>
+            <span>{t("Owned only")}</span>
           </label>
         ) : null}
         {/* The sort and its direction wrap as one, so the arrow never ends up alone on a row. */}
         <span className="db-sort-group">
           <label className="db-sort">
-            <span className="db-group-label">Sort</span>
+            <span className="db-group-label">{t("Sort")}</span>
             <select
               className="db-sort-select"
               data-testid={DB_SORT}
@@ -175,7 +181,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             >
               {SORT_KEYS.map((key) => (
                 <option key={key} value={key}>
-                  {SORT_LABELS[key]}
+                  {t(SORT_LABELS[key])}
                 </option>
               ))}
             </select>
@@ -185,8 +191,8 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             className="db-sort-dir"
             data-testid={DB_SORT_DIR}
             data-dir={sort.dir}
-            aria-label={sort.dir === "asc" ? "Ascending; switch to descending" : "Descending; switch to ascending"}
-            title={sort.dir === "asc" ? "Ascending" : "Descending"}
+            aria-label={sort.dir === "asc" ? t("Ascending; switch to descending") : t("Descending; switch to ascending")}
+            title={sort.dir === "asc" ? t("Ascending") : t("Descending")}
             onClick={() => {
               onSort({ ...sort, dir: nextDir });
             }}
@@ -205,7 +211,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             setExpanded(!expanded);
           }}
         >
-          {active > 0 ? `Filters · ${String(active)}` : "Filters"}
+          {active > 0 ? t("Filters · {count}", { count: active }) : t("Filters")}
         </button>
         {/* The count and Clear close the top row rather than taking a row of their own, so a
             1280x720 screen shows a full row of cards under the filters. */}
@@ -217,7 +223,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             role="status"
             aria-live="polite"
           >
-            {`${String(count)} ${count === 1 ? "card" : "cards"}`}
+            {count === 1 ? t("{count} card", { count }) : t("{count} cards", { count })}
           </span>
           <button
             type="button"
@@ -227,15 +233,15 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
               onFilter(DEFAULT_FILTER);
             }}
           >
-            Clear filters
+            {t("Clear filters")}
           </button>
         </span>
       </div>
 
       <div className="db-filter-row db-filter-row--cost">
-        <div className="db-chip-group" role="group" aria-label="Cost">
+        <div className="db-chip-group" role="group" aria-label={t("Cost")}>
           <span className="db-group-label" aria-hidden="true">
-            Cost
+            {t("Cost")}
           </span>
           {COST_BUCKETS.map((bucket) => (
             <Chip
@@ -244,7 +250,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
               className="db-chip--cost"
               pressed={filter.costs.has(bucket)}
               label={bucket}
-              title={`(${bucket}) Cost`}
+              title={t("({cost}) Cost", { cost: bucket })}
               onToggle={() => {
                 setCosts(bucket);
               }}
@@ -255,9 +261,9 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
 
       <div className="db-filter-chips" id={chipsId}>
         <div className="db-filter-row">
-          <div className="db-chip-group" role="group" aria-label="Set">
+          <div className="db-chip-group" role="group" aria-label={t("Set")}>
             <span className="db-group-label" aria-hidden="true">
-              Set
+              {t("Set")}
             </span>
             {FILTER_SETS.map((set) => (
               <Chip
@@ -265,16 +271,16 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 testId={filterSetId(set)}
                 className="db-chip--set"
                 pressed={filter.sets.has(set)}
-                label={set}
+                label={t(set)}
                 onToggle={() => {
                   setSets(set);
                 }}
               />
             ))}
           </div>
-          <div className="db-chip-group" role="group" aria-label="Type">
+          <div className="db-chip-group" role="group" aria-label={t("Type")}>
             <span className="db-group-label" aria-hidden="true">
-              Type
+              {t("Type")}
             </span>
             {FILTER_TYPES.map((type) => (
               <Chip
@@ -282,7 +288,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 testId={filterTypeId(type)}
                 className="db-chip--type"
                 pressed={filter.types.has(type)}
-                label={type}
+                label={terms?.types[type] ?? type}
                 onToggle={() => {
                   setTypes(type);
                 }}
@@ -292,9 +298,9 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
         </div>
 
         <div className="db-filter-row">
-          <div className="db-chip-group" role="group" aria-label="Tag">
+          <div className="db-chip-group" role="group" aria-label={t("Tag")}>
             <span className="db-group-label" aria-hidden="true">
-              Tag
+              {t("Tag")}
             </span>
             {tags.map((tag) => (
               <Chip
@@ -302,16 +308,16 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 testId={filterTagId(tag)}
                 className="db-chip--tag"
                 pressed={filter.tags.has(tag)}
-                label={tag}
+                label={terms?.tags[tag] ?? tag}
                 onToggle={() => {
                   setTags(tag);
                 }}
               />
             ))}
           </div>
-          <div className="db-chip-group" role="group" aria-label="Rarity">
+          <div className="db-chip-group" role="group" aria-label={t("Rarity")}>
             <span className="db-group-label" aria-hidden="true">
-              Rarity
+              {t("Rarity")}
             </span>
             {FILTER_RARITIES.map((rarity) => (
               <Chip
@@ -319,7 +325,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 testId={filterRarityId(rarity)}
                 className="db-chip--rarity"
                 pressed={filter.rarities.has(rarity)}
-                label={rarity}
+                label={terms?.rarities[rarity] ?? rarity}
                 onToggle={() => {
                   setRarities(rarity);
                 }}

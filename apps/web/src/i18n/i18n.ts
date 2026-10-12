@@ -52,7 +52,7 @@ export const LOCALES = {
   "zh-CN": {
     name: "简体中文",
     short: "中文",
-    load: async () => (await import("./zh-CN.json")).default,
+    load: async () => (await import("./zh-CN.json", { with: { type: "json" } })).default,
     day: { year: "numeric", month: "long", day: "numeric" },
   },
 } as const satisfies Record<string, LocaleSpec>;
@@ -133,7 +133,8 @@ function fill(text: string, params: Params): string {
   return text.replace(TOKEN, (token, name: string) => (Object.hasOwn(params, name) ? String(params[name]) : token));
 }
 
-function words(entry: Entry, locale: Locale, params: Params | undefined): string {
+/** An entry's words before filling: a plural entry's category for `params.count` in `locale`. */
+export function words(entry: Entry, locale: Locale, params: Params | undefined): string {
   if (typeof entry === "string") return entry;
   return entry[new Intl.PluralRules(locale).select(Number(params?.["count"]))] ?? entry.other;
 }

@@ -131,7 +131,6 @@ function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
 }
 
 function curveLabel(columns: readonly CurveColumn[], counts: ReadonlyMap<CurveColumn, number>): string {
-  const parts = columns.map((column) => `${String(counts.get(column) ?? 0)} at ${column}`);
-  // Looked up whole, so a language can reorder each column's words (a key per curve shape).
-  return t(`Mana curve: ${parts.join(", ")}`);
+  const parts = columns.map((column) => t("{count} at {cost}", { count: String(counts.get(column) ?? 0), cost: column }));
+  return t("Mana curve: {columns}", { columns: parts.join(t(", ")) });
 }

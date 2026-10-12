@@ -907,30 +907,37 @@ export default function LoginRoute(): ReactElement {
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
   let title: string;
-  if (signingUp) title = "Create an account";
-  else if (forgot || claiming) title = "Reset your password";
-  else if (emailCode) title = "Sign in with an email code";
-  else if (secondFactor) title = "Two-step sign-in";
-  else title = "Sign in";
+  if (signingUp) title = t("Create an account");
+  else if (forgot || claiming) title = t("Reset your password");
+  else if (emailCode) title = t("Sign in with an email code");
+  else if (secondFactor) title = t("Two-step sign-in");
+  else title = t("Sign in");
 
   let submitLabel: string;
   if (signingUp) {
-    submitLabel = busy ? "Creating…" : "Create account";
+    submitLabel = busy ? t("Creating…") : t("Create account");
   } else if (forgot) {
     // "Send", not "Send again": the interval may have been started before a reload.
     // The wait is said once, in the line under the button (as the confirmation resend says it),
     // so the button keeps its name while it is locked (integration QA: the countdown was twice).
-    submitLabel = busy ? "Sending…" : "Send reset link";
+    submitLabel = busy ? t("Sending…") : t("Send reset link");
   } else if (claiming) {
-    submitLabel = "Continue";
+    submitLabel = t("Continue");
   } else if (emailCode) {
-    if (codeAsked) submitLabel = busy ? "Signing in…" : "Sign in";
-    else submitLabel = busy ? "Sending…" : "Email me a sign-in code";
+    if (codeAsked) submitLabel = busy ? t("Signing in…") : t("Sign in");
+    else submitLabel = busy ? t("Sending…") : t("Email me a sign-in code");
   } else if (secondFactor) {
-    submitLabel = busy ? "Checking…" : "Verify";
+    submitLabel = busy ? t("Checking…") : t("Verify");
   } else {
-    submitLabel = busy ? "Signing in…" : "Sign in";
+    submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
+
+  // Sentences with a link or an address inside: one entry each, split around what is inserted, so
+  // English keeps the text nodes it always had.
+  const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
+  const [agreeBefore = "", agreeBetween = "", agreeAfter = ""] = t(
+    "By creating an account you agree to the {terms} and {privacy}.",
+  ).split(/\{terms\}|\{privacy\}/);
 
   const forgotButton = (
     <button
@@ -979,7 +986,7 @@ export default function LoginRoute(): ReactElement {
           <div className="brand">
             <h1>JackiOh</h1>
           </div>
-          <h2>{t(title)}</h2>
+          <h2>{title}</h2>
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">
@@ -1114,11 +1121,11 @@ export default function LoginRoute(): ReactElement {
                   t("This browser is already signed in to an account.")
                 ) : (
                   <>
-                    {t("This browser is signed in as")}{" "}
+                    {signedInBefore}
                     <strong>
                       <Address value={signedInAs} />
                     </strong>
-                    .
+                    {signedInAfter}
                   </>
                 )}{" "}
                 {signingUp ? t("Creating an account does not change that.") : t("Signing in here signs it out of that account.")}
@@ -1289,7 +1296,7 @@ export default function LoginRoute(): ReactElement {
               data-testid={loginTestid.submit}
               disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
             >
-              {t(submitLabel)}
+              {submitLabel}
             </button>
             {codeAsked ? (
               <div className="auth-resend">
@@ -1312,15 +1319,15 @@ export default function LoginRoute(): ReactElement {
             ) : null}
             {signingUp ? (
               <p className="auth-hint" data-testid={signUpPrivacyTestid}>
-                {t("By creating an account you agree to the")}{" "}
+                {agreeBefore}
                 <a href={paths.terms} onClick={followInApp(paths.terms)}>
                   {t("Terms")}
-                </a>{" "}
-                {t("and")}{" "}
+                </a>
+                {agreeBetween}
                 <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
                   {t("Privacy Policy")}
                 </a>
-                .
+                {agreeAfter}
               </p>
             ) : null}
             {forgot && resetWait > 0 ? (

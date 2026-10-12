@@ -9,6 +9,7 @@ import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings } from "../car
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
+import { t } from "../i18n/i18n.ts";
 
 /** Every intensity the effects layer knows, in the order the picker lists them. */
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
@@ -44,7 +45,7 @@ function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }
     <div className="settings-row settings-row--slider">
       <div className="settings-control settings-control--slider">
         <label className="settings-label" htmlFor={`${id}-range`}>
-          Effects speed
+          {t("Effects speed")}
         </label>
         <output className="settings-slider-value" htmlFor={`${id}-range`} data-testid="setting-fxSpeed-value" aria-live="off">
           {speedLabel(props.speed)}
@@ -77,7 +78,7 @@ function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }
         <span>{speedLabel(FX_SPEED_MAX)}</span>
       </div>
       <p className="settings-hint" id={`${id}-hint`}>
-        How fast cards move, hit and die. Faster also shortens the pauses between them.
+        {t("How fast cards move, hit and die. Faster also shortens the pauses between them.")}
       </p>
     </div>
   );
@@ -96,7 +97,7 @@ function SelectRow(props: {
   return (
     <div className="settings-row">
       <label className="settings-control" htmlFor={`${id}-select`}>
-        <span className="settings-label">{props.label}</span>
+        <span className="settings-label">{t(props.label)}</span>
         <select
           id={`${id}-select`}
           className="settings-select"
@@ -109,13 +110,13 @@ function SelectRow(props: {
         >
           {props.options.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {t(option.label)}
             </option>
           ))}
         </select>
       </label>
       <p className="settings-hint" id={`${id}-hint`}>
-        {props.hint}
+        {t(props.hint)}
       </p>
     </div>
   );
@@ -157,7 +158,7 @@ export function AnimatedFoilSwitch(): ReactElement {
   return (
     <div className="settings-row">
       <label className="settings-control">
-        <span className="settings-label">{FOIL_FIELD?.label ?? "Animated foil"}</span>
+        <span className="settings-label">{t(FOIL_FIELD?.label ?? "Animated foil")}</span>
         <input
           type="checkbox"
           role="switch"
@@ -171,7 +172,7 @@ export function AnimatedFoilSwitch(): ReactElement {
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        {FOIL_FIELD?.description}
+        {FOIL_FIELD === undefined ? null : t(FOIL_FIELD.description)}
       </p>
     </div>
   );
@@ -184,7 +185,7 @@ export function VibrationSwitch(): ReactElement {
   return (
     <div className="settings-row">
       <label className="settings-control">
-        <span className="settings-label">Vibration</span>
+        <span className="settings-label">{t("Vibration")}</span>
         <input
           type="checkbox"
           role="switch"
@@ -198,7 +199,7 @@ export function VibrationSwitch(): ReactElement {
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        A short buzz when your card lands, a hit lands and your turn starts, on a phone that can. Off under Reduce motion.
+        {t("A short buzz when your card lands, a hit lands and your turn starts, on a phone that can. Off under Reduce motion.")}
       </p>
     </div>
   );
