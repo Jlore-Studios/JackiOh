@@ -4267,7 +4267,9 @@
     },
     "728": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6126405024"
+      ],
       "difficulty_by": {
         "at": "2026-10-12T14:54:07Z",
         "difficulty": "medium",
@@ -4299,9 +4301,7 @@
       "run_id": "38264718065",
       "started_at": "2026-10-12T14:41:50Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6126405024"
-      ]
+      "taken_asks": []
     },
     "729": {
       "action": "plan",
