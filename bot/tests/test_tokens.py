@@ -130,17 +130,17 @@ class RecordingTests(unittest.TestCase):
             devin={"spent": [{"at": "2026-09-29T12:00:00Z", "minutes": 60.0}],
                    "tokens_spent": [{"at": "2026-09-29T12:00:00Z", "input": 1000,
                                       "output": 50, "cache": 200, "cost": 0.04}]}))
-        body = stats.render(ctx, stats.collect(ctx))
-        self.assertIn("| Model tokens (in / out / cached) | 1000 / 50 / 200 |", body)
+        body = stats.block(ctx, stats.collect(ctx))
+        self.assertIn("| Model tokens (in / out / cached) | 1,000 / 50 / 200 |", body)
         self.assertIn("| Model cost (USD) | $0.04 |", body)
-        self.assertIn("| `devin` | 1000 | 50 | 200 | $0.04 |", body)
+        self.assertIn("| `devin` | 1,000 | 50 | 200 | $0.04 |", body)
 
     def test_a_window_without_tokens_says_so(self):
         from tests.test_stats import section, world
         _gh, ctx = world()
-        body = stats.render(ctx, stats.collect(ctx))
+        body = stats.block(ctx, stats.collect(ctx))
         six = section(body, "Last 6 hours")
-        self.assertIn("### Tokens and cost", six)
+        self.assertIn("**Tokens and cost**", six)
         self.assertIn("No call reported token counts in this window.", six)
 
     def test_journal_rows_and_sections_carry_tokens(self):

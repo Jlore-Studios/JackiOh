@@ -1,13 +1,12 @@
-"""The pinned "Night bot statistics" issue (bot/harness/stats.py): what the bot's comments, pull
-requests, commits and state file say it has done over the last six hours, the last day, the last
-week and all time, who planned, built, revised and approved each pull request, and the rewrite
-every 30 minutes."""
+"""The statistics in the pinned status issue (bot/harness/stats.py, #148): what the bot's
+comments, pull requests, commits and state file say it has done over the last six hours, the last
+day, the last week and all time, who planned, built, revised and approved each pull request, and
+the count every 30 minutes, kept in the issue between counts."""
 
 from __future__ import annotations
 
 import unittest
 from datetime import timedelta
-from unittest import mock
 
 from harness import stats
 
@@ -96,10 +95,9 @@ def world():
 
 
 def section(body: str, name: str) -> str:
-    start = body.index(f"## {name}\n")
-    following = [body.index(f"## {other}\n") for other, _ in stats.WINDOWS
-                 if body.index(f"## {other}\n") > start]
-    return body[start:min(following, default=len(body))]
+    """One window's folded section of the block."""
+    start = body.index(f"<details><summary><b>{name}</b>")
+    return body[start:body.index("</details>", start)]
 
 
 class ParseTests(unittest.TestCase):
@@ -170,7 +168,7 @@ class CreditTests(unittest.TestCase):
 class IssueTests(unittest.TestCase):
     def test_the_four_windows_sit_side_by_side_in_one_table(self):
         gh, ctx = world()
-        body = stats.render(ctx, stats.collect(ctx))
+        body = stats.block(ctx, stats.collect(ctx))
         self.assertIn("| | Last 6 hours | Last 24 hours | Last 7 days | All time |", body)
         for line in ("| Runs started | 4 | 5 | 6 | 6 |",
                      "| … plans · builds · revisions · reviews | 1 · 1 · 1 · 1 | 1 · 2 · 1 · 1 "
@@ -182,7 +180,7 @@ class IssueTests(unittest.TestCase):
                      "| Pull requests merged | 1 | 2 | 3 | 4 |",
                      "| Issues closed by them | 1 | 2 | 3 | 4 |",
                      "| Lines merged (added / removed) | +40 / −5 | +140 / −15 | +147 / −16 "
-                     "| +1147 / −16 |",
+                     "| +1,147 / −16 |",
                      "| Files changed in them | 4 | 6 | 7 | 8 |",
                      "| Commits in them | 3 | 4 | 5 | 6 |",
                      "| Median time from opening to merge | 3h 00m | 3h 00m | 3h 00m | 7h 30m |",
@@ -191,34 +189,29 @@ class IssueTests(unittest.TestCase):
                      "| Requests answered (`Queued …`) | 1 | 1 | 1 | 1 |"):
             self.assertIn(line, body)
         self.assertIn("Now: 1 of its pull requests open, 0 closed without merging, 1 commits on "
-                      "`main` by the bot itself. `bot-night.yml` runs ended: success 2, failure 1.",
+                      "`main` by the bot itself. `bot-night.yml` runs ended: success 2, failure 1",
                       body)
-        self.assertEqual([line for line in body.splitlines() if line.startswith("## ")],
-                         ["## The four windows"] + [f"## {name}" for name, _ in stats.WINDOWS])
-        self.assertTrue(body.endswith(stats.MARKER))
+        self.assertEqual([line for line in body.splitlines() if line.startswith("#")],
+                         ["## 📊 What it has done", "### The four windows",
+                          "### The last two weeks", "### Per window"])
+        self.assertTrue(body.startswith(stats.BLOCK_START))
+        self.assertTrue(body.endswith(stats.BLOCK_END))
+        self.assertEqual(stats.kept(f"before\n{body}\nafter"), body)
+        self.assertIsNone(stats.kept("no block here"))
 
-    def test_each_window_says_who_did_what_and_lists_what_merged_in_it(self):
+    def test_each_window_says_who_did_what_and_every_merge_is_listed_once(self):
         gh, ctx = world()
-        body = stats.render(ctx, stats.collect(ctx))
+        body = stats.block(ctx, stats.collect(ctx))
         six = section(body, "Last 6 hours")
+        self.assertIn("<b>Last 6 hours</b>: 4 runs, 1 pull requests merged, +40 / −5 lines", six)
         self.assertIn("| `devin` | `swe-2-max` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
                       "| 0 | 0 | 0 | 2.0 h |", six)
         self.assertIn("| `agy` | `gemini-3.1-pro` | 1 | 0 | 0 | 0 | 1 | 1 of 1 | 0 | 0 | +0 / −0 "
                       "| 0 | 0 | 0 | 0.0 h |", six)
-        self.assertIn("### Pull requests merged (1)", six)
-        self.assertIn("| #9 Patch v0.2.Y: work for #3 | `claude-3` | `devin` | `muse` "
-                      "| `claude-2`, `muse`, `agy` | 3h 00m | +40 / −5 | 4 |", six)
         self.assertNotIn("#10 ", six)
         self.assertNotIn("`gpt`", six)
 
-        day = section(body, "Last 24 hours")
-        self.assertIn("### Pull requests merged (2)", day)
-        self.assertIn("| #10 Patch v0.2.Y: work for #4 | — | `gpt` | — | — | 3h 00m "
-                      "| +100 / −10 | 2 |", day)
-
         week = section(body, "Last 7 days")
-        self.assertIn("| #11 Patch v0.2.Y: work for #5 | — | not recorded | — | — | 12h 00m "
-                      "| +7 / −1 | 1 |", week)
         # #11 and the open #13: no comment names who built either.
         self.assertIn("| _not recorded_ | — | 0 | 0 | 0 | 0 | 0 | 0 of 0 | 2 | 1 | +7 / −1 |",
                       week)
@@ -226,19 +219,27 @@ class IssueTests(unittest.TestCase):
                       "| 0 | 1 | 0 | 0.0 h |", week)
 
         ever = section(body, "All time")
-        self.assertIn("### Pull requests merged (4)", ever)
-        self.assertIn("#12 Patch v0.2.Y: work for #6", ever)
         self.assertIn("| `devin` | `swe-2-max` | 1 | 0 | 1 | 0 | 0 | 1 of 1 | 1 | 1 | +40 / −5 "
                       "| 0 | 0 | 0 | 3.0 h (its last 2 runs) |", ever)
-        self.assertIn("### Over time", ever)
-        self.assertEqual(body.count("### Over time"), 1)
+        # One list of every merge, newest first, with when it merged and who did what.
+        merged = body[body.index("<b>Pull requests merged</b>"):]
+        self.assertIn("<b>Pull requests merged</b>: the newest 4 of 4", merged)
+        rows = [line for line in merged.splitlines() if line.startswith("| #")]
+        self.assertEqual([row.split()[1] for row in rows], ["#9", "#10", "#11", "#12"])
+        self.assertIn("| #9 Patch v0.2.Y: work for #3 | Tue 09-29 10:00 | `claude-3` | `devin` "
+                      "| `muse` | `claude-2`, `muse`, `agy` | 3h 00m | +40 / −5 | 4 |", merged)
+        self.assertIn("| #10 Patch v0.2.Y: work for #4 | Mon 09-28 22:00 | — | `gpt` | — | — "
+                      "| 3h 00m | +100 / −10 | 2 |", merged)
+        self.assertIn("| #11 Patch v0.2.Y: work for #5 | Sat 09-26 07:00 | — | not recorded | — "
+                      "| — | 12h 00m | +7 / −1 | 1 |", merged)
+        self.assertEqual(body.count("| #9 Patch"), 1)
         # A person's pull request is not the bot's work.
         self.assertNotIn("#20 ", body)
-        self.assertNotIn("+5000", body)
+        self.assertNotIn("+5,000", body)
 
     def test_the_charts_are_bars_and_lines_never_pies(self):
         gh, ctx = world()
-        body = stats.render(ctx, stats.collect(ctx))
+        body = stats.block(ctx, stats.collect(ctx))
         self.assertNotIn("pie", body)
         self.assertEqual(body.count("```mermaid"), body.count("xychart-beta"))
         self.assertIn('title "Runs started, by subscription (last 6 hours)"', body)
@@ -250,48 +251,28 @@ class IssueTests(unittest.TestCase):
         self.assertEqual(lines[at + 1:at + 4], ['    x-axis ["devin", "gpt"]', '    y-axis "lines"',
                                                 '    bar [40, 100]'])
         self.assertIn('title "What runs ended in (all time)"', body)
+        self.assertEqual(body.count('title "Runs started per day (last 14 days)"'), 1)
 
     def test_a_quiet_window_says_so(self):
         gh, ctx = world()
         later = make_ctx(gh, at=DAY + timedelta(days=2))
-        body = stats.render(later, stats.collect(later))
-        self.assertIn("## Last 6 hours\n\nNothing happened.", body)
-        self.assertIn("## Last 24 hours\n\nNothing happened.", body)
+        body = stats.block(later, stats.collect(later))
+        self.assertIn("<details><summary><b>Last 6 hours</b>: nothing happened</summary>", body)
+        self.assertIn("<details><summary><b>Last 24 hours</b>: nothing happened</summary>", body)
         self.assertIn("| Pull requests merged | 0 | 0 | 3 | 4 |", body)
 
-    def test_a_body_too_long_for_github_lists_fewer_merges(self):
+    def test_the_merge_list_is_cut_to_its_newest(self):
         gh, ctx = world()
         for number in range(100, 160):
             merged_pull(gh, number, 3, opened="2026-09-29T12:00:00Z",
                         merged="2026-09-29T15:00:00Z", additions=1, deletions=1)
         facts = stats.collect(ctx)
-        full = stats.render(ctx, facts)
-        # 64 merged in all: each window lists its newest MERGES_SHOWN.
-        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN} older ones._", full)
-        with mock.patch.object(stats, "MAX_BODY", len(full) - 1):
-            body = stats.fit(ctx, facts)
-        self.assertLess(len(body), len(full))
-        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
-        self.assertTrue(body.endswith(stats.MARKER))
-
-    def test_it_is_opened_pinned_and_then_rewritten_every_30_minutes(self):
-        gh, ctx = world()
-        note = stats.update(ctx)
-        self.assertRegex(note, r"statistics: opened #\d+ and pinned it")
-        number = ctx.store.load()["statistics"]["issue"]
-        self.assertEqual(gh.threads[number]["title"], stats.TITLE)
-        self.assertEqual(gh.pinned, [gh.threads[number]["node_id"]])
-        self.assertEqual(stats.update(ctx), "statistics: not due")
-        self.assertEqual(stats.update(ctx, force=True), f"statistics: rewrote #{number}")
-        self.assertEqual(stats.STATS_EVERY, timedelta(minutes=30))
-        soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
-        self.assertEqual(stats.update(soon), "statistics: not due")
-        later = make_ctx(gh, at=DAY + stats.STATS_EVERY + timedelta(minutes=1))
-        self.assertEqual(stats.update(later), f"statistics: rewrote #{number}")
-        # Someone closes it: the next rewrite opens a new one.
-        gh.threads[number]["state"] = "closed"
-        much_later = make_ctx(gh, at=DAY + 3 * stats.STATS_EVERY)
-        self.assertRegex(stats.update(much_later), r"opened #\d+")
+        # 64 merged in all: the block lists its newest MERGES_SHOWN, or none at all.
+        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN} older ones._", stats.block(ctx, facts))
+        self.assertIn("_… and 54 older ones._", stats.block(ctx, facts, shown=10))
+        none = stats.block(ctx, facts, shown=0)
+        self.assertIn("_64 pull requests merged; the list is left out", none)
+        self.assertNotIn("| #100 ", none)
 
 
 if __name__ == "__main__":

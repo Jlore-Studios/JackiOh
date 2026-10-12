@@ -64,7 +64,7 @@ class ReviewRuleTests(unittest.TestCase):
         waits for its Strong final audit, and no medium review run goes out meanwhile."""
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, result = self.build_on_medium(h)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         votes = h.ctx.store.load()["items"][str(pr)]["votes"]
         self.assertEqual(votes, {"sha": result["head"], "builder": "muse",
@@ -78,7 +78,7 @@ class ReviewRuleTests(unittest.TestCase):
         planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
         self.assertEqual(planned["action"], "none")
         self.assertEqual(h.gh.auto_merge, {})
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         # With a strong seat free, Opus audits, and that ships it.
         h.committed_hours()  # claude-3 works all day
         next_run(h, "778")
@@ -102,7 +102,7 @@ class ReviewRuleTests(unittest.TestCase):
         planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
         self.assertEqual(planned["action"], "none")
         self.assertEqual(h.gh.auto_merge, {})
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
 
     def test_a_deliver_job_run_again_does_not_count_its_review_twice(self):
         h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("agy",), at=DAY)
@@ -191,7 +191,7 @@ class ReviewRuleTests(unittest.TestCase):
         self.assertEqual([c.role for c in runner.calls].count("review"), 1)
         self.assertIn("Strong final audit", result["reason"])
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         record = h.ctx.store.load()["items"]["12"]
         self.assertEqual((record["verdict_rounds"], record["round_tier"]), (3, "medium"))
 
@@ -219,7 +219,7 @@ class ReviewRuleTests(unittest.TestCase):
         pr, _ = self.build_on_medium(h)
         h.night(FakeRunner({"review": reviewer(changes("It skips the replay check."))}))
         record = h.ctx.store.load()["items"][str(pr)]
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE, "difficulty:medium"})
         self.assertEqual((record["source"], record["cross_rounds"]), ("cross-review", 1))
         # The revision answers the Strong audit, so it stays with a Strong seat (#725).
         # Two failed revisions are strikes two and three (each failed for the item's own sake),
@@ -259,7 +259,7 @@ class ReviewRuleTests(unittest.TestCase):
                         base="bot/issue-12")
             return reviewer(APPROVE)(request)
         h.night(FakeRunner({"review": moved}))
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         self.assertIn("does not count", h.gh.bot_comments(pr)[-1])
 
@@ -386,7 +386,7 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertIn("yours is the only review of the resolution", runner.calls[1].prompt)
         self.assertIn("resolved the conflicts in `src/game.txt`", runner.calls[1].prompt)
         # No review run: auto-merge is back on, pinned to the resolved head.
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge_heads[f"PR_{pr}"], result["head"])
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertEqual([r["family"] for r in record["votes"]["reviews"]], ["muse"])
@@ -410,7 +410,7 @@ class ConflictCarryTests(unittest.TestCase):
         planned, result = h.night(FakeRunner({"revise": resolve({"src/extra.txt": "more\n"}),
                                               "review": reviewer(APPROVE)}))
         self.assertEqual(result["status"], "approved")
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertNotIn("carried", record["votes"])
@@ -429,7 +429,7 @@ class ConflictCarryTests(unittest.TestCase):
         h.night(runner)
         self.assertNotIn("change nothing else", runner.calls[0].prompt)
         self.assertNotIn("yours is the only review", runner.calls[1].prompt)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertIn("but that does not carry over: the branch had moved on from the commit they "
                       "cleared", h.gh.bot_comments(pr)[-1])
 
@@ -446,7 +446,7 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertEqual((planned["source"], result["status"]), ("conflict", "approved"))
         self.assertNotIn("cleared", planned)
         self.assertNotIn("yours is the only review", runner.calls[1].prompt)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         self.assertNotIn("cleared this change", h.gh.bot_comments(pr)[-1])
 

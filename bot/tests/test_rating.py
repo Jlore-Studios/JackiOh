@@ -64,6 +64,19 @@ class RatingTests(unittest.TestCase):
         planned = plan_mod.make(h.ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
 
+    def test_a_plan_with_no_rating_line_still_labels_the_item_medium(self):
+        """A planner that leaves out its `<!-- bot: ... -->` line must not leave the item
+        unlabelled (#735): it is `difficulty:medium`, the bot's own rating, so a later planner
+        may raise it."""
+        h = day_harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,), body="Make the rules v2.")
+        h.night(planner(rated_plan("easy").split("\n", 1)[1]))
+        self.assertEqual({n for n in h.gh.label_names(12) if n.startswith("difficulty:")},
+                         {MEDIUM})
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual(record["difficulty_by"]["difficulty"], "medium")
+        self.assertIn("gave no rating, so it is `difficulty:medium`", h.gh.bot_comments(12)[-1])
+
     def test_a_medium_rating_by_a_medium_planner_stands(self):
         """A medium plan meets a medium item's floor (#695): no strong plan comes next, it is
         cleared to build."""

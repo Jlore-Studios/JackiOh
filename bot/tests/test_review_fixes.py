@@ -31,7 +31,7 @@ def medium_pr(test, h):
     h.night(FakeRunner({"build": timed_builder({"src/game.txt": "rules v2\n"}),
                         "review": reviewer(APPROVE)}))
     pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-    test.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+    test.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
     return pr
 
 
@@ -127,7 +127,7 @@ class SecondReviewTests(unittest.TestCase):
 
         h.night(FakeRunner({"review": commented}))
         self.assertEqual(h.gh.auto_merge, {})
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE, "difficulty:medium"})
         self.assertFalse(h.ctx.store.load()["items"][str(pr)]["pending_request"])
 
     def test_a_review_whose_run_dies_backs_off_its_subscription_and_is_counted(self):
@@ -141,7 +141,7 @@ class SecondReviewTests(unittest.TestCase):
             Deliverer(h.ctx, planned, empty_out(h, f"died-{attempt}"), h.deliver_repo).run()
         # Each death backs its subscription off; the next strong seat takes it.
         self.assertEqual(seen, ["claude-3", "claude-7"])
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED, "difficulty:medium"})
         self.assertIn("died 2 times", h.gh.bot_comments(pr)[-1])
 
     def test_a_second_review_runs_none_of_the_builders_code(self):
