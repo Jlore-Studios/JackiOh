@@ -4305,9 +4305,10 @@
       "stop_requested": false,
       "strike_log": [
         "`claude-7` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:29`: The Meditative release summary tells players the set is 'built around the Zenith, Flow and Focus mechanics', but no su",
-        "`claude-4` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:37`: The Meditative set's practice AI bullet tells players the AI's decks leave the Meditative cards out until it has been "
+        "`claude-4` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:37`: The Meditative set's practice AI bullet tells players the AI's decks leave the Meditative cards out until it has been ",
+        "`claude-6` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:37`: The Meditative technical-changes bullet says the practice AI's decks leave the Meditative cards out until it has been "
       ],
-      "strikes": 2,
+      "strikes": 3,
       "taken_asks": [],
       "verdict_rounds": 0
     },
