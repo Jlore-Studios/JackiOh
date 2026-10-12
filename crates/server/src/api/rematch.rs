@@ -27,10 +27,10 @@ use serde_json::Value;
 use crate::api::collection::caller_profile;
 use crate::api::decks::lean_newest_of;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
-use crate::api::queue::{new_seed, new_uuid};
+use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
-use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, QueueMode, StartMatchInput};
+use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
 
 /// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
 pub const STAKE_NORMAL: RematchStakes = 1;
@@ -98,6 +98,10 @@ pub fn rematch_offer_count() -> usize {
 
 fn no_such_match() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such match")
+}
+
+fn already_in_match() -> ApiError {
+    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
 fn series_game() -> ApiError {
@@ -211,6 +215,7 @@ async fn create_rematch(
     );
 
     // Refuse before minting anything: a seat that found another game meanwhile keeps that game.
+    let mut bots = Vec::new();
     {
         let mut tx = app
             .db
@@ -223,10 +228,36 @@ async fn create_rematch(
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
             if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
-                return Err(ApiError::new(
-                    ApiErrorCode::AlreadyInMatch,
-                    "finish your current match first",
-                ));
+                return Err(already_in_match());
+            }
+            if found.first().is_some_and(|profile| profile.kind == ProfileKind::Bot) {
+                bots.push(seat.profile_id.clone());
+            }
+        }
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+    }
+
+    // R639000: a ladder bot is claimed for its rematch in one step, as the fallback claims one for a
+    // ticket (R1453): free and not retired, whatever its schedule says. One claimed meanwhile, or any
+    // while `LADDER_BOTS` is off, answers as a seat that found another game.
+    if !bots.is_empty() {
+        if !app.env.ladder_bots {
+            return Err(already_in_match());
+        }
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        for bot in &bots {
+            let claimed = tx
+                .bots_claim_for_rematch(bot, &finished.players, match_id, &finished.catalog_version, now_ms())
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            if !claimed {
+                return Err(already_in_match());
             }
         }
         tx.commit()
@@ -235,7 +266,8 @@ async fn create_rematch(
     }
 
     // A failed start leaves nothing behind: the caller clears the offer claim and the seats re-offer.
-    app.matches
+    let started = app
+        .matches
         .start(
             app,
             StartMatchInput {
@@ -254,7 +286,34 @@ async fn create_rematch(
                 seats: seats.clone(),
             },
         )
-        .await?;
+        .await;
+    if let Err(error) = started {
+        // R639000: the claimed bot is let go and its skeleton discarded, as `queue.rs` lets go a bot
+        // whose fallback start failed.
+        if !bots.is_empty() {
+            let cleanup = async {
+                let mut tx = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                for bot in &bots {
+                    tx.profiles_set_in_match(bot, None)
+                        .await
+                        .map_err(|error| ApiError::internal(error.to_string()))?;
+                }
+                tx.commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                discard_open(app, match_id).await
+            }
+            .await;
+            if let Err(cleanup) = cleanup {
+                tracing::error!(event = "rematch.bot_cleanup_failed", matchId = %match_id, message = %cleanup.message);
+            }
+        }
+        return Err(error);
+    }
 
     // After the start, not before: the row is what the in-match reference points at
     // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. A seat taken during
@@ -366,6 +425,56 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     // R1372: absent is off, so an offer from a client before it is a plain rematch.
     let lean_newest = lean_newest_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
+    let match_id = offer_as(app, &match_row, seat, stakes, lean_newest).await?;
+    let created = RematchOfferBody { match_id };
+    Ok(json(
+        200,
+        serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?,
+    ))
+}
+
+/// R639000: a ladder bot's offer (or its answer to a person's), made for the seat it began
+/// `match_id` in, as a person's offer is made: the same refusals, the same map and the same start.
+/// Nothing unless `LADDER_BOTS` is on and the match is held. A bot leans on no set (R1372). Answers
+/// the game the offer made, if it made one.
+pub async fn offer_for_bot(
+    app: &Arc<App>,
+    match_id: &str,
+    seat: PlayerId,
+    stakes: RematchStakes,
+) -> Result<Option<String>, ApiError> {
+    if !app.env.ladder_bots {
+        return Ok(None);
+    }
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let found = tx
+        .matches_get(match_id)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let Some(match_row) = found else {
+        return Ok(None);
+    };
+    offer_as(app, &match_row, seat, stakes, false).await
+}
+
+/// The offer of `seat` (the seat its account began the match in) once the caller is known: the
+/// refusals, the claim on the offers map, the start of the rematch equal offers make, and the
+/// telemetry. R639000: an offer that made no rematch is told to the match's actor, if it is still in
+/// memory, so a ladder bot opposite can meet it.
+async fn offer_as(
+    app: &Arc<App>,
+    match_row: &MatchRow,
+    seat: PlayerId,
+    stakes: RematchStakes,
+    lean_newest: bool,
+) -> Result<Option<String>, ApiError> {
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
         return Err(ApiError::new(
@@ -425,8 +534,8 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
         None => answered,
         Some((new_id, generation, leans)) => {
             let created = async {
-                let mode = rematch_mode(app, &match_row).await?;
-                create_rematch(app, &match_row, mode, stakes, leans, &new_id).await
+                let mode = rematch_mode(app, match_row).await?;
+                create_rematch(app, match_row, mode, stakes, leans, &new_id).await
             }
             .await;
             if let Err(error) = created {
@@ -443,11 +552,12 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     };
     // R1442: the offer, and whether it made the rematch, among the finished match's signals.
     crate::actor::telemetry::note_rematch(app, &match_row.id, seat, made).await;
-    let created = RematchOfferBody { match_id };
-    Ok(json(
-        200,
-        serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?,
-    ))
+    if match_id.is_none()
+        && let Some(actor) = app.matches.get(&match_row.id)
+    {
+        actor.on_rematch_offer(seat, stakes);
+    }
+    Ok(match_id)
 }
 
 /// `GET /api/matches/:matchId/rematch` (active): what each seat offered, whether the opponent is

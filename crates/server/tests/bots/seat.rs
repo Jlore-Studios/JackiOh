@@ -8,7 +8,9 @@
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{Action, ActionBody, ActionType, Rng};
 use jackioh_server::actor::engine::{begin_game, create_game, create_game_args, reduce};
-use jackioh_server::bots::seat::{decision_deadline_ms, fallback_action, r188_forbidden, think_ms};
+use jackioh_server::bots::seat::{
+    THINK_MODEL, ThinkFor, decision_deadline_ms, fallback_action, r188_forbidden, think_ms,
+};
 use jackioh_server::config::{
     BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS,
 };
@@ -25,13 +27,23 @@ fn decks() -> (Vec<String>, Vec<String>) {
     (pool[..size].to_vec(), pool[size..size * 2].to_vec())
 }
 
+/// A plain move's think time: not a lethal one, on a board of seven legal actions.
+fn think(action_kind: ActionType, first_in_turn: bool) -> ThinkFor {
+    ThinkFor {
+        action_kind,
+        first_in_turn,
+        legal_count: 7,
+        lethal: false,
+    }
+}
+
 #[test]
 fn r1452_a_think_time_stays_inside_its_bounds_and_the_clock() {
     let mut rng = Rng::new("think-bounds", 0);
     for at in 0..400 {
         let first = at % 2 == 0;
         let cursor = rng.cursor();
-        let free = think_ms(&mut rng, ActionType::Play, first, 1.0, None);
+        let free = think_ms(&mut rng, &think(ActionType::Play, first), &THINK_MODEL, 1.0, None);
         assert!((BOT_THINK_MIN_MS..=BOT_THINK_MAX_MS).contains(&free), "{free}");
         // Two draws a think time (Box–Muller).
         assert_eq!(rng.cursor(), cursor + 2);
@@ -42,15 +54,15 @@ fn r1452_a_think_time_stays_inside_its_bounds_and_the_clock() {
     for at in 0..100u32 {
         let slow = think_ms(
             &mut Rng::new("think-speed", at * 2),
-            ActionType::EndTurn,
-            true,
+            &think(ActionType::EndTurn, true),
+            &THINK_MODEL,
             2.0,
             None,
         );
         let plain = think_ms(
             &mut Rng::new("think-speed", at * 2),
-            ActionType::EndTurn,
-            true,
+            &think(ActionType::EndTurn, true),
+            &THINK_MODEL,
             1.0,
             None,
         );
@@ -58,8 +70,8 @@ fn r1452_a_think_time_stays_inside_its_bounds_and_the_clock() {
         let left = BOT_CLOCK_MARGIN_MS + 3_000;
         let tight = think_ms(
             &mut Rng::new("think-speed", at * 2),
-            ActionType::EndTurn,
-            true,
+            &think(ActionType::EndTurn, true),
+            &THINK_MODEL,
             2.0,
             Some(left),
         );
@@ -70,8 +82,8 @@ fn r1452_a_think_time_stays_inside_its_bounds_and_the_clock() {
     assert_eq!(
         think_ms(
             &mut Rng::new("think-edge", 0),
-            ActionType::EndTurn,
-            false,
+            &think(ActionType::EndTurn, false),
+            &THINK_MODEL,
             1.0,
             Some(edge)
         ),
@@ -80,8 +92,8 @@ fn r1452_a_think_time_stays_inside_its_bounds_and_the_clock() {
     assert_eq!(
         think_ms(
             &mut Rng::new("think-edge", 0),
-            ActionType::EndTurn,
-            false,
+            &think(ActionType::EndTurn, false),
+            &THINK_MODEL,
             1.0,
             Some(0)
         ),

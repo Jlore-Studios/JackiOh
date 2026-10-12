@@ -69,32 +69,18 @@ pub fn bot_aim(state: &GameState, seat: PlayerId, body: &ActionBody) -> Option<A
             })
         }
         ActionBody::Play {
-            instance_id,
-            targets,
-            ..
+            instance_id, targets, ..
         } => {
             let index = state.players[seat]
                 .hand
                 .iter()
                 .position(|card| card.id == *instance_id)?;
-            declared(
-                state,
-                AimEnd::Hand {
-                    player: seat,
-                    index,
-                },
-                targets.as_ref(),
-            )
+            declared(state, AimEnd::Hand { player: seat, index }, targets.as_ref())
         }
         ActionBody::Activate {
-            instance_id,
-            targets,
-            ..
+            instance_id, targets, ..
         } => declared(state, field_end(state, instance_id)?, targets.as_ref()),
-        ActionBody::ActivatePower {
-            instance_id,
-            targets,
-        } => {
+        ActionBody::ActivatePower { instance_id, targets } => {
             // A hero's power has no zone: the aim starts at the hero, as the client's does.
             let source = field_end(state, instance_id).unwrap_or(AimEnd::Hero { player: seat });
             declared(state, source, targets.as_ref())

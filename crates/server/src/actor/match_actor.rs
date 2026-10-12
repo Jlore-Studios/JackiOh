@@ -57,14 +57,15 @@ use crate::actor::protocol::{
 };
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
+use crate::api::rematch::{RematchStakes, STAKE_NORMAL, offer_for_bot};
 use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
 use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
 use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
 use crate::ranked::ladder::RankTier;
@@ -1021,6 +1022,7 @@ impl MatchActor {
             core.telemetry.finish(&pilots, core.tiers.as_ref())
         };
         telemetry::record(&self.shared.deps, &played).await;
+        self.plan_bot_rematches(at);
 
         tracing::info!(
             event = "match.over",
@@ -1029,6 +1031,62 @@ impl MatchActor {
             reason = %result.reason,
             turns = snapshot.turn,
         );
+    }
+
+    /// R639000, R672: each bot home of a ranked match draws its plan for the game's end: it stays
+    /// present until its linger ends, and when the plan says so offers a normal rematch
+    /// `offer_after_ms` after the end, as `on_rematch_offer` meets a person's. Only a match whose
+    /// result landed reaches here, so a void or an unrecorded end plans nothing.
+    fn plan_bot_rematches(&self, at: i64) {
+        if self.shared.match_row.ranked != Some(true) {
+            return;
+        }
+        for home in PLAYERS {
+            if self.shared.bots[home].is_none() {
+                continue;
+            }
+            let plan = rematch_plan(&self.shared.match_row.seed, home, &BOT_REMATCH_FIT);
+            self.lock().bot_rematch[home] = Some((plan, at + plan.linger_ms));
+            if plan.offers {
+                self.bot_offers_rematch_after(home, plan.offer_after_ms, STAKE_NORMAL);
+            }
+        }
+    }
+
+    /// R639000: the bot home offers a rematch at `stakes` once `ms` have passed, through the route a
+    /// person's offer takes (`api::rematch::offer_for_bot`), off the queue.
+    fn bot_offers_rematch_after(&self, home: PlayerId, ms: i64, stakes: RematchStakes) {
+        let deps = Arc::clone(&self.shared.deps);
+        let match_id = self.shared.match_row.id.clone();
+        let wait = Duration::from_millis(u64::try_from(ms).unwrap_or(0));
+        tokio::spawn(async move {
+            tokio::time::sleep(wait).await;
+            if let Err(error) = offer_for_bot(&deps, &match_id, home, stakes).await {
+                tracing::warn!(event = "bot.rematch.failed", matchId = %match_id, home = %home, message = %error.message);
+            }
+        });
+    }
+
+    /// R639000, R672: a person in seat `from` offered a rematch that made none yet. The bot home
+    /// opposite meets it, at the person's stakes and `reply_ms` later, when its plan accepts, it has
+    /// not answered already and it is still on the match (its linger has not ended).
+    pub fn on_rematch_offer(&self, from: PlayerId, stakes: RematchStakes) {
+        let bot = from.opponent();
+        if self.shared.bots[bot].is_none() {
+            return;
+        }
+        let reply_ms = {
+            let mut core = self.lock();
+            let Some((plan, until)) = core.bot_rematch[bot] else {
+                return;
+            };
+            if !plan.accepts || core.bot_rematch_answered[bot] || now_ms() >= until {
+                return;
+            }
+            core.bot_rematch_answered[bot] = true;
+            plan.reply_ms
+        };
+        self.bot_offers_rematch_after(bot, reply_ms, stakes);
     }
 
     /// R1437: `record_result`, tried up to `MATCH_RECORD_RESULT_ATTEMPTS` times, the first wait
@@ -1147,6 +1205,12 @@ impl MatchActor {
     /// it plays now) and is not already deciding. `seat::play` decides and waits out the think time
     /// off the queue, then queues the move as `Task::BotMove`; the queue goes on meanwhile, so a
     /// clock that runs out first still times the bot out as it would a person.
+    ///
+    /// R639000: a bot whose own turn is just starting first asks `signals::idles_turn` whether it
+    /// lets this one run out; when it does, no move is started, so its turn clock times it out
+    /// (R79) as it does a person who is away. The answer is drawn on the turn's own stream, so every
+    /// later call this turn answers the same. A targeted move's aim goes through the relay
+    /// (`receive_aim`) once `play` comes back, and the move `aim_lead_ms` after it.
     fn drive_bots(&self) {
         let mut core = self.lock();
         if core.finished || core.stopped {
@@ -1167,23 +1231,53 @@ impl MatchActor {
                 continue;
             };
             let seed = &self.shared.match_row.seed;
+            let turn = core.state.turn;
+            let first_in_turn = core.bot_moved_turn[home] != Some(turn);
+            let own_turn_start = first_in_turn
+                && core.state.active == player
+                && core.state.mulligan.is_none()
+                && core.state.pending.is_none();
+            let clock_left_ms = self.shared.clock.remaining_for(player);
+            // Only a running clock can time the bot out; with none, an idle turn would never end.
+            if own_turn_start && clock_left_ms.is_some() && idles_turn(seed, home, turn, &BOT_TIMEOUT_FIT) {
+                continue;
+            }
             let (ai_cursor, timing_cursor) = core.bot_cursors[home];
+            let version = core.next_seq;
             let job = BotJob {
                 state: core.state.clone(),
                 seat: player,
+                home,
+                seed: seed.clone(),
                 strength,
                 speed: bot.speed,
                 ai_rng: Rng::new(&format!("{seed}:bot-ai:{home}"), ai_cursor),
                 timing_rng: Rng::new(&format!("{seed}:bot-timing:{home}"), timing_cursor),
-                first_in_turn: core.bot_moved_turn[home] != Some(core.state.turn),
-                clock_left_ms: self.shared.clock.remaining_for(player),
+                first_in_turn,
+                own_turn_start,
+                aim_lead_ms: aim_lead_ms(seed, home, version),
+                clock_left_ms,
             };
             core.bot_thinking[home] = true;
-            let version = core.next_seq;
-            let turn = core.state.turn;
             let actor = Arc::downgrade(&self.shared);
             tokio::spawn(async move {
                 let played = seat::play(job).await;
+                if let Some(aim) = played.aim {
+                    // R738: the aim shows a beat before the move, through the relay a person's goes by.
+                    let Some(shared) = actor.upgrade() else { return };
+                    let strong = MatchActor { shared };
+                    {
+                        let mut core = strong.lock();
+                        let player = playing(&core, home);
+                        strong.receive_aim(&mut core, player, Some(aim));
+                    }
+                    // Not held across the wait, so the actor can still go meanwhile.
+                    drop(strong);
+                    tokio::time::sleep(Duration::from_millis(
+                        u64::try_from(played.aim_lead_ms).unwrap_or(0),
+                    ))
+                    .await;
+                }
                 if let Some(shared) = actor.upgrade() {
                     MatchActor { shared }.enqueue(Task::BotMove {
                         home,
@@ -1198,7 +1292,9 @@ impl MatchActor {
 
     /// R1452: plays the move a bot home decided, as a server action (R270's prefix, so no client can
     /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
-    /// the seat it plays now. R188: a bot never concedes or offers or takes a draw.
+    /// the seat it plays now. R639000: a bot concedes and answers a draw offer as `seat::play` drew
+    /// it, never offers a draw (`never_played`), and its aim, once relayed, is taken down after the
+    /// move as a person's client takes its own down.
     ///
     /// A move decided on a state the log has since moved past (the other seat acted meanwhile: a
     /// person's auto-end-turn switch, their side of the mulligan, an answer to a prompt) still goes,
@@ -1208,6 +1304,16 @@ impl MatchActor {
     /// one whose write failed is decided again `BOT_WRITE_RETRY_MS` later, never traded for the
     /// fallback.
     async fn on_bot_move(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
+        let aimed = played.aim.is_some();
+        self.on_bot_move_inner(home, version, turn, played).await;
+        if aimed {
+            let mut core = self.lock();
+            let player = playing(&core, home);
+            self.receive_aim(&mut core, player, None);
+        }
+    }
+
+    async fn on_bot_move_inner(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
         let (player, body, stale, previous_turn, nonce) = {
             let mut core = self.lock();
             core.bot_thinking[home] = false;
@@ -1217,7 +1323,7 @@ impl MatchActor {
             }
             let player = playing(&core, home);
             let stale = core.next_seq != version;
-            let body = played.body.filter(|body| !r188_forbidden(body));
+            let body = played.body.filter(|body| !never_played(body));
             let body = if !stale {
                 body.or_else(|| fallback_action(&core.state, player))
             } else if core.state.turn == turn {
@@ -1731,13 +1837,17 @@ impl MatchActor {
     /// R672: which seats hold an open socket right now. The registry's `presence_of` reads this, so a
     /// rematch offer learns whether the opponent is still on the match. A seat is present while it
     /// holds a socket that is still open. R1452: a bot's seat holds none, and is present until the
-    /// game ends, as a person playing it would be; after that it reads as gone.
+    /// game ends, as a person playing it would be; R639000: after that it stays present until its
+    /// rematch plan's linger ends, as a person on the death screen is, and then reads as gone.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();
         let playing_on = !core.finished && !core.voided;
+        let now = now_ms();
+        let lingering =
+            |home: PlayerId| core.bot_rematch[home].is_some_and(|(_, until)| core.finished && now < until);
         let open = |home: PlayerId| {
             core.sockets[home].as_ref().is_some_and(Socket::is_open)
-                || (playing_on && self.shared.bots[home].is_some())
+                || (self.shared.bots[home].is_some() && (playing_on || lingering(home)))
         };
         PerPlayer::new(open(PlayerId::P1), open(PlayerId::P2))
     }

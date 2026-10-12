@@ -29,8 +29,8 @@ use crate::config::{
     AIM_RELAY_INTERVAL_MS, BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS,
     BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU,
     BOT_THINK_PRIOR_FIRST_SIGMA, BOT_THINK_PRIOR_LATER_MU, BOT_THINK_PRIOR_LATER_SIGMA,
-    BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength, THINK_COMPLEXITY_SLOPE,
-    THINK_LETHAL_SHIFT, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
+    BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength, THINK_COMPLEXITY_SLOPE, THINK_LETHAL_SHIFT,
+    THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
 };
 
 /// One move a bot owes: the true state (the AI reads it only through `ai_to_act` and `redact`,
@@ -167,7 +167,13 @@ pub async fn play(job: BotJob) -> BotMove {
             .filter(|body| !r188_forbidden(body))
             .map(|body| match body {
                 ActionBody::AnswerDraw { .. } => ActionBody::AnswerDraw {
-                    accept: accepts_draw(&seed, home, state.turn, deficit(&state, seat), &BOT_DRAW_ANSWER_FIT),
+                    accept: accepts_draw(
+                        &seed,
+                        home,
+                        state.turn,
+                        deficit(&state, seat),
+                        &BOT_DRAW_ANSWER_FIT,
+                    ),
                 },
                 body => body,
             });

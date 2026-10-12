@@ -1868,6 +1868,28 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
+    /// TEMP STUB (replaced by the store agent's version).
+    pub async fn bots_claim_for_rematch(
+        &mut self,
+        bot_id: &str,
+        players: &(String, String),
+        match_id: &str,
+        catalog_version: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        let _ = (players, catalog_version);
+        match self {
+            _ => {
+                let ok = self.profiles_get_many(&[bot_id.to_string()]).await?.first().is_some_and(|p| p.in_match_id.is_none());
+                if ok {
+                    self.profiles_set_in_match(bot_id, Some(match_id)).await?;
+                }
+                let _ = at;
+                Ok(ok)
+            }
+        }
+    }
+
     /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
     /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
     /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`

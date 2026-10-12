@@ -392,6 +392,12 @@ impl Registry {
         actor.map(|actor| actor.presence())
     }
 
+    /// R639000: the actor in memory, never rebuilt, as `presence_of` reads it: a rematch offer tells
+    /// it so a ladder bot still on the match can meet the offer (`MatchActor::on_rematch_offer`).
+    pub fn get(&self, match_id: &str) -> Option<MatchActor> {
+        lock(&self.actors).get(match_id).cloned()
+    }
+
     /// Drop the in-memory actor; the log stays. Used by the reaper and by tests.
     pub async fn stop(&self, match_id: &str) {
         let actor = lock(&self.actors).shift_remove(match_id);

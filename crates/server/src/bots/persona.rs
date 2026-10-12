@@ -25,8 +25,8 @@ use jackioh_engine::wire::{
 };
 
 use crate::config::{
-    AI_EMOTE, AI_PERSONAS, BOT_PERSONA_WEIGHTS, EmoteDelayFit, EmoteReplyKey, EmoteTrigger, PERSONA_DEAL_STEPS,
-    PERSONA_NAMES, PersonaName, persona_spec,
+    AI_EMOTE, AI_PERSONAS, BOT_PERSONA_WEIGHTS, EmoteDelayFit, EmoteReplyKey, EmoteTrigger,
+    PERSONA_DEAL_STEPS, PERSONA_NAMES, PersonaName, persona_spec,
 };
 
 /// R645: the practice AI's delay window, `AI_EMOTE`'s, as an `EmoteDelayFit`.
