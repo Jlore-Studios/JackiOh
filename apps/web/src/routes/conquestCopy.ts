@@ -38,7 +38,7 @@ export const CONQUEST_MESSAGES = {
   dismiss: "Got it",
   toggleOpen: "How Conquest works",
   lockInReminder: "Locking in is final and sealed. A win locks this deck for the rest of the series.",
-  seriesEndRatingReminder: "Ranked series: counted as one rated game. Rating updates once for the series.",
+  seriesEndRatingReminder: "Your rating moves once for the whole series, not for each of its games.",
   trioL4Hint: "Three decks with no cards in common make a trio for Conquest (Rule L4). Each card can appear in only one deck.",
 } as const;
 

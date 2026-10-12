@@ -19,7 +19,7 @@ import {
   conquestText,
 } from "./conquestCopy.ts";
 import { conquestExplainerTestid } from "./ConquestExplainer.tsx";
-import SeriesRoute, { seriesTestid } from "./series.tsx";
+import SeriesRoute, { ratingWords, seriesTestid } from "./series.tsx";
 import SeriesPicker, { seriesPickerTestid } from "./SeriesPicker.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -214,6 +214,10 @@ describe("Conquest first-series walkthrough and onboarding", () => {
     const endReminder = screen.getByTestId(seriesTestid.endReminder);
     expect(endReminder).toBeInTheDocument();
     expect(endReminder).toHaveTextContent(conquestText("seriesEndRatingReminder"));
+    // The reminder adds to the rating line above it and never repeats it.
+    const ratingLine = ratingWords({ outcome: "win", endReason: "decided", ranked: true });
+    expect(endReminder).not.toHaveTextContent(ratingLine);
+    expect((screen.getByTestId(seriesTestid.result).textContent ?? "").split(ratingLine)).toHaveLength(2);
   });
 
   it("series result does not show inline rating reminder when unrated", async () => {
