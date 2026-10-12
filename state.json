@@ -4324,6 +4324,13 @@
     "659": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T00:45:28Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rules 2 and 7 fail: an e2e Cypress spec in e2e/ plus a fix in crates/tools, two places; nothing touches engine or AI, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
