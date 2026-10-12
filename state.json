@@ -4900,7 +4900,25 @@
       "run_id": "38189733635",
       "started_at": "2026-10-12T00:54:14Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "38189733635",
+            "tier": "medium"
+          }
+        ],
+        "sha": "8b02b36c0364c511d96be05c9ea55b69b428be63",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "693": {
       "action": "review",
