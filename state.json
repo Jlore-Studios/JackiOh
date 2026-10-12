@@ -4714,8 +4714,10 @@
     "what": "revise #731 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-12T15:43:48Z",
-    "notes": [],
+    "at": "2026-10-12T15:54:35Z",
+    "notes": [
+      "#740: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
