@@ -1171,6 +1171,24 @@ pub struct MatchSignalRow {
     pub pilot: Pilot,
 }
 
+/// R639000: one seat's signals beside how its match ended, what `timing-fit` fits the concessions,
+/// draws, timeouts and rematches on.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SignalOutcomeRow {
+    pub signal: MatchSignalRow,
+    /// Whether the account that began in the seat won (the match's seat, as the signals row's is,
+    /// not the result's credited one after a Glitch's swap, R677); `None` when the match had no winner.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub won: Option<bool>,
+    pub reason: GameOverReason,
+    /// The match's last turn, as its result holds it.
+    pub turns: i64,
+    /// Whether a rematch could be offered from the match (R672): it was ranked, as every match a
+    /// ladder bot plays is, and no Conquest series holds it.
+    pub rematchable: bool,
+}
+
 /// R1442: one match's telemetry, as the actor writes it with the result.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -1851,6 +1869,24 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
+    /// R639000: claims a bot for the rematch `match_id` of a match `players` played, single-shot as
+    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (in no match and not
+    /// retired), whatever its schedule. On true the `open` match skeleton is written for `players`
+    /// and the bot is put in it; the person is the caller's to put in the match.
+    pub async fn bots_claim_for_rematch(
+        &mut self,
+        bot_id: &str,
+        players: &(String, String),
+        match_id: &str,
+        catalog_version: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        dispatch!(
+            self,
+            bots_claim_for_rematch(bot_id, players, match_id, catalog_version, at)
+        )
+    }
+
     /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
     /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
     /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`
@@ -2016,6 +2052,17 @@ impl Tx<'_> {
     /// Every action timing held, by match id then seq, for `timing-fit`.
     pub async fn play_telemetry_timings(&mut self) -> StoreResult<Vec<ActionTimingRow>> {
         dispatch!(self, play_telemetry_timings())
+    }
+
+    /// R639000: every emote event held, by match id then ordinal, for `timing-fit`.
+    pub async fn play_telemetry_emotes(&mut self) -> StoreResult<Vec<EmoteEventRow>> {
+        dispatch!(self, play_telemetry_emotes())
+    }
+
+    /// R639000: every signals row held beside its match's result, by match id then seat (p1 first),
+    /// for `timing-fit`. A row whose match has no result yet is left out.
+    pub async fn play_telemetry_outcomes(&mut self) -> StoreResult<Vec<SignalOutcomeRow>> {
+        dispatch!(self, play_telemetry_outcomes())
     }
 
     /// The finished matches whose action log is still held, that have no action timing yet and
