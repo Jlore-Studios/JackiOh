@@ -4592,6 +4592,12 @@
           "claude": "strong",
           "gemini": "medium"
         }
+      },
+      "wip": {
+        "at": "2026-10-12T15:28:23Z",
+        "provider": "claude-3",
+        "sha": "0e344668d11915a388a2b86797cd4256c4f4ee0a",
+        "start": "3c3427085cdf323b59487a3ce953e3ff5b999ed1"
       }
     },
     "737": {
