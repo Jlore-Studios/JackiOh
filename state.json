@@ -4759,6 +4759,9 @@
     "742": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "53100e95e79a0e166b8c5839200ef483ea9dade6": 1
+      },
       "cleared": {
         "at": "2026-10-12T17:24:15Z",
         "by": "`claude` (strong)",
