@@ -4402,6 +4402,13 @@
     "735": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T14:50:11Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): with no GitHub access the planner cannot verify no open PR touches the same forms, and cannot-tell is medium at least (line 6's .github//bot/ paths independently rule out easy)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
