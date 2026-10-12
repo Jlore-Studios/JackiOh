@@ -4932,6 +4932,7 @@
         "by": "`muse` (medium), `gemini` (medium)",
         "sha": "0dedb013bf6031293f36a737b479c499a170e93d"
       },
+      "closed_at": "2026-10-12T02:13:29Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -4941,6 +4942,7 @@
       "interruptions": 0,
       "issue": 690,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-10-12T01:24:33Z",
