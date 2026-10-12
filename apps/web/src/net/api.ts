@@ -555,7 +555,6 @@ export type EnqueueResponse = {
   status: "open" | "matched" | "cancelled";
   matchId: string | null;
   seriesId: string | null;
-  population: number;
   mode: QueueMode;
 };
 
@@ -567,8 +566,15 @@ export function dequeue(token: string): Promise<{ cancelled: boolean; ticketId?:
   return apiRequest<{ cancelled: boolean; ticketId?: string }>("/api/queue", { method: "DELETE", token });
 }
 
-/** `GET /api/queue/population`: the total, and per mode (R257). */
-export type PopulationResponse = { population: number; byMode?: Record<QueueMode, number> };
+/**
+ * `GET /api/queue/population`: the queue readout (R640002), every number counted over the last hour:
+ * the games that ended in it, and per mode (R257) the expected wait in seconds, `null` when too few
+ * tickets were claimed to say. Both are optional because a server from before R640002 sends neither.
+ */
+export type PopulationResponse = {
+  gamesLastHour?: number;
+  expectedWaitSeconds?: Record<QueueMode, number | null>;
+};
 
 export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });

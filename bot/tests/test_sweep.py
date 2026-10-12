@@ -172,7 +172,7 @@ class LostEventTests(Base):
         events.handle(self.ctx, "pull_request_review", {"action": "submitted", "sender": OPERATOR,
                                                         "review": review,
                                                         "pull_request": self.gh.get_pull(9)})
-        self.gh.threads[9]["labels"] = [{"name": LABEL_PR}]  # the revision has since landed
+        self.gh.threads[9]["labels"] = [{"name": LABEL_PR}, {"name": "difficulty:medium"}]  # landed
         self.assertEqual(sweep.sweep(self.ctx), [])
 
     def test_a_failed_ci_run_nothing_answered_is_rerun_then_fixed(self):
@@ -188,8 +188,9 @@ class LostEventTests(Base):
         self.assertEqual(sweep.sweep(self.ctx), [])  # queued: nothing more to do
 
     def test_a_blocked_or_green_pr_is_left_alone(self):
-        self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR, LABEL_BLOCKED), sha="s1")
-        self.gh.add_pull(10, "bot/issue-6", labels=(LABEL_PR,), sha="s2")
+        self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR, LABEL_BLOCKED, "difficulty:medium"),
+                         sha="s1")
+        self.gh.add_pull(10, "bot/issue-6", labels=(LABEL_PR, "difficulty:medium"), sha="s2")
         self.gh.runs["1"] = {"id": 1, "name": "CI", "head_sha": "s1", "status": "completed",
                              "conclusion": "failure", "created_at": AN_HOUR_AGO}
         self.gh.runs["2"] = {"id": 2, "name": "CI", "head_sha": "s2", "status": "completed",
@@ -407,3 +408,31 @@ class LabelTests(unittest.TestCase):
         sweep._labels(ctx, DAY)
         self.assertIn("human", gh.labels)
         self.assertIn("labels_synced", ctx.store.load())
+
+
+class DifficultyLabelTests(Base):
+    """A planned issue and a bot pull request never stay without a difficulty (#735)."""
+
+    def labels(self, number):
+        return {n for n in self.gh.label_names(number) if n.startswith("difficulty:")}
+
+    def test_planned_issues_and_bot_pulls_get_a_difficulty(self):
+        self.gh.add_issue(30, labels=("bot:planned",))  # planned, no rating line
+        self.gh.add_issue(31, labels=(LABEL_BUILD,))  # still waiting for its plan
+        self.gh.add_issue(32, labels=("bot:planned", "human"))
+        self.gh.add_issue(33, labels=("bot:planned", "difficulty:easy"))
+        self.gh.add_pull(34, "bot/issue-33", labels=(LABEL_PR,))  # its issue says easy
+        self.gh.add_pull(35, "bot/issue-30", labels=(LABEL_PR,))  # its issue had none
+        self.gh.add_pull(36, "feature/x")  # not the bot's
+        notes = sweep.sweep(self.ctx)
+        self.assertEqual(self.labels(30), {"difficulty:medium"})
+        self.assertEqual(self.labels(31), set())  # the planner may still rate it easy
+        self.assertEqual(self.labels(32), set())
+        self.assertEqual(self.labels(33), {"difficulty:easy"})
+        self.assertEqual(self.labels(34), {"difficulty:easy"})
+        self.assertEqual(self.labels(35), {"difficulty:medium"})
+        self.assertEqual(self.labels(36), set())
+        self.assertIn("#30: planned with no difficulty, so `difficulty:medium`", notes)
+        # It is the bot's own rating, so a later planner may raise it.
+        record = self.ctx.store.load()["items"]["30"]
+        self.assertEqual(record["difficulty_by"]["difficulty"], "medium")

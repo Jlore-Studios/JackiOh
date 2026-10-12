@@ -197,7 +197,9 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
             number = busy[provider.id]
             now_doing = f"**working on #{number}**" if number else "**running a survey**"
         elif reason is None:
-            now_doing = "free"
+            # Nothing holds it back; whether the queue has work for it is the planner's
+            # (the status issue's Queue says which item it takes next, if any).
+            now_doing = "idle, nothing holds it back"
         else:
             now_doing = reason
         seats = ", ".join(f"`{seat.model}` {seat.tier}" + (", self-check" if seat.self_check

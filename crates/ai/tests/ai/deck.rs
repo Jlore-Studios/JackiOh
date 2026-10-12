@@ -143,7 +143,7 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_and_classic_plus_alike() {
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_and_meditative_alike() {
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -151,7 +151,7 @@ mod build_ai_deck_b22 {
             .collect();
         let mut sets: Vec<String> = dealt.into_iter().collect();
         sets.sort();
-        assert_eq!(sets, vec!["Classic", "Classic+", "Core"]);
+        assert_eq!(sets, vec!["Classic", "Classic+", "Core", "Meditative"]);
     }
 
     #[test]
@@ -654,12 +654,13 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_without_a_lean_set_these_seeds_deal_the_decks_they_always_did_and_take_no_extra_rng_draw() {
         register_cards();
-        // Dealt by the deck builder before R1370, with the cursor its rng stopped at.
+        // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
+        // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [] }),
+                json!({ "banned": [], "gatedSets": ["Meditative"] }),
                 21,
                 &[
                     "classicplus-006",
@@ -687,7 +688,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4 }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative"] }),
                 21,
                 &[
                     "core-089",
@@ -715,7 +716,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7 }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -753,7 +754,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative"], "theme": "Human" }),
                 20,
                 &[
                     "classic-006",
@@ -856,7 +857,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         let newest = newest_shipped_set();
         let banned: Vec<String> = SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect();
         // The AI's own decks: its soft gate keeps their pool and their lean off a gated set (R1390),
-        // so a lean on the newest set lands on the newest set the gate leaves.
+        // so a lean on the newest set lands on the newest set the gate leaves (the newest itself while
+        // the gate is empty, as it is since #732).
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let base = json!({ "manaCap": h.mana_cap });
@@ -984,10 +986,21 @@ mod r1390_the_ai_decks_soft_gate {
     /// A card of the Meditative set, which the sweep forces in by name.
     const FORCED_MEDITATIVE: &str = "meditative-002";
 
+    /// The gate the AI's decks were dealt under from #551 until #732 lifted it, named by the tests of
+    /// the gate's mechanics now that `AI_DECK_GATED_SETS` is empty.
+    const GATE: &[SetName] = &[SetName::Meditative];
+
     fn gated_in(deck: &[String]) -> Vec<&String> {
         deck.iter()
-            .filter(|id| AI_DECK_GATED_SETS.contains(&def_of(None, id).set))
+            .filter(|id| GATE.contains(&def_of(None, id).set))
             .collect()
+    }
+
+    /// `base` with `GATE` as its `gatedSets`.
+    fn under_gate(base: &Value) -> Value {
+        let mut gated = base.clone();
+        gated["gatedSets"] = json!(GATE);
+        gated
     }
 
     fn of_set(deck: &[String], set: SetName) -> usize {
@@ -1015,17 +1028,15 @@ mod r1390_the_ai_decks_soft_gate {
     }
 
     #[test]
-    fn r1390_no_ai_deck_holds_a_meditative_card_with_the_set_previewed_as_if_it_shipped() {
+    fn r1390_a_gate_on_meditative_deals_no_ai_deck_a_meditative_card_with_the_set_previewed() {
         register_cards();
-        // The switch: Meditative is gated until the AI is trained on its cards (issue #551).
-        assert!(AI_DECK_GATED_SETS.contains(&SetName::Meditative));
         // R1420's preview opens the set on this thread exactly as shipping it does.
         let _preview = preview_every_set();
         let mut player_meditative = 0;
         for (tier, size, base) in ai_rules() {
             for n in 1..=GATE_SEEDS {
                 let seed = format!("r1390:{tier}:{n}");
-                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(under_gate(&base)));
                 assert_eq!(deck.len(), size as usize, "{seed}");
                 assert!(gated_in(&deck).is_empty(), "{seed}: {deck:?}");
                 // An explicit ban list (the arena's and the sweep's) and a named theme the set is full
@@ -1033,7 +1044,9 @@ mod r1390_the_ai_decks_soft_gate {
                 let named = build_ai_deck(
                     &mut create_rng(&seed, 0),
                     size,
-                    &options(json!({ "manaCap": base["manaCap"], "banned": SHADOW_BAN_IDS, "theme": "CN" })),
+                    &options(json!({
+                        "manaCap": base["manaCap"], "banned": SHADOW_BAN_IDS, "theme": "CN", "gatedSets": GATE
+                    })),
                 );
                 assert!(gated_in(&named).is_empty(), "{seed}: {named:?}");
                 // A player's random deck from the same stream is dealt from every set.
@@ -1053,7 +1066,7 @@ mod r1390_the_ai_decks_soft_gate {
         let forced = build_ai_deck(
             &mut create_rng("r1390:include", 0),
             DECK_SIZE,
-            &options(json!({ "include": [FORCED_MEDITATIVE] })),
+            &options(json!({ "include": [FORCED_MEDITATIVE], "gatedSets": GATE })),
         );
         assert!(forced.iter().any(|id| id == FORCED_MEDITATIVE), "{forced:?}");
         assert_eq!(gated_in(&forced).len(), 1, "{forced:?}");
@@ -1062,7 +1075,7 @@ mod r1390_the_ai_decks_soft_gate {
     #[test]
     fn r1390_a_lean_on_meditative_leans_on_the_newest_shipped_set_that_is_not_gated() {
         register_cards();
-        let gate = AI_DECK_GATED_SETS;
+        let gate = GATE;
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
             Some(SetName::ClassicPlus)
@@ -1100,12 +1113,12 @@ mod r1390_the_ai_decks_soft_gate {
             let on_meditative = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
-                &options(json!({ "leanSet": "Meditative" })),
+                &options(json!({ "leanSet": "Meditative", "gatedSets": GATE })),
             );
             let on_classic_plus = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
-                &options(json!({ "leanSet": "Classic+" })),
+                &options(json!({ "leanSet": "Classic+", "gatedSets": GATE })),
             );
             assert_eq!(on_meditative, on_classic_plus, "{seed}");
             assert!(gated_in(&on_meditative).is_empty(), "{seed}: {on_meditative:?}");
@@ -1122,10 +1135,10 @@ mod r1390_the_ai_decks_soft_gate {
         // The gate is a filter on the pool and nothing more: gating a set deals exactly the deck that
         // banning its every card would, and leaves the rng at the same cursor, so an empty gate, which
         // filters nothing, deals what the draw dealt before the gate. Before the Meditative set shipped
-        // the default gate removed nothing; now that it ships the default gate is these bans.
+        // a gate on it removed nothing; now that it ships the gate is these bans.
         let gated_ids: Vec<String> = query(&CatalogQueryArgs::default())
             .into_iter()
-            .filter(|def| AI_DECK_GATED_SETS.contains(&def.set))
+            .filter(|def| GATE.contains(&def.set))
             .map(|def| def.id.clone())
             .collect();
         assert!(
@@ -1143,7 +1156,7 @@ mod r1390_the_ai_decks_soft_gate {
                 let mut gated_rng = create_rng(&seed, 0);
                 let mut empty_rng = create_rng(&seed, 0);
                 assert_eq!(
-                    build_ai_deck(&mut gated_rng, size, &options(base.clone())),
+                    build_ai_deck(&mut gated_rng, size, &options(under_gate(&base))),
                     build_ai_deck(&mut empty_rng, size, &options(empty.clone())),
                     "{seed}"
                 );
@@ -1178,5 +1191,38 @@ mod r1390_the_ai_decks_soft_gate {
             serde_json::to_value(options(json!({ "gatedSets": [] }))).ok(),
             Some(json!({ "gatedSets": [] }))
         );
+    }
+
+    #[test]
+    fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
+        register_cards();
+        // Issue #732 measured the AI on the Meditative set and emptied the list (R1390): the AI's own
+        // decks are dealt from every set that ships, and a lean on Meditative is a lean on Meditative.
+        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        assert_eq!(
+            ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
+            Some(SetName::Meditative)
+        );
+        let mut dealt = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r1390:lifted:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                dealt += of_set(&deck, SetName::Meditative);
+            }
+        }
+        assert!(dealt > 0, "no AI deck held a Meditative card");
+        for n in 1..=GATE_SEEDS {
+            let seed = format!("r1390:lifted:lean:{n}");
+            let leaning = build_ai_deck(
+                &mut create_rng(&seed, 0),
+                DECK_SIZE,
+                &options(json!({ "leanSet": "Meditative" })),
+            );
+            assert!(
+                of_set(&leaning, SetName::Meditative) >= lean_floor(DECK_SIZE),
+                "{seed}: {leaning:?}"
+            );
+        }
     }
 }

@@ -236,6 +236,29 @@ pub const REDEMPTION_CIRCUIT_FAILURE_THRESHOLD: i64 = 100;
 pub const REDEMPTION_CIRCUIT_WINDOW_SECONDS: i64 = 600;
 
 // ---------------------------------------------------------------------------------------------
+// The invite-cluster watch (§9.8).
+// ---------------------------------------------------------------------------------------------
+
+// SPEC §9.8 (abuse surface): "Multi-accounting to farm rating: invite codes; watch for clusters of
+// accounts sharing an IP hash." `jackioh-server invite-clusters` is that watch: an offline report a
+// person reads, never a ban, because many people can share one address (a campus, a household, a
+// carrier's NAT). SPEC fixes no threshold or window, so these three are advisory defaults an
+// operator may override with the command's flags; none of them is a game rule, and the client reads
+// none of them.
+
+/// §9.8: how far back the watch counts attempts by default, in seconds. A week: farming rating
+/// takes accounts made over days, and a window of the rate limit's own hour (`CODE_ATTEMPT_WINDOW_SECONDS`)
+/// would never see a slow cluster. The same table also bounds the window: `code_attempts` rows are
+/// kept `CODE_ATTEMPT_RETENTION_DAYS`, so the flag takes at most that many days.
+pub const INVITE_CLUSTER_WINDOW_SECONDS: i64 = 7 * 24 * 3600;
+/// §9.8: how many distinct accounts one IP hash must be behind, by default, for the watch to list
+/// it. A household or a dorm room stays under it; a farm built to be worth the trouble does not.
+pub const INVITE_CLUSTER_MIN_ACCOUNTS: i64 = 6;
+/// §9.8: how many characters of an IP hash the report prints. Enough for an operator to tell two
+/// hashes apart and to find one in the table, too few to stand in for the hash itself.
+pub const INVITE_CLUSTER_HASH_PREFIX_LEN: usize = 8;
+
+// ---------------------------------------------------------------------------------------------
 // Matchmaking (§9.5, BUILD M7-T3).
 // ---------------------------------------------------------------------------------------------
 
@@ -245,8 +268,15 @@ pub const RATING_WINDOW_START: i64 = 100;
 pub const RATING_WINDOW_WIDEN_BY: i64 = 50;
 /// §9.5: the cadence, in seconds, at which the rating window widens.
 pub const RATING_WINDOW_WIDEN_EVERY_SECONDS: i64 = 10;
-/// §9.5: past this many seconds waited, the rating window is uncapped (any opponent qualifies).
-pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
+/// SPEC §11 R640001: the widest the rating window gets, in rating points: its width at the 60 s mark
+/// where it used to go uncapped. Two people further apart than this never pair, however long they
+/// wait; past it the empty-queue fallback (R1453) seats a bot instead.
+pub const MAX_FAIR_GAP: i64 = 400;
+/// R640001: the seconds a ticket waits before its window reaches `MAX_FAIR_GAP`. The gap is a whole
+/// number of widenings past `RATING_WINDOW_START`, so the window reaches it exactly at a widening.
+/// PUBLIC: e2e spec 19 reads it.
+pub const RATING_WINDOW_FULL_AFTER_SECONDS: i64 =
+    (MAX_FAIR_GAP - RATING_WINDOW_START) / RATING_WINDOW_WIDEN_BY * RATING_WINDOW_WIDEN_EVERY_SECONDS;
 
 // SPEC §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" — the exact cadence is
 // not fixed by SPEC.
@@ -255,20 +285,27 @@ pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
 // widen before being reconsidered, without hammering the ticket table.
 pub const MATCHMAKER_SWEEP_INTERVAL_SECONDS: i64 = 3;
 
+/// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
+/// claimed in it and the games that ended in it.
+pub const QUEUE_READOUT_WINDOW_SECONDS: i64 = 3600;
+/// R640002: the share of a mode's counted waits the expected wait is at least as long as: the upper
+/// quartile, so "usually under" holds for three waits in four.
+pub const QUEUE_WAIT_QUANTILE: f64 = 0.75;
+/// R640002: the fewest counted waits a mode needs before the readout states an expected wait.
+pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
+/// R640002: the expected wait is rounded up to the next multiple of this many seconds.
+pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
+
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
 ///
 /// At `waited_seconds = 0` this is `RATING_WINDOW_START`; it widens by `RATING_WINDOW_WIDEN_BY`
-/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS`, and returns `f64::INFINITY` (TS
-/// `Number.POSITIVE_INFINITY`) once `waited_seconds` passes `RATING_WINDOW_UNCAPPED_AFTER_SECONDS`
-/// (any opponent qualifies).
+/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS` and stops at `MAX_FAIR_GAP` (R640001), which it
+/// reaches at `RATING_WINDOW_FULL_AFTER_SECONDS`.
 pub fn rating_window(waited_seconds: f64) -> f64 {
-    if waited_seconds >= RATING_WINDOW_UNCAPPED_AFTER_SECONDS as f64 {
-        return f64::INFINITY;
-    }
     let clamped_wait = waited_seconds.max(0.0);
     let widen_steps = (clamped_wait / RATING_WINDOW_WIDEN_EVERY_SECONDS as f64).floor();
-    RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64
+    (RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64).min(MAX_FAIR_GAP as f64)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -630,6 +667,24 @@ pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
 /// the row displays "not enough games".
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
+
+/// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
+/// may flag it. Sits above `CARD_STATS_MIN_SAMPLE` (20): a card under 20 games counts toward the
+/// report's not-enough-games list and is never flagged, and a card with 20–39 games shows its
+/// figures as watched but is never flagged either — the same 55% is noise at 20 games and a signal
+/// at hundreds, so the flag reads a z-score against 50% (draws count as not won), not a fixed
+/// win-rate cut-off.
+pub const BALANCE_WATCH_MIN_GAMES: i64 = 40;
+/// SPEC §9.11 (R377): the |z-score| against 50% at and above which `jackioh-server balance-watch`
+/// flags a card with at least `BALANCE_WATCH_MIN_GAMES` in-deck games as too strong (high) or too
+/// weak (low). Advisory only: the report files nothing and changes no card.
+pub const BALANCE_WATCH_Z_THRESHOLD: f64 = 2.5;
+/// SPEC §9.11 (R377): the |played delta| (played win rate minus drawn-but-not-played win rate, in
+/// fraction points) at and above which `jackioh-server balance-watch` flags a card with at least
+/// `BALANCE_WATCH_MIN_GAMES` in-deck games, whatever its in-deck win rate. A big gap here is the
+/// sign of a card the AI pilot cannot use (trap timing, hand-dump spells), so the flag asks for
+/// live human games, not a change.
+pub const BALANCE_WATCH_PLAYED_DELTA_THRESHOLD: f64 = 0.15;
 
 /// SPEC §11 R654: cost bucket boundary for card statistics filters.
 /// Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.

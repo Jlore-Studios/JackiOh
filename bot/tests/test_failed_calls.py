@@ -84,7 +84,7 @@ class InstantFailureTests(unittest.TestCase):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         h.committed_hours()  # claude-3 works all day: the Strong final can audit
         pr, _ = test_cross.ReviewRuleTests.build_on_medium(self, h)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         _, review = h.night(FakeRunner({"review": failing(900, "overloaded")}))
         self.assertEqual(review["status"], "failed")
         self.assertEqual(review["reason"], "the reviewer's call failed: overloaded")

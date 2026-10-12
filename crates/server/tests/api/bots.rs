@@ -7,8 +7,11 @@
 //! R1451 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
 //! gate like any live game; the bot's side is recorded as `ai` and read only when a query asks.
 //!
-//! R1452 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's; the match screen
-//! shows the rank the bot's rating calls for.
+//! R1452 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's. R640000: the match
+//! screen shows a bot's own season row, as the leaderboard does, and Jlorious is people's alone.
+//!
+//! R640001 (SPEC §9.5): the rating window stops at `MAX_FAIR_GAP`, so past it the fallback seats a
+//! bot rather than pairing two people that far apart.
 //!
 //! R639000: once a ranked match ends a bot stays on it a while, as a person on the death screen
 //! does, and offers or meets a rematch as its plan says, a rematch that claims it as the fallback
@@ -35,7 +38,8 @@ use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_se
 use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
-    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, JLORIOUS_SIZE, RANK_PLACEMENT_GAMES,
+    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, JLORIOUS_SIZE, MAX_FAIR_GAP, RANK_PLACEMENT_GAMES,
+    RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError, Ticket};
@@ -737,19 +741,20 @@ async fn r1452_no_read_tells_a_bot_seat() {
     )
     .await;
     assert_eq!(status, 200, "{ranks}");
-    let bot_seat = if row.players.0 == bot { "p1" } else { "p2" };
+    let (bot_seat, person_seat) = if row.players.0 == bot {
+        ("p1", "p2")
+    } else {
+        ("p2", "p1")
+    };
     let shown = &ranks["seats"][bot_seat];
     assert_eq!(shown["profileId"], bot.as_str());
     assert!(
         shown["username"].is_string(),
         "the bot has a username like anyone: {shown}"
     );
-    assert!(
-        shown["rank"]["tier"].is_string() && shown["rank"]["tier"] != "jlorious",
-        "a Grape rank: {shown}"
-    );
-    // On its own tier's floor, as a placed player often stands: never one no player could hold.
-    assert_eq!(shown["rank"]["floor"], shown["rank"]["tier"], "{shown}");
+    // R640000: its own season row, read as a person's: neither has played this season, so both are
+    // Raisins with no placements played.
+    assert_eq!(shown["rank"], ranks["seats"][person_seat]["rank"], "{ranks}");
 
     // R672: while the game goes on the bot is on the match, as a person playing it is, though it
     // holds no socket.
@@ -789,46 +794,82 @@ async fn r1452_no_read_tells_a_bot_seat() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1452_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
-    // Jlorious takes the first JLORIOUS_SIZE placed Mythic players (R608): with exactly that many
-    // nobody holds Mythic Grape, and one more is the first who does.
-    for (in_mythic, shown) in [(JLORIOUS_SIZE, "golden"), (JLORIOUS_SIZE + 1, "mythic")] {
-        let app = app_with_bots(true).await;
-        let season = season_id_of(jackioh_cards::catalog_version());
-        let mythic = GrapeTier::Mythic as i32;
-        for _ in 0..in_mythic {
-            let id = next_id("mythic");
-            fake(&app)
-                .await
-                .seed_profile(json!({ "id": id, "status": "active", "rating": 1000 }));
-            let mut rank = fresh_rank(&season, &id, 0);
-            rank.games = RANK_PLACEMENT_GAMES;
-            rank.ladder = Some(tier_bottom(mythic));
-            rank.floor = mythic;
-            rank.peak_ladder = rank.ladder;
-            q!(app, ranked_put_rank(&rank));
-        }
-        // The bot is rated above every one of them, so its rating calls for Mythic.
-        let (person, token) = new_person(&app, 1000.0).await;
-        let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
-        ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
-        let row = fake(&app).await.tables.matches[0].clone();
-        let (status, _, ranks) = call(
-            &app,
-            "GET",
-            &format!("/api/matches/{}/ranks", row.id),
-            Some(&token),
-            Value::Null,
-        )
-        .await;
-        assert_eq!(status, 200, "{ranks}");
-        let bot_seat = if row.players.0 == bot { "p1" } else { "p2" };
-        assert_eq!(
-            ranks["seats"][bot_seat]["rank"]["tier"], shown,
-            "{in_mythic} in Mythic: {ranks}"
-        );
+async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
+    // Jlorious is people's (R640000): a bot rated above all of them, with its own Mythic row, is
+    // Mythic Grape while Jlorious still has room, and Jlorious lists the people alone.
+    const PEOPLE_IN_MYTHIC: usize = 3;
+    const { assert!(PEOPLE_IN_MYTHIC < JLORIOUS_SIZE) };
+    let app = app_with_bots(true).await;
+    let season = season_id_of(jackioh_cards::catalog_version());
+    let mythic = GrapeTier::Mythic as i32;
+    let mythic_row = |id: &str| {
+        let mut rank = fresh_rank(&season, id, 0);
+        rank.games = RANK_PLACEMENT_GAMES;
+        rank.ladder = Some(tier_bottom(mythic));
+        rank.floor = mythic;
+        rank.peak_ladder = rank.ladder;
+        rank
+    };
+    let mut people = Vec::new();
+    for _ in 0..PEOPLE_IN_MYTHIC {
+        let id = next_id("mythic");
+        fake(&app)
+            .await
+            .seed_profile(json!({ "id": id, "status": "active", "rating": 1000 }));
+        q!(app, ranked_put_rank(&mythic_row(&id)));
+        people.push(json!(id));
     }
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
+    q!(app, ranked_put_rank(&mythic_row(&bot)));
+    ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let row = fake(&app).await.tables.matches[0].clone();
+    let (status, _, ranks) = call(
+        &app,
+        "GET",
+        &format!("/api/matches/{}/ranks", row.id),
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{ranks}");
+    let bot_seat = if row.players.0 == bot { "p1" } else { "p2" };
+    assert_eq!(ranks["seats"][bot_seat]["rank"]["tier"], "mythic", "{ranks}");
+
+    let (status, _, listed) = call(&app, "GET", "/api/leaderboard", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{listed}");
+    let jlorious: Vec<Value> = listed["jlorious"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|place| place["profileId"].clone())
+        .collect();
+    assert_eq!(jlorious, people, "{listed}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r640001_past_the_gap_a_far_person_is_not_paired_and_the_near_one_gets_a_bot() {
+    // Two people 500 apart who have both waited 120 s: once the window went uncapped at 60 s they
+    // paired; it stops at MAX_FAIR_GAP now, so the one a bot is near gets the bot and the other
+    // (rated above every bot, R1453) waits on.
+    const WAITED_MS: i64 = 120 * MS_PER_SECOND;
+    const {
+        assert!(1500 - 1000 > MAX_FAIR_GAP);
+        assert!(WAITED_MS > RATING_WINDOW_FULL_AFTER_SECONDS * MS_PER_SECOND);
+        assert!(WAITED_MS > (BOT_FALLBACK_MAX_SECONDS + 1) * MS_PER_SECOND);
+    };
+    let app = app_with_bots(true).await;
+    let (near, _) = new_person(&app, 1000.0).await;
+    let (far, _) = new_person(&app, 1500.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    ticket(&app, &near, 1000.0, WAITED_MS, "bo1").await;
+    let waiting = ticket(&app, &far, 1500.0, WAITED_MS, "bo1").await;
+
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(matches(&app).await, vec![(near, bot)]);
+    let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
+    assert_eq!(serde_json::to_value(&held).expect("a ticket")["status"], "open");
 }
 
 #[tokio::test(start_paused = true)]

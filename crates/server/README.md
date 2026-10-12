@@ -80,6 +80,13 @@ target/release/jackioh-server                   # 4. serve (the default subcomma
   creates one: the plaintext goes to stdout once, the database stores its keyed hash. It validates
   the whole environment, because a `CODE_PEPPER` that differs from the running server's mints a code
   nobody can redeem.
+- **Invite clusters.** `invite-clusters [--window=<seconds>] [--min-accounts=<N>]` is SPEC §9.8's
+  watch for accounts sharing an IP hash: it reads `code_attempts` (`DATABASE_URL`) and prints a
+  Markdown table of every hash that at least N distinct accounts (default `INVITE_CLUSTER_MIN_ACCOUNTS`,
+  6) made an attempt from in the window (default `INVITE_CLUSTER_WINDOW_SECONDS`, a week; at most the 30
+  days the table is kept), with its account and attempt counts. It is read-only and advisory: nothing
+  is banned or disabled, since a campus or a carrier's NAT puts many honest players behind one hash,
+  and a hash is printed shortened to `INVITE_CLUSTER_HASH_PREFIX_LEN` characters.
 - **Seasons.** `season-start --dry-run` walks R609's season open and soft reset and rolls it back,
   printing the report; without the flag it commits. Re-running is safe.
 
@@ -108,7 +115,7 @@ placeholders (`app::load_server_env`).
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
-`timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`balance-watch`, `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -137,7 +144,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave |
-| `GET` | `/api/queue/population` | user | open tickets, in total and per mode |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
@@ -216,6 +223,19 @@ writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stat
 only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
+
+`balance-watch --patch=<version> [--source=live|all]` is the offline, advisory outlier watch whose
+Markdown pastes into #699: per card it prints the in-deck win rate with its games, z-score against
+50% and played delta, flagging too-strong and too-weak bands (`BALANCE_WATCH_Z_THRESHOLD`, 2.5, at
+`BALANCE_WATCH_MIN_GAMES`, 40 games) and large played deltas (`BALANCE_WATCH_PLAYED_DELTA_THRESHOLD`,
+15 points). Cards under `CARD_STATS_MIN_SAMPLE` games are listed as not enough games and never
+flagged. Below `PUBLIC_STATS_MIN_LIVE_GAMES` live games the report says provisional; seat counting
+matches the public endpoint (live records count human seats only, development runs every seat,
+R1451). It reads `DATABASE_URL`, changes no card and files nothing.
+
+```
+target/release/jackioh-server balance-watch --patch=v0.3.6
+```
 
 ## Play telemetry (§9.11, R1442)
 
@@ -324,10 +344,11 @@ foreign key to `auth.users` for triggers: inserting a person's profile still nee
 and deleting an auth user still deletes its profile, but a bot's profile needs none; and it limits
 the launch collection's backfill (`app.grant_launch_collection_all`, which every catalog stamp
 runs) to people, since a bot owns no collection. A bot's rating
-is a `bot_ratings` row (0022, R610). Nothing a client reads carries a profile's `kind`, a seat's
-pilot or a bot's nonces, and `GET /api/matches/:matchId/ranks` shows a bot's seat the rank its
-rating calls for among the placed players' ratings, on that tier's floor and below Mythic Grape
-unless more players stand in Mythic than Jlorious holds, since it has no season row (R1452). The human
+is a `bot_ratings` row (0022, R610), and its rank a `season_ranks` row its ranked games move as a
+person's move theirs, read against people's ratings alone (R640000). Nothing a client reads carries
+a profile's `kind`, a seat's pilot or a bot's nonces: `GET /api/leaderboard` and
+`GET /api/matches/:matchId/ranks` show a bot's row as a player's, and Jlorious and the percentiles
+read people's rows only, so a bot that would qualify stays Mythic Grape (R640000, R1452). The human
 side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
 with its bot id in `rated_games`, and is read only when a query asks for it (R1451).
 

@@ -142,7 +142,7 @@ parent_bans() {
 # fewer, so a Devin session could only find that out (as #635's did, a minute each, on 2026-10-10).
 # The cycle starts none and waits idle_pause instead. The first idle cycle of a generation says so
 # once, in the log, the draft's title and a comment; a session starts again once main's AI bans a
-# card (a sweep of record, such as the one that lifts R1390's gate on the Meditative set, #616).
+# card (a sweep of record, such as the one that lifted R1390's gate on the Meditative set, #732).
 idle() {
   sleep_for="$idle_pause"
   [ "$generation" != "$idle_generation" ] || return 0
@@ -153,7 +153,7 @@ idle() {
   gh pr edit "$pr" --title "AI gen $((generation + 1)) ($lane): idle, the AI on main bans no card" >/dev/null ||
     log "cannot retitle #$pr"
   cat >"$work/note.md" <<EOF
-**Idle:** the AI on \`main\` (generation $generation, $idle_at) shadow-bans no card, and a promotion of this lane needs strictly fewer bans than its parent, so no Devin session starts. The loop looks again every $((idle_pause / 60)) minutes and starts one once \`main\`'s AI bans a card again: a sweep of record adds the cards it misplays, as the one that brings the Meditative set into the AI's decks does (#616).
+**Idle:** the AI on \`main\` (generation $generation, $idle_at) shadow-bans no card, and a promotion of this lane needs strictly fewer bans than its parent, so no Devin session starts. The loop looks again every $((idle_pause / 60)) minutes and starts one once \`main\`'s AI bans a card again: a sweep of record adds the cards it misplays, as the one that brought the Meditative set into the AI's decks did (#732).
 EOF
   comment "$pr" "$work/note.md" >/dev/null
 }

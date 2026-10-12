@@ -203,8 +203,8 @@ class FlowTests(unittest.TestCase):
         self.assertIn("Approved on round 1", pull["body"])
         self.assertFalse(pull["draft"])
         self.assertIn(pull["node_id"], h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR})
-        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned"})
+        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, "difficulty:medium"})
+        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned", "difficulty:medium"})
         self.assertIn("Auto-merge is on", h.gh.bot_comments(12)[-1])
         usage = h.ctx.store.load()["providers"]["claude-1"]["usage"]
         self.assertEqual(usage["five_hour"]["utilization"], 0.3)
@@ -234,7 +234,7 @@ class FlowTests(unittest.TestCase):
                             "review": reviewer(APPROVE)}))
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, "ready for merge"})
+        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, "ready for merge", "difficulty:medium"})
 
     def test_no_auto_merge_while_main_is_unprotected(self):
         h = Harness(self)
@@ -277,8 +277,8 @@ class FlowTests(unittest.TestCase):
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
         self.assertFalse(pull["draft"])
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, LABEL_CROSS})
-        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned"})
+        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
+        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned", "difficulty:medium"})
         said = h.gh.bot_comments(12)[-1]
         self.assertIn("Its own reviewer read it 2 time(s) in the run", said)
         self.assertIn("one strong model's final audit (Opus)", said)
@@ -293,7 +293,7 @@ class FlowTests(unittest.TestCase):
         _, first = h.night(runner)
         self.assertEqual(first["status"], "interrupted")
         self.assertEqual(h.origin_sha("bot/issue-12"), first["head"])
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned", "difficulty:medium"})
         self.assertEqual(h.ctx.store.load()["providers"]["claude-1"]["refused_until"],
                          "2026-09-30T04:00:00Z")
         self.assertEqual(h.gh.dispatches, [])  # no chaining into a refusal

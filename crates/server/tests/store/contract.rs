@@ -46,9 +46,9 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
-    GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
-    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
+    Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
     TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
@@ -1160,11 +1160,87 @@ mod codes {
         assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
+    /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
+    /// are not, and the window decides which attempts count. `accounts` is distinct profiles (a
+    /// second attempt by one adds to `attempts` only, and an attempt with no profile to neither
+    /// count of accounts), and the rows come back ordered by hash.
+    async fn lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each(
+        harness: &StoreHarness,
+    ) {
+        let now = harness.now();
+        let window = 3_600_000;
+        let shared = format!("ip-shared-{}", id());
+        let mut accounts = Vec::new();
+        for _ in 0..6 {
+            accounts.push(pending_profile(harness, None).await);
+        }
+        let log = |profile: Option<&Profile>, ip_hash: &str, at: i64| -> CodeAttempt {
+            from(json!({
+                "profileId": profile.map(|p| p.id.as_str()),
+                "ipHash": ip_hash,
+                "result": "rejected",
+                "reason": "missing",
+                "at": at,
+            }))
+        };
+        // Six accounts, one attempt each, from the shared hash; the first tries twice and one attempt
+        // is signed in as nobody.
+        for profile in &accounts {
+            let attempt = log(Some(profile), &shared, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+        let again = log(Some(&accounts[0]), &shared, now - 5);
+        let anonymous = log(None, &shared, now - 5);
+        q!(harness, t => t.codes_log_attempt(&again));
+        q!(harness, t => t.codes_log_attempt(&anonymous));
+        // A seventh account's attempt from the same hash, a second past the window.
+        let late_comer = pending_profile(harness, None).await;
+        let stale = log(Some(&late_comer), &shared, now - window - 1000);
+        q!(harness, t => t.codes_log_attempt(&stale));
+        // One account, six hashes, one attempt each.
+        let solo = pending_profile(harness, None).await;
+        let singles: Vec<String> = (0..6).map(|n| format!("ip-solo-{n}-{}", id())).collect();
+        for ip_hash in &singles {
+            let attempt = log(Some(&solo), ip_hash, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+
+        let cluster = |ip_hash: &str, accounts: i64, attempts: i64| InviteCluster {
+            ip_hash: ip_hash.to_owned(),
+            accounts,
+            attempts,
+        };
+        let expected = |shared_row: InviteCluster| {
+            let mut rows: Vec<InviteCluster> = singles.iter().map(|hash| cluster(hash, 1, 1)).collect();
+            rows.push(shared_row);
+            rows.sort_by(|a, b| a.ip_hash.cmp(&b.ip_hash));
+            rows
+        };
+
+        // Inside the window: six accounts and eight attempts behind the shared hash, and one account
+        // behind each of the others.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window)),
+            expected(cluster(&shared, 6, 8)),
+        );
+        // A window wide enough for the stale attempt counts its account too.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window - 2000)),
+            expected(cluster(&shared, 7, 9)),
+        );
+        // Past every attempt there is nothing to list.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now + 60_000)),
+            Vec::new()
+        );
+    }
+
     both_stores!(
         round_trips_a_code_by_its_hash,
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
 
@@ -3481,6 +3557,75 @@ mod tickets {
         assert!(ticket_a["matchId"].is_null());
     }
 
+    /// R640002: the waits the queue readout reads, enqueue to claim, of every ticket claimed at or
+    /// after the cut, oldest claim first and a pair's two by id; an open or cancelled ticket has none.
+    async fn r640002_lists_the_waits_of_tickets_claimed_since_and_no_others(harness: &StoreHarness) {
+        let now = harness.now();
+        let mut owners = Vec::new();
+        for _ in 0..8 {
+            owners.push(active_profile(harness, None).await);
+        }
+        let queued = |owner: &Profile, mode: &str, enqueued_at: i64| {
+            let deck = if mode == "bo1" {
+                json!(deck_of(harness, 0))
+            } else {
+                json!([])
+            };
+            ticket(
+                harness,
+                &owner.id,
+                json!({ "mode": mode, "deck": deck, "enqueuedAt": enqueued_at }),
+            )
+        };
+        let old = [
+            queued(&owners[0], "bo1", now - 60_000),
+            queued(&owners[1], "bo1", now - 50_000),
+        ];
+        let recent = [
+            queued(&owners[2], "bo1", now - 9_000),
+            queued(&owners[3], "bo1", now - 4_000),
+        ];
+        let random = [
+            queued(&owners[4], "random", now - 3_000),
+            queued(&owners[5], "random", now - 2_500),
+        ];
+        let open = queued(&owners[6], "bo1", now - 90_000);
+        let gone = queued(&owners[7], "bo1", now - 90_000);
+        for row in old.iter().chain(&recent).chain(&random).chain([&open, &gone]) {
+            q!(harness, t => t.tickets_insert(row));
+        }
+        for (pair, at) in [(&old, now - 40_000), (&recent, now - 1_000), (&random, now)] {
+            assert!(q!(harness, t => t.tickets_claim_pair(&pair[0].id, &pair[1].id, &id(), at)));
+        }
+        q!(harness, t => t.tickets_cancel(&gone.id, now));
+
+        // A pair is claimed at one instant, so its two come by id.
+        let waits_of = |pair: &[Ticket; 2], at: i64| {
+            let mut rows: Vec<&Ticket> = pair.iter().collect();
+            rows.sort_by(|a, b| a.id.cmp(&b.id));
+            rows.into_iter()
+                .map(|row| json!({ "mode": row.mode, "waitedMs": at - row.enqueued_at }))
+                .collect::<Vec<Value>>()
+        };
+        let expected: Vec<Value> = waits_of(&recent, now - 1_000)
+            .into_iter()
+            .chain(waits_of(&random, now))
+            .collect();
+        let waits: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 30_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(waits, expected);
+        // The cut is inclusive.
+        let from_recent: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 1_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(from_recent, expected);
+        assert_eq!(q!(harness, t => t.tickets_recent_waits(now - 60_000)).len(), 6);
+        assert!(q!(harness, t => t.tickets_recent_waits(now + 1)).is_empty());
+    }
+
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
@@ -3492,6 +3637,7 @@ mod tickets {
         refuses_to_pair_a_ticket_with_itself,
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
         r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go,
+        r640002_lists_the_waits_of_tickets_claimed_since_and_no_others,
     );
 }
 
@@ -5238,6 +5384,88 @@ mod bots {
         );
     }
 
+    /// R640002: the games the queue readout counts are every result that ended at or after the cut,
+    /// a game against a ladder bot as much as any.
+    async fn r640002_counts_the_results_that_ended_since_a_bot_s_game_included(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - 30 * DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        played(harness, &a.id, &bot.profile_id, now - 1_000).await;
+        played(harness, &a.id, &b.id, now - 2_000).await;
+        played(harness, &b.id, &a.id, now - DAY).await;
+
+        assert_eq!(q!(harness, t => t.results_count_since(now - 2_000)), 2);
+        assert_eq!(q!(harness, t => t.results_count_since(now - 1_999)), 1);
+        assert_eq!(q!(harness, t => t.results_count_since(now - 2 * DAY)), 3);
+        assert_eq!(q!(harness, t => t.results_count_since(now + 1)), 0);
+    }
+
+    /// R640002: a ticket a bot claimed waited from its enqueue to that claim, as a pair's does.
+    async fn r640002_a_ticket_claimed_for_a_bot_lists_its_wait(harness: &StoreHarness) {
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let queued: Ticket = from(spread(
+            j(&ticket(harness, &person.id)),
+            json!({ "enqueuedAt": now - 25_000 }),
+        ));
+        q!(harness, t => t.tickets_insert(&queued));
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&queued.id, &bot.profile_id, &id(), now - 5_000)));
+
+        let waits: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 5_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(waits, vec![json!({ "mode": "bo1", "waitedMs": 20_000 })]);
+        assert!(q!(harness, t => t.tickets_recent_waits(now - 4_999)).is_empty());
+    }
+
+    /// R640000: a ladder bot's season row is marked as one and reads the bot's own R610 rating, not
+    /// its profile's; a person's carries no mark at all.
+    async fn r640000_standings_mark_a_bot_s_row_and_read_its_own_rating(harness: &StoreHarness) {
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1150.0);
+        q!(harness, t => t.bots_create(&bot));
+        let season: Season = from(json!({ "id": "v0.1", "patchVersion": "v0.1.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for profile_id in [&person.id, &bot.profile_id] {
+            q!(harness, t => t.ranked_put_rank(&fresh_rank("v0.1", profile_id, now)));
+        }
+
+        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1"))
+            .iter()
+            .map(j)
+            .collect();
+        let of = |profile_id: &str| {
+            must(
+                standings
+                    .iter()
+                    .find(|standing| standing["profileId"] == profile_id)
+                    .cloned(),
+                "a standing",
+            )
+        };
+        let bot_row = of(&bot.profile_id);
+        assert_eq!(bot_row["bot"], json!(true), "{bot_row}");
+        assert_eq!(bot_row["rating"].as_f64(), Some(1150.0), "{bot_row}");
+        assert_ne!(
+            must(
+                q!(harness, t => t.profiles_get_by_id(&bot.profile_id)),
+                "the bot's profile"
+            )
+            .rating,
+            1150.0,
+            "premise: the profile's rating is not the bot's own"
+        );
+        let person_row = of(&person.id);
+        assert!(person_row.get("bot").is_none(), "{person_row}");
+        assert_eq!(person_row["rating"].as_f64(), Some(person.rating));
+    }
+
     both_stores!(
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
@@ -5248,6 +5476,9 @@ mod bots {
         r1454_a_claim_that_never_started_is_released,
         r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started,
         r639000_a_rematch_claims_a_free_unretired_bot_once,
+        r640002_counts_the_results_that_ended_since_a_bot_s_game_included,
+        r640002_a_ticket_claimed_for_a_bot_lists_its_wait,
+        r640000_standings_mark_a_bot_s_row_and_read_its_own_rating,
     );
 }
 

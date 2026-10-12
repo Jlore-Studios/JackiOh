@@ -8,7 +8,7 @@
 //!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
 //!
 //! Game `n`'s seed is `<base>:<n>`; agent `a` sits p1 on odd games. Each seat's deck is
-//! `build_ai_deck` over all three sets minus its own agent's shadow ban (R186), with no handicap
+//! `build_ai_deck` over every set that ships minus its own agent's shadow ban (R186), with no handicap
 //! (Easy both, R180). A refused action is replaced by endTurn or the first legal answer; a
 //! controller that throws ends the game without a result. So a game is a function of its seed and
 //! its two agents, whatever the thread count.
