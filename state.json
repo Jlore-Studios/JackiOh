@@ -5490,15 +5490,20 @@
         {
           "at": "2026-10-12T07:46:45Z",
           "minutes": 14.3
+        },
+        {
+          "at": "2026-10-12T08:07:26Z",
+          "minutes": 60.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T12:00:00Z",
-          "utilization": 0.57
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-12T07:46:45Z",
-        "status": "allowed"
+        "observed_at": "2026-10-12T08:07:26Z",
+        "rejected_resets_at": "2026-10-12T12:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
