@@ -4291,10 +4291,10 @@
       "kind": "build",
       "pending_at": "2026-10-12T14:55:54Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true,
-      "provider": "claude-3",
-      "run_id": "38266410045",
-      "started_at": "2026-10-12T14:55:52Z",
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "38267466911",
+      "started_at": "2026-10-12T15:04:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4613,9 +4613,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T14:56:25Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38266431622",
-    "what": "build #729 on claude-2"
+    "at": "2026-10-12T15:04:39Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38267466911",
+    "what": "plan #727 on agy"
   },
   "last_sweep": {
     "at": "2026-10-12T14:57:40Z",
