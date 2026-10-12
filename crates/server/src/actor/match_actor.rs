@@ -251,6 +251,9 @@ struct Core {
     bot_rematch: PerPlayer<Option<(RematchPlan, i64)>>,
     /// R639000: whether each bot home has already answered a person's rematch offer.
     bot_rematch_answered: PerPlayer<bool>,
+    /// R639000: whether each bot home's answer is on its way, which keeps it on the match until it
+    /// lands, past its linger if need be.
+    bot_rematch_replying: PerPlayer<bool>,
 }
 
 struct Shared {
@@ -459,6 +462,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         bot_long_turn: PerPlayer::new(None, None),
         bot_rematch: PerPlayer::new(None, None),
         bot_rematch_answered: PerPlayer::new(false, false),
+        bot_rematch_replying: PerPlayer::new(false, false),
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -980,6 +984,11 @@ impl MatchActor {
             for player in PLAYERS {
                 self.end_aim(&mut core, player);
             }
+            // R639000: under the lock that ends the game, so a bot never reads as gone while the
+            // result is written and then as present again.
+            if result.reason != GameOverReason::Voided {
+                self.plan_bot_rematches(&mut core, at);
+            }
             (core.swapped, engine::last_boards(&core.state))
         };
         // R679: the one ending that records nothing. Only the engine's state reaches it.
@@ -1022,7 +1031,7 @@ impl MatchActor {
             core.telemetry.finish(&pilots, core.tiers.as_ref())
         };
         telemetry::record(&self.shared.deps, &played).await;
-        self.plan_bot_rematches(at);
+        self.send_bot_rematch_offers(at);
 
         tracing::info!(
             event = "match.over",
@@ -1033,22 +1042,31 @@ impl MatchActor {
         );
     }
 
-    /// R639000, R672: each bot home of a ranked match draws its plan for the game's end: it stays
-    /// present until its linger ends, and when the plan says so offers a normal rematch
-    /// `offer_after_ms` after the end, as `on_rematch_offer` meets a person's. Only a match whose
-    /// result landed reaches here, so a void or an unrecorded end plans nothing.
-    fn plan_bot_rematches(&self, at: i64) {
+    /// R639000, R672: each bot home of a ranked match draws its plan for the game's end as the game
+    /// ends (`at`), not voided: it stays present from then until its linger ends, as a person's open
+    /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
+    /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
+    fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
         if self.shared.match_row.ranked != Some(true) {
             return;
         }
         for home in PLAYERS {
-            if self.shared.bots[home].is_none() {
-                continue;
+            if self.shared.bots[home].is_some() {
+                let plan = rematch_plan(&self.shared.match_row.seed, home, &BOT_REMATCH_FIT);
+                core.bot_rematch[home] = Some((plan, at + plan.linger_ms));
             }
-            let plan = rematch_plan(&self.shared.match_row.seed, home, &BOT_REMATCH_FIT);
-            self.lock().bot_rematch[home] = Some((plan, at + plan.linger_ms));
-            if plan.offers {
-                self.bot_offers_rematch_after(home, plan.offer_after_ms, STAKE_NORMAL);
+        }
+    }
+
+    /// R639000, R672: once the result landed, each bot home whose plan offers makes a normal rematch
+    /// offer `offer_after_ms` after the game's end (`at`).
+    fn send_bot_rematch_offers(&self, at: i64) {
+        for home in PLAYERS {
+            let planned = self.lock().bot_rematch[home];
+            if let Some((plan, _)) = planned
+                && plan.offers
+            {
+                self.bot_offers_rematch_after(home, at + plan.offer_after_ms - now_ms(), STAKE_NORMAL);
             }
         }
     }
@@ -1069,7 +1087,8 @@ impl MatchActor {
 
     /// R639000, R672: a person in seat `from` offered a rematch that made none yet. The bot home
     /// opposite meets it, at the person's stakes and `reply_ms` later, when its plan accepts, it has
-    /// not answered already and it is still on the match (its linger has not ended).
+    /// not answered already and it is still on the match (its linger has not ended). Once it means to
+    /// meet it, it stays on the match until it has, as a person reaching for the button does.
     pub fn on_rematch_offer(&self, from: PlayerId, stakes: RematchStakes) {
         let bot = from.opponent();
         if self.shared.bots[bot].is_none() {
@@ -1084,9 +1103,22 @@ impl MatchActor {
                 return;
             }
             core.bot_rematch_answered[bot] = true;
+            core.bot_rematch_replying[bot] = true;
             plan.reply_ms
         };
-        self.bot_offers_rematch_after(bot, reply_ms, stakes);
+        let deps = Arc::clone(&self.shared.deps);
+        let match_id = self.shared.match_row.id.clone();
+        let actor = Arc::downgrade(&self.shared);
+        let wait = Duration::from_millis(u64::try_from(reply_ms).unwrap_or(0));
+        tokio::spawn(async move {
+            tokio::time::sleep(wait).await;
+            if let Err(error) = offer_for_bot(&deps, &match_id, bot, stakes).await {
+                tracing::warn!(event = "bot.rematch.failed", matchId = %match_id, home = %bot, message = %error.message);
+            }
+            if let Some(shared) = actor.upgrade() {
+                MatchActor { shared }.lock().bot_rematch_replying[bot] = false;
+            }
+        });
     }
 
     /// R1437: `record_result`, tried up to `MATCH_RECORD_RESULT_ATTEMPTS` times, the first wait

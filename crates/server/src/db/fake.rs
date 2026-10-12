@@ -2245,8 +2245,9 @@ pub fn play_telemetry_emotes(f: &mut FakeTx<'_>) -> Result<Vec<EmoteEventRow>, S
     Ok(rows)
 }
 
-/// Each signals row whose match has a result, beside it: whether the seat's account won (none for
-/// a draw), the reason, the turns, and whether a rematch could follow (ranked, in no series).
+/// Each signals row whose match has a result, beside it: whether the account that began in the
+/// seat won (none for a draw; the match's seats, not the result's credited ones, R677), the reason,
+/// the turns, and whether a rematch could follow (ranked, in no series).
 pub fn play_telemetry_outcomes(f: &mut FakeTx<'_>) -> Result<Vec<SignalOutcomeRow>, StoreError> {
     call(f, "playTelemetry.outcomes")?;
     let tables = f.tables();
@@ -2260,8 +2261,8 @@ pub fn play_telemetry_outcomes(f: &mut FakeTx<'_>) -> Result<Vec<SignalOutcomeRo
                 .find(|row| row.match_id == signal.match_id)?;
             let found = tables.matches.iter().find(|row| row.id == signal.match_id)?;
             let profile = match signal.seat {
-                PlayerId::P1 => &result.players.0,
-                PlayerId::P2 => &result.players.1,
+                PlayerId::P1 => &found.players.0,
+                PlayerId::P2 => &found.players.1,
             };
             let in_series = tables
                 .series

@@ -41,6 +41,15 @@ fn r639000_concede_draws_its_temper_once_and_waits_for_turn_and_deficit() {
             assert!(concedes(seed, home, 30, 41.0, &sure));
         }
     }
+    // A threshold drawn at or below 0 still needs the bot behind: one even or ahead never concedes.
+    let low = ConcedeFit {
+        deficit_mu: -30.0,
+        ..sure
+    };
+    assert!(!concedes("temper-low", PlayerId::P1, 10, 0.0, &low), "never while even");
+    assert!(!concedes("temper-low", PlayerId::P1, 10, -5.0, &low), "never while ahead");
+    assert!(concedes("temper-low", PlayerId::P1, 10, 0.5, &low));
+
     // No conceder ever concedes, however far behind.
     let never = concede_fit(0.0, 20.0);
     assert!((0..200).all(|at| !concedes(&format!("never-{at}"), PlayerId::P2, 20, 1e9, &never)));

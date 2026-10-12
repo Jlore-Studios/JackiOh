@@ -46,12 +46,12 @@ fn uniform_ms(rng: &mut Rng, min: i64, max: i64) -> i64 {
 /// R639000: whether the bot that began in `home` concedes now, at the start of its own turn `turn`,
 /// standing `deficit` behind. Its temper is drawn once a match: whether it is one who concedes at
 /// all (`share`), and the deficit it gives up at (normal, `deficit_mu` and `deficit_sigma`). It
-/// never concedes before `min_turn`.
+/// never concedes before `min_turn`, nor while it is not behind at all, whatever its threshold drew.
 pub fn concedes(seed: &str, home: PlayerId, turn: i32, deficit: f64, fit: &ConcedeFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-concede:{home}"), 0);
     let conceder = rng.next() < fit.share;
     let threshold = fit.deficit_mu + fit.deficit_sigma * standard_normal(&mut rng);
-    conceder && turn >= fit.min_turn && deficit >= threshold
+    conceder && turn >= fit.min_turn && deficit > 0.0 && deficit >= threshold
 }
 
 /// R639000: whether the bot that began in `home` accepts the draw offered in turn `turn`. Only a

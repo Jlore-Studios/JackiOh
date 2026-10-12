@@ -1177,7 +1177,8 @@ pub struct MatchSignalRow {
 #[serde(rename_all = "camelCase")]
 pub struct SignalOutcomeRow {
     pub signal: MatchSignalRow,
-    /// Whether the seat's account won; `None` when the match had no winner (a draw).
+    /// Whether the account that began in the seat won (the match's seat, as the signals row's is,
+    /// not the result's credited one after a Glitch's swap, R677); `None` when the match had no winner.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub won: Option<bool>,
     pub reason: GameOverReason,

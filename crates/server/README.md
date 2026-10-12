@@ -284,7 +284,8 @@ is seated and the pool is never sized.
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
   takes it down after.
 - Once a ranked match a bot played ends, the bot reads as present (`presence`) until its plan's
-  linger ends, offers a normal rematch when its plan says, and meets a person's offer at their stakes
+  linger ends (the plan is drawn under the lock that ends the game, so there is no gap while the
+  result is written), offers a normal rematch when its plan says once the result has landed, and meets a person's offer at their stakes
   when its plan accepts and it is still there (`MatchActor::on_rematch_offer`, told by
   `api/rematch.rs`'s `offer_as` through `Registry::get`); its offers go through the route's own path
   (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free

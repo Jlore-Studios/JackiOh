@@ -964,3 +964,40 @@ async fn r639000_a_bot_offers_a_rematch_when_its_plan_says() {
     let made = offer_rematch(&app, &finished, &token).await;
     assert!(made["matchId"].is_string(), "{made}");
 }
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
+    // A person's socket stays open from the end of the game on, so a bot that read as gone while
+    // the result is written, then as present for its linger, would flicker where a person never does.
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let finished = bot_match_on(&app, &person, &bot, "seed-present").await;
+    let actor = app
+        .matches
+        .actor_for(&app, &finished)
+        .await
+        .expect("the match's actor");
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    {
+        let (actor, seen) = (actor.clone(), Arc::clone(&seen));
+        fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
+            if method == "results.insert" {
+                seen.lock()
+                    .expect("the presence seen")
+                    .push(actor.presence()[PlayerId::P2]);
+            }
+            Ok(())
+        }));
+    }
+    concede_bot_match(&app, &person).await;
+    fake(&app).await.on_call = None;
+
+    assert_eq!(
+        *seen.lock().expect("the presence seen"),
+        vec![true],
+        "the bot is on the match as its result is written"
+    );
+    let status = rematch_status(&app, &finished, &token).await;
+    assert_eq!(status["opponentHere"], json!(true), "{status}");
+}

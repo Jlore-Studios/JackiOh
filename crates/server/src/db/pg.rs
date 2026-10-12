@@ -4252,8 +4252,10 @@ pub async fn play_telemetry_emotes(t: &mut PgTx<'_>) -> Result<Vec<EmoteEventRow
 }
 
 /// R639000: every row of `match_signals` whose match has a result, beside it, for `timing-fit`.
-/// `won` is null for a draw; a match is rematchable when it was ranked and no series lists it among
-/// its games (`state.games[].matchId`).
+/// `won` is null for a draw, and otherwise whether the winner is the account that began in the
+/// row's seat: the match's own seats, since the result's are the seats as credited after a Glitch's
+/// swap (R677). A match is rematchable when it was ranked and no series lists it among its games
+/// (`state.games[].matchId`).
 pub async fn play_telemetry_outcomes(t: &mut PgTx<'_>) -> Result<Vec<SignalOutcomeRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -4261,7 +4263,7 @@ pub async fn play_telemetry_outcomes(t: &mut PgTx<'_>) -> Result<Vec<SignalOutco
                 s.draw_accepted, s.rematch_offered, s.rematch_accepted, s.timeouts, s.pilot,
                 case when r.winner_profile_id is null then null
                      else r.winner_profile_id
-                          = (case s.seat when 'p1' then r.p1_profile_id else r.p2_profile_id end)
+                          = (case s.seat when 'p1' then m.p1_profile_id else m.p2_profile_id end)
                 end as won,
                 r.reason, r.turns,
                 (coalesce(m.ranked, false)

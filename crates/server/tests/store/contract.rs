@@ -4654,10 +4654,13 @@ mod r1442_play_telemetry {
         );
     }
 
-    /// A finished match between `p1` and `p2`, ranked or not, with its result and its telemetry.
+    /// A finished match between `p1` and `p2`, ranked or not, with its result and its telemetry. A
+    /// `swapped` one ended after a Glitch's swap (R677), so its result credits each seat to the
+    /// account that began in the other.
     async fn finished_with(
         harness: &StoreHarness,
         players: (&str, &str),
+        swapped: bool,
         ranked: bool,
         winner: Option<&str>,
         reason: &str,
@@ -4669,9 +4672,14 @@ mod r1442_play_telemetry {
         row.ranked = ranked.then_some(true);
         q!(harness, t => t.matches_create(&row));
         q!(harness, t => t.matches_finish(&match_id, now));
+        let credited = if swapped {
+            [players.1, players.0]
+        } else {
+            [players.0, players.1]
+        };
         let result: ResultRow = from(json!({
             "matchId": match_id,
-            "players": [players.0, players.1],
+            "players": credited,
             "winnerProfileId": winner,
             "reason": reason,
             "turns": turns,
@@ -4689,11 +4697,23 @@ mod r1442_play_telemetry {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         // Ranked and won by `a` in p1: a rematch could follow.
-        let won = finished_with(harness, (&a.id, &b.id), true, Some(&a.id), "concede", 7).await;
+        let won = finished_with(harness, (&a.id, &b.id), false, true, Some(&a.id), "concede", 7).await;
         // Unranked, and a draw: no winner, and no rematch the ladder fits on.
-        let drawn = finished_with(harness, (&b.id, &a.id), false, None, "draw-accepted", 9).await;
+        let drawn = finished_with(harness, (&b.id, &a.id), false, false, None, "draw-accepted", 9).await;
         // Ranked, won by `a` in p2, but a game of a series.
-        let series_game = finished_with(harness, (&b.id, &a.id), true, Some(&a.id), "hero-death", 11).await;
+        let series_game = finished_with(
+            harness,
+            (&b.id, &a.id),
+            false,
+            true,
+            Some(&a.id),
+            "hero-death",
+            11,
+        )
+        .await;
+        // Ranked, won by `a`, who began in p1 and played p2 after a Glitch's swap: the seat it began
+        // in won, whatever the result credits.
+        let swapped = finished_with(harness, (&a.id, &b.id), true, true, Some(&a.id), "hero-death", 13).await;
         let now = harness.now();
         let series: SeriesRow = from(json!({
             "id": id(),
@@ -4724,7 +4744,13 @@ mod r1442_play_telemetry {
         let live = a_match(harness, &a.id, &b.id, None).await;
         q!(harness, t => t.play_telemetry_insert(&telemetry(&live, 1_500)));
 
-        let mut matches = [won.clone(), drawn.clone(), series_game.clone(), live.clone()];
+        let mut matches = [
+            won.clone(),
+            drawn.clone(),
+            series_game.clone(),
+            swapped.clone(),
+            live.clone(),
+        ];
         matches.sort();
         let emotes = q!(harness, t => t.play_telemetry_emotes());
         let expected: Vec<Value> = matches
@@ -4792,6 +4818,22 @@ mod r1442_play_telemetry {
                 json!("hero-death"),
                 11,
                 false,
+            ),
+            (
+                swapped.clone(),
+                json!("p1"),
+                json!(true),
+                json!("hero-death"),
+                13,
+                true,
+            ),
+            (
+                swapped.clone(),
+                json!("p2"),
+                json!(false),
+                json!("hero-death"),
+                13,
+                true,
             ),
         ];
         ended.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.to_string().cmp(&y.1.to_string())));
