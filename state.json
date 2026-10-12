@@ -4758,6 +4758,8 @@
       }
     },
     "742": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-10-12T16:49:36Z",
         "by": "`claude` (strong)",
@@ -4768,10 +4770,15 @@
       "feedback_since": "2026-10-12T15:41:52Z",
       "issue": 640,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-10-12T16:50:33Z",
+      "run_id": "38280123679",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-12T16:50:47Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -4815,9 +4822,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T16:44:49Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38279442026",
-    "what": "plan #726 on muse"
+    "at": "2026-10-12T16:50:47Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38280123679",
+    "what": "revise #742 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-12T16:43:32Z",
