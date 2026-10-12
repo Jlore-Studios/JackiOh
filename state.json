@@ -4474,15 +4474,6 @@
       "failures": 0,
       "feedback_since": "2026-10-12T19:29:58Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-12T20:19:14Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n- Revision (ci) of #731 on opus. Cause: apps/web/src/wording.test.ts (R373, R432, R1320 guards over client strings) flagged 9 strings in releaseNotes.ts. Harness doesn't run it (only --changed tests), CI does.\n- DONE: reworded the 9 strings (no Degrade/Upgrade, no library/sacrifice, \"costs (1) less\"); docs/issues-and-patches.md R724000 section now says notes use today's words (R373/R432/R1320). Merge conflicts in spec/11-rulings.md (kept R724000 + main's R732000 paragraphs) and spec/INDEX.md (regenerated) resolved; no markers left.\n- Checks green: wording+PatchNotes+route 33/33, full web suite 211 files / 4388 tests, fmt, spec/patches/catalog check, eslint, typecheck. Nothing left but delivery.\n\n## Log\n- start: reading wording.test.ts and conflicts\n- reworded 9 strings in releaseNotes.ts (Nerf/Buff, Deck/Tribute, costs (1) less); next: docs rule line + run tests\n- wording + PatchNotes + route tests 33/33 pass; docs rule line added. next: spec/fmt/patches/catalog checks, eslint, typecheck\n- 33/33 + all checks green; running full web suite (bg)\n- full web suite: 211 files, 4388 tests pass; done\n",
-        "provider": "claude-5",
-        "reason": "`claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-13T00:20:00Z",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 724,
       "kind": "revise",
