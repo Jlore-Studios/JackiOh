@@ -160,10 +160,11 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
 
 Card catalog patches and player-facing release notes are two different records. The catalog
 patches in `crates/cards/patches/` are machine-readable snapshots (R388, R646): each patch's
-full catalog as it shipped, used for engine backwards-compatibility, replay verification and
-the card history. The release notes in `apps/web/src/patches/releaseNotes.ts` are what players
-read on `/patch-notes`: Factorio- and Steam-style notes, one bubble per set, written by hand.
-A catalog patch never writes the player's notes, and the notes never move a snapshot.
+full catalog as it shipped, which the server serves, a match started under it folds under,
+and the card history reads. The release notes in `apps/web/src/patches/releaseNotes.ts` are
+what players read on `/patch-notes`: Factorio- and Steam-style notes, one bubble per set,
+written by hand. A catalog patch never writes the player's notes, and the notes never move a
+snapshot.
 
 Rules for future patches:
 
@@ -177,6 +178,10 @@ Rules for future patches:
 - Player-facing notes describe player-visible gameplay and balance changes in clear prose.
   They never carry an AI pull request's commit title, a raw ruling citation (`R656`, `R386`)
   or an internal rulebook reference: those stay in the catalog patch's notes.
+- A note says nothing its record does not. A sub-patch's summary restates its catalog patch's
+  own notes and card changes (read the snapshot diff, not the pull request's title), and a
+  set's technical changes list only what merged to `main` during its version line. A test holds
+  every number a summary states to its patch's notes, so an invented count fails.
 - Clutter stays hidden by default: a set's card diff panels are shut until the player opens
   them, and only the newest sub-patch of the set on show opens its cards on arrival (R507).
 - A patch that ships before its note is written still shows: `PatchNotes.tsx` lists any

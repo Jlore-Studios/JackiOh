@@ -13,7 +13,7 @@ import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
-import { ALL_SET_RELEASES } from "./releaseNotes.ts";
+import { ALL_SET_RELEASES, findSubPatchNote, type SetReleaseNotes } from "./releaseNotes.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -47,6 +47,17 @@ function setBubble(id: string): HTMLElement {
   const found = screen.getAllByTestId(patchTestid.setBubble).find((element) => element.dataset.set === id);
   if (found === undefined) throw new Error(`no set bubble ${id}`);
   return found;
+}
+
+function setNotes(id: string): SetReleaseNotes {
+  const found = ALL_SET_RELEASES.find((set) => set.id === id);
+  if (found === undefined) throw new Error(`no release notes for ${id}`);
+  return found;
+}
+
+/** The numbers a text states, versions aside. */
+function numbersIn(text: string): string[] {
+  return text.replace(/v\d+\.\d+\.\d+[a-z]?/g, "").match(/\d+/g) ?? [];
 }
 
 function subPatchVersions(): (string | undefined)[] {
@@ -281,8 +292,10 @@ describe("R724000 the Patch notes page grouped by set", () => {
     expect(screen.getByRole("heading", { level: 2, name: /Meditative/ })).toHaveTextContent("v0.3.0 – v0.3.6");
     const technical = screen.getByTestId(patchTestid.technicalChanges);
     expect(technical).toHaveTextContent("Technical changes");
-    expect(technical).toHaveTextContent("Engine Rewrite");
-    expect(technical).toHaveTextContent("AI Improvements");
+    expect(within(technical).getAllByRole("listitem").map((item) => item.textContent)).toEqual(
+      setNotes("meditative").technicalChanges,
+    );
+    expect(technical).toHaveTextContent("The Rust rewrite");
     // Fixture versions belong to no set, so they list under the newest one with their catalog titles.
     expect(subPatchVersions()).toEqual([V3, V2, V1]);
     expect(patchEntry(V3)).toHaveTextContent("Two new sets");
@@ -294,11 +307,11 @@ describe("R724000 the Patch notes page grouped by set", () => {
     fireEvent.click(setBubble("classic"));
     expect(setBubble("classic")).toHaveAttribute("aria-pressed", "true");
     expect(setBubble("meditative")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Ranked Ladder");
+    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Ranked play");
     expect(screen.getByRole("heading", { level: 2, name: /Classic/ })).toBeInTheDocument();
     expect(subPatchVersions()).toEqual([]);
     fireEvent.click(setBubble("core"));
-    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Dual-Lane Battlefield");
+    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("five lanes");
     expect(subPatchVersions()).toEqual([]);
     // The dropdown stays in sync both ways.
     fireEvent.change(screen.getByTestId(patchTestid.setSelect), { target: { value: "meditative" } });
@@ -306,18 +319,39 @@ describe("R724000 the Patch notes page grouped by set", () => {
     expect(subPatchVersions()).toEqual([V3, V2, V1]);
   });
 
-  it("R724000 sub-patches display retconned human-readable titles and summaries without AI commit slop", async () => {
+  it("R724000 a claimed sub-patch shows its own title and summary, never the catalog's title, notes or source", async () => {
     renderPage();
+    const shipped = await realPatchSource.patches();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    const nerf = patchEntry("v0.3.4");
-    expect(nerf).toHaveTextContent("Keyword Refinements: Nerf & Buff");
-    expect(nerf).toHaveTextContent("Gave the two tuning keywords their current names, Nerf and Buff, across all printed cards for improved clarity.");
-    expect(nerf).not.toHaveTextContent("Patch v0.3.4: Degrade is Nerf and Upgrade is Buff");
-    const numbers = patchEntry("v0.3.2");
-    expect(numbers).toHaveTextContent("Declared Numbers Expansion");
-    expect(numbers).toHaveTextContent("Expanded tunable parameters across 80 cards to support broader stat-scaling interactions.");
-    expect(numbers).not.toHaveTextContent("R386");
-    expect(numbers).not.toHaveTextContent("B3.4");
+    for (const version of ["v0.3.4", "v0.3.2"]) {
+      const note = findSubPatchNote(version);
+      const record = shipped.find((patch) => patch.version === version);
+      if (note === undefined || record === undefined) throw new Error(`no note or no patch ${version}`);
+      const entry = patchEntry(version);
+      expect(within(entry).getByRole("heading", { level: 2 })).toHaveTextContent(`${version} ${note.title}`);
+      expect(entry).toHaveTextContent(note.summary);
+      expect(entry).not.toHaveTextContent(record.title);
+      expect(entry).not.toHaveTextContent(record.notes);
+      expect(entry).not.toHaveTextContent(record.source);
+    }
+  });
+
+  it("R724000 every note claims a shipped patch once, in the history's order, and adds no number or citation its patch lacks", async () => {
+    const shipped = await realPatchSource.patches();
+    const history = shipped.map((patch) => patch.version);
+    const claimed = ALL_SET_RELEASES.flatMap((set) => set.subPatches.map((sub) => sub.version));
+    // Newest set first and newest sub-patch first: read backwards, the notes follow patches.json (R105).
+    expect([...claimed].reverse()).toEqual(history.filter((version) => claimed.includes(version)));
+    expect(new Set(claimed).size).toBe(claimed.length);
+    for (const set of ALL_SET_RELEASES) {
+      const words = [set.summary, ...set.technicalChanges, ...set.subPatches.flatMap((sub) => [sub.title, sub.summary])];
+      for (const text of words) expect(text).not.toMatch(/\bR\d+|#\d/);
+      for (const sub of set.subPatches) {
+        // A summary restates its patch's own notes, so every number in it (a version aside) is in them.
+        const stated = new Set(numbersIn(shipped.find((patch) => patch.version === sub.version)?.notes ?? ""));
+        expect(numbersIn(`${sub.title} ${sub.summary}`).filter((number) => !stated.has(number))).toEqual([]);
+      }
+    }
   });
 
   it("R724000 sub-patches have card diffs collapsed by default, expanding when toggle is clicked", async () => {
