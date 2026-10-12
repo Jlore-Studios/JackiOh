@@ -6512,14 +6512,18 @@
         {
           "at": "2026-10-12T06:25:26Z",
           "minutes": 12.5
+        },
+        {
+          "at": "2026-10-12T09:04:15Z",
+          "minutes": 30.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T10:40:00Z",
-          "utilization": 0.5
+          "utilization": 0.7
         },
-        "observed_at": "2026-10-12T06:25:26Z",
+        "observed_at": "2026-10-12T09:04:15Z",
         "status": "allowed"
       }
     },
