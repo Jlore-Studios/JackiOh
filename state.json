@@ -3955,6 +3955,7 @@
     "692": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-12T04:46:21Z",
       "cross_rounds": 0,
       "died": 0,
       "failures": 0,
@@ -3971,6 +3972,7 @@
       "interruptions": 1,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-12T02:17:58Z",
