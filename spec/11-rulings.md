@@ -238,4 +238,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R690000]] is the ruling numbers' new scheme (issue #690, 2026-10-12)**: every branch used to take the next free number, so two branches open at once took the same one and the second to merge renumbered its note, its tests and its citations. Now each issue owns a block of a thousand numbers, R(N×1000) to R(N×1000+999), so branches on different issues never meet, and every number before it stands. It takes R690000, the first number of issue #690's block. It edits `spec/README.md` (Note format, Adding a ruling) and CLAUDE.md rule 3.
 
+**[[R724000]] is the Patch notes page grouped by set (issue #724, "Patch v0.3.X", 2026-10-12)**: the page opens on the newest set's bubble with its technical changes and nested sub-patches, each with a human-readable title and summary, the newest sub-patch's cards open on arrival and the rest shut. Presentation only. It takes the first number of issue #724's block. It edits [[§10.10]], [[R388]] and [[R507]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

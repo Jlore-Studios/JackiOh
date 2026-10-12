@@ -48,6 +48,13 @@ describe("R388 the /patch-notes route", () => {
     // The newest patch — patches.json's last entry, whatever a promotion named it (R646) — opens the page.
     const shipped = await realPatchSource.patches();
     expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    // The history groups by set (R724000): one bubble per set with the newest pressed, and the
+    // active set's technical changes below.
+    const bubbles = await screen.findAllByTestId(patchTestid.setBubble, undefined, SLOW);
+    expect(bubbles.map((element) => element.dataset.set)).toEqual(["meditative", "classic", "core"]);
+    expect(bubbles.at(0)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(patchTestid.setSelect)).toBeInTheDocument();
+    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Technical changes");
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);

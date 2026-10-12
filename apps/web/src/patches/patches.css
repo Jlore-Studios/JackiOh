@@ -635,3 +635,144 @@
     min-height: 44px;
   }
 }
+
+/* ---- the set bubbles and technical changes (R724000) ---------------------------------------- */
+
+.tavern.app-shell .patch-set-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.tavern.app-shell .patch-set-selector {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tavern.app-shell .patch-set-bubble {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+  color: var(--tavern-parchment);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tavern.app-shell .patch-set-bubble:hover {
+  border-color: var(--tavern-gold-pale);
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-set-bubble[aria-pressed="true"] {
+  border-color: var(--tavern-gold);
+  background: linear-gradient(180deg, rgba(96, 58, 24, 0.98), rgba(40, 23, 10, 0.98));
+  color: var(--tavern-gold);
+}
+
+.tavern.app-shell .patch-set-bubble:focus-visible,
+.tavern.app-shell .patch-set-select:focus-visible {
+  outline: 2px solid var(--selected, #f0c04a);
+  outline-offset: 2px;
+}
+
+/* The dropdown doubles the bubbles on a phone; a wide screen keeps the bubbles alone. */
+.tavern.app-shell .patch-set-select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 10px;
+  background: var(--tavern-well);
+  color: var(--tavern-parchment);
+  font: inherit;
+  font-weight: 600;
+}
+
+@media (min-width: 601px) {
+  .tavern.app-shell .patch-set-select {
+    display: none;
+  }
+}
+
+.tavern.app-shell .patch-set {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.tavern.app-shell .patch-set__title {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: clamp(22px, 5vw, 30px);
+  line-height: 1.2;
+  color: var(--tavern-gold);
+}
+
+.tavern.app-shell .patch-set__versions {
+  color: var(--tavern-text-dim);
+  font-size: 0.62em;
+  font-weight: 400;
+}
+
+.tavern.app-shell .patch-set__summary {
+  margin: 0 auto;
+  max-width: 68ch;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-technical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+}
+
+.tavern.app-shell .patch-technical__title {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-technical__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .patch-technical__list li {
+  padding-left: 20px;
+  position: relative;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--tavern-parchment);
+  overflow-wrap: anywhere;
+}
+
+.tavern.app-shell .patch-technical__list li::before {
+  content: "◆";
+  position: absolute;
+  left: 0;
+  color: var(--tavern-gold);
+  font-size: 11px;
+  line-height: 2;
+}

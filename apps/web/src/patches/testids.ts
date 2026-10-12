@@ -1,5 +1,5 @@
-// Test ids of the Patch notes page and the History section (R388, R507). Every id starts with
-// `patch-`, never `card-` or `hand-card-`, so no board selector can resolve to one of them.
+// Test ids of the Patch notes page and the History section (R388, R507, R724000). Every id starts
+// with `patch-`, never `card-` or `hand-card-`, so no board selector can resolve to one of them.
 
 export const patchTestid = {
   /** The page's root (routes/patch-notes.tsx). */
@@ -11,6 +11,14 @@ export const patchTestid = {
   empty: "patch-notes-empty",
   /** One patch, `data-version` its version. */
   patch: "patch-entry",
+  /** The set bubble buttons' group (R724000), one button per set, `data-set` its id. */
+  setBubble: "patch-set-bubble",
+  /** The set dropdown synced with the bubbles (R724000). */
+  setSelect: "patch-set-select",
+  /** The active set's technical changes list (R724000). */
+  technicalChanges: "patch-technical-changes",
+  /** The active set's sub-patches (R724000). */
+  subPatchList: "patch-subpatch-list",
   /** A patch's Show / Hide the cards control. */
   toggle: "patch-toggle",
   /** A patch's cards, once shown. */

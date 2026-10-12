@@ -156,6 +156,33 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
 
+## Game patch notes vs card catalog patches (R724000)
+
+Card catalog patches and player-facing release notes are two different records. The catalog
+patches in `crates/cards/patches/` are machine-readable snapshots (R388, R646): each patch's
+full catalog as it shipped, used for engine backwards-compatibility, replay verification and
+the card history. The release notes in `apps/web/src/patches/releaseNotes.ts` are what players
+read on `/patch-notes`: Factorio- and Steam-style notes, one bubble per set, written by hand.
+A catalog patch never writes the player's notes, and the notes never move a snapshot.
+
+Rules for future patches:
+
+- A set release (a major version) adds a new set bubble to `ALL_SET_RELEASES` in
+  `apps/web/src/patches/releaseNotes.ts`, newest first: the set's name and version range, a
+  release summary, and a bulleted list of the technical changes since the preceding set
+  (engine, AI, systems, audio, visuals).
+- A sub-patch (a minor card change, a balance pass, a b-patch) is nested under its set in
+  `ALL_SET_RELEASES` as a `SubPatchNote`: its version, a human-readable title and a summary
+  of what players see. The version must match the catalog patch's version exactly.
+- Player-facing notes describe player-visible gameplay and balance changes in clear prose.
+  They never carry an AI pull request's commit title, a raw ruling citation (`R656`, `R386`)
+  or an internal rulebook reference: those stay in the catalog patch's notes.
+- Clutter stays hidden by default: a set's card diff panels are shut until the player opens
+  them, and only the newest sub-patch of the set on show opens its cards on arrival (R507).
+- A patch that ships before its note is written still shows: `PatchNotes.tsx` lists any
+  catalog patch no set claims under the newest set with its catalog title and notes, so new
+  patches never disappear from the page.
+
 ## Pull requests
 
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it

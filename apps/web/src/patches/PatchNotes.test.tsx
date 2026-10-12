@@ -1,8 +1,9 @@
-// R388, R507: the Patch notes page's body. Every patch newest first with its version, date, title
-// and notes; the newest shows its cards on arrival and the others load their snapshots when opened;
-// a patch's cards as faces with their changes marked, data-only changes and added cards as names by
-// set, a name filter; a card opens its full history. Fixtures through the context, the empty and
-// failed states, then the real history through the default source.
+// R388, R507, R724000: the Patch notes page's body. The active set's patches newest first with
+// their version, date, title and notes; the newest shows its cards on arrival and the others load
+// their snapshots when opened; a patch's cards as faces with their changes marked, data-only
+// changes and added cards as names by set, a name filter; a card opens its full history. Fixtures
+// through the context, the empty and failed states, then the real history through the default
+// source. Unclaimed fixture versions list under the newest set with their catalog titles.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,7 @@ import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
+import { ALL_SET_RELEASES } from "./releaseNotes.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -39,6 +41,18 @@ function byCard(testId: string, id: string, inside: HTMLElement = document.body)
   const found = within(inside).getAllByTestId(testId).find((element) => element.dataset.card === id);
   if (found === undefined) throw new Error(`no ${testId} for ${id}`);
   return found;
+}
+
+function setBubble(id: string): HTMLElement {
+  const found = screen.getAllByTestId(patchTestid.setBubble).find((element) => element.dataset.set === id);
+  if (found === undefined) throw new Error(`no set bubble ${id}`);
+  return found;
+}
+
+function subPatchVersions(): (string | undefined)[] {
+  return within(screen.getByTestId(patchTestid.subPatchList))
+    .queryAllByTestId(patchTestid.patch)
+    .map((element) => element.dataset.version);
 }
 
 describe("R388 the Patch notes page", () => {
@@ -191,36 +205,44 @@ describe("R388 the Patch notes page", () => {
 });
 
 describe("R388 the Patch notes page over the real history", () => {
-  it("R388 lists every patch newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
+  it("R388 lists the active set's patches newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
+    // The page opens on the newest set (R724000): a patch shipped before its note was written
+    // lists first with its catalog title, then the newest set's sub-patches, newest first.
+    const claimed = new Set(ALL_SET_RELEASES.flatMap((set) => set.subPatches.map((sub) => sub.version)));
+    const unclaimed = shipped
+      .map((patch) => patch.version)
+      .reverse()
+      .filter((version) => !claimed.has(version));
+    const newestSet = ALL_SET_RELEASES[0];
+    if (newestSet === undefined) throw new Error("the release notes name no set");
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    // Newest first is patches.json read backwards (R105, R388) — and promotions only append
-    // (R646), so the page's list is the file's, whatever the newest patch is called today.
-    expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
-    // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
-    // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
-    // v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
-    // (R743's names for issues #113, #181 and #218): whichever of the three is the newest opens with
-    // every card it changed.
-    const newest = shipped.at(-1)?.version ?? "";
-    await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
-    if (newest === "v0.2.3" || newest === "v0.2.4" || newest === "v0.2.5") {
-      const record = shipped.find((patch) => patch.version === newest);
-      const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
-      const shownNewest = [
-        ...within(patchEntry(newest)).getAllByTestId(patchTestid.changedCard),
-        ...within(patchEntry(newest)).queryAllByTestId(patchTestid.dataOnly),
-      ].map((element) => element.dataset.card);
-      expect(shownNewest.sort()).toEqual([...changedIds].sort());
-      fireEvent.click(within(patchEntry(newest)).getByTestId(patchTestid.toggle));
-    }
+    expect(entries.map((element) => element.dataset.version)).toEqual([
+      ...unclaimed,
+      ...newestSet.subPatches.map((sub) => sub.version),
+    ]);
+    // Only the newest sub-patch of the set on show opens on arrival (R507); the others wait.
+    const first = entries[0];
+    if (first === undefined) throw new Error("the newest set lists no patch");
+    await within(first).findByTestId(patchTestid.cards, undefined, SLOW);
+    const second = entries[1];
+    if (second !== undefined) expect(within(second).queryByTestId(patchTestid.cards)).toBeNull();
+    // Classic & Classic+ live under their own bubble: every one of the set's sub-patches,
+    // newest first, whatever a later promotion appends elsewhere (R646).
+    fireEvent.click(setBubble("classic"));
+    const classicSet = ALL_SET_RELEASES[1];
+    if (classicSet === undefined) throw new Error("the release notes name no second set");
+    const classicEntries = await screen.findAllByTestId(patchTestid.patch);
+    expect(classicEntries.map((element) => element.dataset.version)).toEqual(
+      classicSet.subPatches.map((sub) => sub.version),
+    );
     const v020 = patchEntry("v0.2.0");
     if (within(v020).getByTestId(patchTestid.toggle).getAttribute("aria-expanded") === "false") {
       fireEvent.click(within(v020).getByTestId(patchTestid.toggle));
     }
     await within(v020).findByTestId(patchTestid.cards, undefined, SLOW);
-    // Inside v0.2.0's entry: the newest patch is open too, and a promoted one may change the Mask again (R646).
+    // Inside v0.2.0's entry: a promoted patch may change the Mask again (R646).
     const mask = byCard(patchTestid.changedCard, "core-065", v020);
     expect(mask).toHaveTextContent("(2) Cost → becomes (1) Cost");
     expect(mask.querySelector(".cost-gem")).toHaveAttribute("data-cost", "1");
@@ -240,7 +262,72 @@ describe("R388 the Patch notes page over the real history", () => {
       ["Classic+", 78],
       ["Classic+ tokens", 38],
     ]);
-    // The older patches wait to be opened.
+    // Core's patches wait under their own bubble, shut.
+    fireEvent.click(setBubble("core"));
+    expect(patchEntry("v0.1.0")).toBeInTheDocument();
     expect(within(patchEntry("v0.1.0")).queryByTestId(patchTestid.cards)).toBeNull();
   }, 30_000);
+});
+
+describe("R724000 the Patch notes page grouped by set", () => {
+  it("R724000 shows set bubbles with Meditative active by default on load, rendering its technical changes bullets", async () => {
+    renderPage(fixtureSource());
+    const bubbles = await screen.findAllByTestId(patchTestid.setBubble);
+    expect(bubbles.map((element) => element.dataset.set)).toEqual(["meditative", "classic", "core"]);
+    expect(setBubble("meditative")).toHaveAttribute("aria-pressed", "true");
+    expect(setBubble("classic")).toHaveAttribute("aria-pressed", "false");
+    expect(setBubble("core")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(patchTestid.setSelect)).toHaveValue("meditative");
+    expect(screen.getByRole("heading", { level: 2, name: /Meditative/ })).toHaveTextContent("v0.3.0 – v0.3.6");
+    const technical = screen.getByTestId(patchTestid.technicalChanges);
+    expect(technical).toHaveTextContent("Technical changes");
+    expect(technical).toHaveTextContent("Engine Rewrite");
+    expect(technical).toHaveTextContent("AI Upgrades");
+    // Fixture versions belong to no set, so they list under the newest one with their catalog titles.
+    expect(subPatchVersions()).toEqual([V3, V2, V1]);
+    expect(patchEntry(V3)).toHaveTextContent("Two new sets");
+  });
+
+  it("R724000 clicking a set bubble switches the view to Classic or Core", async () => {
+    renderPage(fixtureSource());
+    await screen.findAllByTestId(patchTestid.setBubble);
+    fireEvent.click(setBubble("classic"));
+    expect(setBubble("classic")).toHaveAttribute("aria-pressed", "true");
+    expect(setBubble("meditative")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Ranked Ladder");
+    expect(screen.getByRole("heading", { level: 2, name: /Classic/ })).toBeInTheDocument();
+    expect(subPatchVersions()).toEqual([]);
+    fireEvent.click(setBubble("core"));
+    expect(screen.getByTestId(patchTestid.technicalChanges)).toHaveTextContent("Dual-Lane Battlefield");
+    expect(subPatchVersions()).toEqual([]);
+    // The dropdown stays in sync both ways.
+    fireEvent.change(screen.getByTestId(patchTestid.setSelect), { target: { value: "meditative" } });
+    expect(setBubble("meditative")).toHaveAttribute("aria-pressed", "true");
+    expect(subPatchVersions()).toEqual([V3, V2, V1]);
+  });
+
+  it("R724000 sub-patches display retconned human-readable titles and summaries without AI commit slop", async () => {
+    renderPage();
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    const nerf = patchEntry("v0.3.4");
+    expect(nerf).toHaveTextContent("Keyword Refinements: Nerf & Buff");
+    expect(nerf).toHaveTextContent("Renamed Degrade to Nerf and Upgrade to Buff across all printed cards for improved clarity.");
+    expect(nerf).not.toHaveTextContent("Patch v0.3.4: Degrade is Nerf and Upgrade is Buff");
+    const numbers = patchEntry("v0.3.2");
+    expect(numbers).toHaveTextContent("Declared Numbers Expansion");
+    expect(numbers).toHaveTextContent("Expanded tunable parameters across 80 cards to support broader stat-scaling interactions.");
+    expect(numbers).not.toHaveTextContent("R386");
+    expect(numbers).not.toHaveTextContent("B3.4");
+  });
+
+  it("R724000 sub-patches have card diffs collapsed by default, expanding when toggle is clicked", async () => {
+    renderPage();
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    const launch = patchEntry("v0.3.5");
+    expect(within(launch).getByTestId(patchTestid.toggle)).toHaveAttribute("aria-expanded", "false");
+    expect(within(launch).queryByTestId(patchTestid.cards)).toBeNull();
+    fireEvent.click(within(launch).getByTestId(patchTestid.toggle));
+    expect(await within(launch).findByTestId(patchTestid.cards, undefined, SLOW)).toBeInTheDocument();
+    expect(within(launch).getByTestId(patchTestid.toggle)).toHaveTextContent("Hide the cards");
+  });
 });

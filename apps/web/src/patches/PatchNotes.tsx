@@ -1,5 +1,5 @@
-// Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
-// They read public patch data only (CLAUDE.md rule 7).
+// Patch notes (brief B4.2 item 5; R388, R507, R724000) lazy-load opened snapshots and limit faces
+// in large additions. They read public patch data only (CLAUDE.md rule 7).
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -14,6 +14,7 @@ import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
+import { ALL_SET_RELEASES, findSubPatchNote, type SetReleaseNotes } from "./releaseNotes.ts";
 import type { Patch } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -227,31 +228,40 @@ function PatchEntry({
   patch,
   patches,
   initiallyOpen,
+  titleOverride,
+  summaryOverride,
   onOpen,
 }: {
   patch: Patch;
   patches: readonly Patch[];
   initiallyOpen: boolean;
+  titleOverride?: string;
+  summaryOverride?: string;
   onOpen: OpenCard;
 }): ReactElement {
   const [open, setOpen] = useState(initiallyOpen);
   const titleId = useId();
   const panelId = useId();
   const counts = countsLine(patch);
+  // R724000: a claimed patch shows its hand-written title and summary, never the catalog's —
+  // and not its source line either, which cites commits and rulings (v0.1.0d's "R275-R279").
+  const title = titleOverride ?? patch.title;
+  const notes = summaryOverride ?? patch.notes;
+  const showSource = patch.source !== "" && titleOverride === undefined;
   return (
     <article className="patch" data-testid={patchTestid.patch} data-version={patch.version} aria-labelledby={titleId}>
       <header className="patch__head">
         <h2 className="patch__title" id={titleId}>
-          <span className="patch-version">{patch.version}</span> <span className="patch__name">{patch.title}</span>
+          <span className="patch-version">{patch.version}</span> <span className="patch__name">{title}</span>
         </h2>
         <p className="patch__meta">
           <time className="patch-date" dateTime={patch.date}>
             {patch.date}
           </time>
-          {patch.source === "" ? null : <span className="patch__source"> · {patch.source}</span>}
+          {showSource ? <span className="patch__source"> · {patch.source}</span> : null}
         </p>
       </header>
-      {patch.notes === "" ? null : <p className="patch__notes">{patch.notes}</p>}
+      {notes === "" ? null : <p className="patch__notes">{notes}</p>}
       {patch.changes.length === 0 ? (
         <p className="patch__counts">No card changed.</p>
       ) : (
@@ -285,23 +295,118 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <CardDetail def={read.value} onClose={onClose} historyOpen />;
 }
 
+/**
+ * R724000: one bubble per set, plus a dropdown synced with them for a keyboard or a finger.
+ * Plain buttons with `aria-pressed`, so keyboard navigation needs nothing extra.
+ */
+function SetSelector({ activeId, onSelect }: { activeId: string; onSelect: (id: string) => void }): ReactElement {
+  return (
+    <div className="patch-set-picker">
+      <div className="patch-set-selector" role="group" aria-label="Releases by set">
+        {ALL_SET_RELEASES.map((set) => (
+          <button
+            key={set.id}
+            type="button"
+            className="patch-set-bubble"
+            aria-pressed={set.id === activeId}
+            data-testid={patchTestid.setBubble}
+            data-set={set.id}
+            onClick={() => {
+              onSelect(set.id);
+            }}
+          >
+            {set.name}
+          </button>
+        ))}
+      </div>
+      <select
+        className="patch-set-select"
+        data-testid={patchTestid.setSelect}
+        aria-label="Releases by set"
+        value={activeId}
+        onChange={(event) => {
+          onSelect(event.target.value);
+        }}
+      >
+        {ALL_SET_RELEASES.map((set) => (
+          <option key={set.id} value={set.id}>
+            {set.name} · {set.versions}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
   const source = usePatchSource();
   const [openId, setOpenId] = useState<string | null>(null);
+  // R724000: the set on show. Newest first, so the page opens on the newest set.
+  const [selectedSetId, setSelectedSetId] = useState<string>(() => ALL_SET_RELEASES[0]?.id ?? "");
+  const selectedSet: SetReleaseNotes | undefined =
+    ALL_SET_RELEASES.find((set) => set.id === selectedSetId) ?? ALL_SET_RELEASES[0];
   const newest = patches[patches.length - 1];
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
+  const setTitleId = useId();
+  const technicalTitleId = useId();
   const ordered = newestFirst(patches);
+  if (selectedSet === undefined) {
+    return (
+      <p className="patch-status" data-testid={patchTestid.empty}>
+        There are no patch notes yet.
+      </p>
+    );
+  }
+  const claimed = new Set(ALL_SET_RELEASES.flatMap((set) => set.subPatches.map((sub) => sub.version)));
+  const setVersions = new Set(selectedSet.subPatches.map((sub) => sub.version));
+  // A patch no set claims yet — one shipped before its note was written — lists under the newest
+  // set with its catalog title and notes, so no patch ever disappears from the page.
+  const unclaimed =
+    selectedSet.id === ALL_SET_RELEASES[0]?.id ? ordered.filter((patch) => !claimed.has(patch.version)) : [];
+  const visible = [...unclaimed, ...ordered.filter((patch) => setVersions.has(patch.version))];
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
-      <ol className="patch-list">
-        {ordered.map((patch, at) => (
-          <li key={patch.version}>
-            <PatchEntry patch={patch} patches={patches} initiallyOpen={at < PATCHES_OPEN_ON_LOAD} onOpen={setOpenId} />
-          </li>
-        ))}
+      <SetSelector activeId={selectedSet.id} onSelect={setSelectedSetId} />
+      <section className="patch-set" aria-labelledby={setTitleId}>
+        <h2 className="patch-set__title" id={setTitleId}>
+          {selectedSet.name} <span className="patch-set__versions">{selectedSet.versions}</span>
+        </h2>
+        <p className="patch-set__summary">{selectedSet.summary}</p>
+      </section>
+      <section
+        className="patch-technical"
+        data-testid={patchTestid.technicalChanges}
+        aria-labelledby={technicalTitleId}
+      >
+        <h3 className="patch-technical__title" id={technicalTitleId}>
+          Technical changes
+        </h3>
+        <ul className="patch-technical__list">
+          {selectedSet.technicalChanges.map((change) => (
+            <li key={change}>{change}</li>
+          ))}
+        </ul>
+      </section>
+      <ol className="patch-list patch-subpatches" data-testid={patchTestid.subPatchList}>
+        {visible.map((patch, at) => {
+          const note = findSubPatchNote(patch.version);
+          return (
+            <li key={patch.version}>
+              <PatchEntry
+                patch={patch}
+                patches={patches}
+                initiallyOpen={at < PATCHES_OPEN_ON_LOAD}
+                titleOverride={note?.title}
+                summaryOverride={note?.summary}
+                onOpen={setOpenId}
+              />
+            </li>
+          );
+        })}
       </ol>
+      {visible.length === 0 ? <p className="patch-status">No sub-patches in this set yet.</p> : null}
       {openId === null ? null : (
         <OpenedCard
           key={openId}
