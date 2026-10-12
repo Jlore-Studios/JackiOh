@@ -16,6 +16,12 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
+# A failed run on the default branch hands the issue to the night bot (.harness/config.json's
+# bot_login), as ci-duration.yml hands over its report: a new issue is assigned to it and queued with
+# bot:build, and an open one nobody is assigned to is handed over the same way, so main's red run is
+# worked on without anyone asking. A dispatched run on any other branch tests that branch's change,
+# so it is reported but never handed over, and its report says the branch's author owns it.
+#
 # The release binaries and the built client travel between jobs as artifacts, built once per run by
 # the same steps ci.yml uses (its `rust-build` and `wasm` jobs).
 name: super
@@ -331,8 +337,9 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # One issue, found by its exact title: opened (or commented on) when anything above did not pass,
-  # closed when everything did. It never checks out or runs code; the job names it quotes reach the
-  # shell through the API's JSON and env, never through `${{ }}` in the script.
+  # closed when everything did, and handed to the night bot when the red run is on the default
+  # branch. It never checks out or runs code; the job names it quotes reach the shell through the
+  # API's JSON and env, never through `${{ }}` in the script.
   report:
     name: report
     needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, coverage, e2e, component, web-extra, db]
@@ -351,10 +358,13 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           SHA: ${{ github.sha }}
           EVENT: ${{ github.event_name }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
           TITLE: "CI: daily super run failed"
+          # Who fixes main's red run: the night bot (.harness/config.json's bot_login).
+          BOT_LOGIN: jgoetzmann-bot
         run: |
           set -euo pipefail
           red=false
@@ -389,6 +399,13 @@ jobs:
           fi
           echo "$failed"
 
+          # Main's red run is the night bot's to fix; a branch's is its author's.
+          if [ "$REF" = "$DEFAULT_BRANCH" ]; then
+            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave). A pull request's CI runs only the e2e smoke specs, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+          else
+            owner="This run is on \`$REF\`, not \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
+          fi
+
           body=$(printf '%s\n' \
             "$where failed:" \
             "" \
@@ -398,13 +415,33 @@ jobs:
             "" \
             "Each link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. \`gh workflow run super.yml --ref <branch>\` runs it again on demand." \
             "" \
+            "$owner" \
+            "" \
             "---" \
             "_Posted by \`.github/workflows/super.yml\`._")
+
+          # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
+          # would, for a red run on the default branch only. A failure here leaves the report
+          # standing for a person.
+          hand_over() {
+            if [ "$REF" != "$DEFAULT_BRANCH" ]; then
+              echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
+              return 0
+            fi
+            gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+              && echo "handed #$1 to @$BOT_LOGIN" \
+              || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+          }
 
           if [ -n "$open" ]; then
             gh issue comment "$open" --repo "$REPO" --body "$body"
             echo "commented on #$open"
+            # Someone already on it, the bot or a person, keeps it.
+            if [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ]; then
+              hand_over "$open"
+            fi
           else
             url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
             echo "opened $url"
+            hand_over "${url##*/}"
           fi
