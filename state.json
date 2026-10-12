@@ -4278,6 +4278,7 @@
     "727": {
       "action": "plan",
       "asks": [],
+      "failures": 1,
       "handoff": {
         "at": "2026-10-12T15:03:17Z",
         "draft": "# Draft plan #727 (planner: opus)\n\n## Found so far\n- No locale message layer on main: #711 (PR #736, branch bot/issue-711) adds `apps/web/src/i18n/i18n.ts` with `t(english, params)` keyed by exact English; not merged. #713\u2013#722 have no journals/branches.\n- Decision: own message table `apps/web/src/routes/conquestCopy.ts` keyed by message keys (English values), so it works alone and #711 can wrap it later.\n- `apps/web/src/game/deckbuilder/messages.test.ts` forbids copying validator.rs sentence fragments (>=9 chars) anywhere in apps/web/src \u2014 L4 copy must be new wording.\n- series.tsx: SeriesHero, result section (endReasonWords, ratingWords), forfeit confirm; SeriesPicker.tsx: lock-in button.\n- Spec: \u00a79.4 L1\u2013L6 line 52 of spec/09-architecture.md; \u00a79.5 Conquest line 64; R330\u2013R334, R336, R338, R262, R604.\n\n## Files (so far)\n- apps/web/src/routes/conquestCopy.ts (new)\n- apps/web/src/routes/ConquestExplainer.tsx (new)\n- apps/web/src/routes/series.tsx, SeriesPicker.tsx (change)\n- apps/web/src/routes/series.test.tsx (change) or new conquest-onboarding.test.tsx\n- apps/web/src/game/deckbuilder/TrioEditor.tsx (change)",
