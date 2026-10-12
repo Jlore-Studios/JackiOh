@@ -4274,6 +4274,13 @@
     "726": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T16:50:09Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 1 (small, with room to spare): a new CLI plus fake-store tests runs about 450 lines across 7 files, at or over the 400-line cap, so easy fails"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
