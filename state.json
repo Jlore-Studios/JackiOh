@@ -5022,8 +5022,10 @@
     "what": "revise #731 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-12T19:30:11Z",
-    "notes": [],
+    "at": "2026-10-12T19:40:11Z",
+    "notes": [
+      "started a night run, as a lane was free: #741 (medium) is queued to revise, for `claude-3`: build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
