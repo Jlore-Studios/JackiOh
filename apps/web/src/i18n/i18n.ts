@@ -117,14 +117,21 @@ function patternsOf(dictionary: Dictionary): Pattern[] {
     const names: string[] = [];
     let source = "";
     let last = 0;
+    let enclosed = true;
     for (const match of key.matchAll(TOKEN)) {
-      source += escapeRegex(key.slice(last, match.index)) + "(.+?)";
+      const end = match.index + match[0].length;
+      // A token in parentheses ("({cost}) Cost") holds only what stands inside them, never words.
+      const inParentheses = key[match.index - 1] === "(" && key[end] === ")";
+      enclosed &&= inParentheses;
+      source += escapeRegex(key.slice(last, match.index)) + (inParentheses ? "([^()]+?)" : "(.+?)");
       names.push(match[1] ?? "");
-      last = match.index + match[0].length;
+      last = end;
     }
     // A key whose own words are fewer than two ("{n} cards") would take any sentence that ends the
-    // same way and leave it half translated, so it only ever answers its own calls.
-    if (names.length > 0 && (key.replace(TOKEN, " ").match(/\p{L}+/gu) ?? []).length >= MIN_PATTERN_WORDS) {
+    // same way and leave it half translated, so it only ever answers its own calls, unless each of
+    // its tokens is held in parentheses ("({cost}) Cost" takes "(3) Cost" and nothing longer).
+    const own = (key.replace(TOKEN, " ").match(/\p{L}+/gu) ?? []).length;
+    if (names.length > 0 && (own >= MIN_PATTERN_WORDS || (enclosed && own > 0))) {
       const regex = new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s");
       patterns.push({ key, names, regex, literal: key.replace(TOKEN, "").length });
     }
@@ -144,7 +151,11 @@ export function words(entry: Entry, locale: Locale, params: Params | undefined):
   return entry[new Intl.PluralRules(locale).select(Number(params?.["count"]))] ?? entry.other;
 }
 
-/** The sentence a complete English sentence reads as when a `{name}` key matches it. */
+/**
+ * The sentence a complete English sentence reads as when a `{name}` key matches it. Each value is
+ * looked up in turn, since the engine nests its sentences ("{label} (next turn)", "Next {type} costs
+ * {amount} less"); a value is shorter than the sentence it came from, so the lookup ends.
+ */
 function matched(english: string): string | null {
   state.patterns ??= patternsOf(state.dictionary);
   for (const pattern of state.patterns) {
@@ -152,7 +163,7 @@ function matched(english: string): string | null {
     if (found === null) continue;
     const values: Record<string, string> = {};
     pattern.names.forEach((name, index) => {
-      values[name] = found[index + 1] ?? "";
+      values[name] = t(found[index + 1] ?? "");
     });
     const entry = state.dictionary[pattern.key];
     return entry === undefined ? null : fill(words(entry, state.locale, values), values);

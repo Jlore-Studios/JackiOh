@@ -30,8 +30,8 @@ import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, t
 
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
-import { costPhrase, useInspectTrigger } from "../cards/index.ts";
-import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { useInspectTrigger } from "../cards/index.ts";
+import { chineseName, drawnInChinese, listSeparator, readerKeyword } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
@@ -101,11 +101,11 @@ type Naming = {
 };
 
 function seatLabel(view: PlayerView, player: PlayerId): string {
-  return sideOf(view, player) === "you" ? "You" : "Opponent";
+  return sideOf(view, player) === "you" ? t("You") : t("Opponent");
 }
 
 function whoseLabel(view: PlayerView, player: PlayerId): string {
-  return sideOf(view, player) === "you" ? "your" : "the opponent's";
+  return sideOf(view, player) === "you" ? t("your") : t("the opponent's");
 }
 
 /** The log's own words ("your hero", "a unit") open a line with a capital; a card's name is as printed. */
@@ -116,7 +116,7 @@ function capitalised(text: string): string {
 }
 
 function zoneLabel(row: string, lane: number): string {
-  return row === "units" ? `lane ${String(lane)}` : `backrow lane ${String(lane)}`;
+  return row === "units" ? t("lane {lane}", { lane }) : t("backrow lane {lane}", { lane });
 }
 
 /**
@@ -192,235 +192,310 @@ function questText(view: PlayerView, instanceId: string, quest: string): string 
   return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
 }
 
-/** What became of a card a full deck turned away (R316), as a line ends. */
-const OVERFLOW_OUTCOME: Readonly<Record<LibraryOverflowOutcome, string>> = {
-  notCreated: "was not created",
-  graveyard: "went to the graveyard",
-  ceased: "ceased to exist",
+/**
+ * What became of a card a full deck turned away (R316), as its line reads. Each line is one
+ * sentence for the reader's language (R711000), as are the other tables of whole lines below.
+ */
+const OVERFLOW_LINE: Readonly<Record<LibraryOverflowOutcome, string>> = {
+  notCreated: "{whose} deck is full: {card} was not created",
+  graveyard: "{whose} deck is full: {card} went to the graveyard",
+  ceased: "{whose} deck is full: {card} ceased to exist",
+};
+
+/** A counter's line, by the counter. */
+const COUNTER_LINE: Readonly<Record<Extract<GameEvent, { type: "counterChanged" }>["counter"], string>> = {
+  plague: "{target} plague counters: {value}",
+  grade: "{target} grade counters: {value}",
+  brittle: "{target} brittle counters: {value}",
+};
+
+const ROTATED_LINE: Readonly<Record<Extract<GameEvent, { type: "rotated" }>["direction"], string>> = {
+  left: "The board rotated left",
+  right: "The board rotated right",
+};
+
+const SWAPPED_LINE: Readonly<Record<Extract<GameEvent, { type: "swapped" }>["what"], string>> = {
+  health: "Both players swapped health",
+  board: "Both players swapped board",
+  library: "Both players swapped library",
 };
 
 function describe(event: GameEvent, view: PlayerView, name: Naming): string | null {
   /** A card an overflow names: by name where the viewer reads it, else "a card" (R97). */
-  const named = (defId: string): string => (defId === HIDDEN_CARD ? "a card" : name.def(defId));
+  const named = (defId: string): string => (defId === HIDDEN_CARD ? t("a card") : name.def(defId));
   /** The same, naming the card as the board shows that instance (R1301's Chinese name included). */
-  const namedCard = (instanceId: string, defId: string): string => (defId === HIDDEN_CARD ? "a card" : name.card(instanceId, defId));
+  const namedCard = (instanceId: string, defId: string): string => (defId === HIDDEN_CARD ? t("a card") : name.card(instanceId, defId));
   switch (event.type) {
     case "cardPlayed":
-      return `${name.seat(event.player)} played ${name.def(event.defId)} for ${event.costPaid}`;
-    case "summoned":
+      return t("{seat} played {card} for {cost}", { seat: name.seat(event.player), card: name.def(event.defId), cost: event.costPaid });
+    case "summoned": {
       // R370: a card set face down is a trap the viewer may not read; the line says so, with the
       // cost its back shows while it still stands there.
+      const where = { whose: name.whose(event.player), zone: zoneLabel(event.row, event.lane) };
       if (event.defId === HIDDEN_CARD && event.row === "backrow") {
         const cost = faceDownCostAt(view, event.player, event.lane);
         return capitalised(
-          `${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}: a face-down trap was set${cost === undefined ? "" : `, ${costPhrase(cost)}`}`,
+          cost === undefined
+            ? t("{whose} {zone}: a face-down trap was set", where)
+            : t("{whose} {zone}: a face-down trap was set, ({cost}) Cost", { ...where, cost }),
         );
       }
-      return capitalised(`${name.card(event.instanceId, event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`);
+      return capitalised(t("{card} entered {whose} {zone}", { card: name.card(event.instanceId, event.defId), ...where }));
+    }
     case "damage": {
       // R1360: the Armor's part of the hit, where it took one.
       const absorbed = event.absorbed ?? 0;
-      const armor = absorbed > 0 ? `, ${String(absorbed)} absorbed by Armor` : "";
-      return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}${armor}`;
+      const hit = { target: capitalised(name.instance(event.targetId)), amount: event.amount, absorbed };
+      if (absorbed > 0) {
+        return event.combat
+          ? t("{target} took {amount} damage in combat, {absorbed} absorbed by Armor", hit)
+          : t("{target} took {amount} damage, {absorbed} absorbed by Armor", hit);
+      }
+      return event.combat ? t("{target} took {amount} damage in combat", hit) : t("{target} took {amount} damage", hit);
     }
-    case "damageAbsorbed":
+    case "damageAbsorbed": {
       // R1361: the Armor took the whole hit, so nothing was dealt.
-      return `${capitalised(name.instance(event.targetId))}'s Armor absorbed ${String(event.absorbed)} damage${event.combat ? " in combat" : ""}`;
+      const hit = { target: capitalised(name.instance(event.targetId)), absorbed: event.absorbed };
+      return event.combat ? t("{target}'s Armor absorbed {absorbed} damage in combat", hit) : t("{target}'s Armor absorbed {absorbed} damage", hit);
+    }
     case "secretChosen":
       // R860: the line names only that a secret is held — never the choice.
-      return `${name.seat(event.player)} kept a secret`;
+      return t("{seat} kept a secret", { seat: name.seat(event.player) });
     case "secretRevealed":
       // R864: revealed, the choice is public history.
-      return capitalised(`${name.whose(event.player)} secret was ${SECRET_WORDS[event.choice]}`);
+      return capitalised(t("{whose} secret was {choice}", { whose: name.whose(event.player), choice: t(SECRET_WORDS[event.choice]) }));
     case "predicted":
       // R864: the guess and what it did to the reward.
-      return `${name.seat(event.player)} guessed ${SECRET_WORDS[event.guess]}: ${PREDICTED_WORDS[event.outcome]}`;
+      return t("{seat} guessed {guess}: {outcome}", {
+        seat: name.seat(event.player),
+        guess: t(SECRET_WORDS[event.guess]),
+        outcome: t(PREDICTED_WORDS[event.outcome]),
+      });
     case "healthLost":
-      return `${name.seat(event.player)} lost ${event.amount} health`;
+      return t("{seat} lost {amount} health", { seat: name.seat(event.player), amount: event.amount });
     case "healed":
-      return `${capitalised(name.instance(event.targetId))} healed ${event.amount}`;
+      return t("{target} healed {amount}", { target: capitalised(name.instance(event.targetId)), amount: event.amount });
     case "divineShieldLost":
-      return `${capitalised(name.instance(event.instanceId))} lost its Divine Shield`;
+      return t("{target} lost its Divine Shield", { target: capitalised(name.instance(event.instanceId)) });
     case "destroyed":
-      return capitalised(`${name.card(event.instanceId, event.defId)} was destroyed`);
+      return capitalised(t("{card} was destroyed", { card: name.card(event.instanceId, event.defId) }));
     case "cardResolved":
       return null;
     case "enteredGraveyard":
-      return capitalised(`${name.card(event.instanceId, event.defId)} went to ${name.whose(event.owner)} graveyard`);
+      return capitalised(t("{card} went to {whose} graveyard", { card: name.card(event.instanceId, event.defId), whose: name.whose(event.owner) }));
     case "exiled":
-      return capitalised(`${name.card(event.instanceId, event.defId)} was exiled`);
+      return capitalised(t("{card} was exiled", { card: name.card(event.instanceId, event.defId) }));
     case "bounced":
-      return capitalised(`${name.card(event.instanceId, event.defId)} returned to ${name.whose(event.owner)} hand`);
+      return capitalised(t("{card} returned to {whose} hand", { card: name.card(event.instanceId, event.defId), whose: name.whose(event.owner) }));
     case "burned":
       // R317: a full hand's card, named where the viewer reads it (the sentinel is "a card").
-      return capitalised(`${name.whose(event.owner)} hand is full: ${named(event.defId)} burned`);
+      return capitalised(t("{whose} hand is full: {card} burned", { whose: name.whose(event.owner), card: named(event.defId) }));
     case "fatigue":
       // R315: public, and it names no card. The hit is the `damage` line after it.
       // R373: the rules' library reads as the Deck.
-      return capitalised(`${name.whose(event.player)} deck is empty: fatigue ${event.count}`);
+      return capitalised(t("{whose} deck is empty: fatigue {count}", { whose: name.whose(event.player), count: event.count }));
     case "libraryOverflow":
       // R316: the card a full library turned away, named only where the viewer reads it.
-      return capitalised(`${name.whose(event.player)} deck is full: ${named(event.defId)} ${OVERFLOW_OUTCOME[event.outcome]}`);
+      return capitalised(t(OVERFLOW_LINE[event.outcome], { whose: name.whose(event.player), card: named(event.defId) }));
     case "discarded":
-      return `${name.seat(event.owner)} discarded ${name.def(event.defId)}`;
+      return t("{seat} discarded {card}", { seat: name.seat(event.owner), card: name.def(event.defId) });
     case "drawn":
-      return `${name.seat(event.player)} drew a card`;
+      return t("{seat} drew a card", { seat: name.seat(event.player) });
     case "addedToHand":
-      return `${name.seat(event.player)} added a card to hand`;
+      return t("{seat} added a card to hand", { seat: name.seat(event.player) });
     case "shuffledIn":
-      return `${name.seat(event.player)} shuffled a card into the deck`;
+      return t("{seat} shuffled a card into the deck", { seat: name.seat(event.player) });
     case "buffed":
       // R177: a buff on a card this seat may not read arrives as the sentinel with 0/0, which says
       // nothing of its size, so the line does not claim one.
       return event.instanceId === HIDDEN_CARD
-        ? "A hidden card was buffed"
-        : `${capitalised(name.instance(event.instanceId))} gained +${event.attack}/+${event.health}`;
-    case "keywordGranted":
+        ? t("A hidden card was buffed")
+        : t("{target} gained +{attack}/+{health}", { target: capitalised(name.instance(event.instanceId)), attack: event.attack, health: event.health });
+    case "keywordGranted": {
       // R46: the same event reports the Taunt an Indestructible unit's knock-down takes.
-      return `${capitalised(name.instance(event.instanceId))} ${event.lost === true ? "lost" : "gained"} ${event.keyword.kind}`;
+      const change = { target: capitalised(name.instance(event.instanceId)), keyword: readerKeyword(event.keyword.kind) };
+      return event.lost === true ? t("{target} lost {keyword}", change) : t("{target} gained {keyword}", change);
+    }
     case "counterChanged":
-      return `${capitalised(name.instance(event.instanceId))} ${event.counter} counters: ${event.value}`;
+      return t(COUNTER_LINE[event.counter], { target: capitalised(name.instance(event.instanceId)), value: event.value });
     case "jadeChanged":
-      return capitalised(`${name.whose(event.player)} Jade Counter is ${event.value}`);
-    case "costChanged":
+      return capitalised(t("{whose} Jade Counter is {value}", { whose: name.whose(event.player), value: event.value }));
+    case "costChanged": {
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
-      return event.cost < 0
-        ? `${capitalised(name.instance(event.instanceId, "a card"))} changed cost`
-        : `${capitalised(name.instance(event.instanceId, "a card"))} now costs (${event.cost})`;
+      const target = capitalised(name.instance(event.instanceId, t("a card")));
+      return event.cost < 0 ? t("{target} changed cost", { target }) : t("{target} now costs ({cost})", { target, cost: event.cost });
+    }
     case "modifierChanged": {
       // The id is the engine's handle ("m123"); the label, while the view still lists it, is the words.
       const label = [...view.you.modifiers, ...view.opponent.modifiers].find((mod) => mod.id === event.modifierId)?.label;
-      const what = label === undefined ? "an effect" : `"${label}"`;
-      return `${name.seat(event.player)} ${event.added ? "gained" : "lost"} ${what}`;
+      const change = { seat: name.seat(event.player), what: label === undefined ? t("an effect") : `"${t(label)}"` };
+      return event.added ? t("{seat} gained {what}", change) : t("{seat} lost {what}", change);
     }
     case "radiantSet":
-      return capitalised(`${name.card(event.instanceId, event.defId)} became Radiant`);
+      return capitalised(t("{card} became Radiant", { card: name.card(event.instanceId, event.defId) }));
     case "deradianted":
       // MD-D6: the mirror of `radiantSet`'s line.
-      return capitalised(`${name.card(event.instanceId, event.defId)} is no longer Radiant`);
+      return capitalised(t("{card} is no longer Radiant", { card: name.card(event.instanceId, event.defId) }));
     case "manaSpent":
       // MD-D26: the spend is noise beside the play or activation it paid for; `manaChanged` says the total.
       return null;
     case "transformed":
       // R97: a card the viewer may not read is a hidden card on both sides; with nothing to name the
       // line says only that it changed (a hidden card in a hand becoming another, #552).
-      if (event.fromDefId === HIDDEN_CARD && event.toDefId === HIDDEN_CARD) return "A hidden card was transformed";
-      return capitalised(`${name.def(event.fromDefId)} became ${name.card(event.newInstanceId, event.toDefId)}`);
+      if (event.fromDefId === HIDDEN_CARD && event.toDefId === HIDDEN_CARD) return t("A hidden card was transformed");
+      return capitalised(t("{from} became {to}", { from: name.def(event.fromDefId), to: name.card(event.newInstanceId, event.toDefId) }));
     case "fused":
-      return `${event.instanceIds.length} cards fused into ${name.def(event.defId)}`;
+      return t("{count} cards fused into {card}", { count: event.instanceIds.length, card: name.def(event.defId) });
     case "positionSwitched":
-      return `${capitalised(name.instance(event.instanceId))} switched to ${event.position}`;
+      return t("{target} switched to {position}", { target: capitalised(name.instance(event.instanceId)), position: t(event.position) });
     case "controlChanged":
-      return `${capitalised(name.instance(event.instanceId))} moved to ${name.whose(event.controller)} ${zoneLabel(event.row, event.lane)}`;
+      return t("{target} moved to {whose} {zone}", {
+        target: capitalised(name.instance(event.instanceId)),
+        whose: name.whose(event.controller),
+        zone: zoneLabel(event.row, event.lane),
+      });
     case "rotated":
-      return `The board rotated ${event.direction}`;
+      return t(ROTATED_LINE[event.direction]);
     case "swapped":
-      return `Both players swapped ${event.what}`;
+      return t(SWAPPED_LINE[event.what]);
     case "locked":
-      return `${capitalised(name.whose(event.player))} ${zoneLabel(event.row, event.lane)} was locked`;
+      return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
       // R154: the other seat reads the sentinel, and a sentinel is not a name.
       return event.defId === HIDDEN_CARD
-        ? `${capitalised(name.whose(event.controller))} face-down trap fired`
-        : `${capitalised(name.whose(event.controller))} trap ${name.def(event.defId)} fired`;
-    case "attackDeclared":
-      return `${capitalised(name.instance(event.attackerId))} attacked ${name.instance(event.targetId)}${event.forced ? " (forced)" : ""}`;
+        ? t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) })
+        : t("{whose} trap {card} fired", { whose: capitalised(name.whose(event.controller)), card: name.def(event.defId) });
+    case "attackDeclared": {
+      const attack = { attacker: capitalised(name.instance(event.attackerId)), target: name.instance(event.targetId) };
+      return event.forced ? t("{attacker} attacked {target} (forced)", attack) : t("{attacker} attacked {target}", attack);
+    }
     case "attackCancelled":
-      return `${capitalised(name.instance(event.attackerId))}'s attack was cancelled`;
-    case "manaChanged":
-      return `${name.seat(event.player)} ${name.seat(event.player) === "You" ? "have" : "has"} ${event.current}/${event.max} mana`;
-    case "turnStarted":
+      return t("{attacker}'s attack was cancelled", { attacker: capitalised(name.instance(event.attackerId)) });
+    case "manaChanged": {
+      const mana = { seat: name.seat(event.player), current: event.current, max: event.max };
+      return sideOf(view, event.player) === "you" ? t("{seat} have {current}/{max} mana", mana) : t("{seat} has {current}/{max} mana", mana);
+    }
+    case "turnStarted": {
       // R845: an extra turn's line says so.
-      return `Turn ${event.turn}: ${name.seat(event.player)}${event.extra === true ? " (extra turn)" : ""}`;
+      const turn = { turn: event.turn, seat: name.seat(event.player) };
+      return event.extra === true ? t("Turn {turn}: {seat} (extra turn)", turn) : t("Turn {turn}: {seat}", turn);
+    }
     case "turnEnded":
-      return `${name.seat(event.player)} ended turn ${event.turn} with ${event.unspentMana} mana unspent`;
+      return t("{seat} ended turn {turn} with {mana} mana unspent", { seat: name.seat(event.player), turn: event.turn, mana: event.unspentMana });
     case "turnAutoEnded":
-      return `${name.seat(event.player)} had no moves left, so turn ${event.turn} ended`;
+      return t("{seat} had no moves left, so turn {turn} ended", { seat: name.seat(event.player), turn: event.turn });
     case "promptOpened":
-      return `${name.seat(event.player)} must choose ${PROMPT_WORDS[event.kind]}`;
+      return t("{seat} must choose {what}", { seat: name.seat(event.player), what: t(PROMPT_WORDS[event.kind]) });
     case "promptAnswered":
-      return `${name.seat(event.player)} chose`;
+      return t("{seat} chose", { seat: name.seat(event.player) });
     case "drawOffered":
-      return `${name.seat(event.player)} offered a draw`;
+      return t("{seat} offered a draw", { seat: name.seat(event.player) });
     case "drawAnswered":
-      return `${name.seat(event.player)} ${event.accept ? "accepted" : "declined"} the draw`;
+      return event.accept
+        ? t("{seat} accepted the draw", { seat: name.seat(event.player) })
+        : t("{seat} declined the draw", { seat: name.seat(event.player) });
     case "emoted":
-      return `${name.seat(event.player)} emoted`;
+      return t("{seat} emoted", { seat: name.seat(event.player) });
     case "gameOver": {
       const why = resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason);
-      return event.winner === "draw" ? `Draw. ${why}` : `${seatLabel(view, event.winner)} won. ${why}`;
+      return event.winner === "draw" ? t("Draw. {why}", { why }) : t("{seat} won. {why}", { seat: seatLabel(view, event.winner), why });
     }
     // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
     case "cardAnnounced":
       // The play's own line is its `cardPlayed`; a countered one has its `countered` line.
       return null;
     case "countered":
-      return `${named(event.defId)} was countered${event.to === "hand" ? " and stolen" : ""}`;
+      return event.to === "hand"
+        ? t("{card} was countered and stolen", { card: named(event.defId) })
+        : t("{card} was countered", { card: named(event.defId) });
     case "stolen":
-      return capitalised(`${name.seat(event.to)} stole ${named(event.defId)} from ${name.whose(event.from)} ${STOLEN_FROM[event.zone]}`);
+      return capitalised(t(STOLEN_LINE[event.zone], { seat: name.seat(event.to), card: named(event.defId), whose: name.whose(event.from) }));
     case "unlocked":
-      return `${capitalised(name.whose(event.player))} ${zoneLabel(event.row, event.lane)} was unlocked`;
+      return t("{whose} {zone} was unlocked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "activated":
-      return `${name.seat(event.player)} activated ${name.def(event.defId)}`;
+      return t("{seat} activated {card}", { seat: name.seat(event.player), card: name.def(event.defId) });
     case "animated":
-      return `${name.def(event.defId)} came to life in ${name.whose(event.player)} ${zoneLabel("units", event.unitLane)}`;
+      return t("{card} came to life in {whose} {zone}", {
+        card: name.def(event.defId),
+        whose: name.whose(event.player),
+        zone: zoneLabel("units", event.unitLane),
+      });
     case "deanimated":
-      return `${name.def(event.defId)} returned to ${name.whose(event.player)} ${zoneLabel("backrow", event.backrowLane)}`;
+      return t("{card} returned to {whose} {zone}", {
+        card: name.def(event.defId),
+        whose: name.whose(event.player),
+        zone: zoneLabel("backrow", event.backrowLane),
+      });
     case "crumbled":
-      return capitalised(`${namedCard(event.instanceId, event.defId)} crumbled`);
+      return capitalised(t("{card} crumbled", { card: namedCard(event.instanceId, event.defId) }));
     // R1320: players read the engine's Degrade as a Nerf and its Upgrade as a Buff.
     case "degraded":
-      return capitalised(`${namedCard(event.instanceId, event.defId)} was nerfed`);
+      return capitalised(t("{card} was nerfed", { card: namedCard(event.instanceId, event.defId) }));
     case "upgraded":
-      return capitalised(`${namedCard(event.instanceId, event.defId)} was buffed`);
-    case "numberChanged":
-      if (event.key === HIDDEN_CARD) return capitalised(`${namedCard(event.instanceId, event.defId)} changed`);
+      return capitalised(t("{card} was buffed", { card: namedCard(event.instanceId, event.defId) }));
+    case "numberChanged": {
+      const card = namedCard(event.instanceId, event.defId);
+      if (event.key === HIDDEN_CARD) return capitalised(t("{card} changed", { card }));
       // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").
       return capitalised(
         event.key === "cost"
-          ? `${namedCard(event.instanceId, event.defId)} now costs (${String(event.value)})`
-          : `${namedCard(event.instanceId, event.defId)}'s ${keyWords(event.key)} became ${String(event.value)}`,
+          ? t("{card} now costs ({value})", { card, value: event.value })
+          : t("{card}'s {key} became {value}", { card, key: keyWords(event.key), value: event.value }),
       );
+    }
     case "redirected":
-      return `${capitalised(REDIRECTED[event.what])} was redirected to ${name.instance(event.toId)}`;
+      return t("{what} was redirected to {target}", { what: capitalised(t(REDIRECTED[event.what])), target: name.instance(event.toId) });
     case "healthSet":
-      return `${capitalised(name.whose(event.player))} hero's health was set to ${event.health}`;
+      return t("{whose} hero's health was set to {health}", { whose: capitalised(name.whose(event.player)), health: event.health });
     case "questProgressed": {
       // R404: the event names the quest by its id; its words are the card's view's while it is open.
       const text = questText(view, event.instanceId, event.quest);
-      const where = `${name.whose(event.player)} ${name.instance(event.instanceId, "card")} quest`;
-      return capitalised(`${where}: ${text === null ? "" : `${text}, `}${String(event.progress)}/${String(event.goal)}`);
+      const quest = {
+        whose: name.whose(event.player),
+        card: name.instance(event.instanceId, t("card")),
+        progress: event.progress,
+        goal: event.goal,
+      };
+      return capitalised(
+        text === null
+          ? t("{whose} {card} quest: {progress}/{goal}", quest)
+          : t("{whose} {card} quest: {text}, {progress}/{goal}", { ...quest, text: t(text) }),
+      );
     }
     case "questCompleted":
       // A completed quest has left the view's open quests, so its words are gone with it.
-      return capitalised(`${name.whose(event.player)} ${name.instance(event.instanceId, "card")} completed a quest`);
+      return capitalised(t("{whose} {card} completed a quest", { whose: name.whose(event.player), card: name.instance(event.instanceId, t("card")) }));
     case "rolledBack":
-      return `The board went back ${event.turnsAgo} turn${event.turnsAgo === 1 ? "" : "s"}`;
+      return event.turnsAgo === 1
+        ? t("The board went back {n} turn", { n: event.turnsAgo })
+        : t("The board went back {n} turns", { n: event.turnsAgo });
     case "chaosRolled": {
       // R436: the effects in the words the reveal shows (fx/chaos.ts), never the engine's keys. The
       // roll is public; a card the viewer may not read is still a Call to Chaos (R97).
       const roll = chaosRollOf(event);
-      const who = event.defId === HIDDEN_CARD ? CHAOS_TEXT.title : name.def(event.defId);
-      return roll === null ? null : `${who} rolled: ${chaosNames(roll).join("; ")}`;
+      const who = event.defId === HIDDEN_CARD ? t(CHAOS_TEXT.title) : name.def(event.defId);
+      return roll === null ? null : t("{who} rolled: {names}", { who, names: chaosNames(roll).map((effect) => t(effect)).join(listSeparator()) });
     }
     case "flickered":
-      return capitalised(`${name.card(event.instanceId, event.defId)} flickered`);
+      return capitalised(t("{card} flickered", { card: name.card(event.instanceId, event.defId) }));
     case "drawLimited":
-      return `${name.seat(event.player)} could not draw more this turn`;
+      return t("{seat} could not draw more this turn", { seat: name.seat(event.player) });
     case "discardPrevented":
-      return `${name.seat(event.player)} could not be made to discard`;
+      return t("{seat} could not be made to discard", { seat: name.seat(event.player) });
     case "turnCutShort":
-      return capitalised(`${name.whose(event.player)} turn was cut short`);
+      return capitalised(t("{whose} turn was cut short", { whose: name.whose(event.player) }));
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
-      return `${GLITCH_WORDS.name}: ${GLITCH_OUTCOME_LINE[event.outcome]}`;
+      return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });
     case "fengShui":
       // R983: whose play was judged, and how.
-      return capitalised(`${name.whose(event.player)} play was ${FENG_SHUI_LINE[event.outcome]}`);
+      return capitalised(t("{whose} play was {outcome}", { whose: name.whose(event.player), outcome: t(FENG_SHUI_LINE[event.outcome]) }));
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
-      return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
+      return event.added
+        ? t("{target} was marked ({mark})", { target: capitalised(name.instance(event.instanceId, t("a card"))), mark: t(markWords(event.mark).name) })
+        : null;
     case "translated":
       // R1301: only the language the card is shown in changed; its face says so.
       return null;
@@ -430,7 +505,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
 /** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
   const def = (defId: string): string => {
-    if (defId === HIDDEN_CARD) return "a hidden card";
+    if (defId === HIDDEN_CARD) return t("a hidden card");
     const info = lookup?.(defId, false);
     const english = info?.name ?? defId;
     return drawnInChinese(false) ? chineseName(defId, english, info?.def) : english;
@@ -444,11 +519,11 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
       const info = lookup?.(defId, false);
       return chineseName(defId, info?.name ?? defId, info?.def);
     },
-    instance: (instanceId, unknown = "a unit") => {
-      if (instanceId === `hero-${view.you.player}`) return "your hero";
-      if (instanceId === `hero-${view.opponent.player}`) return "the opponent's hero";
+    instance: (instanceId, unknown) => {
+      if (instanceId === `hero-${view.you.player}`) return t("your hero");
+      if (instanceId === `hero-${view.opponent.player}`) return t("the opponent's hero");
       const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
-      if (defId === undefined) return unknown;
+      if (defId === undefined) return unknown ?? t("a unit");
       const info = lookup?.(defId, false);
       const english = info?.name ?? defId;
       // R1301, R711000: a card the view shows in Chinese is named in Chinese.
@@ -473,14 +548,14 @@ const FENG_SHUI_LINE: Readonly<Record<Extract<GameEvent, { type: "fengShui" }>["
   negative: "inauspicious (凶)",
 };
 
-/** Where a stolen card was taken from, as a line ends (R373: the rules' library is the Deck). */
-const STOLEN_FROM: Readonly<Record<Extract<GameEvent, { type: "stolen" }>["zone"], string>> = {
-  hand: "hand",
-  library: "deck",
-  resolving: "play",
-  graveyard: "graveyard",
-  exile: "exile",
-  field: "side of the field",
+/** Where a stolen card was taken from, as its line reads (R373: the rules' library is the Deck). */
+const STOLEN_LINE: Readonly<Record<Extract<GameEvent, { type: "stolen" }>["zone"], string>> = {
+  hand: "{seat} stole {card} from {whose} hand",
+  library: "{seat} stole {card} from {whose} deck",
+  resolving: "{seat} stole {card} from {whose} play",
+  graveyard: "{seat} stole {card} from {whose} graveyard",
+  exile: "{seat} stole {card} from {whose} exile",
+  field: "{seat} stole {card} from {whose} side of the field",
 };
 
 /** What a redirect moved. */

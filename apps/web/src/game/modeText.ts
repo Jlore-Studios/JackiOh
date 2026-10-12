@@ -124,5 +124,8 @@ export function modeText(
   if (face !== undefined) return read(face);
   const known = defId === undefined ? undefined : MODE_TEXT[defId]?.[option];
   if (known !== undefined) return read(known);
-  return { label: option.length === 0 ? option : t(`${option.charAt(0).toUpperCase()}${option.slice(1)}`) };
+  if (option.length === 0) return { label: option };
+  // The option's own word first, where the language has one: "draw" is not the result word "Draw".
+  const own = t(option);
+  return { label: own !== option ? own : t(`${option.charAt(0).toUpperCase()}${option.slice(1)}`) };
 }

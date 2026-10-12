@@ -65,9 +65,15 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
     // Parameter formatting
-    expect(t("{count} waiting", { count: 3 })).toBe("3人在等待");
+    expect(t("{seat} drew a card", { seat: t("You") })).toBe("你抽了一张牌");
     // A finished sentence from the engine or the server matches the key its values were filled into
     expect(t("Your decks could not be loaded: offline")).toBe("无法加载卡组：offline");
+    // ...and a token in parentheses matches only what stands inside them ("({cost}) Cost")
+    expect(t("(3) Cost")).toBe("(3)费");
+    // ...and the values it holds are looked up in turn, as the engine nests its sentences
+    expect(t("Your cards cost 2 less (next turn)")).toBe("你的牌的法力值消耗减少2点（下回合）");
+    // ...but a key with fewer than two words of its own ("{n} cards") never half-translates a sentence
+    expect(t("Juggle 2 cards")).toBe("Juggle 2 cards");
     // Plurals: a `{ one, other }` entry picks its category by Intl.PluralRules over `count`
     const plural = { one: "{count} card", other: "{count} cards" };
     expect(words(plural, "en", { count: 1 })).toBe("{count} card");
