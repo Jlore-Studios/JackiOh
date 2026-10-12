@@ -49,8 +49,9 @@ class FixEffortTests(unittest.TestCase):
                              "review": [reviewer(changes("Not yet.")), reviewer(APPROVE)]})
         h.night(runner)
         efforts = {c.role: c.effort for c in runner.calls}
+        # Builds run at the seat's effort, fix and review one notch down (#695).
         self.assertEqual((efforts["build"], efforts["fix"], efforts["review"]),
-                         ("xhigh", "high", "xhigh"))
+                         ("xhigh", "high", "high"))
 
 
 class CatchUpTests(unittest.TestCase):

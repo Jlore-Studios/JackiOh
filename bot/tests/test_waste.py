@@ -252,7 +252,8 @@ class HonestReportTests(unittest.TestCase):
         self.assertNotIn("still had blocking findings", body)
 
     def test_the_squash_commit_takes_the_pull_requests_title(self):
-        h = Harness(self, env=ALL, machine=MACHINE)
+        # claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
+        h = Harness(self, env={"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}, machine=())
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer(APPROVE)}))
@@ -267,7 +268,8 @@ class HonestReportTests(unittest.TestCase):
         for text, want in ((DONE, issue),
                            (DONE.replace("Make the rules v2", "Patch v0.3.2: the rules, version two"),
                             "Patch v0.3.2: the rules, version two")):
-            h = Harness(self, env=ALL, machine=MACHINE)
+            # claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
+            h = Harness(self, env={"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}, machine=())
             h.gh.add_issue(12, title=issue, labels=(LABEL_BUILD,))
             h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}, text),
                                 "review": reviewer(APPROVE)}))

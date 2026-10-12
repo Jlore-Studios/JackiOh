@@ -149,6 +149,23 @@ class RebuildTests(unittest.TestCase):
         self.assertEqual(planned["previous_pr"], 9)
         self.assertEqual(planned["previous_findings"], [FINDING])
 
+    def test_the_rebuild_starts_clean_from_main_with_no_old_work(self):
+        gh = FakeGitHub()
+        ctx = make_ctx(gh, at=DAY, cfg=make_config(env={"HARNESS_SECRETS_SET": ""},
+                                                   machine=("muse",)))
+        gh.add_issue(5, labels=(LABEL_PR_OPEN,))
+        gh.add_pull(9, "bot/issue-5", body="Closes #5", labels=(LABEL_PR,), sha="s1")
+        ctx.store.update(lambda s: state_item(s, 9).update(issue=5))
+        ctx.store.update(lambda s: state_item(s, 5).update(
+            kind="build", pr=9, handoff={"pr": 9}, wip={"anything": True}))
+        stepup.rebuild(ctx, 5, 9, why="it failed 3 times at difficulty:medium")
+        self.assertIn("bot/issue-5", getattr(gh, "deleted_branches", []))
+        record = ctx.store.load()["items"]["5"]
+        for key in ("pr", "handoff", "wip"):
+            self.assertNotIn(key, record)
+        self.assertEqual((record["failures"], record["strikes"], record["strike_log"]),
+                         (0, 0, []))
+
 
 class ConflictRoutingTests(unittest.TestCase):
     def test_a_conflict_revision_waits_for_a_builder_that_reviews_in_its_own_run(self):

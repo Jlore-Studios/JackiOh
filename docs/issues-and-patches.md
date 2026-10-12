@@ -176,24 +176,32 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
 
 ## Ruling numbers
 
-A ruling the spec does not make yet takes the next free number (CLAUDE.md rule 3): the last row of
-`spec/INDEX.md` on `main` plus one, as `spec/rulings/R<nnnn>.md`. A number is taken once it is on
-`main`; until then a branch only holds it, and its pull request names it (the template's rulings
-line), so a second branch can see it is in use and take the one after.
+A ruling the spec does not make yet takes the lowest number free in its issue's block (CLAUDE.md
+rule 3, R690000): issue N owns the thousand numbers R(N×1000) to R(N×1000+999), so issue #690 owns
+R690000–R690999 and issue #900 owns R900000–R900999. A sub-issue (a fullsend part, a tracker's
+part) uses its own number's block, not its parent's, and a pull request with no issue uses its own
+number's; GitHub numbers issues and pull requests in one sequence, so no two blocks overlap. The
+note is `spec/rulings/R<n>.md`, zero-padded to four digits at least (`R690000.md`). Branches on
+different issues never take the same number, so merging `main` in never renumbers one. The numbers
+taken before R690000 are sequential and below R2000: a branch that took one under the old rule
+(the last row of `spec/INDEX.md` on `main` plus one) keeps it, and issue #1, whose block would
+overlap them, has none.
 
-When two open pull requests take the same number anyway (#357 and #360 both took R744), the one that
-merges second renumbers before it merges, as #360 did to R745: it merges `main` in, moves its note to
-the next free number (the file name and its `id`), renames its proving tests (`fn r<n>_…`,
-`it("R<n> …")`) and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index`
-again for its index row. The clash shows as a conflict on the note and on `spec/INDEX.md`, and
-`cargo jackioh spec check` fails on whatever the renumbering missed: two notes with one `id`, a test
-or a citation with no note, a link to nothing. Numbers on `main` are never reused or renumbered
-(`spec/README.md`).
+Two branches can still take one number when they work on one issue. The one that merges second
+renumbers before it merges: it merges `main` in, moves its note to the next number free in its
+issue's block (the file name and its `id`), renames its proving tests (`fn r<n>_…`, `it("R<n> …")`)
+and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index` again for its
+index row. The clash shows as a conflict on the note, and `cargo jackioh spec check` fails on
+whatever the renumbering missed: two notes with one `id`, a test or a citation with no note, a link
+to nothing. A conflict on `spec/INDEX.md` or `spec/11-rulings.md` alone is no clash: two branches'
+rows or paragraphs met, and `cargo jackioh spec index` rewrites the index with both, renumbering
+nothing. Numbers on `main` are never reused or renumbered (`spec/README.md`). Under the old rule
+this happened on nearly every merge (#357 and #360 both took R744, and #360 moved to R745).
 
-A tracker whose parts build side by side may hold a block of numbers for each part, so its parts
-never clash with each other. Its foundation takes the top block, so once the foundation is on `main`
-the next free number is above every block. A held number counts as in use: other work never takes
-one, and a part that needs more than its block takes the next free number. Held now:
+Before R690000, a tracker whose parts built side by side could hold a block of sequential numbers
+for each part, so its parts never clashed with each other; a part now takes its own sub-issue's
+block, and nothing new is held. A held number counts as in use: other work never takes one. Held
+now:
 
 | Tracker | Numbers | Blocks |
 | --- | --- | --- |

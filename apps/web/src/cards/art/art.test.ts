@@ -250,9 +250,10 @@ describe("per-card variety within a theme", () => {
       groups.set(key, [...(groups.get(key) ?? []), base]);
     }
     const large = [...groups].filter(([, specs]) => specs.length >= GROUP_USES_EVERY_LAYOUT);
-    // The four largest Core themes are among them, and so is the Book family's.
+    // The four largest Core themes are among them, and so are the Book family's and, with the
+    // Meditative set's variety salt (R503), the CN figures' (#617).
     expect(large.map(([key]) => key)).toEqual(
-      expect.arrayContaining(["human|figure", "spell|burst", "unit|figure", "field-spell|landscape", "book|burst"]),
+      expect.arrayContaining(["human|figure", "spell|burst", "unit|figure", "field-spell|landscape", "book|burst", "cn|figure"]),
     );
     for (const [key, specs] of large) {
       const composition = specs[0]?.composition ?? "figure";

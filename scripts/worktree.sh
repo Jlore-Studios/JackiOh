@@ -13,7 +13,7 @@
 # Worth knowing before reaching for one:
 #   - GOOD for work that mutates files and needs its own verification (card scripts, a fuzz
 #     harness, a migration sweep, anything where two agents would otherwise race on one file).
-#   - BAD for the shared surfaces — the next free ruling number in spec/rulings/,
+#   - BAD for the shared surfaces — one issue's block of ruling numbers in spec/rulings/,
 #     crates/engine/src/wire/events.rs, script.rs, state.rs, effects/mod.rs. Several isolated copies
 #     each adding a note or a field conflict on merge, and one owner editing in place is strictly
 #     cheaper.

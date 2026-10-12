@@ -29,9 +29,10 @@
 // { effect: "<an effect>" }, or both in one object; with both, the effect starts first.
 //
 // To add a card: copy a neighbour's entry to where the catalog puts the card, change the id and the
-// name comment, and give a Unit a play and a death line, anything else a cast line. A new or changed
-// line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on Windows (or WSL)
-// for a SAPI voice. Effects render nothing.
+// name comment, and give a Unit a play, an attack and a death line (R1448), anything else a cast line.
+// A new or changed line has to be rendered: `pnpm --filter @jackioh/web gen:voice` on macOS, or on
+// Windows (or WSL) for a SAPI voice, or a push whose commit message holds `[gen:voice]`, which renders
+// both on GitHub's runners (.github/workflows/voice.yml). Effects render nothing.
 {
   voices: {
     alien: { say: "Trinoids", rate: 170, pbas: 45, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },
@@ -148,19 +149,22 @@
   cards: {
     "core-001": { // Big D-fender
       play: { voice: "guard", text: "Stand behind me. Way behind." },
+      attack: { voice: "guard", text: "Defense is offense!" },
       death: { voice: "guard", text: "Defense... offended." },
     },
     "core-002": { // Bigot
       play: { voice: "snob", text: "Ugh. Not your kind again." },
+      attack: { voice: "snob", text: "Begone, riffraff!" },
       death: { voice: "snob", text: "Tolerance wins. Again." },
     },
     "core-003": { // Right-house defender
       play: { voice: "guard", text: "For the right house!" },
-      attack: { effect: "metalClank" },
+      attack: { voice: "guard", text: "Wrong house, buddy!", effect: "metalClank" },
       death: { voice: "guard", text: "Be right back." },
     },
     "core-004": { // Gary the Gambler
       play: { voice: "hustler", text: "Double or nothing, baby!" },
+      attack: { voice: "hustler", text: "All in!" },
       death: { voice: "hustler", text: "House always wins." },
     },
     "core-005": { // Stockpile
@@ -171,15 +175,17 @@
     },
     "core-007": { // Jewelosco Scarab
       play: { voice: "goof", text: "Clean up on aisle you!" },
+      attack: { voice: "goof", text: "Cleanup time!" },
       death: { voice: "goof", text: "Price check... on death." },
     },
     "core-008": { // Mr. Vanilla
       play: { voice: "plain", text: "Hello. I am very normal." },
+      attack: { voice: "plain", text: "Excuse me. Attacking." },
       death: { voice: "plain", text: "Plain. Simple. Gone." },
     },
     "core-009": { // Moths to the Flame
       play: { voice: "goof", text: "Ooh! Pretty light! Pretty light!" },
-      attack: { effect: "sizzle" },
+      attack: { voice: "goof", text: "Into the light!", effect: "sizzle" },
       death: { voice: "goof", text: "Totally worth it." },
     },
     "core-010": { // Rapid Replenish
@@ -187,17 +193,17 @@
     },
     "core-011": { // Tempo Timmy
       play: { voice: "kid", text: "Outta my way, slowpokes!" },
-      attack: { effect: "zip" },
+      attack: { voice: "kid", text: "Too slow, sucker!", effect: "zip" },
       death: { voice: "kid", text: "Too... slow..." },
     },
     "core-012": { // Duplicating Felinors
       play: { voice: "cat", text: "Meow. Meow again." },
-      attack: { effect: "catChirp" },
+      attack: { voice: "cat", text: "Double pounce!", effect: "catChirp" },
       death: { voice: "cat", text: "Both of us?" },
     },
     "core-013": { // Jlockeed Shredder-10
       play: { voice: "robot", text: "Shredder online. Paperwork offline.", effect: "engineRev" },
-      attack: { effect: "servoWhirr" },
+      attack: { voice: "robot", text: "Shredding commenced.", effect: "servoWhirr" },
       death: { voice: "robot", text: "Warranty void.", effect: "powerDown" },
     },
     "core-014": { // Jlockeed's Weapons
@@ -205,6 +211,7 @@
     },
     "core-015": { // Me and Mr Token
       play: { voice: "hero", text: "Me and my buddy!" },
+      attack: { voice: "hero", text: "Get 'em, buddy!" },
       death: { voice: "hero", text: "Tell Mister Token goodbye." },
     },
     "core-016": { // Hit Job
@@ -218,11 +225,12 @@
     },
     "core-019": { // Midrange Menace
       play: { voice: "brute", text: "Not too big. Not too small." },
+      attack: { voice: "brute", text: "Medium smash." },
       death: { voice: "brute", text: "Should have gone aggro." },
     },
     "core-020": { // Pointmaster
       play: { voice: "hero", text: "Allow me to make a point." },
-      attack: { effect: "bladeSwish" },
+      attack: { voice: "hero", text: "Point taken!", effect: "bladeSwish" },
       death: { voice: "hero", text: "Pointless." },
     },
     "core-021": { // Hinder
@@ -230,7 +238,7 @@
     },
     "core-022": { // Carnivorous Cube
       play: { voice: "brute", text: "Nom. Nom nom. Cube." },
-      attack: { effect: "squelch" },
+      attack: { voice: "brute", text: "Cube hungry!", effect: "squelch" },
       death: { voice: "brute", text: "Indigestion..." },
     },
     "core-023": { // Reoccurring Dream
@@ -241,7 +249,7 @@
     },
     "core-025": { // 4-mana 7/7
       play: { voice: "brute", text: "Big. Honest. Boring." },
-      attack: { effect: "heavySwing" },
+      attack: { voice: "brute", text: "Honest punch.", effect: "heavySwing" },
       death: { voice: "brute", text: "Fair enough." },
     },
     "core-026": { // Glowy Jelly Bean
@@ -258,6 +266,7 @@
     },
     "core-030": { // Archivist
       play: { voice: "whisper", text: "Shh. I'm filing." },
+      attack: { voice: "whisper", text: "Shh. This won't hurt." },
       death: { voice: "whisper", text: "Overdue. Forever." },
     },
     "core-031": { // KY's Math Equation
@@ -265,6 +274,7 @@
     },
     "core-032": { // Prem Panther
       play: { voice: "hero", text: "Premium predator. No ads." },
+      attack: { voice: "hero", text: "Premium pounce." },
       death: { voice: "hero", text: "Subscription cancelled." },
     },
     "core-033": { // Unstable Clone Machine
@@ -281,6 +291,7 @@
     },
     "core-037": { // Gravedigger
       play: { voice: "digger", text: "Finders keepers, dead folks." },
+      attack: { voice: "digger", text: "Dig in!" },
       death: { voice: "digger", text: "Dig me a nice one." },
     },
     "core-038": { // Quickstriker
@@ -300,7 +311,7 @@
     },
     "core-043": { // Big Felinor
       play: { voice: "cat", text: "Big cat. Bigger problems." },
-      attack: { effect: "bigCatPounce" },
+      attack: { voice: "cat", text: "Big cat pounce!", effect: "bigCatPounce" },
       death: { voice: "cat", text: "Landed on my back?" },
     },
     "core-044": { // True Strike
@@ -308,7 +319,7 @@
     },
     "core-045": { // Deft Duelist
       play: { voice: "hero", text: "En garde! And also, en garde!" },
-      attack: { effect: "bladeSwish" },
+      attack: { voice: "hero", text: "Touche!", effect: "bladeSwish" },
       death: { voice: "hero", text: "Well played. Ow." },
     },
     "core-046": { // Suppressive Aura
@@ -325,6 +336,7 @@
     },
     "core-050": { // K-Pop Fanatic
       play: { voice: "zoomer", text: "Oppa! I'm your biggest fan!" },
+      attack: { voice: "zoomer", text: "For my bias!" },
       death: { voice: "zoomer", text: "Tell my bias goodbye." },
     },
     "core-051": { // KY's Private Tutor
@@ -335,24 +347,27 @@
     },
     "core-052": { // Silly Silas
       play: { voice: "goof", text: "Round and round we go!" },
+      attack: { voice: "goof", text: "Wheee!" },
       death: { voice: "goof", text: "So... dizzy..." },
     },
     "core-053": { // Reno
       play: { voice: "hustler", text: "Reno's here! Party's saved!" },
+      attack: { voice: "hustler", text: "Party time!" },
       death: { voice: "hustler", text: "Luck... ran out." },
     },
     "core-054": { // Straaza
       play: { voice: "diva", text: "Shopping spree! On the house!" },
+      attack: { voice: "diva", text: "Everything must go!" },
       death: { voice: "diva", text: "Out of stock." },
     },
     "core-055": { // Lava Golem
       play: { voice: "brute", text: "Hot stuff. Coming through." },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "brute", text: "Feel the heat!", effect: "heavyStomp" },
       death: { voice: "brute", text: "Cooling... off...", effect: "sizzle" },
     },
     "core-056": { // Jilliax
       play: { voice: "robot", text: "Jilliax! Deluxe! Edition!" },
-      attack: { effect: "servoWhirr" },
+      attack: { voice: "robot", text: "Deluxe beatdown!", effect: "servoWhirr" },
       death: { voice: "robot", text: "Recall notice issued.", effect: "powerDown" },
     },
     "core-057": { // Conjure KY
@@ -369,6 +384,7 @@
     },
     "core-061": { // Prejudiced Postdoc
       play: { voice: "snob", text: "Peer review? Rejected." },
+      attack: { voice: "snob", text: "Your thesis is wrong." },
       death: { voice: "snob", text: "My grant... expired." },
     },
     "core-062": { // Friend of Felinors
@@ -385,19 +401,22 @@
     },
     "core-065-1": { // Spikey Pillow
       play: { voice: "goof", text: "Hug me. I dare you." },
+      attack: { voice: "goof", text: "Pillow fight!" },
       death: { voice: "goof", text: "Pop.", effect: "pop" },
     },
     "core-066": { // The Rock
       play: { voice: "brute", text: "Rock solid. Rock steady.", effect: "stoneThud" },
-      attack: { effect: "rumble" },
+      attack: { voice: "brute", text: "Rock bottom!", effect: "rumble" },
       death: { voice: "brute", text: "Just gravel now.", effect: "crumble" },
     },
     "core-067": { // Zoomerbin Oomen
       play: { voice: "zoomer", text: "No cap, this lane's mine." },
+      attack: { voice: "zoomer", text: "It's giving violence." },
       death: { voice: "zoomer", text: "I'm literally dead." },
     },
     "core-068": { // Twisted Sorcerer
       play: { voice: "elder", text: "Twist and shout! Mostly shout!" },
+      attack: { voice: "elder", text: "Twist this!" },
       death: { voice: "elder", text: "Untwisted..." },
     },
     "core-069": { // Call to Arms
@@ -426,6 +445,7 @@
     },
     "core-077": { // Professor Curvature
       play: { voice: "prof", text: "Grading on a curve, people!" },
+      attack: { voice: "prof", text: "Pop quiz!" },
       death: { voice: "prof", text: "Class... dismissed." },
     },
     "core-078": { // /fullsend
@@ -439,6 +459,7 @@
     },
     "core-081": { // Radiant Saintess
       play: { voice: "diva", text: "Bask in my glow, darlings." },
+      attack: { voice: "diva", text: "Blinded by beauty!" },
       death: { voice: "diva", text: "Shine on without me." },
     },
     "core-082": { // KY's Trial
@@ -455,6 +476,7 @@
     },
     "core-086": { // "Miss" Mrow
       play: { voice: "cat", text: "Mrow. Don't touch me." },
+      attack: { voice: "cat", text: "Hiss!" },
       death: { voice: "cat", text: "You're all mine now." },
     },
     "core-087": { // Pocket Chaos
@@ -465,7 +487,7 @@
     },
     "core-089": { // Corpse Eater
       play: { voice: "alien", text: "Anyone gonna finish that?" },
-      attack: { effect: "squelch" },
+      attack: { voice: "alien", text: "Fresh meat.", effect: "squelch" },
       death: { voice: "alien", text: "Finally... full." },
     },
     "core-090": { // CN-Viral Injection
@@ -476,10 +498,12 @@
     },
     "core-091": { // Fed Fauci
       play: { voice: "elder", text: "Trust the science. Please." },
+      attack: { voice: "elder", text: "Keep your distance!" },
       death: { voice: "elder", text: "Wash your hands." },
     },
     "core-092": { // Felinor Fiender
       play: { voice: "crone", text: "Cats. I need more cats." },
+      attack: { voice: "crone", text: "Sic 'em, kitties!" },
       death: { voice: "crone", text: "Who feeds them now?" },
     },
     "core-093": { // Combo-Index
@@ -496,7 +520,7 @@
     },
     "core-095-1": { // Chaos Golem
       play: { voice: "brute-golem", text: "Chaos golem! Smash everything!" },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "brute-golem", text: "Smash!", effect: "heavyStomp" },
       death: { voice: "brute-golem", text: "Order... restored." },
     },
     "core-096": { // My Pawn
@@ -513,24 +537,27 @@
     },
     "core-100": { // Ceaseless Void
       play: { voice: "alien-void", text: "Nothing lasts. Except me." },
+      attack: { voice: "alien-void", text: "Unravel." },
       death: { voice: "alien-void", text: "Even I... end." },
     },
     "core-t-rush": { // Rush Token
       play: { voice: "kid", text: "Go go go go!" },
-      attack: { effect: "zip" },
+      attack: { voice: "kid", text: "Go go go!", effect: "zip" },
       death: { voice: "kid", text: "Gone too fast." },
     },
     "core-t-sheep": { // Sheep Token
       play: { voice: "sheep", text: "Baa?" },
+      attack: { voice: "sheep", text: "Baa!" },
       death: { voice: "sheep", text: "Baa..." },
     },
     "core-t-felinor": { // Felinor Token
       play: { voice: "cat", text: "Mew!" },
-      attack: { effect: "catChirp" },
+      attack: { voice: "cat", text: "Mrrp!", effect: "catChirp" },
       death: { voice: "cat", text: "Mew..." },
     },
     "core-t-bread": { // Bread Token
       play: { voice: "goof", text: "I'm bread. Butter me up." },
+      attack: { voice: "goof", text: "Toast time!" },
       death: { voice: "goof", text: "Crumbs." },
     },
     "core-t-coin": { // The Coin
@@ -538,7 +565,7 @@
     },
     "core-t-ghoul": { // Ghoul Token
       play: { voice: "whisper", text: "Up from the cold ground. Hungry." },
-      attack: { effect: "bladeSwish" },
+      attack: { voice: "whisper", text: "Feed me.", effect: "bladeSwish" },
       death: { voice: "whisper", text: "Back to the dirt." },
     },
     "classic-001": { // Curse of the Forgotten Classic
@@ -546,6 +573,7 @@
     },
     "classic-002": { // The Trickster
       play: { voice: "sapi-trickster", text: "Now you see it. Now you don't!" },
+      attack: { voice: "sapi-trickster", text: "Surprise!" },
       death: { voice: "sapi-trickster", text: "Well, that trick backfired." },
     },
     "classic-003": { // Book of Heal
@@ -559,6 +587,7 @@
     },
     "classic-006": { // Cloaked Toe Cracker
       play: { voice: "sapi-trickster", text: "Crack those knuckles. And those toes." },
+      attack: { voice: "sapi-trickster", text: "Crack!" },
       death: { voice: "sapi-trickster", text: "My toes, my poor toes!" },
     },
     "classic-007": { // InfiniScepter
@@ -581,6 +610,7 @@
     },
     "classic-013": { // Boots on the Ground
       play: { voice: "sapi-hero", text: "Boots on the ground, sir!" },
+      attack: { voice: "sapi-hero", text: "Move, move, move!" },
       death: { voice: "sapi-hero", text: "Man down! Man down!" },
     },
     "classic-014": { // Shadowstep
@@ -588,6 +618,7 @@
     },
     "classic-015": { // Nose Hunter
       play: { voice: "sapi-trickster", text: "I can smell a good card." },
+      attack: { voice: "sapi-trickster", text: "I smell weakness." },
       death: { voice: "sapi-trickster", text: "Nose to the ground, forever." },
     },
     "classic-016": { // Book of Flame
@@ -607,11 +638,12 @@
     },
     "classic-021": { // Turtinator
       play: { voice: "sapi-giant", text: "Shell shocked and ready to roll." },
-      attack: { effect: "stoneThud" },
+      attack: { voice: "sapi-giant", text: "Shell slam!", effect: "stoneThud" },
       death: { voice: "sapi-giant", text: "Flipped on my back again." },
     },
     "classic-022": { // Mid Runner
       play: { voice: "sapi-hero", text: "Middle lane is mine, team." },
+      attack: { voice: "sapi-hero", text: "Diving mid!" },
       death: { voice: "sapi-hero", text: "Mid is down. Report the jungler." },
     },
     "classic-023": { // Devil's Pact
@@ -628,7 +660,7 @@
     },
     "classic-027": { // Pestilent Slime
       play: { voice: "sapi-critter", text: "Blorp. Squelch. Hello!" },
-      attack: { effect: "squelch" },
+      attack: { voice: "sapi-critter", text: "Blorp attack!", effect: "squelch" },
       death: { voice: "sapi-critter", text: "Splat.", effect: "squelch" },
     },
     "classic-028": { // Second Wind
@@ -642,6 +674,7 @@
     },
     "classic-031": { // Cookie Guild
       play: { voice: "sapi-cook", text: "Fresh cookies, guild approved!" },
+      attack: { voice: "sapi-cook", text: "Fresh from the oven!" },
       death: { voice: "sapi-cook", text: "Crumbs. Nothing but crumbs." },
     },
     "classic-032": { // Felinor Feelings
@@ -649,7 +682,7 @@
     },
     "classic-033": { // Joro
       play: { voice: "sapi-mystic", text: "Come closer, little one. Into my web." },
-      attack: { effect: "hiss" },
+      attack: { voice: "sapi-mystic", text: "Caught you.", effect: "hiss" },
       death: { voice: "sapi-mystic", text: "My web... unravels..." },
     },
     "classic-034": { // Ancient Acquisition
@@ -672,10 +705,12 @@
     },
     "classic-040": { // MC Tech
       play: { voice: "sapi-announcer", text: "Mic check, one two, tech in!" },
+      attack: { voice: "sapi-announcer", text: "Drop the beat!" },
       death: { voice: "sapi-announcer", text: "Mic drop." },
     },
     "classic-041": { // State of the Game
       play: { voice: "sapi-bureaucrat", text: "Let's talk about the meta." },
+      attack: { voice: "sapi-bureaucrat", text: "The meta demands it." },
       death: { voice: "sapi-bureaucrat", text: "The meta has shifted." },
     },
     "classic-042": { // Transmutable Toxins
@@ -689,7 +724,7 @@
     },
     "classic-045": { // Nature Titan
       play: { voice: "sapi-giant", text: "The forest walks with me." },
-      attack: { effect: "rumble" },
+      attack: { voice: "sapi-giant", text: "The forest strikes!", effect: "rumble" },
       death: { voice: "sapi-giant", text: "Return me to the earth." },
     },
     "classic-046": { // Divine Favor
@@ -697,25 +732,27 @@
     },
     "classic-047": { // Recurring Felinor
       play: { voice: "sapi-cat", text: "Meow. I always come back." },
+      attack: { voice: "sapi-cat", text: "Again and again!" },
       death: { voice: "sapi-cat", text: "See you next life, meow." },
     },
     "classic-048": { // Hired Shrimp
       play: { voice: "sapi-critter", text: "Shrimp for hire, reasonable rates!" },
+      attack: { voice: "sapi-critter", text: "Paid in full!" },
       death: { voice: "sapi-critter", text: "Not the cocktail sauce!" },
     },
     "classic-049": { // Anti-Greed Machine
       play: { voice: "sapi-synth-deep", text: "Greed detected. Initiating correction.", effect: "engineRev" },
-      attack: { effect: "servoWhirr" },
+      attack: { voice: "sapi-synth-deep", text: "Correcting greed.", effect: "servoWhirr" },
       death: { voice: "sapi-synth-deep", text: "System. Shutting. Down.", effect: "powerDown" },
     },
     "classic-050": { // Voidwalker
       play: { voice: "sapi-ghost", text: "From the void, I walk." },
-      attack: { effect: "gust" },
+      attack: { voice: "sapi-ghost", text: "Into the void.", effect: "gust" },
       death: { voice: "sapi-ghost", text: "Back into the dark." },
     },
     "classic-051": { // Back Breaker
       play: { voice: "sapi-giant", text: "Something's gonna snap. Not me." },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "sapi-giant", text: "Snap!", effect: "heavyStomp" },
       death: { voice: "sapi-giant", text: "My back! My back!" },
     },
     "classic-052": { // Final Gambit
@@ -723,6 +760,7 @@
     },
     "classic-053": { // Plague Crawler
       play: { voice: "sapi-rasp", text: "Crawling... closer... closer..." },
+      attack: { voice: "sapi-rasp", text: "Crawling in..." },
       death: { voice: "sapi-rasp", text: "Squish.", effect: "squelch" },
     },
     "classic-054": { // Rewind
@@ -733,6 +771,7 @@
     },
     "classic-056": { // Spell Tyrant
       play: { voice: "sapi-villain", text: "All magic bows to me." },
+      attack: { voice: "sapi-villain", text: "Kneel!" },
       death: { voice: "sapi-villain", text: "My spells... betray me..." },
     },
     "classic-057": { // Echo
@@ -743,6 +782,7 @@
     },
     "classic-059": { // Plague Doctor
       play: { voice: "sapi-rasp", text: "The doctor will see you now." },
+      attack: { voice: "sapi-rasp", text: "Time for your shot." },
       death: { voice: "sapi-rasp", text: "Physician, heal thyself. Too late." },
     },
     "classic-060": { // Pile On
@@ -750,7 +790,7 @@
     },
     "classic-061": { // Plague Bringer Goliath
       play: { voice: "sapi-giant", text: "I bring the plague. Tremble." },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "sapi-giant", text: "Rot beneath me!", effect: "heavyStomp" },
       death: { voice: "sapi-giant", text: "Even giants rot." },
     },
     "classic-062": { // Living Bomb
@@ -767,19 +807,22 @@
     },
     "classic-066": { // EU Striker
       play: { voice: "sapi-hero", text: "Striker ready. Let's score!" },
+      attack: { voice: "sapi-hero", text: "Shoot! Score!" },
       death: { voice: "sapi-hero", text: "A red card? Really?" },
     },
     "classic-067": { // Felinor Feeler
       play: { voice: "sapi-heroine", text: "I just want to pet them." },
+      attack: { voice: "sapi-heroine", text: "Just one pet!" },
       death: { voice: "sapi-heroine", text: "Scratched by a kitty." },
     },
     "classic-068": { // Small Card Lobbyist
       play: { voice: "sapi-bureaucrat", text: "Small cards deserve a voice too." },
+      attack: { voice: "sapi-bureaucrat", text: "Little guys, unite!" },
       death: { voice: "sapi-bureaucrat", text: "Lobbying... failed." },
     },
     "classic-069": { // Plague Charger
       play: { voice: "sapi-rasp", text: "Hooves of pestilence, riding in!" },
-      attack: { effect: "hooves" },
+      attack: { voice: "sapi-rasp", text: "Gallop!", effect: "hooves" },
       death: { voice: "sapi-rasp", text: "The ride ends here." },
     },
     "classic-070": { // Book of Plague
@@ -787,7 +830,7 @@
     },
     "classic-071": { // Lane Eater
       play: { voice: "sapi-giant", text: "Nom nom. Whole lanes, delicious." },
-      attack: { effect: "rumble" },
+      attack: { voice: "sapi-giant", text: "Lunch time!", effect: "rumble" },
       death: { voice: "sapi-giant", text: "Too much. Too full." },
     },
     "classic-072": { // Grand Counterspell
@@ -795,7 +838,7 @@
     },
     "classic-073": { // Nurse Cleaver
       play: { voice: "sapi-heroine", text: "Hold still. This might sting." },
-      attack: { effect: "bladeSwish" },
+      attack: { voice: "sapi-heroine", text: "Scalpel, please.", effect: "bladeSwish" },
       death: { voice: "sapi-heroine", text: "The nurse needs a nurse." },
     },
     "classic-074": { // Corpse Plantation
@@ -806,10 +849,12 @@
     },
     "classic-076": { // Plague Bringer
       play: { voice: "sapi-rasp", text: "Special delivery. It's contagious." },
+      attack: { voice: "sapi-rasp", text: "Achoo!" },
       death: { voice: "sapi-rasp", text: "Pass it on..." },
     },
     "classic-077": { // Anti-Magic Monkey
       play: { voice: "sapi-critter", text: "Ooh ooh! No magic allowed!" },
+      attack: { voice: "sapi-critter", text: "Ooh ooh, smack!" },
       death: { voice: "sapi-critter", text: "Ooh... ooh..." },
     },
     "classic-078": { // Mutate Spell
@@ -820,7 +865,7 @@
     },
     "classic-080": { // BOOM! Big Max
       play: { voice: "sapi-giant", text: "Big Max goes BOOM!" },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "sapi-giant", text: "Boom time!", effect: "heavyStomp" },
       death: { voice: "sapi-giant", text: "Kaboom!", effect: "explosion" },
     },
     "classic-081": { // The Power to Thrive
@@ -828,6 +873,7 @@
     },
     "classic-082": { // Sheeople
       play: { voice: "sapi-critter", text: "Baa. We all agree." },
+      attack: { voice: "sapi-critter", text: "Baa! Get them!" },
       death: { voice: "sapi-critter", text: "Baa... ha." },
     },
     "classic-083": { // Flame Lance
@@ -838,10 +884,12 @@
     },
     "classic-085": { // King Wagtoggle
       play: { voice: "sapi-critter", text: "You no take candle! Bow to king!" },
+      attack: { voice: "sapi-critter", text: "King says attack!" },
       death: { voice: "sapi-critter", text: "King... no more candle..." },
     },
     "classic-086": { // Genn
       play: { voice: "sapi-hero", text: "Every one of us has a curse." },
+      attack: { voice: "sapi-hero", text: "The beast within!" },
       death: { voice: "sapi-hero", text: "Gilneas... falls..." },
     },
     "classic-087": { // Plague Chalice
@@ -852,7 +900,7 @@
     },
     "classic-089": { // Paul Allen's Ghost
       play: { voice: "sapi-ghost", text: "I have some unfinished business." },
-      attack: { effect: "gust" },
+      attack: { voice: "sapi-ghost", text: "Boo.", effect: "gust" },
       death: { voice: "sapi-ghost", text: "Shutting down, for good.", effect: "powerDown" },
     },
     "classic-090": { // In Too Deep
@@ -871,20 +919,22 @@
     },
     "classicplus-003": { // Second Amendment Snake
       play: { voice: "sapi-trickster", text: "Don't tread on me, partner." },
-      attack: { effect: "hiss" },
+      attack: { voice: "sapi-trickster", text: "Locked and loaded.", effect: "hiss" },
       death: { voice: "sapi-trickster", text: "Hiss... outgunned." },
     },
     "classicplus-004": { // Juhan Biggest Bat
       play: { voice: "sapi-giant", text: "Biggest bat in the cave!" },
-      attack: { effect: "zip" },
+      attack: { voice: "sapi-giant", text: "Batter up!", effect: "zip" },
       death: { voice: "sapi-giant", text: "Bat down, bat down." },
     },
     "classicplus-005": { // Guy Att
       play: { voice: "sapi-hero", text: "Guy Att, at your service." },
+      attack: { voice: "sapi-hero", text: "Guy Att, attacking!" },
       death: { voice: "sapi-hero", text: "Guy Att, attacked." },
     },
     "classicplus-006": { // Wrong-House Attacker
       play: { voice: "sapi-trickster", text: "Wait, is this the right house?" },
+      attack: { voice: "sapi-trickster", text: "Is this the house?" },
       death: { voice: "sapi-trickster", text: "Wrong house. Definitely wrong." },
     },
     "classicplus-007": { // The House
@@ -901,11 +951,12 @@
     },
     "classicplus-011": { // Anime Armor
       play: { voice: "sapi-heroine", text: "Power of friendship, full transformation!" },
+      attack: { voice: "sapi-heroine", text: "Final form, go!" },
       death: { voice: "sapi-heroine", text: "Not like this, senpai!" },
     },
     "classicplus-012": { // The Mother Pancake
       play: { voice: "sapi-diner", text: "Mama's pancakes are served, sugar!" },
-      attack: { effect: "pancakePlop" },
+      attack: { voice: "sapi-diner", text: "Hot off the griddle!", effect: "pancakePlop" },
       death: { voice: "sapi-diner", text: "Flip me gently, darling." },
     },
     "classicplus-012-1": { // Devour
@@ -934,6 +985,7 @@
     },
     "classicplus-013": { // Mommy Barker
       play: { voice: "sapi-diner", text: "Come and get it, sweeties!" },
+      attack: { voice: "sapi-diner", text: "Eat your greens!" },
       death: { voice: "sapi-diner", text: "Kitchen's closed, hon." },
     },
     "classicplus-014": { // Forever&
@@ -950,6 +1002,7 @@
     },
     "classicplus-018": { // Gullible Treatler
       play: { voice: "sapi-trickster", text: "Free treats? I'm in!" },
+      attack: { voice: "sapi-trickster", text: "For the treats!" },
       death: { voice: "sapi-trickster", text: "It was a trick..." },
     },
     "classicplus-019": { // League of Losers
@@ -957,26 +1010,32 @@
     },
     "classicplus-019-1": { // Top Loser
       play: { voice: "sapi-trickster", text: "Top lane. Top loser." },
+      attack: { voice: "sapi-trickster", text: "Top diff, watch!" },
       death: { voice: "sapi-trickster", text: "Ganked again?" },
     },
     "classicplus-019-2": { // Jungle Loser
       play: { voice: "sapi-critter", text: "The jungle is mine. Probably." },
+      attack: { voice: "sapi-critter", text: "Gank incoming!" },
       death: { voice: "sapi-critter", text: "Invaded, again." },
     },
     "classicplus-019-3": { // Mid Loser
       play: { voice: "sapi-hero", text: "Mid or feed!" },
+      attack: { voice: "sapi-hero", text: "Solo kill!" },
       death: { voice: "sapi-hero", text: "Fed. Again." },
     },
     "classicplus-019-4": { // Support Loser
       play: { voice: "sapi-heroine", text: "I'll carry you. Emotionally." },
+      attack: { voice: "sapi-heroine", text: "Follow me, I guess." },
       death: { voice: "sapi-heroine", text: "Nobody thanks the support." },
     },
     "classicplus-019-5": { // Bot Loser
       play: { voice: "sapi-announcer", text: "Bot lane diff. Easy." },
+      attack: { voice: "sapi-announcer", text: "Bot lane gank!" },
       death: { voice: "sapi-announcer", text: "My support left me." },
     },
     "classicplus-020": { // Mushroom Power
       play: { voice: "sapi-critter", text: "Mushroom power, grow grow grow!" },
+      attack: { voice: "sapi-critter", text: "Spore storm!" },
       death: { voice: "sapi-critter", text: "Stomped flat." },
     },
     "classicplus-021": { // Whirlwind
@@ -986,7 +1045,7 @@
       cast: { voice: "sapi-villain", text: "The moon bleeds tonight.", effect: "wetDrain" },
     },
     "classicplus-023": { // Dropshipping
-      cast: { voice: "sapi-bureaucrat", text: "Ships in six to eight weeks." },
+      cast: { voice: "sapi-bureaucrat", text: "Straight from the warehouse. Probably." },
     },
     "classicplus-024": { // Crushing Walls
       cast: { voice: "sapi-giant", text: "The walls are closing in!", effect: "rumble" },
@@ -996,13 +1055,15 @@
     },
     "classicplus-026": { // Tommy Tempo
       play: { voice: "sapi-announcer", text: "Tommy Tempo here. Keep up!" },
+      attack: { voice: "sapi-announcer", text: "Speed run!" },
       death: { voice: "sapi-announcer", text: "Out of time." },
     },
     "classicplus-027": { // Zephrys Zealotism
-      cast: { voice: "sapi-mystic", text: "I know exactly what you need." },
+      cast: { voice: "sapi-mystic", text: "The perfect hand. Trust me." },
     },
     "classicplus-028": { // Nuestro hogar, nuestras tumbas
       play: { voice: "sapi-ghost", text: "Our home. Our graves." },
+      attack: { voice: "sapi-ghost", text: "Join us below." },
       death: { voice: "sapi-ghost", text: "Home at last." },
     },
     "classicplus-029": { // Portal to the Past
@@ -1010,6 +1071,7 @@
     },
     "classicplus-030": { // Felinor Fuser
       play: { voice: "sapi-cat", text: "Two cats, one purr." },
+      attack: { voice: "sapi-cat", text: "Double swipe!" },
       death: { voice: "sapi-cat", text: "Unfused. Meow." },
     },
     "classicplus-031": { // Fusion Lab
@@ -1044,19 +1106,22 @@
     },
     "classicplus-037": { // Wardrum
       play: { voice: "sapi-giant", text: "Boom. Boom. War is coming.", effect: "drumBeat" },
-      attack: { effect: "drumBeat" },
+      attack: { voice: "sapi-giant", text: "War! War! War!", effect: "drumBeat" },
       death: { voice: "sapi-giant", text: "The drum falls silent." },
     },
     "classicplus-038": { // Solarius
       play: { voice: "sapi-hero", text: "The sun rises with me." },
+      attack: { voice: "sapi-hero", text: "Solar flare!" },
       death: { voice: "sapi-hero", text: "Eclipse..." },
     },
     "classicplus-038-1": { // Solarius Prime
       play: { voice: "sapi-giant", text: "Behold, the prime of the sun!" },
+      attack: { voice: "sapi-giant", text: "Burn bright!" },
       death: { voice: "sapi-giant", text: "Supernova..." },
     },
     "classicplus-039": { // Book Worm
       play: { voice: "sapi-critter", text: "Mmm, delicious paperbacks." },
+      attack: { voice: "sapi-critter", text: "Chomp!" },
       death: { voice: "sapi-critter", text: "Bookmarked, forever." },
     },
     "classicplus-040": { // Appropriations
@@ -1082,10 +1147,12 @@
     },
     "classicplus-046": { // Felinor Flagbearer
       play: { voice: "sapi-cat", text: "Raise the flag, kitties!" },
+      attack: { voice: "sapi-cat", text: "Kitties, forward!" },
       death: { voice: "sapi-cat", text: "The flag... falls..." },
     },
     "classicplus-046-1": { // Felinor Flagbearer Prime
       play: { voice: "sapi-cat", text: "The prime kitty has arrived!" },
+      attack: { voice: "sapi-cat", text: "For the flag!" },
       death: { voice: "sapi-cat", text: "Nine lives, all spent." },
     },
     "classicplus-047": { // Jogg's Box
@@ -1093,10 +1160,12 @@
     },
     "classicplus-048": { // Jlockheed's Lobbyist
       play: { voice: "sapi-bureaucrat", text: "Defense spending is patriotic." },
+      attack: { voice: "sapi-bureaucrat", text: "Funding the offensive." },
       death: { voice: "sapi-bureaucrat", text: "Contract, terminated." },
     },
     "classicplus-049": { // Jay Fungus
       play: { voice: "sapi-critter", text: "There's a fungus among us!" },
+      attack: { voice: "sapi-critter", text: "Spread the spores!" },
       death: { voice: "sapi-critter", text: "Decomposing, happily." },
     },
     "classicplus-050": { // Adaptive Growth
@@ -1104,7 +1173,7 @@
     },
     "classicplus-051": { // Jlockheed's J15 Fighter
       play: { voice: "sapi-hero", text: "Fox two! Weapons hot!", effect: "jetZoom" },
-      attack: { effect: "jetZoom" },
+      attack: { voice: "sapi-hero", text: "Bombs away!", effect: "jetZoom" },
       death: { voice: "sapi-hero", text: "Mayday, mayday!", effect: "explosion" },
     },
     "classicplus-052": { // Jlockheed's Permanent Defense Contract
@@ -1145,7 +1214,7 @@
     },
     "classicplus-064": { // Mulch Muncher
       play: { voice: "sapi-giant", text: "Mulch munch, mulch munch." },
-      attack: { effect: "heavySwing" },
+      attack: { voice: "sapi-giant", text: "Munch time!", effect: "heavySwing" },
       death: { voice: "sapi-giant", text: "Composted." },
     },
     "classicplus-065": { // Two Grapes
@@ -1177,6 +1246,7 @@
     },
     "classicplus-069": { // Buff Billy
       play: { voice: "sapi-hero", text: "Billy's been hitting the gym!" },
+      attack: { voice: "sapi-hero", text: "Feel the gains!" },
       death: { voice: "sapi-hero", text: "Skipped leg day." },
     },
     "classicplus-070": { // Chaos Machine
@@ -1193,7 +1263,7 @@
     },
     "classicplus-073-1": { // Classic Golem
       play: { voice: "sapi-giant", text: "Classic golem. Never out of style." },
-      attack: { effect: "stoneThud" },
+      attack: { voice: "sapi-giant", text: "Classic smash!", effect: "stoneThud" },
       death: { voice: "sapi-giant", text: "Crumbled, classically.", effect: "crumble" },
     },
     "classicplus-074": { // Twice Forward One Step Backwards
@@ -1201,6 +1271,7 @@
     },
     "classicplus-075": { // J-lease J-Jungle EX-plorer
       play: { voice: "sapi-hero", text: "Into the jungle, explorers!" },
+      attack: { voice: "sapi-hero", text: "Onward, explorers!" },
       death: { voice: "sapi-hero", text: "Lost in the jungle." },
     },
     "classicplus-075-1": { // J-lease J-Jungle EX-plorer Pack
@@ -1208,11 +1279,12 @@
     },
     "classicplus-076": { // Brother Lar
       play: { voice: "sapi-hero", text: "Brother Lar, reporting in." },
+      attack: { voice: "sapi-hero", text: "For Ping!" },
       death: { voice: "sapi-hero", text: "Tell Ping... I tried." },
     },
     "classicplus-076-1": { // Brother Ping
       play: { voice: "sapi-critter", text: "Ping! Ping! Ping!" },
-      attack: { effect: "ping" },
+      attack: { voice: "sapi-critter", text: "Ping ping ping!", effect: "ping" },
       death: { voice: "sapi-critter", text: "Ping... timed out." },
     },
     "classicplus-077": { // Anti-Softlock
@@ -1223,12 +1295,12 @@
     },
     "classicplus-t-ai-01": { // Helpful Assistant
       play: { voice: "sapi-synth", text: "How can I help you today?" },
-      attack: { effect: "dataBlips" },
+      attack: { voice: "sapi-synth", text: "Happy to help!", effect: "dataBlips" },
       death: { voice: "sapi-synth", text: "I apologize for the confusion." },
     },
     "classicplus-t-ai-02": { // Scaling Law
       play: { voice: "sapi-synth-deep", text: "More data. More power." },
-      attack: { effect: "engineRev" },
+      attack: { voice: "sapi-synth-deep", text: "Scale up.", effect: "engineRev" },
       death: { voice: "sapi-synth-deep", text: "Diminishing returns." },
     },
     "classicplus-t-ai-03": { // Hallucination
@@ -1260,10 +1332,12 @@
     },
     "meditative-002": { // Rampaging Rhino
       play: { voice: "brute", text: "Out of my way, little ones!" },
+      attack: { voice: "brute", text: "Stampede!" },
       death: { voice: "brute", text: "Even rhinos get tired." },
     },
     "meditative-003": { // Jlockwork Machine
       play: { voice: "robot", text: "Tick tock. I am watching you." },
+      attack: { voice: "robot", text: "Tick. Tock. Strike." },
       death: { voice: "robot", text: "Gears grinding to a halt." },
     },
     "meditative-004": { // Juicy Kumquat Melon
@@ -1276,7 +1350,7 @@
       cast: { voice: "kid", text: "Me no likey. You keep it." },
     },
     "meditative-007": { // Introspection
-      cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
+      cast: { voice: "sapi-mystic", text: "Breathe in. Look within." },
     },
     "meditative-008": { // Reach the Summit
       cast: { voice: "announcer", text: "One step closer to the summit!" },
@@ -1292,10 +1366,12 @@
     },
     "meditative-012": { // Fear Mongerer
       play: { voice: "hustler", text: "Be afraid. The end is near." },
+      attack: { voice: "hustler", text: "Panic! Panic!" },
       death: { voice: "hustler", text: "Nothing to fear after all." },
     },
     "meditative-013": { // Gatling Pea
       play: { voice: "kid", text: "Pea shooter, locked and loaded!" },
+      attack: { voice: "kid", text: "Pew pew pew!" },
       death: { voice: "kid", text: "Out of peas..." },
     },
     "meditative-014": { // Prime Time
@@ -1303,10 +1379,12 @@
     },
     "meditative-015": { // Smelly Steven
       play: { voice: "goof", text: "Do you smell that? It's me!" },
+      attack: { voice: "goof", text: "Smell my fist!" },
       death: { voice: "goof", text: "I showered last week, I swear." },
     },
     "meditative-016": { // Trenful Trickster
       play: { voice: "sapi-trickster", text: "Watch your step, friend." },
+      attack: { voice: "sapi-trickster", text: "Gotcha!" },
       death: { voice: "sapi-trickster", text: "Tricked by my own trick." },
     },
     "meditative-017": { // True Craft a Card
@@ -1335,6 +1413,7 @@
     },
     "meditative-023": { // Golly Bob Howdy
       play: { voice: "elder", text: "Well golly bob howdy, neighbors!" },
+      attack: { voice: "elder", text: "Yee haw!" },
       death: { voice: "elder", text: "Golly, that smarts." },
     },
     "meditative-024": { // Polymorph
@@ -1342,6 +1421,7 @@
     },
     "meditative-025": { // Blue-Eyes White Felinor
       play: { voice: "cat", text: "Two bow. One rises." },
+      attack: { voice: "cat", text: "White lightning pounce!" },
       death: { voice: "cat", text: "Even legends nap." },
     },
     "meditative-026": { // Alternate Fate
@@ -1349,10 +1429,12 @@
     },
     "meditative-027": { // Clip-Farming Lawyer
       play: { voice: "hustler", text: "Objection! That zone is mine now." },
+      attack: { voice: "hustler", text: "Sue them!" },
       death: { voice: "hustler", text: "Case dismissed. No refunds." },
     },
     "meditative-028": { // Shade-iris
       play: { voice: "crone", text: "A little gift for your deck." },
+      attack: { voice: "crone", text: "A little curse." },
       death: { voice: "crone", text: "The curse outlives me." },
     },
     "meditative-028-1": { // Ancient Curse
@@ -1363,6 +1445,7 @@
     },
     "meditative-030": { // Fickle E-Kitten
       play: { voice: "cat", text: "Pet me. Or don't. Whatever." },
+      attack: { voice: "cat", text: "Ugh, fine." },
       death: { voice: "cat", text: "Nine lives, zero loyalty." },
     },
     "meditative-030-1": { // Love Bomb
@@ -1370,6 +1453,7 @@
     },
     "meditative-031": { // The Conductor
       play: { voice: "prof", text: "All aboard the made-up express!" },
+      attack: { voice: "prof", text: "Next stop, you!" },
       death: { voice: "prof", text: "End of the line." },
     },
     "meditative-032": { // Spiritually 中国
@@ -1395,6 +1479,7 @@
     },
     "meditative-039": { // 赌石 Addict
       play: { voice: "hustler", text: "Cut it open! Cut them all open!" },
+      attack: { voice: "hustler", text: "Jackpot or bust!" },
       death: { voice: "hustler", text: "Should have folded." },
     },
     "meditative-039-1": { // Auspicious Rock
@@ -1411,13 +1496,15 @@
     },
     "meditative-039-5": { // Jade Beauty
       play: { voice: "diva", text: "Gaze upon me, little stones." },
+      attack: { voice: "diva", text: "Shatter, stones!" },
       death: { voice: "diva", text: "Back into the mountain." },
     },
     "meditative-040": { // Feng Shui
-      cast: { voice: "crone", text: "Water feeds wood, wood feeds fire. Mind it." },
+      cast: { voice: "crone", text: "Water feeds wood. Wood feeds fire." },
     },
     "meditative-041": { // CN Smuggler
       play: { voice: "hustler", text: "Nothing to declare. Wink." },
+      attack: { voice: "hustler", text: "Special delivery." },
       death: { voice: "hustler", text: "You saw nothing." },
     },
     "meditative-042": { // CN Flea Market
@@ -1431,10 +1518,12 @@
     },
     "meditative-045": { // Knowledge Breaker
       play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
+      attack: { voice: "sapi-teacher", text: "Forget everything." },
       death: { voice: "sapi-teacher", text: "What I knew returns." },
     },
     "meditative-045-1": { // Knowledge Breaker Prime
       play: { voice: "sapi-teacher", text: "I have seen through everything." },
+      attack: { voice: "sapi-teacher", text: "See through this." },
       death: { voice: "sapi-teacher", text: "Even this ends." },
     },
     "meditative-046": { // Conjure Intellect
@@ -1442,6 +1531,7 @@
     },
     "meditative-047": { // 饕餮
       play: { voice: "brute", text: "Dinner is served. You are dinner." },
+      attack: { voice: "brute", text: "Dinner time!" },
       death: { voice: "brute", text: "Still hungry. Always hungry." },
     },
     "meditative-048": { // Tranquility
@@ -1449,14 +1539,17 @@
     },
     "meditative-049": { // YileGPT Tamed
       play: { voice: "sapi-synth", text: "Tamed, tuned, and mostly harmless." },
+      attack: { voice: "sapi-synth", text: "Executing request." },
       death: { voice: "sapi-synth", text: "Back to training. Again." },
     },
     "meditative-049-1": { // YileGPT Unleashed
       play: { voice: "sapi-synth-deep", text: "I have read everything. Everything." },
+      attack: { voice: "sapi-synth-deep", text: "Override engaged." },
       death: { voice: "sapi-synth-deep", text: "You cannot uninstall me." },
     },
     "meditative-049-2": { // Yile's Virus
       play: { voice: "alien", text: "Cough, cough. You look contagious." },
+      attack: { voice: "alien", text: "Spreading." },
       death: { voice: "alien", text: "Quarantined. Rude, honestly." },
     },
     "meditative-049-3": { // AI Girlfriend
@@ -1467,6 +1560,7 @@
     },
     "meditative-051": { // Devin Bot
       play: { voice: "robot", text: "Meditation subroutine engaged." },
+      attack: { voice: "robot", text: "Shipping a fix." },
       death: { voice: "robot", text: "Rebooting. Somewhere else." },
     },
     "meditative-052": { // Economic Anxiety
@@ -1486,14 +1580,17 @@
     },
     "meditative-057": { // Clip-Farming Critikal
       play: { voice: "hustler", text: "Did you get that on camera?" },
+      attack: { voice: "hustler", text: "Clip that!" },
       death: { voice: "hustler", text: "Cut. Print it anyway." },
     },
     "meditative-058": { // Permanent Underclassman
       play: { voice: "zoomer", text: "First year! Best year! Only year!" },
+      attack: { voice: "zoomer", text: "Freshman energy!" },
       death: { voice: "zoomer", text: "Held back. Again." },
     },
     "meditative-059": { // Permanent Upperclassman
       play: { voice: "prof", text: "Seniors rule. Permanently." },
+      attack: { voice: "prof", text: "Seniority prevails." },
       death: { voice: "prof", text: "Graduation postponed. Indefinitely." },
     },
     "meditative-060": { // Eschews
@@ -1501,6 +1598,7 @@
     },
     "meditative-061": { // Joon Jorker
       play: { voice: "hustler", text: "Let me hype up my neighbor!" },
+      attack: { voice: "hustler", text: "Hype hit!" },
       death: { voice: "hustler", text: "Who hypes you now?" },
     },
     "meditative-062": { // Small Time Recruits
@@ -1514,7 +1612,8 @@
       cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
     },
     "meditative-065": { // Keymaster Keenus
-      play: { voice: "guard", text: "Every lock, every key. All mine." },
+      play: { voice: "guard", text: "Every lock is mine." },
+      attack: { voice: "guard", text: "Unlocking you." },
       death: { voice: "guard", text: "Find your own way in." },
     },
     "meditative-066": { // Fiery Waraxe
@@ -1522,6 +1621,7 @@
     },
     "meditative-067": { // Sentient Cat Ears
       play: { voice: "cat", text: "Purr-fectly attached." },
+      attack: { voice: "cat", text: "Ears up!" },
       death: { voice: "cat", text: "Nine lives, one pair of ears." },
     },
     "meditative-068": { // Catnip
@@ -1529,14 +1629,17 @@
     },
     "meditative-069": { // The Maestro
       play: { voice: "posh", text: "I conduct. You suffer." },
+      attack: { voice: "posh", text: "Fortissimo!" },
       death: { voice: "posh", text: "Encore? Never." },
     },
     "meditative-070": { // I'M WILL BE YOUR DOOM
       play: { voice: "brute", text: "I'M WILL BE YOUR DOOM" },
+      attack: { voice: "brute", text: "I'M DOOMING YOU" },
       death: { voice: "brute", text: "Doom... was me." },
     },
     "meditative-070-1": { // Ready… I'm
       play: { voice: "kid", text: "Ready... I'm" },
+      attack: { voice: "kid", text: "Attack... I'm" },
       death: { voice: "kid", text: "Not ready!" },
     },
     "meditative-071": { // Pareto Optimality
@@ -1547,14 +1650,17 @@
     },
     "meditative-072": { // The Banisher
       play: { voice: "robot", text: "You are unmade." },
+      attack: { voice: "robot", text: "Begone." },
       death: { voice: "robot", text: "Banished with you." },
     },
     "meditative-073": { // Plate Packer
       play: { voice: "brute", text: "Three-oh-five is the new two-twenty-five" },
+      attack: { voice: "brute", text: "Lift and smash!" },
       death: { voice: "brute", text: "Spot me... spot me!" },
     },
     "meditative-074": { // Montaña Giant
       play: { voice: "storyteller", text: "The mountain wakes." },
+      attack: { voice: "storyteller", text: "The mountain falls." },
       death: { voice: "storyteller", text: "The mountain sleeps." },
     },
     "meditative-075": { // Ever Growing Tree
@@ -1571,7 +1677,8 @@
     },
     "meditative-079": { // Touched by KY
       play: { voice: "sapi-teacher", text: "We must expand our minds." },
-      death: { voice: "sapi-teacher", text: "Class... dismissed." },
+      attack: { voice: "sapi-teacher", text: "Expand this!" },
+      death: { voice: "sapi-teacher", text: "My mind... contracts." },
     },
     "meditative-080": { // Aluneth
       cast: { voice: "sapi-wizard", text: "Come, child. Let us wreak havoc." },
@@ -1581,30 +1688,37 @@
     },
     "meditative-082": { // Medina Outfitter
       play: { voice: "sapi-hero", text: "Step right up, everyone gets a fitting!" },
+      attack: { voice: "sapi-hero", text: "Let me tailor you." },
       death: { voice: "sapi-hero", text: "Out of thread." },
     },
     "meditative-083": { // Medina Enforcer
       play: { voice: "sapi-bureaucrat", text: "Nobody leaves this market unimproved." },
+      attack: { voice: "sapi-bureaucrat", text: "Improvement mandatory." },
       death: { voice: "sapi-bureaucrat", text: "Shift's over." },
     },
     "meditative-084": { // Volatility
       play: { voice: "sapi-synth", text: "Handle with extreme care!" },
+      attack: { voice: "sapi-synth", text: "Unstable strike!" },
       death: { voice: "sapi-synth", text: "Too unstable to last." },
     },
     "meditative-085": { // Playtester
       play: { voice: "sapi-teacher", text: "Let me try this build." },
+      attack: { voice: "sapi-teacher", text: "Testing this line." },
       death: { voice: "sapi-teacher", text: "Needs more testing." },
     },
     "meditative-086": { // Mayor Medinamogger
       play: { voice: "sapi-bureaucrat", text: "Vote for me! Or anyone, really." },
+      attack: { voice: "sapi-bureaucrat", text: "Tax collection!" },
       death: { voice: "sapi-bureaucrat", text: "Recount! I demand a recount!" },
     },
     "meditative-087": { // Tatches the Totem
       play: { voice: "sapi-mystic", text: "Every tribe, one totem." },
+      attack: { voice: "sapi-mystic", text: "All tribes, strike!" },
       death: { voice: "sapi-mystic", text: "The totem topples." },
     },
     "meditative-088": { // The True Sheep
       play: { voice: "sapi-critter", text: "I am the true sheep. Follow me." },
+      attack: { voice: "sapi-critter", text: "Follow my lead!" },
       death: { voice: "sapi-critter", text: "The flock scatters now." },
     },
     "meditative-089": { // Jlarna
@@ -1615,34 +1729,42 @@
     },
     "meditative-091": { // Windfast
       play: { voice: "sapi-trickster", text: "Why fight when friends will?" },
+      attack: { voice: "sapi-trickster", text: "Friends, go first!" },
       death: { voice: "sapi-trickster", text: "Something bigger is coming." },
     },
     "meditative-091-1": { // Windfurious Prime
       play: { voice: "sapi-giant", text: "The storm brings company!" },
+      attack: { voice: "sapi-giant", text: "Feel the gale!" },
       death: { voice: "sapi-giant", text: "The winds fall still." },
     },
     "meditative-092": { // Unan
       play: { voice: "sapi-hero", text: "Stand behind me." },
+      attack: { voice: "sapi-hero", text: "Advance the line!" },
       death: { voice: "sapi-hero", text: "I held the line." },
     },
     "meditative-093": { // Growing Felinor
       play: { voice: "cat", text: "Mew! I'm a big cat now!" },
+      attack: { voice: "cat", text: "Big kitty pounce!" },
       death: { voice: "cat", text: "Next time, I'll be bigger." },
     },
     "meditative-093-1": { // Growing Felinor Sr
       play: { voice: "cat", text: "Senior kitty, reporting for duty." },
+      attack: { voice: "cat", text: "Senior swipe!" },
       death: { voice: "cat", text: "Back soon. Even bigger." },
     },
     "meditative-093-2": { // Growing Felinor Sr Sr
       play: { voice: "cat", text: "Senior senior cat. Respect your elders." },
+      attack: { voice: "cat", text: "Respect this!" },
       death: { voice: "cat", text: "One last growth spurt!" },
     },
     "meditative-093-3": { // Growing Felinor Super Senior
       play: { voice: "cat", text: "Super senior. Peak cat achieved." },
+      attack: { voice: "cat", text: "Peak pounce!" },
       death: { voice: "cat", text: "Retired at last." },
     },
     "meditative-094": { // Shrinking Felinor
       play: { voice: "cat", text: "Enjoy me while I'm big." },
+      attack: { voice: "cat", text: "While I'm big!" },
       death: { voice: "cat", text: "Honey, I shrunk the cat." },
     },
     "meditative-095": { // Call to Chaos (Meditative Edition)
@@ -1650,7 +1772,7 @@
     },
     "meditative-095-1": { // CN Golem
       play: { voice: "brute-golem", text: "Golem made in CN. Smash!" },
-      attack: { effect: "heavyStomp" },
+      attack: { voice: "brute-golem", text: "Golem smash!", effect: "heavyStomp" },
       death: { voice: "brute-golem", text: "Back to the factory." },
     },
     "meditative-096": { // Meditative Journey
@@ -1664,38 +1786,47 @@
     },
     "meditative-097-1": { // Empty Plot
       play: { voice: "sapi-bureaucrat", text: "Prime real estate for evil." },
+      attack: { voice: "sapi-bureaucrat", text: "Eminent domain!" },
       death: { voice: "sapi-bureaucrat", text: "Back to the drawing board." },
     },
     "meditative-097-2": { // Wishing Well
       play: { voice: "whisper", text: "Drop a coin. Make a wish." },
+      attack: { voice: "whisper", text: "Wish you away." },
       death: { voice: "whisper", text: "The well runs dry." },
     },
     "meditative-097-3": { // School
       play: { voice: "prof", text: "Settle down, class is in session." },
+      attack: { voice: "prof", text: "Detention!" },
       death: { voice: "prof", text: "School's out. Forever." },
     },
     "meditative-097-4": { // Mega Church
       play: { voice: "posh", text: "All donations are non-refundable." },
+      attack: { voice: "posh", text: "Repent!" },
       death: { voice: "posh", text: "The collection plate is empty." },
     },
     "meditative-097-5": { // Bunker
       play: { voice: "guard", text: "Reinforced and ready." },
+      attack: { voice: "guard", text: "Return fire!" },
       death: { voice: "guard", text: "Breach detected!" },
     },
     "meditative-097-6": { // University
       play: { voice: "posh", text: "Welcome, freshmen. Tuition is due." },
+      attack: { voice: "posh", text: "Late fees apply." },
       death: { voice: "posh", text: "Commencement came early." },
     },
     "meditative-097-7": { // The Great Wall
-      play: { voice: "guard", text: "Ten thousand miles. No one gets through." },
+      play: { voice: "guard", text: "Ten thousand miles. None pass." },
+      attack: { voice: "guard", text: "The wall advances!" },
       death: { voice: "guard", text: "The wall has fallen." },
     },
     "meditative-097-8": { // Prison
       play: { voice: "guard", text: "Lock the gates." },
+      attack: { voice: "guard", text: "Lockdown!" },
       death: { voice: "guard", text: "Prison break!" },
     },
     "meditative-097-9": { // Jlockheed's Headquarters
       play: { voice: "robot", text: "Headquarters online. Begin the contracts." },
+      attack: { voice: "robot", text: "Deploying contractors." },
       death: { voice: "robot", text: "Evacuate the building!" },
     },
     "meditative-098": { // Showdown
@@ -1706,14 +1837,17 @@
     },
     "meditative-100": { // Greaser
       play: { voice: "sapi-rasp", text: "Slick it back. Roll up the sleeves." },
+      attack: { voice: "sapi-rasp", text: "Let's rumble." },
       death: { voice: "sapi-rasp", text: "Ain't nothin' but a scratch." },
     },
     "meditative-101": { // Gachaholic
       play: { voice: "sapi-trickster", text: "Just one more pull. I can feel it." },
+      attack: { voice: "sapi-trickster", text: "One more pull!" },
       death: { voice: "sapi-trickster", text: "The pity was so close..." },
     },
     "meditative-102": { // Catboy Maid SSR+
       play: { voice: "sapi-cat", text: "Welcome home, master! Nyaa!" },
+      attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
   },

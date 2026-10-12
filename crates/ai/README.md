@@ -26,6 +26,8 @@ their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`, `AI_SWEEP` in `sw
 
 ```rust
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision>;
+pub fn decide_styled(state: &GameState, seat: PlayerId, options: &mut AiOptions, style: &AiStyle) -> Option<Decision>;
+pub struct AiStyle { pub temperature: f64, pub missed_lethal_chance: f64 }
 pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_stop: Option<&'a dyn Fn() -> bool> }
 ```
 
@@ -47,6 +49,14 @@ same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`) on every determinization, and plays the
 first action of the best mean. It re-plans after every action.
+
+`decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
+their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
+keeps off every line that wins this turn, `lines_missing_lethal`, or it would find the same lethal),
+and a softmax
+`temperature`, in evaluation points, over the finalists' means (`pick_finalist`) instead of always the
+best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
+which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
 ## Budgets
 

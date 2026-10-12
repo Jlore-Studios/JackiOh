@@ -2,7 +2,9 @@
 //! `crates/cards/data/win_rates.json`, the table M #50 CN Tech reads, from a `stats report --json`
 //! export or from JSONL game record files. The table is `{ patch, source, cards }` with R377's
 //! in-deck wins and games per card id, as `/api/stats/cards` ranks by; the build compiles it in and
-//! never reads it at run time (CLAUDE.md rule 4).
+//! never reads it at run time (CLAUDE.md rule 4). Record files are counted as that endpoint counts
+//! them: a live game's human seats only, so a ladder bot's side moves nothing (R1451), and both
+//! seats of a development game (R378).
 //!
 //! The command does not apply R654's gate: the threshold lives in the server, and the exporter
 //! picks `--source` there. What reaches the table is what the input holds — live games when the
@@ -30,7 +32,7 @@ pub struct Args {
     pub dry_run: bool,
 }
 
-/// One built table row: `table_from_report_reads_in_deck`, `table_from_records_counts_every_seat`
+/// One built table row: `table_from_report_reads_in_deck`, `r1451_table_from_records_counts_as_the_public_stats_do`
 /// and `rows_sorted_zero_games_dropped` pin it.
 fn row_of(card: &str, wins: i32, games: i32) -> Option<WinRateRow> {
     if games <= 0 {
@@ -65,32 +67,46 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
     })
 }
 
-/// The table from JSONL game record files: every record counted under `{ source: All, mode: None,
-/// patch, pilot: Unified }`, `live` only when every record counted is live.
+/// The table from JSONL game record files, counted on the patch as `/api/stats/cards` counts them
+/// (R1451): the live records under `{ source: Live, pilot: Human }`, so a ladder bot's side of a
+/// live game is left out, and the development records under `{ source: Dev, pilot: Unified }`,
+/// every mode, in-deck figures summed card by card; `live` only when every record counted is live.
 fn table_from_records(texts: &[String], patch: &str) -> Result<WinRateTable> {
     let mut records = Vec::new();
     for text in texts {
         records.extend(parse_game_record_lines(text).context("parsing the game records")?);
     }
-    let filter = CardStatsFilter {
-        source: SourceFilter::All,
+    let filters = [
+        (SourceFilter::Live, PilotFilter::Human),
+        (SourceFilter::Dev, PilotFilter::Unified),
+    ]
+    .map(|(source, pilot)| CardStatsFilter {
+        source,
         mode: None,
         patch: Some(patch.to_string()),
-        pilot: PilotFilter::Unified,
-    };
-    let report = card_stats(&records, &filter);
+        pilot,
+    });
+    let mut in_deck: std::collections::BTreeMap<String, (i32, i32)> = std::collections::BTreeMap::new();
+    for filter in &filters {
+        for stats in card_stats(&records, filter).cards {
+            let held = in_deck.entry(stats.card).or_default();
+            held.0 += stats.in_deck.wins;
+            held.1 += stats.in_deck.games;
+        }
+    }
     let counted: Vec<&jackioh_engine::GameRecord> = records
         .iter()
         .filter(|record| {
-            jackioh_engine::record_matches(record, &filter)
-                && !jackioh_engine::seats_counted(record, filter.pilot).is_empty()
+            filters.iter().any(|filter| {
+                jackioh_engine::record_matches(record, filter)
+                    && !jackioh_engine::seats_counted(record, filter.pilot).is_empty()
+            })
         })
         .collect();
     let live = !counted.is_empty() && counted.iter().all(|record| record.source == GameSource::Live);
-    let mut cards: Vec<WinRateRow> = report
-        .cards
+    let mut cards: Vec<WinRateRow> = in_deck
         .iter()
-        .filter_map(|stats| row_of(&stats.card, stats.in_deck.wins, stats.in_deck.games))
+        .filter_map(|(card, (wins, games))| row_of(card, *wins, *games))
         .collect();
     cards.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(WinRateTable {
@@ -230,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn table_from_records_counts_every_seat() {
+    fn r1451_table_from_records_counts_as_the_public_stats_do() {
         use jackioh_engine::{
             GameMode, GameOverReason, GameRecord, GameSummary, PerPlayer, Pilot, PlayerId, SeatSummary,
             Winner,
@@ -243,13 +259,13 @@ mod tests {
             played: Vec::new(),
             played_turns: None,
         };
-        let line = |id: &str, source: GameSource| {
+        let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {
                 id: id.to_string(),
                 source,
                 mode: GameMode::Bo1,
                 patch: "v0.3.3".to_string(),
-                pilots: PerPlayer::new(Pilot::Human, Pilot::Human),
+                pilots,
                 game: GameSummary {
                     first: PlayerId::P1,
                     winner: Winner::P1,
@@ -260,7 +276,8 @@ mod tests {
             };
             serde_json::to_string(&record).unwrap_or_default()
         };
-        let table = table_from_records(&[line("m1", GameSource::Live)], "v0.3.3")
+        let people = PerPlayer::new(Pilot::Human, Pilot::Human);
+        let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.3.3")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -271,9 +288,43 @@ mod tests {
         // Both seats held core-001: p1 won it, p2 lost it.
         assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
         assert!(hit.contains(&("core-003", 0, 1)), "{hit:?}");
-        let table = table_from_records(&[line("dev:v0.3.3:s:1", GameSource::Dev)], "v0.3.3")
+        let ais = PerPlayer::new(Pilot::Ai, Pilot::Ai);
+        let table = table_from_records(&[line("dev:v0.3.3:s:1", GameSource::Dev, ais.clone())], "v0.3.3")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
+        let hit: Vec<(&str, i32, i32)> = table
+            .cards
+            .iter()
+            .map(|row| (row.id.as_str(), row.wins, row.games))
+            .collect();
+        assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
+
+        // R1451: p2 a ladder bot (`ai` on a live record): its side moves nothing, as on /stats.
+        let bot_game = PerPlayer::new(Pilot::Human, Pilot::Ai);
+        let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.3.3")
+            .unwrap_or_else(|error| panic!("{error:?}"));
+        assert_eq!(table.source, WinRateSource::Live);
+        assert_eq!(
+            table.cards,
+            vec![WinRateRow {
+                id: "core-001".to_string(),
+                wins: 1,
+                games: 1,
+            }]
+        );
+        // Summed with a development game: the dev game's two seats and the person's one.
+        let both = [
+            line("m2", GameSource::Live, PerPlayer::new(Pilot::Human, Pilot::Ai)),
+            line("dev:v0.3.3:s:1", GameSource::Dev, ais),
+        ];
+        let table = table_from_records(&both, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        assert_eq!(table.source, WinRateSource::Provisional);
+        let hit: Vec<(&str, i32, i32)> = table
+            .cards
+            .iter()
+            .map(|row| (row.id.as_str(), row.wins, row.games))
+            .collect();
+        assert_eq!(hit, [("core-001", 2, 3), ("core-003", 0, 1)]);
     }
 
     #[test]

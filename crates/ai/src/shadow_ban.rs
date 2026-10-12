@@ -3,8 +3,8 @@
 //! else: a banned card stays legal for every player, a human may play it against the AI, and the AI
 //! still has to answer it. It is not §9.4 L6's ban, which is server state (R164).
 //!
-//! How an entry gets here: `pnpm ai:sweep` (scripts/sweep.ts; `cargo jackioh sweep` once v0.3.0
-//! ships) forces each non-token card of every set into AI decks at every tier in AI_SWEEP.tiers (Easy
+//! How an entry gets here: `cargo jackioh sweep` (crates/tools/src/sweep.rs; `pnpm ai:sweep` before
+//! v0.3.0) forces each non-token card of every set into AI decks at every tier in AI_SWEEP.tiers (Easy
 //! and Hard) against the greedy baseline, in two passes (R390): the second sweeps the cards at risk
 //! again with more games and deals them more often as filler, and a `neverPlayed` or `selfHarm` ban
 //! needs its numbers. It prints one row per flagged card and tier, together with ready-made entries

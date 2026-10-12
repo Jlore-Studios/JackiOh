@@ -637,17 +637,22 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         origins = %serde_json::to_string(&origins).unwrap_or_default(),
         e2e = app.env.e2e,
         "trustedProxyHops" = %app.env.trusted_proxy_hops,
+        "ladderBots" = app.env.ladder_bots,
     );
 
     // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
     // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
     // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
     // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
-    // failures and tries again on its next tick.
+    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
+    // once now and then hourly.
     tokio::spawn(api::queue::run_matchmaker(app.clone()));
     tokio::spawn(api::series::run_sweeper(app.clone()));
     tokio::spawn(api::results::run_reaper(app.clone()));
     tokio::spawn(api::retention::run_purge(app.clone()));
+    if app.env.ladder_bots {
+        tokio::spawn(crate::bots::pool::run_bot_pool(app.clone()));
+    }
 
     axum::serve(
         listener,

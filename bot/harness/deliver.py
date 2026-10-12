@@ -5,12 +5,13 @@ item comes from the plan job's outputs and the branch is worked out again here, 
 must hold the head the result names, descend from the commit the work started at, change no
 forbidden path, and fast-forward the branch on GitHub.
 
-The review rule (`review_rule.py`): a commit ships when one strong model (Opus) approved it, or
-two medium models did (the same model twice included), or, for an easy item, one weak model and
-one medium one did, and no model's rejection of it stands. Votes are kept per commit, one per
-review, with the tier of the seat that cast them (`_vote`), from the plan's seats, never from the
-model job. A pull request whose commit has that gets auto-merge, which merges it once the
-required CI checks pass; one still short of it waits in `bot:cross-review` for a review run.
+The review rule (`review_rule.py`): a commit ships when one strong model (Opus) approved it,
+whatever the difficulty, and no model's rejection of it stands. A weak approval is an easy
+item's green light only: recorded, but the lane's Strong seat still reviews after it. Votes are
+kept per commit, one per review, with the tier of the seat that cast them (`_vote`), from the
+plan's seats, never from the model job. A pull request whose commit has that gets auto-merge,
+which merges it once the required CI checks pass; one still short of it waits in
+`bot:cross-review` for a review run.
 
 A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
 conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from
@@ -131,9 +132,15 @@ class Deliverer:
             minutes = float(self.result.get("minutes") or 0)
         except (TypeError, ValueError):
             minutes = 0.0
+        tokens = self.result.get("tokens")
+        tokens = tokens if isinstance(tokens, dict) else None
+        try:
+            cost = float(self.result.get("cost_usd") or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
         self.ctx.store.update(lambda s: providers_mod.note_usage(
-            s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
-            f"usage {self.provider.id}")
+            s, self.provider.id, usage, reset_at, self.ctx.now(), minutes, tokens,
+            cost if cost > 0 else None), f"usage {self.provider.id}")
         self._machine_disk()
         self._machine_memory()
         self._login_works()
@@ -377,7 +384,7 @@ class Deliverer:
             # The run planned it first: a later run builds from that plan, never plans again.
             who, tier = self._planner()
             self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
-                           planned_tier=tier)
+                           planned_by_id=self.provider.id, planned_tier=tier)
             self._plan_into_issue(number, who)
             if self.rating_note and self.result.get("status") != "planned":
                 self._try(lambda: self.gh.create_comment(number, self.rating_note))
@@ -457,13 +464,14 @@ class Deliverer:
             self._fail(number, "build")
             return
         who, tier = self._planner()
-        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who, planned_tier=tier)
+        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                       planned_by_id=self.provider.id, planned_tier=tier)
         self._requeue_label(number, "build")
         rated = getattr(self, "rating_note", "")
         rated = f"{rated} " if rated else ""
         difficulty = self._difficulty(number)
         if tier and not providers_mod.tier_at_least(tier, PLAN_FLOOR[difficulty]):
-            # A medium planner rated it medium or hard: a strong model plans it next (part 6).
+            # A medium planner rated it hard: a strong model plans it next (part 6, #695).
             nxt = (f"A {PLAN_FLOOR[difficulty]} model plans `difficulty:{difficulty}` work, so "
                    "one plans it next; it is queued for that.")
         else:
@@ -486,7 +494,9 @@ class Deliverer:
         """Label the item with the difficulty its planner rated (#317 part 8), and say so: only
         when no person set one (`queue.rating_source`), never lower than the bot's own earlier
         rating, and easy only when the plan's **Files to touch** table holds to the easy rule
-        (`easy.plan_breach`). Records `difficulty_by`. Returns the sentence for the comment."""
+        (`easy.plan_breach`, borderline included) and the rating's `why` admits no doubt
+        (`easy.uncertain_why`, #695). Records `difficulty_by`. Returns the sentence for the
+        comment."""
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
         rated = plan.get("rating") if isinstance(plan.get("rating"), dict) else None
         if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
@@ -504,6 +514,12 @@ class Deliverer:
             breach = easy_mod.plan_breach(str(plan.get("text") or ""), self.cfg.easy,
                                           self.cfg.review_paths, self.cfg.forbidden_paths)
             if breach:
+                wanted = "medium"
+            elif easy_mod.uncertain_why(str(rated.get("why") or "")):
+                # Torn between two means the higher (#695): the planner admitted doubt.
+                breach = (f"the rating itself was unsure "
+                          f"({str(rated.get('why') or '').strip()[:140]}), "
+                          f"so borderline easy is medium")
                 wanted = "medium"
         who, tier = self._planner()
         self._set_difficulty(number, wanted, labels)
@@ -563,7 +579,7 @@ class Deliverer:
                 if LABEL_PLANNED not in labels:
                     self.gh.add_labels(number, [LABEL_PLANNED])
             elif LABEL_NEEDS_PLAN not in labels:
-                # A medium plan of a medium or hard item (#317 part 6): a strong one comes next.
+                # A medium plan of a hard item (#317 part 6, #695): a strong one comes next.
                 self.gh.add_labels(number, [LABEL_NEEDS_PLAN])
         except GitHubError:
             pass  # the next plan job's sync puts the labels right

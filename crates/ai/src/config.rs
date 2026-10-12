@@ -9,7 +9,15 @@
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
-use crate::types::SearchBudget;
+use crate::types::{AiStyle, SearchBudget};
+
+/// The style that always plays the best line it found and never passes over lethal (R1452):
+/// `decide`'s own, which takes no draw for it. The ladder bots set their own (the server's
+/// `BOT_STRENGTHS`).
+pub const AI_STYLE_EXACT: AiStyle = AiStyle {
+    temperature: 0.0,
+    missed_lethal_chance: 0.0,
+};
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {

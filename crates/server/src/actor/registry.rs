@@ -12,8 +12,9 @@
 //!    looks like from the outside (and how `recovery.rs` kills one mid-game).
 //!
 //! `api/queue.rs` and `rooms.rs` only ever call `start`, `has`, `stop` and `presence_of`, so neither
-//! reaches into the actor. Finished actors stay in the map until the reaper or a restart
-//! (SURFACE §11.3): a rematch's presence reads their sockets.
+//! reaches into the actor. A finished actor stays in the map while a rematch's presence may read its
+//! sockets, until the reaper's `reap_finished` drops it once its rematch window has passed and no seat
+//! holds an open socket, or a restart does (SURFACE §11.3).
 
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex};
@@ -30,8 +31,11 @@ use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
-use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
-use crate::db::store::{LastBoardKind, MatchClocks, MatchRow, MatchStatus, QueueMode, StartMatchInput};
+use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES, REMATCH_OFFER_TTL_MS};
+use crate::db::store::{
+    BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
+    StoreError, Tx,
+};
 
 /// Why `attach` could not hand the socket to a seat. `ws_server.rs` closes with 4404 for an
 /// `Api` error whose code is `not_found`, 4403 for any other `Api` error, and 1011 for `Internal`
@@ -73,7 +77,7 @@ impl From<RebuildError> for AttachError {
 
 type Rebuild = Arc<OnceCell<Result<MatchActor, RebuildError>>>;
 
-/// Live actors by match id; finished actors stay until the reaper or a restart (SURFACE §11.2).
+/// Live actors by match id; a finished one stays until `reap_finished` or a restart (SURFACE §11.2).
 pub struct Registry {
     actors: Mutex<IndexMap<String, MatchActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once, not twice.
@@ -121,6 +125,33 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     }
 }
 
+/// R1452: the ladder bot at each home seat of a match between `players` (seat order), or none for a
+/// person. The bots' rows are read only when a seat's profile is a bot's, inside the caller's
+/// transaction, so a match `start` makes and the same match `rebuild` folds read the same seats.
+async fn bots_of(
+    t: &mut Tx<'_>,
+    players: &(String, String),
+) -> Result<PerPlayer<Option<BotRow>>, StoreError> {
+    let profiles = t
+        .profiles_get_many(&[players.0.clone(), players.1.clone()])
+        .await?;
+    let is_bot = |id: &str| {
+        profiles
+            .iter()
+            .any(|profile| profile.id == id && profile.kind == ProfileKind::Bot)
+    };
+    if !is_bot(&players.0) && !is_bot(&players.1) {
+        return Ok(PerPlayer::new(None, None));
+    }
+    let bots = t.bots_list().await?;
+    let bot = |id: &str| {
+        is_bot(id)
+            .then(|| bots.iter().find(|bot| bot.profile_id == id).cloned())
+            .flatten()
+    };
+    Ok(PerPlayer::new(bot(&players.0), bot(&players.1)))
+}
+
 impl Registry {
     pub fn new() -> Registry {
         Registry {
@@ -149,7 +180,8 @@ impl Registry {
         let (first, second) = &input.seats;
         let now = now_ms();
         let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
-        let (boards, sampled, derived_mode) = one_tx!(app.db, |t| {
+        let players = (first.profile_id.clone(), second.profile_id.clone());
+        let (boards, sampled, derived_mode, bots) = one_tx!(app.db, |t| {
             // R417: each seat's last server-match board, frozen on the match as it starts.
             let boards = (
                 t.last_boards_get(&first.profile_id, LastBoardKind::Server)
@@ -173,7 +205,9 @@ impl Registry {
                 Some(mode) => Some(mode),
                 None => t.matches_mode_of(&input.match_id).await?,
             };
-            (boards, sampled, derived_mode)
+            // R1452: the ladder bot at either seat, which the actor plays.
+            let bots = bots_of(&mut t, &players).await?;
+            (boards, sampled, derived_mode, bots)
         })
         .map_err(|error| ApiError::internal(error.to_string()))?;
 
@@ -241,6 +275,7 @@ impl Registry {
                 log: Vec::new(),
                 on_voided: Some(Registry::on_voided(app, &match_id)),
                 telemetry: None,
+                bots,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -250,11 +285,16 @@ impl Registry {
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
-        let (match_row, log, mode) = one_tx!(app.db, |t| {
+        let (match_row, log, mode, bots) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
-            (match_row, log, mode)
+            // R1452: a restart resumes a bot's seat as it resumes the match.
+            let bots = match &match_row {
+                Some(row) => bots_of(&mut t, &row.players).await?,
+                None => PerPlayer::new(None, None),
+            };
+            (match_row, log, mode, bots)
         })
         .map_err(store)?;
         let Some(match_row) = match_row else {
@@ -303,6 +343,7 @@ impl Registry {
                 log,
                 on_voided: Some(Registry::on_voided(app, match_id)),
                 telemetry,
+                bots,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());
@@ -380,6 +421,40 @@ impl Registry {
         };
         actor.attach(seat, socket);
         Ok(())
+    }
+
+    /// R672: drops each finished actor whose rematch window has passed (`REMATCH_OFFER_TTL_MS` since
+    /// `MatchActor::finished_at`) and whose seats hold no open socket, as `stop` drops one; the reaper
+    /// calls it every tick (`api::results::run_reaper`). No client can tell: with no socket open
+    /// `presence_of` already answered nobody, the offers live in `api/rematch.rs`, and a socket that
+    /// comes back folds the actor again (§9.5). An open socket keeps its actor, since closing it would
+    /// only send the client back to rebuild it. The check and the removal share the map's lock.
+    /// Answers the ids it dropped.
+    pub async fn reap_finished(&self, now: i64) -> Vec<String> {
+        let reaped: Vec<(String, MatchActor)> = {
+            let mut actors = lock(&self.actors);
+            let due: Vec<String> = actors
+                .iter()
+                .filter(|(_, actor)| {
+                    let presence = actor.presence();
+                    actor
+                        .finished_at()
+                        .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
+                        && PLAYER_IDS.into_iter().all(|home| !presence[home])
+                })
+                .map(|(match_id, _)| match_id.clone())
+                .collect();
+            due.into_iter()
+                .filter_map(|match_id| actors.shift_remove(&match_id).map(|actor| (match_id, actor)))
+                .collect()
+        };
+        let mut ids = Vec::with_capacity(reaped.len());
+        for (match_id, actor) in reaped {
+            actor.stop().await;
+            tracing::info!(event = "match.evicted", matchId = %match_id);
+            ids.push(match_id);
+        }
+        ids
     }
 
     /// The match ids currently held in memory.

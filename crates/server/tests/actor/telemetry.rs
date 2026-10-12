@@ -16,7 +16,7 @@ use jackioh_engine::{Action, GameEventType, deal_emote_hand};
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::app::App;
 use jackioh_server::cli::timing_backfill::{BackfillOutcome, backfill};
-use jackioh_server::config::{MULLIGAN_CLOCK_MS, TURN_CLOCK_MS};
+use jackioh_server::config::{MULLIGAN_CLOCK_MS, REMATCH_OFFER_TTL_MS, TURN_CLOCK_MS};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchStatus, PlayTelemetry, StoreError};
 
@@ -454,6 +454,65 @@ mod r1442_play_telemetry_through_the_actor {
         assert_eq!(
             backfill(&app.db).await.expect("the backfill runs again"),
             BackfillOutcome::default()
+        );
+    }
+
+    /// The reaper drops a finished match's actor; the backfill and a rebuild fold its log, not the
+    /// actor.
+    #[tokio::test(start_paused = true)]
+    async fn r1442_the_backfill_and_a_rebuild_fold_a_finished_match_after_the_reaper_dropped_its_actor() {
+        let app = world().await;
+        play(&app, "m-tel-6").await;
+        settle().await;
+        let live = telemetry_of(&app, "m-tel-6").await;
+        let ended = store!(app, t => t.matches_get("m-tel-6").await.expect("matches.get"))
+            .and_then(|row| row.finished_at)
+            .expect("the finished match's row has its end");
+
+        assert_eq!(
+            app.matches.reap_finished(ended + REMATCH_OFFER_TTL_MS + 1).await,
+            vec!["m-tel-6".to_string()]
+        );
+        assert!(!app.matches.has("m-tel-6"));
+
+        fake(&app).lock().await.tables.action_timings.clear();
+        assert_eq!(
+            backfill(&app.db).await.expect("the backfill runs"),
+            BackfillOutcome {
+                matches: 1,
+                rows: 4,
+                skipped: 0
+            }
+        );
+        assert_eq!(
+            telemetry_of(&app, "m-tel-6").await.action_timings.len(),
+            live.action_timings.len()
+        );
+
+        // A socket that comes back folds the actor again, whose window opens at the rebuild.
+        sleep_ms(u64::try_from(REMATCH_OFFER_TTL_MS + 1).expect("a ttl")).await;
+        let rebuilt = app
+            .matches
+            .actor_for(&app, "m-tel-6")
+            .await
+            .expect("the log folds back into an actor");
+        assert!(rebuilt.snapshot().result.is_some());
+        let reopened = rebuilt
+            .finished_at()
+            .expect("a rebuilt finished match has a window");
+        assert!(reopened > ended + REMATCH_OFFER_TTL_MS);
+        drop(rebuilt);
+        assert!(
+            app.matches
+                .reap_finished(reopened + REMATCH_OFFER_TTL_MS)
+                .await
+                .is_empty()
+        );
+        assert_eq!(
+            app.matches
+                .reap_finished(reopened + REMATCH_OFFER_TTL_MS + 1)
+                .await,
+            vec!["m-tel-6".to_string()]
         );
     }
 

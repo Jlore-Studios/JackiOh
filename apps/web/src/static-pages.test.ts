@@ -3,25 +3,31 @@
 // edit here. `writeStaticPages` is called on a temp directory with the source `index.html`, so no test
 // needs a full build.
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createElement } from "react";
 
+import { render } from "@testing-library/react";
 import { CATALOG } from "@jackioh/cards";
-import { GLITCH_DEF_ID } from "@jackioh/engine/config";
+import { DECK_SIZE, GLITCH_DEF_ID, HERO_HEALTH, MAX_MANA } from "@jackioh/engine/config";
 import type { CardDefs } from "@jackioh/shared";
 import { fillParams } from "@jackioh/shared";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PUBLIC_PAGES, sitemapXml, writeStaticPages } from "../static-pages.ts";
+import { ADDRESSED_PUBLIC_FILES, PAGE_TEXT, PUBLIC_PAGES, sitemapXml, writeStaticPages } from "../static-pages.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "./game/deckbuilder/filters.ts";
 import { almanacShelf } from "./game/deckbuilder/shelf.ts";
-import { SITE_ORIGIN, paths } from "./net/navigate.ts";
+import { SITE_ORIGIN, originOf, paths, siteOrigin } from "./net/navigate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { newestFirst } from "./patches/history.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch } from "./patches/source.ts";
+import AccessibilityRoute from "./routes/accessibility.tsx";
+import PrivacyRoute from "./routes/privacy.tsx";
+import TermsRoute from "./routes/terms.tsx";
+import { SHIPPED_SETS } from "./wire/catalog.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE = readFileSync(join(HERE, "../index.html"), "utf8");
@@ -43,16 +49,37 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** Writes every page for this data and returns a reader of one page's HTML, as text and as a document. */
-function build(cards: CardDefs, patches: readonly Patch[]): (path: string) => { html: string; doc: Document } {
+/** Writes every page for this data and origin, with the addressed public files, and returns the directory. */
+function writeAll(cards: CardDefs, patches: readonly Patch[], origin: string = SITE_ORIGIN): string {
   const outDir = mkdtempSync(join(tmpdir(), "jackioh-static-"));
   dirs.push(outDir);
-  writeStaticPages({ template: TEMPLATE, pages: PUBLIC_PAGES, cards, patches, outDir });
-  return (path) => {
-    const html = readFileSync(join(outDir, path, "index.html"), "utf8");
-    return { html, doc: new DOMParser().parseFromString(html, "text/html") };
-  };
+  for (const file of ADDRESSED_PUBLIC_FILES) {
+    const target = join(outDir, file);
+    mkdirSync(dirname(target), { recursive: true });
+    copyFileSync(join(HERE, "../public", file), target);
+  }
+  writeStaticPages({ template: TEMPLATE, pages: PUBLIC_PAGES, cards, patches, outDir, origin });
+  return outDir;
 }
+
+/** One written page's HTML, as text and as a document. */
+function read(outDir: string, path: string): { html: string; doc: Document } {
+  const html = readFileSync(join(outDir, path, "index.html"), "utf8");
+  return { html, doc: new DOMParser().parseFromString(html, "text/html") };
+}
+
+/** Writes every page for this data and returns a reader of one page's HTML, as text and as a document. */
+function build(
+  cards: CardDefs,
+  patches: readonly Patch[],
+  origin: string = SITE_ORIGIN,
+): (path: string) => { html: string; doc: Document } {
+  const outDir = writeAll(cards, patches, origin);
+  return (path) => read(outDir, path);
+}
+
+/** Rendered text with its whitespace collapsed, for comparing static copy with its route. */
+const norm = (t: string | null | undefined): string => (t ?? "").replace(/\s+/gu, " ").trim();
 
 /** The fixture catalog, with a card added to a shipped set, Glitch, and a card of a set not shipped. */
 function fixtureCatalog(): CardDefs {
@@ -144,13 +171,123 @@ describe("the static pages", () => {
   });
 
   it("write the sitemap from the page table and SITE_ORIGIN: addresses only", () => {
-    const outDir = mkdtempSync(join(tmpdir(), "jackioh-static-"));
-    dirs.push(outDir);
-    writeStaticPages({ template: TEMPLATE, pages: PUBLIC_PAGES, cards: {}, patches: [], outDir });
+    const outDir = writeAll({}, []);
     const sitemap = readFileSync(join(outDir, "sitemap.xml"), "utf8");
     expect(sitemap).toBe(sitemapXml(PUBLIC_PAGES));
     const locs = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/gu)].map((match) => match[1]);
     expect(locs).toEqual(PUBLIC_PAGES.map((page) => `${SITE_ORIGIN}${page.path}`));
     expect(sitemap).not.toMatch(/lastmod|changefreq|priority/u);
+  });
+
+  it("name the host each build is served from in every address: jackioh.com in production, the Vercel host on staging", () => {
+    const production = originOf(/^VITE_SITE_ORIGIN=(.*)$/mu.exec(readFileSync(join(HERE, "../.env.production"), "utf8"))?.[1]);
+    const vercel = JSON.parse(readFileSync(join(HERE, "../../../vercel.json"), "utf8")) as { buildCommand: string };
+    const staging = originOf(/VITE_SITE_ORIGIN=(\S+)/u.exec(vercel.buildCommand)?.[1]);
+    expect(production).toBe("https://jackioh.com");
+    expect(staging).toBe(SITE_ORIGIN);
+    for (const origin of [production, staging]) {
+      const other = origin === production ? staging : production;
+      const outDir = writeAll(CATALOG, REAL_PATCHES, origin);
+      for (const { path } of PUBLIC_PAGES) {
+        const { html, doc } = read(outDir, path);
+        expect(attr(doc, 'link[rel="canonical"]', "href"), `${origin} ${path}`).toBe(`${origin}${path}`);
+        expect(attr(doc, 'meta[property="og:url"]', "content"), `${origin} ${path}`).toBe(`${origin}${path}`);
+        expect(attr(doc, 'meta[property="og:image"]', "content"), `${origin} ${path}`).toBe(`${origin}/og.png`);
+        const jsonLd = JSON.parse(
+          doc.querySelector('script[type="application/ld+json"]')?.textContent ?? "null",
+        ) as { url: string };
+        expect(jsonLd.url, `${origin} ${path}`).toBe(`${origin}/`);
+        expect(html, `${origin} ${path} names no other host`).not.toContain(other);
+      }
+      const locs = [...readFileSync(join(outDir, "sitemap.xml"), "utf8").matchAll(/<loc>([^<]*)<\/loc>/gu)].map(
+        (match) => match[1],
+      );
+      expect(locs, `${origin} sitemap`).toEqual(PUBLIC_PAGES.map((page) => `${origin}${page.path}`));
+      const robots = readFileSync(join(outDir, "robots.txt"), "utf8");
+      expect(robots, `${origin} robots.txt`).toContain(`Sitemap: ${origin}/sitemap.xml`);
+      expect(robots, `${origin} robots.txt names no other host`).not.toContain(other);
+      const security = readFileSync(join(outDir, ".well-known/security.txt"), "utf8");
+      expect(security, `${origin} security.txt`).toContain(`Canonical: ${origin}/.well-known/security.txt`);
+      expect(security, `${origin} security.txt names no other host`).not.toContain(other);
+    }
+  });
+
+  it("give the running app the bundle's own address for its canonical link, and the source files' when the build sets none", () => {
+    expect(originOf(undefined)).toBe(SITE_ORIGIN);
+    expect(originOf("")).toBe(SITE_ORIGIN);
+    expect(originOf("https://jackioh.com/")).toBe("https://jackioh.com");
+    expect(siteOrigin()).toBe(SITE_ORIGIN);
+    try {
+      vi.stubEnv("VITE_SITE_ORIGIN", "https://jackioh.com");
+      expect(canonicalUrlFor(paths.privacy)).toBe("https://jackioh.com/privacy");
+      expect(canonicalUrlFor("/nope")).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("describe the game on the landing page without script: its lanes, mana, traps, numbers and sets", () => {
+    const { doc } = build(CATALOG, REAL_PATCHES)(paths.landing);
+    const text = doc.querySelector("#root .static-body")?.textContent ?? "";
+    for (const want of [
+      `${String(DECK_SIZE)}-card deck`,
+      `${String(HERO_HEALTH)} health`,
+      `up to ${String(MAX_MANA)}`,
+      "shared lanes",
+      "face down in the backrow",
+      "Radiant face",
+      "tutorial",
+      "invite code",
+      "almanac",
+      "patch notes",
+      ...SHIPPED_SETS,
+    ]) {
+      expect(text, want).toContain(want);
+    }
+  });
+
+  it("give every public page text of its own beyond its title and description", () => {
+    const page = build(CATALOG, REAL_PATCHES);
+    for (const { path, description } of PUBLIC_PAGES) {
+      const { doc } = page(path);
+      const body = doc.querySelector("#root .static-body");
+      expect(body?.querySelector("p")?.textContent, path).toBe(description);
+      if (path === paths.almanac || path === paths.patchNotes) continue;
+      expect(PAGE_TEXT[path], path).toBeDefined();
+      const sections = [...(body?.querySelectorAll("section") ?? [])];
+      expect(sections.length, `${path} has a section`).toBeGreaterThan(0);
+      for (const element of sections) {
+        expect(element.querySelector("h2")?.textContent?.trim() ?? "", `${path} section heading`).not.toBe("");
+        const texts = [...element.querySelectorAll("p, li")].map((el) => el.textContent?.trim() ?? "");
+        expect(texts.length, `${path} section text`).toBeGreaterThan(0);
+        for (const text of texts) expect(text, path).not.toBe("");
+      }
+    }
+  });
+
+  it("quote /privacy, /terms and /accessibility word for word from their own pages", () => {
+    const page = build(CATALOG, REAL_PATCHES);
+    const cases = [
+      [PrivacyRoute, paths.privacy],
+      [TermsRoute, paths.terms],
+      [AccessibilityRoute, paths.accessibility],
+    ] as const;
+    for (const [Route, path] of cases) {
+      const { unmount } = render(createElement(Route));
+      const said = new Set(
+        [...document.querySelectorAll("section h3, section p, section li")].map((el) => norm(el.textContent)),
+      );
+      unmount();
+      const { doc } = page(path);
+      const statics = [
+        ...doc.querySelectorAll("#root .static-body section h2, #root .static-body section p, #root .static-body section li"),
+      ];
+      expect(statics.length, `${path} static-pages.ts PAGE_TEXT has text`).toBeGreaterThan(0);
+      for (const el of statics) {
+        expect(said, `${path} static-pages.ts PAGE_TEXT quotes its route: ${norm(el.textContent)}`).toContain(
+          norm(el.textContent),
+        );
+      }
+    }
   });
 });

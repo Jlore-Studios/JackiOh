@@ -26,7 +26,7 @@ export const EMOTE_MENU_EDGE_PX = 8;
 export const SAPI_BASELINE_WPM = 180;
 export const FELINORS_ECHO_TAIL_MS = 120;
 
-/** The board portrait's reaction to opening its inspect view: the squash and the glint (R1331). */
+/** The board portrait's reaction to opening its menu or its inspect view: the squash and the glint (R1331). */
 export const PORTRAIT_REACT_MS = 320;
 
 /** How many motes drift over each portrait's oval (R1332). */

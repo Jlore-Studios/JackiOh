@@ -15,25 +15,26 @@ Among the seats (`providers.Seat`: one model on one subscription) whose subscrip
 available (`providers.availability`: switched on, its secret set, inside its hours unless the item
 is forced, under its limits):
 
-- **build, revise, fix**: the first subscription in the usage order (`priority`: claude-3,
-  claude-1, then the medium models, then Devin, with `build_last` ones such as claude-2 after
-  all of them) with a seat that meets the tier, on its weakest such seat. An easy item goes to
-  an `easy_first` subscription (Devin) ahead of that order while it has a free lane; otherwise
-  the Claude accounts build it with Sonnet, not Opus (and the run may switch: `work._switch`). A
-  builder above the item's tier (no seat of that tier free, or one comes later in the usage
+- **build, revise, fix**: the first free seat in the lane's tier order (#695: Muse before
+  agy before Sonnet, GPT before Devin), on the weakest seat of a subscription that meets the
+  tier; ties break by the usage order (`priority`), with `build_last` ones such as claude-2
+  after all of them. The subscription that planned the item builds only when no other lane
+  seat is free, so planner and builder differ (and the run may switch: `work._switch`). A
+  builder above the item's tier (no seat of that tier free, or one comes later in the tier
   order) is said in the run's log.
-- **plan**: a build that has no plan yet gets a planning session first, on a medium or strong
-  seat, strong whenever one is free. When the builder's own subscription has a seat of that tier,
-  the plan and the build share one run; otherwise the planning is a run of its own, and the item
-  goes back to the queue to build from the plan. Such a planning run is short and starts before
-  any long run, so a planner plans Devin's next item before it builds one of its own.
+- **plan**: a build that has no plan yet gets a planning session first, on the lane's weakest
+  seat that meets its plan floor: a medium seat plans an easy or medium item, a strong one a
+  hard item. When the builder's own subscription has a seat of that tier, the plan and the
+  build share one run; otherwise the planning is a run of its own, and the item goes back to
+  the queue to build from the plan. Such a planning run is short and starts before any long
+  run, so a planner plans Devin's next item before it builds one of its own.
 - **review** in the run: the run's own strongest seat of at least medium; a run with none (Devin's,
   which checks itself instead) hands the change to a review run.
-- **a review run** (`bot:cross-review`): a strong seat whenever one is free, otherwise a medium one
-  (a family that has not approved the head yet first, but the same model may review it twice),
-  otherwise, for an easy item that has no weak approval yet, a weak one. What counts is the
-  review rule (`review_rule.py`): one strong approval, or two medium ones, or for an easy item one
-  weak and one medium.
+- **a review run** (`bot:cross-review`): for an easy item with no weak approval yet, a weak
+  seat first (the Easy green light); otherwise a strong seat whenever one is free, then a medium
+  one (a family that has not approved the head yet first, but the same model may review it
+  twice). What counts is the review rule (`review_rule.py`): one strong approval, whatever the
+  difficulty.
 - **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
   `main`): a builder with its own reviewer in the run first, since that review carries the
   clearance to the resolution (`deliver._carry`) and no review run follows.
@@ -82,7 +83,7 @@ ROLE_OF = {"build": "build", "revise": "revise", "review": "review", "plan": "pl
 #: `quiet_ok` that lets every provider through, for questions that start nothing.
 ANY_QUIET = "*"
 #: How long a review run waits for a strong or medium reviewer before a weak one (Devin) may take
-#: it (#317 part 9): a weak approval counts only for an easy item, so it rarely moves one.
+#: it (#317 part 9): a weak approval is an easy item's green light only, so it rarely moves one.
 WEAK_REVIEW_AFTER = timedelta(minutes=30)
 #: The gate's step that waits for the shared subscription to be quiet (`bot-night.yml`).
 QUIET_STEP = "Wait until the subscription is quiet"
@@ -310,10 +311,12 @@ def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
 
 
 def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
-                 part: bool = False) -> tuple[Seat | None, str]:
-    """Who builds an item of `difficulty`: the first free subscription in the usage order with a
-    seat that meets its tier, on its weakest such seat; with a note when that seat is above the
-    tier, saying why (none of that tier is free, or the usage order puts this one first).
+                 part: bool = False, avoid: str = "") -> tuple[Seat | None, str]:
+    """Who builds an item of `difficulty`: the first free seat in the lane's tier order
+    (#695: Muse before agy before Sonnet, GPT before Devin), on its weakest seat that meets
+    the tier; with a note when that seat is above the tier, saying why (none of that tier is
+    free, or the tier order puts this one first). The subscription that planned it (`avoid`)
+    builds only when no other lane seat is free, so planner and builder differ.
 
     A fullsend `part` (#505), whose plan is on record by now, goes first to the subscriptions
     whose strongest seat is weakest, and one with no seat of its tier may build it on a seat of
@@ -321,15 +324,6 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
     planning and to the reconcile that checks and reviews every part."""
     floor = MIN_TIER[difficulty]
     free = {provider.id for provider in providers}
-
-    def strongest(provider: Provider) -> int:
-        seat = pool.best_seat(provider)
-        return TIER_RANK[seat.tier] if seat is not None else 0
-    # An easy item goes first to a subscription marked `easy_first` (Devin), which may build
-    # nothing harder; one marked `build_last` (claude-2) builds only after every other one.
-    order = sorted(providers, key=lambda provider: (
-        not (provider.easy_first and difficulty == "easy"), strongest(provider) if part else 0,
-        provider.build_last))
 
     def builds(provider: Provider, seat: Seat) -> bool:
         # A stand-in (`takes_over`, Sonnet for Devin) builds only an easy item, and only while
@@ -340,25 +334,50 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
             return True
         return (part and tier_at_least(seat.tier, PART_FLOOR)
                 and pool.best_seat(provider, floor) is None)
+
+    def weakest_key(provider: Provider) -> tuple[int, int]:
+        """Its weakest seat that may build this item, as (tier, tier-rank): the lane order."""
+        seats = [seat for seat in pool.seats(provider) if builds(provider, seat)]
+        if not seats:
+            return (len(TIER_RANK), 0)
+        seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
+        return (TIER_RANK[seat.tier], seat.rank)
+
+    def strongest(provider: Provider) -> int:
+        seat = pool.best_seat(provider)
+        return TIER_RANK[seat.tier] if seat is not None else 0
+    # A planner's own subscription builds only as a fallback (#695); an easy item still goes
+    # first to an `easy_first` subscription, and a `build_last` one (claude-2) after the rest.
+    others = [p for p in providers if p.id != avoid]
+    fallback = bool(avoid) and not any(
+        seat for p in others for seat in pool.seats(p) if builds(p, seat))
+    order = sorted(providers if fallback else others, key=lambda provider: (
+        weakest_key(provider),
+        not (provider.easy_first and difficulty == "easy"), strongest(provider) if part else 0,
+        provider.build_last,
+        pool.priority.index(provider.id) if provider.id in pool.priority else len(pool.priority)))
     usable = [(provider, [seat for seat in pool.seats(provider) if builds(provider, seat)])
               for provider in order]
     for index, (provider, seats) in enumerate(usable):
         if not seats:
             continue
         seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
+        prefix = (f"its planner `{avoid}` also builds it: no other lane seat is free. "
+                  if fallback and provider.id == avoid else "")
         if not tier_at_least(seat.tier, floor):
-            return seat, (f"a fullsend part, built on {seat.tier} from its plan: its tree's "
-                          "reconcile checks and reviews it")
+            return seat, (prefix + f"a fullsend part, built on {seat.tier} from its plan: its "
+                          "tree's reconcile checks and reviews it")
         if seat.tier == floor:
-            return seat, ""
+            return seat, prefix.rstrip()
         later = [s.describe() for _, others in usable[index + 1:] for s in others
                  if s.tier == floor]
         if later:
-            return seat, (f"built on {seat.tier} though difficulty:{difficulty} allows {floor}: "
-                          f"the usage order puts `{provider.id}` before {', '.join(later)}")
+            return seat, (prefix + f"built on {seat.tier} though difficulty:{difficulty} allows "
+                          f"{floor}: the tier order puts `{provider.id}` before "
+                          f"{', '.join(later)}")
         models = ", ".join(e.model for e in pool.tiers.get(floor, ())) or "none listed"
-        return seat, (f"stepped up from {floor} to {seat.tier} to build it: no {floor}-tier "
-                      f"model ({models}) is free now")
+        return seat, (prefix + f"stepped up from {floor} to {seat.tier} to build it: no "
+                      f"{floor}-tier model ({models}) is free now")
     return None, ""
 
 
@@ -409,12 +428,19 @@ def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None
 
 def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate,
                 waited: timedelta | None = None) -> Seat | None:
-    """A review run's reviewer: strong whenever one is free; otherwise medium, a family that has
-    not approved the head yet before one that has (the same model may review it twice);
-    otherwise weak, only where a weak approval helps (`review_rule.helps`: an easy item with no
-    weak approval yet), and only once the review has waited `WEAK_REVIEW_AFTER` for a stronger
-    one (`waited`; None does not wait). A stand-in seat (`takes_over`) reviews nothing."""
+    """A review run's reviewer: for an easy item with no weak approval yet, a weak seat first
+    (the Easy green light, #695: GPT before Devin in tier order, no waiting); otherwise strong
+    whenever one is free, then medium, a family that has not approved the head yet before one
+    that has (the same model may review it twice); otherwise weak, only where a weak approval
+    helps, and only once the review has waited `WEAK_REVIEW_AFTER` for a stronger one
+    (`waited`; None does not wait). A stand-in seat (`takes_over`) reviews nothing."""
     seats = [seat for provider in providers for seat in pool.own_seats(provider)]
+    if (candidate.difficulty == "easy" and not candidate.review_floor
+            and "weak" not in (candidate.approval_tiers or [])):
+        found = ranked(pool, [seat for seat in seats if seat.tier == "weak"])
+        found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
+        if found:
+            return found[0]
     for tier in ("strong", "medium", "weak"):
         if candidate.review_floor and not tier_at_least(tier, candidate.review_floor):
             continue  # a person asked for this tier or stronger (`/harness review strong`)
@@ -460,7 +486,9 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         # run takes one (#317 part 2), and none at all may wait for one.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
     builder, note = builder_seat(pool, builders, candidate.difficulty,
-                                 part=candidate.part and plan_meets(candidate))
+                                 part=candidate.part and plan_meets(candidate),
+                                 avoid=candidate.planned_by
+                                 if candidate.kind == "build" else "")
     if builder is None:
         return None
     notes = [f"#{candidate.number}: {note}"] if note else []
@@ -492,15 +520,20 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
     # The Needs plan stage first: a planner on the planning lane, which takes no build lane,
     # plans the items a builder that cannot plan (Devin) waits on before the rest, then the
     # fullsend parts a medium subscription (Muse) builds from their plans, each by a model that
-    # meets its plan floor (medium for an easy or unrated item, strong for the rest).
+    # meets its plan floor (medium for an easy, medium or unrated item, strong for a hard one).
     planning: list[tuple[Candidate, Assignment]] = []
     planners = lane_planners(ctx, state, lanes, forced=force, quiet_ok=quiet_ok)
     if planners:
         for candidate in sorted((c for c in order if needs_plan(c)),
                                 key=lambda c: (not (force or c.forced), c.difficulty != "easy",
                                                not c.part)):
-            seat = next((s for s in planners if tier_at_least(s.tier, plan_floor(candidate))),
-                        None)
+            # The lane's weakest planner that meets its floor (#695): a medium seat plans an
+            # easy or medium item, a strong one a hard item.
+            fitting = sorted(
+                (s for s in planners if tier_at_least(s.tier, plan_floor(candidate))),
+                key=lambda s: (TIER_RANK[s.tier], s.rank,
+                               lanes.planning_by(s.provider.id)))
+            seat = fitting[0] if fitting else None
             if seat is None:
                 continue
             what = "rates and plans it" if not candidate.rated else "writes it"
