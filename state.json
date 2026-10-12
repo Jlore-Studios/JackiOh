@@ -4922,7 +4922,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "gemini"
         ],
         "builder": "muse",
         "rejections": [],
@@ -4931,10 +4932,16 @@
             "family": "muse",
             "run": "38189765567",
             "tier": "medium"
+          },
+          {
+            "family": "gemini",
+            "run": "38191784812",
+            "tier": "medium"
           }
         ],
         "sha": "0dedb013bf6031293f36a737b479c499a170e93d",
         "tiers": {
+          "gemini": "medium",
           "muse": "medium"
         }
       }
