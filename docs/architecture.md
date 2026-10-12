@@ -453,6 +453,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` | Dashboard → Project Settings → API Keys → Publishable key |
 | `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `jackioh-server` is deployed |
 | `VITE_SERVER_WS_URL` | `wss://api.example.com/ws` | same host, WebSocket path |
+| `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `vercel.json`'s `buildCommand` for staging; unset, `SITE_ORIGIN` |
 | `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
 
 The client's catalog version is not a variable: the bundle reads it from

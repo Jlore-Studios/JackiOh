@@ -48,10 +48,26 @@ export function usePathname(): string {
 }
 
 /**
- * The runtime canonical link and static pages derive from this address. Static `index.html`,
- * `public/robots.txt`, and `public/.well-known/security.txt` must spell it too.
+ * The address the source files spell: `index.html`, `public/robots.txt` and
+ * `public/.well-known/security.txt` name it, and `static-pages.ts` replaces it with the build's
+ * own (#696). It is staging's host, and the address of any build that sets no `VITE_SITE_ORIGIN`.
  */
 export const SITE_ORIGIN = "https://jackioh.vercel.app";
+
+/** A build's address from its `VITE_SITE_ORIGIN`, without a trailing slash; `SITE_ORIGIN` when unset or empty. */
+export function originOf(configured: unknown): string {
+  return typeof configured === "string" && configured.length > 0 ? configured.replace(/\/+$/u, "") : SITE_ORIGIN;
+}
+
+/**
+ * The address this bundle is served from: jackioh.com in production (`.env.production`), the Vercel
+ * host on staging (`vercel.json`'s build command). Read here, not at load: Vite's config loader runs
+ * this file with no `import.meta.env`, so `static-pages.ts` calls `originOf` instead.
+ */
+export function siteOrigin(): string {
+  const configured: unknown = import.meta.env.VITE_SITE_ORIGIN;
+  return originOf(configured);
+}
 
 /**
  * Client routes live in one table. `vercel.json` and `apps/web/vercel.json` must match it or

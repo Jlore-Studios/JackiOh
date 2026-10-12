@@ -19,6 +19,7 @@ const PUBLIC = [
   "VITE_SUPABASE_PUBLISHABLE_KEY",
   "VITE_SERVER_HTTP_URL",
   "VITE_SERVER_WS_URL",
+  "VITE_SITE_ORIGIN",
   "VITE_CATALOG_VERSION",
   // R666: provider names only; set once a provider is set up in the Supabase dashboard.
   "VITE_AUTH_OAUTH_PROVIDERS",
@@ -41,7 +42,7 @@ describe("apps/web/.env.production", () => {
       expect(PUBLIC, key).toContain(key);
       expect(value, key).not.toMatch(/sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN/u);
     }
-    // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same four names are public.
+    // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same names are public.
     const server = readFileSync(join(ROOT, "crates/server/src/env.rs"), "utf8");
     for (const [key] of entries()) expect(server, key).toContain(`"${key}"`);
   });
@@ -53,6 +54,7 @@ describe("apps/web/.env.production", () => {
     expect(values["VITE_SUPABASE_PUBLISHABLE_KEY"]).toMatch(/^sb_publishable_[A-Za-z0-9_-]+$/u);
     expect(values["VITE_SERVER_HTTP_URL"]).toBe("https://jackioh-server.onrender.com");
     expect(values["VITE_SERVER_WS_URL"]).toBe("wss://jackioh-server.onrender.com/ws/match");
+    expect(values["VITE_SITE_ORIGIN"]).toBe("https://jackioh.com");
     const csp = readFileSync(join(WEB, "public/_headers"), "utf8");
     for (const key of ["VITE_SUPABASE_URL", "VITE_SERVER_HTTP_URL", "VITE_SERVER_WS_URL"]) {
       const origin = new URL(values[key] ?? "").origin;

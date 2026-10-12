@@ -273,6 +273,10 @@ class Worker:
         self.asked: tuple[str, int] | None = None
         self.plan_text = ""
         self.minutes = 0.0
+        #: This run's token totals ({input, output, cache_read, cache_write}) and cost in
+        #: USD, summed over its model calls that reported any (#695).
+        self.tokens = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+        self.cost_usd = 0.0
         #: The last builder's or planner's transcript, whose end the handoff carries.
         self.build_transcript: Path | None = None
         #: A planning session began (`_planning`); with no plan in the result, it was cut off.
@@ -436,6 +440,7 @@ class Worker:
         reader (the planner) may also write its draft (`PLAN_DRAFT_FILE`), and the end of its
         session goes into the handoff, as a builder's does."""
         self._signalled()  # never start a call after a cancel
+        self._call_headroom()  # never start a call the cap will kill halfway (#695)
         self.calls += 1
         self._clear_settings(cwd)
         timeout = int(min(self.cfg.call_timeout_minutes * 60, self.seconds_left() - 300))
@@ -461,7 +466,10 @@ class Worker:
             max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
             model=seat.model,
+            # Reviews run one notch below building (#695): the subscription's
+            # `review_effort`, else `high`; planning and building keep theirs.
             effort=(self.provider.fix_effort if role == "fix" and self.provider.fix_effort
+                    else (self.provider.review_effort or "high") if role == "review"
                     else seat.effort),
             transcript=transcript,
             read_only=reader,
@@ -470,6 +478,14 @@ class Worker:
         )
         result = self.runner.run(request)
         step.update(minutes=round(result.duration_s / 60, 1), outcome=_call_outcome(result))
+        if result.tokens:
+            for name in self.tokens:
+                self.tokens[name] += int(result.tokens.get(name) or 0)
+            step.update(tokens={name: int(result.tokens.get(name) or 0)
+                               for name in self.tokens})
+        if result.cost_usd:
+            self.cost_usd += float(result.cost_usd)
+            step.update(cost_usd=round(float(result.cost_usd), 4))
         self._read_memory()
         if self.after_call is not None:
             self.after_call()
@@ -496,6 +512,22 @@ class Worker:
         now = self.now()
         entry = {"usage": {**usage, "observed_at": iso(now)}}
         return providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
+
+    def _call_headroom(self) -> None:
+        """Before each model call: the latest reading against the caps, with no headroom margin
+        (a run going on stops at the cap itself, `providers.refusal`). Short of room the run
+        stops here, with its commits bundled and its handoff written (`_interrupted`), instead
+        of starting a call the cap kills halfway (#695). The first call's reading is the run's
+        `_start_check`, so this repeats it.
+        """
+        if not self.last_usage:
+            return
+        now = self.now()
+        entry = {"usage": {**self.last_usage, "observed_at": iso(now)}}
+        reason = providers_mod.refusal(self.provider, entry, now, self.cfg.timezone)
+        if reason:
+            raise Interrupt(f"`{self.provider.id}` stops before its next call: {reason}",
+                            "usage")
 
     def _start_check(self) -> None:
         """The fresh reading taken just before the run: a run over its cap, or a build, a
@@ -528,6 +560,8 @@ class Worker:
         self.result["finished_at"] = iso(self.now())
         self.result["model_calls"] = self.calls
         self.result["minutes"] = round(self.minutes, 1)
+        self.result["tokens"] = dict(self.tokens)
+        self.result["cost_usd"] = round(self.cost_usd, 4)
         handoff = self._handoff()
         if handoff:
             self.result["handoff"] = handoff
@@ -866,9 +900,11 @@ class Worker:
         if len(runs) > len(shown):
             listed = f"- … {len(runs) - len(shown)} earlier run(s)\n" + listed
         text = (f"\n\n## The journal of earlier runs\n\n{len(runs)} earlier run(s) worked on "
-                f"this. `{journal_mod.JOURNAL_FILE}` at the top of your worktree (git ignores it) "
-                "holds what each one did, step by step, why, how it ended and the notes it left. "
-                "Read it before anything else.")
+                f"this. Read the `## State` section of `{NOTES_FILE}` first: in a minute it says "
+                "what is done, what is left and what did not work. The full journal is "
+                f"`{journal_mod.JOURNAL_FILE}` at the top of your worktree (git ignores it), with "
+                "what each run did step by step; read the runs you need for detail, not the whole "
+                "file up front (#695).")
         if builder:
             text += (f" Then bring the `## State` part of `{NOTES_FILE}` up to date with it, "
                      "in a few lines: what is done, what is left, and what was tried and did not "
@@ -1303,7 +1339,9 @@ class Worker:
                "single HTML comment carrying JSON, with nothing before it, then the plan:\n\n"
                f"{line}\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who "
                "builds it: an easy item goes to the weakest model (Devin's SWE-2), which cannot "
-               "fill gaps, resolve a hard conflict, or judge what it cannot see.")
+               "fill gaps, resolve a hard conflict, or judge what it cannot see. When in doubt "
+               "between easy and medium, rate medium: a borderline easy costs a weak builder's "
+               "failed run, while a medium plan still builds fast.")
         if self._rating_source() == "bot":
             ask += (f" The bot rated it `difficulty:{difficulty}` already"
                     + (f" (`{rating.get('by')}`)" if rating.get("by") else "")

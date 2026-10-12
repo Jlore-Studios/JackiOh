@@ -216,11 +216,11 @@ MIN_TIER = {"easy": "weak", "medium": "medium", "hard": "strong"}
 #: its plan floor, on a subscription with no seat of the part's own tier (Muse): a part lands with
 #: no checks or review, and its tree's reconcile, a strong model's, checks and reviews them all.
 PART_FLOOR = "medium"
-#: The weakest tier whose plan an item of each difficulty builds from (#317 part 6): a medium
-#: model may plan an easy item, only a strong one anything harder. An item no one has rated yet
-#: (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then stands only
-#: if it rates the item easy (#317 part 8).
-PLAN_FLOOR = {"easy": "medium", "medium": "strong", "hard": "strong"}
+#: The weakest tier whose plan an item of each difficulty builds from (#317 part 6, #695):
+#: a medium model plans an easy or medium item, only a strong one a hard one. An item no one has
+#: rated yet (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then
+#: stands only if it rates the item easy or medium (#317 part 8).
+PLAN_FLOOR = {"easy": "medium", "medium": "medium", "hard": "strong"}
 UNRATED_PLAN_FLOOR = "medium"
 #: Failures of an item's own (not infra, a usage pause, a halt or a stop) at one difficulty before
 #: the bot raises it a step, easy to medium to hard; three more at hard block it (#317 part 8).
