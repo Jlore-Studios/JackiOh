@@ -4422,6 +4422,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-12T14:44:21Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38265135370",
       "self_check_findings": [],
       "started_at": "2026-10-12T14:45:25Z",
