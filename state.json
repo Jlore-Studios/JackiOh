@@ -4390,7 +4390,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-12T13:57:28Z",
+      "feedback_since": "2026-10-12T15:46:41Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-12T15:17:57Z",
@@ -4415,11 +4415,11 @@
       "round_tier": "strong",
       "run_id": "38272613152",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-12T15:46:41Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
