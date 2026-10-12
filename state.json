@@ -4238,6 +4238,9 @@
       "verdict_rounds": 0
     },
     "731": {
+      "ci_reruns": {
+        "ba04c44cb4ec9c7c9b8fc5614954f3ebf8f35475": 1
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-12T13:03:25Z",
