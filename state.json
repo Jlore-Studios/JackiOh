@@ -4276,6 +4276,7 @@
     "724": {
       "action": "build",
       "asks": [],
+      "audit_tier": "",
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-12T21:41:52Z",
@@ -4294,10 +4295,12 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
-      "pr": 731,
+      "previous_branch": "bot/old/issue-724-20261012-2142",
+      "previous_pr": 731,
+      "previous_why": "it failed 3 times at `difficulty:medium` (`claude-7` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:29`: The Meditative release summary tells players the set is 'built around the Zenith, Flow and Focus mechanics', but no su; `claude-4` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:37`: The Meditative set's practice AI bullet tells players the AI's decks leave the Meditative cards out until it has been ; `claude-6` (claude, opus) rejected it: `apps/web/src/p",
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-12T12:34:22Z",
+      "queued_at": "2026-10-12T21:42:01Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "38252949584",
