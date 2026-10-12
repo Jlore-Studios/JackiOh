@@ -4292,6 +4292,14 @@
       "requested_by": "jgoetzmann",
       "stop_requested": false
     },
+    "734": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-12T13:33:05Z",
+      "issue": 639,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "88": {
       "action": "build",
       "died": 0,
