@@ -81,7 +81,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Ways to play",
       "<p>Play the AI in your browser with no account, at the difficulty you choose, or learn the game " +
-        "in the tutorial. Create an account to build decks and, with an invite code, play friends online. " +
+        "in the tutorial. Create an account and redeem an invite code to build decks and play friends online. " +
         "Look up any card in the almanac, and read what each patch changed in the patch notes.</p>",
     ),
   [paths.practice]:
@@ -89,7 +89,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "A game against the AI",
       "<p>A practice game runs in your browser, and its moves are never sent to a server, so no account " +
         "is needed. Pick a difficulty and a deck, a random one or a preset deck, or one of your saved " +
-        "decks once you have signed in, and play.</p>",
+        "decks once your account is active, and play.</p>",
     ) +
     section(
       "The tutorial",
