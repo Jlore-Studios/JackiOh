@@ -4941,10 +4941,9 @@
     "what": "build #743 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-12T17:54:27Z",
+    "at": "2026-10-12T18:05:18Z",
     "notes": [
-      "#743 needs a plan",
-      "started a night run, as a lane was free: #743 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+      "#746: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
