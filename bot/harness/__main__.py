@@ -387,7 +387,9 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
     the loop runs shows within a tick (or, when this checkout's code is too old to read it, the
     loop ends and the next one shows it on newer code), and settles the issue about the
-    machine's disk (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop.
+    machine's disk (`disk.alert`). With `--stats` the issue carries the statistics, counted
+    afresh every 30 minutes and kept between (`dashboard.update`). A failure is only a warning:
+    it never fails the sweep or the loop.
 
     With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
     process of its own (`_companions`), and its section goes into the issue apart from the night
@@ -412,7 +414,9 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
         extra = (_companions(cfg, sweep=bool(getattr(args, "sweep", False)))
                  if getattr(args, "companions", False) else ())
         try:
-            note = dashboard_mod.update(_ctx(cfg), extra)
+            note = dashboard_mod.update(_ctx(cfg), extra,
+                                        stats=bool(getattr(args, "stats", False)),
+                                        stats_extra=_stats_sections(cfg, args))
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
@@ -422,21 +426,14 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
                 print(redact(f"disk: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
-        if getattr(args, "stats", False):
-            try:
-                print(redact(stats_mod.update(_ctx(cfg), extra=_stats_sections(cfg, args))),
-                      flush=True)
-            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
-                print(redact(f"::warning::the statistics issue was not updated: {exc}"),
-                      flush=True)
         if not every or time.monotonic() + every > deadline:
             return 0
         time.sleep(every)
 
 
 def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
-    """What draws the other bots' sections of the statistics issue: their own processes with
-    `--companions` (#60), nothing without. Called only when the issue is rewritten."""
+    """What draws the other bots' records in the statistics: their own processes with
+    `--companions` (#60), nothing without. Called only when the statistics are counted."""
     if not getattr(args, "companions", False):
         return tuple
     return lambda: _companions(cfg, sweep=False, argv=("stats", "--section-only"),
@@ -444,14 +441,17 @@ def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
 
 
 def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
-    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force.
-    `--section-only` prints this bot's section of it (Squishy's, which the night bot's loop puts
-    in) and writes nothing; `--companions` puts the other bots' sections in."""
+    """The statistics in the pinned status issue (stats.py): the issue rewritten now, with them
+    counted afresh when due, or at once with --force. `--section-only` prints this bot's record
+    (Squishy's, which the night bot's loop puts in) and writes nothing; `--companions` draws the
+    other bots' sections and records, as the loop does."""
     if getattr(args, "section_only", False):
         print(stats_mod.bot_section(_ctx(cfg, write=False)))
         return 0
-    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)),
-                                  extra=_stats_sections(cfg, args))))
+    extra = _companions(cfg, sweep=False) if getattr(args, "companions", False) else ()
+    print(redact("dashboard: " + dashboard_mod.update(
+        _ctx(cfg), extra, stats=True, force_stats=bool(getattr(args, "force", False)),
+        stats_extra=_stats_sections(cfg, args))))
     return 0
 
 
@@ -688,7 +688,7 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
     dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
-                               "runs it every ten minutes; each sweep runs it once)")
+                               "runs it every five minutes)")
     dashboard.add_argument("--every", type=int, default=0,
                            help="seconds between rewrites; 0 rewrites it once")
     dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
@@ -696,19 +696,21 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
-                           help="also rewrite the pinned statistics issue, every 30 minutes")
+                           help="carry the statistics in it, counted afresh every 30 minutes")
     dashboard.add_argument("--companions", action="store_true",
                            help="also sweep and draw each other bot (Squishy) in a process of "
                            "its own, and put its section in the issue")
     dashboard.add_argument("--section-only", action="store_true",
                            help="print this bot's section of the status issue and write nothing "
                            "(the night bot's loop runs this as Squishy)")
-    p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
-    p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
+    p = sub.add_parser("stats", help="rewrite the pinned status issue now, with its statistics")
+    p.add_argument("--force", action="store_true",
+                   help="count the statistics afresh even if they were counted under 30 minutes ago")
     p.add_argument("--companions", action="store_true",
-                   help="also put in each other bot's section (Squishy's), drawn by its own process")
+                   help="also put in each other bot's section and record (Squishy's), drawn by "
+                   "its own process")
     p.add_argument("--section-only", action="store_true",
-                   help="print this bot's section of the statistics issue and write nothing")
+                   help="print this bot's record for the statistics and write nothing")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")

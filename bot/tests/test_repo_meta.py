@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 from harness import __main__ as main_mod
-from harness import config, dashboard, disk, stats, triage
+from harness import config, dashboard, disk, triage
 
 from tests.fakes import FakeGitHub
 from tests.support import make_config, make_ctx
@@ -214,7 +214,7 @@ class LabelListTests(unittest.TestCase):
         table = re.search(r"^## Labels\n(.*?)^## ", docs, re.M | re.S).group(1)
         named = re.findall(r"^\| `([^`]+)` \|", table, re.M)
         self.assertEqual(named[:4], ["patch", "major version", "architecture", "night bot"])
-        used = {*named, *dashboard.LABELS, *disk.LABELS, *stats.LABELS, *triage.TYPE_LABELS,
+        used = {*named, *dashboard.LABELS, *disk.LABELS, *triage.TYPE_LABELS,
                 config.LABEL_HUMAN, config.LABEL_READY, *config.DIFFICULTY_LABELS,
                 config.LABEL_PRIORITY_HIGH, config.LABEL_PRIORITY_MEDIUM, config.LABEL_PRIORITY_LOW}
         # And every label a workflow or a script puts on by name.

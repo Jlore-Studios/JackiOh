@@ -1,14 +1,18 @@
-# The pinned "Night bot status" issue (bot/harness/dashboard.py), rewritten every ten minutes, and
-# the pinned "Night bot statistics" issue (bot/harness/stats.py), rewritten every 30 minutes.
+# The pinned "Night bot status" issue (bot/harness/dashboard.py, #148), rewritten every five
+# minutes, with its statistics (bot/harness/stats.py) counted afresh every 30 minutes and kept in
+# the issue between counts. (They had an issue of their own, #190, until they were folded in.)
 #
 # GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
 # between runs), so a schedule alone cannot keep the issue current. Instead one job loops: it
-# rewrites the issue every ten minutes for five and a half hours, inside the six-hour cap, then
+# rewrites the issue every five minutes for five and a half hours, inside the six-hour cap, then
 # starts the next loop itself (a workflow_dispatch from the job's own token does start a run).
+# A tick costs a few dozen GitHub calls (a count of the statistics, a few hundred, comes only
+# every 30 minutes), and the loop's one runner is busy either way, so five minutes costs no
+# more runner time than ten.
 # The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
 # loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
-# within ten minutes, not hours. Each tick also settles the issue about the bot machine's disk
+# within five minutes, not hours. Each tick also settles the issue about the bot machine's disk
 # (bot/harness/disk.py): open while the disk is filling up, closed once it is not.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
@@ -30,7 +34,7 @@ concurrency:
 env:
   PYTHONUTF8: "1"
   PYTHONDONTWRITEBYTECODE: "1"
-  EVERY_SECONDS: "600"
+  EVERY_SECONDS: "300"
   LOOP_SECONDS: "19800"
 
 jobs:
@@ -54,7 +58,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Sweep and rewrite the status issue every ten minutes
+      - name: Sweep and rewrite the status issue every five minutes
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
