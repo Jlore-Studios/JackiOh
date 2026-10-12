@@ -4243,6 +4243,7 @@
       },
       "ci_run_id": 38257626340,
       "ci_sha": "ba04c44cb4ec9c7c9b8fc5614954f3ebf8f35475",
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-12T13:57:28Z",
