@@ -133,6 +133,9 @@ export const TRIO_EDITOR = "trio-editor";
 /** The open trio's name (T1 met gently: an emptied name saves as "Untitled trio"). */
 export const TRIO_NAME_INPUT = "trio-name-input";
 
+/** Surfacing of the L4 shared-card rule before queue (SPEC §9.4, R250). */
+export const TRIO_L4_HINT = "trio-l4-hint";
+
 export function trioSlotId(slot: number): string {
   return `trio-slot-${String(slot)}`;
 }
