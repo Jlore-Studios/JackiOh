@@ -234,7 +234,7 @@ mod tests {
                 s.end_turn();
                 s.end_turn();
                 // p1's refresh gave 1 less than its max: one instalment paid.
-                let mana = s.state().players.p1.mana.clone();
+                let mana = s.state().players.p1.mana;
                 assert_eq!(mana.current, mana.max - 1);
                 assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1]));
             }
@@ -280,7 +280,7 @@ mod tests {
                 assert_eq!(owed_mana_of(s.state(), P1), 3);
                 s.end_turn();
                 // With no lender left, the next refresh still takes its instalment.
-                let mana = s.state().players.p1.mana.clone();
+                let mana = s.state().players.p1.mana;
                 assert_eq!(mana.current, mana.max - 1);
                 assert_eq!(owed_mana_of(s.state(), P1), 2);
             }

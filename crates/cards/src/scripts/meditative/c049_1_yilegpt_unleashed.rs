@@ -565,7 +565,7 @@ mod tests {
                     "p1": { "field": [{ "def": UNLEASHED, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
                 }));
-                let stats = s.stats(&s.unit(P1, 1).expect("unleashed"));
+                let stats = s.stats(s.unit(P1, 1).expect("unleashed"));
                 assert_eq!((stats.attack, stats.health, stats.armor), (16, 40, 5));
             }
 
