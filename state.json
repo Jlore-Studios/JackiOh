@@ -6221,14 +6221,18 @@
         {
           "at": "2026-10-12T13:07:18Z",
           "minutes": 9.8
+        },
+        {
+          "at": "2026-10-12T17:20:04Z",
+          "minutes": 12.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-12T17:00:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-12T22:00:00Z",
+          "utilization": 0.42
         },
-        "observed_at": "2026-10-12T13:07:18Z",
+        "observed_at": "2026-10-12T17:20:04Z",
         "status": "allowed"
       }
     },
