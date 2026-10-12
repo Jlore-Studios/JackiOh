@@ -4000,12 +4000,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-12T02:47:34Z",
-        "provider": "claude-7",
-        "sha": "2454834ac9ee533901f72699eb6c8596c601e42b",
-        "start": "8b02b36c0364c511d96be05c9ea55b69b428be63"
       }
     },
     "693": {
