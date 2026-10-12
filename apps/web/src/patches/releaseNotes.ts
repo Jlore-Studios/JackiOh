@@ -31,7 +31,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
     name: "Meditative",
     versions: "v0.3.0 – v0.3.6",
     summary:
-      "The Meditative set: 102 cards and 30 tokens, shipped in v0.3.5 into the deck builder, the Almanac, random decks and every card pool that names no set. Among them are Magnetic Units, the Jade Counter, an extra turn, a card that can win the game and a card you craft yourself. Before it shipped, v0.3.1 to v0.3.4 changed cards of the earlier sets: a text pass, more numbers to tune, Heroic Power's numbers tied to the power it has, and Degrade and Upgrade renamed Nerf and Buff.",
+      "The Meditative set: 102 cards and 30 tokens, shipped in v0.3.5 into the deck builder, the Almanac, random decks and every card pool that names no set. Among them are Magnetic Units, the Jade Counter, an extra turn, a card that can win the game and a card you craft yourself. Before it shipped, v0.3.1 to v0.3.4 changed cards of the earlier sets: a text pass, more numbers to tune, Heroic Power's numbers tied to the power it has, and the two tuning keywords given the names Nerf and Buff.",
     technicalChanges: [
       "The Rust rewrite (v0.3.0): the rules engine, the cards, the AI and the server are rewritten in Rust, and your browser runs the same engine compiled to WebAssembly. It plays exactly as v0.2.11 did: games recorded on the old engine replay step for step on the new one.",
       "The practice AI: its training brought back into its decks every Core card it used to leave out, so it now builds from every Core, Classic and Classic+ card. Its decks leave the Meditative cards out until it has been trained on them.",
@@ -54,21 +54,21 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       },
       {
         version: "v0.3.4",
-        title: "Degrade is Nerf, Upgrade is Buff",
+        title: "The tuning keywords are Nerf and Buff",
         summary:
-          "Degrade is renamed Nerf and Upgrade is renamed Buff on both faces of every card that printed them, from Withering Storm to Fine-Tuning, and Heroic Power's Radiant Steady Shot now says it permanently deals two more damage. Only the words change; the cards play as before.",
+          "The two tuning keywords take the names Nerf and Buff on both faces of every card that prints them, from Withering Storm to Fine-Tuning, and Heroic Power's Radiant Steady Shot now says it permanently deals two more damage. Only the words change; the cards play as before.",
       },
       {
         version: "v0.3.3",
         title: "Heroic Power's numbers belong to its power",
         summary:
-          "Degrade and Upgrade (now Nerf and Buff) and KY's Constant reach only the numbers of the power Heroic Power has now; a number of another power keeps its tuning until a reroll brings that power back. Thirteen numbers that only a base face prints, Life Tap's damage among them, are tuned on the base face only.",
+          "Nerf, Buff and KY's Constant reach only the numbers of the power Heroic Power has now; a number of another power keeps its tuning until a reroll brings that power back. Thirteen numbers that only a base face prints, Life Tap's damage among them, are tuned on the base face only.",
       },
       {
         version: "v0.3.2",
         title: "More numbers to tune",
         summary:
-          "111 more numbers on 80 cards can be moved by Degrade and Upgrade (now Nerf and Buff) and KY's Constant: damage, healing, draws, tokens, copies, buffs, Armor, mana, discounts, set costs, thresholds and Heroic Power's powers. Each prints as before.",
+          "111 more numbers on 80 cards can be moved by Nerf, Buff and KY's Constant: damage, healing, draws, tokens, copies, buffs, Armor, mana, discounts, set costs, thresholds and Heroic Power's powers. Each prints as before.",
       },
       {
         version: "v0.3.1",
@@ -83,7 +83,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
     name: "Classic & Classic+",
     versions: "v0.2.0 – v0.2.11",
     summary:
-      "Two sets at once: Classic (90 cards) and Classic+ (78 cards and 38 tokens), with the keywords Animated, Activate, Brittle, Degrade and Upgrade (Degrade and Upgrade are now Nerf and Buff). The line went on to the first Classic and Classic+ balance patch and the Heroic Power rework.",
+      "Two sets at once: Classic (90 cards) and Classic+ (78 cards and 38 tokens), with the keywords Animated, Activate and Brittle and the two tuning keywords now called Nerf and Buff. The line went on to the first Classic and Classic+ balance patch and the Heroic Power rework.",
     technicalChanges: [
       "Ranked play: a ranked ladder with Raisin placement games, five Grape tiers, the top 100 shown as numbered Jlorious ranks, seasons with a soft reset, and a global leaderboard.",
       "The Card Almanac: browse every card, tokens included, with no account.",
@@ -128,7 +128,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.2.9",
         title: "Rarity pass",
         summary:
-          "Fifteen rarity changes across Classic, Classic+ and three Core cards. Classic and Classic+ Traps say “Reveals when”, Plague Tokens are now Plague Counters, Radiant Crop Dusting places 3 Plague Counters and draws 3, and Pocket Chaos costs (4), each copy it passes on costing (1) less.",
+          "Fifteen rarity changes across Classic, Classic+ and three Core cards. Classic and Classic+ Traps say “Reveals when”, Plague Tokens are now Plague Counters, Radiant Crop Dusting places 3 Plague Counters and draws 3, and Pocket Chaos costs (4), each copy it passes on costs (1) less.",
       },
       {
         version: "v0.2.8b",
@@ -182,7 +182,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.2.2",
         title: "Mechanics changes",
         summary:
-          "Chaos Machine never Upgrades (now Buffs) itself, Joro answers only a Spell's targeting, a Grape that any random pool picks is re-rolled by the Grapes' own odds, every card that uses Plague Tokens gains the Plague tag, Blade Storm casts Whirlwind until a Unit dies, Adaptive Growth's buff and debuff are both 2 (Radiant 3), and Exile's base face answers (2) Cost or less.",
+          "Chaos Machine never Buffs itself, Joro answers only a Spell's targeting, a Grape that any random pool picks is re-rolled by the Grapes' own odds, every card that uses Plague Tokens gains the Plague tag, Blade Storm casts Whirlwind until a Unit dies, Adaptive Growth's buff and debuff are both 2 (Radiant 3), and Exile's base face answers (2) Cost or less.",
       },
       {
         version: "v0.2.1",
@@ -215,7 +215,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.1.1",
         title: "Pierce, Deck and Tribute",
         summary:
-          "The Pierce keyword arrives, an Indestructible Unit never has Taunt, an X you choose is at least one, the Ghoul Token is added and Heroic Power gains an eighth power, Stitching. The game says Deck for the library and Tribute for a sacrifice wherever you read them, a face-down Trap shows its cost, and 105 cards and tokens change in all.",
+          "The Pierce keyword arrives, an Indestructible Unit never has Taunt, an X you choose is at least one, the Ghoul Token is added and Heroic Power gains an eighth power, Stitching. Card text and the game's screens say Deck and Tribute throughout, a face-down Trap shows its cost, and 105 cards and tokens change in all.",
       },
       {
         version: "v0.1.0d",

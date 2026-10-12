@@ -601,7 +601,7 @@ def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
             reason = f"waits for room on the machine ({cfg.pool.machine_parallel} at once)"
         if reason is None and provider.quiet_check and cfg.quiet.enabled:
             reason = "waits for its owner to be quiet"
-        parts.append(f"`{provider.id}` {reason or 'is free'}")
+        parts.append(f"`{provider.id}` {reason or 'is idle, but nothing queued is for it'}")
     return "; ".join(parts)
 
 

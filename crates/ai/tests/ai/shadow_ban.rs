@@ -1399,17 +1399,148 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// The unban lane's generation-8 table: empty — removals only from TypeScript's eleven, and it
-    /// has dropped all of them, each for the reason `SHADOW_BAN`'s own doc comment names.
-    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[];
+    /// Generation 9's table: the sweep of record over the Meditative set's 102 cards (#732, R732000),
+    /// copied as the sweep printed it. The unban lane only removes entries, so every entry of
+    /// `SHADOW_BAN` is one of these, and none is one of TypeScript's eleven, which generations 1 to 8
+    /// removed.
+    const SWEEP_OF_RECORD_SHADOW_BAN: &[(&str, &str)] = &[
+        (
+            "meditative-006",
+            "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-011",
+            "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-012",
+            "timeout: easy: 11 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-016",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-017",
+            "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-021",
+            "timeout: hard: 5 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-025",
+            "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-029",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-030",
+            "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-031",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-033",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-041",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-045",
+            "timeout: hard: 31 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-047",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-049",
+            "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-051",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-058",
+            "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-063",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-067",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-068",
+            "timeout: easy: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-069",
+            "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-073",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-075",
+            "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-078",
+            "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-080",
+            "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-085",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-087",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-091",
+            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-092",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-096",
+            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+        (
+            "meditative-099",
+            "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
+        ),
+    ];
 
     #[test]
-    fn v12_the_unban_lanes_table_is_empty_it_removed_all_of_typescripts_eleven() {
-        assert_eq!(SHADOW_BAN, UNBAN_LANE_SHADOW_BAN);
+    fn v12_every_entry_is_the_meditative_sweeps_and_none_is_typescripts() {
         for entry in SHADOW_BAN {
             assert!(
-                TS_SHADOW_BAN.contains(entry),
-                "{} removed or rewritten — the lane removes only",
+                SWEEP_OF_RECORD_SHADOW_BAN.contains(entry),
+                "{} added or rewritten — the lane removes only",
+                entry.0
+            );
+            assert!(
+                !TS_SHADOW_BAN.contains(entry),
+                "{} is TypeScript's, removed by generation 8",
                 entry.0
             );
         }
@@ -1417,5 +1548,50 @@ mod v12 {
         if record["generation"].as_i64() == Some(0) {
             assert_eq!(record["lane"].as_str(), Some("port"));
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R732000: the shadow ban holds Meditative cards only, at most half of the set (issue #732)
+// ---------------------------------------------------------------------------------------------
+
+mod r732000_the_shadow_ban_holds_meditative_cards_only {
+    use super::*;
+
+    /// The Meditative set's non-token cards.
+    const MEDITATIVE_CARDS: usize = 102;
+    /// R732000: the most of them the table may hold, so that the AI deals itself at least half the set.
+    const MEDITATIVE_BAN_CAP: usize = MEDITATIVE_CARDS / 2;
+
+    #[test]
+    fn r732000_no_card_of_an_earlier_set_is_banned_and_at_most_half_the_meditative_set_is() {
+        jackioh_cards::register_all();
+        let meditative: Vec<String> = ai_pool()
+            .into_iter()
+            .filter(|id| def_of(None, id).set == SetName::Meditative)
+            .collect();
+        assert_eq!(meditative.len(), MEDITATIVE_CARDS);
+        for &(def_id, _) in SHADOW_BAN {
+            assert_eq!(
+                def_of(None, def_id).set,
+                SetName::Meditative,
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
+            );
+        }
+        assert!(
+            SHADOW_BAN.len() <= MEDITATIVE_BAN_CAP,
+            "{} of the {MEDITATIVE_CARDS} Meditative cards banned, more than half",
+            SHADOW_BAN.len()
+        );
+        assert!(MEDITATIVE_CARDS - SHADOW_BAN.len() >= MEDITATIVE_CARDS.div_ceil(2));
+    }
+
+    #[test]
+    fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
+        // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
+        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
+        assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
+        assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");
     }
 }

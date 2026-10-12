@@ -415,9 +415,10 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
 /// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
 /// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
-/// Meditative is gated until the AI is trained on its cards (issue #551's deferred work, MN08 of
-/// #496): lifting the gate is emptying this list, which deals every deck exactly as before it.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::Meditative];
+/// The list is empty since issue #732 measured the AI on the Meditative set (MN08 of #496), which it
+/// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
+/// before the AI is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,

@@ -53,7 +53,10 @@ touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfac
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
 is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
-gives no difficulty. Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
+gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
+(#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
+issue's label (or medium); an issue still waiting for its plan is left to the planner. An agent
+that opens an issue labels it itself (`CLAUDE.md` rule 11). Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
 strikes and the step up).
 
 ## Issue type
@@ -177,7 +180,10 @@ Rules for future patches:
   of what players see. The version must match the catalog patch's version exactly.
 - Player-facing notes describe player-visible gameplay and balance changes in clear prose.
   They never carry an AI pull request's commit title, a raw ruling citation (`R656`, `R386`)
-  or an internal rulebook reference: those stay in the catalog patch's notes.
+  or an internal rulebook reference: those stay in the catalog patch's notes. They are client
+  text, so they use today's words even for a patch that shipped under older ones: Deck and
+  Tribute (R373), "(N) Cost" and "costs (N)" (R432), Nerf and Buff (R1320).
+  `apps/web/src/wording.test.ts` checks them.
 - A note says nothing its record does not. A sub-patch's summary restates what its catalog
   patch changed: its notes, its card changes and the rules the change its `source` names made
   (read the snapshot diff and that change, not the pull request's title), and a

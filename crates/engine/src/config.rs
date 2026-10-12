@@ -978,33 +978,29 @@ pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 
-/// SURFACE §14.2: the games `cargo jackioh promote` plays against each opponent (random, then the parent).
+/// SURFACE §14.2: the games `cargo jackioh promote` plays against the parent.
 pub const TRAINING_GAMES: i32 = 100;
 
-/// A promotion gate: the wins out of `TRAINING_GAMES` a candidate needs against each opponent
-/// (a draw is not a win).
+/// A promotion gate: the wins out of `TRAINING_GAMES` a candidate needs against the parent, the AI on
+/// `main` (a draw is not a win). The lanes play no games against SPEC §10.7's random policy: they
+/// dropped them once generation 9, the first AI dealt the Meditative set (issue #732), had beaten
+/// random in at least 90 of 100 (R732001). The daily quality gates (`cargo jackioh gate --full`)
+/// still hold every AI on `main` to their floor against random.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TrainingGate {
-    pub vs_random: i32,
     pub vs_parent: i32,
 }
 
 /// SURFACE §14.2: the `improve` lane's gate. Against the parent the bar only has to be out of
 /// variance's reach: a successor no stronger than its parent wins about 50 of 100, with a standard
-/// deviation of 5, so 75 is five deviations out. It was 85 until the lane's first sessions measured
-/// a ceiling near 55–60 of 100 for the AI's design at its fixed budget.
-pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
-    vs_random: 90,
-    vs_parent: 75,
-};
+/// deviation of 5, so 65 is three deviations out. It was 85, then 75, until the lane's sessions
+/// measured a ceiling near 55–60 of 100 for the AI's design at its fixed budget (R732001).
+pub const TRAINING_IMPROVE: TrainingGate = TrainingGate { vs_parent: 65 };
 /// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent). Its bar
-/// against the parent is lower than improve's, since unbanning cards is its gain: 65 is three
-/// deviations above an equal successor's 50 of 100. It was 75.
-pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
-    vs_random: 90,
-    vs_parent: 65,
-};
+/// against the parent is lower than improve's, since unbanning cards is its gain: 60 is two
+/// deviations above an equal successor's 50 of 100. It was 75, then 65 (R732001).
+pub const TRAINING_UNBAN: TrainingGate = TrainingGate { vs_parent: 60 };
 
 // ---------------------------------------------------------------------------------------------
 // Replays (R768, issue #508).
