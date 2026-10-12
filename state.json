@@ -6366,6 +6366,10 @@
         {
           "at": "2026-10-12T02:08:57Z",
           "minutes": 7.5
+        },
+        {
+          "at": "2026-10-12T02:09:00Z",
+          "minutes": 6.5
         }
       ],
       "usage": {
@@ -6373,7 +6377,7 @@
           "resets_at": "2026-10-12T07:00:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-10-12T02:08:57Z",
+        "observed_at": "2026-10-12T02:09:00Z",
         "rejected_resets_at": "2026-10-12T07:00:00Z",
         "status": "rejected"
       }
