@@ -4958,9 +4958,12 @@
         "sha": "a39edf8d25ce99e9f376b4e39c9306c619f798a5"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-12T00:47:27Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 659,
       "kind": "review",
       "pending_request": false,
