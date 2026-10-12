@@ -3355,6 +3355,7 @@
       "action": "build",
       "asks": [],
       "died": 0,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-12T13:27:01Z",
@@ -3372,8 +3373,11 @@
       "planned_at": "2026-10-12T06:10:35Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 734,
       "provider": "claude-2",
+      "question": "",
       "queued_at": "2026-10-12T13:27:24Z",
+      "round_tier": "",
       "run_id": "38256369867",
       "started_at": "2026-10-12T13:33:05Z",
       "stop_requested": false,
@@ -3381,7 +3385,8 @@
         "a run died: the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-639:refs/heads/bot/issue-639 failed (1): remote: fatal error in commit_ref"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "642": {
       "action": "revise",
