@@ -6852,6 +6852,10 @@
         {
           "at": "2026-10-12T15:18:19Z",
           "minutes": 11.3
+        },
+        {
+          "at": "2026-10-12T15:28:19Z",
+          "minutes": 37.2
         }
       ],
       "tokens_spent": [
@@ -6887,10 +6891,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T19:40:00Z",
-          "utilization": 0.33
+          "utilization": 1.02
         },
-        "observed_at": "2026-10-12T15:18:19Z",
-        "status": "allowed"
+        "observed_at": "2026-10-12T15:28:19Z",
+        "rejected_resets_at": "2026-10-12T19:40:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
