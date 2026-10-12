@@ -40,7 +40,8 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
-use jackioh_engine::{Action, GameRecord, LastBoardEntry};
+use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
+use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
@@ -2660,7 +2661,7 @@ mod player_stats {
 mod series {
     use super::*;
 
-    fn series_row(harness: &StoreHarness, p1: &str, p2: &str, over: Value) -> SeriesRow {
+    pub(super) fn series_row(harness: &StoreHarness, p1: &str, p2: &str, over: Value) -> SeriesRow {
         let now = harness.now();
         from(spread(
             json!({
@@ -5046,6 +5047,14 @@ mod bots {
         }))
     }
 
+    /// R641000: a Conquest ticket, its trio frozen in.
+    fn conquest_ticket(harness: &StoreHarness, profile_id: &str) -> Ticket {
+        from(spread(
+            j(&ticket(harness, profile_id)),
+            json!({ "mode": "bo3", "deck": [], "trio": j(&frozen_trio(harness, None)) }),
+        ))
+    }
+
     /// A finished match between `p1` and `p2` that ended at `ended_at`, with its result.
     async fn played(harness: &StoreHarness, p1: &str, p2: &str, ended_at: i64) -> String {
         let match_id = id();
@@ -5466,6 +5475,120 @@ mod bots {
         assert_eq!(person_row["rating"].as_f64(), Some(person.rating));
     }
 
+    /// R641000: a bot's Conquest trio is kept beside the catalog version it was dealt for, and its
+    /// Best-of-1 decks are left as they were.
+    async fn r641000_a_bot_s_trio_is_kept_for_its_catalog(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let listed = q!(harness, t => t.bots_list());
+        assert!(listed[0].trio.is_none() && listed[0].trio_catalog_version.is_none());
+
+        let decks = vec![deck(harness)];
+        q!(harness, t => t.bots_set_decks(&bot.profile_id, &decks, "core-9"));
+        let trio: FrozenTrio = from(spread(
+            j(&frozen_trio(harness, Some("Conquest"))),
+            json!({ "decks": [
+                { "name": "Deck 1", "cards": deck_of(harness, 0), "portrait": "vanilla" },
+                { "name": "Deck 2", "cards": deck_of(harness, 1), "portrait": "vanilla" },
+                { "name": "Deck 3", "cards": deck_of(harness, 2), "portrait": "vanilla" },
+            ] }),
+        ));
+        q!(harness, t => t.bots_set_trio(&bot.profile_id, &trio, "core-9"));
+        let listed = q!(harness, t => t.bots_list());
+        assert_eq!(listed[0].trio.as_ref(), Some(&trio));
+        assert_eq!(listed[0].trio_catalog_version.as_deref(), Some("core-9"));
+        assert_eq!(listed[0].decks, decks, "the decks are left as they were");
+
+        let unknown = id();
+        assert!(call!(harness, t => t.bots_set_trio(&unknown, &trio, "core-9")).is_err());
+    }
+
+    /// R641000: a Conquest ticket's claim for a bot takes the ticket, single-shot, and puts the bot
+    /// in no match: the series written beside it holds the bot. A ticket of another mode is not a
+    /// series' to claim.
+    async fn r641000_a_series_claim_takes_the_ticket_and_puts_the_bot_in_no_match(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let conquest = conquest_ticket(harness, &a.id);
+        q!(harness, t => t.tickets_insert(&conquest));
+        let best_of_one = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&best_of_one));
+
+        assert!(
+            !q!(harness, t => t.tickets_claim_for_bot_series(&best_of_one.id, &bot.profile_id, &id(), now))
+        );
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &match_id, now))
+        );
+        let claimed = j(&must(
+            q!(harness, t => t.tickets_get(&conquest.id)),
+            "the Conquest ticket",
+        ));
+        assert_eq!(claimed["status"], "matched");
+        assert_eq!(claimed["matchId"], match_id.as_str());
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].in_match_id,
+            None,
+            "the bot is in no match"
+        );
+        // A start's cut-off release finds nothing to let go: the bot is in no match.
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + DAY)).is_empty());
+
+        // The ticket is gone, so it claims again for nothing; the other ticket is still open.
+        assert!(!q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &id(), now)));
+        assert!(
+            !q!(harness, t => t.tickets_claim_for_bot_series(&best_of_one.id, &bot.profile_id, &id(), now))
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.tickets_get(&best_of_one.id)),
+                "the Best-of-1 ticket"
+            ))["status"],
+            "open"
+        );
+    }
+
+    /// R641000: a bot that is a side of a series not over is free to no claim, of any kind, until
+    /// the series ends.
+    async fn r641000_a_bot_in_a_series_not_over_is_claimed_by_nothing_else(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let row = super::series::series_row(harness, &a.id, &bot.profile_id, json!({}));
+        q!(harness, t => t.series_create(&row));
+        let best_of_one = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&best_of_one));
+        let conquest = conquest_ticket(harness, &c.id);
+        q!(harness, t => t.tickets_insert(&conquest));
+        let players = (b.id.clone(), bot.profile_id.clone());
+        let version = harness.catalog_version.clone();
+
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &id(), &version, now)));
+        assert_eq!(
+            q!(harness, t => t.tickets_count_open()),
+            2,
+            "both tickets wait on"
+        );
+
+        // The series ends, and the bot is free again.
+        let over = must(
+            forfeit_series(&row, PlayerId::P1, now).ok(),
+            "a forfeit between games",
+        );
+        assert!(q!(harness, t => t.series_update(&over)));
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
+    }
+
     both_stores!(
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
@@ -5479,6 +5602,9 @@ mod bots {
         r640002_counts_the_results_that_ended_since_a_bot_s_game_included,
         r640002_a_ticket_claimed_for_a_bot_lists_its_wait,
         r640000_standings_mark_a_bot_s_row_and_read_its_own_rating,
+        r641000_a_bot_s_trio_is_kept_for_its_catalog,
+        r641000_a_series_claim_takes_the_ticket_and_puts_the_bot_in_no_match,
+        r641000_a_bot_in_a_series_not_over_is_claimed_by_nothing_else,
     );
 }
 

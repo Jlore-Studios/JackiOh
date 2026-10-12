@@ -960,7 +960,7 @@ pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 /// R1454: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
-/// R1453: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
+/// R1453, R641000: the shortest a ticket of any mode waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
 /// R1453: the longest; each ticket's wait is drawn from its id and the server's key between the
 /// two, inclusive.
@@ -1058,6 +1058,15 @@ pub const BOT_REMATCH_LINGER_MAX_MS: i64 = 15_000;
 pub const BOT_REMATCH_DELAY_MIN_MS: i64 = 1_500;
 /// R639000: the longest; always under `BOT_REMATCH_LINGER_MIN_MS`, so an offer goes inside the linger.
 pub const BOT_REMATCH_DELAY_MAX_MS: i64 = 3_500;
+/// R641000: the soonest a bot seated in a Conquest series makes its sealed pick after the pick
+/// phase opens, as a person reads the matchup first.
+pub const BOT_PICK_DELAY_MIN_MS: i64 = 4_000;
+/// R641000: the latest; with one more series sweep (`SERIES_SWEEP_INTERVAL_SECONDS`) still well
+/// inside `SERIES_PICK_SECONDS`, so a bot never lets the pick clock run out.
+pub const BOT_PICK_DELAY_MAX_MS: i64 = 20_000;
+/// R641000: the share of a bot's picks that follow its rule (the fastest deck on the play, the
+/// slowest on the draw); the rest are uniform over the decks that have not won.
+pub const BOT_PICK_RULE_SHARE: f64 = 0.75;
 /// R1452: the quickest a bot moves, decision included.
 pub const BOT_THINK_MIN_MS: i64 = 600;
 /// R1452: the longest it waits before a move.

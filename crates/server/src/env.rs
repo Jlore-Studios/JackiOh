@@ -80,9 +80,9 @@ pub struct Env {
     /// when a push leaves the catalog as it was. Only a hex string is kept, since it is echoed into a
     /// header.
     pub deployed_commit: Option<String>,
-    /// R1453: `LADDER_BOTS=on` seats a ladder bot in a ranked Best of 1 or All Random match whose
-    /// ticket has waited past its fallback time with no person to pair with, and keeps the bot pool
-    /// (R1454). Off unless it is set to `on`: the bots decide in this process (SPEC §9.12), which
+    /// R1453: `LADDER_BOTS=on` seats a ladder bot in a ranked match (or, for Conquest, series,
+    /// R641000) whose ticket has waited past its fallback time with no person to pair with, and keeps
+    /// the bot pool (R1454). Off unless it is set to `on`: the bots decide in this process (SPEC §9.12), which
     /// wants a host with room for the AI's search.
     pub ladder_bots: bool,
 }
@@ -322,7 +322,7 @@ fn parse_ladder_bots(value: Option<&str>, problems: &mut Vec<String>) -> bool {
         "off" => false,
         _ => {
             problems.push(format!(
-                "LADDER_BOTS: whether a ranked Best of 1 or All Random ticket that waits past its fallback time with no one to pair with is seated against a ladder bot (R1453), which this server plays itself. Must be 'on' or 'off' (got {}). Optional; defaults to 'off'.",
+                "LADDER_BOTS: whether a ranked ticket that waits past its fallback time with no one to pair with is seated against a ladder bot (R1453, R641000), which this server plays itself. Must be 'on' or 'off' (got {}). Optional; defaults to 'off'.",
                 quoted(raw)
             ));
             false

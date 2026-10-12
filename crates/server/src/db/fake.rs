@@ -100,9 +100,9 @@ use crate::config::{
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus,
-    NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
+    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow,
+    MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
     RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
@@ -158,6 +158,9 @@ pub struct BotTableRow {
     pub active_hours: i32,
     pub decks: Vec<BotDeck>,
     pub decks_catalog_version: Option<String>,
+    /// R641000: its Conquest trio and the catalog version it was dealt for (migration 0033).
+    pub trio: Option<FrozenTrio>,
+    pub trio_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
 }
 
@@ -2936,6 +2939,8 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 active_hours: bot.active_hours,
                 decks: bot.decks.clone(),
                 decks_catalog_version: bot.decks_catalog_version.clone(),
+                trio: bot.trio.clone(),
+                trio_catalog_version: bot.trio_catalog_version.clone(),
                 created_at: profile.created_at,
                 retired_at: bot.retired_at,
                 rating,
@@ -2990,6 +2995,8 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         active_hours: bot.active_hours,
         decks: bot.decks.clone(),
         decks_catalog_version: bot.decks_catalog_version.clone(),
+        trio: None,
+        trio_catalog_version: None,
         retired_at: None,
     });
     let rating = BotRating {
@@ -3036,6 +3043,41 @@ pub fn bots_set_decks(
     Ok(())
 }
 
+pub fn bots_set_trio(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    trio: &FrozenTrio,
+    catalog_version: &str,
+) -> Result<(), StoreError> {
+    call(f, "bots.setTrio")?;
+    let row = bot_row_of(f.tables(), profile_id)?;
+    row.trio = Some(trio.clone());
+    row.trio_catalog_version = Some(catalog_version.to_string());
+    Ok(())
+}
+
+/// R1453, R641000: whether the bot may be claimed: in the pool (not retired), in no match and a
+/// side of no series that is not over, as Postgres's `lock_free_bot` reads it.
+fn bot_is_free(tables: &FakeTables, bot_id: &str) -> bool {
+    tables
+        .ladder_bots
+        .iter()
+        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
+        && tables
+            .profiles
+            .iter()
+            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none())
+        && !in_open_series(tables, bot_id)
+}
+
+/// R641000: whether a series that is not over names the profile as a side.
+fn in_open_series(tables: &FakeTables, profile_id: &str) -> bool {
+    tables.series.iter().any(|series| {
+        series.status != SeriesStatus::Over
+            && (series.sides.0.profile_id == profile_id || series.sides.1.profile_id == profile_id)
+    })
+}
+
 /// R1453: single-shot, as `tickets_claim_pair`: the bot free and the ticket open, or nothing changes.
 /// The fake writes no `open` skeleton (`matches_discard_open`), so the bot points at the reserved id.
 pub fn tickets_claim_for_bot(
@@ -3047,15 +3089,7 @@ pub fn tickets_claim_for_bot(
 ) -> Result<bool, StoreError> {
     call(f, "tickets.claimForBot")?;
     let tables = f.tables();
-    let free = tables
-        .ladder_bots
-        .iter()
-        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
-        && tables
-            .profiles
-            .iter()
-            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none());
-    if !free {
+    if !bot_is_free(tables, bot_id) {
         return Ok(false);
     }
     let Some(ticket) = tables
@@ -3078,6 +3112,35 @@ pub fn tickets_claim_for_bot(
     Ok(true)
 }
 
+/// R641000: `tickets_claim_for_bot` for a Conquest ticket: the bot free and the ticket open and
+/// `bo3`, or nothing changes; the bot is put in no match, since the series holds it.
+pub fn tickets_claim_for_bot_series(
+    f: &mut FakeTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    call(f, "tickets.claimForBotSeries")?;
+    let tables = f.tables();
+    if !bot_is_free(tables, bot_id) {
+        return Ok(false);
+    }
+    let Some(ticket) = tables.tickets.iter_mut().find(|ticket| {
+        ticket.id == ticket_id && ticket.status == TicketStatus::Open && ticket.mode == QueueMode::Bo3
+    }) else {
+        return Ok(false);
+    };
+    ticket.status = TicketStatus::Matched;
+    ticket.match_id = Some(match_id.to_string());
+    tables.ticket_claims.insert(ticket_id.to_string(), at);
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
+    Ok(true)
+}
+
 /// R639000: single-shot, as `tickets_claim_for_bot` with no ticket: the bot free, or nothing
 /// changes. As there, the fake writes no skeleton, so the bot points at the reserved id.
 pub fn bots_claim_for_rematch(
@@ -3090,15 +3153,7 @@ pub fn bots_claim_for_rematch(
 ) -> Result<bool, StoreError> {
     call(f, "bots.claimForRematch")?;
     let tables = f.tables();
-    let free = tables
-        .ladder_bots
-        .iter()
-        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
-        && tables
-            .profiles
-            .iter()
-            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none());
-    if !free {
+    if !bot_is_free(tables, bot_id) {
         return Ok(false);
     }
     if let Some(bot) = profile_of(tables, bot_id) {

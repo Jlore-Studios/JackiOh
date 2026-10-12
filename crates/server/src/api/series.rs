@@ -12,12 +12,16 @@
 //!  - **Starting the game** (R331, R263). With both picks in, `next_match_id` starts through
 //!    `app.matches` after the commit, since the actor must never run a game the row does not name;
 //!    the sweeper starts one a crash left unstarted, after `SERIES_START_GRACE_SECONDS`.
+//!  - **A bot's side** (R641000). A ladder bot seated in a series makes its picks from the sweeper,
+//!    each after its delay (`bots::pick`), through `pick_deck` as a person's pick goes; the series'
+//!    rating move rates its side as the bot it is (R610).
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper` (every 5 s).
 
 use std::sync::Arc;
 use std::time::Duration;
 
+use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
@@ -35,13 +39,14 @@ use crate::api::series_rules::{
     timeout_picks,
 };
 use crate::app::{App, now_ms};
+use crate::bots::pick::{bot_pick, pick_is_due};
 use crate::config::{
     SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
     SERIES_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    MatchSeat, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError,
-    Tx,
+    MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
+    StoreError, Tx,
 };
 
 pub use crate::api::series_rules::NewSeriesInput;
@@ -262,7 +267,9 @@ pub async fn resume_series(app: &Arc<App>, series: Option<&SeriesRow>) {
 // Writing a transition
 
 /// R262, R604: plans a ranked series' one rating move as a game between its two sides, or `None` for
-/// a series that does not move the rating: unranked, abandoned, or not over.
+/// a series that does not move the rating: unranked, abandoned, or not over. A side whose profile is
+/// a ladder bot is rated as the bot it is, on its own row (R610, R641000), as `results.rs` rates a
+/// bot's match.
 async fn plan_series_rating(
     t: &mut Tx<'_>,
     app: &App,
@@ -274,18 +281,29 @@ async fn plan_series_rating(
         return Ok(None);
     };
     let (p1, p2) = &series.sides;
+    let bots: Vec<String> = t
+        .profiles_get_many(&[p1.profile_id.clone(), p2.profile_id.clone()])
+        .await?
+        .into_iter()
+        .filter(|profile| profile.kind == ProfileKind::Bot)
+        .map(|profile| profile.id)
+        .collect();
+    let side_of = |profile_id: &str| {
+        if bots.iter().any(|bot| bot == profile_id) {
+            RankedSideInput::Bot {
+                bot_id: profile_id.to_string(),
+            }
+        } else {
+            RankedSideInput::Player {
+                profile_id: profile_id.to_string(),
+            }
+        }
+    };
     let input = RankedGameInput {
         id: series.id.clone(),
         kind: RatedGameKind::Series,
         catalog_version: series.catalog_version.clone(),
-        sides: (
-            RankedSideInput::Player {
-                profile_id: p1.profile_id.clone(),
-            },
-            RankedSideInput::Player {
-                profile_id: p2.profile_id.clone(),
-            },
-        ),
+        sides: (side_of(&p1.profile_id), side_of(&p2.profile_id)),
         winner_side: if score == 0.5 {
             None
         } else if score == 1.0 {
@@ -475,12 +493,18 @@ pub struct SeriesSweep {
     pub timed_out: Vec<String>,
     pub started: Vec<String>,
     pub abandoned: Vec<String>,
+    /// R641000: the series whose bot side made its pick in this sweep. Left out when none did, so a
+    /// sweep with no bot in it reads as it always has.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bot_picked: Vec<String>,
 }
 
-/// One series of the sweep. `Ok(())` covers "nothing to do".
+/// One series of the sweep. `bots` holds the ladder bots among the sides of the series in their pick
+/// phase. `Ok(())` covers "nothing to do".
 async fn sweep_one(
     app: &Arc<App>,
     series: &SeriesRow,
+    bots: &IndexSet<String>,
     now: i64,
     swept: &mut SeriesSweep,
 ) -> Result<(), SeriesError> {
@@ -488,6 +512,28 @@ async fn sweep_one(
     let give_up_ms = SERIES_START_GIVE_UP_SECONDS * MS_PER_SECOND;
 
     if matches!(series.status, SeriesStatus::Picking) {
+        // R641000: a bot side picks once its delay has passed, before its clock runs out. A bot
+        // already seated is played whatever `LADDER_BOTS` says now, as its match would be.
+        for seat in [SeriesSeat::P1, SeriesSeat::P2] {
+            let side = if seat == SeriesSeat::P1 {
+                &series.sides.0
+            } else {
+                &series.sides.1
+            };
+            if !bots.contains(&side.profile_id) || !pick_is_due(series, seat, now) {
+                continue;
+            }
+            let Written { after, .. } =
+                write_transition(app, &series.id, |row| bot_pick(row, seat, &app.catalog.defs, now)).await?;
+            swept.bot_picked.push(series.id.clone());
+            tracing::info!(
+                event = "series.bot_picked",
+                seriesId = %series.id,
+                seat = %seat,
+                status = ?after.status,
+            );
+            return Ok(());
+        }
         match series.pick_deadline {
             Some(deadline) if now >= deadline => {}
             _ => return Ok(()),
@@ -528,7 +574,8 @@ async fn sweep_one(
     Ok(())
 }
 
-/// One sweep over every series that is not over: a pick phase past its deadline is settled (R333);
+/// One sweep over every series that is not over: a bot side whose pick is due makes it (R641000); a
+/// pick phase past its deadline is settled (R333);
 /// a `playing` series whose match is not running and whose row has sat unchanged for
 /// `SERIES_START_GRACE_SECONDS` gets it started (R263), the grace keeping the sweeper from racing
 /// the starting request; one still without a match row `SERIES_START_GIVE_UP_SECONDS` after its
@@ -538,8 +585,28 @@ pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
     let mut swept = SeriesSweep::default();
 
     let active = one_tx!(app.db, |t| t.series_active().await?)?;
+    // R641000: which sides in a pick phase are ladder bots, in one read for the sweep.
+    let picking: Vec<String> = active
+        .iter()
+        .filter(|series| matches!(series.status, SeriesStatus::Picking))
+        .flat_map(|series| {
+            [
+                series.sides.0.profile_id.clone(),
+                series.sides.1.profile_id.clone(),
+            ]
+        })
+        .collect();
+    let bots: IndexSet<String> = if picking.is_empty() {
+        IndexSet::new()
+    } else {
+        one_tx!(app.db, |t| t.profiles_get_many(&picking).await?)?
+            .into_iter()
+            .filter(|profile| profile.kind == ProfileKind::Bot)
+            .map(|profile| profile.id)
+            .collect()
+    };
     for series in &active {
-        match sweep_one(app, series, now, &mut swept).await {
+        match sweep_one(app, series, &bots, now, &mut swept).await {
             Ok(()) => {}
             // Another writer moved the series first: the rules refused a transition that no longer
             // applies, which is the sweep having nothing to do.

@@ -279,6 +279,8 @@ impl Registry {
                 telemetry: None,
                 bots,
                 bot_moved_turn: PerPlayer::new(None, None),
+                // R641000: a series game draws its bot no rematch plan.
+                series_game: derived_mode == Some(QueueMode::Bo3),
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -360,6 +362,7 @@ impl Registry {
                 telemetry,
                 bots,
                 bot_moved_turn,
+                series_game: mode == Some(QueueMode::Bo3),
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

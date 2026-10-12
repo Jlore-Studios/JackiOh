@@ -1,8 +1,13 @@
-//! R1453 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked Best of 1 or All
-//! Random ticket that has waited past its own fallback time (15–40 s, from its id) with no person to
-//! pair with is paired with a ladder bot: free, on its schedule, the closest in rating, and not one the
-//! player faced in their last games. A player rated above every bot never gets one, Conquest never
-//! does, and a person inside the window always pairs first.
+//! R1453 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked ticket that has
+//! waited past its own fallback time (15–40 s, from its id) with no person to pair with is paired with
+//! a ladder bot: free, on its schedule, the closest in rating, and not one the player faced in their
+//! last games. A player rated above every bot never gets one, and a person inside the window always
+//! pairs first.
+//!
+//! R641000 (SPEC §9.5): a Conquest ticket's bot holds a trio, and the two play a ranked series. The
+//! bot is held by the series between games, so nothing else seats it until the series ends; it makes
+//! its picks from the series sweeper after a person's delay; the series is rated once, as it ends,
+//! its side as the bot it is; and a series game draws it no rematch plan.
 //!
 //! R1451 (SPEC §9.11): the person's side of a bot game counts toward the card statistics and R654's
 //! gate like any live game; the bot's side is recorded as `ai` and read only when a query asks.
@@ -33,8 +38,10 @@ use tokio::sync::MutexGuard;
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::rematch::STAKE_NORMAL;
+use jackioh_server::api::series::sweep_series;
 use jackioh_server::app::{App, load_server_env, now_ms};
 use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_seconds_keyed, hour_of};
+use jackioh_server::bots::pick::{pick_due_at, pick_slot};
 use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
@@ -42,7 +49,7 @@ use jackioh_server::config::{
     RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError, Ticket};
+use jackioh_server::db::store::{BotDeck, Db, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
 use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
@@ -187,6 +194,81 @@ async fn ticket(app: &App, profile_id: &str, rating: f64, waited_ms: i64, mode: 
     }));
     q!(app, tickets_insert(&row));
     row
+}
+
+/// R641000: deals the bot a Conquest trio for this catalog, as the pool does; answers it.
+async fn give_trio(app: &App, bot: &str) -> FrozenTrio {
+    let trio: FrozenTrio = from(json!({
+        "name": "Conquest",
+        "decks": [
+            { "name": "Deck 1", "cards": deck(2), "portrait": "vanilla" },
+            { "name": "Deck 2", "cards": deck(3), "portrait": "vanilla" },
+            { "name": "Deck 3", "cards": deck(4), "portrait": "vanilla" },
+        ],
+    }));
+    q!(app, bots_set_trio(bot, &trio, &app.catalog.version));
+    trio
+}
+
+/// R641000: a Conquest ticket for `profile_id`, its trio frozen in, that has waited `waited_ms`.
+async fn conquest_ticket(app: &App, profile_id: &str, rating: f64, waited_ms: i64) -> Ticket {
+    let row: Ticket = from(json!({
+        "id": next_id("ticket"),
+        "profileId": profile_id,
+        "rating": rating,
+        "mode": "bo3",
+        "deck": [],
+        "portrait": null,
+        "trio": {
+            "name": "Mine",
+            "decks": [
+                { "name": "Aggro", "cards": deck(5) },
+                { "name": "Control", "cards": deck(6) },
+                { "name": "Tempo", "cards": deck(7) },
+            ],
+        },
+        "catalogVersion": app.catalog.version,
+        "enqueuedAt": now_ms() - waited_ms,
+        "status": "open",
+        "matchId": null,
+    }));
+    q!(app, tickets_insert(&row));
+    row
+}
+
+/// `POST /api/series/:id/{action}` as `token`'s holder, answering the series view.
+async fn series_post(app: &Arc<App>, series_id: &str, action: &str, token: &str, body: Value) -> Value {
+    let (status, _, view) = call(
+        app,
+        "POST",
+        &format!("/api/series/{series_id}/{action}"),
+        Some(token),
+        body,
+    )
+    .await;
+    assert_eq!(status, 200, "{action}: {view}");
+    view
+}
+
+/// R641000: a person and a bot paired into a Conquest series by the fallback, and game 1 begun: the
+/// person picks their first deck, and the sweeper makes the bot's pick once its delay has passed.
+/// Answers `(person, their token, bot, series id)`.
+async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
+    let (person, token) = new_person(app, 1000.0).await;
+    let bot = new_bot(app, BotSpec::rated(1000.0)).await;
+    give_trio(app, &bot).await;
+    conquest_ticket(app, &person, 1000.0, past_any_fallback()).await;
+    assert_eq!(try_pair(app).await.expect("a sweep"), 1);
+    let opened = fake(app).await.tables.series[0].clone();
+    series_post(app, &opened.id, "pick", &token, json!({ "slot": 0, "gameNo": 1 })).await;
+    let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
+    tokio::time::advance(Duration::from_millis(
+        u64::try_from(due - now_ms()).expect("a wait"),
+    ))
+    .await;
+    let swept = sweep_series(app).await.expect("a sweep");
+    assert_eq!(swept.bot_picked, vec![opened.id.clone()]);
+    (person, token, bot, opened.id)
 }
 
 /// Past the longest fallback time any ticket draws.
@@ -475,19 +557,218 @@ async fn r1453_a_human_inside_the_window_pairs_first() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1453_conquest_never_gets_a_bot() {
+async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
-    new_bot(&app, BotSpec::rated(1000.0)).await;
-    let conquest = ticket(&app, &person, 1000.0, 10 * past_any_fallback(), "bo3").await;
-    assert!(!fallback_due(&conquest, now_ms()));
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let conquest = conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
+    assert!(
+        fallback_due(&conquest, now_ms()),
+        "a Conquest ticket falls back too"
+    );
+    // A bot with no trio dealt for this catalog plays no Conquest.
     assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
-    assert!(matches(&app).await.is_empty());
+    assert!(fake(&app).await.tables.series.is_empty());
 
-    // All Random does get one.
+    let trio = give_trio(&app, &bot).await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let made = fake(&app).await.tables.series.clone();
+    assert_eq!(made.len(), 1);
+    let series = &made[0];
+    // The person is series p1, as the older ticket of a pair is (R335), with the trio they queued;
+    // the bot p2, with its own. It is ranked (R604) and opens on game 1's pick phase.
+    assert_eq!(series.sides.0.profile_id, person);
+    assert_eq!(Some(&series.sides.0.trio), conquest.trio.as_ref());
+    assert_eq!(series.sides.1.profile_id, bot);
+    assert_eq!(series.sides.1.trio, trio);
+    assert_eq!(series.ranked, Some(true));
+    assert_eq!(series.status, SeriesStatus::Picking);
+    assert!(series.games.is_empty());
+    assert!(
+        matches(&app).await.is_empty(),
+        "no game starts before both have picked"
+    );
+    // The ticket is matched to game 1's reserved id, and neither side is in a match yet.
+    let held = q!(app, tickets_get(&conquest.id)).expect("the ticket");
+    assert_eq!(
+        serde_json::to_value(&held).expect("a ticket")["status"],
+        "matched"
+    );
+    assert_eq!(held.match_id.as_deref(), Some(series.next_match_id.as_str()));
+    for id in [&person, &bot] {
+        let profile = q!(app, profiles_get_by_id(id)).expect("the profile");
+        assert_eq!(profile.in_match_id, None, "{id} is in no match");
+    }
+
+    // All Random gets one too, the bot in the series aside.
+    let free = new_bot(&app, BotSpec::rated(1000.0)).await;
     let (other, _) = new_person(&app, 1000.0).await;
     ticket(&app, &other, 1000.0, past_any_fallback(), "random").await;
     assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(seated(&app, &[&bot, &free]).await, vec![free.clone()]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r641000_a_bot_in_a_series_is_seated_nowhere_else_until_it_ends() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    give_trio(&app, &bot).await;
+    conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let series_id = fake(&app).await.tables.series[0].id.clone();
+
+    // Between games the bot is in no match, but the series holds it: a Best-of-1 ticket past its
+    // fallback time, with that bot the only one, waits on.
+    let (other, _) = new_person(&app, 1000.0).await;
+    ticket(&app, &other, 1000.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert!(matches(&app).await.is_empty());
+
+    // The person forfeits between games, the series is over, and the bot is free again.
+    series_post(&app, &series_id, "forfeit", &token, json!({})).await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(matches(&app).await, vec![(other, bot)]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let trio = give_trio(&app, &bot).await;
+    conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let opened = fake(&app).await.tables.series[0].clone();
+
+    // The person picks through the route; the bot's pick is not in yet.
+    let view = series_post(
+        &app,
+        &opened.id,
+        "pick",
+        &token,
+        json!({ "slot": 0, "gameNo": 1 }),
+    )
+    .await;
+    assert_eq!(view["opponent"]["picked"], json!(false), "{view}");
+    let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
+    let wanted = pick_slot(&opened, PlayerId::P2, &app.catalog.defs).expect("a pick");
+
+    // A sweep a moment before its delay ends picks nothing.
+    tokio::time::advance(Duration::from_millis(
+        u64::try_from(due - 1 - now_ms()).expect("a wait"),
+    ))
+    .await;
+    let swept = sweep_series(&app).await.expect("a sweep");
+    assert!(swept.bot_picked.is_empty(), "{swept:?}");
+    let waiting = q!(app, series_get(&opened.id)).expect("the series");
+    assert_eq!(waiting.status, SeriesStatus::Picking);
+    assert_eq!(waiting.sides.1.pick, None);
+
+    // The sweep at its delay makes it, and the pick that completes both begins game 1.
+    tokio::time::advance(Duration::from_millis(1)).await;
+    let swept = sweep_series(&app).await.expect("a sweep");
+    assert_eq!(swept.bot_picked, vec![opened.id.clone()]);
+    let begun = q!(app, series_get(&opened.id)).expect("the series");
+    assert_eq!(begun.status, SeriesStatus::Playing);
+    assert_eq!(begun.games[0].slots, (0, i64::try_from(wanted).expect("a slot")));
+    // Game 1 is started: the person, series p1, goes first (R335); the bot plays its picked deck.
+    let row = fake(&app)
+        .await
+        .tables
+        .matches
+        .last()
+        .cloned()
+        .expect("game 1 started");
+    assert_eq!(row.id, begun.next_match_id);
+    assert_eq!(row.players, (person, bot));
+    let decks = [&trio.decks.0, &trio.decks.1, &trio.decks.2];
+    assert_eq!(row.decks.1, decks[wanted].cards);
+    assert_eq!(row.ranked, Some(true));
+}
+
+#[tokio::test(start_paused = true)]
+async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
+    let app = app_with_bots(true).await;
+    let (person, token, bot, series_id) = series_in_game_1(&app).await;
+    let person_before = q!(app, profiles_get_by_id(&person)).expect("the person").rating;
+    let bot_before = q!(app, ranked_bot(&bot)).expect("the bot's rating");
+
+    // The person concedes game 1: it is recorded and rates nothing (R262).
+    let (game_1, _) = concede_bot_match(&app, &person).await;
+    assert!(
+        fake(&app).await.tables.rated_games.is_empty(),
+        "a series game is not rated"
+    );
+    let result = q!(app, results_get_by_match(&game_1)).expect("game 1's result");
+    assert_eq!(result.rating_before, result.rating_after);
+    assert_eq!(
+        q!(app, profiles_get_by_id(&person)).expect("the person").rating,
+        person_before
+    );
+    assert_eq!(q!(app, ranked_bot(&bot)), Some(bot_before.clone()));
+    let between = q!(app, series_get(&series_id)).expect("the series");
+    assert_eq!(between.status, SeriesStatus::Picking, "game 2's pick phase");
+    assert_eq!(between.sides.1.wins, 1);
+
+    // The person forfeits between games: the series is rated once, as one game (R262, R604), the
+    // bot's side as the bot it is (R610, R611).
+    series_post(&app, &series_id, "forfeit", &token, json!({})).await;
+    let rated = fake(&app).await.tables.rated_games.clone();
+    assert_eq!(rated.len(), 1, "one rated game for the series");
+    let game = serde_json::to_value(&rated[0]).expect("a rated game");
+    assert_eq!(game["kind"], "series", "{game}");
+    assert_eq!(game["id"], series_id.as_str(), "{game}");
+    assert_eq!(game["sides"][0]["profileId"], person.as_str(), "{game}");
+    assert_eq!(game["sides"][0]["pilot"], "human", "{game}");
+    assert_eq!(game["sides"][1]["botId"], bot.as_str(), "{game}");
+    assert_eq!(game["sides"][1]["pilot"], "ai", "{game}");
+    let bot_after = q!(app, ranked_bot(&bot)).expect("the bot's rating");
+    assert_eq!(bot_after.games, bot_before.games + 1);
+    assert!(
+        bot_after.glicko.rating > bot_before.glicko.rating,
+        "the bot took the series"
+    );
+    assert!(
+        q!(app, profiles_get_by_id(&person)).expect("the person").rating < person_before,
+        "the person lost it"
+    );
+    // R640000: the series moved the bot's season row, as it moved the person's.
+    let season = season_id_of(jackioh_cards::catalog_version());
+    for id in [&person, &bot] {
+        let rank = q!(app, ranked_rank(&season, id)).expect("a season row");
+        assert_eq!(rank.games, 1, "{id}");
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r641000_a_series_game_s_bot_draws_no_rematch_plan() {
+    let app = app_with_bots(true).await;
+    let (person, _, _, _) = series_in_game_1(&app).await;
+    let game_1 = fake(&app)
+        .await
+        .tables
+        .matches
+        .last()
+        .cloned()
+        .expect("game 1 started");
+    let actor = app
+        .matches
+        .actor_for(&app, &game_1.id)
+        .await
+        .expect("game 1's actor");
+    assert!(
+        actor.presence()[PlayerId::P2],
+        "the bot is on its game while it goes on"
+    );
+
+    // A series game offers no rematch (R672), so the bot stays for none: the series' next pick
+    // phase is what comes next.
+    concede_bot_match(&app, &person).await;
+    assert!(
+        !actor.presence()[PlayerId::P2],
+        "the bot lingers on a series game"
+    );
 }
 
 #[tokio::test(start_paused = true)]

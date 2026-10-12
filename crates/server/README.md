@@ -33,7 +33,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, and the pool (R1453, R1454, R1452) |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, and the pool (R1453, R641000, R1454, R1452) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -111,7 +111,7 @@ placeholders (`app::load_server_env`).
 | `E2E` | no | BUILD M8's test-server mode: fixture auth, accounts and codes, the in-memory store |
 | `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
-| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked Best of 1 or All Random ticket left alone past its fallback time, and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
+| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
@@ -264,21 +264,36 @@ emote delay windows and the persona weights, each a `pub const` to paste over th
 or a comment keeping the hand-set prior when fewer than `TIMING_FIT_MIN_SAMPLES` observations back
 it. Neither takes an option.
 
-## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000)
+## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000)
 
-With `LADDER_BOTS=on`, a ranked Best of 1 or All Random ticket that has waited past its fallback
-time (15–40 s, drawn from its id and a key the server keeps to itself) with no person inside its
-window is seated against a ladder bot, which this process plays itself. Off, none of it runs: no bot
-is seated and the pool is never sized.
+With `LADDER_BOTS=on`, a ranked ticket of any mode that has waited past its fallback time (15–40 s,
+drawn from its id and a key the server keeps to itself) with no person inside its window is seated
+against a ladder bot, which this process plays itself: in a match for Best of 1 and All Random, in a
+series for Conquest. Off, no bot is seated and the pool is never sized; a bot already seated in a
+series still makes its picks.
 
 - `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
-  and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match, not one of the player's last
-  `BOT_RECENT_OPPONENTS`, for Best of 1 holding decks dealt for this catalog, the closest in
-  rating; none for a player rated above every bot). The
-  queue's sweep (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a
-  ticket and its bot in one statement (`tickets_claim_for_bot`, single-shot like a pair's claim)
-  and starts the match, ranked, the person p1 and first to act as the older ticket of a pair is
-  (R1453); a start that fails lets both go. Conquest never gets one.
+  and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
+  series that is not over, not one of the player's last `BOT_RECENT_OPPONENTS`, for Best of 1
+  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; none for a
+  player rated above every bot). The queue's sweep (`api/queue.rs`, `try_pair`) pairs every two
+  people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
+  single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
+  the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
+  bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
+  `tickets_claim_for_bot_series`, which puts the bot in no match, then `start_series`): between
+  games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
+  it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
+  so it reads what an earlier claim committed). The person is series p1; the series is ranked and
+  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`).
+- `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
+  `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
+  the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
+  (`rule_slot`: the fastest deck by mean cost on the play, the slowest on the draw, of those that have
+  not won) `BOT_PICK_RULE_SHARE` of the time and is uniform otherwise, and goes through `pick_deck`,
+  sealed as a person's. Its streams are `{seed_base}:bot-pick-delay:{seat}:{game}` and
+  `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
+  its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
   budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
@@ -331,7 +346,9 @@ is seated and the pool is never sized.
   account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
   patch's human Best-of-1 decklists, then decks dealt as All Random deals a player's
   (`deal_random_deck`: no shadow ban, no soft gate), each checked legal, and they are dealt
-  again when the catalog version changes (R1454). The queue's sweeper lets go a bot whose claimed
+  again when the catalog version changes (R1454). Its Conquest trio (`draw_trio`, R641000) is its
+  own decks that share no card, in order, then decks dealt with the cards taken left out
+  (`deal_random_deck_excluding`), checked as a trio (`validate_trio`), and dealt again with them. The queue's sweeper lets go a bot whose claimed
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
@@ -351,6 +368,10 @@ a profile's `kind`, a seat's pilot or a bot's nonces: `GET /api/leaderboard` and
 read people's rows only, so a bot that would qualify stays Mythic Grape (R640000, R1452). The human
 side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
 with its bot id in `rated_games`, and is read only when a query asks for it (R1451).
+
+Migration 0033 adds `bots.trio` and `bots.trio_catalog_version`: the Conquest trio the pool dealt
+the bot, frozen as a ticket's is, and the catalog it was dealt for (R641000). The table stays
+server-only.
 
 ## Tests
 

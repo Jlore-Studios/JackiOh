@@ -859,6 +859,12 @@ pub struct BotRow {
     pub decks: Vec<BotDeck>,
     /// The catalog version its decks were dealt for, or none before they were.
     pub decks_catalog_version: Option<String>,
+    /// R641000: its Conquest trio (three decks sharing no card, R253); none until the pool deals it.
+    #[serde(default)]
+    pub trio: Option<FrozenTrio>,
+    /// R641000: the catalog version its trio was dealt for, or none before it was.
+    #[serde(default)]
+    pub trio_catalog_version: Option<String>,
     /// Epoch ms: when its account reads as made.
     pub created_at: i64,
     /// Epoch ms it was retired (R1454), or none while it is in the pool.
@@ -1894,10 +1900,21 @@ impl Tx<'_> {
         dispatch!(self, bots_set_decks(profile_id, decks, catalog_version))
     }
 
+    /// R641000: the bot's Conquest trio, dealt for `catalog_version`.
+    pub async fn bots_set_trio(
+        &mut self,
+        profile_id: &str,
+        trio: &FrozenTrio,
+        catalog_version: &str,
+    ) -> StoreResult<()> {
+        dispatch!(self, bots_set_trio(profile_id, trio, catalog_version))
+    }
+
     /// R1453: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless
-    /// the bot is free (in no match and not retired) and the ticket still open. On true the ticket is
-    /// matched to `match_id`, the `open` match skeleton is written and the bot is put in it; the
-    /// ticket's owner is the caller's to put in the match.
+    /// the bot is free (in no match, a side of no series that is not over (R641000), and not
+    /// retired) and the ticket still open. On true the ticket is matched to `match_id`, the `open`
+    /// match skeleton is written and the bot is put in it; the ticket's owner is the caller's to put
+    /// in the match.
     pub async fn tickets_claim_for_bot(
         &mut self,
         ticket_id: &str,
@@ -1908,10 +1925,27 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
+    /// R641000: `tickets_claim_for_bot` for a Conquest (`bo3`) ticket, but the bot is put in no
+    /// match: `match_id` is game 1's reserved id, and the series the caller writes in the same
+    /// transaction is what holds the bot between games. False for a ticket of another mode.
+    pub async fn tickets_claim_for_bot_series(
+        &mut self,
+        ticket_id: &str,
+        bot_id: &str,
+        match_id: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        dispatch!(
+            self,
+            tickets_claim_for_bot_series(ticket_id, bot_id, match_id, at)
+        )
+    }
+
     /// R639000: claims a bot for the rematch `match_id` of a match `players` played, single-shot as
-    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (in no match and not
-    /// retired), whatever its schedule. On true the `open` match skeleton is written for `players`
-    /// and the bot is put in it; the person is the caller's to put in the match.
+    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (in no match, a side
+    /// of no series that is not over (R641000), and not retired), whatever its schedule. On true the
+    /// `open` match skeleton is written for `players` and the bot is put in it; the person is the
+    /// caller's to put in the match.
     pub async fn bots_claim_for_rematch(
         &mut self,
         bot_id: &str,
