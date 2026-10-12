@@ -86,7 +86,7 @@ pub struct Args {
     #[arg(long)]
     pub from: Option<u32>,
     /// How many seeds this run plays (TS `JACKIOH_FUZZ_SEEDS`): narrows the wave by hand while chasing
-    /// a failure, and can never widen it past WAVE_SEEDS.
+    /// a failure, or widens it past WAVE_SEEDS (the daily run's quarters, `--seeds 2500`, #659).
     #[arg(long)]
     pub seeds: Option<u32>,
     /// Play the handicapped wave (fuzz-handicap.test.ts) instead of the gate: one seat on Medium or
@@ -148,11 +148,11 @@ pub fn hidden_stride() -> usize {
 }
 
 /// How many seeds this run plays (from `first_seed()`, which is 1 unless a developer moves it).
-/// `--seeds 25` narrows it by hand while chasing a failure; it can never widen the wave past
-/// WAVE_SEEDS, and the summary line always reports which seeds actually ran.
+/// `--seeds 25` narrows it by hand while chasing a failure and `--seeds 2500` widens it (super.yml's
+/// quarters); the summary line always reports which seeds actually ran.
 pub fn wave_size(raw: Option<u32>) -> u32 {
     match raw {
-        Some(parsed) if parsed >= 1 => parsed.min(WAVE_SEEDS),
+        Some(parsed) if parsed >= 1 => parsed,
         _ => {
             if is_whole_suite_sweep() {
                 SWEEP_SEEDS
@@ -1057,7 +1057,7 @@ impl Wave {
         };
         format!(
             "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s); {}s\n",
-            if self.ran == WAVE_SEEDS {
+            if self.ran >= WAVE_SEEDS {
                 "FULL GATE".to_string()
             } else {
                 format!("SHORT WAVE (the gate is {WAVE_SEEDS} seeds: cargo jackioh fuzz)")
@@ -1372,6 +1372,33 @@ mod tests {
             }
             // Different seeds must give different decks, or the "random decks" of the gate are a fiction.
             assert_ne!(decks_for_seed(1), decks_for_seed(2));
+        }
+
+        #[test]
+        fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
+            // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).
+            assert_eq!(wave_size(Some(2500)), 2500);
+            assert_eq!(wave_size(Some(WAVE_SEEDS)), WAVE_SEEDS);
+            assert_eq!(wave_size(Some(1)), 1);
+            assert_eq!(wave_size(Some(0)), SWEEP_SEEDS);
+            assert_eq!(wave_size(None), SWEEP_SEEDS);
+        }
+
+        #[test]
+        fn a_wave_of_at_least_the_gates_seeds_reports_as_the_full_gate() {
+            let wave = |ran| Wave {
+                from: 5001,
+                ran,
+                failures: Vec::new(),
+                reasons: IndexMap::new(),
+                actions_total: 0,
+                actions_max: 0,
+                turn_max: 0,
+                elapsed_ms: 0.0,
+            };
+            assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
+            assert!(wave(WAVE_SEEDS).summary().starts_with("[M4 fuzz] FULL GATE\n"));
+            assert!(wave(200).summary().starts_with("[M4 fuzz] SHORT WAVE"));
         }
 
         #[test]
