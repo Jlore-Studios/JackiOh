@@ -3595,11 +3595,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-11T23:58:08Z",
+        "at": "2026-10-12T06:02:13Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "44 script files exceeds the easy rule's 10-file cap and hits the hard rule's ~40-file line, so it is hard by count alone"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "56 card script files (the 'about 40 files or more' line), far past easy's ten files and its no-card-script line"
       },
       "failures": 0,
       "forced": false,
