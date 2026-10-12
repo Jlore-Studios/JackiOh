@@ -4123,8 +4123,10 @@
     "what": "build #616 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-12T04:39:58Z",
-    "notes": [],
+    "at": "2026-10-12T04:50:34Z",
+    "notes": [
+      "#639 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
