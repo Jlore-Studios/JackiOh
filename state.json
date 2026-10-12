@@ -4547,31 +4547,20 @@
       "interruptions": 0,
       "issue": 711,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The acceptance item 'the button switches every screen to \u7b80\u4f53\u4e2d\u6587' is not met: most screens and all engine and server English are still unwrapped, so a Chinese reader still sees mostly English.",
-          "evidence": "`grep -rlE '\\bt\\(' apps/web/src` finds `t()` only in CardDetail, Flavour, Clock, ConfirmConcede, DrawOffer, Game, MarketPrompt, Prompt, Result, DeckSidebar, PoolGrid, main, net/head and the almanac, match, nav, patch-notes, play, privacy, terms and settings files. Zero calls in tutorial/, practice/, auth/ (sign-in), emotes/, stats/, landing.tsx, login.tsx, account.tsx, decks.tsx, leaderboard.tsx, invite.tsx, series.tsx or the Log's sentences. Even play.tsx:747-748 ('Play online', 'Pick a mode, bring a deck\u2026'), which the plan listed, is still bare English. The issue's 'Engine and server English' is not done either: prompt titles go out raw (Prompt.tsx:356 `title: pending.prompt`, drawn by PickerTitle at :834/:844 with no `t()`), as do engine option labels, validator loadout issues (play.tsx:766 `error.issues.map`) and API errors. apps/web/static-pages.ts is untouched.",
-          "severity": "blocking",
-          "where": "task"
-        },
-        {
-          "claim": "formatClock now goes through Intl.NumberFormat with grouping on, so the English match-ceiling readout changes from '7200s' to '7,200s'. That breaks 'with English chosen, nothing changes on any screen'.",
-          "evidence": "formatSeconds is `formatNumber(seconds, {style:'unit', unit:'second', unitDisplay:'narrow'})`. `node -e` with that format on 7200 prints '7,200s'. MATCH_CEILING_MS is 7200000 (wire/serverConfig.ts:33), and Clock.tsx:468-476 renders `formatClock(readout.ceilingMs)` in a visible span on every clocked match. The old code printed `${n}s`, i.e. '7200s'.",
-          "severity": "blocking",
-          "where": "apps/web/src/game/Clock.tsx:258"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-12T14:48:45Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38265656489",
       "self_check_findings": [],
       "source": "cross-review",
       "started_at": "2026-10-12T14:49:37Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "gemini"
