@@ -12,8 +12,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { faceModel } from "../cards/model.ts";
 import { drawnInChinese } from "../cards/chinese.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { Flavour, showsEasterEgg } from "../cards/inspect/Flavour.tsx";
+import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import {
+  formatDateTime,
+  formatDay,
+  formatNumber,
   getLocale,
   resetLocaleForTests,
   setLocale,
@@ -41,6 +46,11 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
 
+    expect(t("The English text governs.")).toBe("The English text governs.");
+    expect(formatDay("2026-10-10")).toBe("2026-10-10");
+    expect(formatNumber(1234)).toBe("1,234");
+    expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString("en"));
+
     // 2. Switch to zh-CN
     await setLocale("zh-CN");
     expect(getLocale()).toBe("zh-CN");
@@ -51,6 +61,11 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
     // Plurals / parameter formatting
     expect(t("{count} waiting", { count: 3 })).toBe("3人在等待");
+    // Governing legal notice and date helpers
+    expect(t("The English text governs.")).toBe("以英文版本为准。");
+    expect(formatDay("2026-10-10")).toBe("2026年10月10日");
+    expect(formatNumber(1234)).toBe("1,234");
+    expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString("zh-CN"));
   });
 
   it("R711000 cards print in reader language, Meditative-flagged cards print in Chinese, and the easter egg triggers only for Chinese readers", async () => {
@@ -95,11 +110,26 @@ describe("R711000 internationalisation and reader language", () => {
     // Verify Flavour component rendering the easter egg text:
     const { container } = render(createElement(Flavour, { defId: sampleDefId, easter: true }));
     expect(container).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
+
+    // Verify CardDetail modal inspect view also renders the easter egg line for Chinese reader:
+    render(createElement(CardDetail, { def: sampleDef, onClose: () => {}, easter: true }));
+    expect(document.body).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
   });
 
   it("R711000 language button switches live without reload, sets <html lang> and persists in localStorage", async () => {
     expect(document.documentElement.lang).toBe("en");
     expect(window.localStorage.getItem("jackioh.locale")).toBeNull();
+
+    // SETTINGS_SLOTS mounts language under gameplay and resets to English (R711000):
+    const langSlot = SETTINGS_SLOTS.find((slot) => slot.id === "language");
+    expect(langSlot).toBeDefined();
+    expect(langSlot?.section).toBe("gameplay");
+    await setLocale("zh-CN");
+    expect(getLocale()).toBe("zh-CN");
+    langSlot?.reset?.();
+    await vi.waitFor(() => {
+      expect(getLocale()).toBe("en");
+    });
 
     const { getByTestId } = render(createElement(LanguageButton, { placement: "nav" }));
     const button = getByTestId("language-nav");

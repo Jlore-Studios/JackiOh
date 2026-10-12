@@ -29,6 +29,7 @@ import {
   type OwnUsername,
   type UsernamePreview,
 } from "../net/api.ts";
+import { formatDateTime } from "../i18n/i18n.ts";
 import Username from "./Username.tsx";
 import { usernameTestid } from "./testids.ts";
 
@@ -45,7 +46,7 @@ export const USERNAME_CHANGED = "That changed since you looked. Check the name a
 /** R1435: when the next change is allowed, in the player's own clock and locale. The preview's
  * cooldown refusal and the account page's cooldown line both say it. */
 export function nextChangeSentence(nextChangeAt: number): string {
-  return `You can change your username again on ${new Date(nextChangeAt).toLocaleString()}.`;
+  return `You can change your username again on ${formatDateTime(nextChangeAt)}.`;
 }
 
 /** The server's answer for one name exactly as typed; on screen only while the box still holds it. */

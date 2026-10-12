@@ -4024,6 +4024,21 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       </svg>
     </button>
     <button
+      aria-label="Language: English. Switch to 简体中文."
+      class="language-button language-button--game"
+      data-locale="en"
+      data-testid="language-game"
+      title="Language"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        lang="en"
+      >
+        EN
+      </span>
+    </button>
+    <button
       aria-expanded="false"
       aria-haspopup="dialog"
       aria-label="Settings"

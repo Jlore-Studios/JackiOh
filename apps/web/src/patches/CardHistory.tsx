@@ -7,6 +7,7 @@ import { RefsInteractive } from "../cards/refContext.tsx";
 import { ChangeList } from "./ChangeList.tsx";
 import { useLoaded, usePatchSource } from "./context.tsx";
 import { cardHistory, unchangedSince, versionsForCard, type HistoryEntry } from "./history.ts";
+import { formatDay } from "../i18n/i18n.ts";
 import { PatchFace } from "./PatchFace.tsx";
 import { patchTestid } from "./testids.ts";
 
@@ -21,7 +22,7 @@ function EntryView({ entry }: { entry: HistoryEntry }): ReactElement {
       <h4 className="patch-history__head">
         <span className="patch-version">{patch.version}</span>
         <time className="patch-date" dateTime={patch.date}>
-          {patch.date}
+          {formatDay(patch.date)}
         </time>
         <span className="patch-history__patch-title">{patch.title}</span>
       </h4>

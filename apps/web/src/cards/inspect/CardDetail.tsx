@@ -38,6 +38,9 @@ export type CardDetailProps = {
   historyOpen?: boolean;
   /** SPEC §9.11, R654: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
+  /** R711000: card flagged Chinese; a Chinese reader gets the easter egg line. */
+  easter?: boolean;
+  flagged?: boolean;
 };
 
 /**
@@ -86,7 +89,16 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta, historyOpen = false, showStats = false }: CardDetailProps): ReactElement {
+export function CardDetail({
+  def,
+  onClose,
+  actions,
+  meta,
+  historyOpen = false,
+  showStats = false,
+  easter = false,
+  flagged = false,
+}: CardDetailProps): ReactElement {
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
@@ -102,8 +114,9 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
     return registerDetail(`inspect-detail:${def.id}`, () => onCloseRef.current());
   }, [def.id]);
 
-  const base = faceModel({ defId: def.id, def, radiant: false });
-  const radiant = faceModel({ defId: def.id, def, radiant: true });
+  const isFlagged = easter || flagged;
+  const base = faceModel({ defId: def.id, def, radiant: false, chinese: isFlagged });
+  const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: isFlagged });
   const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
 
   return createPortal(
@@ -143,7 +156,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
-              <Flavour defId={def.id} />
+              <Flavour defId={def.id} easter={isFlagged} />
               {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />

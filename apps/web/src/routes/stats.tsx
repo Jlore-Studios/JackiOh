@@ -19,6 +19,7 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
+import { formatNumber } from "../i18n/i18n.ts";
 import {
   getCardDrillDown,
   getCardStats,
@@ -265,7 +266,7 @@ export default function StatsRoute(): ReactElement {
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label="Statistics summary">
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
               <span className="stats-summary-label">Games on patch {cardStatsData.patch}</span>
-              <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
+              <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
             </div>
             {summary?.bestCard && (
               <div className="stats-summary-tile" data-testid={statsTestid.summaryBestCard}>

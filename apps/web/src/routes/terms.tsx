@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
@@ -16,6 +17,7 @@ export const termsTestid = {
 export const TERMS_LAST_UPDATED = "2026-10-03";
 
 export default function TermsRoute(): ReactElement {
+  useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={termsTestid.screen}>
       <BackLink />
@@ -25,6 +27,7 @@ export default function TermsRoute(): ReactElement {
           <h1>JackiOh</h1>
         </div>
         <h2>Terms of service</h2>
+        <p className="privacy-policy__governing">{t("The English text governs.")}</p>
         <p className="privacy-policy__updated" data-testid={termsTestid.updated}>
           Last updated <time dateTime={TERMS_LAST_UPDATED}>{TERMS_LAST_UPDATED}</time>
         </p>

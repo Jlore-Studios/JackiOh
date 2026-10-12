@@ -8,6 +8,7 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 import { isGlitch } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
+import { formatDay } from "../i18n/i18n.ts";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
@@ -246,7 +247,7 @@ function PatchEntry({
         </h2>
         <p className="patch__meta">
           <time className="patch-date" dateTime={patch.date}>
-            {patch.date}
+            {formatDay(patch.date)}
           </time>
           {patch.source === "" ? null : <span className="patch__source"> · {patch.source}</span>}
         </p>
