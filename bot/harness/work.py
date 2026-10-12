@@ -466,10 +466,11 @@ class Worker:
             max_turns=int(self.cfg.max_turns.get(role) or self.cfg.max_turns["review"]),
             timeout_s=max(60, timeout),
             model=seat.model,
-            # Reviews run one notch below building (#695): `high`, whatever the seat's own
-            # effort; planning and building keep theirs.
+            # Reviews run one notch below building (#695): the subscription's
+            # `review_effort`, else `high`; planning and building keep theirs.
             effort=(self.provider.fix_effort if role == "fix" and self.provider.fix_effort
-                    else "high" if role == "review" else seat.effort),
+                    else (self.provider.review_effort or "high") if role == "review"
+                    else seat.effort),
             transcript=transcript,
             read_only=reader,
             extra_dirs=self._git_dirs(cwd),

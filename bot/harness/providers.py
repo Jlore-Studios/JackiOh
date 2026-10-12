@@ -191,6 +191,9 @@ class Provider:
     #: The effort a fix pass runs at (#160, #317 part 12): a fix answers named findings, which
     #: needs less thought than the build. "" runs it at the seat's own effort.
     fix_effort: str = ""
+    #: The effort a review runs at (#695): a review checks a finished change, which needs
+    #: less thought than the build. "" runs it at `high`.
+    review_effort: str = ""
 
     def describe(self) -> str:
         return f"`{self.id}` ({self.cli}, {self.model})"
@@ -395,7 +398,8 @@ def _limits(raw: Any, where: str) -> Limits:
 _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason", "usage_since",
-                  "lanes", "build_last", "easy_first", "off_hours", "fix_effort"}
+                  "lanes", "build_last", "easy_first", "off_hours", "fix_effort",
+                  "review_effort"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -518,6 +522,7 @@ def _provider(name: str, raw: Any) -> Provider:
         easy_first=bool(raw.get("easy_first", False)),
         off_hours=_off_hours(raw.get("off_hours"), f"{where}.off_hours"),
         fix_effort=str(raw.get("fix_effort") or ""),
+        review_effort=str(raw.get("review_effort") or ""),
         extra_models=_extra_models(raw.get("extra_models"), str(raw.get("effort", "")),
                                    f"{where}.extra_models"),
     )

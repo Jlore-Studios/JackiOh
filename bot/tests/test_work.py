@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import tempfile
 import unittest
@@ -195,6 +196,19 @@ class WorkTests(unittest.TestCase):
         self.assertEqual(runner.calls[0].model, "opus")
         self.assertEqual(runner.calls[0].effort, "xhigh")
         self.assertEqual(runner.calls[1].effort, "high")  # reviews run one notch down (#695)
+        self.assertEqual(runner.calls[1].max_turns, self.cfg.max_turns["review"])
+
+    def test_a_review_runs_at_the_subscription_s_review_effort(self):
+        """A review runs at the subscription's `review_effort` when it names one, else at
+        `high`, and never past the review `max_turns` (#695)."""
+        runner = FakeRunner({"build": builder({"src/game.txt": "rules v2\n"}),
+                             "review": reviewer(APPROVE)})
+        worker = self.worker(runner)
+        worker.provider = dataclasses.replace(worker.provider, review_effort="medium")
+        result = worker.run()
+        self.assertEqual(result["status"], "approved", result.get("reason"))
+        self.assertEqual(runner.calls[1].effort, "medium")
+        self.assertEqual(runner.calls[1].max_turns, self.cfg.max_turns["review"])
         self.assertIn("Agent", runner.calls[0].allowed_tools)
         self.assertNotIn("Edit", runner.calls[1].allowed_tools)
         self.assertIn("Please make the rules v2.", runner.calls[1].prompt)
