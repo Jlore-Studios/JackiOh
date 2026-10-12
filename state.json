@@ -4194,10 +4194,8 @@
     "what": "build #655 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-12T08:04:06Z",
-    "notes": [
-      "#701: approved and green, so its strikes are cleared"
-    ],
+    "at": "2026-10-12T08:14:47Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
