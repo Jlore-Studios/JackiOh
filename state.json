@@ -4278,11 +4278,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-10-12T18:49:11Z",
-        "difficulty": "medium",
-        "provider": "sweep",
+        "at": "2026-10-12T21:41:52Z",
+        "difficulty": "hard",
+        "provider": "step-up",
         "tier": "",
-        "why": "planned with no rating, so medium"
+        "why": "failed 3 times at difficulty:medium"
       },
       "failures": 0,
       "forced": false,
