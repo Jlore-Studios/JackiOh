@@ -41,8 +41,7 @@ fn exile_ability(price: i32, exiles: i32) -> ActivationDecl {
         targets: Vec::new(),
         modes: Vec::new(),
         can_activate: Some(condition_hook(move |c| {
-            plague_on(c.self_)
-                >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
+            plague_on(c.self_) >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
         })),
         has: None,
         run: hook(move |ctx| {
@@ -177,6 +176,153 @@ mod tests {
                 .filter(|event| event.event_type() == GameEventType::Exiled)
                 .count();
             assert_eq!(exiled, 2);
+        }
+
+        /// Money Machine (Meditative #54): "Activate: Spend (2). Tribute this."
+        const MONEY_MACHINE: &str = "meditative-054";
+        const VANILLA: &str = "core-008";
+
+        fn exiled_of(s: &Scenario) -> Vec<GameEvent> {
+            s.last_events()
+                .iter()
+                .filter(|event| event.event_type() == GameEventType::Exiled)
+                .cloned()
+                .collect()
+        }
+
+        /// The Maestro on p1's field with `counters` Plague Counters, and every enemy zone full.
+        fn full_enemy(seed: &str, radiant_face: bool, counters: i32) -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "field": [{ "def": MAESTRO, "radiant": radiant_face, "counters": { "plague": counters } }],
+                    "hand": [FILLER, FILLER],
+                    "library": filler(4),
+                },
+                "p2": {
+                    "hand": [FILLER, FILLER, FILLER],
+                    "field": [VANILLA, VANILLA, VANILLA],
+                    "graveyard": [FILLER, FILLER, FILLER],
+                    "library": filler(4),
+                },
+            }))
+        }
+
+        fn activate_exile(s: &mut Scenario) {
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            s.activate(&maestro, json!({ "ability": "maestro-exile" }));
+        }
+
+        #[test]
+        fn an_activations_mana_places_counters_too() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "maestro-activation",
+                "p1": {
+                    "mana": 10,
+                    "field": [MAESTRO],
+                    "backrow": [MONEY_MACHINE],
+                    "hand": [FILLER, FILLER],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            s.activate(MONEY_MACHINE, json!({ "ability": "tribute" }));
+            // Money Machine's price is (2): two counters.
+            assert_eq!(plague(&s, &maestro.id), 2);
+        }
+
+        #[test]
+        fn r1110_one_random_card_from_each_of_the_four_enemy_zones() {
+            let mut s = full_enemy("maestro-four", false, 4);
+            activate_exile(&mut s);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            assert_eq!(plague(&s, &maestro.id), 0, "the counters are removed");
+            let units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p2", *lane).is_some())
+                .count();
+            assert_eq!(units, 2);
+            assert_eq!(s.hand("p2").len(), 2);
+            assert_eq!(s.pile("p2", "library").len(), 3);
+            assert_eq!(s.pile("p2", "graveyard").len(), 2);
+            assert_eq!(s.pile("p2", "exile").len(), 4);
+            assert_eq!(exiled_of(&s).len(), 4);
+        }
+
+        #[test]
+        fn the_exiles_are_public() {
+            let mut s = full_enemy("maestro-public", false, 4);
+            activate_exile(&mut s);
+            // p1 reads each exiled card, the hand and deck ones included.
+            let events = serde_json::to_value(s.view(PlayerId::P1).events).expect("events");
+            let exiled: Vec<&Value> = events
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|event| event["type"] == json!("exiled"))
+                .collect();
+            assert_eq!(exiled.len(), 4);
+            for event in exiled {
+                assert_ne!(event["instanceId"], json!("hidden"), "{event}");
+                assert!(event["defId"].is_string(), "{event}");
+            }
+        }
+
+        #[test]
+        fn below_4_counters_legal_actions_does_not_list_it() {
+            let s = full_enemy("maestro-listed", false, 3);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            let listed = |s: &Scenario| {
+                legal_actions(s.state(), PlayerId::P1).iter().any(|body| {
+                    matches!(body, ActionBody::Activate { instance_id, .. } if *instance_id == maestro.id)
+                })
+            };
+            assert!(!listed(&s));
+            let s = full_enemy("maestro-listed-4", false, 4);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            assert!(legal_actions(s.state(), PlayerId::P1).iter().any(|body| {
+                matches!(body, ActionBody::Activate { instance_id, .. } if *instance_id == maestro.id)
+            }));
+        }
+
+        #[test]
+        fn once_a_turn() {
+            let mut s = full_enemy("maestro-once", false, 8);
+            activate_exile(&mut s);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            assert_eq!(plague(&s, &maestro.id), 4);
+            s.expect_refused(|s| s.activate(&maestro, json!({ "ability": "maestro-exile" })));
+        }
+
+        #[test]
+        fn r386_price_and_exiles_read_through_param() {
+            let mut s = full_enemy("maestro-param", false, 3);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            // The price set to 3 and exiles to 2 per zone: the Activate reads both off the card.
+            set_param(s.card_mut(&maestro.id), "price", 3);
+            set_param(s.card_mut(&maestro.id), "exiles", 2);
+            activate_exile(&mut s);
+            assert_eq!(plague(&s, &maestro.id), 0);
+            assert_eq!(exiled_of(&s).len(), 8);
+        }
+
+        #[test]
+        fn the_radiant_face_is_8_8() {
+            let s = full_enemy("maestro-stats", true, 0);
+            let maestro = s.unit("p1", 1).expect("the Maestro");
+            let stats = s.stats(maestro.id.as_str());
+            assert_eq!((stats.attack, stats.health), (8, 8));
+        }
+
+        #[test]
+        fn two_per_zone_on_the_radiant_face_from_each_of_four_zones() {
+            let mut s = full_enemy("maestro-radiant-four", true, 4);
+            activate_exile(&mut s);
+            assert_eq!(exiled_of(&s).len(), 8);
+            assert_eq!(s.hand("p2").len(), 1);
+            assert_eq!(s.pile("p2", "graveyard").len(), 1);
         }
 
         #[test]

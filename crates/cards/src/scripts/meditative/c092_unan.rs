@@ -53,6 +53,21 @@ mod tests {
     const HEAVY: &str = "classic-086"; // A plain 14/14 Unit.
     const FILLER: &str = "core-005";
     const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage to any unit or hero.
+    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const GOLEM: &str = "core-055"; // 10/5 Taunt.
+    const GHOST: &str = "classic-089"; // 5/6 Divine Shield.
+    const BASTION: &str = "classic-041"; // 3/3 Indestructible.
+    const GRAPE: &str = "classicplus-065-1"; // (1) Spell: your hero loses 5 health.
+    const POISONOUS: &str = "classicplus-006"; // 1/1 Rush, Lifesteal, Poisonous.
+    const SCARAB: &str = "core-007"; // 1/1.
+    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: deal 1 damage to all Units.
+
+    fn redirects(s: &Scenario) -> usize {
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Redirected { .. }))
+            .count()
+    }
 
     mod m92_unan {
         use super::*;
@@ -67,7 +82,12 @@ mod tests {
                 assert_eq!(def.cost, CardCost::Fixed(3));
                 assert_eq!(def.rarity, Rarity::Rare);
                 assert_eq!(
-                    [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+                    [
+                        def.base.attack,
+                        def.base.health,
+                        def.radiant.attack,
+                        def.radiant.health
+                    ],
                     [Some(3), Some(13), Some(6), Some(26)]
                 );
                 assert_eq!(def.base.keywords, vec![Keyword::Armor { n: 3 }]);
@@ -79,10 +99,7 @@ mod tests {
                 assert_eq!(guard.len(), 1);
                 assert_eq!(guard[0].id, "92-lethal-guard");
                 assert_eq!(guard[0].on, ReplacementMoment::LethalHit);
-                assert_eq!(
-                    guard[0].instead.redirect,
-                    Some(InsteadRedirect::SelfCard)
-                );
+                assert_eq!(guard[0].instead.redirect, Some(InsteadRedirect::SelfCard));
             }
 
             #[test]
@@ -99,10 +116,9 @@ mod tests {
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
                 assert_eq!(s.stats(UNAN).health, 13 - 6);
                 assert!(
-                    s.events().iter().any(|event| matches!(
-                        event,
-                        GameEvent::Redirected { .. }
-                    )),
+                    s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Redirected { .. })),
                     "a redirect was emitted"
                 );
             }
@@ -154,6 +170,147 @@ mod tests {
                 s.attack(HEAVY, "hero");
                 s.expect_health(P1, 13);
                 assert_eq!(s.stats(UNAN).health, 13 - 11);
+            }
+            #[test]
+            fn r1204_ten_damage_aimed_at_a_4_health_unit_reaches_unan_as_7() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [UNAN, VANILLA] },
+                    "p2": { "hand": [FILLER], "field": [GOLEM] },
+                }));
+                s.end_turn();
+                s.attack(GOLEM, VANILLA);
+                assert_eq!(s.card(VANILLA).damage, 0, "the 4/4 is untouched");
+                assert_eq!(s.stats(UNAN).health, 13 - 7, "10 through Armor 3");
+            }
+
+            #[test]
+            fn r1204_a_divine_shield_is_read_first() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [UNAN, GHOST] },
+                    "p2": { "hand": [FILLER], "field": [STRIKER] },
+                }));
+                s.end_turn();
+                s.attack(STRIKER, GHOST);
+                // The Shield takes the 9: nothing lethal, nothing caught.
+                assert_eq!(s.card(GHOST).damage, 0);
+                assert!(
+                    !s.stats(GHOST)
+                        .keywords
+                        .iter()
+                        .any(|k| k.kind() == KeywordKind::DivineShield)
+                );
+                assert_eq!(s.stats(UNAN).health, 13);
+                assert_eq!(redirects(&s), 0);
+            }
+
+            #[test]
+            fn r1204_indestructible_is_read_first() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [UNAN, BASTION] },
+                    "p2": { "hand": [FILLER], "field": [STRIKER] },
+                }));
+                s.end_turn();
+                s.attack(STRIKER, BASTION);
+                // The Indestructible Unit cannot die of it: not caught, and it stands.
+                s.expect_in_zone(BASTION, "field");
+                assert_eq!(s.stats(UNAN).health, 13);
+                assert_eq!(redirects(&s), 0);
+            }
+
+            #[test]
+            fn r1204_a_hit_lethal_to_unan_kills_it() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": UNAN, "damage": 10 }, ALLY] },
+                    "p2": { "hand": [FILLER], "field": [STRIKER] },
+                }));
+                let unan = s.card(UNAN).id.clone();
+                s.end_turn();
+                // 9 on the 3/3 ally is caught: 6 through Armor 3 on Unan's 3 left kills it.
+                s.attack(STRIKER, ALLY);
+                assert_eq!(s.card(ALLY).damage, 0, "the ally is untouched");
+                s.expect_in_zone(&unan, "graveyard");
+            }
+
+            #[test]
+            fn r1204_a_second_unan_catches_what_the_first_passes_on() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": UNAN, "damage": 10 }, UNAN, ALLY] },
+                    "p2": { "hand": [FILLER], "field": [STRIKER] },
+                }));
+                let first = s.unit(P1, 1).unwrap().id;
+                let second = s.unit(P1, 2).unwrap().id;
+                s.end_turn();
+                // The ally's lethal 9 would reach the first Unan as 6, lethal to its 3 left, so the
+                // second catches the hit: a new instance of the 9 through its own Armor 3, 6. Each
+                // Unan catches the hit once.
+                s.attack(STRIKER, ALLY);
+                assert_eq!(redirects(&s), 2, "two redirects, then the cap: each Unan once");
+                assert_eq!(s.card(ALLY).damage, 0);
+                s.expect_in_zone(&first, "field");
+                assert_eq!(s.card(first.as_str()).damage, 10);
+                assert_eq!(s.stats(second.as_str()).health, 13 - 6);
+            }
+
+            #[test]
+            fn r1204_lose_health_is_not_caught() {
+                // Rotten Grape: "Your hero loses 5 health." At 5 health it is lethal, and no
+                // damage for Unan to catch.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "health": 5, "hand": [GRAPE, FILLER], "field": [UNAN] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                s.play(GRAPE, json!({}));
+                assert!(s.state().players[P1].hero.health <= 0, "the hero lost its 5");
+                assert_eq!(s.stats(UNAN).health, 13);
+                assert_eq!(redirects(&s), 0);
+            }
+
+            #[test]
+            fn r1204_poisonous_is_not_caught() {
+                // A Poisonous 1: survivable by amount, so no window opens, and the poison kills.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [UNAN, VANILLA] },
+                    "p2": { "hand": [FILLER], "field": [POISONOUS] },
+                }));
+                let vanilla = s.card(VANILLA).id.clone();
+                s.end_turn();
+                s.attack(POISONOUS, &vanilla);
+                s.expect_in_zone(&vanilla, "graveyard");
+                assert_eq!(s.stats(UNAN).health, 13);
+                assert_eq!(redirects(&s), 0);
+            }
+
+            #[test]
+            fn r1204_each_hit_of_a_sweep_is_judged_alone() {
+                // Whirlwind deals 1 to every Unit: lethal to the 1/1 Scarab alone, survivable
+                // for the 4/4. Only the Scarab's hit is caught.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [UNAN, SCARAB, VANILLA] },
+                    "p2": { "hand": [WHIRLWIND, FILLER] },
+                }));
+                let scarab = s.card(SCARAB).id.clone();
+                s.end_turn();
+                s.play(WHIRLWIND, json!({}));
+                s.expect_in_zone(&scarab, "field");
+                assert_eq!(s.card(scarab.as_str()).damage, 0, "the Scarab's hit went to Unan");
+                assert_eq!(s.card(VANILLA).damage, 1, "the 4/4 took its own");
+                let caught: Vec<String> = s
+                    .events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::Redirected { from_id, .. } => Some(from_id.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(caught, vec![scarab]);
             }
         }
 

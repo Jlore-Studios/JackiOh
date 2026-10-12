@@ -1,7 +1,7 @@
 {
   "framework": null,
   "installCommand": "sh \"$(git rev-parse --show-toplevel)/scripts/vercel-install.sh\"",
-  "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
+  "buildCommand": "rm -rf dist && VITE_SITE_ORIGIN=https://jackioh.vercel.app pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
   "git": {
     "deploymentEnabled": {

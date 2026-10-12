@@ -17,11 +17,11 @@
       }
     ]
   },
-  "max_turns": { "plan": 150, "build": 400, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
+  "max_turns": { "plan": 150, "build": 400, "fix": 300, "revise": 300, "review": 100, "suggest": 120 },
   "call_timeout_minutes": 150,
   "job_budget_minutes": 330,
   "min_minutes_for_a_call": 25,
-  "max_review_cycles": 10,
+  "max_review_cycles": { "hard": 10, "medium": 3, "easy": 3 },
   "max_self_check_rounds": 3,
   "easy": {
     "max_files": 10,

@@ -93,6 +93,9 @@ mod tests {
     const DEAR_UNIT: &str = "core-025"; // (4) Unit.
     const CHEAP_SPELL: &str = "core-041"; // (1) Trap.
     const VANILLA: &str = "core-008";
+    const SHEEP: &str = "core-t-sheep"; // Worth 2 Tributes.
+    const SAINTESS: &str = "core-081"; // (1) 2/2, Death: make your other Units Radiant.
+    const TWO_COST: &str = "core-056"; // (2) Jilliax.
 
     #[test]
     fn is_a_3_cost_unit_token_printed_rare() {
@@ -118,7 +121,10 @@ mod tests {
         );
         let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(5));
-        assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute_cheap), Some(1));
+        assert_eq!(
+            s.base.static_flags.as_ref().and_then(|f| f.tribute_cheap),
+            Some(1)
+        );
     }
 
     mod base {
@@ -173,13 +179,27 @@ mod tests {
             assert_eq!(s.unit(P1, 1).unwrap().controller, P1);
 
             // P1's 3 cards are in P1's graveyard.
-            let p1_gy: Vec<String> = s.state().players.p1.graveyard.iter().map(|c| c.id.clone()).collect();
+            let p1_gy: Vec<String> = s
+                .state()
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .map(|c| c.id.clone())
+                .collect();
             assert!(p1_gy.contains(&p1_u1));
             assert!(p1_gy.contains(&p1_u2));
             assert!(p1_gy.contains(&p1_u3));
 
             // P2's 2 cards are in P2's graveyard.
-            let p2_gy: Vec<String> = s.state().players.p2.graveyard.iter().map(|c| c.id.clone()).collect();
+            let p2_gy: Vec<String> = s
+                .state()
+                .players
+                .p2
+                .graveyard
+                .iter()
+                .map(|c| c.id.clone())
+                .collect();
             assert!(p2_gy.contains(&p2_u1));
             assert!(p2_gy.contains(&p2_b1));
         }
@@ -241,7 +261,10 @@ mod tests {
 
             let enemy_unit = s.unit(P2, 2).unwrap().id.clone();
 
-            s.activate(ID, json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }));
+            s.activate(
+                ID,
+                json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }),
+            );
 
             // Unit is now controlled by P1!
             let stolen = s.unit(P1, 2).expect("unit stole into lane 2");
@@ -250,8 +273,213 @@ mod tests {
 
             // Second activation in the same turn is refused.
             s.expect_refused(|s| {
-                s.activate(ID, json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }))
+                s.activate(
+                    ID,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }),
+                )
             });
+        }
+        /// The tribute sets `legalActions` offers for the Church's plays.
+        fn offered_sets(s: &Scenario) -> Vec<Vec<String>> {
+            let church = s.card(ID).id.clone();
+            legal_actions(s.state(), P1)
+                .into_iter()
+                .filter_map(|action| match action {
+                    ActionBody::Play {
+                        instance_id,
+                        tributes: Some(set),
+                        ..
+                    } if instance_id == church => Some(set),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        /// Four cheap Units of p1's and the Church in hand, with `p2` as the opponent's side.
+        fn four_and(p2: Value) -> Scenario {
+            crate::register_all();
+            let mut p2 = p2;
+            p2["hand"] = json!([FILLER]);
+            p2["library"] = json!([SPARE, SPARE]);
+            crate::scenario(json!({
+                "p1": {
+                    "field": [CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT],
+                    "hand": [ID, FILLER],
+                    "library": [SPARE, SPARE],
+                    "mana": 10
+                },
+                "p2": p2,
+            }))
+        }
+
+        fn own_four(s: &Scenario) -> Vec<String> {
+            (1..=4).map(|lane| s.unit(P1, lane).unwrap().id).collect()
+        }
+
+        #[test]
+        fn r1282_a_face_down_permanent_pays() {
+            let mut s = four_and(json!({ "backrow": [{ "def": CHEAP_SPELL, "faceUp": false }] }));
+            let trap = s.backrow(P2, 1).unwrap().id;
+            let mut tributes = own_four(&s);
+            tributes.push(trap.clone());
+            s.play(ID, json!({ "zone": 5, "tributes": tributes }));
+            s.expect_in_zone(&trap, "graveyard");
+            assert_eq!(s.unit(P1, 5).unwrap().def_id, ID);
+        }
+
+        #[test]
+        fn r1282_a_sheep_is_worth_2() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "field": [SHEEP, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT],
+                    "hand": [ID, FILLER],
+                    "library": [SPARE, SPARE],
+                    "mana": 10
+                },
+                "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
+            }));
+            let sheep = s.unit(P1, 1).unwrap().id;
+            // Every offered set is minimal: the Sheep and three, or the four without it.
+            for set in offered_sets(&s) {
+                assert_eq!(set.len(), if set.contains(&sheep) { 4 } else { 5 }, "{set:?}");
+            }
+            let tributes: Vec<String> = (1..=4).map(|lane| s.unit(P1, lane).unwrap().id).collect();
+            s.play(ID, json!({ "zone": 1, "tributes": tributes }));
+            s.expect_in_zone(&sheep, "gone");
+            assert_eq!(s.unit(P1, 5).unwrap().def_id, CHEAP_UNIT, "one Unit kept");
+        }
+
+        #[test]
+        fn r1282_each_payment_is_a_sacrifice_its_death_runs() {
+            // The enemy Radiant Saintess (1): "Death: Make your other Units Radiant."
+            let mut s = four_and(json!({ "field": [SAINTESS, DEAR_UNIT] }));
+            let saintess = s.unit(P2, 1).unwrap().id;
+            let mut tributes = own_four(&s);
+            tributes.push(saintess.clone());
+            s.play(ID, json!({ "zone": 5, "tributes": tributes }));
+            s.expect_in_zone(&saintess, "graveyard");
+            assert!(
+                s.unit(P2, 2).unwrap().radiant,
+                "the sacrificed Saintess's Death ran"
+            );
+        }
+
+        #[test]
+        fn r1282_a_dormant_card_never_pays() {
+            let s = four_and(json!({
+                "field": [CHEAP_UNIT, { "def": DEAR_UNIT, "stack": true }],
+                "backrow": [CHEAP_SPELL],
+            }));
+            let dormant = s.state().players[P2].units[0]
+                .iter()
+                .flatten()
+                .find(|card| card.def_id == CHEAP_UNIT)
+                .map(|card| card.id.clone())
+                .expect("the dormant (1) Unit under the pile");
+            let sets = offered_sets(&s);
+            assert!(!sets.is_empty());
+            assert!(
+                sets.iter().all(|set| !set.contains(&dormant)),
+                "never the dormant card"
+            );
+        }
+
+        #[test]
+        fn r1282_a_hand_card_never_pays() {
+            crate::register_all();
+            let s = crate::scenario(json!({
+                "p1": {
+                    "field": [CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT],
+                    "hand": [ID, CHEAP_UNIT, FILLER],
+                    "library": [SPARE, SPARE],
+                    "mana": 10
+                },
+                "p2": { "field": [CHEAP_UNIT], "hand": [CHEAP_UNIT, FILLER], "library": [SPARE, SPARE] },
+            }));
+            let hand: Vec<String> = s
+                .hand(P1)
+                .into_iter()
+                .chain(s.hand(P2))
+                .filter(|card| card.def_id == CHEAP_UNIT)
+                .map(|card| card.id)
+                .collect();
+            let sets = offered_sets(&s);
+            assert!(!sets.is_empty());
+            assert!(sets.iter().all(|set| set.iter().all(|id| !hand.contains(id))));
+        }
+
+        #[test]
+        fn r1282_legal_actions_on_a_full_board_offers_every_minimal_set() {
+            // Twenty (1) permanents: C(20, 5) = 15,504 sets of 5, less the C(15, 5) = 3,003 that
+            // free none of p1's five full unit zones (the Church needs one): 12,501, every one listed.
+            // The AI's cut of these to its budget (`AI_SEARCH.tribute_sets`) is proved with this
+            // card in crates/ai/tests/ai/search.rs.
+            crate::register_all();
+            let row = |def: &str| json!(vec![def; 5]);
+            let s = crate::scenario(json!({
+                "p1": {
+                    "field": row(CHEAP_UNIT),
+                    "backrow": row(CHEAP_SPELL),
+                    "hand": [ID],
+                    "library": [SPARE, SPARE],
+                    "mana": 10
+                },
+                "p2": {
+                    "field": row(CHEAP_UNIT),
+                    "backrow": row(CHEAP_SPELL),
+                    "hand": [FILLER],
+                    "library": [SPARE, SPARE]
+                },
+            }));
+            let sets = offered_sets(&s);
+            let mut distinct: Vec<Vec<String>> = sets
+                .into_iter()
+                .map(|mut set| {
+                    set.sort();
+                    set
+                })
+                .collect();
+            distinct.sort();
+            distinct.dedup();
+            assert_eq!(distinct.len(), 15_504 - 3_003);
+            assert!(distinct.iter().all(|set| set.len() == 5));
+        }
+
+        #[test]
+        fn r15_with_no_free_zone_the_stolen_permanent_stays_put() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "field": [ID, VANILLA, VANILLA, VANILLA, VANILLA],
+                    "hand": [FILLER],
+                    "library": [SPARE, SPARE],
+                },
+                "p2": {
+                    "field": [{ "def": VANILLA, "lane": 2 }],
+                    "hand": [FILLER],
+                    "library": [SPARE, SPARE],
+                },
+            }));
+            let enemy = s.unit(P2, 2).unwrap().id;
+            s.activate(
+                ID,
+                json!({ "targets": [{ "pick": "instance", "instanceId": enemy }] }),
+            );
+            // No zone of p1's is free: it stays where it stands, with its opponent (R15).
+            let still = s.unit(P2, 2).expect("still in p2's lane 2");
+            assert_eq!(still.id, enemy);
+            assert_eq!(still.controller, P2);
+        }
+
+        #[test]
+        fn r1282_cheap_reads_through_param() {
+            // Cheap 1 -> 2 lets a (2) enemy Unit pay.
+            let mut s = four_and(json!({ "field": [TWO_COST] }));
+            let two = s.unit(P2, 1).unwrap().id;
+            assert!(offered_sets(&s).iter().all(|set| !set.contains(&two)));
+            assert_eq!(crate::upgrade_number(&mut s, ID, "cheap"), 2);
+            assert!(offered_sets(&s).iter().any(|set| set.contains(&two)));
         }
     }
 
@@ -287,7 +515,10 @@ mod tests {
             let enemy_unit = s.unit(P2, 2).unwrap().id.clone();
             assert!(!s.unit(P2, 2).unwrap().radiant, "initially not radiant");
 
-            s.activate(ID, json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }));
+            s.activate(
+                ID,
+                json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }),
+            );
 
             let stolen = s.unit(P1, 2).expect("unit stole into lane 2");
             assert_eq!(stolen.id, enemy_unit);

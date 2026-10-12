@@ -26,8 +26,8 @@
 // set straight off the definition), so a face drawn from the catalog is the face a player will see
 // once the set ships (R1420); nothing here has to pretend `SHIPPED_SETS` lists it.
 //
-// The Created mark (ME-CREATED, `CardView.created`) belongs to its system, which #31 The Conductor's
-// part builds; until the view carries it there is no mark to place, and this spec has nothing to say.
+// The Created mark (ME-CREATED, `CardView.created`, R943) is a mark of the card in play, not of its
+// printed face: meditative-prompts.cy.tsx places it on a card in hand at phone width (#617).
 //
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and each
 // carries a control (the face fills its box, the name has a box and reads the card's name), since a
@@ -197,10 +197,25 @@ describe("MN09: every Meditative face fits its frame at the inspect view's sizes
       expect(chinese.chinese, `${def.id} has a Chinese face (#516)`).to.eq(true);
       expect(chinese.name, `${def.id}'s Chinese name`).to.not.eq("");
     }
-    // The faces the phone sheet may clamp: today Knowledge Breaker's Radiant face alone. A card that
-    // joins it is not an error, but its text is long enough that a person should read it once.
+    // The faces the phone sheet may clamp. A card that joins them is not an error, but its text is
+    // long enough that a person should read it once: these were read for #617, and each fits at both
+    // inspect sizes (#8's eleven Ascent lines in the longest layout, cards/fit.ts). No Chinese face
+    // is among them, since a Chinese face prints fewer characters for the same words.
     const long = MEDITATIVE.flatMap((def) => FACES.filter((face) => printedLength(def, face) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`));
-    expect(long).to.have.members(["meditative-045 radiant"]);
+    expect(long).to.have.members([
+      "meditative-008 base",
+      "meditative-008 radiant",
+      "meditative-022 base",
+      "meditative-022 radiant",
+      "meditative-022-1 base",
+      "meditative-022-1 radiant",
+      "meditative-045 radiant",
+      "meditative-049-1 base",
+      "meditative-049-1 radiant",
+      "meditative-065 radiant",
+      "meditative-095 base",
+      "meditative-095 radiant",
+    ]);
   });
 
   for (const size of INSPECT_SIZES) {

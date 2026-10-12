@@ -6,13 +6,13 @@
   "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
+      { "model": "gpt-5.6-terra", "note": "ChatGPT through Codex: weak since 2026-10-11, so it builds easy items only and its review counts as a weak one. First among the weak models (#695)." },
       { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
     ],
     "medium": [
       { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
       { "model": "gemini-3.8-flash-high", "note": "Google through agy." },
-      { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a medium seat on every Claude account, which switches between it and Opus as the work needs (work.Worker._switch)." },
-      { "model": "gpt-5.6-terra", "note": "ChatGPT through Codex." }
+      { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a medium seat on every Claude account, which switches between it and Opus as the work needs (work.Worker._switch)." }
     ],
     "strong": [
       { "model": "opus", "note": "Claude Opus, on every Claude account, beside its Sonnet." }
@@ -20,7 +20,7 @@
   },
   "providers": {
     "claude-1": {
-      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. Two lanes, so it works two items at once.",
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. One lane, so it works one item at a time (#695).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -32,14 +32,14 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
-      "lanes": 2,
+      "lanes": 1,
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
       "limits": { "mode": "caps", "five_hour": 1.0 },
       "quiet_check": false
     },
     "claude-2": {
-      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. Two lanes, so it works two items at once.",
+      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free, Devin included (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. One lane, so it works one item at a time (#695).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -51,7 +51,7 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
       "runs_on": "ubuntu-latest",
-      "lanes": 2,
+      "lanes": 1,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
       "build_last": true,
@@ -141,20 +141,22 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
       "runs_on": "ubuntu-latest",
-      "lanes": 2,
+      "lanes": 1,
       "schedule": { "mode": "window", "start": "01:00", "end": "10:00" },
       "off_hours": { "five_hour": 0.5 },
       "limits": { "mode": "caps", "five_hour": 0.7 },
       "quiet_check": false
     },
     "gpt": {
-      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`).",
+      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). Weak since 2026-10-11: easy items only, which it takes ahead of the stronger models while it is free (easy_first), before Devin, so a week shows what it can do (#682).",
       "enabled": true,
       "cli": "codex",
       "family": "gpt",
       "model": "gpt-5.6-terra",
       "effort": "xhigh",
-      "tier": "medium",
+      "tier": "weak",
+      "self_check": true,
+      "easy_first": true,
       "login": "machine",
       "runs_on": "night-vm-gpt",
       "schedule": { "mode": "always" },
@@ -188,14 +190,14 @@
       "login": "machine",
       "runs_on": "night-vm-devin",
       "lanes": 6,
-      "off_from": "2026-10-15",
-      "off_reason": "SWE-2 is free on Devin's CLI only through 2026-10-16 (devin.ai/pricing). After that it draws on the Devin plan's daily and weekly allowance, at 6x (medium) to 12x (max) credits, so Devin needs a new model, caps, or to stay off.",
+      "off_from": "2026-11-02",
+      "off_reason": "Windsurf, which Devin's plan came with, is canceled: the plan runs out on 2026-11-02, so Devin takes no new work from that day. Until then it draws on the plan's allowance.",
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "quiet_check": false
     },
     "muse": {
-      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Four lanes, `night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, under the one login; `bot/machine/register-runners.sh` registers one runner per lane.",
+      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Four lanes, `night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, under the one login; `bot/machine/register-runners.sh` registers one runner per lane. On Meta's $50 plan since 2026-10-11, four times the usage of the one before; its caps are shares of whatever the plan gives, so they stretch with it.",
       "enabled": true,
       "cli": "muse",
       "family": "muse",
@@ -204,7 +206,8 @@
       "tier": "medium",
       "login": "machine",
       "runs_on": "night-vm-muse",
-      "lanes": 4,
+      "lanes": 1,
+      "usage_since": "2026-10-11T00:00:00Z",
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false

@@ -159,17 +159,30 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98 and three Classic and Classic+ faces)", () => {
+  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98, three Classic and Classic+ faces and twelve Meditative ones)", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
     expect(TEXT_TIER_MAX.xl).to.eq(260);
     // Balance patch 1 (issue #88) rewords C+ #40 Appropriations and C+ #42 KY's Test onto short
     // faces, so they leave the allowance; nothing else crosses the tier either way. The catalog holds
-    // the Meditative set before it ships (R1420), and Meditative #45 Knowledge Breaker's Radiant face
-    // crosses it too (meditative-faces.cy.tsx measures the set's faces at the inspect sizes).
+    // the Meditative set, and its wordiest faces cross it too: #8 Reach the Summit's Ascent ladder,
+    // #22 Mind Games and its #22.1 Fortify Mind, #45 Knowledge Breaker's Radiant face, #49.1 YileGPT
+    // Unleashed, #65 Keymaster Keenus's Radiant face and #95 Call to Chaos (meditative-faces.cy.tsx
+    // measures the set's faces at the inspect sizes). Each fits at 270 px, #8 in the longest layout.
     expect(long).to.have.members([
+      "meditative-008 base",
+      "meditative-008 radiant",
+      "meditative-022 base",
+      "meditative-022 radiant",
+      "meditative-022-1 base",
+      "meditative-022-1 radiant",
       "meditative-045 radiant",
+      "meditative-049-1 base",
+      "meditative-049-1 radiant",
+      "meditative-065 radiant",
+      "meditative-095 base",
+      "meditative-095 radiant",
       "core-093 base",
       "core-093 radiant",
       "core-095 base",

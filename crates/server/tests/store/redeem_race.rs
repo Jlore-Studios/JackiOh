@@ -71,7 +71,7 @@ const TRUNCATE: &str = "truncate
   public.trios, public.decks,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
-  public.code_attempts, public.invite_codes, public.profiles, auth.users
+  public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
   restart identity cascade";
 
 /// `app.settings.redemption_enabled` — migration 0001 seeds it `true` and

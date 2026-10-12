@@ -390,7 +390,7 @@ declare
 begin
   foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                            'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
-                           'action_timings', 'emote_events', 'match_signals'] loop
+                           'action_timings', 'emote_events', 'match_signals', 'bots'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -409,9 +409,10 @@ declare
   -- ranked tables (0022, R603–R612): hidden ratings, which R612 says no client read may ever carry —
   -- the client gets its rank through the API, never a row. The three play telemetry tables (0029,
   -- R1442): how each person paced, emoted and gave up, which the server alone reads and writes.
+  -- `bots` (0032, R1454): which profiles are ladder bots, which R1452 says no client read tells.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
-                                     'action_timings', 'emote_events', 'match_signals'];
+                                     'action_timings', 'emote_events', 'match_signals', 'bots'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

@@ -129,9 +129,14 @@
 }
 
 /* The card being crafted: a block box for the face (cards.css sizes it off its width), which opens
-   the card's preview and long-press sheet (#552). */
+   the card's preview and long-press sheet (#552). The picker's chrome is click-through (prompt.css),
+   so the face takes pointer events back, or neither the hover nor the long-press reaches it (#617). */
 .craft-face {
   display: block;
+}
+
+.prompt .craft-face {
+  pointer-events: auto;
 }
 
 .craft-meters {

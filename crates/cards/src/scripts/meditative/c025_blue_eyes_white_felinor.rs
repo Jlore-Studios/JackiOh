@@ -56,6 +56,14 @@ mod tests {
     const FILLER: &str = "core-005";
     const TRIBUTE_A: &str = "core-011"; // Tempo Timmy: (1) 3/3, tribute fodder.
     const TRIBUTE_B: &str = "core-020"; // Pointmaster: (2) 7/1, tribute fodder.
+    const LAR: &str = "classicplus-076"; // Brother Lar: (1) 1/1 CN Human.
+    const BREAKER: &str = "meditative-045"; // Cry: Nerf every other CN or KY card, field, hands, decks.
+    const PRIME: &str = "meditative-045-1"; // Cry: destroy (radiant: exile) every other CN or KY permanent.
+    const FLAGBEARER: &str = "classicplus-046"; // Aura: your other Felinors have +1/+1.
+    const FIENDER: &str = "core-092"; // Also has the stats of all your Felinors.
+
+    use jackioh_engine::effects::{degrade, transform, upgrade, vanilla};
+    use jackioh_engine::resolve::{HookOptions, make_context};
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER])
@@ -232,6 +240,146 @@ mod tests {
         s.card_mut(felinor).vanilla = true;
         s.play(BIGOT, json!({}));
         assert!(s.unit(P2, 1).is_none(), "without its text it is no longer immune");
+    }
+
+    /// Apply one effect as `controller`'s, outside any card.
+    fn run_as(s: &mut Scenario, effect: Effect, controller: PlayerId) {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(controller), ..Default::default() });
+            (effect.apply)(&mut ctx);
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+    }
+
+    /// The board of `hunting` with the Felinor made CN (M 35's result) and a CN Brother Lar beside it.
+    fn cn_hunting(seed: &str, card: &str, radiant: bool) -> Scenario {
+        let mut s = hunting(seed, card, radiant, json!([{ "def": LAR }]));
+        let felinor = felinor_id(&s);
+        s.card_mut(felinor).granted_tags = Some(vec![Tag::Cn]);
+        s
+    }
+
+    #[test]
+    fn r391_tribute_2_may_be_paid_from_its_own_zone() {
+        let mut s = tributing("felinor-own-zone");
+        let a = s.unit(P1, 1).expect("tribute A").id.clone();
+        let b = s.unit(P1, 2).expect("tribute B").id.clone();
+        s.play(FELINOR, json!({ "zone": 1, "tributes": [a, b] }));
+        assert_eq!(s.unit(P1, 1).expect("it stands").def_id, FELINOR);
+    }
+
+    #[test]
+    fn r940_knowledge_breakers_nerfs_pass_it_by() {
+        let mut s = cn_hunting("felinor-breaker", BREAKER, false);
+        let felinor = felinor_id(&s);
+        let lar = s.unit(P2, 2).expect("Lar").id.clone();
+        s.play(BREAKER, json!({ "zone": 1 }));
+        assert!(s.card(&lar).tuning.is_some(), "the other CN card is Nerfed");
+        assert!(s.card(&felinor).tuning.is_none(), "the CN Felinor is passed by");
+    }
+
+    #[test]
+    fn r940_knowledge_breaker_primes_destroy_and_radiant_exile_pass_it_by() {
+        for (radiant, zone) in [(false, "graveyard"), (true, "exile")] {
+            let mut s = cn_hunting("felinor-prime", PRIME, radiant);
+            let felinor = felinor_id(&s);
+            let lar = s.unit(P2, 2).expect("Lar").id.clone();
+            s.play(PRIME, json!({ "zone": 1 }));
+            assert_eq!(s.card(&lar).zone.z().as_str(), zone, "the other CN permanent goes ({radiant})");
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(felinor), "the Felinor stands ({radiant})");
+        }
+    }
+
+    #[test]
+    fn r940_helpful_tag_filtered_effects_reach_it() {
+        // Felinor Flagbearer's aura: "Your other Felinors have +1/+1".
+        let mut s = hunting("felinor-flagbearer", FILLER, false, json!([{ "def": FLAGBEARER }]));
+        let felinor = felinor_id(&s);
+        s.expect_stats(&felinor, json!({ "attack": 13, "health": 10 }));
+        // Felinor Fiender's sum: "Also has the stats of all your Felinors".
+        let s = hunting("felinor-fiender", FILLER, false, json!([{ "def": FIENDER }]));
+        let fiender = s.unit(P2, 2).expect("the Fiender").id.clone();
+        let printed = crate::card_def(FIENDER).base.attack.expect("an attack");
+        assert_eq!(s.stats(&fiender).attack, printed + 12, "the sum counts the Felinor");
+    }
+
+    #[test]
+    fn r940_in_hand_or_deck_it_protects_nothing() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "felinor-off-field",
+            "p1": { "mana": 10, "hand": [BREAKER, FILLER], "library": library() },
+            "p2": { "hand": [FELINOR, FILLER], "library": [FELINOR, FILLER, FILLER] },
+        }));
+        let held = s.pile(P2, "hand").into_iter().find(|card| card.def_id == FELINOR).expect("in hand").id;
+        let deck = s.pile(P2, "library").into_iter().find(|card| card.def_id == FELINOR).expect("in deck").id;
+        for id in [&held, &deck] {
+            s.card_mut(id.as_str()).granted_tags = Some(vec![Tag::Cn]);
+        }
+        s.play(BREAKER, json!({ "zone": 1 }));
+        assert!(s.card(&held).tuning.is_some(), "Nerfed in hand");
+        assert!(s.card(&deck).tuning.is_some(), "Nerfed in the deck");
+    }
+
+    #[test]
+    fn r940_a_nerf_can_take_the_keyword() {
+        // A Nerf draws one row at random; on a seed where it takes the keyword, Bigot's sweep hits it.
+        let mut found = false;
+        for cursor in 0..64 {
+            let mut s = hunting("felinor-nerfed", BIGOT, true, json!([]));
+            let felinor = felinor_id(&s);
+            s.state_mut().rng_cursor = cursor;
+            run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
+            let removed = s
+                .card(&felinor)
+                .tuning
+                .as_ref()
+                .and_then(|tuning| tuning.remove_keywords.clone())
+                .unwrap_or_default();
+            if !removed.contains(&KeywordKind::ImmuneToTribalHate) {
+                continue;
+            }
+            assert!(!s.stats(&felinor).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::ImmuneToTribalHate));
+            s.play(BIGOT, json!({}));
+            assert!(s.unit(P2, 1).is_none(), "Nerfed out of its keyword, it is no longer immune");
+            found = true;
+            break;
+        }
+        assert!(found, "some Nerf takes the keyword");
+    }
+
+    #[test]
+    fn tribute_2_is_a_fixed_static_flag_on_both_faces() {
+        let scripts = script();
+        for face in [&scripts.base, &scripts.radiant] {
+            assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.tribute), Some(2));
+        }
+        // A Nerf never moves it: it is no declared number.
+        crate::register_all();
+        assert!(crate::card_def(FELINOR).params.is_none());
+    }
+
+    #[test]
+    fn r23_radiant_is_immutable_no_nerf_buff_transform_or_vanilla() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "felinor-immutable",
+            "p1": { "hand": [FILLER], "library": library() },
+            "p2": { "hand": [FILLER], "field": [{ "def": FELINOR, "radiant": true, "lane": 1 }], "library": library() },
+        }));
+        let felinor = felinor_id(&s);
+        run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
+        run_as(&mut s, upgrade(json_as(json!({ "instanceId": felinor }))), P1);
+        run_as(&mut s, vanilla(json_as(json!({ "instanceId": felinor }))), P1);
+        run_as(&mut s, transform(json_as(json!({ "instanceId": felinor, "defId": VANILLA }))), P1);
+        let card = s.card(&felinor).clone();
+        assert_eq!(card.def_id, FELINOR, "no Transform");
+        assert!(card.tuning.is_none(), "no Nerf or Buff");
+        assert!(!card.vanilla, "no Vanilla");
+        s.expect_stats(&felinor, json!({ "attack": 24, "health": 18 }));
     }
 
     #[test]

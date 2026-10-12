@@ -11,6 +11,10 @@
 //! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
 //! first game waits for both players to pick (`series.rs`).
 //!
+//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a Best-of-1 or All Random ticket that
+//! has waited past its fallback time with no person to pair with is paired with a ladder bot, after
+//! every pair of people the sweep could make (`pair_with_bots`, `bots::fallback`).
+//!
 //! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
 //! Two invariants:
 //!
@@ -39,9 +43,10 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
-use crate::config::{MATCHMAKER_SWEEP_INTERVAL_SECONDS, rating_window};
+use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
+use crate::config::{BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, rating_window};
 use crate::db::store::{
-    FrozenTrio, MatchSeat, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket, TicketStatus,
+    BotRow, FrozenTrio, MatchSeat, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket, TicketStatus,
 };
 
 /// Unit conversion, not configuration: `rating_window` speaks seconds, tickets are stamped in ms.
@@ -296,7 +301,7 @@ fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
 }
 
 /// R263: forget the `open` skeleton `tickets_claim_pair` wrote, in its own transaction.
-async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
+pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
     let mut tx = app
         .db
         .begin(None)
@@ -358,8 +363,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
     let series = match made {
         Ok(series) => series,
         Err(error) => {
-            // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton
-            // `tickets_claim_pair` wrote points at nothing and nothing reaps `open` rows, so delete it.
+            // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton `tickets_claim_pair` wrote points at nothing, so delete it now rather than leave it to the reaper's open-row sweep (R1450).
             if let Err(cleanup) = discard_open(app, match_id).await {
                 tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
             }
@@ -481,8 +485,9 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         .await;
     if let Err(error) = started {
         // The `set_in_match` transaction has committed, so a failed start leaves the `open` skeleton
-        // `tickets_claim_pair` wrote with both profiles pointing at it, and nothing reaps `open` rows:
-        // the players would stay locked out. Undo it before the error stands (the tickets stay claimed).
+        // `tickets_claim_pair` wrote with both profiles pointing at it: the players would stay locked
+        // out until the reaper's open-row sweep (R1450) deletes it. Undo it now, before the error
+        // stands (the tickets stay claimed).
         let cleanup = async {
             let mut tx = app
                 .db
@@ -537,7 +542,8 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     open.sort_by(|x, y| x.enqueued_at.cmp(&y.enqueued_at).then_with(|| x.id.cmp(&y.id)));
-    if open.len() < 2 {
+    // R1453: one ticket alone can still pair, with a bot.
+    if open.is_empty() {
         tx.commit()
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
@@ -638,7 +644,214 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         }
     }
 
+    // R1453: only after every pair of people this sweep could make, so a person inside the window
+    // always comes before a bot.
+    if app.env.ladder_bots {
+        made += pair_with_bots(app, &open, &mut taken, now).await?;
+    }
+
     Ok(made)
+}
+
+/// R1453: pairs each ticket still open and past its fallback time, oldest first, with the bot
+/// `choose_bot` names for it, claimed in one statement as a pair of tickets is
+/// (`tickets_claim_for_bot`). A claim that loses (the ticket went, or the bot was taken) is not an
+/// error: that ticket waits for the next sweep. Answers how many matches it made.
+async fn pair_with_bots(
+    app: &Arc<App>,
+    open: &[Ticket],
+    taken: &mut IndexSet<String>,
+    now: i64,
+) -> Result<usize, ApiError> {
+    let due: Vec<&Ticket> = open
+        .iter()
+        .filter(|ticket| !taken.contains(&ticket.id) && fallback_due(ticket, now))
+        .collect();
+    if due.is_empty() {
+        return Ok(0);
+    }
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let bots = tx
+        .bots_list()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let hour = hour_of(now);
+    let mut busy: IndexSet<String> = IndexSet::new();
+    let mut made = 0;
+    for ticket in due {
+        let recent = {
+            let mut tx = app
+                .db
+                .begin(Some(&ticket.profile_id))
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            let recent = tx
+                .results_recent_opponents(&ticket.profile_id, BOT_RECENT_OPPONENTS)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            recent
+        };
+        let Some(bot) = choose_bot(ticket, &bots, &recent, &busy, hour, &app.catalog.version) else {
+            continue;
+        };
+        let match_id = new_uuid();
+        let won = {
+            let mut tx = app
+                .db
+                .begin(None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            let won = tx
+                .tickets_claim_for_bot(&ticket.id, &bot.profile_id, &match_id, now)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            won
+        };
+        if !won {
+            continue;
+        }
+        taken.insert(ticket.id.clone());
+        busy.insert(bot.profile_id.clone());
+        start_bot_match(app, ticket, bot, &match_id).await?;
+        made += 1;
+    }
+    Ok(made)
+}
+
+/// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
+/// pair's. The seed is the server's (or R143's end-to-end one). The person is always p1 and goes
+/// first, the bot p2: between two people the older ticket is p1 (`start_paired_match`), and a ticket
+/// past its fallback time is older than anyone who would have come to pair with it. Best of 1 plays
+/// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
+/// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
+/// lean.
+/// The match is ranked (R604): a ticket the queue paired, whoever it was paired with.
+async fn start_bot_match(
+    app: &Arc<App>,
+    ticket: &Ticket,
+    bot: &BotRow,
+    match_id: &str,
+) -> Result<(), ApiError> {
+    let seed = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
+    let (human_player, bot_player) = (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2);
+    let random = ticket.mode == QueueMode::Random;
+    let human = MatchSeat {
+        profile_id: ticket.profile_id.clone(),
+        player: human_player,
+        deck: if random {
+            dealt_deck(&seed, human_player.as_str(), ticket.lean_newest)
+        } else {
+            ticket.deck.clone()
+        },
+        portrait: if random {
+            dealt_portrait(&seed, human_player.as_str())
+        } else {
+            ticket.portrait.clone().flatten()
+        },
+    };
+    // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
+    // in the match, and otherwise only the sweeper's release of stale starts would let them go,
+    // `BOT_STALE_START_SECONDS` after the claim (R1454), or the reaper's open-row sweep (R1450).
+    let started = async {
+        let bot_seat = if random {
+            MatchSeat {
+                profile_id: bot.profile_id.clone(),
+                player: bot_player,
+                deck: dealt_deck(&seed, bot_player.as_str(), false),
+                portrait: dealt_portrait(&seed, bot_player.as_str()),
+            }
+        } else {
+            let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck"), 0)
+                .pick(&bot.decks)
+                .cloned()
+                .ok_or_else(|| ApiError::internal(format!("bot {} holds no deck", bot.profile_id)))?;
+            MatchSeat {
+                profile_id: bot.profile_id.clone(),
+                player: bot_player,
+                deck: picked.cards,
+                portrait: Some(picked.portrait),
+            }
+        };
+        let seats = (human, bot_seat);
+
+        // §9.5's in-match state for the player; `tickets_claim_for_bot` put the bot in the match.
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.profiles_set_in_match(&ticket.profile_id, Some(match_id))
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+
+        // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
+        app.matches
+            .start(
+                app,
+                StartMatchInput {
+                    match_id: match_id.to_string(),
+                    seed: seed.clone(),
+                    catalog_version: app.catalog.version.clone(),
+                    ranked: true,
+                    seats,
+                    mode: None,
+                    stake: None,
+                },
+            )
+            .await
+    }
+    .await;
+    if let Err(error) = started {
+        // As `start_paired_match`'s: both profiles are let go and the skeleton discarded before the
+        // error stands (the ticket stays claimed).
+        let cleanup = async {
+            let mut tx = app
+                .db
+                .begin(None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.profiles_set_in_match(&ticket.profile_id, None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.profiles_set_in_match(&bot.profile_id, None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            discard_open(app, match_id).await
+        }
+        .await;
+        if let Err(cleanup) = cleanup {
+            tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
+        }
+        return Err(error);
+    }
+    tracing::info!(
+        event = "queue.paired_bot",
+        mode = ticket.mode.as_str(),
+        matchId = %match_id,
+        ticket = %ticket.id,
+        botId = %bot.profile_id,
+        ratings = %json_list(&[ticket.rating, bot.rating]),
+    );
+    Ok(())
 }
 
 /// §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" (R108: every 3 s,
@@ -648,6 +861,12 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
 pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
+        // R1454: a bot (and its player) a cut-off start still holds is let go before the sweep,
+        // whatever `LADDER_BOTS` says now: a start cut off before a restart that turned it off
+        // holds them too.
+        if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
+            tracing::warn!(event = "bots.start.release_failed", message = %error);
+        }
         if let Err(error) = try_pair(&app).await {
             // A failed sweep must not kill the sweeper: the next one may well succeed.
             tracing::warn!(event = "matchmaker.sweep_failed", message = %error.message);

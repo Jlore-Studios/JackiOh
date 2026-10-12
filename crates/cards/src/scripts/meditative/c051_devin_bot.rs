@@ -41,7 +41,9 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
+    use jackioh_engine::zones::{ZoneSlot, lock_zone};
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -79,6 +81,22 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": target }] })
     }
 
+    /// p1 with `field` already on the board and Devin Bot in hand.
+    fn board(seed: &str, field: Value) -> Scenario {
+        crate::register_all();
+        scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [BOT, FILLER], "field": field, "library": filler(3) },
+            "p2": { "hand": [ECLIPSE, FILLER], "library": filler(4) },
+        }))
+    }
+
+    /// The units p1's Cry summoned (every one but the Bot).
+    fn summoned(s: &Scenario) -> Vec<CardInstance> {
+        let me = s.card(BOT).id.clone();
+        units_of(s, P1).into_iter().filter(|unit| unit.id != me).collect()
+    }
+
     mod m51_devin_bot {
         use super::*;
 
@@ -107,6 +125,123 @@ mod tests {
                     1,
                     "Devin Bot never generates itself (R387)"
                 );
+            }
+
+            #[test]
+            fn reborn_it_returns_once_after_it_dies() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = board(
+                    "devin-reborn-keyword",
+                    json!(["core-008", "core-008", "core-008", "core-008"]),
+                );
+                s.play(BOT, json!({}));
+                let me = s.card(BOT).id.clone();
+                let keywords = serde_json::to_string(&s.stats(me.as_str()).keywords).expect("JSON");
+                assert!(keywords.contains("Reborn"), "{keywords}");
+                s.end_turn();
+                s.play(ECLIPSE, eclipse(&me));
+                // It came back into its own zone, lane 5.
+                let back = s.unit(P1, 5).expect("returned");
+                assert_eq!(back.def_id, BOT);
+            }
+
+            #[test]
+            fn r1_a_cast_fires_the_cry_too() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = board("devin-cast", json!([]));
+                let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+                let mut rng = Rng::new(&seed, cursor);
+                let mut events: Vec<GameEvent> = Vec::new();
+                {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    {
+                        let mut ctx = make_context(
+                            &mut sink,
+                            None,
+                            HookOptions {
+                                controller: Some(P1),
+                                ..HookOptions::default()
+                            },
+                        );
+                        apply_effects(&[cast_new(json_as(json!({ "def": BOT })))], &mut ctx);
+                    }
+                    settle(&mut sink, SettleOptions::default());
+                }
+                s.state_mut().rng_cursor = rng.cursor();
+                // Cast, it enters and its Cry fills the other four zones.
+                assert_eq!(units_of(&s, P1).len(), 5);
+            }
+
+            #[test]
+            fn r1080_a_locked_zone_is_skipped() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = board("devin-locked", json!([]));
+                lock_zone(
+                    s.state_mut(),
+                    ZoneSlot {
+                        player: P1,
+                        row: Row::Units,
+                        lane: 3,
+                    },
+                );
+                s.play(BOT, json!({ "zone": 1 }));
+                let lanes: Vec<i32> = units_of(&s, P1)
+                    .iter()
+                    .map(|unit| slot_of(s.state(), unit).map(|slot| slot.lane).unwrap_or(0))
+                    .collect();
+                assert_eq!(lanes, vec![1, 2, 4, 5]);
+            }
+
+            #[test]
+            fn r1080_each_zone_its_own_pick_tokens_included() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut mixed = false;
+                let mut token = false;
+                for n in 0..40 {
+                    let mut s = board(&format!("devin-picks-{n}"), json!([]));
+                    s.play(BOT, json!({}));
+                    let defs: Vec<String> = summoned(&s).into_iter().map(|unit| unit.def_id).collect();
+                    assert_eq!(defs.len(), 4, "{n}");
+                    let mut distinct = defs.clone();
+                    distinct.sort();
+                    distinct.dedup();
+                    mixed |= distinct.len() > 1;
+                    token |= defs.iter().any(|def| crate::card_def(def).token);
+                }
+                assert!(mixed, "each zone draws its own pick");
+                assert!(token, "the pool holds tokens");
+            }
+
+            #[test]
+            fn r1_the_summoned_1_1s_fire_no_cry() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                for n in 0..10 {
+                    let mut s = board(&format!("devin-no-cry-{n}"), json!([]));
+                    s.play(BOT, json!({}));
+                    // Only the Bot was played, and no summoned Cry (a Discover, a summon) ran.
+                    let plays = s
+                        .events()
+                        .iter()
+                        .filter(|event| matches!(event, GameEvent::CardPlayed { .. }))
+                        .count();
+                    assert_eq!(plays, 1, "{n}");
+                    assert!(s.state().pending.is_none(), "{n}");
+                    assert_eq!(units_of(&s, P1).len(), 5, "{n}");
+                }
+            }
+
+            #[test]
+            fn r129_a_board_it_fills_itself_draws_no_random_number() {
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = board(
+                    "devin-last-zone",
+                    json!(["core-008", "core-008", "core-008", "core-008"]),
+                );
+                let cursor = s.state().rng_cursor;
+                s.play(BOT, json!({}));
+                // It took the last open zone: its Cry finds none and draws nothing.
+                assert_eq!(units_of(&s, P1).len(), 5);
+                assert_eq!(s.state().rng_cursor, cursor);
             }
 
             #[test]
@@ -143,8 +278,7 @@ mod tests {
                     },
                 }));
                 s.play(BOT, json!({}));
-                let mut before: Vec<String> =
-                    units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
+                let mut before: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 before.sort();
                 assert_eq!(before.len(), 5);
                 // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill (no shield on
@@ -154,16 +288,14 @@ mod tests {
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
                 s.play(ECLIPSE, eclipse(&me));
-                let mut after: Vec<String> =
-                    units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
+                let mut after: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 after.sort();
                 assert_eq!(after.len(), 5);
                 let survivor: Vec<String> = before.into_iter().filter(|id| id != &me).collect();
                 for id in &survivor {
                     assert!(after.contains(id), "survivor {id} is still there");
                 }
-                let returned: Vec<String> =
-                    after.into_iter().filter(|id| !survivor.contains(id)).collect();
+                let returned: Vec<String> = after.into_iter().filter(|id| !survivor.contains(id)).collect();
                 assert_eq!(returned.len(), 1);
                 assert_eq!(s.card(returned[0].as_str()).def_id, BOT);
             }

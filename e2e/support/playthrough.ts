@@ -22,7 +22,8 @@ import type { ActionBody, JackiOhDevHandle, PlayerId } from "./types.ts";
 export type PlayStep =
   | { kind: "handOver"; seat: PlayerId }
   | { kind: "mulligan"; seat: PlayerId }
-  | { kind: "answer"; seat: PlayerId; prompt: string; promptKind: string; shown: string | null; error: string | null }
+  /** `drawn`: the `data-prompt-kind` the board draws the view's prompt with (`boardKind`); `shown`: the one it drew. */
+  | { kind: "answer"; seat: PlayerId; prompt: string; promptKind: string; drawn: string; shown: string | null; error: string | null }
   | { kind: "play"; seat: PlayerId; defId: string; instanceId: string; error: string | null }
   /** `held`: the cards still to play in the seat's hand; `deck`: the cards left in its deck. */
   | { kind: "end"; seat: PlayerId; turn: number; held: string[]; deck: number }
@@ -30,7 +31,7 @@ export type PlayStep =
 
 /** The parts of `viewFor` the driver reads (a structural subset of `PlayerView`). */
 type ViewLike = {
-  pending?: { forYou?: boolean; kind?: string; prompt?: string } | null;
+  pending?: { forYou?: boolean; kind?: string; prompt?: string; options?: unknown[] } | null;
   you: { hand: { instanceId: string; defId: string }[] | { count: number }; libraryCount?: number };
 };
 
@@ -58,6 +59,36 @@ function dispatched(handle: Handle, body: ActionBody, seat: PlayerId): string | 
   return result?.error ?? null;
 }
 
+/** The one `over` a game may end on: a card won it (the heroes cannot die, so only a Wincon ends one). */
+export const GAME_OVER = "the game is over";
+
+/** Mirrors `apps/web/src/game/contract.ts`: a "Choose one" this short is drawn as a Discover pop-up. */
+const DISCOVER_OPTION_LIMIT = 5;
+
+/**
+ * The `data-prompt-kind` the board draws a prompt with (`apps/web/src/game/Prompt.tsx`, the M5-T4
+ * contract): the prompt's own kind, except a short `mode` prompt, which is a Discover pop-up.
+ */
+export function boardKind(pending: { kind?: string; options?: unknown[] }): string {
+  const kind = pending.kind ?? "";
+  return kind === "mode" && (pending.options?.length ?? 0) <= DISCOVER_OPTION_LIMIT ? "discover" : kind;
+}
+
+/**
+ * The prompt kind the next step will answer, when it is one, as the board draws it (`boardKind`): the seat that owes the move holds the
+ * device and its view holds a prompt for it. The spec waits on the board to draw that prompt before
+ * the step reads it, since the board swaps its view only once the animations before it have run.
+ */
+export function owedPromptKind(handle: Handle): string | null {
+  const state = handle.state as unknown as StateLike;
+  if (state.result !== null && state.result !== undefined) return null;
+  const seat = seatToAct(state);
+  if (handle.seat !== seat) return null;
+  if (state.mulligan !== undefined && state.mulligan[seat]?.keep === null) return null;
+  const view = handle.view() as unknown as ViewLike;
+  return view.pending?.forYou === true ? boardKind(view.pending) : null;
+}
+
 /**
  * One step of the game, as the header says. `toPlay` is the set of definition ids still to be played;
  * the step plays one of them when it can and never anything else. `doc` is read for the open prompt's
@@ -65,7 +96,7 @@ function dispatched(handle: Handle, body: ActionBody, seat: PlayerId): string | 
  */
 export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Document): PlayStep {
   const state = handle.state as unknown as StateLike;
-  if (state.result !== null && state.result !== undefined) return { kind: "over", why: "the game is over" };
+  if (state.result !== null && state.result !== undefined) return { kind: "over", why: GAME_OVER };
   const seat = seatToAct(state);
   if (handle.seat !== seat) {
     handle.setSeat(seat);
@@ -88,7 +119,7 @@ export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Docum
     if (answer === undefined) return { kind: "over", why: `${seat}'s ${view.pending.kind ?? "?"} prompt lists no answer` };
     const shown = doc.querySelector('[data-testid="prompt-modal"]')?.getAttribute("data-prompt-kind") ?? null;
     const error = dispatched(handle, answer, seat);
-    return { kind: "answer", seat, prompt: view.pending.prompt ?? "", promptKind: view.pending.kind ?? "", shown, error };
+    return { kind: "answer", seat, prompt: view.pending.prompt ?? "", promptKind: view.pending.kind ?? "", drawn: boardKind(view.pending), shown, error };
   }
 
   const hand = Array.isArray(view.you.hand) ? view.you.hand : [];

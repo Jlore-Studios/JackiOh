@@ -170,7 +170,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Stack: keyword("Stack", "May be played onto an occupied zone"),
   "Can't attack": keyword("Can't attack", "Cannot declare attacks"),
   Armor: keyword("Armor", "Reduce each damage instance by X", { row: "Armor X" }),
-  Lucky: keyword("Lucky", "Repeat a luck-based roll X extra times, keep the best", { row: "Lucky X" }),
+  // R1438, R1440: a coin flip is a luck-based roll, and Lucky given to a card adds to its own.
+  Lucky: keyword(
+    "Lucky",
+    "Repeat a luck-based roll X extra times, keep the best; a coin flip is one, heads its better side unless the card says otherwise; Lucky given to it adds to X",
+    { row: "Lucky X" },
+  ),
   // Patch v0.2.0's keywords (docs/classic-sets.md B3.1, B3.3, B5 E6 and E35; R383, R385).
   Animated: keyword(
     "Animated",

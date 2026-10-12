@@ -2,15 +2,12 @@
 votes against it (`deliver.py`), and the router uses it to pick a review run's reviewer
 (`plan.review_seat`), so the two cannot disagree.
 
-A commit ships when no model's rejection of it stands and it has
-
-- one strong model's approval (Opus), or
-- two medium models' approvals, the same model twice included (two Muse reviews count), or
-- for an easy item only, one weak model's approval (Devin, Sonnet) and one medium model's.
-
-That holds whatever the difficulty: a hard item ships on two medium approvals too. Approvals
-count per review, never per family: each review run, and each run's own adversarial reviewer,
-casts one. A weak approval counts only toward an easy item's weak-and-medium pair.
+A commit ships when no model's rejection of it stands and its lane's final audit approved
+it (#725): one strong model's approval (Opus) for a medium or hard item, one medium
+model's for an easy item, whose scope the easy rule hard-limits. A strong approval ships
+an easy item too. Approvals count per review, never per family: each review run, and each
+run's own adversarial reviewer, casts one. A weak approval never ships anything; it is a
+finding round, not a vote.
 
 A commit that met the rule is recorded as cleared. When `main` then leaves it with conflicts,
 the clearance carries to the revision that resolves them (`carried`), so no review run is
@@ -25,8 +22,7 @@ from collections import Counter
 from typing import Any, Callable, Iterable, Mapping
 
 #: The rule in one line, for prompts, comments and the status issue.
-SUMMARY = ("one strong model, or two medium ones (the same model may give both), or for an easy "
-           "item one weak and one medium one")
+SUMMARY = "its lane's final audit: a strong model's approval, or a medium model's for an easy item"
 
 
 def approvals(votes: Mapping[str, Any], family_tier: Callable[[str], str]) -> list[tuple[str, str]]:
@@ -44,10 +40,13 @@ def approvals(votes: Mapping[str, Any], family_tier: Callable[[str], str]) -> li
 
 
 def met(tiers: Iterable[str], difficulty: str) -> bool:
-    """Whether approvals at these tiers (one per review) let an item of `difficulty` ship."""
+    """Whether approvals at these tiers (one per review) let an item of `difficulty` ship:
+    one strong approval for a medium or hard item, one medium (or strong) approval for an
+    easy item (#725: the Medium audit ships Easy). A weak approval never ships anything."""
     count = Counter(tiers)
-    return (count["strong"] >= 1 or count["medium"] >= 2
-            or (difficulty == "easy" and count["medium"] >= 1 and count["weak"] >= 1))
+    if difficulty == "easy":
+        return count["strong"] >= 1 or count["medium"] >= 1
+    return count["strong"] >= 1
 
 
 def carried(votes: Mapping[str, Any]) -> bool:
@@ -57,37 +56,34 @@ def carried(votes: Mapping[str, Any]) -> bool:
 
 
 def helps(tiers: Iterable[str], tier: str, difficulty: str) -> bool:
-    """Whether one more approval at `tier` brings the head closer to the rule. A strong or medium
-    one always does; a weak one only for an easy item that has no weak approval yet."""
-    if tier != "weak":
+    """Whether one more approval at `tier` brings the head closer to the rule. A strong one
+    always does; a medium one only where it ships (an easy item's final audit); a weak one
+    never does (#725: weak self-review rounds are findings, and no weak review runs go out)."""
+    if tier == "strong":
         return True
-    return difficulty == "easy" and "weak" not in set(tiers)
+    if tier == "medium":
+        return difficulty == "easy"
+    return False
 
 
 def reachable(tiers: Iterable[str], available: Iterable[str], difficulty: str) -> bool:
-    """Whether reviewers of the `available` tiers could still take the head to the rule: any
-    strong or medium one can (a medium model may review twice), a weak one only for an easy item
-    that already has a medium approval."""
-    tiers, available = list(tiers), set(available)
-    if met(tiers, difficulty) or available & {"strong", "medium"}:
+    """Whether reviewers of the `available` tiers could still take the head to the rule: a
+    strong one always can, and a medium one can for an easy item (#725)."""
+    tiers = list(tiers)
+    if met(tiers, difficulty):
         return True
-    return "weak" in available and met([*tiers, "weak"], difficulty)
+    have = set(available)
+    if "strong" in have:
+        return True
+    return difficulty == "easy" and "medium" in have
 
 
 def missing(tiers: Iterable[str], difficulty: str) -> str:
-    """What the head still waits for, in words."""
-    count = Counter(tiers)
+    """What the head still waits for, in words: a strong model's final audit, or a medium
+    model's for an easy item (#725)."""
     if difficulty == "easy":
-        if count["medium"]:
-            return ("one more review, by a strong, medium or weak model (the same medium model "
-                    "may review it again)")
-        if count["weak"]:
-            return "a strong or medium model's review"
-        return ("one strong model's review (Opus), two medium ones (the same model may give both), "
-                "or a weak and a medium one")
-    if count["medium"]:
-        return "a strong or medium model's review (the same medium model may review it again)"
-    return "one strong model's review (Opus), or two medium ones (the same model may give both)"
+        return "a medium model's final audit (sooner) or a strong model's (Opus)"
+    return "one strong model's final audit (Opus)"
 
 
 def who(approved: Iterable[tuple[str, str]]) -> str:

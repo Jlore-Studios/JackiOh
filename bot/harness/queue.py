@@ -511,6 +511,9 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
+    #: The subscription that wrote that plan, so a medium or hard build stays with it
+    #: (one lane, one owner, #725).
+    planned_by: str = ""
     #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
     #: For a review: the tier of each approval the head has, one per review (`review_rule`).
@@ -534,6 +537,13 @@ class Candidate:
     #: For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
     #: checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
     part: bool = False
+    #: For a revision: the tier of the final audit it answers (#725), so the auditor's tier
+    #: fixes and pushes it ("" when no audit has asked for changes yet).
+    audit_tier: str = ""
+    #: Review verdict rounds already used on the item in the current owner's hands (#725).
+    rounds_used: int = 0
+    #: The owner tier that used them ("" when none); a new owner starts its own count.
+    round_tier: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -557,19 +567,20 @@ def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str,
     bot must not plan over it. A mode (#60) plans for itself: a split is the planning, and a
     one-shot writes its own spec first, so neither waits for a plan."""
     if kind == "build" and mode:
-        return {"planned": True, "plan_tier": "strong"}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
     if record.get("planned_at"):
-        return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
+        return {"planned": True, "plan_tier": str(record.get("planned_tier") or ""),
+                "planned_by": str(record.get("planned_by_id") or "")}
     if kind == "build" and issueplan.plan_of(thread.get("body")):
-        return {"planned": True, "plan_tier": "strong"}
-    return {"planned": False, "plan_tier": ""}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
+    return {"planned": False, "plan_tier": "", "planned_by": ""}
 
 
 def plan_floor(candidate: Candidate) -> str:
     """The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
-    easy item, strong for anything harder, and medium to rate and plan an item nobody has rated
-    or planned yet. One planned but never rated (a plan from before ratings, or a planner that
-    gave none) counts as medium, so it needs a strong plan."""
+    easy or medium item, strong for a hard one, and medium to rate and plan an item nobody has
+    rated or planned yet. One planned but never rated (a plan from before ratings, or a planner
+    that gave none) still needs a plan from its difficulty's floor."""
     if not candidate.rated and not candidate.planned:
         return UNRATED_PLAN_FLOOR
     return PLAN_FLOOR[candidate.difficulty]
@@ -585,7 +596,7 @@ def plan_meets(candidate: Candidate) -> bool:
 
 def needs_plan(candidate: Candidate) -> bool:
     """The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-    weaker than its difficulty's plan floor (a medium plan for a medium or hard item). Devin,
+    weaker than its difficulty's plan floor (a medium plan for a hard item). Devin,
     which cannot plan, builds only from a plan that meets its floor."""
     return candidate.kind == "build" and not plan_meets(candidate)
 
@@ -725,7 +736,12 @@ def candidates(ctx: Context, state: dict[str, Any],
                 rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
                 review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
-                mode=mode, part=kind == "build" and not mode and is_part(record))
+                mode=mode, part=kind == "build" and not mode and is_part(record),
+                audit_tier=str(record.get("audit_tier") or "") if kind == "revise" else "",
+                rounds_used=int(record.get("verdict_rounds") or 0)
+                if kind in ("build", "revise") else 0,
+                round_tier=str(record.get("round_tier") or "")
+                if kind in ("build", "revise") else "")
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

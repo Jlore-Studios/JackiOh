@@ -11,9 +11,10 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 use jackioh_engine::wire::stats::{
-    CardStatsFilter, GameMode, GameRecord, GameSource, PilotFilter, SourceFilter, Tally, card_stats, win_rate,
+    CardStats, CardStatsFilter, CardStatsReport, GameMode, GameRecord, GameSource, PilotFilter, SourceFilter,
+    Tally, card_stats, win_rate,
 };
-use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Winner};
+use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Pilot, Winner};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -203,8 +204,83 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
     Ok(records)
 }
 
+/// R1451: the seats of a record the public figures count: a live game's people only, so a ladder
+/// bot's side (`ai`, R1452) is read only by a query that asks for it, and both seats of an AI
+/// development game (R378).
+fn counted_pilot(source: GameSource) -> PilotFilter {
+    match source {
+        GameSource::Live => PilotFilter::Human,
+        GameSource::Dev => PilotFilter::Unified,
+    }
+}
+
+fn sum_tally(a: &Tally, b: &Tally) -> Tally {
+    Tally {
+        games: a.games + b.games,
+        wins: a.wins + b.wins,
+        draws: a.draws + b.draws,
+    }
+}
+
+/// R1451: the public report over `records` for `source`: the live records' report counting their
+/// people (`counted_pilot`) and the development records' counting both seats, summed card by card,
+/// in catalog-id order as `card_stats` lists them.
+fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> CardStatsReport {
+    let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
+        source,
+        mode: None,
+        patch: Some(patch.to_string()),
+        pilot,
+    };
+    let mut parts: Vec<CardStatsReport> = Vec::new();
+    if matches!(source, SourceFilter::Live | SourceFilter::All) {
+        parts.push(card_stats(
+            records,
+            &filter(SourceFilter::Live, counted_pilot(GameSource::Live)),
+        ));
+    }
+    if matches!(source, SourceFilter::Dev | SourceFilter::All) {
+        parts.push(card_stats(
+            records,
+            &filter(SourceFilter::Dev, counted_pilot(GameSource::Dev)),
+        ));
+    }
+    let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
+    let (mut games, mut decks) = (0, 0);
+    for part in parts {
+        games += part.games;
+        decks += part.decks;
+        for stat in part.cards {
+            match by_card.get_mut(&stat.card) {
+                None => {
+                    by_card.insert(stat.card.clone(), stat);
+                }
+                Some(held) => {
+                    held.in_deck = sum_tally(&held.in_deck, &stat.in_deck);
+                    held.opening_hand = sum_tally(&held.opening_hand, &stat.opening_hand);
+                    held.going_first = sum_tally(&held.going_first, &stat.going_first);
+                    held.going_second = sum_tally(&held.going_second, &stat.going_second);
+                    held.played = sum_tally(&held.played, &stat.played);
+                    held.drawn_not_played = sum_tally(&held.drawn_not_played, &stat.drawn_not_played);
+                }
+            }
+        }
+    }
+    let mut cards: Vec<CardStats> = by_card.into_values().collect();
+    cards.sort_by(|a, b| a.card.cmp(&b.card));
+    CardStatsReport {
+        filter: filter(source, PilotFilter::Unified),
+        games,
+        decks,
+        cards,
+    }
+}
+
 /// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
+/// R1451: a ladder bot's game counts toward the gate like any live game, and its people's side
+/// toward the figures; the bot's side never does (`public_report`). That a bot game adds one deck
+/// where a person's adds two is a tell R1452 records and keeps.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -254,18 +330,14 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         )
     };
 
-    let report = card_stats(
+    let report = public_report(
         &records_to_count,
-        &CardStatsFilter {
-            source: match source {
-                PublicStatsSource::Live => SourceFilter::Live,
-                PublicStatsSource::Dev => SourceFilter::Dev,
-                PublicStatsSource::Provisional => SourceFilter::All,
-            },
-            mode: None,
-            patch: Some(requested_patch.clone()),
-            pilot: PilotFilter::Unified,
+        match source {
+            PublicStatsSource::Live => SourceFilter::Live,
+            PublicStatsSource::Dev => SourceFilter::Dev,
+            PublicStatsSource::Provisional => SourceFilter::All,
         },
+        &requested_patch,
     );
 
     let stats_map: IndexMap<&str, _> = report
@@ -448,15 +520,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             .filter(|record| !is_tutorial(record))
             .collect();
         if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
-            let report = card_stats(
-                &records,
-                &CardStatsFilter {
-                    source: SourceFilter::Live,
-                    mode: None,
-                    patch: Some(version.clone()),
-                    pilot: PilotFilter::Unified,
-                },
-            );
+            let report = public_report(&records, SourceFilter::Live, version);
             let stat = report.cards.iter().find(|stat| stat.card == card_id);
             patch_history.push(PatchRate {
                 patch: version.clone(),
@@ -483,6 +547,10 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
     for record in &records_to_count {
         for seat in PLAYER_IDS {
+            // R1451: as `public_report` counts them, a live game's people only.
+            if counted_pilot(record.source) == PilotFilter::Human && record.pilots[seat] != Pilot::Human {
+                continue;
+            }
             let summary = &record.game.seats[seat];
             if !summary.deck.contains(&card_id) {
                 continue;

@@ -8,7 +8,16 @@ docs/v0.3.0/SURFACE.md §14.
 | Lane | Goal | Standing prompt |
 |---|---|---|
 | `improve` | a stronger AI: beat its predecessor in 75 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
-| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100 | [`unban.md`](unban.md) |
+| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100. **Done at generation 8** (2026-10-10), which lifted the last ban | [`unban.md`](unban.md) |
+
+The unban lane is done. Generation 8 (`training/history/unban.jsonl`) removed the last entry of
+`SHADOW_BAN`, and no AI can keep strictly fewer cards out of its decks than none, so no unban
+promotion can pass again: `promote --lane unban` refuses to play its games (The gate), and a session
+on [`unban.md`](unban.md) stops before it does any work. Its service, `jackioh-train@unban`, idles:
+`loop.sh` starts no session while the parent bans no card, and looks again every
+`TRAIN_IDLE_SECONDS` (How a lane runs, step 2). The lane has work again once an entry is added to the
+table: #616's sweep of record does that for the Meditative cards the AI misplays when it lifts
+R1390's gate, and the first cycle after it starts a session.
 
 ## How a lane runs
 
@@ -27,10 +36,16 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    as a local branch `ai/<lane>-set-back-<t>`, and an entry in `attempts.md` saying why, which the
    next session reads first. Otherwise wait.
 2. Otherwise fetch `main`, reset `ai/<lane>` to it, build `jackioh` from it and keep that binary as
-   `~/parent-jackioh`. The parent is always the AI on `main`. Push `ai/<lane>` as `main` plus an
-   empty `[skip ci]` commit naming the session, and make the lane's pull request this session's
-   draft, titled `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is
-   open).
+   `~/parent-jackioh`. The parent is always the AI on `main`.
+   - The `unban` lane stops here while the parent shadow-bans no card. A promotion needs strictly
+     fewer bans, so a session could do nothing. The lane retitles its draft
+     `AI gen <N> (unban): idle, the AI on main bans no card`, says so once in a comment, and looks
+     again every `TRAIN_IDLE_SECONDS` (15 minutes). The first cycle after `main`'s AI bans a card
+     again starts a session. A sweep of record adds such bans, as #616's does for the Meditative set,
+     and both standing prompts send the lanes to the Meditative cards first.
+   - Otherwise push `ai/<lane>` as `main` plus an empty `[skip ci]` commit naming the session, and
+     make the lane's pull request this session's draft, titled
+     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open).
 3. Run one Devin session on the lane's standing prompt
    (`devin -p --prompt-file training/<lane>.md --model "$DEVIN_MODEL" --permission-mode dangerous
    --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI, measures
@@ -98,6 +113,10 @@ The engine (`crates/engine`), the cards (`crates/cards`), every test outside `cr
 
 A draw is not a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a
 failed gate. The report (Markdown) goes to stdout.
+
+Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
+none), so `promote --lane unban` says the lane is done and exits 1 before it plays a game, whatever
+the flag, writing nothing and printing no report.
 
 - `--dry-run` measures and writes nothing. It runs on a working copy with uncommitted changes in
   `crates/ai/src` (on HEAD's seeds, and says so).

@@ -255,6 +255,212 @@ mod tests {
             assert!(added[0].radiant);
         }
 
+        /// Me and Mr Token (Core #15): (1) Unit, "Cry: Summon a Rush Token" (Radiant: three).
+        const MR_TOKEN: &str = "core-015";
+        /// K-Pop Fanatic (Core #50): (1) 1/1 Unit with a Cry; Radiant 2/2 with Divine Shield.
+        const KPOP: &str = "core-050";
+        /// Anti-oneshot Armor (Core #73): a face-up Field Spell.
+        const FIELD_SPELL: &str = "core-073";
+        /// Sheepish (Core #41): a Trap, face-down.
+        const TRAP: &str = "core-041";
+
+        fn pick(id: &str) -> Value {
+            json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
+        }
+
+        /// p1 holds Prestige and plenty of mana; p2's backrow holds a Radiant Field Spell and a
+        /// Radiant face-down Trap, and its field a plain Unit.
+        fn backrow_game(seed: &str) -> Scenario {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": { "mana": 10, "hand": [PRESTIGE, FILLER], "library": filler(4) },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [VANILLA],
+                    "backrow": [{ "def": FIELD_SPELL, "lane": 1 }, { "def": TRAP, "lane": 2 }],
+                    "library": filler(4),
+                },
+            }));
+            for lane in [1, 2] {
+                let id = s.backrow("p2", lane).expect("a backrow card").id;
+                s.card_mut(&id).radiant = true;
+            }
+            s
+        }
+
+        #[test]
+        fn targets_a_face_up_backrow_card_on_the_enemy_side() {
+            let mut s = backrow_game("prestige-backrow");
+            let field_spell = s.backrow("p2", 1).expect("the Field Spell");
+            s.play(PRESTIGE, pick(&field_spell.id));
+            assert!(!s.card(&field_spell.id).radiant);
+            assert_eq!(ai_cards(&s).len(), 1);
+        }
+
+        #[test]
+        fn a_face_down_trap_or_a_card_that_is_not_radiant_is_refused() {
+            let mut s = backrow_game("prestige-refused");
+            let trap = s.backrow("p2", 2).expect("the Trap");
+            let plain = must_unit(&s, "p2", 1);
+            assert!(!plain.radiant);
+            s.expect_refused(|s| s.play(PRESTIGE, pick(&trap.id)));
+            s.expect_refused(|s| s.play(PRESTIGE, pick(&plain.id)));
+            assert!(s.card(&trap.id).radiant, "the face-down Trap stays Radiant");
+        }
+
+        #[test]
+        fn radiant_only_keywords_are_lost_and_no_cry_runs() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "prestige-kpop",
+                "p1": { "mana": 10, "hand": [PRESTIGE, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "field": [{ "def": KPOP, "radiant": true }], "library": filler(4) },
+            }));
+            let kpop = must_unit(&s, "p2", 1);
+            let kinds = |s: &Scenario| -> Vec<KeywordKind> {
+                keywords_of(s.state(), s.card(&kpop.id))
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect()
+            };
+            assert!(kinds(&s).contains(&KeywordKind::DivineShield));
+            s.play(PRESTIGE, pick(&kpop.id));
+            // Back to the base 1/1 with no Divine Shield, and its Cry did not run: no prompt.
+            assert!(!kinds(&s).contains(&KeywordKind::DivineShield));
+            s.expect_stats(&kpop.id, json!({ "attack": 1, "health": 1 }));
+            assert!(s.state().pending.is_none());
+        }
+
+        #[test]
+        fn the_card_follows_its_base_text_from_then_on() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "prestige-base-text",
+                "p1": {
+                    "mana": 10,
+                    "hand": [PRESTIGE, { "def": MR_TOKEN, "radiant": true }, FILLER],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            let held = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.def_id == MR_TOKEN)
+                .expect("Mr Token");
+            s.play(PRESTIGE, pick(&held.id));
+            // Played now, it runs its base Cry: one Rush Token, not the Radiant face's three.
+            s.play(&held.id, json!({ "zone": 1 }));
+            let p1_units = (1..=UNIT_ZONES)
+                .filter(|lane| s.unit("p1", *lane).is_some())
+                .count();
+            assert_eq!(p1_units, 2, "Mr Token and one Rush Token");
+            assert!(!must_unit(&s, "p1", 1).radiant);
+        }
+
+        #[test]
+        fn r1421_the_added_card_is_one_of_the_ten_ai_cards_hidden_from_the_opponent() {
+            for n in 0..8 {
+                let mut s = casting(&format!("prestige-pool-{n}"), false);
+                let unit = must_unit(&s, "p1", 1);
+                s.play(PRESTIGE, pick(&unit.id));
+                let added = ai_cards(&s);
+                assert_eq!(added.len(), 1);
+                let def = crate::card_def(&added[0].def_id);
+                assert!(def.token, "an AI generated card is a token (R1421)");
+                assert!(
+                    added[0].def_id.starts_with("classicplus-t-ai-"),
+                    "{}",
+                    added[0].def_id
+                );
+                // The opponent never reads which.
+                let seen = serde_json::to_string(&s.view(PlayerId::P2)).expect("the view serialises");
+                assert!(!seen.contains(&added[0].def_id), "p2 reads {}", added[0].def_id);
+            }
+        }
+
+        #[test]
+        fn r440_deradianted_is_hidden_in_a_hand_and_public_on_the_field() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "prestige-hidden",
+                "p1": {
+                    "mana": 10,
+                    "hand": [PRESTIGE, { "def": PRESTIGE }, { "def": VANILLA, "radiant": true }],
+                    "field": [{ "def": VANILLA, "radiant": true }],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            let deradianted = |s: &Scenario| -> Vec<Value> {
+                let events = serde_json::to_value(s.view(PlayerId::P2).events).expect("events");
+                events
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|event| event["type"] == json!("deradianted"))
+                    .collect()
+            };
+            let held = s
+                .hand("p1")
+                .into_iter()
+                .find(|card| card.def_id == VANILLA)
+                .expect("held");
+            s.play(PRESTIGE, pick(&held.id));
+            let seen = deradianted(&s);
+            assert_eq!(seen.len(), 1);
+            assert_eq!(
+                seen[0]["instanceId"],
+                json!("hidden"),
+                "a hand card's stays hidden"
+            );
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
+            // The view keeps the earlier action's events too: the new one comes last.
+            let seen = deradianted(&s);
+            assert_eq!(seen.len(), 2);
+            assert_eq!(seen[1]["instanceId"], json!(unit.id), "a field card's is public");
+        }
+
+        #[test]
+        fn r386_cards_reads_through_param() {
+            let mut s = casting("prestige-param", false);
+            step_param(s.card_mut(PRESTIGE), "cards", 1);
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
+            assert_eq!(ai_cards(&s).len(), 2);
+        }
+
+        #[test]
+        fn r1104_radiant_leaves_the_opponents_exile_untouched() {
+            let mut s = casting("prestige-exile", true);
+            let mut card = new_instance(
+                s.state_mut(),
+                VANILLA,
+                PlayerId::P2,
+                Zone::Exile { player: PlayerId::P2 },
+            );
+            card.radiant = true;
+            s.state_mut().players.p2.exile.push(card);
+            s.play(PRESTIGE, json!({}));
+            assert!(!must_unit(&s, "p2", 1).radiant);
+            assert!(
+                s.pile("p2", "exile").iter().all(|card| card.radiant),
+                "the exile stays Radiant"
+            );
+        }
+
+        #[test]
+        fn the_radiant_face_adds_a_radiant_ai_card() {
+            let mut s = casting("prestige-radiant-ai", true);
+            s.play(PRESTIGE, json!({}));
+            let added = ai_cards(&s);
+            assert_eq!(added.len(), 1);
+            assert!(added[0].radiant);
+        }
+
         #[test]
         fn adds_a_radiant_ai_card_off_the_radiant_face() {
             let mut s = casting("prestige-ai", false);

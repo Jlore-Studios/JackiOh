@@ -116,9 +116,11 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Buffed { instance_id, attack, health } => {
-                    Some((instance_id.clone(), *attack, *health))
-                }
+                GameEvent::Buffed {
+                    instance_id,
+                    attack,
+                    health,
+                } => Some((instance_id.clone(), *attack, *health)),
                 _ => None,
             })
             .collect()
@@ -129,6 +131,41 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == id))
             .count()
+    }
+
+    /// `effects` applied for p1 on a sink over the scenario's state, then settled.
+    fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) {
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
+                );
+                apply_effects(effects, &mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+    }
+
+    /// RCTA cast on p1's Vanilla; its id.
+    fn granted(seed: &str) -> (Scenario, String) {
+        let mut s = casting(seed, false);
+        let victim = s.unit(P1, 1).expect("the Vanilla").id;
+        s.play(RCTA, pick(&victim));
+        assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
+        (s, victim)
+    }
+
+    fn instance(id: &str) -> Value {
+        json!({ "of": "instance", "instanceId": id })
     }
 
     mod m35_rcta_cn {
@@ -168,7 +205,7 @@ mod tests {
             }
 
             #[test]
-            fn r924_an_enemy_face_down_trap_is_a_legal_pick_and_fizzles_if_cn() {
+            fn r924_an_enemy_face_down_trap_is_a_legal_pick() {
                 // The enemy's face-down Sheepish is a legal pick, whatever its tags: the play
                 // resolves onto it, granting CN, Chinese, stats and a Buff.
                 crate::register_all();
@@ -190,7 +227,10 @@ mod tests {
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));
                 assert_eq!((changed.buffs.attack, changed.buffs.health), (2, 2));
+            }
 
+            #[test]
+            fn a_target_that_is_cn_by_resolution_fizzles() {
                 // CN by the time the Spell resolves: the effect fizzles on it — no flag, no
                 // stats, no Buff.
                 crate::register_all();
@@ -208,8 +248,9 @@ mod tests {
                 }));
                 let trap = s.backrow(P2, 1).expect("the face-down trap");
                 // CN before the play resolves, as a mid-resolution grant would leave it.
-                find_instance_mut(s.state_mut(), &trap.id).expect("the trap").granted_tags =
-                    Some(vec![Tag::Cn]);
+                find_instance_mut(s.state_mut(), &trap.id)
+                    .expect("the trap")
+                    .granted_tags = Some(vec![Tag::Cn]);
                 s.play(RCTA, pick(&trap.id));
                 let unchanged = s.card(&trap.id).clone();
                 assert_eq!(unchanged.chinese, None);
@@ -228,6 +269,105 @@ mod tests {
                 let changed = s.card(&victim.id).clone();
                 assert_eq!((changed.buffs.attack, changed.buffs.health), (4, 4));
                 assert_eq!(upgraded_for(s.events(), &victim.id), 3);
+            }
+
+            #[test]
+            fn an_enemy_permanent_is_a_legal_target() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "rcta-enemy",
+                    "p1": { "hand": [{ "def": RCTA }, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": filler(4) },
+                }));
+                let enemy = s.unit(P2, 1).expect("the enemy Vanilla").id;
+                s.play(RCTA, pick(&enemy));
+                assert_eq!(s.card(&enemy).granted_tags, Some(vec![Tag::Cn]));
+            }
+
+            #[test]
+            fn r923_every_instance_level_read_sees_the_tag_while_pools_do_not() {
+                let (mut s, victim) = granted("rcta-reads");
+                // The instance reads CN; the definition, and so every pool, does not.
+                assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
+                assert!(!crate::card_def(VANILLA).tags.contains(&Tag::Cn));
+                let pool = jackioh_engine::catalog::query(&json_as(json!({ "tags": ["CN"] })));
+                assert!(
+                    !pool.iter().any(|def| def.id == VANILLA),
+                    "a pool reads the printed tags"
+                );
+                // M 78's filter: "exile every non-CN permanent" spares it. (M 34's scopes are proven
+                // in its own file, r923_a_granted_cn_unit_survives_and_is_buffed.)
+                let mandate = "meditative-078";
+                s.state_mut().players[P1].mana.current = 10;
+                let card = new_instance(s.state_mut(), mandate, P1, Zone::Hand { player: P1 });
+                s.state_mut().players[P1].hand.push(card.clone());
+                s.play(&card.id, json!({}));
+                assert_eq!(s.unit(P1, 1).expect("the granted unit stands").id, victim);
+            }
+
+            #[test]
+            fn r923_kept_in_every_zone_and_by_a_copy_dropped_by_a_transform() {
+                // Kept by a copy.
+                let (mut s, victim) = granted("rcta-copy");
+                apply_for_p1(
+                    &mut s,
+                    &[summon_copy(json_as(json!({ "of": instance(&victim) })))],
+                );
+                let copy = s.unit(P1, 2).expect("the copy");
+                assert_eq!(copy.granted_tags, Some(vec![Tag::Cn]));
+                // Kept in a hand.
+                apply_for_p1(&mut s, &[bounce(json_as(json!({ "target": instance(&victim) })))]);
+                assert!(matches!(s.card(&victim).zone, Zone::Hand { .. }));
+                assert_eq!(s.card(&victim).granted_tags, Some(vec![Tag::Cn]));
+                // Kept in a graveyard.
+                apply_for_p1(
+                    &mut s,
+                    &[destroy(json_as(json!({ "target": instance(&copy.id) })))],
+                );
+                s.expect_in_zone(&copy.id, "graveyard");
+                assert_eq!(s.card(&copy.id).granted_tags, Some(vec![Tag::Cn]));
+                // Dropped by a Transform.
+                let (mut s, victim) = granted("rcta-transform");
+                apply_for_p1(
+                    &mut s,
+                    &[transform(json_as(
+                        json!({ "target": instance(&victim), "defId": "core-003" }),
+                    ))],
+                );
+                let changed = s.unit(P1, 1).expect("the transformed unit");
+                assert_eq!(changed.def_id, "core-003");
+                assert_eq!(changed.granted_tags, None);
+                assert!(!tags_of(s.state(), &changed).contains(&Tag::Cn));
+            }
+
+            #[test]
+            fn r1300_the_chinese_flag_which_no_rule_reads() {
+                let (mut s, victim) = granted("rcta-chinese");
+                assert_eq!(s.card(&victim).chinese, Some(true));
+                let read = |s: &Scenario| {
+                    (
+                        tags_of(s.state(), s.card(&victim)),
+                        s.stats(&victim),
+                        legal_actions(s.state(), P1),
+                    )
+                };
+                let flagged = read(&s);
+                // The flag alone changes no read: unflagged, the card has the same tags, stats and
+                // legal actions.
+                s.card_mut(&victim).chinese = None;
+                assert_eq!(read(&s), flagged);
+            }
+
+            #[test]
+            fn plus_2_2_permanently_and_one_buff() {
+                let mut s = casting("rcta-permanent", false);
+                let victim = s.unit(P1, 1).expect("the Vanilla").id;
+                s.play(RCTA, pick(&victim));
+                assert_eq!(upgraded_for(s.events(), &victim), 1);
+                // Past both turns' ends, the +2/+2 stays.
+                s.end_turn().end_turn();
+                let card = s.card(&victim).clone();
+                assert_eq!((card.buffs.attack, card.buffs.health), (2, 2));
             }
         }
 

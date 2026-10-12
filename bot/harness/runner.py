@@ -178,6 +178,11 @@ class RunResult:
     extra: dict[str, Any] = field(default_factory=dict)
     #: The backend knows the CLI could not run at all (its exit code says so).
     infra_hint: bool = False
+    #: This call's token counts ({input, output, cache_read, cache_write}), when its CLI
+    #: reports any (#695: Claude's result event, Codex's turn.completed, agy's result).
+    tokens: dict[str, int] | None = None
+    #: This call's cost in USD, when its CLI reports one (Claude's `total_cost_usd`).
+    cost_usd: float | None = None
 
     @property
     def infra(self) -> bool:
@@ -477,13 +482,17 @@ class ClaudeCli(_Cli):
         with open(raw, encoding="utf-8", errors="replace") as handle:
             result, usage = parse_stream(handle)
         self._keep(launch, transcript)
+        tokens = tokens_from_block((result or {}).get("usage") if isinstance(result, dict)
+                                   else None)
+        cost = cost_from_result(result)
         if launch.stopped:
             return RunResult(False, _text(result), launch.code, _turns(result), launch.elapsed,
-                             f"stopped mid-call: {launch.stopped}", usage,
-                             extra={"usage_stop": launch.stopped})
+                             f"stopped mid-call: {launch.stopped}", usage, tokens=tokens,
+                             cost_usd=cost, extra={"usage_stop": launch.stopped})
         if launch.timed_out:
             return RunResult(False, _text(result), EXIT_TIMEOUT, _turns(result), launch.elapsed,
-                             f"timed out after {request.timeout_s}s", usage, timed_out=True)
+                             f"timed out after {request.timeout_s}s", usage, tokens=tokens,
+                             cost_usd=cost, timed_out=True)
         code = launch.code
         is_error = bool(result.get("is_error")) if isinstance(result, dict) else True
         text = _text(result)
@@ -496,7 +505,7 @@ class ClaudeCli(_Cli):
             reset_at = (usage or {}).get("rejected_resets_at") or _exhausted_reset(usage) or DEFAULT_PARK
         return RunResult(ok=not is_error and code == 0, text=text, exit_code=code,
                          turns=_turns(result), duration_s=launch.elapsed, error=error,
-                         usage=usage, reset_at=reset_at)
+                         usage=usage, tokens=tokens, cost_usd=cost, reset_at=reset_at)
 
     def live_usage(self, line: str) -> dict[str, Any] | None:
         if "rate_limit_event" not in line:
@@ -547,6 +556,7 @@ class CodexCli(_Cli):
             return launch
         failed: list[str] = []
         messages: list[str] = []
+        tokens: dict[str, int] | None = None
         for event in _json_lines(_read(raw).splitlines()):
             kind = event.get("type")
             if kind in ("turn.failed", "error"):
@@ -556,19 +566,25 @@ class CodexCli(_Cli):
                 item = event.get("item") or {}
                 if item.get("type") == "agent_message":
                     messages.append(str(item.get("text") or ""))
+            elif kind == "turn.completed":
+                found = tokens_from_block(event.get("usage"))
+                if found is not None:
+                    tokens = found
         self._keep(launch, transcript)
         text = _read(last).strip() or (messages[-1] if messages else "")
         usage = codex_usage(Path(self.env().get("CODEX_HOME") or Path.home() / ".codex"), since)
         if launch.timed_out:
             return RunResult(False, text, EXIT_TIMEOUT, None, launch.elapsed,
-                             f"timed out after {request.timeout_s}s", usage, timed_out=True)
+                             f"timed out after {request.timeout_s}s", usage, timed_out=True,
+                             tokens=tokens)
         ok = launch.code == 0 and not failed
         error = None if ok else redact(("; ".join(failed) or stderr_error(
             launch.stderr or "", f"codex exited {launch.code}"))[-2000:])
         reset_at = None
         if not ok and RATE_LIMIT_WORDS.search(error or ""):
             reset_at = _exhausted_reset(usage) or DEFAULT_PARK
-        return RunResult(ok, text, launch.code, None, launch.elapsed, error, usage, reset_at)
+        return RunResult(ok, text, launch.code, None, launch.elapsed, error, usage, reset_at,
+                         tokens=tokens)
 
     def trail(self, transcript: Path) -> str:
         entries: list[str] = []
@@ -699,15 +715,16 @@ class AgyCli(_Cli):
         self._keep(launch, transcript)
         text = str(result.get("response") or "").strip()
         turns = result.get("num_turns") if isinstance(result.get("num_turns"), int) else None
+        tokens = tokens_from_block(result.get("usage"))
         if launch.stopped:
             return self._with_usage(RunResult(
                 False, text, launch.code, turns, launch.elapsed,
-                f"stopped mid-call: {launch.stopped}", extra={"usage_stop": launch.stopped}),
-                request)
+                f"stopped mid-call: {launch.stopped}", extra={"usage_stop": launch.stopped},
+                tokens=tokens), request)
         if launch.timed_out:
             return self._with_usage(RunResult(False, text, EXIT_TIMEOUT, turns, launch.elapsed,
                                               f"timed out after {request.timeout_s}s", None,
-                                              timed_out=True), request)
+                                              timed_out=True, tokens=tokens), request)
         ok = launch.code == 0 and result.get("status") == "SUCCESS"
         error = None
         if not ok:
@@ -715,7 +732,8 @@ class AgyCli(_Cli):
                 launch.stderr or "", f"agy exited {launch.code} ({result.get('status')})"))[-2000:])
         reset_at = park_for(error) if not ok and RATE_LIMIT_WORDS.search(error or "") else None
         return self._with_usage(
-            RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at), request)
+            RunResult(ok, text, launch.code, turns, launch.elapsed, error, None, reset_at,
+                      tokens=tokens), request)
 
     def trail(self, transcript: Path) -> str:
         entries: list[str] = []
@@ -1136,6 +1154,34 @@ def _turns(result: dict[str, Any] | None) -> int | None:
     if isinstance(result, dict) and isinstance(result.get("num_turns"), int):
         return result["num_turns"]
     return None
+
+
+#: A result event's token block under the names one harness-wide shape: Claude's result
+#: event carries `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and
+#: `cache_read_input_tokens`; Codex's `turn.completed` and agy's result carry subsets.
+TOKEN_NAMES = (("input_tokens", "input"), ("output_tokens", "output"),
+               ("cache_read_input_tokens", "cache_read"),
+               ("cache_creation_input_tokens", "cache_write"))
+
+
+def tokens_from_block(block: Any) -> dict[str, int] | None:
+    """A result event's token counts as {input, output, cache_read, cache_write}, or None
+    when it names none (#695)."""
+    if not isinstance(block, Mapping):
+        return None
+    found = {name: block.get(key) for key, name in TOKEN_NAMES}
+    if not any(isinstance(value, (int, float)) for value in found.values()):
+        return None
+    return {name: int(found[name]) if isinstance(found[name], (int, float)) else 0
+            for _, name in TOKEN_NAMES}
+
+
+def cost_from_result(result: dict[str, Any] | None) -> float | None:
+    """A result event's cost in USD (`total_cost_usd`), or None (#695)."""
+    if not isinstance(result, dict):
+        return None
+    cost = result.get("total_cost_usd")
+    return float(cost) if isinstance(cost, (int, float)) else None
 
 
 def _write_redacted(source: Path, target: Path) -> None:

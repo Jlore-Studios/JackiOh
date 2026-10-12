@@ -188,6 +188,12 @@ type Picker = {
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
+  /**
+   * #617: the card being played, as the view lists it, when the options are words rather than faces
+   * (a "Choose one"): its name in the title opens its preview and long-press sheet, so the card can
+   * be read while its choice is open, on a phone too.
+   */
+  sourceCard?: CardView;
   items: PickerItem[];
   min: number;
   max: number;
@@ -600,6 +606,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         submit: (keys) => play({ modes: [...keys] }),
       };
       if (source !== undefined) picker.sourceDefId = source;
+      if (played !== null) picker.sourceCard = played.card;
       return picker;
     }
   }
@@ -818,13 +825,22 @@ function arrowFocus(columns: number) {
 }
 
 /** The picker's heading: the asking card's name before it, when the picker knows the card. */
-function PickerTitle(props: { title: string; sourceDefId: string | undefined }) {
-  const info = useCardInfo(props.sourceDefId ?? "", false);
+function PickerTitle(props: { title: string; sourceDefId: string | undefined; sourceCard: CardView | undefined }) {
+  const info = useCardInfo(props.sourceDefId ?? "", props.sourceCard?.radiant === true);
+  const face = props.sourceCard === undefined ? null : liveFace(info, props.sourceCard);
+  const inspect = useInspectTrigger(face === null ? null : { key: `prompt-source:${face.defId}`, face }, { prefer: "above", showLoc: false });
   if (props.sourceDefId === undefined) return <p className="prompt-title">{props.title}</p>;
   return (
     <p className="prompt-title">
-      <span className="prompt-title-source">{info.name}</span>
+      {face === null ? (
+        <span className="prompt-title-source">{info.name}</span>
+      ) : (
+        <span className="prompt-title-source prompt-title-source--inspect" data-testid="prompt-title-source" {...inspect.handlers}>
+          {info.name}
+        </span>
+      )}
       <span className="prompt-title-ask">{props.title}</span>
+      {inspect.overlay}
     </p>
   );
 }
@@ -1191,7 +1207,7 @@ function PromptModal(props: {
             {QUEST_COMPLETE}
           </p>
         ) : null}
-        <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} />
+        <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
         <p className="prompt-count">
           Choose {range}: {selected.length} chosen
         </p>

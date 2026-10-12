@@ -82,6 +82,7 @@ class InstantFailureTests(unittest.TestCase):
 
     def test_a_review_call_that_fails_names_its_error(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
         pr, _ = test_cross.ReviewRuleTests.build_on_medium(self, h)
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
         _, review = h.night(FakeRunner({"review": failing(900, "overloaded")}))
