@@ -12,13 +12,14 @@ Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
 each item first (a strong one for medium and hard items) and rates an item nobody rated, under a
-strict [easy rule](#the-easy-rule); the weakest model of the item's difficulty's tier that has a
-free lane builds it,
-runs the repository's checks, and adversarial review runs read the change, going round until the
-reviewer approves. Three failures of an item's own raise its difficulty a step and rebuild it from
-`main` ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and one strong model, or two medium
-ones (the same model may give both), or for an easy item one weak and one medium one, approved the
-same commit. When it has nothing to do, it proposes
+strict [easy rule](#the-easy-rule); one subscription owns the item end to end (a medium or
+hard item stays with its planner), builds it,
+runs the repository's checks, and reviews itself in a fresh adversarial session, going round
+until its lane's verdict rounds run out or its reviewer approves. Then the lane's final audit
+(a Strong seat for medium and hard items, a medium one for easy items) reviews, fixes and
+pushes. Three failures of an item's own raise its difficulty a step and rebuild it from
+`main` ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and its lane's final audit approved the
+same commit: one strong model for a medium or hard item, one medium model for an easy item. When it has nothing to do, it proposes
 improvements to the game as issues, at most four open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
@@ -44,15 +45,15 @@ flowchart TD
     GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
     PL --> PN["planner (medium or strong; strong for medium and hard)<br/>rates an unrated item, writes the plan"]
-    PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the cheapest the item's difficulty allows"]
+    PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
-    G -- "a self-checking builder (Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
+    G -- "a weak builder (Codex, Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
     SC --> R
-    G --> R["adversarial reviewer<br/>the run's own medium or strong model"]
-    R -- "blocking findings or red checks<br/>(up to 10 rounds)" --> F["a fresh builder<br/>fixes the findings"]
+    G --> R["adversarial reviewer<br/>the run's own lane reviewer, a fresh session"]
+    R -- "blocking findings or red checks<br/>(3 verdict rounds, 10 for hard)" --> F["the same owner<br/>fixes the findings"]
     F --> G
-    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on one strong approval"]
-    D -- "not enough approvals yet" --> X["review run (bot:cross-review)<br/>a strong model, else a medium one,<br/>else (easy) a weak one"]
+    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
+    D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
     X -- "approved" --> CI
     PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:build approves one"]
   end
@@ -346,7 +347,7 @@ in place of the `bot:*` ones.
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
-| `bot:stuck` | beside `bot:blocked`: a build or revision used every review round (`max_review_cycles`, 10) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
+| `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; add `bot:build` (or assign the bot, or `/harness build`) to have it built, which takes this label off; close it to say no |
@@ -432,7 +433,7 @@ prints each one and whether it could start now, and `/harness status` does the s
   full), and never plans or reviews. No committed seat uses it now.
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
   findings and needs less thought than the build; empty runs it at the seat's own.
-- `self_check: true`: its builds check themselves before any review (Devin;
+- `self_check: true`: its builds check themselves before any review (the weak builders;
   [the self-check loop](#the-self-check-loop)).
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
@@ -543,15 +544,18 @@ may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #3
 
 | Difficulty | Plan written by | Builds it | Approvals it needs |
 |---|---|---|---|
-| easy | medium or strong | weak or stronger | one strong (a weak review is its green light only) |
-| medium | strong only | medium or stronger | one strong |
-| hard | strong only | strong only | one strong |
+| easy | medium or strong | weak or stronger | one medium (the final audit; a strong one ships it too) |
+| medium | medium or strong | medium or stronger, planner preferred | one strong (the final audit) |
+| hard | strong only | strong only, planner and builder the same | one strong |
 | (unrated) | medium or strong, who rates it | as medium | as medium |
 
 **The usage order** (`priority`) is the owner's, and it is the tie-break inside a tier, not
 across tiers: each difficulty has its own lane, and the weakest tier that may build the item
 takes it first (weak models take the easy items while they have a free lane, then medium; medium
-items pass the weak models by; hard items go only to strong models). Inside a tier the owner's
+items pass the weak models by; hard items go only to strong models). One lane, one owner
+(#725): a medium or hard item stays with the subscription that planned it when that one can
+build it, so planner and builder are the same; an easy item still goes weak-first, since its
+medium planner must not spend its lane building what a weak seat builds. Inside a tier the owner's
 order holds: spend claude-3 (any hour, no caps), claude-7
 (held to half its 5-hour session from 10:00 to 01:00 and to 70% of it from 01:00 to 10:00, with
 no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
@@ -597,31 +601,38 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
   builder or planner, the run stops after planning and the item goes back to the queue, rated. A
   revision is not planned again. The ten-minute sweep keeps `bot:needs-plan` in step, so an
   unrated issue is in the stage within one pass.
-- **Building, fixing, revising.** The weakest free seat of the item's tier builds it: an
+- **Building, fixing, revising.** The lane's owner builds it end to end: an
   easy item goes to a weak model (Codex, then Devin) while one has a free lane, else to a medium
-  one in the usage order; a medium item passes the weak models by and takes the first free medium
-  seat; a hard item takes a strong seat only. Every Claude account builds an
+  one in the usage order; a medium item stays with its planner when that one can build it, else
+  takes the first free medium seat; a hard item takes a strong seat only, planner and builder
+  the same. Every Claude account builds an
   easy or medium item with Sonnet and a hard one with Opus, and its run may switch between the two
   ([below](#switching-between-opus-and-sonnet)). When that is above the item's tier (none of that
   tier is free), the run's log says so and why, and claude-2 only builds when everyone
   else is busy. A revision that
-  resolves a conflict with `main` goes only to a builder with its own reviewer in the run, never
-  to Devin (#317): SPEC §11 and the rulings index conflict on nearly every merge, and Devin
+  resolves a conflict with `main` goes only to a builder with a real reviewer in the run, never
+  to a weak one (#317): SPEC §11 and the rulings index conflict on nearly every merge, and Devin
   committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
-- **Reviewing in the run.** Almost nothing reviews in its own run: the change goes to a review
-  run instead, so no builder approves its own work. Only a hard item's run on a lane with both
-  Sonnet and Opus reviews in the run, with the model that did not build it. Before a
+  A revision that answers a final audit stays at the auditor's tier or above, so the auditor
+  fixes and pushes it.
+- **Reviewing in the run.** Every builder reviews its own change in a fresh adversarial session
+  of its lane's reviewer, never an approval from its own context: a medium or strong builder's
+  own strongest seat of at least medium reads the change cold; a weak builder's own model does
+  the same in a findings-only self check, which never approves. A medium or easy item gets up
+  to 3 such verdict rounds (`max_review_cycles`), then its kept work goes to its final audit;
+  a hard item stays with Opus for up to 10. Only rounds that end in a readable verdict count:
+  usage pauses, infra failures, halts and stops keep the work and pause the count, across runs
+  too. Before a
   review, the run merges `main` again when it moved and merges cleanly, and runs the checks on the
   merged head, so what is approved still merges.
-- **Review runs.** They go before every build and revision, whatever their priority, since they
-  unblock merges. A strong model whenever one is free; else a medium one, a family that has not
-  approved the commit yet before one that has (the same model may review it twice). An easy item
-  needs a weak review too (Devin), but only once the review has waited
-  30 minutes for a stronger one (`plan.WEAK_REVIEW_AFTER`); a weak model reviews nothing else, and
-  a stand-in seat reviews nothing. `/harness review strong` (or `medium`) asks for a review run of
-  a bot pull request's head at that tier or stronger, and no revision. Only a strong model's
-  approval ships, at every difficulty; weaker reviews still reject and force fixes, and a weak
-  approval is an easy item's green light only.
+- **Review runs.** They are the lane's final audit, and they go before every build and revision,
+  whatever their priority, since they unblock merges. A medium or hard item waits for a strong
+  seat (Opus); an easy item takes the weakest seat that ships it (medium first, saving the Opus
+  gate). No weak review runs go out. A family that has not
+  approved the commit yet goes before one that has (the same model may review it twice),
+  and a stand-in seat reviews nothing. `/harness review strong` (or `medium`) asks for a review run of
+  a bot pull request's head at that tier or stronger, and no revision. A strong approval ships a
+  medium or hard item; a medium one ships an easy item, whose scope the easy rule hard-limits.
 
 ### Switching between Opus and Sonnet
 
@@ -641,8 +652,8 @@ item stays on Opus.
   below the bot's earlier rating), and the run goes on, rather than sending the item back to the
   queue for another builder.
 
-Review runs take the strongest free seat, since only a strong approval ships; the router no
-longer fixes the reviewer. Each round's
+Review runs take the lane's final auditor, and the router no longer fixes the reviewer
+beyond that. Each round's
 record names the model that built it, the result lists every switch (`switches`), and the comment
 the run leaves says when and why it switched. A lane with one model (Muse, agy, Codex, Devin) never
 switches.
@@ -705,9 +716,10 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   request.
 
 **The review rule** (`harness/review_rule.py`). A commit ships when no model's rejection of it
-stands and it has one strong model's approval, at every difficulty (#695): a hard item never
-ships on medium approvals, and a weak approval never ships, even beside a medium one — it is
-an easy item's green light only.
+stands and its lane's final audit approved it (#725): one strong model's approval for a medium
+or hard item, one medium model's for an easy item (a strong one ships it too). A weak approval
+never ships anything: weak builders review themselves in findings-only self checks, and no weak
+review runs go out.
 - Votes are kept per commit, one per review (each review run, and each run's own reviewer, is
   one; a deliver job run again does not count its review twice), with the tier of the model that
   cast them, from the plan job's own record of who ran, never from the model job.
@@ -729,7 +741,8 @@ an easy item's green light only.
   changes anything more, a branch someone pushed to after the reviews, or a change still short of
   the rule when the conflict came goes back under the rule, and the comment on the pull request
   says why.
-- Blocking findings queue a revision, built by the building rule above (through the self-check
+- Blocking findings queue a revision at the auditor's tier or above, so the auditor fixes
+  and pushes it (through the self-check
   loop again if that builder checks itself), which goes round the same way. A rejection stands
   against that commit until the same model approves it or the commit changes. Each rejection is a
   strike, so after three the item steps up and is rebuilt ([above](#rating-strikes-and-the-step-up)).
@@ -740,19 +753,19 @@ an easy item's green light only.
 
 ### The self-check loop
 
-A builder with `self_check` (Devin) checks its own change before any reviewer sees it: build,
+A builder with `self_check` (the weak builders, Codex and Devin) checks its own change before any reviewer sees it: build,
 the repository's checks, then a **self check**, a fresh session of the same model allowed to read
 and run things but not edit, told to find every reason its own change should not ship, in the
 review's prompt and verdict format. If it flags anything (or a check this change turned red), the
 same model fixes it, the checks run, and the self check goes again, until one comes back clean.
-`max_self_check_rounds` in `.harness/config.json` (3) caps it; at the cap the change goes to review
-anyway, with the self check's open findings attached for the reviewer, except for conflict markers
+`max_self_check_rounds` in `.harness/config.json` (3) caps it; at the cap the change goes to its
+final audit
+anyway, with the self check's open findings attached for the auditor, except for conflict markers
 (#317): a change still holding one gets one more fix pass, and if a marker is left it ends not
 approved and nothing is pushed. Deliver greps the bundle's changed files for markers itself too,
 and refuses a push that holds one. A clean self check is never an approval and never counts toward
-the review rule. No builder reviews its own change in its own run: every change waits for a
-review run (only a hard item's run on a lane with both Sonnet and Opus reviews in the run, since
-both models may approve a hard item);
+the review rule: it is the weak lane's substitute for an in-run reviewer. Every other builder
+reviews its own change in its own run, in a fresh session of its lane's reviewer;
 its pull request opens ready, not a draft.
 
 **Handing work over.** A run can stop half-way: its subscription runs out, the clock runs out, its

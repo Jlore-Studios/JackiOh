@@ -511,7 +511,8 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
-    #: The subscription that wrote that plan, so the build goes to another one (#695).
+    #: The subscription that wrote that plan, so a medium or hard build stays with it
+    #: (one lane, one owner, #725).
     planned_by: str = ""
     #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
@@ -536,6 +537,13 @@ class Candidate:
     #: For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
     #: checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
     part: bool = False
+    #: For a revision: the tier of the final audit it answers (#725), so the auditor's tier
+    #: fixes and pushes it ("" when no audit has asked for changes yet).
+    audit_tier: str = ""
+    #: Review verdict rounds already used on the item in the current owner's hands (#725).
+    rounds_used: int = 0
+    #: The owner tier that used them ("" when none); a new owner starts its own count.
+    round_tier: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -728,7 +736,12 @@ def candidates(ctx: Context, state: dict[str, Any],
                 rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
                 review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
-                mode=mode, part=kind == "build" and not mode and is_part(record))
+                mode=mode, part=kind == "build" and not mode and is_part(record),
+                audit_tier=str(record.get("audit_tier") or "") if kind == "revise" else "",
+                rounds_used=int(record.get("verdict_rounds") or 0)
+                if kind in ("build", "revise") else 0,
+                round_tier=str(record.get("round_tier") or "")
+                if kind in ("build", "revise") else "")
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

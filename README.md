@@ -49,9 +49,12 @@ pnpm --dir apps/web test       # the client's tests
 ## The night bot
 
 `@jgoetzmann-bot` works from 21:00 to 07:00 Central. Label an issue `bot:build`, assign it the bot,
-or comment `@jgoetzmann-bot <what you want>`. Overnight, Claude Opus builds it, the repository's
-checks run, and an independent Opus reviewer tries to find every reason it should not ship. When
-the reviewer approves, the bot opens a pull request that merges itself once CI passes.
+or comment `@jgoetzmann-bot <what you want>`. Overnight, one subscription owns each item end to
+end: hard items go to Opus throughout; medium items go to a medium model for up to 3 review rounds,
+then to Opus for the final audit; easy items go to a weak model, then to a medium model whose audit
+ships them. Every builder reviews itself in a fresh adversarial session — never an approval from
+its own context — the checks run every round, and the bot opens a pull request that merges itself
+once CI passes and the lane's final audit approves.
 `/harness status`, `/harness halt` and `/harness start` work in any comment. When the queue is
 empty, the bot suggests improvements as issues, at most four at a time. It starts only when the
 Claude subscription is quiet. It reads the usage twice, ten minutes apart, and holds back while
@@ -62,11 +65,12 @@ it may run alongside.
 flowchart LR
   A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> Q{"subscription quiet?<br/>21:00–07:00 Central"}
   Q -- "yes" --> B["plan"]
-  B --> C["Opus builder<br/>subagents, worktrees"]
+  B --> C["lane owner builds<br/>(Opus / medium / weak)"]
   C --> D["repository checks"]
-  D --> E{"adversarial<br/>Opus reviewer"}
-  E -- "findings" --> F["fresh builder<br/>fixes them"] --> D
-  E -- "approved" --> G["pull request<br/>with auto-merge"]
+  D --> E{"fresh adversarial<br/>self-review session"}
+  E -- "findings" --> F["same owner<br/>fixes them"] --> D
+  E -- "approved" --> FA["lane final audit<br/>(Opus, or medium for easy)"]
+  FA --> G["pull request<br/>with auto-merge"]
   G --> H{"CI"}
   H -- "green" --> I["merged into main"]
   H -- "red" --> F
