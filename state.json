@@ -3392,6 +3392,7 @@
     "640": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-12T15:01:03Z",
         "family": "claude",
@@ -3409,13 +3410,15 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
+      "pr": 742,
       "provider": "claude-6",
+      "question": "",
       "round_tier": "strong",
       "run_id": "38272049568",
       "started_at": "2026-10-12T15:41:52Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "642": {
       "action": "revise",
