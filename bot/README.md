@@ -698,7 +698,11 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   "… A strong model plans `difficulty:medium` work, so one plans it next". A rating is never
   lowered (a strong planner may raise one, never lower it), a person's label is never replaced
   (the planner is told not to rate it), and an easy rating whose plan breaks the rule is medium.
-  Triage gives no difficulty.
+  A plan with no rating line is medium, the bot's own rating, so a later planner may raise it
+  (#735). Triage gives no difficulty beyond its form's answer; the sweep labels what is left bare
+  (`sweep._difficulty_labels`): a planned issue with none gets medium, and a bot pull request its
+  issue's label, or medium. An issue still waiting for its plan is left to the planner, which may
+  rate it easy.
 - **Strikes** (`harness/stepup.py`). A run that failed for the item's own sake is a strike: a
   failed run, a build or revision its reviewer would not approve, a review run that rejected its
   head, a head a CI fix pushed that CI still fails, a run that died. Infra, a usage pause, a halt or a stop is
