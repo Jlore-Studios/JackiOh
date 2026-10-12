@@ -4635,7 +4635,7 @@
       "started_at": "2026-10-12T21:18:39Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "gemini"
