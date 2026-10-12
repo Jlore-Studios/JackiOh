@@ -58,6 +58,12 @@
       "lines": [
         "/harness build but split this into smaller issues like recommended"
       ]
+    },
+    "c:6126405024": {
+      "at": "2026-10-12T14:34:59Z",
+      "lines": [
+        "@jgoetzmann-bot approved but make the tests work in the daily check only"
+      ]
     }
   },
   "items": {
