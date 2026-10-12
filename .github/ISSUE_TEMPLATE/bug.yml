@@ -50,6 +50,17 @@ body:
       label: Version or commit
       description: The catalog version, the commit, or the page and date you saw it on.
   - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty (a guess)
+      description: The weakest model tier that may build it. A choice here becomes its `difficulty:*` label; with none, the bot's planner rates it.
+      options:
+        - Not sure (the planner rates it)
+        - "easy: small, one crate or app, no engine, AI, catalog, card or migration work"
+        - "medium: the rest"
+        - "hard: engine rules, the AI, design across crates, a migration, or about 40 files or more"
+      default: 0
+  - type: dropdown
     id: priority
     attributes:
       label: Priority

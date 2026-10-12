@@ -164,6 +164,7 @@ class IssueFormTests(unittest.TestCase):
         for name, text in self.forms.items():
             dropdowns = self.dropdowns(text)
             self.assertIn("method", dropdowns, name)
+            self.assertIn("difficulty", dropdowns, name)
             for ident, (label, options) in dropdowns.items():
                 answers = [triage.form_labels(f"### {label}\n\n{option}") for option in options]
                 if ident == "method":
