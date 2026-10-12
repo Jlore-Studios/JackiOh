@@ -4294,6 +4294,7 @@
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
       "provider": "agy",
+      "round_tier": "",
       "run_id": "38267466911",
       "started_at": "2026-10-12T15:04:39Z",
       "stop_requested": false,
@@ -4301,7 +4302,8 @@
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: The stream was interrupted. Please continue the task you were working on."
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "728": {
       "action": "build",
