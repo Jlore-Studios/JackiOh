@@ -6892,6 +6892,11 @@
       }
     },
     "claude-7": {
+      "infra": {
+        "at": "2026-10-12T13:27:24Z",
+        "reason": "the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-639:refs/heads/bot/issue-639 failed (1): remote: fatal error in commit_refs        \nTo https://github.com/Jlore-Studios/JackiOh.git\n ! [remote rejected]   deliver/bot/issue-639 -> bot/issue-639 (failure)\nerror: failed to push some refs to 'https://github.com/Jlore-Studios/JackiOh.git'",
+        "streak": 1
+      },
       "refused_until": "2026-10-09T19:00:00Z",
       "spent": [
         {
