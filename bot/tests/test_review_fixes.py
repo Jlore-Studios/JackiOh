@@ -18,7 +18,7 @@ from harness.work import Worker
 
 from tests.fakes import FakeGitHub, push_branch
 from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx, with_lanes
-from tests.test_cross import ALL, timed_builder
+from tests.test_cross import ALL, next_run, timed_builder
 from tests.test_flow import Harness
 from tests.test_providers import raw_providers, secrets
 from tests.test_work import APPROVE, builder, changes, reviewer
@@ -42,17 +42,21 @@ def empty_out(h, name):
 
 
 class AutoMergeTests(unittest.TestCase):
-    def test_a_revision_by_another_model_turns_opus_auto_merge_off(self):
-        # claude-3 builds from a plan on record (never its planner's), and its Opus review
-        # turns auto-merge on; then Muse revises by day, whose medium approval alone never
-        # ships (#695), so the strong approval of the old head is gone.
+    def test_a_revision_by_another_model_turns_strong_auto_merge_off(self):
+        # Muse keeps the medium item it planned (one lane, one owner, #725), and its in-run
+        # approval waits for a Strong final; the Strong audit turns auto-merge on. Then Muse
+        # revises by day, whose medium approval alone never ships a medium item, so the strong
+        # approval of the old head is gone.
         h = Harness(self, env=ALL, machine=("muse",))
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         h.ctx.store.update(lambda s: state_item(s, 12).update(
             planned_at=iso(DAY), planned_tier="medium", planned_by_id="muse"))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)}))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-        self.assertIn(f"PR_{pr}", h.gh.auto_merge)  # Opus: auto-merge on
+        self.assertEqual(h.gh.auto_merge, {})
+        next_run(h, "778")
+        h.night(FakeRunner({"review": reviewer(APPROVE)}))  # claude-3 audits at night
+        self.assertIn(f"PR_{pr}", h.gh.auto_merge)  # Strong: auto-merge on
         # A revision is queued by a path that leaves auto-merge alone, and Muse does it by day:
         # its medium approval alone is not enough, so the strong approval of the old head is gone.
         h.gh.threads[pr]["labels"].append({"name": LABEL_REVISE})
@@ -98,16 +102,16 @@ class AutoMergeTests(unittest.TestCase):
         h.gh.add_pull(30, "feature/someone", labels=(LABEL_CROSS,))
         self.assertNotEqual(plan_mod.make(h.ctx).get("number"), 30)
 
-    def test_with_only_its_builder_set_up_it_waits_for_that_models_second_review(self):
+    def test_with_only_its_builder_set_up_it_waits_for_a_strong_reviewer(self):
         h = Harness(self, env=secrets(), machine=("agy",), at=DAY)
         h.gh.add_issue(12, "Make the rules v2", labels=(LABEL_BUILD,))
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer(APPROVE)}))
         comment = h.gh.bot_comments(12)[-1]
-        # Only a Strong approval ships (#695): agy's second review is recorded, and the head
-        # waits for a Strong seat no setup has.
+        # Only a Strong approval ships a medium item (#725): agy's in-run approval is recorded,
+        # and the head waits for a Strong seat no setup has.
         self.assertIn("`gemini` (medium) approved it, so it waits for one strong model's "
-                      "review (Opus)", comment)
+                      "final audit (Opus)", comment)
         self.assertIn("No subscription that could give that review is set up", comment)
 
 
@@ -115,6 +119,7 @@ class SecondReviewTests(unittest.TestCase):
     def test_a_comment_during_the_review_gets_its_revision_before_any_merge(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr = medium_pr(self, h)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
 
         def commented(request):
             h.ctx.store.update(lambda s: state_item(s, pr).update(pending_request=True))
@@ -126,7 +131,7 @@ class SecondReviewTests(unittest.TestCase):
         self.assertFalse(h.ctx.store.load()["items"][str(pr)]["pending_request"])
 
     def test_a_review_whose_run_dies_backs_off_its_subscription_and_is_counted(self):
-        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h = Harness(self, env=ALL, machine=MACHINE, at=NIGHT)
         pr = medium_pr(self, h)
         seen = []
         for attempt in (1, 2):
@@ -134,17 +139,18 @@ class SecondReviewTests(unittest.TestCase):
             self.assertEqual((planned["action"], planned["number"]), ("review", pr))
             seen.append(planned["provider"])
             Deliverer(h.ctx, planned, empty_out(h, f"died-{attempt}"), h.deliver_repo).run()
-        # Each death backs its subscription off; gpt, weak, reviews no medium item.
-        self.assertEqual(seen, ["agy", "muse"])
+        # Each death backs its subscription off; the next strong seat takes it.
+        self.assertEqual(seen, ["claude-3", "claude-7"])
         self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_BLOCKED})
         self.assertIn("died 2 times", h.gh.bot_comments(pr)[-1])
 
     def test_a_second_review_runs_none_of_the_builders_code(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
         log = h.root / "installs.log"
         h.cfg = make_config(env={"GITHUB_SERVER_URL": f"file://{h.root / 'remote'}",
                                  "BOT_GITHUB_TOKEN": "t" * 20, **ALL},
-                            machine=MACHINE,
+                            machine=MACHINE, committed_hours=True,  # the Strong final can audit
                             gates=[{"name": "rules exist", "run": "true", "timeout_minutes": 1}],
                             install={"run": f"pwd >> {log}", "timeout_minutes": 1},
                             max_review_cycles=2)

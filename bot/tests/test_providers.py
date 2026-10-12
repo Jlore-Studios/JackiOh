@@ -61,7 +61,7 @@ class ParseTests(unittest.TestCase):
             "claude-7": [("opus", "strong", False), ("sonnet", "medium", False)],
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
-            "gpt": [("gpt-5.6-terra", "weak", False)],
+            "gpt": [("gpt-5.6-terra", "weak", True)],
             "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
             "devin": [("swe-2-max", "weak", True)],
         })
@@ -721,16 +721,19 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(devins, 5)
         self.assertIn("`devin` waits for room on the machine (6 at once)", planned["reason"])
 
-    def test_a_second_review_goes_to_another_model_family(self):
+    def test_an_easy_audit_goes_to_a_medium_model(self):
+        # No weak review runs go out (#725): an easy item's weak approval is answered by the
+        # weakest seat that ships it, medium.
         gh = FakeGitHub()
-        gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR, LABEL_CROSS), sha="h1")
+        gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR, LABEL_CROSS, "difficulty:easy"),
+                    sha="h1")
         ctx = ctx_for(gh, at=DAY)
         ctx.store.update(lambda s: state_item(s, 9).update(
             votes={"sha": "h1", "builder": "gpt", "approvals": ["gpt"]}))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"], planned["head"], planned["builder"]),
                          ("review", "muse", "h1", "gpt"))
-        self.assertEqual(gh.label_names(9), {LABEL_PR, LABEL_WORKING})
+        self.assertEqual(gh.label_names(9), {LABEL_PR, LABEL_WORKING, "difficulty:easy"})
 
     def test_the_shared_subscription_takes_work_without_a_wait(self):
         """claude-1 is spent like any other subscription now: no gate wait for quiet, so the
