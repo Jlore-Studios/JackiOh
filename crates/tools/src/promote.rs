@@ -405,9 +405,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let failures = gate_failures(args.lane, &counts);
     print!(
         "{}",
-        report(
-            args.lane, mode, &record, &counts, &parent, vs_parent, &failures
-        )?
+        report(args.lane, mode, &record, &counts, &parent, vs_parent, &failures)?
     );
 
     if args.verify {

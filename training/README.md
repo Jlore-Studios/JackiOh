@@ -99,7 +99,9 @@ until the loop lands it on `main` again (How a lane runs, step 1).
 
 The engine (`crates/engine`), the cards (`crates/cards`), every test outside `crates/ai`, the gate
 (`crates/tools/src/promote.rs`, `arena.rs`) and its thresholds (`TRAINING_*` in
-`crates/engine/src/config.rs`) are never a lane's to change.
+`crates/engine/src/config.rs`) are never a lane's to change. Inside `crates/ai`, `SHADOW_BAN` only
+shrinks: no lane adds an entry, and no card of an earlier set is ever banned again (R732000;
+`crates/ai/tests/ai/shadow_ban.rs` fails on one).
 
 ## The gate
 

@@ -67,7 +67,7 @@ of the new set that the AI deals itself and plays:
   finds the line worth it, and the generation notes above the table show how earlier unbans priced
   one. `selfHarm` and `selfKill` are misplays. `timeout` is a decision too slow at the browser's budget
   (over two seconds): find what makes the search slow in the states the card brings about (many cheap
-  random spells in hand, a huge hand, a long game's state) and make it faster. That is most of
+  random spells in hand, a huge hand, a long game's state) and make it faster. That is every entry of
   generation 9's table.
 - `cargo jackioh sweep meditative-<nnn>` runs R186's sweep on one card on your build: it forces the
   card into AI decks at Easy and Hard and says whether the AI played it and how it went. Check every
