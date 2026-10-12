@@ -2,8 +2,9 @@
 
 You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comments of
 `crates/ai/src/`). Your goal is a stronger AI: one that beats its predecessor, the AI on
-`main`, in at least 75 of 100 games, and SPEC §10.7's random policy in at least 90 of 100. The lane
-is described in `training/README.md`; read it first.
+`main`, in at least 65 of 100 games. The gate plays no games against random (R732001): generation 9
+beat random in at least 90 of 100, and the daily quality gates still check that every AI on `main`
+does. The lane is described in `training/README.md`; read it first.
 
 ## What you may change
 
@@ -14,7 +15,10 @@ is described in `training/README.md`; read it first.
    `TRAINING_IMPROVE`, `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
-3. Leave `crates/ai/src/shadow_ban.rs` alone: the shadow ban is the unban lane's. Leave
+3. Leave `crates/ai/src/shadow_ban.rs` alone: the shadow ban is the unban lane's. Never add a card
+   to `SHADOW_BAN`, and above all never one of an earlier set (Core, Classic, Classic+): the table
+   holds Meditative cards only (R732000), and a test fails on any other. A change that plays a card
+   badly is fixed in how the AI plays it, never by banning it. Leave
    `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` alone too: which sets the AI's decks are gated
    from is a person's call (R1390). Do not raise `AI_BUDGET` or `AI_GATE_BUDGET`: the browser runs
    the AI at that budget under a time limit (SPEC §9.9), so a stronger AI spends the same budget
@@ -27,10 +31,10 @@ is described in `training/README.md`; read it first.
 
 The Meditative set (102 cards, SPEC §8.8, `crates/cards/src/scripts/meditative/`) is the newest set and
 the one the AI has played least. Its cards bring new prompt kinds (the crafter, the market, the secret
-choice, the prediction), Jade, Luck, extra turns and wins by effect. Once issue #616 lifts R1390's soft
-gate (`AI_DECK_GATED_SETS` in `crates/ai/src/config.rs`, empty from then on), the gate's decks deal
-Meditative cards like any other: 102 of the 370, about a quarter of every deck. How the AI plays them is
-where a stronger AI is likeliest to come from, so look there first:
+choice, the prediction), Jade, Luck, extra turns and wins by effect. Since generation 9 (#732) lifted
+R1390's soft gate, the gate's decks deal Meditative cards like any other, minus the ones `SHADOW_BAN`
+keeps out: about a quarter of every deck. How the AI plays them is where a stronger AI is likeliest to
+come from, so look there first:
 
 - In the games you lose, look for the Meditative cards in play and in hand (`cargo jackioh trace`
   prints a game turn by turn), and for the prompts they open that the AI answers badly.
@@ -38,9 +42,8 @@ where a stronger AI is likeliest to come from, so look there first:
   whether the AI played it, how often, and how the eval moved per play. Run it on a card before and
   after a change aimed at it.
 - A change for one card or one family of them must not cost the rest: the gate is the whole deal.
-
-While `AI_DECK_GATED_SETS` still lists Meditative, the gate's games hold no Meditative card, so work on
-them cannot show in the gate yet. Spend those sessions on the rest of the AI.
+- Every one of generation 9's 31 bans is `timeout`: a decision over two seconds at the browser's
+  budget. A faster search is a stronger AI too, since the browser stops a slow one short.
 
 ## How you measure
 
@@ -50,11 +53,11 @@ Measure with
 cargo jackioh promote --lane improve --parent-bin ~/parent-jackioh --dry-run
 ```
 
-It plays 100 games against random and 100 against the parent (`~/parent-jackioh`, built from
-`main`) and prints the gate's report: wins against each, the 90 and 75 needed, draws and games
-without a result (neither counts as a win). A dry run measures your uncommitted change on the seeds
-of HEAD's `crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them:
-check a change on other seeds too, for example
+It plays 100 games against the parent (`~/parent-jackioh`, built from `main`) and prints the gate's
+report: wins, the 65 needed, draws and games without a result (neither counts as a win). It plays
+no games against random. A dry run measures your uncommitted change on the seeds of HEAD's
+`crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them: check a
+change on other seeds too, for example
 
 ```sh
 cargo jackioh arena --a self --b bin:~/parent-jackioh --games 40 --seed improve-try-<n>
@@ -99,7 +102,7 @@ repeat an attempt that is recorded as failed unless you know why it will go diff
 
 1. Keep each attempt small: one idea, one measured change. Before you start the next one, add an
    entry to `~/training-out/improve/attempts.md`: the date, what you changed and why, the dry run's
-   numbers (vs random, vs parent), and whether you kept or reverted it.
+   numbers (vs parent), and whether you kept or reverted it.
 2. The gate reads the AI from git, so a promotion is made in this order, and only this order:
    1. When a dry run passes, commit your `crates/ai` change:
       `git add crates/ai && git commit -m "AI gen <N> (improve): <what changed>"`, where `<N>` is
