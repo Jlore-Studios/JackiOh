@@ -382,7 +382,8 @@ class PlannerTests(unittest.TestCase):
         self.assertTrue(record["planned_at"])
         self.assertEqual(record["planned_tier"], "medium")
         self.assertEqual(record["planned_by_id"], "muse")
-        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned"})  # out of the Needs plan stage
+        # Out of the Needs plan stage; no rating line in the plan, so it is labelled medium (#735).
+        self.assertEqual(h.gh.label_names(12), {LABEL_BUILD, "bot:planned", "difficulty:medium"})
         self.assertIn("Planned on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
                       h.gh.bot_comments(12)[-1])
         self.assertIn("in this issue's description", h.gh.bot_comments(12)[-1])
