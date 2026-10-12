@@ -261,8 +261,11 @@ class LabelsTests(unittest.TestCase):
         self.assertEqual((planned["provider"], planned["priority"], planned["difficulty"],
                           result["status"]), ("muse", "high", "easy", "approved"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
+        # Muse planned, built and reviewed it in the run, and a medium approval ships an
+        # easy item with no further audit (#725).
         self.assertEqual(h.gh.label_names(pr),
-                         {LABEL_PR, LABEL_CROSS, "difficulty:easy", "Priority:High"})
+                         {LABEL_PR, "difficulty:easy", "Priority:High"})
+        self.assertIn(f"PR_{pr}", h.gh.auto_merge)
         self.assertEqual(h.ctx.store.load()["items"][str(pr)]["difficulty"], "easy")
 
     def test_a_draft_pull_request_keeps_them_too(self):

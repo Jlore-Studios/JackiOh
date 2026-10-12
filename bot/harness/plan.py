@@ -28,13 +28,13 @@ is forced, under its limits):
   build share one run; otherwise the planning is a run of its own, and the item goes back to
   the queue to build from the plan. Such a planning run is short and starts before any long
   run, so a planner plans Devin's next item before it builds one of its own.
-- **review** in the run: the run's own strongest seat of at least medium; a run with none (Devin's,
-  which checks itself instead) hands the change to a review run.
-- **a review run** (`bot:cross-review`): for an easy item with no weak approval yet, a weak
-  seat first (the Easy green light); otherwise a strong seat whenever one is free, then a medium
-  one (a family that has not approved the head yet first, but the same model may review it
-  twice). What counts is the review rule (`review_rule.py`): one strong approval, whatever the
-  difficulty.
+- **review** in the run: the run's own strongest seat of at least medium, in a fresh
+  adversarial session; a weak builder's own model checks itself instead (findings only, never
+  an approval), and the change goes to its final audit.
+- **a review run** (`bot:cross-review`): the lane's final audit. A medium or hard item waits
+  for a strong seat; an easy item takes the weakest seat that ships it (medium first). No weak
+  review runs go out. What counts is the review rule (`review_rule.py`): the final audit's
+  approval (strong, or medium for an easy item).
 - **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
   `main`): a builder with its own reviewer in the run first, since that review carries the
   clearance to the resolution (`deliver._carry`) and no review run follows.
@@ -82,9 +82,6 @@ LIVE = ("queued", "in_progress", "waiting", "pending", "requested")
 ROLE_OF = {"build": "build", "revise": "revise", "review": "review", "plan": "plan"}
 #: `quiet_ok` that lets every provider through, for questions that start nothing.
 ANY_QUIET = "*"
-#: How long a review run waits for a strong or medium reviewer before a weak one (Devin) may take
-#: it (#317 part 9): a weak approval is an easy item's green light only, so it rarely moves one.
-WEAK_REVIEW_AFTER = timedelta(minutes=30)
 #: The gate's step that waits for the shared subscription to be quiet (`bot-night.yml`).
 QUIET_STEP = "Wait until the subscription is quiet"
 
@@ -311,18 +308,25 @@ def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
 
 
 def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
-                 part: bool = False, avoid: str = "") -> tuple[Seat | None, str]:
+                 part: bool = False, avoid: str = "",
+                 audit_tier: str = "") -> tuple[Seat | None, str]:
     """Who builds an item of `difficulty`: the first free seat in the lane's tier order
     (#695: Muse before agy before Sonnet, GPT before Devin), on its weakest seat that meets
     the tier; with a note when that seat is above the tier, saying why (none of that tier is
-    free, or the tier order puts this one first). The subscription that planned it (`avoid`)
-    builds only when no other lane seat is free, so planner and builder differ.
+    free, or the tier order puts this one first). One lane, one owner (#725): a medium or
+    hard item stays with the subscription that planned it (`avoid`) when that one can build
+    it, so planner and builder are the same; an easy item still goes weak-first, since its
+    planner (medium) must not spend its lane building what a weak seat builds. A revision
+    that answers a final audit (`audit_tier`) stays at the auditor's tier or above, so the
+    auditor fixes and pushes it.
 
     A fullsend `part` (#505), whose plan is on record by now, goes first to the subscriptions
     whose strongest seat is weakest, and one with no seat of its tier may build it on a seat of
     `PART_FLOOR`: Muse builds a hard part from Opus's plan, and the strong models keep to the
     planning and to the reconcile that checks and reviews every part."""
     floor = MIN_TIER[difficulty]
+    if audit_tier and TIER_RANK.get(audit_tier, -1) > TIER_RANK.get(floor, -1):
+        floor = audit_tier
     free = {provider.id for provider in providers}
 
     def builds(provider: Provider, seat: Seat) -> bool:
@@ -346,24 +350,37 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
     def strongest(provider: Provider) -> int:
         seat = pool.best_seat(provider)
         return TIER_RANK[seat.tier] if seat is not None else 0
-    # A planner's own subscription builds only as a fallback (#695); an easy item still goes
-    # first to an `easy_first` subscription, and a `build_last` one (claude-2) after the rest.
+    # One lane, one owner (#725): a medium or hard item stays with the subscription that
+    # planned it when that one can build it; an easy item still goes first to an `easy_first`
+    # subscription (its medium planner must not spend its lane on weak work), and a
+    # `build_last` one (claude-2) after the rest.
+    owner_first = (difficulty in ("medium", "hard") and not part and not audit_tier
+                   and any(p.id == avoid and not p.build_last
+                           and any(builds(p, seat) for seat in pool.seats(p))
+                           for p in providers))
     others = [p for p in providers if p.id != avoid]
-    fallback = bool(avoid) and not any(
+    fallback = bool(avoid) and difficulty == "easy" and not any(
         seat for p in others for seat in pool.seats(p) if builds(p, seat))
-    order = sorted(providers if fallback else others, key=lambda provider: (
+    order = sorted(providers if (fallback or owner_first) else others,
+                   key=lambda provider: (
         weakest_key(provider),
         not (provider.easy_first and difficulty == "easy"), strongest(provider) if part else 0,
         provider.build_last,
         pool.priority.index(provider.id) if provider.id in pool.priority else len(pool.priority)))
+    if owner_first:
+        owned = [p for p in order if p.id == avoid]
+        order = owned + [p for p in order if p.id != avoid]
     usable = [(provider, [seat for seat in pool.seats(provider) if builds(provider, seat)])
               for provider in order]
     for index, (provider, seats) in enumerate(usable):
         if not seats:
             continue
         seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
-        prefix = (f"its planner `{avoid}` also builds it: no other lane seat is free. "
-                  if fallback and provider.id == avoid else "")
+        if owner_first and provider.id == avoid:
+            prefix = f"its planner `{avoid}` keeps it: one lane, one owner. "
+        else:
+            prefix = (f"its planner `{avoid}` also builds it: no other lane seat is free. "
+                      if fallback and provider.id == avoid else "")
         if not tier_at_least(seat.tier, floor):
             return seat, (prefix + f"a fullsend part, built on {seat.tier} from its plan: its "
                           "tree's reconcile checks and reviews it")
@@ -426,28 +443,27 @@ def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None
     return pool.best_seat(provider, "medium")
 
 
-def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate,
-                waited: timedelta | None = None) -> Seat | None:
-    """A review run's reviewer: for an easy item with no weak approval yet, a weak seat first
-    (the Easy green light, #695: GPT before Devin in tier order, no waiting); otherwise strong
-    whenever one is free, then medium, a family that has not approved the head yet before one
-    that has (the same model may review it twice); otherwise weak, only where a weak approval
-    helps, and only once the review has waited `WEAK_REVIEW_AFTER` for a stronger one
-    (`waited`; None does not wait). A stand-in seat (`takes_over`) reviews nothing."""
+def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
+    """A review run's reviewer: the lane's final audit (#725). A medium or hard item waits for
+    a strong seat (Opus); an easy item takes the weakest free seat that ships it (medium, then
+    strong). No weak review runs go out: weak builders review themselves in fresh sessions, and
+    a weak approval never ships. Within a tier, a family that has not approved the head yet
+    goes before one that has (the same model may review it twice). A stand-in seat
+    (`takes_over`) reviews nothing."""
     seats = [seat for provider in providers for seat in pool.own_seats(provider)]
-    if (candidate.difficulty == "easy" and not candidate.review_floor
-            and "weak" not in (candidate.approval_tiers or [])):
-        found = ranked(pool, [seat for seat in seats if seat.tier == "weak"])
-        found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
-        if found:
-            return found[0]
-    for tier in ("strong", "medium", "weak"):
+    # An easy item takes the weakest seat that ships it (medium first, saving the Opus gate);
+    # a medium or hard one waits for strong (#725). A person asking `/harness review <tier>`
+    # gets that tier first.
+    tiers = ("medium", "strong") if candidate.difficulty == "easy" else ("strong",)
+    if (candidate.review_floor in ("medium", "strong")
+            and candidate.review_floor not in tiers):
+        tiers = (candidate.review_floor, *tiers)
+    for tier in tiers:
         if candidate.review_floor and not tier_at_least(tier, candidate.review_floor):
             continue  # a person asked for this tier or stronger (`/harness review strong`)
-        if not review_rule.helps(candidate.approval_tiers, tier, candidate.difficulty):
-            continue
-        if tier == "weak" and waited is not None and waited < WEAK_REVIEW_AFTER:
-            continue
+        if not candidate.review_floor and not review_rule.helps(
+                candidate.approval_tiers, tier, candidate.difficulty):
+            continue  # a person's explicit request reviews at any tier
         found = ranked(pool, [seat for seat in seats if seat.tier == tier])
         found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
         if found:
@@ -465,9 +481,7 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         return free_providers(ctx, state, lanes, role, forced=forced, quiet_ok=quiet_ok)
 
     if candidate.kind == "review":
-        queued = parse_iso(candidate.queued_at)
-        waited = ctx.now() - queued if queued is not None else None
-        seat = review_seat(pool, free("review"), candidate, waited)
+        seat = review_seat(pool, free("review"), candidate)
         if seat is None:
             return None
         return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
@@ -482,13 +496,16 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     if candidate.kind == "revise" and (not candidate.bot_pr or candidate.conflict):
         # A person's pull request never gets a review run: its reviewer must be in this run. A
         # conflict with `main` lands in SPEC §11 and the rulings index nearly every time, which a
-        # weak builder resolves badly (#203, #214, #287): only a builder that reviews in its own
-        # run takes one (#317 part 2), and none at all may wait for one.
+        # weak builder resolves badly (#203, #214, #287): only a builder with a real reviewer
+        # in its own run takes one (a weak builder's findings-only self review does not count,
+        # #317 part 2), and none at all may wait for one.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
     builder, note = builder_seat(pool, builders, candidate.difficulty,
                                  part=candidate.part and plan_meets(candidate),
                                  avoid=candidate.planned_by
-                                 if candidate.kind == "build" else "")
+                                 if candidate.kind == "build" else "",
+                                 audit_tier=candidate.audit_tier
+                                 if candidate.kind == "revise" else "")
     if builder is None:
         return None
     notes = [f"#{candidate.number}: {note}"] if note else []
@@ -1020,7 +1037,7 @@ def _start_message(assignment: Assignment, cfg: Any) -> str:
                      "times")
     if assignment.review is not None:
         steps.append(f"have {assignment.review.describe()} review the change adversarially, up "
-                     f"to {cfg.max_review_cycles} rounds")
+                     f"to {cfg.max_review_cycles.get(assignment.difficulty, 3)} rounds")
         end = "Only an approved change becomes a pull request."
     else:
         end = ("No model here reviews it, so the pull request then waits for a review run, until "
@@ -1110,9 +1127,9 @@ def claim(ctx: Context, candidate: Candidate,
         elif assignment.action == "plan":
             message = (f"Planning this now{run_link(cfg)}, on {assignment.plan.describe()} "
                        f"(`{LABEL_NEEDS_PLAN}`): it is difficulty:{candidate.difficulty}. The plan "
-                       "goes into this issue's description, under **Plan**, and the builder starts "
-                       "from it; then it is queued to build on the cheapest model its difficulty "
-                       "allows.")
+                       "goes into this issue's description, under **Plan**, and the lane's owner "
+                       "builds from it (a medium or hard item stays with its planner; an easy one "
+                       "goes to the weakest weak seat).")
         else:
             message = (f"Starting work on this now{run_link(cfg)}: it is "
                        f"difficulty:{candidate.difficulty}. {_start_message(assignment, cfg)}")
@@ -1187,6 +1204,9 @@ def claim(ctx: Context, candidate: Candidate,
     planned.update(_provider_fields(ctx, provider))
     planned.update(difficulty=candidate.difficulty, seats=assignment.seats(),
                    routing=list(assignment.notes), assignment=assignment.describe())
+    if kind in ("build", "revise"):
+        # Verdict rounds the item already used in its current owner's hands (#725).
+        planned.update(rounds_used=candidate.rounds_used, round_tier=candidate.round_tier)
     if kind == "review" and record.get("self_check_findings"):
         planned["self_check_findings"] = record["self_check_findings"]
     if record.get("handoff"):

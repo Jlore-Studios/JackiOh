@@ -286,7 +286,11 @@ class Config:
     call_timeout_minutes: int
     job_budget_minutes: int
     min_minutes_for_a_call: int
-    max_review_cycles: int
+    #: Review verdict rounds per in-run review loop, by difficulty (#725): a medium or easy
+    #: item gets 3 verdicts from its lane owner, then goes to its final audit; a hard item stays
+    #: with its Opus owner for up to 10. Only rounds that end in a readable review verdict count:
+    #: usage pauses, infra failures, halts and stops keep the work and pause the count.
+    max_review_cycles: Mapping[str, int]
     max_failures: int
     auto_merge: bool
     merge_method: str
@@ -428,6 +432,23 @@ def _quiet(raw: Any) -> Quiet:
     )
 
 
+#: Review verdict rounds per difficulty when `max_review_cycles` names no mapping (#725).
+LANE_REVIEW_CYCLES = {"hard": 10, "medium": 3, "easy": 3}
+
+
+def _review_cycles(raw: Any) -> dict[str, int]:
+    """`max_review_cycles` as a per-difficulty mapping: a mapping names each difficulty, and a
+    bare number keeps the old shape (every difficulty gets it)."""
+    if isinstance(raw, Mapping):
+        cycles = {str(k): int(v) for k, v in dict(raw).items()}
+    else:
+        cycles = {difficulty: int(raw) for difficulty in LANE_REVIEW_CYCLES}
+    absent = [difficulty for difficulty in LANE_REVIEW_CYCLES if difficulty not in cycles]
+    if absent:
+        raise ConfigError(f"max_review_cycles: missing {', '.join(absent)}")
+    return cycles
+
+
 def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
           pool: Pool | None = None) -> Config:
     """A `Config` from the committed JSON and an environment mapping. Raises `ConfigError`.
@@ -471,7 +492,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         call_timeout_minutes=int(raw["call_timeout_minutes"]),
         job_budget_minutes=int(raw["job_budget_minutes"]),
         min_minutes_for_a_call=int(raw["min_minutes_for_a_call"]),
-        max_review_cycles=int(raw["max_review_cycles"]),
+        max_review_cycles=_review_cycles(raw["max_review_cycles"]),
         max_failures=int(raw["max_failures"]),
         auto_merge=bool(raw["auto_merge"]),
         merge_method=str(raw["merge_method"]),
