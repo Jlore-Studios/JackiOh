@@ -5136,11 +5136,8 @@
     "what": "plan #696 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-12T03:04:28Z",
-    "notes": [
-      "#696 needs a plan",
-      "started a night run, as a lane was free: #696 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-12T03:18:49Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
