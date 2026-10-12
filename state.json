@@ -4673,18 +4673,29 @@
     "741": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-12T15:24:40Z",
       "issue": 727,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new series-end reminder repeats, word for word, the line just above it, so every finished ranked series shows 'Ranked series: counted as one rated game.' twice in a row.",
+          "evidence": "Line 311 renders `<p>{ratingWords(view.result)}</p>`. For a ranked series that was not abandoned, `ratingWords` (series.tsx:88) returns \"Ranked series: counted as one rated game.\". The new `<p data-testid=series-end-reminder>` right below it renders `seriesEndRatingReminder` = \"Ranked series: counted as one rated game. Rating updates once for the series.\" (conquestCopy.ts:43). Both show under the same condition, `ranked && outcome !== 'abandoned'`. series.test.tsx:340 already asserts the first sentence, so the duplicate goes to production. The fix: drop the repeated opening of the reminder, or fold the extra clause into `ratingWords`.",
+          "severity": "blocking",
+          "where": "apps/web/src/routes/series.tsx:311"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-10-12T16:18:42Z",
+      "queued_at": "2026-10-12T16:34:28Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38277856346",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-12T16:31:04Z",
       "stop_requested": false,
       "taken_asks": [],
