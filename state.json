@@ -3028,6 +3028,7 @@
       "action": "build",
       "asks": [],
       "failures": 1,
+      "forced": false,
       "handoff": {
         "at": "2026-10-12T04:43:48Z",
         "family": "claude",
