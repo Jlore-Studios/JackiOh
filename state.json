@@ -8833,6 +8833,10 @@
         {
           "at": "2026-10-11T23:57:59Z",
           "minutes": 2.1
+        },
+        {
+          "at": "2026-10-12T00:35:45Z",
+          "minutes": 6.2
         }
       ],
       "usage": {
@@ -8840,10 +8844,10 @@
           "resets_at": "2026-10-12T04:55:00Z",
           "utilization": 0.0
         },
-        "observed_at": "2026-10-11T23:57:59Z",
+        "observed_at": "2026-10-12T00:35:45Z",
         "seven_day": {
-          "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.25
+          "resets_at": "2026-10-19T00:00:00Z",
+          "utilization": 0.0
         },
         "status": "allowed"
       }
