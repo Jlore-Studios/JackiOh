@@ -7824,14 +7824,18 @@
         {
           "at": "2026-10-12T02:39:32Z",
           "minutes": 9.0
+        },
+        {
+          "at": "2026-10-12T02:47:30Z",
+          "minutes": 15.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T07:30:00Z",
-          "utilization": 0.51
+          "utilization": 0.52
         },
-        "observed_at": "2026-10-12T02:39:32Z",
+        "observed_at": "2026-10-12T02:47:30Z",
         "status": "allowed"
       }
     },
