@@ -12,8 +12,9 @@
 //!    looks like from the outside (and how `recovery.rs` kills one mid-game).
 //!
 //! `api/queue.rs` and `rooms.rs` only ever call `start`, `has`, `stop` and `presence_of`, so neither
-//! reaches into the actor. Finished actors stay in the map until the reaper or a restart
-//! (SURFACE §11.3): a rematch's presence reads their sockets.
+//! reaches into the actor. A finished actor stays in the map while a rematch's presence may read its
+//! sockets, until the reaper's `reap_finished` drops it once its rematch window has passed and no seat
+//! holds an open socket, or a restart does (SURFACE §11.3).
 
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex};
@@ -30,7 +31,7 @@ use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
-use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
+use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES, REMATCH_OFFER_TTL_MS};
 use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
     StoreError, Tx,
@@ -76,7 +77,7 @@ impl From<RebuildError> for AttachError {
 
 type Rebuild = Arc<OnceCell<Result<MatchActor, RebuildError>>>;
 
-/// Live actors by match id; finished actors stay until the reaper or a restart (SURFACE §11.2).
+/// Live actors by match id; a finished one stays until `reap_finished` or a restart (SURFACE §11.2).
 pub struct Registry {
     actors: Mutex<IndexMap<String, MatchActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once, not twice.
@@ -420,6 +421,40 @@ impl Registry {
         };
         actor.attach(seat, socket);
         Ok(())
+    }
+
+    /// R672: drops each finished actor whose rematch window has passed (`REMATCH_OFFER_TTL_MS` since
+    /// `MatchActor::finished_at`) and whose seats hold no open socket, as `stop` drops one; the reaper
+    /// calls it every tick (`api::results::run_reaper`). No client can tell: with no socket open
+    /// `presence_of` already answered nobody, the offers live in `api/rematch.rs`, and a socket that
+    /// comes back folds the actor again (§9.5). An open socket keeps its actor, since closing it would
+    /// only send the client back to rebuild it. The check and the removal share the map's lock.
+    /// Answers the ids it dropped.
+    pub async fn reap_finished(&self, now: i64) -> Vec<String> {
+        let reaped: Vec<(String, MatchActor)> = {
+            let mut actors = lock(&self.actors);
+            let due: Vec<String> = actors
+                .iter()
+                .filter(|(_, actor)| {
+                    let presence = actor.presence();
+                    actor
+                        .finished_at()
+                        .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
+                        && PLAYER_IDS.into_iter().all(|home| !presence[home])
+                })
+                .map(|(match_id, _)| match_id.clone())
+                .collect();
+            due.into_iter()
+                .filter_map(|match_id| actors.shift_remove(&match_id).map(|actor| (match_id, actor)))
+                .collect()
+        };
+        let mut ids = Vec::with_capacity(reaped.len());
+        for (match_id, actor) in reaped {
+            actor.stop().await;
+            tracing::info!(event = "match.evicted", matchId = %match_id);
+            ids.push(match_id);
+        }
+        ids
     }
 
     /// The match ids currently held in memory.

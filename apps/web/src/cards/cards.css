@@ -757,6 +757,30 @@
   font-size: calc(4.4cqh * var(--cf-fit, 1));
 }
 
+/* The longest layout (#617: fit.ts adds `data-longest` to a long face whose rules still print under
+   FIT_FLOOR_PX, such as Meditative #8's eleven Ascent lines): the art window is a strip, the name and
+   the gem follow it up, and the rules box takes two thirds of the face before anything clamps. */
+.cf[data-longest="true"] .cf-art-frame {
+  height: 9.5cqh;
+}
+
+.cf[data-longest="true"][data-card-type="Unit"] .cf-art-frame {
+  height: 11cqh;
+}
+
+.cf[data-longest="true"] .card-name {
+  top: 15.5cqh;
+}
+
+.cf[data-longest="true"] .cf-gem {
+  top: 23.7cqh;
+}
+
+.cf[data-longest="true"] .card-text {
+  --cf-text-h: 58cqh;
+  top: 29cqh;
+}
+
 .cf .card-name[data-clamped="true"] {
   text-overflow: ellipsis;
 }
@@ -1102,7 +1126,7 @@
 .cf[data-layout="minion"] .cf-crest {
   top: 0;
   width: 62cqw;
-  height: 12cqh;
+  height: 10.5cqh;
 }
 
 .cf[data-layout="minion"] .cost-gem {

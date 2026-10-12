@@ -205,6 +205,10 @@ struct Core {
     /// nothing left to record. One that is still `live` crashed between the terminal action and the
     /// results write, so it heals itself on arming (§9.5: every ending records a result).
     finished: bool,
+    /// When this actor's rematch window opened (R672): the game's end, or, for an actor rebuilt on a
+    /// match already `finished`, the rebuild. `None` while the game is on. `Registry::reap_finished`
+    /// counts `REMATCH_OFFER_TTL_MS` from here.
+    finished_at: Option<i64>,
     stopped: bool,
     persisted_clocks: MatchClocks,
     /// R744: the grace deadlines the match row held when this actor was built, keyed by engine seat
@@ -424,6 +428,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
         voided: false,
         finished: matches!(match_row.status, MatchStatus::Finished),
+        finished_at: matches!(match_row.status, MatchStatus::Finished).then(now_ms),
         stopped: false,
         persisted_clocks: match_row.clocks.clone(),
         stored_grace: Some(match_row.clocks.grace_deadline.clone()),
@@ -946,12 +951,14 @@ impl MatchActor {
     /// §9.5: "Every ending records a result and clears both players' in-match state." Once.
     async fn on_terminal(&self, snapshot: &MatchSnapshot) {
         let Some(result) = snapshot.result else { return };
+        let at = now_ms();
         let (swapped, last_boards) = {
             let mut core = self.lock();
             if core.finished {
                 return;
             }
             core.finished = true;
+            core.finished_at = Some(at);
             self.shared.clock.stop();
             // R738: no aim outlives the game.
             for player in PLAYERS {
@@ -964,7 +971,6 @@ impl MatchActor {
             self.on_void().await;
             return;
         }
-        let at = now_ms();
 
         // The results row, the rating move and clearing `inMatchId` are `api/results.rs` (M7-T2); the
         // actor never writes them itself.
@@ -1719,6 +1725,33 @@ impl MatchActor {
                 || (playing_on && self.shared.bots[home].is_some())
         };
         PerPlayer::new(open(PlayerId::P1), open(PlayerId::P2))
+    }
+
+    /// When this actor's rematch window opened (`Core::finished_at`), or `None` while the game is on.
+    pub fn finished_at(&self) -> Option<i64> {
+        self.lock().finished_at
+    }
+
+    /// A handle that does not keep the actor alive, for a test to watch it go.
+    pub fn downgrade(&self) -> WeakMatchActor {
+        WeakMatchActor {
+            shared: Arc::downgrade(&self.shared),
+        }
+    }
+}
+
+/// `MatchActor::downgrade`. Everything else that outlives a call holds the actor this way too (its
+/// queue task, its sockets' handlers, its timers), and `Shared` owns the queue's only sender, so the
+/// queue task ends once no `MatchActor` is left.
+#[derive(Clone)]
+pub struct WeakMatchActor {
+    shared: Weak<Shared>,
+}
+
+impl WeakMatchActor {
+    /// Whether any `MatchActor` still holds the actor: its state, its log's acks and its queue task.
+    pub fn is_alive(&self) -> bool {
+        self.shared.strong_count() > 0
     }
 }
 

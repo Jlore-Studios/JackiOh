@@ -4666,7 +4666,7 @@ mod r1442_play_telemetry {
 }
 
 // ---------------------------------------------------------------------------
-// The ladder bots (R1448, R1449, R1452, migration 0032)
+// The ladder bots (R1453, R1454, R1452, migration 0032)
 // ---------------------------------------------------------------------------
 
 mod bots {
@@ -4728,7 +4728,7 @@ mod bots {
         match_id
     }
 
-    async fn r1449_bots_create_and_list(harness: &StoreHarness) {
+    async fn r1454_bots_create_and_list(harness: &StoreHarness) {
         let now = harness.now();
         let older = new_bot(0, now - 3 * DAY, 800.0);
         let newer = new_bot(4, now - DAY, 1200.0);
@@ -4778,7 +4778,7 @@ mod bots {
         assert_eq!(person.kind, ProfileKind::Human);
     }
 
-    async fn r1449_retire_and_decks(harness: &StoreHarness) {
+    async fn r1454_retire_and_decks(harness: &StoreHarness) {
         let now = harness.now();
         let bot = new_bot(2, now - DAY, 1000.0);
         q!(harness, t => t.bots_create(&bot));
@@ -4799,7 +4799,7 @@ mod bots {
         assert!(call!(harness, t => t.bots_set_decks(&unknown, &decks, "core-9")).is_err());
     }
 
-    async fn r1448_claim_for_bot_is_single_shot(harness: &StoreHarness) {
+    async fn r1453_claim_for_bot_is_single_shot(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4837,7 +4837,7 @@ mod bots {
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
     }
 
-    async fn r1448_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued(harness: &StoreHarness) {
+    async fn r1453_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4857,7 +4857,7 @@ mod bots {
         assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
     }
 
-    async fn r1448_recent_opponents_newest_first(harness: &StoreHarness) {
+    async fn r1453_recent_opponents_newest_first(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4879,7 +4879,7 @@ mod bots {
         assert!(q!(harness, t => t.results_recent_opponents(&id(), 5)).is_empty());
     }
 
-    async fn r1449_active_humans_skip_bots(harness: &StoreHarness) {
+    async fn r1454_active_humans_skip_bots(harness: &StoreHarness) {
         let now = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -4893,7 +4893,7 @@ mod bots {
         assert_eq!(q!(harness, t => t.results_count_active_humans(now)), 0);
     }
 
-    async fn r1449_a_claim_that_never_started_is_released(harness: &StoreHarness) {
+    async fn r1454_a_claim_that_never_started_is_released(harness: &StoreHarness) {
         const MINUTE: i64 = 60_000;
         let now = harness.now();
         // Claimed two minutes ago, its player put in the match, and never started: a cut-off start.
@@ -4958,7 +4958,7 @@ mod bots {
         assert!(q!(harness, t => t.bots_release_stale_starts(now - MINUTE)).is_empty());
     }
 
-    async fn r1449_r1450_the_reaper_lets_a_bot_claim_go_that_never_started(harness: &StoreHarness) {
+    async fn r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started(harness: &StoreHarness) {
         let now = harness.now();
         let bot = new_bot(2, now - DAY, 1000.0);
         q!(harness, t => t.bots_create(&bot));
@@ -4987,14 +4987,14 @@ mod bots {
     }
 
     both_stores!(
-        r1449_bots_create_and_list,
-        r1449_retire_and_decks,
-        r1448_claim_for_bot_is_single_shot,
-        r1448_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued,
-        r1448_recent_opponents_newest_first,
-        r1449_active_humans_skip_bots,
-        r1449_a_claim_that_never_started_is_released,
-        r1449_r1450_the_reaper_lets_a_bot_claim_go_that_never_started,
+        r1454_bots_create_and_list,
+        r1454_retire_and_decks,
+        r1453_claim_for_bot_is_single_shot,
+        r1453_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued,
+        r1453_recent_opponents_newest_first,
+        r1454_active_humans_skip_bots,
+        r1454_a_claim_that_never_started_is_released,
+        r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started,
     );
 }
 

@@ -644,7 +644,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
     // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
     // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
-    // failures and tries again on its next tick. R1449: with `LADDER_BOTS=on`, the bot pool is sized
+    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
     // once now and then hourly.
     tokio::spawn(api::queue::run_matchmaker(app.clone()));
     tokio::spawn(api::series::run_sweeper(app.clone()));

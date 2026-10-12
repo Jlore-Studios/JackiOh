@@ -171,6 +171,26 @@ class AvailabilityTests(unittest.TestCase):
                                       self.zone, Secrets.of(env or secrets(*providers.SECRETS)),
                                       forced=forced)
 
+    def test_a_reading_from_before_a_plan_change_holds_nothing(self):
+        """`usage_since`: Muse's last reading (2026-10-09, the $15 plan) said 100% of its week,
+        resetting on 2026-10-12. On the $50 plan since 2026-10-11 that reading holds nothing back,
+        and the next run reads the new plan's usage; a reading taken since still counts."""
+        old = {"observed_at": "2026-10-09T11:09:34Z", "status": "allowed",
+               "seven_day": {"resets_at": "2026-10-12T00:00:00Z", "utilization": 1.0}}
+        tonight = datetime(2026, 10, 11, 22, 0, tzinfo=timezone.utc)
+        self.assertEqual(str(providers.load(ROOT).get("muse").usage_since),
+                         "2026-10-11 00:00:00+00:00")
+        self.assertIsNone(self.why("muse", {"providers": {"muse": {"usage": old}}}, at=tonight))
+        # Without `usage_since`, the same reading holds it until the old plan's reset.
+        unchanged = pool_with(muse={"usage_since": None})
+        self.assertIn("7-day usage is 100%", self.why(
+            "muse", {"providers": {"muse": {"usage": old}}}, at=tonight, pool=unchanged))
+        fresh = {**old, "observed_at": "2026-10-11T21:30:00Z"}
+        self.assertIn("7-day usage is 100%", self.why(
+            "muse", {"providers": {"muse": {"usage": fresh}}}, at=tonight))
+        with self.assertRaisesRegex(ConfigError, "is not a time"):
+            pool_with(muse={"usage_since": "last Tuesday"})
+
     def test_hours_secrets_and_the_switch(self):
         # claude-4 works any hour: up to 70% in its 03:00–15:00 window, under 50% outside it.
         self.assertIsNone(self.why("claude-4"))

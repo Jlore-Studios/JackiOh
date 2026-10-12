@@ -58,7 +58,8 @@ use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS,
-    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, TURN_CLOCK_SECONDS,
+    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::store::{Db, MatchRow, StartMatchInput};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
@@ -4334,5 +4335,84 @@ mod r1086_magnetic_over_the_socket {
                 .to_string(),
         );
         assert!(wrong.is_err(), "{wrong:?}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R672 — a finished actor leaves the registry once its rematch window has passed
+// ---------------------------------------------------------------------------
+
+/// Nothing dropped a finished actor: `Registry.actors` kept its state, its acks and its queue task for
+/// the life of the process, since the reaper read only the matches still `live`. `reap_finished` drops
+/// one `REMATCH_OFFER_TTL_MS` after the game's end, once neither seat holds an open socket.
+mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
+    use super::*;
+
+    /// The tasks the test's runtime is running now, the actor's queue among them.
+    fn alive_tasks() -> usize {
+        tokio::runtime::Handle::current().metrics().num_alive_tasks()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn drops_a_finished_actor_and_its_queue_task_once_its_window_passed_and_no_socket_is_open() {
+        let h = harness(Options::default()).await;
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+
+        // The window is still open at its last millisecond.
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+
+        // Past it, an open socket still keeps the actor: closing it would send the client back to
+        // rebuild the actor it was just parted from.
+        assert!(h.app.matches.reap_finished(window_end + 1).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
+
+        // With both sockets gone, the window is the only thing left to wait for.
+        h.p1.drop_transport();
+        h.p2.drop_transport();
+        settle().await;
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+
+        // The test's own handle is the last one but the registry's: let it go, so what the reaper
+        // drops is the actor's last holder, and count the tasks first.
+        let weak = h.actor.downgrade();
+        drop(h.actor);
+        settle().await;
+        let before = alive_tasks();
+        assert_eq!(
+            h.app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        settle().await;
+
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert!(h.app.matches.live().is_empty());
+        assert!(!weak.is_alive(), "the actor's state is still held");
+        assert_eq!(
+            alive_tasks(),
+            before - 1,
+            "the actor's queue task is still running"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_live_actor_is_never_reaped() {
+        let h = harness(Options {
+            attach: false,
+            ..Options::default()
+        })
+        .await;
+        assert_eq!(h.actor.finished_at(), None);
+        assert!(
+            h.app
+                .matches
+                .reap_finished(now() + REMATCH_OFFER_TTL_MS + 1)
+                .await
+                .is_empty()
+        );
+        assert!(h.app.matches.has(MATCH_ID));
     }
 }

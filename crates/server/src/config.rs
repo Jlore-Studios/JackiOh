@@ -674,7 +674,7 @@ pub struct ThinkTimeFit {
 pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1448, R1449, R1451, R1452; #638). Every value is hand-set until the offline
+// Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). Every value is hand-set until the offline
 // calibration and the think-time fit (R1442's `THINK_TIME_FITS`) replace it.
 // ---------------------------------------------------------------------------------------------
 
@@ -693,7 +693,7 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R1449, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
+/// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
 pub const BOT_STRENGTHS: &[BotStrength] = &[
     BotStrength {
@@ -755,55 +755,55 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
     },
 ];
 
-/// R1449: the pool never holds fewer active bots than this, however few people play.
+/// R1454: the pool never holds fewer active bots than this, however few people play.
 pub const BOT_POOL_MIN: usize = 8;
-/// R1449: nor more than this, however many do.
+/// R1454: nor more than this, however many do.
 pub const BOT_POOL_MAX: usize = 200;
-/// R1449: active bots per person who finished a live game in the last
+/// R1454: active bots per person who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`, before the clamp.
 pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
-/// R1449: the window "weekly active" counts people over.
+/// R1454: the window "weekly active" counts people over.
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
-/// R1449: how often the server sizes the pool again (and once as it boots).
+/// R1454: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
-/// R1448: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
+/// R1453: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
-/// R1448: the longest; each ticket's wait is drawn from its id and the server's key between the
+/// R1453: the longest; each ticket's wait is drawn from its id and the server's key between the
 /// two, inclusive.
 pub const BOT_FALLBACK_MAX_SECONDS: i64 = 40;
-/// R1448: a player is not paired with a bot they faced in this many of their last games.
+/// R1453: a player is not paired with a bot they faced in this many of their last games.
 pub const BOT_RECENT_OPPONENTS: usize = 5;
-/// R1449: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
+/// R1454: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
 pub const BOT_ACTIVE_HOURS_MIN: i32 = 8;
-/// R1449: the most hours a day a bot is on.
+/// R1454: the most hours a day a bot is on.
 pub const BOT_ACTIVE_HOURS_MAX: i32 = 16;
-/// R1449: hours in the day a bot's schedule wraps around (UTC).
+/// R1454: hours in the day a bot's schedule wraps around (UTC).
 pub const BOT_HOURS_PER_DAY: i32 = 24;
 /// R1452: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
 pub const BOT_SPEED_MIN: f64 = 0.75;
 /// R1452: the slowest.
 pub const BOT_SPEED_MAX: f64 = 1.35;
-/// R1449: the fewest Best-of-1 decks a bot carries.
+/// R1454: the fewest Best-of-1 decks a bot carries.
 pub const BOT_DECKS_MIN: usize = 2;
-/// R1449: the most.
+/// R1454: the most.
 pub const BOT_DECKS_MAX: usize = 3;
-/// R1449: how many decks the pool tries in all to find a bot's legal ones.
+/// R1454: how many decks the pool tries in all to find a bot's legal ones.
 pub const BOT_DECK_DRAW_ATTEMPTS: usize = 20;
-/// R1449: the youngest a bot's account reads (its profile's `created_at`), in days.
+/// R1454: the youngest a bot's account reads (its profile's `created_at`), in days.
 pub const BOT_ACCOUNT_AGE_MIN_DAYS: i64 = 1;
-/// R1449: the oldest.
+/// R1454: the oldest.
 pub const BOT_ACCOUNT_AGE_MAX_DAYS: i64 = 180;
-/// R1449: the share of bots that keep the `Player#n` name a new account is given, as people do
+/// R1454: the share of bots that keep the `Player#n` name a new account is given, as people do
 /// who skip the username prompt (R1435).
 pub const BOT_DEFAULT_USERNAME_SHARE: f64 = 0.3;
-/// R1449: the first halves of a bot's username, `{first}{second}`; each at most eight letters, so
+/// R1454: the first halves of a bot's username, `{first}{second}`; each at most eight letters, so
 /// every name fits `USERNAME_MAX_LENGTH`.
 pub const BOT_NAME_FIRST: &[&str] = &[
     "Quiet", "Brave", "Lucky", "Sly", "Mighty", "Silver", "Rusty", "Clever", "Swift", "Gentle", "Bold",
     "Sunny", "Misty", "Lazy", "Grumpy", "Jolly", "Cosmic", "Frosty", "Golden", "Hidden", "Little", "Shadow",
     "Velvet", "Wild",
 ];
-/// R1449: the second halves of a bot's username.
+/// R1454: the second halves of a bot's username.
 pub const BOT_NAME_SECOND: &[&str] = &[
     "Otter", "Falcon", "Badger", "Panda", "Comet", "Wizard", "Knight", "Pickle", "Turnip", "Mango", "Raven",
     "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle", "Dragon",
@@ -828,7 +828,7 @@ pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
 /// R1452: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
 /// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
 pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
-/// R1449: how old a match a bot was claimed for may be and still be `open` (claimed, never
+/// R1454: how old a match a bot was claimed for may be and still be `open` (claimed, never
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;

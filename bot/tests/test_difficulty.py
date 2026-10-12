@@ -121,11 +121,12 @@ class BuilderTests(unittest.TestCase):
              ("claude-2", 53), ("claude-2", 56))
         queue(gh, ctx, 3, HARD)
         planned = plan_mod.make(ctx)
-        self.assertEqual(planned["action"], "none")  # agy, muse and gpt are free, and medium
+        self.assertEqual(planned["action"], "none")  # agy and muse are free and medium, gpt weak
         self.assertIn("no subscription can take the queue now", planned["reason"])
 
     def test_the_usage_order(self):
-        """For easy items Devin first while it has a lane (`easy_first`); then claude-3, claude-7
+        """For easy items the weak models first while they have a lane (`easy_first`), Codex
+        before Devin; then claude-3, claude-7
         and claude-1 (twice each: two lanes) with Sonnet; then claude-4, claude-6 and
         claude-5 with
         Sonnet, their stand-in for Devin while Devin's lanes are full (`takes_over`, #317 part
@@ -133,7 +134,7 @@ class BuilderTests(unittest.TestCase):
         after all of them (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 18):
+        for number in range(3, 19):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -143,7 +144,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(15):
+        for _ in range(16):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -151,7 +152,8 @@ class BuilderTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
-        self.assertEqual(order, [("devin", "swe-2-max"), ("claude-3", "sonnet"),
+        self.assertEqual(order, [("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
+                                 ("claude-3", "sonnet"),
                                  ("claude-3", "sonnet"), ("claude-7", "sonnet"),
                                  ("claude-7", "sonnet"),
                                  ("claude-1", "sonnet"), ("claude-1", "sonnet"),
@@ -300,13 +302,16 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual((planned["number"], planned["provider"]), (10, "devin"))
 
     def test_revisions_follow_the_building_rule(self):
-        gh = FakeGitHub()
-        ctx = ctx_for(gh)
-        gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "bot:revise", EASY))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["action"], seats(planned)["build"]),
-                         ("revise", ("claude-3", "sonnet", "medium")))
-        self.assertIsNone(seats(planned)["plan"])  # a revision is not planned again
+        # Codex, weak and `easy_first`, revises an easy pull request first; without it,
+        # claude-3 does, on its Sonnet.
+        for machine, seat in ((MACHINE, ("gpt", "gpt-5.6-terra", "weak")),
+                              (("agy", "muse"), ("claude-3", "sonnet", "medium"))):
+            gh = FakeGitHub()
+            ctx = ctx_for(gh, machine=machine)
+            gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "bot:revise", EASY))
+            planned = plan_mod.make(ctx)
+            self.assertEqual((planned["action"], seats(planned)["build"]), ("revise", seat))
+            self.assertIsNone(seats(planned)["plan"])  # a revision is not planned again
 
 
 class PlannerTests(unittest.TestCase):

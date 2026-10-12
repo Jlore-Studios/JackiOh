@@ -806,7 +806,7 @@ pub struct BotRating {
     pub updated_at: i64,
 }
 
-/// R1449: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
+/// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BotDeck {
@@ -814,7 +814,7 @@ pub struct BotDeck {
     pub portrait: String,
 }
 
-/// R1448, R1449, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
+/// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
 /// 0032), its profile's `created_at` and `current_match_id`, and its R610 rating. Server-only.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -826,7 +826,7 @@ pub struct BotRow {
     /// Its think times' multiplier (R1452).
     pub speed: f64,
     pub persona: PersonaName,
-    /// Its schedule (R1449): on from this hour of the day (UTC) for `active_hours` hours.
+    /// Its schedule (R1454): on from this hour of the day (UTC) for `active_hours` hours.
     pub active_from_hour: i32,
     pub active_hours: i32,
     /// Its Best-of-1 decks; empty until the pool deals them.
@@ -835,7 +835,7 @@ pub struct BotRow {
     pub decks_catalog_version: Option<String>,
     /// Epoch ms: when its account reads as made.
     pub created_at: i64,
-    /// Epoch ms it was retired (R1449), or none while it is in the pool.
+    /// Epoch ms it was retired (R1454), or none while it is in the pool.
     pub retired_at: Option<i64>,
     /// Its R610 rating (`bot_ratings`), `RATING_START` before it has a row.
     pub rating: f64,
@@ -843,7 +843,7 @@ pub struct BotRow {
     pub in_match_id: Option<String>,
 }
 
-/// R1449: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
+/// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
 /// `bot_ratings` row starts at (R610), with a new player's deviation and volatility.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1806,14 +1806,14 @@ impl Tx<'_> {
         dispatch!(self, ranked_put_bot(bot))
     }
 
-    // bots (R1448, R1449, R1451, R1452, migration 0032): the ladder bots
+    // bots (R1453, R1454, R1451, R1452, migration 0032): the ladder bots
 
-    /// R1449: every ladder bot, retired ones included, oldest profile first (ties on id).
+    /// R1454: every ladder bot, retired ones included, oldest profile first (ties on id).
     pub async fn bots_list(&mut self) -> StoreResult<Vec<BotRow>> {
         dispatch!(self, bots_list())
     }
 
-    /// R1449: a new bot in one write: an `active` profile of kind `bot` made at `created_at`, with
+    /// R1454: a new bot in one write: an `active` profile of kind `bot` made at `created_at`, with
     /// the default username a new account gets (the lowest free `Player#n`, R1434) and no auth user;
     /// its `bots` row; and its `bot_ratings` row at `seed_rating` with a new player's deviation and
     /// volatility and no games (R610).
@@ -1821,13 +1821,13 @@ impl Tx<'_> {
         dispatch!(self, bots_create(bot))
     }
 
-    /// R1449: retires the bot at `at`, or puts it back in the pool with `None`. A retired bot
+    /// R1454: retires the bot at `at`, or puts it back in the pool with `None`. A retired bot
     /// finishes the match it is in.
     pub async fn bots_set_retired(&mut self, profile_id: &str, at: Option<i64>) -> StoreResult<()> {
         dispatch!(self, bots_set_retired(profile_id, at))
     }
 
-    /// R1449: the bot's Best-of-1 decks, dealt for `catalog_version`.
+    /// R1454: the bot's Best-of-1 decks, dealt for `catalog_version`.
     pub async fn bots_set_decks(
         &mut self,
         profile_id: &str,
@@ -1837,7 +1837,7 @@ impl Tx<'_> {
         dispatch!(self, bots_set_decks(profile_id, decks, catalog_version))
     }
 
-    /// R1448: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless
+    /// R1453: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless
     /// the bot is free (in no match and not retired) and the ticket still open. On true the ticket is
     /// matched to `match_id`, the `open` match skeleton is written and the bot is put in it; the
     /// ticket's owner is the caller's to put in the match.
@@ -1851,7 +1851,7 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
-    /// R1449: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
+    /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
     /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
     /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`
     /// lets a failed start's go; the ticket stays claimed. Answers the bots let go.
@@ -1859,7 +1859,7 @@ impl Tx<'_> {
         dispatch!(self, bots_release_stale_starts(before))
     }
 
-    /// R1448: the profiles `profile_id` faced in its last `limit` finished matches, newest first.
+    /// R1453: the profiles `profile_id` faced in its last `limit` finished matches, newest first.
     pub async fn results_recent_opponents(
         &mut self,
         profile_id: &str,
@@ -1868,7 +1868,7 @@ impl Tx<'_> {
         dispatch!(self, results_recent_opponents(profile_id, limit))
     }
 
-    /// R1449: how many people (bots left out) finished a match at or after `since` (epoch ms).
+    /// R1454: how many people (bots left out) finished a match at or after `since` (epoch ms).
     pub async fn results_count_active_humans(&mut self, since: i64) -> StoreResult<i64> {
         dispatch!(self, results_count_active_humans(since))
     }

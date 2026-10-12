@@ -1,4 +1,4 @@
-//! R1448 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked Best of 1 or All
+//! R1453 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked Best of 1 or All
 //! Random ticket that has waited past its own fallback time (15–40 s, from its id) with no person to
 //! pair with is paired with a ladder bot: free, on its schedule, the closest in rating, and not one the
 //! player faced in their last games. A player rated above every bot never gets one, Conquest never
@@ -239,7 +239,7 @@ async fn concede_bot_match(app: &Arc<App>, person_id: &str) -> (String, PlayerId
 }
 
 #[test]
-fn r1448_fallback_time_is_15_to_40_s_and_stable() {
+fn r1453_fallback_time_is_15_to_40_s_and_stable() {
     let mut seen_min = false;
     let mut seen_max = false;
     for k in 0..2_000 {
@@ -257,7 +257,7 @@ fn r1448_fallback_time_is_15_to_40_s_and_stable() {
 }
 
 #[test]
-fn r1448_no_client_can_work_out_the_fallback_time() {
+fn r1453_no_client_can_work_out_the_fallback_time() {
     // What a client holds: its ticket's id (`ticketId`), the range, and the engine's `Rng`, which runs
     // in its browser. A time drawn from those alone would tell it the moment a bot would come.
     let span = i32::try_from(BOT_FALLBACK_MAX_SECONDS - BOT_FALLBACK_MIN_SECONDS + 1).expect("a small range");
@@ -287,7 +287,7 @@ fn r1448_no_client_can_work_out_the_fallback_time() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_no_bot_before_the_fallback_time() {
+async fn r1453_no_bot_before_the_fallback_time() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -321,7 +321,7 @@ async fn r1448_no_bot_before_the_fallback_time() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_the_closest_free_scheduled_bot_pairs() {
+async fn r1453_the_closest_free_scheduled_bot_pairs() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let far_below = new_bot(&app, BotSpec::rated(900.0)).await;
@@ -359,7 +359,7 @@ async fn r1448_the_closest_free_scheduled_bot_pairs() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_the_player_is_player_1_as_the_older_ticket_is() {
+async fn r1453_the_player_is_player_1_as_the_older_ticket_is() {
     // Between two people the older ticket is p1 and goes first; a ticket past its fallback time is
     // older than anyone who would come to pair with it, so a bot match seats the person p1 every time.
     // A coin for the seats would put the person second about half of these.
@@ -376,7 +376,7 @@ async fn r1448_the_player_is_player_1_as_the_older_ticket_is() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_a_human_inside_the_window_pairs_first() {
+async fn r1453_a_human_inside_the_window_pairs_first() {
     let app = app_with_bots(true).await;
     let (a, _) = new_person(&app, 1000.0).await;
     let (b, _) = new_person(&app, 1010.0).await;
@@ -397,7 +397,7 @@ async fn r1448_a_human_inside_the_window_pairs_first() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_conquest_never_gets_a_bot() {
+async fn r1453_conquest_never_gets_a_bot() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -413,7 +413,7 @@ async fn r1448_conquest_never_gets_a_bot() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_recent_retired_off_schedule_and_busy_bots_are_skipped() {
+async fn r1453_recent_retired_off_schedule_and_busy_bots_are_skipped() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let now = now_ms();
@@ -441,7 +441,7 @@ async fn r1448_recent_retired_off_schedule_and_busy_bots_are_skipped() {
         },
     )
     .await;
-    // R1449: decks dealt for a catalog this server no longer plays seat it in no Best of 1.
+    // R1454: decks dealt for a catalog this server no longer plays seat it in no Best of 1.
     let stale_decks = new_bot(&app, BotSpec::rated(1005.0)).await;
     let older: Vec<BotDeck> = vec![from(json!({ "cards": deck(1), "portrait": "vanilla" }))];
     q!(app, bots_set_decks(&stale_decks, &older, "an-older-catalog"));
@@ -487,7 +487,7 @@ async fn r1448_recent_retired_off_schedule_and_busy_bots_are_skipped() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_a_start_that_fails_lets_the_bot_go() {
+async fn r1453_a_start_that_fails_lets_the_bot_go() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -518,7 +518,7 @@ async fn r1448_a_start_that_fails_lets_the_bot_go() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_above_the_strongest_bot_gets_none() {
+async fn r1453_above_the_strongest_bot_gets_none() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1500.0).await;
     new_bot(&app, BotSpec::rated(1100.0)).await;
@@ -534,7 +534,7 @@ async fn r1448_above_the_strongest_bot_gets_none() {
 }
 
 #[test]
-fn r1448_ladder_bots_takes_on_or_off() {
+fn r1453_ladder_bots_takes_on_or_off() {
     let env_of = |value: Option<&str>| {
         let mut source: IndexMap<String, String> = IndexMap::new();
         source.insert("E2E".to_string(), "1".to_string());
@@ -558,7 +558,7 @@ fn r1448_ladder_bots_takes_on_or_off() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1448_ladder_bots_off_seats_none() {
+async fn r1453_ladder_bots_off_seats_none() {
     let app = app_with_bots(false).await;
     assert!(!app.env.ladder_bots);
     let (person, _) = new_person(&app, 1000.0).await;

@@ -1,4 +1,4 @@
--- The ladder bots (migration 0032, SPEC §9.12, R1448, R1449, R1452; issue #638). Runs last, after
+-- The ladder bots (migration 0032, SPEC §9.12, R1453, R1454, R1452; issue #638). Runs last, after
 -- 16_play_telemetry.sql; profile 1 is active by then (03 activated it).
 \set ON_ERROR_STOP on
 
@@ -148,7 +148,7 @@ begin
   delete from public.profiles where id = bot;
   select count(*) into n from public.bots where profile_id = bot;
   if n <> 0 then
-    raise exception 'FAIL (R1449): deleting the bot''s profile left its bots row';
+    raise exception 'FAIL (R1454): deleting the bot''s profile left its bots row';
   end if;
 
   -- And `kind` holds only its two values.
@@ -165,7 +165,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R1449: a bot owns no collection, whatever grants the launch collection ###'
+\echo '### R1454: a bot owns no collection, whatever grants the launch collection ###'
 begin;
 do $$
 declare
@@ -178,23 +178,23 @@ begin
   select count(*) into v_cards from public.cards
    where token = false and catalog_version = app.catalog_version();
   if v_cards = 0 then
-    raise exception 'FAIL (R1449): the current catalog holds no non-Token card; the backfill below would grant nothing to anyone';
+    raise exception 'FAIL (R1454): the current catalog holds no non-Token card; the backfill below would grant nothing to anyone';
   end if;
 
   insert into public.profiles (id, kind, status) values (bot, 'bot', 'active');
   perform app.grant_launch_collection_all();
   select count(*) into n from public.collection where profile_id = p1 and quantity >= 1;
   if n <> v_cards then
-    raise exception 'FAIL (R1449): profile 1 owns % of the % cards after the backfill; it must still grant people', n, v_cards;
+    raise exception 'FAIL (R1454): profile 1 owns % of the % cards after the backfill; it must still grant people', n, v_cards;
   end if;
   select count(*) into n from public.collection where profile_id = bot;
   if n <> 0 then
-    raise exception 'FAIL (R1449): the backfill (0016 runs it on every catalog stamp) granted the bot % cards', n;
+    raise exception 'FAIL (R1454): the backfill (0016 runs it on every catalog stamp) granted the bot % cards', n;
   end if;
   select count(*) into n from public.collection_grants where profile_id = bot;
   if n <> 0 then
-    raise exception 'FAIL (R1449): the bot has % collection_grants rows', n;
+    raise exception 'FAIL (R1454): the bot has % collection_grants rows', n;
   end if;
-  raise notice 'OK (R1449): the launch backfill grants people and passes over the bot';
+  raise notice 'OK (R1454): the launch backfill grants people and passes over the bot';
 end $$;
 rollback;

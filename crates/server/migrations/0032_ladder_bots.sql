@@ -1,9 +1,9 @@
 -- ============================================================================
--- Migration 0032: the ladder bots (SPEC §9.5, §9.12, R1448, R1449, R1452; issue #638)
+-- Migration 0032: the ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1452; issue #638)
 -- ============================================================================
 -- A ranked Best of 1 or All Random ticket that waits past its fallback time
--- with no person to pair with plays a ladder bot (R1448), which the server
--- seats and plays itself (R1452) out of a pool it keeps (R1449). A bot is a
+-- with no person to pair with plays a ladder bot (R1453), which the server
+-- seats and plays itself (R1452) out of a pool it keeps (R1454). A bot is a
 -- profile like a person's, so every table that names a seat by profile id
 -- (matches, results, game_records, rated_games' sides) takes it as it is:
 --
@@ -27,7 +27,7 @@
 --   * profiles_need_auth_user (profiles, before insert) refuses a profile of
 --     kind 'human' with no auth.users row, as the key did.
 --
--- A bot owns no collection (R1449): 0002's app.grant_launch_collection_all,
+-- A bot owns no collection (R1454): 0002's app.grant_launch_collection_all,
 -- which 0016 runs on every catalog stamp, grants people only from here on.
 --
 -- TRUST BOUNDARY: public.bots is server-only, as public.bot_ratings is (0022):
@@ -130,7 +130,7 @@ create trigger profiles_need_auth_user
 
 
 -- ----------------------------------------------------------------------------
--- 3. public.bots (R1448, R1449, R1452).
+-- 3. public.bots (R1453, R1454, R1452).
 -- ----------------------------------------------------------------------------
 create table if not exists public.bots (
   profile_id            uuid primary key references public.profiles(id) on delete cascade,
@@ -150,7 +150,7 @@ create table if not exists public.bots (
 );
 
 comment on table public.bots is
-  'R1448, R1449, R1452: one row per ladder bot profile (profiles.kind = bot): its '
+  'R1453, R1454, R1452: one row per ladder bot profile (profiles.kind = bot): its '
   'strength (an index into the server''s BOT_STRENGTHS), think-time speed, '
   'persona (R645), schedule (UTC hours), Best-of-1 decks and the catalog '
   'version they were dealt for, and when it was retired. Its rating is its '
@@ -164,7 +164,7 @@ revoke all on public.bots from public, anon, authenticated;
 
 
 -- ----------------------------------------------------------------------------
--- 4. A bot owns no collection (R1449).
+-- 4. A bot owns no collection (R1454).
 -- ----------------------------------------------------------------------------
 -- 0002's backfill, as it was, but over people's active profiles only: a bot's
 -- profile is active from the start (it never redeems a code, so 0002's
@@ -183,7 +183,7 @@ begin
   -- SPEC §9.6 build order step 3: "Collection ledger; grant everything to
   -- everyone." Backfill for every currently active person's profile; safe to
   -- run repeatedly because app.grant_launch_collection is itself idempotent.
-  -- R1449: a ladder bot (kind 'bot') owns nothing.
+  -- R1454: a ladder bot (kind 'bot') owns nothing.
   for v_profile in
     select id from public.profiles where status = 'active' and kind = 'human'
   loop
@@ -197,6 +197,6 @@ $$;
 
 comment on function app.grant_launch_collection_all() is
   $$Backfill: calls app.grant_launch_collection for every active person's
-  profile (kind human; a ladder bot owns no collection, R1449). Returns the
+  profile (kind human; a ladder bot owns no collection, R1454). Returns the
   number of profiles touched (visited), not the number that received new
   grants -- a repeat run touches the same count safely.$$;

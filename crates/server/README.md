@@ -4,7 +4,7 @@ The authority for everything that is not presentation: identity, usernames (R143
 invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
 (R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
 Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
-(R1448, R1449, R1451, R1452), and the match itself: one actor per match holding the
+(R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
 `GameState` in memory, one WebSocket per player, `reduce` on every action and `view_for` pushed to
 each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
 for the card statistics (§9.11, R376–R378).
@@ -33,7 +33,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, and the pool (R1448, R1449, R1452) |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, and the pool (R1453, R1454, R1452) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -104,7 +104,7 @@ placeholders (`app::load_server_env`).
 | `E2E` | no | BUILD M8's test-server mode: fixture auth, accounts and codes, the in-memory store |
 | `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
-| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked Best of 1 or All Random ticket left alone past its fallback time, and keeps the bot pool (R1448, R1449, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
+| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked Best of 1 or All Random ticket left alone past its fallback time, and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
@@ -238,7 +238,7 @@ and first move of the turn, fits each bucket of at least `TIMING_FIT_MIN_SAMPLES
 and prints one `ThinkTimeFit` row per bucket, to paste by hand into `config.rs`'s
 `THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. Neither takes an option.
 
-## Ladder bots (§9.5, §9.12, R1448, R1449, R1451, R1452)
+## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452)
 
 With `LADDER_BOTS=on`, a ranked Best of 1 or All Random ticket that has waited past its fallback
 time (15–40 s, drawn from its id and a key the server keeps to itself) with no person inside its
@@ -252,7 +252,7 @@ is seated and the pool is never sized.
   queue's sweep (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a
   ticket and its bot in one statement (`tickets_claim_for_bot`, single-shot like a pair's claim)
   and starts the match, ranked, the person p1 and first to act as the older ticket of a pair is
-  (R1448); a start that fails lets both go. Conquest never gets one.
+  (R1453); a start that fails lets both go. Conquest never gets one.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
   budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
@@ -273,7 +273,7 @@ is seated and the pool is never sized.
   account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
   patch's human Best-of-1 decklists, then decks dealt as All Random deals a player's
   (`deal_random_deck`: no shadow ban, no soft gate), each checked legal, and they are dealt
-  again when the catalog version changes (R1449). The queue's sweeper lets go a bot whose claimed
+  again when the catalog version changes (R1454). The queue's sweeper lets go a bot whose claimed
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's

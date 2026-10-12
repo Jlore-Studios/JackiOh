@@ -1,4 +1,4 @@
-//! R1449 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
+//! R1454 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
 //! weekly active people, BOT_POOL_MAX)`; an excess retires the youngest accounts and a shortfall puts
 //! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
 //! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
@@ -101,7 +101,7 @@ fn record(id: &str, source: &str, mode: &str, pilot: &str, deck: &[String], patc
 }
 
 #[test]
-fn r1449_pool_target_clamps() {
+fn r1454_pool_target_clamps() {
     assert_eq!(pool_target(0), BOT_POOL_MIN);
     assert_eq!(pool_target(-5), BOT_POOL_MIN);
     assert_eq!(pool_target(i64::from(u32::MAX)), BOT_POOL_MAX);
@@ -115,7 +115,7 @@ fn r1449_pool_target_clamps() {
 }
 
 #[test]
-fn r1449_plan_pool_retires_newest_reinstates_first() {
+fn r1454_plan_pool_retires_newest_reinstates_first() {
     let bots = vec![
         bot("a", 1_000, None),
         bot("b", 3_000, None),
@@ -156,7 +156,7 @@ fn r1449_plan_pool_retires_newest_reinstates_first() {
 }
 
 #[test]
-fn r1449_drawn_bots_in_range_valid_names() {
+fn r1454_drawn_bots_in_range_valid_names() {
     let now = 1_800_000_000_000;
     let mut named = 0;
     let mut defaults = 0;
@@ -204,7 +204,7 @@ fn r1449_drawn_bots_in_range_valid_names() {
 }
 
 #[tokio::test]
-async fn r1449_decks_prefer_human_bo1_lists_legal() {
+async fn r1454_decks_prefer_human_bo1_lists_legal() {
     let app = empty_test_app().await;
     let pool = playable();
     let size = deck_size();
@@ -255,7 +255,7 @@ async fn r1449_decks_prefer_human_bo1_lists_legal() {
         );
     }
 
-    // With no human list at all, every deck is one All Random would deal a player (R1448: no shadow
+    // With no human list at all, every deck is one All Random would deal a player (R1453: no shadow
     // ban and no soft gate, which would tell the bot's deck from a person's), and still legal.
     let decks = draw_decks("decks-none", &[], &app.catalog);
     assert!((BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()));
@@ -292,7 +292,7 @@ fn queueable(catalog: &Catalog, cards: &[String]) -> bool {
 }
 
 #[tokio::test]
-async fn r1449_decks_skip_a_list_no_player_could_queue() {
+async fn r1454_decks_skip_a_list_no_player_could_queue() {
     let app = empty_test_app().await;
     let pool = playable();
     let size = deck_size();
@@ -336,7 +336,7 @@ async fn r1449_decks_skip_a_list_no_player_could_queue() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1449_refresh_seeds_ratings_no_collection() {
+async fn r1454_refresh_seeds_ratings_no_collection() {
     let app = empty_test_app().await;
     let now = now_ms();
     let done = refresh_pool(&app, "refresh", now).await.expect("a refresh");
@@ -374,7 +374,7 @@ async fn r1449_refresh_seeds_ratings_no_collection() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1449_new_catalog_redraws_decks() {
+async fn r1454_new_catalog_redraws_decks() {
     let app = empty_test_app().await;
     let now = now_ms();
     refresh_pool(&app, "catalog", now).await.expect("a refresh");
@@ -398,7 +398,7 @@ async fn r1449_new_catalog_redraws_decks() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1449_a_bot_whose_start_was_cut_off_is_let_go() {
+async fn r1454_a_bot_whose_start_was_cut_off_is_let_go() {
     let app = empty_test_app().await;
     let now = now_ms();
     refresh_pool(&app, "cut", now).await.expect("a refresh");
@@ -447,7 +447,7 @@ async fn r1449_a_bot_whose_start_was_cut_off_is_let_go() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r1449_the_sweeper_lets_a_cut_off_start_go_with_the_bots_off() {
+async fn r1454_the_sweeper_lets_a_cut_off_start_go_with_the_bots_off() {
     // A start cut off by a restart whose new deploy turned the bots off: nothing will seat a bot
     // again, but the bot and its player are still let go.
     let app = empty_test_app().await;
