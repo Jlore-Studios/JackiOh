@@ -11,11 +11,13 @@
 //! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
 //! first game waits for both players to pick (`series.rs`).
 //!
-//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a Best-of-1 or All Random ticket that
-//! has waited past its fallback time with no person to pair with is paired with a ladder bot, after
-//! every pair of people the sweep could make (`pair_with_bots`, `bots::fallback`). Since the window
-//! stops at `MAX_FAIR_GAP` (R640001), a bot is that ticket's opponent rather than a person further
-//! from its rating.
+//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a ticket that has waited past its
+//! fallback time with no person to pair with is paired with a ladder bot, after every pair of people
+//! the sweep could make (`pair_with_bots`, `bots::fallback`). Since the window stops at
+//! `MAX_FAIR_GAP` (R640001), a bot is that ticket's opponent rather than a person further from its
+//! rating. A Conquest ticket and its bot (R641000) become a series, claimed and written in one
+//! transaction (`start_bot_series`), whose picks the bot makes through the series sweeper
+//! (`bots::pick`); a bot that is a side of a series not over is seated nowhere else.
 //!
 //! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
 //! Two invariants:
@@ -570,14 +572,15 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         .filter(|profile| profile.in_match_id.is_some())
         .map(|profile| profile.id)
         .collect();
-    for series in tx
+    // R641000: the sides of every series not over, a bot's included, which no bot claim may seat.
+    let in_series: IndexSet<String> = tx
         .series_active()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?
-    {
-        busy.insert(series.sides.0.profile_id.clone());
-        busy.insert(series.sides.1.profile_id.clone());
-    }
+        .into_iter()
+        .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
+        .collect();
+    busy.extend(in_series.iter().cloned());
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
@@ -655,7 +658,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
     // R1453: only after every pair of people this sweep could make, so a person inside the window
     // always comes before a bot.
     if app.env.ladder_bots {
-        made += pair_with_bots(app, &open, &mut taken, now).await?;
+        made += pair_with_bots(app, &open, &mut taken, &in_series, now).await?;
     }
 
     Ok(made)
@@ -663,12 +666,15 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
 
 /// R1453: pairs each ticket still open and past its fallback time, oldest first, with the bot
 /// `choose_bot` names for it, claimed in one statement as a pair of tickets is
-/// (`tickets_claim_for_bot`). A claim that loses (the ticket went, or the bot was taken) is not an
-/// error: that ticket waits for the next sweep. Answers how many matches it made.
+/// (`tickets_claim_for_bot`; a Conquest ticket's in `start_bot_series`, R641000). A claim that loses
+/// (the ticket went, or the bot was taken) is not an error: that ticket waits for the next sweep.
+/// `in_series` holds the sides of every series not over: a bot among them is taken already. Answers
+/// how many matches and series it made.
 async fn pair_with_bots(
     app: &Arc<App>,
     open: &[Ticket],
     taken: &mut IndexSet<String>,
+    in_series: &IndexSet<String>,
     now: i64,
 ) -> Result<usize, ApiError> {
     let due: Vec<&Ticket> = open
@@ -691,7 +697,7 @@ async fn pair_with_bots(
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     let hour = hour_of(now);
-    let mut busy: IndexSet<String> = IndexSet::new();
+    let mut busy: IndexSet<String> = in_series.clone();
     let mut made = 0;
     for ticket in due {
         let recent = {
@@ -713,6 +719,15 @@ async fn pair_with_bots(
             continue;
         };
         let match_id = new_uuid();
+        if ticket.mode == QueueMode::Bo3 {
+            if !start_bot_series(app, ticket, bot, &match_id, now).await? {
+                continue;
+            }
+            taken.insert(ticket.id.clone());
+            busy.insert(bot.profile_id.clone());
+            made += 1;
+            continue;
+        }
         let won = {
             let mut tx = app
                 .db
@@ -737,6 +752,75 @@ async fn pair_with_bots(
         made += 1;
     }
     Ok(made)
+}
+
+/// R641000: the series a Conquest ticket and its bot play, as `start_paired_series` makes a pair's,
+/// with the claim (`tickets_claim_for_bot_series`) and the series row in one transaction: between
+/// games the bot is in no match, and the series is all that holds it, so a claim must never land
+/// without its series. The person is series p1 and goes first in odd games, as the older ticket of a
+/// pair does (R335, R1453); the bot is p2 with the trio the pool dealt it. The series is ranked
+/// (R604) and opens on game 1's pick phase; `bots::pick` makes the bot's picks from the sweeper.
+/// Answers false, with nothing written, when the bot holds no trio or the claim lost.
+async fn start_bot_series(
+    app: &Arc<App>,
+    ticket: &Ticket,
+    bot: &BotRow,
+    match_id: &str,
+    now: i64,
+) -> Result<bool, ApiError> {
+    let person_trio = trio_of(ticket)?;
+    let Some(bot_trio) = bot.trio.clone() else {
+        return Ok(false);
+    };
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let won = tx
+        .tickets_claim_for_bot_series(&ticket.id, &bot.profile_id, match_id, now)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    if !won {
+        // Dropping `tx` rolls it back.
+        return Ok(false);
+    }
+    // R143 and R259: the server mints the series seed, unless an end-to-end enqueue supplied one.
+    let seed_base = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
+    let input = NewSeriesInput {
+        series_id: new_uuid(),
+        first_match_id: match_id.to_string(),
+        sides: (
+            NewSeriesSide {
+                profile_id: ticket.profile_id.clone(),
+                trio: person_trio,
+            },
+            NewSeriesSide {
+                profile_id: bot.profile_id.clone(),
+                trio: bot_trio,
+            },
+        ),
+        seed_base,
+        catalog_version: app.catalog.version.clone(),
+        // R604: a series the queue pairs is ranked, whoever it was paired with.
+        ranked: true,
+    };
+    let series = start_series(app, input, &mut tx)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tracing::info!(
+        event = "queue.paired_bot",
+        mode = "bo3",
+        seriesId = %series.id,
+        firstMatchId = %match_id,
+        ticket = %ticket.id,
+        botId = %bot.profile_id,
+        ratings = %json_list(&[ticket.rating, bot.rating]),
+    );
+    Ok(true)
 }
 
 /// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
