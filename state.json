@@ -5030,11 +5030,13 @@
         "by": "`claude` (strong)",
         "sha": "73ae9596bdec6ae98caba60588c46e7fece10c8b"
       },
+      "closed_at": "2026-10-12T23:52:20Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-12T22:41:06Z",
       "issue": 724,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
