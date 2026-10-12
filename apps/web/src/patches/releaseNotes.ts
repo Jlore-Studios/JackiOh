@@ -21,9 +21,9 @@ export type SetReleaseNotes = {
 
 /**
  * Every set's release notes, newest set first. The page opens on the first entry. A sub-patch's
- * summary says only what its catalog patch's own notes and card changes say (`patches.json`), in
- * words a player reads; a set's technical changes are what merged to `main` during its version
- * line. A test holds every number a summary states to its patch's notes.
+ * summary says only what its catalog patch's notes, card changes and source change say
+ * (`patches.json`), in words a player reads; a set's technical changes are what merged to `main`
+ * during its version line. A test holds every number a summary states to its patch's notes.
  */
 export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
   {
@@ -31,12 +31,12 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
     name: "Meditative",
     versions: "v0.3.0 – v0.3.6",
     summary:
-      "The Meditative set: 102 cards and 30 tokens, shipped in v0.3.5 into the deck builder, the Almanac, random decks and every card pool that names no set. Among them are Magnetic Units, the Jade Counter, an extra turn, a card that can win the game and a card you craft yourself. Before it shipped, v0.3.1 to v0.3.4 changed cards of the earlier sets: a text pass, more numbers to tune, and Degrade and Upgrade renamed Nerf and Buff.",
+      "The Meditative set: 102 cards and 30 tokens, shipped in v0.3.5 into the deck builder, the Almanac, random decks and every card pool that names no set. Among them are Magnetic Units, the Jade Counter, an extra turn, a card that can win the game and a card you craft yourself. Before it shipped, v0.3.1 to v0.3.4 changed cards of the earlier sets: a text pass, more numbers to tune, Heroic Power's numbers tied to the power it has, and Degrade and Upgrade renamed Nerf and Buff.",
     technicalChanges: [
       "The Rust rewrite (v0.3.0): the rules engine, the cards, the AI and the server are rewritten in Rust, and your browser runs the same engine compiled to WebAssembly. It plays exactly as v0.2.11 did: games recorded on the old engine replay step for step on the new one.",
-      "The practice AI: training taught it to play the Core cards it used to leave out of its decks, so it now builds from every Core, Classic and Classic+ card. Its decks leave the Meditative cards out until it has been trained on them.",
+      "The practice AI: its training brought back into its decks every Core card it used to leave out, so it now builds from every Core, Classic and Classic+ card. Its decks leave the Meditative cards out until it has been trained on them.",
       "Usernames: every player has a username, shown wherever a player is named, and you can sign in with it.",
-      "Practice and rooms: a practice game can be saved and resumed later, and an online room can be shared as an invite link.",
+      "Practice and rooms: leaving a practice game now asks whether to save it, a saved game waits on the practice menu with a Resume banner, and an online room can be shared as an invite link.",
       "Emotes and sound: 24 emotes, 8 of them dealt to each player each game; every Legendary and Mythic opens its play with a few bars of music of its own; every Unit speaks as it attacks, and the Meditative cards are voiced.",
     ],
     subPatches: [
@@ -44,7 +44,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.3.6",
         title: "Zephyrs and Zephrys Zealotism draw on every set",
         summary:
-          "Zephyrs and Zephrys Zealotism no longer name a set: both draw on every non-token card of every shipped set but their own, Meditative included, and a later set joins them the day it ships. Only their pools and words change.",
+          "Zephyrs and Zephrys Zealotism no longer name a set: each draws on every non-token card of every shipped set, Meditative included, leaving out only itself, so Zephyrs may offer Zephrys Zealotism and Zealotism may deal Zephyrs. A later set joins them the day it ships. Only their pools and words change.",
       },
       {
         version: "v0.3.5",
@@ -56,7 +56,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.3.4",
         title: "Degrade is Nerf, Upgrade is Buff",
         summary:
-          "Degrade is renamed Nerf and Upgrade is renamed Buff on both faces of every card that printed them, from Withering Storm to Heroic Power's Radiant Steady Shot. Only the words change; the cards play as before.",
+          "Degrade is renamed Nerf and Upgrade is renamed Buff on both faces of every card that printed them, from Withering Storm to Fine-Tuning, and Heroic Power's Radiant Steady Shot now says it permanently deals two more damage. Only the words change; the cards play as before.",
       },
       {
         version: "v0.3.3",
@@ -156,7 +156,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       },
       {
         version: "v0.2.6",
-        title: "Book of Wildfire changes Books",
+        title: "Book of Wildfire becomes a different Book",
         summary:
           "At the end of your turn, a Book of Wildfire in your hand becomes a different random Book (Radiant: a random Radiant Book), never Wildfire and never the Book it already is, and keeps changing each turn.",
       },
@@ -182,7 +182,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.2.2",
         title: "Mechanics changes",
         summary:
-          "Chaos Machine never Upgrades (now Buffs) itself, Joro answers only a Spell's targeting, a Grape that a random Fruit pool picks is re-rolled, every card that uses Plague Tokens gains the Plague tag, Blade Storm casts Whirlwind until a Unit dies, Adaptive Growth's buff and debuff are both 2 (Radiant 3), and Exile's base face answers (2) Cost or less.",
+          "Chaos Machine never Upgrades (now Buffs) itself, Joro answers only a Spell's targeting, a Grape that any random pool picks is re-rolled by the Grapes' own odds, every card that uses Plague Tokens gains the Plague tag, Blade Storm casts Whirlwind until a Unit dies, Adaptive Growth's buff and debuff are both 2 (Radiant 3), and Exile's base face answers (2) Cost or less.",
       },
       {
         version: "v0.2.1",
@@ -202,7 +202,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
     name: "Core",
     versions: "v0.1.0 – v0.1.1",
     summary:
-      "The base set: 100 cards and 9 tokens, with Hearthstone-style mana, combat and keywords played across five shared lanes and a hidden backrow of Traps.",
+      "The base set: 100 cards and 9 tokens as first built, with The Coin and the Ghoul Token joining them by v0.1.1. Hearthstone-style mana, combat and keywords meet five shared lanes and a hidden backrow of Traps.",
     technicalChanges: [
       "The board: five lanes, each with a Unit zone and a backrow zone on either side, where Traps wait face-down until they fire.",
       "Online play: Best of 1, Conquest (a trio of decks, each game's deck picked in secret) and All Random. Both players mulligan at once, and a draw can be offered.",
@@ -215,7 +215,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
         version: "v0.1.1",
         title: "Pierce, Deck and Tribute",
         summary:
-          "The Pierce keyword arrives, an Indestructible Unit no longer has Taunt, X is always at least one, and the Ghoul Token and the Stitching Heroic Power are added. Card text calls the library your Deck and a sacrifice a Tribute, a face-down Trap shows its cost, and 105 cards and tokens change in all.",
+          "The Pierce keyword arrives, an Indestructible Unit never has Taunt, an X you choose is at least one, the Ghoul Token is added and Heroic Power gains an eighth power, Stitching. The game says Deck for the library and Tribute for a sacrifice wherever you read them, a face-down Trap shows its cost, and 105 cards and tokens change in all.",
       },
       {
         version: "v0.1.0d",

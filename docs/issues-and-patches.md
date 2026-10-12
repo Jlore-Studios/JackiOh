@@ -178,8 +178,9 @@ Rules for future patches:
 - Player-facing notes describe player-visible gameplay and balance changes in clear prose.
   They never carry an AI pull request's commit title, a raw ruling citation (`R656`, `R386`)
   or an internal rulebook reference: those stay in the catalog patch's notes.
-- A note says nothing its record does not. A sub-patch's summary restates its catalog patch's
-  own notes and card changes (read the snapshot diff, not the pull request's title), and a
+- A note says nothing its record does not. A sub-patch's summary restates what its catalog
+  patch changed: its notes, its card changes and the rules the change its `source` names made
+  (read the snapshot diff and that change, not the pull request's title), and a
   set's technical changes list only what merged to `main` during its version line. A test holds
   every number a summary states to its patch's notes, so an invented count fails.
 - Clutter stays hidden by default: a set's card diff panels are shut until the player opens
