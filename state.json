@@ -4311,7 +4311,7 @@
       "question": "",
       "queued_at": "2026-10-12T21:42:01Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "38315064527",
       "started_at": "2026-10-12T22:10:51Z",
       "stop_requested": false,
