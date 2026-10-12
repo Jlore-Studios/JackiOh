@@ -134,10 +134,11 @@
 /// Generation 9 (#732) added 31 entries, the sweep of record over the Meditative set, when it
 /// lifted R1390's gate: every one a Meditative card (R732000), every one for `timeout`, a decision
 /// over `AI_SWEEP.decision_ms` (2 s) at the browser's budget in a game the card was forced into. The
-/// slow decisions come in long games whose hands fill with cheap random spells and tokens (Auspicious
-/// Rocks, Jade, CN cards) or whose boards swap sides, where the beam's simulations grow slow, so a ban
-/// says the card leads the AI into such a game, not that the card is hard to think about. They are the
-/// unban lane's work: a faster search in those states lifts them, never a lower bar.
+/// slow games looked at closely were long ones whose hands had filled with cheap random spells and
+/// tokens, or in which a simulated step played out a whole turn (My Pawn), so a ban says the card leads
+/// the AI into a slow game, not necessarily that the card is hard to think about
+/// (training/history/sweep-2026-10-12.md). They are the unban lane's work: a faster search in those
+/// states lifts them, never a lower bar.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-006",
