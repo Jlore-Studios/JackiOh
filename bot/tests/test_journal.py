@@ -195,6 +195,10 @@ class OpusLaneTests(unittest.TestCase):
         prompt = calls(second, "build")[0].prompt
         self.assertIn("## The journal of earlier runs", prompt)
         self.assertIn("build #12 · `claude-3` · interrupted", prompt)
+        # A resume reads the short State first, the whole journal only for detail (#695).
+        self.assertIn("Read the `## State` section of `.bot-notes.md` first", prompt)
+        self.assertIn("not the whole file up front", prompt)
+        self.assertNotIn("Read it before anything else", prompt)
         self.assertIn("bring the `## State` part of `.bot-notes.md` up to date", prompt)
         self.assertIn("`## State`, rewritten in place", prompt)  # the two-part notes ask
         self.assertEqual(result["status"], "approved")

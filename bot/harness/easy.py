@@ -10,8 +10,9 @@ cannot see. Its clean merges were all small (7–15 files, under about 500 lines
 The rule is in the planner's prompt (`RULE`, `bot/prompts/plan.md`), and the harness holds the
 rating to it twice, trusting nothing the model said: deliver checks the plan's "Files to touch"
 table before the item is queued (`plan_breach`), and the real change before a weak builder's work
-is pushed (`change_breach`). Either breach makes the item medium. The limits are settings
-(`easy` in `.harness/config.json`, `config.EasyRule`).
+is pushed (`change_breach`). Either breach makes the item medium, and so does a plan or change
+close to a limit (borderline easy is medium, #695) or a rating whose `why` admits doubt
+(`uncertain_why`). The limits are settings (`easy` in `.harness/config.json`, `config.EasyRule`).
 """
 
 from __future__ import annotations
@@ -21,13 +22,33 @@ from typing import Any, Iterable
 
 from harness.git import matches
 
+#: How close to the file limit still counts as easy: a plan or change within this many files
+#: of `max_files` is borderline, so medium (#695). Only applied when the limit is large enough
+#: that clear-easy work still fits under it.
+BORDERLINE_FILES = 2
+#: How close to the line limit still counts as easy, for a built change (`change_breach`): a
+#: change within this many lines of `max_lines` is borderline, so medium (#695).
+BORDERLINE_LINES = 100
+
+#: Words in a planner's rating `why` that admit doubt: torn between two means the higher (#695).
+_UNCERTAIN = re.compile(
+    r"(?i)\b(borderline|torn|unsure|uncertain|not sure|close call|close to the (?:limit|line)"
+    r"|could go either|either way|debatable|judg?ment call|on the fence|lean(?:s|ing)?)\b")
+
+
+def uncertain_why(why: str) -> bool:
+    """Whether a planner's rating `why` admits doubt about easy (deliver then rates medium:
+    borderline easy is medium). A confident `why` ("one file, one test") is untouched."""
+    return bool(_UNCERTAIN.search(str(why or "")))
+
+
 #: The rule as the planner reads it. `$max_files` and `$max_lines` are filled from the settings.
 RULE = """An item is **easy** only if every line below holds. If any line fails, or you cannot
 tell, it is **medium** at least.
 
-1. **Small.** At most $max_files files changed in all, the tests it adds included, and at most
-   $max_lines lines added plus removed (generated files such as `apps/web/src/wire/generated/`
-   aside).
+1. **Small, with room to spare.** At most $max_files files changed in all, the tests it adds
+   included, and at most $max_lines lines added plus removed (generated files such as
+   `apps/web/src/wire/generated/` aside). Close to either limit is **medium**, not easy.
 2. **One place.** All of it inside one crate or app, except a test of the same feature in that
    crate's `tests/`.
 3. **None of the conflict hot spots:** `SPEC.md` and the spec's notes in `spec/` (no new ruling,
@@ -54,7 +75,8 @@ work, visual polish.
 - **hard:** engine rules or the resolution loop (`crates/engine/src/`), the AI's search
   (`crates/ai/src/`), design across crates, a database migration, or about 40 files or more.
 
-When torn between two, choose the higher."""
+When torn between two, choose the higher. A borderline easy is **medium**: any doubt on
+any line above rates **medium** at least."""
 
 _TABLE_HEADING = re.compile(r"(?im)^\s*(?:#+\s*)?(?:\d+\.\s*)?\**\s*files to touch\b")
 _PATH = re.compile(r"`([^`]+)`")
@@ -98,12 +120,17 @@ def _off_limits(paths: Iterable[str], patterns: Iterable[str]) -> list[str]:
 def plan_breach(plan: str, rule: Any, review_paths: Iterable[str],
                 forbidden_paths: Iterable[str]) -> str:
     """Why a plan rated easy breaks the rule (lines 1, 3–6, from its "Files to touch" table), or
-    "" when it does not. A plan with no such table cannot show it holds, so it breaks line 8."""
+    "" when it does not. A plan with no such table cannot show it holds, so it breaks line 8.
+    A plan within `BORDERLINE_FILES` of the file limit is borderline easy, so medium (#695)."""
     paths = plan_paths(plan)
     if not paths:
         return "line 8: the plan has no **Files to touch** table, so nothing shows it is small"
     if len(paths) > rule.max_files:
         return f"line 1: the plan touches {len(paths)} files, over {rule.max_files}"
+    if (rule.max_files > BORDERLINE_FILES * 2
+            and len(paths) > rule.max_files - BORDERLINE_FILES):
+        return (f"line 1: the plan touches {len(paths)} files, close to the limit of "
+                f"{rule.max_files}, so borderline easy is medium")
     bad = _off_limits(paths, rule.off_limits)
     if bad:
         return f"lines 3–5: the plan touches {', '.join(f'`{p}`' for p in bad[:5])}"
@@ -115,13 +142,23 @@ def plan_breach(plan: str, rule: Any, review_paths: Iterable[str],
 
 def change_breach(counts: dict[str, int], rule: Any) -> str:
     """Why a change built for an easy item breaks the rule (lines 1 and 3–5, from what it really
-    changed: lines per path, `Git.numstat`), or "" when it does not."""
+    changed: lines per path, `Git.numstat`), or "" when it does not. A change within
+    `BORDERLINE_FILES` files or `BORDERLINE_LINES` lines of a limit is borderline easy, so
+    medium (#695)."""
     paths = [p for p in counts if not matches(p, rule.generated)]
     if len(paths) > rule.max_files:
         return f"line 1: it changes {len(paths)} files, over {rule.max_files}"
     lines = sum(counts[p] for p in paths)
     if lines > rule.max_lines:
         return f"line 1: it changes {lines} lines, over {rule.max_lines}"
+    if (rule.max_files > BORDERLINE_FILES * 2
+            and len(paths) > rule.max_files - BORDERLINE_FILES):
+        return (f"line 1: it changes {len(paths)} files, close to the limit of "
+                f"{rule.max_files}, so borderline easy is medium")
+    if (rule.max_lines > BORDERLINE_LINES * 2
+            and lines > rule.max_lines - BORDERLINE_LINES):
+        return (f"line 1: it changes {lines} lines, close to the limit of "
+                f"{rule.max_lines}, so borderline easy is medium")
     bad = _off_limits(paths, rule.off_limits)
     if bad:
         return f"lines 3–5: it changes {', '.join(f'`{p}`' for p in bad[:5])}"

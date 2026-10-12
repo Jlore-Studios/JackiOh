@@ -21,6 +21,8 @@ each time, so it holds nothing of its own but the issue's number and when it was
   issues from their `Closes #n` lines; commits on the default branch from the commit list.
 - **Model minutes** come from each subscription's `spent` record in the state file. Every entry is
   dated, so a window sums the entries in it; all time is its last `providers.SPENT_KEEP` runs.
+- **Model tokens and cost** come from each subscription's `tokens_spent` record beside it
+  (#695): per run its input, output and cached tokens and its USD cost, summed the same way.
 
 Squishy (#60) has a section of its own at the end, apart from the night bot's record: the same
 four windows from its own comments, pull requests, runs and state, and its modes (one-shot builds,
@@ -136,6 +138,8 @@ class Facts:
     runs: list[tuple[str, str]] = field(default_factory=list)
     #: Each subscription's dated model minutes: (when, minutes).
     spent: dict[str, list[tuple[str, float]]] = field(default_factory=dict)
+    #: Each subscription's dated token counts and cost: (when, input, output, cache, USD).
+    counted: dict[str, list[tuple[str, int, int, int, float]]] = field(default_factory=dict)
 
 
 def classify(body: str) -> str:
@@ -202,6 +206,11 @@ def collect(ctx: Context) -> Facts:
     for provider_id, record in providers.items():
         facts.spent[provider_id] = [(str(entry.get("at") or ""), float(entry.get("minutes") or 0))
                                     for entry in (record or {}).get("spent") or []]
+        facts.counted[provider_id] = [
+            (str(entry.get("at") or ""), int(entry.get("input") or 0),
+             int(entry.get("output") or 0), int(entry.get("cache") or 0),
+             float(entry.get("cost") or 0))
+            for entry in (record or {}).get("tokens_spent") or []]
     return facts
 
 
@@ -272,6 +281,9 @@ class Window:
     merged: list[dict[str, Any]]
     runs: list[tuple[str, str]]
     minutes: dict[str, float]
+    #: Per subscription: (input tokens, output tokens, cached tokens) and USD cost (#695).
+    tokens: dict[str, tuple[int, int, int]]
+    cost: dict[str, float]
 
     @property
     def starts(self) -> list[Event]:
@@ -302,6 +314,12 @@ def window(name: str, span: timedelta | None, now: datetime, facts: Facts) -> Wi
         runs=[r for r in facts.runs if _within(r[0], start)],
         minutes={pid: sum(m for at, m in entries if _within(at, start))
                  for pid, entries in facts.spent.items()},
+        tokens={pid: (sum(i for at, i, _o, _c, _d in entries if _within(at, start)),
+                      sum(o for at, _i, o, _c, _d in entries if _within(at, start)),
+                      sum(c for at, _i, _o, c, _d in entries if _within(at, start)))
+                for pid, entries in facts.counted.items()},
+        cost={pid: sum(d for at, _i, _o, _c, d in entries if _within(at, start))
+              for pid, entries in facts.counted.items()},
     )
 
 
@@ -346,6 +364,16 @@ def _median_to_merge(merged: list[dict[str, Any]]) -> str:
     return human_delta(statistics.median(took)) if took else "—"
 
 
+def _tokens(w: Window) -> str:
+    """A window's token counts as `in / out / cached`, compact (#695)."""
+    tin = sum(t[0] for t in w.tokens.values())
+    tout = sum(t[1] for t in w.tokens.values())
+    cached = sum(t[2] for t in w.tokens.values())
+    if not tin and not tout and not cached:
+        return "—"
+    return f"{tin} / {tout} / {cached}"
+
+
 def _title(pull: Mapping[str, Any]) -> str:
     title = str(pull.get("title") or "").replace("|", "\\|")
     return title if len(title) <= TITLE_SHOWN else title[:TITLE_SHOWN].rstrip() + "…"
@@ -380,6 +408,8 @@ def summary(windows: list[Window]) -> list[str]:
         ("Commits in them", lambda w: str(sum(int(p.get("commits") or 0) for p in w.merged))),
         ("Median time from opening to merge", lambda w: _median_to_merge(w.merged)),
         ("Model hours", lambda w: f"{sum(w.minutes.values()) / 60:.1f}"),
+        ("Model tokens (in / out / cached)", _tokens),
+        ("Model cost (USD)", lambda w: f"${sum(w.cost.values()):.2f}"),
         (f"`{NIGHT_WORKFLOW}` workflow runs", lambda w: str(len(w.runs))),
         ("Requests answered (`Queued …`)",
          lambda w: str(sum(1 for e in w.events if e.kind == "queued"))),
@@ -415,40 +445,60 @@ def by_subscription(w: Window, who: Credits) -> dict[str, Counter]:
 def section(ctx: Context, w: Window, who: Credits, facts: Facts, *, shown: int) -> list[str]:
     counts = by_subscription(w, who)
     order = sorted((pid for pid in set(counts) | {p for p, m in w.minutes.items() if m > 0}
-                    if counts[pid] or w.minutes.get(pid)),
+                    | {p for p, t in w.tokens.items() if t != (0, 0, 0)}
+                    | {p for p, c in w.cost.items() if c > 0}
+                    if counts[pid] or w.minutes.get(pid) or w.tokens.get(pid, (0, 0, 0))
+                    != (0, 0, 0) or w.cost.get(pid, 0.0) > 0),
                    key=lambda pid: (pid == UNRECORDED, -counts[pid]["start"],
                                     -counts[pid]["pr:merged"], pid))
     lines = [f"## {w.name}", ""]
-    if not w.events and not w.opened and not w.merged:
+    has_tokens = any(tok != (0, 0, 0) or w.cost.get(pid, 0.0) > 0
+                     for pid, tok in w.tokens.items())
+    if not w.events and not w.opened and not w.merged and not has_tokens:
         return lines + ["Nothing happened.", ""]
+    active = bool(w.events or w.opened or w.merged)
+    if active:
+        lines += ["### Who did what", ""]
+        lines += ["| Subscription | Models | Runs | Plans | Builds | Revisions | Reviews "
+                  "| Outcomes delivered | PRs opened | Merged | Lines merged | Paused | Failed "
+                  "| Could not run | Model time |", "|---|" + "---|" * 14]
+        models: dict[str, Counter] = defaultdict(Counter)
+        for event in w.starts:
+            if event.provider:
+                models[event.provider][event.model] += 1
+        for pid in order:
+            c = counts[pid]
+            ended = sum(c[k] for k in DONE + NOT_DONE)
+            done = sum(c[k] for k in DONE)
+            model_list = ", ".join(f"`{m}`" for m, _ in models[pid].most_common(3)) or "—"
+            mins = w.minutes.get(pid, 0.0)
+            kept = len(facts.spent.get(pid, []))
+            time = f"{mins / 60:.1f} h"
+            if w.start is None and kept:
+                time += f" (its last {kept} runs)"
+            name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
+            lines.append(
+                f"| {name} | {model_list} | {c['start']} | {c['start:plan']} | {c['start:build']} "
+                f"| {c['start:revise']} | {c['start:review']} | {done} of {ended} "
+                f"| {c['pr:opened']} | {c['pr:merged']} | +{c['added']} / −{c['removed']} "
+                f"| {c['paused']} "
+                f"| {c['failed'] + c['not approved']} | {c['infra']} | {time} |")
+        lines.append("")
+    lines += ["### Tokens and cost", ""]
+    rows = [(pid, w.tokens.get(pid, (0, 0, 0)), w.cost.get(pid, 0.0)) for pid in order]
+    rows = [(pid, tok, cost) for pid, tok, cost in rows if tok != (0, 0, 0) or cost > 0]
+    if not rows:
+        lines += ["No call reported token counts in this window.", ""]
+    else:
+        lines += ["| Subscription | Input | Output | Cached | Cost (USD) |",
+                  "|---|---|---|---|---|"]
+        for pid, (tin, tout, cached), cost in rows:
+            name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
+            lines.append(f"| {name} | {tin} | {tout} | {cached} | ${cost:.2f} |")
+        lines.append("")
 
-    lines += ["### Who did what", ""]
-    lines += ["| Subscription | Models | Runs | Plans | Builds | Revisions | Reviews "
-              "| Outcomes delivered | PRs opened | Merged | Lines merged | Paused | Failed "
-              "| Could not run | Model time |", "|---|" + "---|" * 14]
-    models: dict[str, Counter] = defaultdict(Counter)
-    for event in w.starts:
-        if event.provider:
-            models[event.provider][event.model] += 1
-    for pid in order:
-        c = counts[pid]
-        ended = sum(c[k] for k in DONE + NOT_DONE)
-        done = sum(c[k] for k in DONE)
-        model_list = ", ".join(f"`{m}`" for m, _ in models[pid].most_common(3)) or "—"
-        mins = w.minutes.get(pid, 0.0)
-        kept = len(facts.spent.get(pid, []))
-        time = f"{mins / 60:.1f} h"
-        if w.start is None and kept:
-            time += f" (its last {kept} runs)"
-        name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
-        lines.append(
-            f"| {name} | {model_list} | {c['start']} | {c['start:plan']} | {c['start:build']} "
-            f"| {c['start:revise']} | {c['start:review']} | {done} of {ended} "
-            f"| {c['pr:opened']} | {c['pr:merged']} | +{c['added']} / −{c['removed']} "
-            f"| {c['paused']} "
-            f"| {c['failed'] + c['not approved']} | {c['infra']} | {time} |")
-    lines.append("")
-
+    if not active:
+        return lines
     lines += _bars(f"Runs started, by subscription ({w.name.lower()})", "runs",
                    {pid: counts[pid]["start"] for pid in order}, empty="none") + [""]
     lines += _bars(f"Lines added in merged pull requests, by builder ({w.name.lower()})", "lines",

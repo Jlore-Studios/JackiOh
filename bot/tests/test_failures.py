@@ -92,12 +92,13 @@ class PlannedLabelTests(unittest.TestCase):
         queue(gh, ctx, 4, "difficulty:medium")
         ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
                                                             planned_tier="medium"))
-        gh.add_labels(4, [LABEL_PLANNED])                      # a medium item needing a strong plan
+        gh.add_labels(4, [LABEL_PLANNED])                      # a medium item with a medium plan
         plan_mod.make(ctx)
         self.assertIn(LABEL_PLANNED, gh.label_names(3))
         self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(3))
-        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(4))
-        self.assertNotIn(LABEL_PLANNED, gh.label_names(4))
+        # A medium plan meets a medium item's floor (#695): it keeps its plan, no new one.
+        self.assertIn(LABEL_PLANNED, gh.label_names(4))
+        self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(4))
 
 
 if __name__ == "__main__":

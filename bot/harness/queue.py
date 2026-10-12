@@ -511,6 +511,8 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
+    #: The subscription that wrote that plan, so the build goes to another one (#695).
+    planned_by: str = ""
     #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
     #: For a review: the tier of each approval the head has, one per review (`review_rule`).
@@ -557,19 +559,20 @@ def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str,
     bot must not plan over it. A mode (#60) plans for itself: a split is the planning, and a
     one-shot writes its own spec first, so neither waits for a plan."""
     if kind == "build" and mode:
-        return {"planned": True, "plan_tier": "strong"}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
     if record.get("planned_at"):
-        return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
+        return {"planned": True, "plan_tier": str(record.get("planned_tier") or ""),
+                "planned_by": str(record.get("planned_by_id") or "")}
     if kind == "build" and issueplan.plan_of(thread.get("body")):
-        return {"planned": True, "plan_tier": "strong"}
-    return {"planned": False, "plan_tier": ""}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
+    return {"planned": False, "plan_tier": "", "planned_by": ""}
 
 
 def plan_floor(candidate: Candidate) -> str:
     """The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
-    easy item, strong for anything harder, and medium to rate and plan an item nobody has rated
-    or planned yet. One planned but never rated (a plan from before ratings, or a planner that
-    gave none) counts as medium, so it needs a strong plan."""
+    easy or medium item, strong for a hard one, and medium to rate and plan an item nobody has
+    rated or planned yet. One planned but never rated (a plan from before ratings, or a planner
+    that gave none) still needs a plan from its difficulty's floor."""
     if not candidate.rated and not candidate.planned:
         return UNRATED_PLAN_FLOOR
     return PLAN_FLOOR[candidate.difficulty]
@@ -585,7 +588,7 @@ def plan_meets(candidate: Candidate) -> bool:
 
 def needs_plan(candidate: Candidate) -> bool:
     """The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-    weaker than its difficulty's plan floor (a medium plan for a medium or hard item). Devin,
+    weaker than its difficulty's plan floor (a medium plan for a hard item). Devin,
     which cannot plan, builds only from a plan that meets its floor."""
     return candidate.kind == "build" and not plan_meets(candidate)
 

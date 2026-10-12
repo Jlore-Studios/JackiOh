@@ -147,7 +147,7 @@ class Provider:
     id: str
     enabled: bool
     cli: str
-    #: The model family, for the review rule: two medium reviews must come from two families.
+    #: The model family, for the review rule: one review counts per family.
     family: str
     model: str
     effort: str
@@ -632,8 +632,10 @@ def suspension(state: dict[str, Any], provider_id: str) -> dict[str, Any] | None
 
 
 def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, reset_at: str | None,
-               at: datetime, minutes: float = 0.0) -> None:
-    """Keep a run's newest usage reading, any refusal, and the minutes it spent."""
+               at: datetime, minutes: float = 0.0, tokens: dict | None = None,
+               cost_usd: float | None = None) -> None:
+    """Keep a run's newest usage reading, any refusal, the minutes it spent, and the tokens
+    and USD cost its calls reported (#695)."""
     entry = record(state, provider_id)
     if isinstance(usage, dict) and usage:
         entry["usage"] = {**usage, "observed_at": iso(at)}
@@ -654,6 +656,16 @@ def note_usage(state: dict[str, Any], provider_id: str, usage: dict | None, rese
         spent = list(entry.get("spent") or [])
         spent.append({"at": iso(at), "minutes": round(float(minutes), 1)})
         entry["spent"] = spent[-SPENT_KEEP:]
+    if isinstance(tokens, dict) and any(tokens.get(name) for name in ("input", "output")):
+        # A run's token counts and cost beside its minutes, for the statistics issue (#695).
+        counted = list(entry.get("tokens_spent") or [])
+        counted.append({"at": iso(at),
+                        "input": int(tokens.get("input") or 0),
+                        "output": int(tokens.get("output") or 0),
+                        "cache": int(tokens.get("cache_read") or 0)
+                        + int(tokens.get("cache_write") or 0),
+                        "cost": round(float(cost_usd or 0), 4)})
+        entry["tokens_spent"] = counted[-SPENT_KEEP:]
 
 
 #: A window at least this full in the last reading is taken to be why a refusal came.

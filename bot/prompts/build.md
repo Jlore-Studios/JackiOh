@@ -20,7 +20,8 @@ $previous
 
 The harness then commits your work, runs these checks and hands the diff to an adversarial
 reviewer who has not seen your reasoning. If the reviewer finds problems, a fresh builder gets
-the findings, so leave nothing half-done.
+the findings, so leave nothing half-done. Do not launch subagents to review your own work:
+the harness's adversarial review is the review.
 
 $gate_list
 

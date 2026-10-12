@@ -64,29 +64,29 @@ class RatingTests(unittest.TestCase):
         planned = plan_mod.make(h.ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("build", "devin"))
 
-    def test_a_medium_rating_by_a_medium_planner_waits_for_a_strong_one(self):
+    def test_a_medium_rating_by_a_medium_planner_stands(self):
+        """A medium plan meets a medium item's floor (#695): no strong plan comes next, it is
+        cleared to build."""
         h = day_harness(self)
         h.gh.add_issue(12, labels=(LABEL_BUILD,), body="Make the rules v2.")
         h.night(planner(rated_plan("medium", why="a new ruling")))
         self.assertIn(MEDIUM, h.gh.label_names(12))
-        self.assertIn(LABEL_NEEDS_PLAN, h.gh.label_names(12))
-        self.assertIn("A strong model plans `difficulty:medium` work, so one plans it next",
-                      h.gh.bot_comments(12)[-1])
-        self.assertEqual(plan_mod.make(h.ctx)["action"], "none")  # no strong model by day
+        self.assertNotIn(LABEL_NEEDS_PLAN, h.gh.label_names(12))
+        self.assertIn("Cleared and queued to build", h.gh.bot_comments(12)[-1])
 
     def test_a_rating_is_never_lowered_and_a_persons_label_never_replaced(self):
-        # By night claude-1, strong, plans the item Muse rated medium; its easy rating does not
-        # lower it.
+        # A hard item with only a medium plan still needs a strong one: by night claude-1,
+        # strong, plans it, and its easy rating does not lower it.
         h = Harness(self, machine=("muse",), plan_lanes=None)
-        h.gh.add_issue(12, labels=(LABEL_BUILD, MEDIUM), body="Make the rules v2.")
+        h.gh.add_issue(12, labels=(LABEL_BUILD, HARD), body="Make the rules v2.")
         h.ctx.store.update(lambda s: state_item(s, 12).update(
-            difficulty_by={"difficulty": "medium", "provider": "muse", "tier": "medium"},
+            difficulty_by={"difficulty": "hard", "provider": "muse", "tier": "medium"},
             planned_at="2026-09-29T00:00:00Z", planned_tier="medium"))
         runner = planner(rated_plan("easy"))
         planned, _ = h.night(runner)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-1"))
         self.assertIn("you may rate it higher, never lower", runner.calls[0].prompt)
-        self.assertIn(MEDIUM, h.gh.label_names(12))
+        self.assertIn(HARD, h.gh.label_names(12))
         self.assertIn("a rating is never lowered", h.gh.bot_comments(12)[-1])
         self.assertIn("Cleared and queued", h.gh.bot_comments(12)[-1])
         # A person's label: the planner is told not to rate, and a rating it gives anyway is
