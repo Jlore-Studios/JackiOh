@@ -5054,8 +5054,10 @@
     "what": "review #694 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-12T01:40:26Z",
-    "notes": [],
+    "at": "2026-10-12T01:51:37Z",
+    "notes": [
+      "started a night run, as a lane was free: #655 (hard) is queued to build, for `claude-2`: plan on `claude-2` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
