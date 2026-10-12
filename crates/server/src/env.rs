@@ -149,6 +149,8 @@ pub const PUBLIC_ENV_VARS: &[&str] = &[
     "VITE_SUPABASE_PUBLISHABLE_KEY",
     "VITE_SERVER_HTTP_URL",
     "VITE_SERVER_WS_URL",
+    // #696: the address the bundle is served from, which its canonical links and sitemap name.
+    "VITE_SITE_ORIGIN",
     "VITE_CATALOG_VERSION",
     // R666: which OAuth providers the sign-in screen offers, by name only (no client id, no secret).
     "VITE_AUTH_OAUTH_PROVIDERS",

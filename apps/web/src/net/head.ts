@@ -2,7 +2,7 @@
 // so the build's static pages (`apps/web/static-pages.ts`) name a page as the app does. `main.tsx`
 // re-exports them and writes them into the document (`useDocumentHead`).
 
-import { SITE_ORIGIN, matchIdOf, paths, seriesIdOf } from "./navigate.ts";
+import { matchIdOf, paths, seriesIdOf, siteOrigin } from "./navigate.ts";
 
 /** The name every tab title ends with. */
 export const SITE_NAME = "JackiOh";
@@ -59,7 +59,7 @@ export function documentTitleFor(path: string): string {
   return name === "" ? SITE_NAME : `${name} · ${SITE_NAME}`;
 }
 
-/** The canonical address of a path the client serves, or null for one it does not (a 404). */
-export function canonicalUrlFor(path: string): string | null {
-  return screenNameFor(path) === null ? null : `${SITE_ORIGIN}${path}`;
+/** The canonical address of a path the client serves on `origin` (this bundle's own by default), or null for one it does not (a 404). */
+export function canonicalUrlFor(path: string, origin: string = siteOrigin()): string | null {
+  return screenNameFor(path) === null ? null : `${origin}${path}`;
 }
