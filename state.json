@@ -3354,7 +3354,8 @@
     "639": {
       "action": "build",
       "asks": [],
-      "died": 1,
+      "died": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-12T12:20:12Z",
         "family": "claude",
