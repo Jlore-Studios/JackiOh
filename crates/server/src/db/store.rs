@@ -1868,7 +1868,10 @@ impl Tx<'_> {
         dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
     }
 
-    /// TEMP STUB (replaced by the store agent's version).
+    /// R639000: claims a bot for the rematch `match_id` of a match `players` played, single-shot as
+    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (in no match and not
+    /// retired), whatever its schedule. On true the `open` match skeleton is written for `players`
+    /// and the bot is put in it; the person is the caller's to put in the match.
     pub async fn bots_claim_for_rematch(
         &mut self,
         bot_id: &str,
@@ -1877,17 +1880,10 @@ impl Tx<'_> {
         catalog_version: &str,
         at: i64,
     ) -> StoreResult<bool> {
-        let _ = (players, catalog_version);
-        match self {
-            _ => {
-                let ok = self.profiles_get_many(&[bot_id.to_string()]).await?.first().is_some_and(|p| p.in_match_id.is_none());
-                if ok {
-                    self.profiles_set_in_match(bot_id, Some(match_id)).await?;
-                }
-                let _ = at;
-                Ok(ok)
-            }
-        }
+        dispatch!(
+            self,
+            bots_claim_for_rematch(bot_id, players, match_id, catalog_version, at)
+        )
     }
 
     /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
@@ -2055,6 +2051,17 @@ impl Tx<'_> {
     /// Every action timing held, by match id then seq, for `timing-fit`.
     pub async fn play_telemetry_timings(&mut self) -> StoreResult<Vec<ActionTimingRow>> {
         dispatch!(self, play_telemetry_timings())
+    }
+
+    /// R639000: every emote event held, by match id then ordinal, for `timing-fit`.
+    pub async fn play_telemetry_emotes(&mut self) -> StoreResult<Vec<EmoteEventRow>> {
+        dispatch!(self, play_telemetry_emotes())
+    }
+
+    /// R639000: every signals row held beside its match's result, by match id then seat (p1 first),
+    /// for `timing-fit`. A row whose match has no result yet is left out.
+    pub async fn play_telemetry_outcomes(&mut self) -> StoreResult<Vec<SignalOutcomeRow>> {
+        dispatch!(self, play_telemetry_outcomes())
     }
 
     /// The finished matches whose action log is still held, that have no action timing yet and

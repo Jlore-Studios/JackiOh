@@ -4654,12 +4654,161 @@ mod r1442_play_telemetry {
         );
     }
 
+    /// A finished match between `p1` and `p2`, ranked or not, with its result and its telemetry.
+    async fn finished_with(
+        harness: &StoreHarness,
+        players: (&str, &str),
+        ranked: bool,
+        winner: Option<&str>,
+        reason: &str,
+        turns: i64,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        let mut row = match_row(&match_id, players.0, players.1, harness, now);
+        row.ranked = ranked.then_some(true);
+        q!(harness, t => t.matches_create(&row));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [players.0, players.1],
+            "winnerProfileId": winner,
+            "reason": reason,
+            "turns": turns,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1000, 1000],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 1_500)));
+        match_id
+    }
+
+    /// R639000: `timing-fit`'s reads: every emote, and every signals row beside how its match ended.
+    async fn r639000_the_fit_reads_hold_emotes_and_signals_with_outcomes(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // Ranked and won by `a` in p1: a rematch could follow.
+        let won = finished_with(harness, (&a.id, &b.id), true, Some(&a.id), "concede", 7).await;
+        // Unranked, and a draw: no winner, and no rematch the ladder fits on.
+        let drawn = finished_with(harness, (&b.id, &a.id), false, None, "draw-accepted", 9).await;
+        // Ranked, won by `a` in p2, but a game of a series.
+        let series_game = finished_with(harness, (&b.id, &a.id), true, Some(&a.id), "hero-death", 11).await;
+        let now = harness.now();
+        let series: SeriesRow = from(json!({
+            "id": id(),
+            "sides": [
+                { "profileId": b.id, "trio": j(&frozen_trio(harness, Some("Mine"))), "wins": 0, "pick": null },
+                { "profileId": a.id, "trio": j(&frozen_trio(harness, Some("Theirs"))), "wins": 1, "pick": null },
+            ],
+            "catalogVersion": harness.catalog_version,
+            "seedBase": "series-seed",
+            "status": "picking",
+            "games": [{
+                "gameNo": 1, "matchId": series_game, "slots": [0, 0], "first": "p1",
+                "winner": "p2", "reason": "hero-death",
+            }],
+            "nextMatchId": id(),
+            "pickDeadline": now + 60_000,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": now,
+            "updatedAt": now,
+            "endedAt": null,
+            "version": 1,
+        }));
+        q!(harness, t => t.series_create(&series));
+        // Live, with no result: its signals are not an outcome yet.
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&live, 1_500)));
+
+        let mut matches = [won.clone(), drawn.clone(), series_game.clone(), live.clone()];
+        matches.sort();
+        let emotes = q!(harness, t => t.play_telemetry_emotes());
+        let expected: Vec<Value> = matches
+            .iter()
+            .flat_map(|match_id| {
+                telemetry(match_id, 1_500)
+                    .emote_events
+                    .iter()
+                    .map(j)
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert_eq!(
+            emotes.iter().map(j).collect::<Vec<_>>(),
+            expected,
+            "{}",
+            harness.name
+        );
+
+        let outcomes = q!(harness, t => t.play_telemetry_outcomes());
+        let read: Vec<(String, Value, Value, Value, i64, bool)> = outcomes
+            .iter()
+            .map(|row| {
+                (
+                    row.signal.match_id.clone(),
+                    j(&row.signal.seat),
+                    j(&row.won),
+                    j(&row.reason),
+                    row.turns,
+                    row.rematchable,
+                )
+            })
+            .collect();
+        let mut ended = vec![
+            (won.clone(), json!("p1"), json!(true), json!("concede"), 7, true),
+            (won.clone(), json!("p2"), json!(false), json!("concede"), 7, true),
+            (
+                drawn.clone(),
+                json!("p1"),
+                Value::Null,
+                json!("draw-accepted"),
+                9,
+                false,
+            ),
+            (
+                drawn.clone(),
+                json!("p2"),
+                Value::Null,
+                json!("draw-accepted"),
+                9,
+                false,
+            ),
+            (
+                series_game.clone(),
+                json!("p1"),
+                json!(false),
+                json!("hero-death"),
+                11,
+                false,
+            ),
+            (
+                series_game.clone(),
+                json!("p2"),
+                json!(true),
+                json!("hero-death"),
+                11,
+                false,
+            ),
+        ];
+        ended.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.to_string().cmp(&y.1.to_string())));
+        assert_eq!(read, ended, "{}", harness.name);
+        // Each signals row comes back whole beside its outcome.
+        let first = &outcomes[0];
+        let written = telemetry(&first.signal.match_id, 1_500);
+        assert_eq!(first.signal, written.match_signals[0]);
+    }
+
     both_stores!(
         round_trips_and_a_second_write_changes_nothing,
         a_rematch_note_marks_only_its_seat,
         rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands,
         deleting_an_account_deletes_its_seats_rows_only,
         no_write_after_an_account_is_deleted_puts_its_seats_rows_back,
+        r639000_the_fit_reads_hold_emotes_and_signals_with_outcomes,
         the_purge_deletes_telemetry_past_its_cutoff,
         unfolded_lists_finished_matches_with_a_log_and_no_timings,
     );
@@ -4986,6 +5135,67 @@ mod bots {
         assert!(q!(harness, t => t.bots_release_stale_starts(now + 1)).is_empty());
     }
 
+    /// R639000: a rematch's claim on a bot, with no ticket: single-shot, a free unretired bot only,
+    /// completed by the match's start and let go like a fallback's when the start never comes.
+    async fn r639000_a_rematch_claims_a_free_unretired_bot_once(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let players = (person.id.clone(), bot.profile_id.clone());
+        let version = harness.catalog_version.clone();
+
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &match_id, &version, now))
+        );
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].in_match_id.as_deref(),
+            Some(match_id.as_str())
+        );
+        // Busy now: a second claim, for any rematch, finds nothing.
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &id(), &version, now)));
+        // The start completes the claim's match.
+        q!(harness, t => t.matches_create(&match_row(&match_id, &person.id, &bot.profile_id, harness, now)));
+        let started = must(q!(harness, t => t.matches_get(&match_id)), "the rematch");
+        assert_eq!(started.players, players);
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
+
+        // A retired bot is never claimed, and a person is not a bot.
+        let retired = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&retired));
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        let with_retired = (person.id.clone(), retired.profile_id.clone());
+        assert!(
+            !q!(harness, t => t.bots_claim_for_rematch(&retired.profile_id, &with_retired, &id(), &version, now))
+        );
+        let other = active_profile(harness, None).await;
+        let with_person = (person.id.clone(), other.id.clone());
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&other.id, &with_person, &id(), &version, now)));
+
+        // A claim whose start never came is let go as a fallback's is (R1454).
+        let cut = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&cut));
+        let with_cut = (other.id.clone(), cut.profile_id.clone());
+        let cut_match = id();
+        assert!(
+            q!(harness, t => t.bots_claim_for_rematch(&cut.profile_id, &with_cut, &cut_match, &version, now - 2 * MINUTE))
+        );
+        assert_eq!(
+            q!(harness, t => t.bots_release_stale_starts(now - MINUTE)),
+            vec![cut.profile_id.clone()]
+        );
+        let freed = q!(harness, t => t.bots_list());
+        assert!(
+            freed
+                .iter()
+                .find(|row| row.profile_id == cut.profile_id)
+                .is_some_and(|row| row.in_match_id.is_none()),
+            "{freed:?}"
+        );
+    }
+
     both_stores!(
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
@@ -4995,6 +5205,7 @@ mod bots {
         r1454_active_humans_skip_bots,
         r1454_a_claim_that_never_started_is_released,
         r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started,
+        r639000_a_rematch_claims_a_free_unretired_bot_once,
     );
 }
 

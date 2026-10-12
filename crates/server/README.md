@@ -221,7 +221,7 @@ or `--source=all` asks for a development run's (R378).
 
 ```
 target/release/jackioh-server timing-backfill   # the action logs still held, folded into action_timings
-target/release/jackioh-server timing-fit        # log-normal fits of human think times, rows to paste into config
+target/release/jackioh-server timing-fit        # human think times and habits fitted, rows to paste into config
 ```
 
 Once a live match's result commits, the actor writes how it was played in one transaction
@@ -235,10 +235,16 @@ action timing yet, the way a rebuilt actor replays it, into the rows the live pa
 clock and the rank bucket the log does not hold; a match today's engine no longer folds whole is
 skipped. `timing-fit` groups the human moves (`pilot = 'ai'` left out) by rank bucket, action kind
 and first move of the turn, fits each bucket of at least `TIMING_FIT_MIN_SAMPLES` with a log-normal
-and prints one `ThinkTimeFit` row per bucket, to paste by hand into `config.rs`'s
-`THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. Neither takes an option.
+and prints one `ThinkTimeFit` row per bucket (with its moves' mean `ln(legal_count)`), to paste by
+hand into `config.rs`'s `THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. It then prints
+the ladder bots' other rows (R639000), from people's timings, emotes and signals beside their
+matches' results (`play_telemetry_emotes`, `play_telemetry_outcomes`): the complexity slope and the
+lethal shift a think time grows by, the concession, draw-answer, timeout and rematch rates, the two
+emote delay windows and the persona weights, each a `pub const` to paste over the row of its name,
+or a comment keeping the hand-set prior when fewer than `TIMING_FIT_MIN_SAMPLES` observations back
+it. Neither takes an option.
 
-## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452)
+## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000)
 
 With `LADDER_BOTS=on`, a ranked Best of 1 or All Random ticket that has waited past its fallback
 time (15–40 s, drawn from its id and a key the server keeps to itself) with no person inside its
@@ -260,11 +266,36 @@ is seated and the pool is never sized.
   `BOT_WRITE_RETRY_MS` later. A move decided before the person acted still goes while
   it is the same turn and the engine takes it, so the person's own actions never hold it back. Its streams (`{seed}:bot-ai:{home}`, `{seed}:bot-timing:{home}`) are the server's
   own, never the match rng, so a match with a bot replays from `(seed, log)` like any other, and a
-  rebuilt actor resumes the bot's seat with its streams started again (R1452).
+  rebuilt actor resumes the bot's seat with its streams started again (R1452). R639000: the think
+  time also grows with the move's legal actions (`THINK_COMPLEXITY_SLOPE`) and on a lethal decision
+  (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
+  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
+  offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
+  (`never_played`).
+- `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
+  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
+  `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
+  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit read through `redact`), a draw answer
+  (`BOT_DRAW_ANSWER_FIT`, only when behind), an idle turn its clock times out (`BOT_TIMEOUT_FIT`), its
+  plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
+  it meets an offer, and when) and its aim's lead.
+- `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
+  person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
+  through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
+  takes it down after.
+- Once a ranked match a bot played ends, the bot reads as present (`presence`) until its plan's
+  linger ends, offers a normal rematch when its plan says, and meets a person's offer at their stakes
+  when its plan accepts and it is still there (`MatchActor::on_rematch_offer`, told by
+  `api/rematch.rs`'s `offer_as` through `Registry::get`); its offers go through the route's own path
+  (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
+  and not retired, whatever its schedule) and lets it go if the start fails.
 - `bots::persona` is the server's port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
   which stays for practice), its tables `config.rs`'s `AI_PERSONAS` and `AI_EMOTE`, drawing as the
   web's does on its own stream (`{seed}:bot-persona:{home}`) and within the bot seat's dealt hand
-  (R645, R1344).
+  (R645, R1344). A ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and
+  waits out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
+  (`EmotePersona::with_delays`), the rows `timing-fit` refits; the caps and R643's rate limit are
+  unchanged (R639000).
 - `bots::pool` sizes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
   (`run_bot_pool`): `clamp(BOT_POOL_MIN, round(BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people),
   BOT_POOL_MAX)` active bots, retiring the youngest accounts and reinstating the most recently

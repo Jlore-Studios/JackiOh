@@ -10,12 +10,17 @@
 //! R1452 (SPEC §9.12): nothing a client reads tells a bot's seat from a person's; the match screen
 //! shows the rank the bot's rating calls for.
 //!
+//! R639000: once a ranked match ends a bot stays on it a while, as a person on the death screen
+//! does, and offers or meets a rematch as its plan says, a rematch that claims it as the fallback
+//! does and that it then plays.
+//!
 //! Everything runs through `try_pair` on tokio's paused clock, on the fake store, the real catalog and
 //! the real registry (a started match is a real game). Bots are written through the store, as the pool
 //! writes them (`bots_create`, `bots_set_decks`).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::time::Duration;
 
 use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
@@ -24,11 +29,13 @@ use tokio::sync::MutexGuard;
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use jackioh_server::api::queue::try_pair;
+use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::app::{App, load_server_env, now_ms};
 use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_seconds_keyed, hour_of};
+use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
-    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, JLORIOUS_SIZE,
-    RANK_PLACEMENT_GAMES,
+    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
+    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, JLORIOUS_SIZE, RANK_PLACEMENT_GAMES,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError, Ticket};
@@ -236,6 +243,73 @@ async fn concede_bot_match(app: &Arc<App>, person_id: &str) -> (String, PlayerId
         tokio::task::yield_now().await;
     }
     (row.id, seat)
+}
+
+/// Lets `ms` pass on the paused clock, then every task woken by then run.
+async fn pass(ms: i64) {
+    tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
+    for _ in 0..50 {
+        tokio::task::yield_now().await;
+    }
+}
+
+/// R639000: a seed whose bot, in p2, draws a rematch plan `wanted` holds.
+fn seed_where(wanted: impl Fn(&RematchPlan) -> bool) -> String {
+    (0..10_000)
+        .map(|k| format!("seed-rematch-{k}"))
+        .find(|seed| wanted(&rematch_plan(seed, PlayerId::P2, &BOT_REMATCH_FIT)))
+        .expect("a seed whose bot plans so")
+}
+
+/// R639000: a ranked Best of 1 between `person` (p1) and `bot` (p2) on `seed`, started as the
+/// fallback starts one but with the seed chosen. Answers its id.
+async fn bot_match_on(app: &Arc<App>, person: &str, bot: &str, seed: &str) -> String {
+    let match_id = next_id("match");
+    app.matches
+        .start(
+            app,
+            from(json!({
+                "matchId": match_id,
+                "seed": seed,
+                "catalogVersion": app.catalog.version,
+                "ranked": true,
+                "seats": [
+                    { "profileId": person, "player": "p1", "deck": deck(0) },
+                    { "profileId": bot, "player": "p2", "deck": deck(1) },
+                ],
+            })),
+        )
+        .await
+        .expect("the registry starts the match");
+    match_id
+}
+
+/// `GET /api/matches/:matchId/rematch`, as `token`'s holder.
+async fn rematch_status(app: &Arc<App>, match_id: &str, token: &str) -> Value {
+    let (status, _, body) = call(
+        app,
+        "GET",
+        &format!("/api/matches/{match_id}/rematch"),
+        Some(token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    body
+}
+
+/// `POST /api/matches/:matchId/rematch` at normal stakes, as `token`'s holder.
+async fn offer_rematch(app: &Arc<App>, match_id: &str, token: &str) -> Value {
+    let (status, _, body) = call(
+        app,
+        "POST",
+        &format!("/api/matches/{match_id}/rematch"),
+        Some(token),
+        json!({ "stakes": STAKE_NORMAL }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    body
 }
 
 #[test]
@@ -702,8 +776,13 @@ async fn r1452_no_read_tells_a_bot_seat() {
         }
     }
 
-    // Once the game ends the bot reads as gone, so the person is never offered a rematch.
+    // R639000: once the game ends the bot stays on the match a while, as a person on the death
+    // screen does, then reads as gone.
     concede_bot_match(&app, &person).await;
+    let (status, _, rematch) = call(&app, "GET", &rematch_path, Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{rematch}");
+    assert_eq!(rematch["opponentHere"], json!(true), "{rematch}");
+    pass(BOT_REMATCH_LINGER_MAX_MS + 1).await;
     let (status, _, rematch) = call(&app, "GET", &rematch_path, Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{rematch}");
     assert_eq!(rematch["opponentHere"], json!(false), "{rematch}");
@@ -750,4 +829,138 @@ async fn r1452_a_bot_shows_mythic_grape_only_once_a_player_holds_it() {
             "{in_mythic} in Mythic: {ranks}"
         );
     }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let seed = seed_where(|plan| plan.accepts && !plan.offers);
+    let plan = rematch_plan(&seed, PlayerId::P2, &BOT_REMATCH_FIT);
+    let finished = bot_match_on(&app, &person, &bot, &seed).await;
+    concede_bot_match(&app, &person).await;
+
+    // The person offers while the bot is still on the match.
+    let offered = offer_rematch(&app, &finished, &token).await;
+    assert!(offered["matchId"].is_null(), "{offered}");
+    // The bot meets it a person's reply later, not at once.
+    pass(plan.reply_ms - 1).await;
+    let waiting = rematch_status(&app, &finished, &token).await;
+    assert!(waiting["matchId"].is_null(), "{waiting}");
+    assert!(waiting["opponentOffer"].is_null(), "{waiting}");
+    pass(1).await;
+    let made = rematch_status(&app, &finished, &token).await;
+    let rematch = made["matchId"]
+        .as_str()
+        .expect("the rematch was made")
+        .to_string();
+    assert_eq!(made["opponentOffer"], json!(STAKE_NORMAL), "{made}");
+
+    // The rematch seats the same two in the same seats, ranked as the fallback's match was, and the
+    // bot is claimed for it.
+    let row = fake(&app)
+        .await
+        .tables
+        .matches
+        .iter()
+        .find(|row| row.id == rematch)
+        .cloned()
+        .expect("the rematch's row");
+    assert_eq!(row.players, (person.clone(), bot.clone()));
+    assert_eq!(row.ranked, Some(true));
+    let bots = q!(app, bots_list());
+    assert_eq!(bots[0].in_match_id.as_deref(), Some(rematch.as_str()));
+    // And it plays it: its mulligan lands in the rematch's log as a bot's server action.
+    let actor = app
+        .matches
+        .actor_for(&app, &rematch)
+        .await
+        .expect("the rematch's actor");
+    let mut mulliganed = false;
+    for _ in 0..200 {
+        actor.idle().await;
+        let log = q!(app, matches_actions(&rematch));
+        if log.iter().any(|row| {
+            row.action.player_id == PlayerId::P2
+                && row.action.nonce.starts_with("srv-bot-")
+                && serde_json::to_value(&row.action).is_ok_and(|action| action["type"] == "mulligan")
+        }) {
+            mulliganed = true;
+            break;
+        }
+        pass(250).await;
+    }
+    assert!(mulliganed, "the bot never moved in its rematch");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_that_declines_lets_the_offer_lapse() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let seed = seed_where(|plan| !plan.accepts && !plan.offers);
+    let finished = bot_match_on(&app, &person, &bot, &seed).await;
+    concede_bot_match(&app, &person).await;
+
+    offer_rematch(&app, &finished, &token).await;
+    pass(BOT_REMATCH_DELAY_MAX_MS + 1).await;
+    let status = rematch_status(&app, &finished, &token).await;
+    assert_eq!(status["youOffered"], json!(STAKE_NORMAL), "{status}");
+    assert!(status["opponentOffer"].is_null(), "{status}");
+    assert!(status["matchId"].is_null(), "{status}");
+    // Then it leaves, as a person who did not want another game does.
+    pass(BOT_REMATCH_LINGER_MAX_MS).await;
+    let status = rematch_status(&app, &finished, &token).await;
+    assert_eq!(status["opponentHere"], json!(false), "{status}");
+    assert!(status["matchId"].is_null(), "{status}");
+    assert_eq!(fake(&app).await.tables.matches.len(), 1, "no rematch was made");
+
+    // A bot whose plan accepts meets no offer that comes once it has left.
+    let (late, late_token) = new_person(&app, 1000.0).await;
+    let seed = seed_where(|plan| plan.accepts && !plan.offers);
+    let finished = bot_match_on(&app, &late, &bot, &seed).await;
+    concede_bot_match(&app, &late).await;
+    pass(BOT_REMATCH_LINGER_MAX_MS + 1).await;
+    offer_rematch(&app, &finished, &late_token).await;
+    pass(BOT_REMATCH_DELAY_MAX_MS + 1).await;
+    let status = rematch_status(&app, &finished, &late_token).await;
+    assert!(status["opponentOffer"].is_null(), "{status}");
+    assert!(status["matchId"].is_null(), "{status}");
+    assert_eq!(fake(&app).await.tables.matches.len(), 2, "no rematch was made");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_offers_a_rematch_when_its_plan_says() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let seed = seed_where(|plan| plan.offers);
+    let plan = rematch_plan(&seed, PlayerId::P2, &BOT_REMATCH_FIT);
+    let finished = bot_match_on(&app, &person, &bot, &seed).await;
+    concede_bot_match(&app, &person).await;
+
+    // Its offer comes a person's beat after the end, at normal stakes, while it is on the match.
+    pass(plan.offer_after_ms - 1).await;
+    let before = rematch_status(&app, &finished, &token).await;
+    assert!(before["opponentOffer"].is_null(), "{before}");
+    pass(1).await;
+    let offered = rematch_status(&app, &finished, &token).await;
+    assert_eq!(offered["opponentOffer"], json!(STAKE_NORMAL), "{offered}");
+    assert_eq!(offered["opponentHere"], json!(true), "{offered}");
+    // R1442: recorded among the match's signals, as a person's offer is.
+    let signals = serde_json::to_value(&fake(&app).await.tables.match_signals).expect("the signals");
+    let bot_row = signals
+        .as_array()
+        .and_then(|rows| {
+            rows.iter()
+                .find(|row| row["matchId"] == finished.as_str() && row["seat"] == "p2")
+        })
+        .cloned()
+        .expect("the bot's signals row");
+    assert_eq!(bot_row["rematchOffered"], json!(true), "{bot_row}");
+
+    // The person meets it: the rematch is made at once.
+    let made = offer_rematch(&app, &finished, &token).await;
+    assert!(made["matchId"].is_string(), "{made}");
 }

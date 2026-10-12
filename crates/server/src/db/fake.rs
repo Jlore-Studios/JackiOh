@@ -106,9 +106,9 @@ use crate::db::store::{
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
     RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome,
-    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StoreError, Ticket, TicketStatus,
+    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -2238,6 +2238,53 @@ pub fn play_telemetry_timings(f: &mut FakeTx<'_>) -> Result<Vec<ActionTimingRow>
     Ok(rows)
 }
 
+pub fn play_telemetry_emotes(f: &mut FakeTx<'_>) -> Result<Vec<EmoteEventRow>, StoreError> {
+    call(f, "playTelemetry.emotes")?;
+    let mut rows = f.tables().emote_events.clone();
+    rows.sort_by(|a, b| a.match_id.cmp(&b.match_id).then(a.ordinal.cmp(&b.ordinal)));
+    Ok(rows)
+}
+
+/// Each signals row whose match has a result, beside it: whether the seat's account won (none for
+/// a draw), the reason, the turns, and whether a rematch could follow (ranked, in no series).
+pub fn play_telemetry_outcomes(f: &mut FakeTx<'_>) -> Result<Vec<SignalOutcomeRow>, StoreError> {
+    call(f, "playTelemetry.outcomes")?;
+    let tables = f.tables();
+    let mut rows: Vec<SignalOutcomeRow> = tables
+        .match_signals
+        .iter()
+        .filter_map(|signal| {
+            let result = tables
+                .results
+                .iter()
+                .find(|row| row.match_id == signal.match_id)?;
+            let found = tables.matches.iter().find(|row| row.id == signal.match_id)?;
+            let profile = match signal.seat {
+                PlayerId::P1 => &result.players.0,
+                PlayerId::P2 => &result.players.1,
+            };
+            let in_series = tables
+                .series
+                .iter()
+                .any(|series| series.games.iter().any(|game| game.match_id == signal.match_id));
+            Some(SignalOutcomeRow {
+                signal: signal.clone(),
+                won: result.winner_profile_id.as_ref().map(|winner| winner == profile),
+                reason: result.reason,
+                turns: result.turns,
+                rematchable: found.ranked == Some(true) && !in_series,
+            })
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        a.signal
+            .match_id
+            .cmp(&b.signal.match_id)
+            .then(a.signal.seat.cmp(&b.signal.seat))
+    });
+    Ok(rows)
+}
+
 /// Finished matches with a log, no timing and an account still held, by when they ended (a missing
 /// end last, as Postgres sorts a null) and then by id.
 pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreError> {
@@ -2962,6 +3009,39 @@ pub fn tickets_claim_for_bot(
     };
     ticket.status = TicketStatus::Matched;
     ticket.match_id = Some(match_id.to_string());
+    if let Some(bot) = profile_of(tables, bot_id) {
+        bot.in_match_id = Some(match_id.to_string());
+    }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
+    Ok(true)
+}
+
+/// R639000: single-shot, as `tickets_claim_for_bot` with no ticket: the bot free, or nothing
+/// changes. As there, the fake writes no skeleton, so the bot points at the reserved id.
+pub fn bots_claim_for_rematch(
+    f: &mut FakeTx<'_>,
+    bot_id: &str,
+    _players: &(String, String),
+    match_id: &str,
+    _catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    call(f, "bots.claimForRematch")?;
+    let tables = f.tables();
+    let free = tables
+        .ladder_bots
+        .iter()
+        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
+        && tables
+            .profiles
+            .iter()
+            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none());
+    if !free {
+        return Ok(false);
+    }
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
     }

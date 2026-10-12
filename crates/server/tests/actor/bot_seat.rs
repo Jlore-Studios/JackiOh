@@ -1,8 +1,11 @@
 //! R1452 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
 //! itself, deciding off the queue and moving at a human pace inside its clock, with server nonces
-//! (`srv-bot-…`, R270). It gets no disconnect grace (R744), never concedes or takes a draw (R188),
-//! emotes through its persona (R645), is rated as R610 rates a bot, and its match replays from
-//! `(seed, log)` and survives a restart like any other.
+//! (`srv-bot-…`, R270). It gets no disconnect grace (R744), emotes through its persona (R645), is
+//! rated as R610 rates a bot, and its match replays from `(seed, log)` and survives a restart like
+//! any other.
+//!
+//! R639000: it answers a draw offer and its mulligan at a person's pace, lets a turn run out at the
+//! fitted rate, and shows its aim a beat before a targeted attack, each drawn from the fitted rows.
 //!
 //! These run the real engine and the real cards (`jackioh_cards::register_all`), not the testkit's
 //! scripted ones: the bot decides on the blocking pool, whose threads do not see a test's
@@ -17,12 +20,17 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use jackioh_engine::wire::{EmoteId, Phase, PlayerId};
-use jackioh_engine::{ActionBody, deal_emote_hand};
-use jackioh_server::actor::engine::{fold, fold_args, hash_state};
+use jackioh_engine::{ActionBody, ActionType, Rng, deal_emote_hand};
+use jackioh_server::actor::engine::{fold, fold_args, hash_state, legal_actions};
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{AI_PERSONAS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, EmoteTrigger, PersonaName};
+use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
+use jackioh_server::bots::signals::{accepts_draw, deficit, idles_turn};
+use jackioh_server::config::{
+    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger,
+    MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, NewBot, StoreError};
 
@@ -583,35 +591,220 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
     assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));
 }
 
+/// The match's action log as `(seq, action, at)`, in order.
+async fn rows_of(app: &App) -> Vec<(i64, Value, i64)> {
+    q!(app, matches_actions(MATCH_ID))
+        .into_iter()
+        .map(|row| (row.seq, to_json(&row.action), row.at))
+        .collect()
+}
+
+/// The think time the bot that began in `home` draws for one move: its timing stream at `cursor`,
+/// on `state` as it decided, at speed 1 (`unopened_bot_match`'s bot).
+fn drawn_think_ms(
+    seed: &str,
+    home: PlayerId,
+    cursor: u32,
+    action_kind: ActionType,
+    first_in_turn: bool,
+    legal_count: usize,
+    clock_left_ms: Option<i64>,
+) -> i64 {
+    think_ms(
+        &mut Rng::new(&format!("{seed}:bot-timing:{home}"), cursor),
+        &ThinkFor {
+            action_kind,
+            first_in_turn,
+            legal_count,
+            lethal: false,
+        },
+        &THINK_MODEL,
+        1.0,
+        clock_left_ms,
+    )
+}
+
 #[tokio::test(start_paused = true)]
-async fn r1452_bot_declines_a_draw_offer() {
+async fn r639000_a_bot_answers_a_draw_offer_at_its_fitted_pace() {
     let m = bot_match("seed-bot-draw", PlayerId::P1, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     submit(&m, "person-offer", json!({ "type": "offerDraw" })).await;
-    let bot = m.bot().as_str().to_string();
+    // The state the bot answers on, as the offer left it.
+    let state = m.actor.engine_state();
+    let bot = m.bot();
     let app = Arc::clone(&m.app);
     for _ in 0..WAIT_STEPS {
         m.actor.idle().await;
         if log_of(&app)
             .await
             .iter()
-            .any(|(seat, _, kind)| *seat == bot && kind == "answerDraw")
+            .any(|(seat, _, kind)| *seat == bot.as_str() && kind == "answerDraw")
         {
             break;
         }
         tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
     }
-    let answers: Vec<Value> = q!(m.app, matches_actions(MATCH_ID))
-        .into_iter()
-        .map(|row| to_json(&row.action))
-        .filter(|action| action["type"] == "answerDraw")
+    let rows = rows_of(&m.app).await;
+    let offer = rows
+        .iter()
+        .find(|(_, action, _)| action["type"] == "offerDraw")
+        .expect("the person's offer");
+    let answers: Vec<&(i64, Value, i64)> = rows
+        .iter()
+        .filter(|(_, action, _)| action["type"] == "answerDraw")
         .collect();
-    assert_eq!(answers.len(), 1, "{answers:?}");
-    assert_eq!(answers[0]["accept"], json!(false));
-    assert_eq!(answers[0]["playerId"], bot.as_str());
+    assert_eq!(answers.len(), 1, "{rows:?}");
+    let (_, answer, answered_at) = answers[0];
+    assert_eq!(answer["playerId"], bot.as_str());
     assert!(
-        m.actor.snapshot().result.is_none(),
-        "R188: a bot never takes a draw"
+        bot_nonce(answer["nonce"].as_str().unwrap_or_default()),
+        "{answer}"
+    );
+    // Not at once: a person's think over an offer, the `answerDraw` prior, drawn on the bot's timing
+    // stream after its mulligan's two draws, on the person's turn, when no clock runs for the bot.
+    let expected = drawn_think_ms(
+        &m.seed,
+        bot,
+        2,
+        ActionType::AnswerDraw,
+        false,
+        legal_actions(&state, bot).len(),
+        None,
+    );
+    assert_eq!(answered_at - offer.2, expected, "{rows:?}");
+    // Accepted exactly as the bot's draw-answer roll says, from how far behind it stood.
+    let accept = accepts_draw(
+        &m.seed,
+        bot,
+        state.turn,
+        deficit(&state, bot),
+        &BOT_DRAW_ANSWER_FIT,
+    );
+    assert_eq!(answer["accept"], json!(accept), "{rows:?}");
+    assert_eq!(m.actor.snapshot().result.is_some(), accept);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_seeded_bot_game_draws_its_mulligan_and_idle_turn_from_the_fits() {
+    // A seed whose bot, the second seat, lets its first turn run out.
+    let seed = (0..20_000)
+        .map(|k| format!("seed-idle-{k}"))
+        .find(|seed| idles_turn(seed, PlayerId::P2, 2, &BOT_TIMEOUT_FIT))
+        .expect("a seed whose bot idles turn 2");
+    let m = bot_match(&seed, PlayerId::P1, PersonaName::Silent, false).await;
+    let bot = m.bot();
+    let row = q!(m.app, matches_get(MATCH_ID)).expect("the match row");
+    // The opening state, before the bot's mulligan lands.
+    let opening = m.actor.engine_state();
+    assert!(log_of(&m.app).await.is_empty(), "PREMISE: no move yet");
+
+    to_the_persons_turn(&m).await;
+    let rows = rows_of(&m.app).await;
+    let mulligan = rows
+        .iter()
+        .find(|(_, action, _)| action["type"] == "mulligan" && action["playerId"] == bot.as_str())
+        .expect("the bot's mulligan");
+    // A person's mulligan, the `mulligan` prior, not the practice AI's instant answer (R266); the
+    // shared mulligan clock (R268) leaves more than the longest think time.
+    let expected = drawn_think_ms(
+        &seed,
+        bot,
+        0,
+        ActionType::Mulligan,
+        true,
+        legal_actions(&opening, bot).len(),
+        Some(MULLIGAN_CLOCK_MS),
+    );
+    assert_eq!(mulligan.2 - row.created_at, expected, "{rows:?}");
+
+    // The bot's first turn: it plays nothing, and its turn clock times it out (R79).
+    let turn = m.actor.snapshot().turn;
+    assert_eq!(turn, 1, "PREMISE: the person opens");
+    submit(&m, "person-end-idle", json!({ "type": "endTurn" })).await;
+    let ended = rows_of(&m.app).await.len();
+    let person = m.person;
+    wait_until(&m.actor, "the person's next turn", |actor| {
+        let snapshot = actor.snapshot();
+        snapshot.active == person && snapshot.turn > turn + 1
+    })
+    .await;
+    let rows = rows_of(&m.app).await;
+    let end_at = rows[ended - 1].2;
+    let since: Vec<&(i64, Value, i64)> = rows[ended..].iter().collect();
+    assert!(
+        since
+            .iter()
+            .all(|(_, action, _)| !bot_nonce(action["nonce"].as_str().unwrap_or_default())),
+        "the bot moved on its idle turn: {rows:?}"
+    );
+    let timeouts: Vec<&&(i64, Value, i64)> = since
+        .iter()
+        .filter(|(_, action, _)| action["type"] == "timeout")
+        .collect();
+    assert_eq!(timeouts.len(), 1, "{rows:?}");
+    assert_eq!(timeouts[0].1["playerId"], bot.as_str());
+    assert_eq!(timeouts[0].2 - end_at, TURN_CLOCK_MS, "{rows:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_bot_aims_a_beat_before_a_targeted_attack() {
+    let m = bot_match("seed-bot-aims", PlayerId::P1, PersonaName::Silent, false).await;
+    to_the_persons_turn(&m).await;
+    let bot = m.bot();
+    let person = m.person;
+    // The person ends each turn until the bot has attacked.
+    let attacked = |frames: &[Value]| {
+        frames.iter().position(|frame| {
+            frame["type"] == "view"
+                && frame["view"]["events"]
+                    .as_array()
+                    .is_some_and(|events| events.iter().any(|event| event["type"] == "attackDeclared"))
+        })
+    };
+    let frames = |m: &BotMatch| -> Vec<Value> {
+        m.socket
+            .sent()
+            .iter()
+            .map(|text| serde_json::from_str(text).expect("every frame is JSON"))
+            .collect()
+    };
+    for at in 0..8 {
+        if attacked(&frames(&m)).is_some() || m.actor.snapshot().result.is_some() {
+            break;
+        }
+        submit(&m, &format!("person-end-aim-{at}"), json!({ "type": "endTurn" })).await;
+        let turn = m.actor.snapshot().turn;
+        wait_until(&m.actor, "the bot's turn to end", |actor| {
+            let snapshot = actor.snapshot();
+            snapshot.result.is_some() || (snapshot.active == person && snapshot.turn > turn)
+        })
+        .await;
+    }
+    let frames = frames(&m);
+    let at = attacked(&frames).expect("the bot attacked");
+    let aims: Vec<(usize, &Value)> = frames
+        .iter()
+        .enumerate()
+        .filter(|(_, frame)| frame["type"] == "aim")
+        .collect();
+    assert!(
+        aims.iter().all(|(_, frame)| frame["from"] == bot.as_str()),
+        "{aims:?}"
+    );
+    // The aim that showed as the attack went: from the attacker's zone on the bot's side, at a target.
+    let (_, before) = aims
+        .iter()
+        .rev()
+        .find(|(index, _)| *index < at)
+        .expect("an aim before the attack");
+    assert_eq!(before["aim"]["source"]["at"], "zone", "{before}");
+    assert_eq!(before["aim"]["source"]["player"], bot.as_str(), "{before}");
+    assert!(!before["aim"]["target"].is_null(), "{before}");
+    // Then taken down, after the attack.
+    assert!(
+        aims.iter()
+            .any(|(index, frame)| *index > at && frame["aim"].is_null()),
+        "{aims:?}"
     );
 }
 

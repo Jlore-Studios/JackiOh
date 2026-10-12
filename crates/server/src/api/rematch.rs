@@ -230,7 +230,10 @@ async fn create_rematch(
             if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
                 return Err(already_in_match());
             }
-            if found.first().is_some_and(|profile| profile.kind == ProfileKind::Bot) {
+            if found
+                .first()
+                .is_some_and(|profile| profile.kind == ProfileKind::Bot)
+            {
                 bots.push(seat.profile_id.clone());
             }
         }
@@ -253,7 +256,13 @@ async fn create_rematch(
             .map_err(|error| ApiError::internal(error.to_string()))?;
         for bot in &bots {
             let claimed = tx
-                .bots_claim_for_rematch(bot, &finished.players, match_id, &finished.catalog_version, now_ms())
+                .bots_claim_for_rematch(
+                    bot,
+                    &finished.players,
+                    match_id,
+                    &finished.catalog_version,
+                    now_ms(),
+                )
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
             if !claimed {
