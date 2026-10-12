@@ -4945,9 +4945,12 @@
         "sha": "c34734065ec6cdf4c1f02e44508defe522428669"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-12T18:04:32Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 743,
       "kind": "review",
       "pending_request": false,
