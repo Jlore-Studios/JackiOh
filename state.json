@@ -61,41 +61,6 @@
     }
   },
   "items": {
-    "108": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 193,
-      "provider": "devin",
-      "queued_at": "2026-10-03T04:14:18Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37168052374",
-      "started_at": "2026-10-04T01:30:52Z",
-      "stop_requested": false
-    },
-    "113": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T19:09:28Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 168,
-      "provider": "agy",
-      "queued_at": "2026-10-03T23:13:20Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37162924866",
-      "started_at": "2026-10-03T23:48:56Z",
-      "stop_requested": false
-    },
     "124": {
       "died": 0,
       "failures": 0,
@@ -119,25 +84,6 @@
       "pending_request": false,
       "queued_at": "2026-10-03T07:02:36Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "131": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T22:03:10Z",
-      "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
-      "planned_tier": "medium",
-      "pr": 173,
-      "provider": "muse",
-      "queued_at": "2026-10-03T23:13:43Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37165316691",
-      "started_at": "2026-10-04T00:36:07Z",
       "stop_requested": false
     },
     "133": {
@@ -248,29 +194,6 @@
       "stopped_at": "2026-10-05T17:29:54Z",
       "stopped_by": "jgoetzmann"
     },
-    "144": {
-      "action": "review",
-      "closed_at": "2026-10-04T16:26:11Z",
-      "cross_rounds": 1,
-      "died": 0,
-      "failures": 0,
-      "feedback_since": "2026-10-04T15:46:15Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 63,
-      "kind": "revise",
-      "merged": true,
-      "pending_at": "2026-10-03T16:22:09Z",
-      "pending_by": "MaxGoetzmann",
-      "pending_request": false,
-      "provider": "claude-2",
-      "queued_at": "2026-10-04T16:20:40Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "37215374694",
-      "source": "cross-review",
-      "started_at": "2026-10-04T16:04:47Z",
-      "stop_requested": false
-    },
     "148": {
       "asks": [
         "c:5974504575"
@@ -282,38 +205,6 @@
       "pending_request": false,
       "queued_at": "2026-10-03T23:15:32Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "149": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 204,
-      "provider": "muse",
-      "queued_at": "2026-10-03T14:59:40Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37188262170",
-      "started_at": "2026-10-04T08:15:57Z",
-      "stop_requested": false
-    },
-    "153": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 194,
-      "provider": "devin",
-      "queued_at": "2026-10-03T15:16:42Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37168095955",
-      "started_at": "2026-10-04T01:32:34Z",
       "stop_requested": false
     },
     "160": {
@@ -332,22 +223,6 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "37162113695",
       "started_at": "2026-10-03T23:33:13Z",
-      "stop_requested": false
-    },
-    "165": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 198,
-      "provider": "devin",
-      "queued_at": "2026-10-03T17:57:28Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37168249008",
-      "started_at": "2026-10-04T01:35:44Z",
       "stop_requested": false
     },
     "166": {
@@ -388,64 +263,6 @@
       "stopped_at": "2026-10-05T23:35:44Z",
       "stopped_by": "jgoetzmann"
     },
-    "167": {
-      "action": "review",
-      "ci_fixes": 3,
-      "ci_reruns": {
-        "2fe1dea4a657d860e9ce809da8fa1f02851b5f2b": 1,
-        "8e9a280dcfa930b9f37d8f494125e53d39a3a381": 1,
-        "9514e817711428c574e6e3fff332117d83e243eb": 1
-      },
-      "ci_run_id": 37184168583,
-      "ci_sha": "9514e817711428c574e6e3fff332117d83e243eb",
-      "closed_at": "2026-10-04T13:57:42Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T07:17:28Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 75,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "muse",
-      "queued_at": "2026-10-04T09:54:42Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37194135076",
-      "source": "",
-      "started_at": "2026-10-04T10:04:21Z",
-      "stop_requested": false
-    },
-    "168": {
-      "action": "review",
-      "ci_fixes": 1,
-      "ci_reruns": {
-        "2ed45ad546dffb06f4d093715ff7bcae1dfa5744": 1
-      },
-      "ci_run_id": 37173756115,
-      "ci_sha": "2ed45ad546dffb06f4d093715ff7bcae1dfa5744",
-      "closed_at": "2026-10-04T15:39:18Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T06:12:30Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 113,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-04T14:08:26Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37183876062",
-      "source": "conflict",
-      "started_at": "2026-10-04T06:49:01Z",
-      "stop_requested": false
-    },
     "170": {
       "action": "build",
       "died": 0,
@@ -461,82 +278,6 @@
       "started_at": "2026-10-05T02:46:09Z",
       "stop_requested": false
     },
-    "171": {
-      "action": "revise",
-      "ci_fixes": 3,
-      "ci_reruns": {
-        "80a90ddba549326530af4575d06e9d023c9e283c": 1,
-        "97164e49675c2175247872f240d7a94426006a7e": 1,
-        "f4216c2945c3879a40cce6307e596f0a8f6b6962": 1
-      },
-      "ci_run_id": 37216898951,
-      "ci_sha": "97164e49675c2175247872f240d7a94426006a7e",
-      "closed_at": "2026-10-04T21:01:46Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 1,
-      "feedback_since": "2026-10-04T17:27:09Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 49,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T20:25:52Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37232315908",
-      "source": "conflict",
-      "started_at": "2026-10-04T20:35:56Z",
-      "stop_requested": false
-    },
-    "173": {
-      "action": "revise",
-      "ci_fixes": 3,
-      "ci_reruns": {
-        "03173b48f957d43638f574d7ab8404e978723002": 1,
-        "35f28a50e9b59bc5cee37f979afdb1ec2242eb7b": 1,
-        "e91c87f482960ab8e020514077240a1b3141abe0": 1
-      },
-      "ci_run_id": 37181233472,
-      "ci_sha": "35f28a50e9b59bc5cee37f979afdb1ec2242eb7b",
-      "closed_at": "2026-10-04T20:25:30Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T06:55:32Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 131,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "muse",
-      "queued_at": "2026-10-04T14:08:20Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37213576321",
-      "source": "conflict",
-      "started_at": "2026-10-04T15:38:46Z",
-      "stop_requested": false
-    },
-    "181": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 206,
-      "provider": "muse",
-      "queued_at": "2026-10-04T01:04:38Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37201780611",
-      "started_at": "2026-10-04T12:21:51Z",
-      "stop_requested": false
-    },
     "185": {
       "failures": 0,
       "forced": false,
@@ -545,133 +286,6 @@
       "pending_request": false,
       "queued_at": "2026-10-04T01:46:39Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
-    },
-    "188": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T10:27:14Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 205,
-      "provider": "muse",
-      "run_id": "37195856139",
-      "started_at": "2026-10-04T10:38:00Z",
-      "stop_requested": false
-    },
-    "189": {
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "revise",
-      "pending_request": false,
-      "queued_at": "2026-10-04T04:42:23Z",
-      "requested_by": "MaxGoetzmann",
-      "source": "request",
-      "stop_requested": false
-    },
-    "192": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T06:47:26Z",
-      "planned_by": "`claude-2` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 220,
-      "provider": "muse",
-      "queued_at": "2026-10-04T02:05:36Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37216058851",
-      "started_at": "2026-10-04T16:16:02Z",
-      "stop_requested": false
-    },
-    "193": {
-      "action": "revise",
-      "closed_at": "2026-10-04T04:40:53Z",
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T02:08:56Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 108,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T02:33:46Z",
-      "run_id": "37170083945",
-      "source": "",
-      "started_at": "2026-10-04T02:08:56Z",
-      "stop_requested": false
-    },
-    "194": {
-      "action": "revise",
-      "closed_at": "2026-10-04T04:40:38Z",
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T03:37:31Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 153,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T03:57:50Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "37174535506",
-      "source": "",
-      "started_at": "2026-10-04T03:37:31Z",
-      "stop_requested": false
-    },
-    "196": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T06:06:13Z",
-      "planned_by": "`claude-2` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 202,
-      "provider": "devin",
-      "queued_at": "2026-10-04T02:13:42Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37181911080",
-      "started_at": "2026-10-04T06:10:37Z",
-      "stop_requested": false
-    },
-    "198": {
-      "action": "revise",
-      "closed_at": "2026-10-04T04:40:19Z",
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T01:35:44Z",
-      "forced": true,
-      "interruptions": 0,
-      "issue": 165,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T03:35:45Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "37174522129",
-      "source": "request",
-      "started_at": "2026-10-04T03:36:28Z",
       "stop_requested": false
     },
     "200": {
@@ -691,27 +305,6 @@
       "requested_by": "jgoetzmann",
       "run_id": "37346935248",
       "started_at": "2026-10-05T17:15:14Z",
-      "stop_requested": false
-    },
-    "202": {
-      "action": "revise",
-      "closed_at": "2026-10-04T14:44:12Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T14:08:44Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 196,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T14:32:05Z",
-      "run_id": "37208114170",
-      "source": "",
-      "started_at": "2026-10-04T14:08:44Z",
       "stop_requested": false
     },
     "203": {
@@ -744,101 +337,6 @@
       "started_at": "2026-10-05T12:08:58Z",
       "stop_requested": false
     },
-    "204": {
-      "action": "review",
-      "ci_fixes": 1,
-      "ci_reruns": {
-        "c284389c40e4a47a7ee280be4b493907b6cb61a5": 1
-      },
-      "ci_run_id": 37191618150,
-      "ci_sha": "c284389c40e4a47a7ee280be4b493907b6cb61a5",
-      "closed_at": "2026-10-04T14:59:44Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T10:12:38Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 149,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-04T14:08:15Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37198937149",
-      "source": "conflict",
-      "started_at": "2026-10-04T11:30:44Z",
-      "stop_requested": false
-    },
-    "205": {
-      "action": "review",
-      "closed_at": "2026-10-04T13:58:35Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T10:38:00Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 188,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-04T11:14:14Z",
-      "run_id": "37198707003",
-      "started_at": "2026-10-04T11:26:33Z",
-      "stop_requested": false
-    },
-    "206": {
-      "action": "revise",
-      "ci_fixes": 2,
-      "ci_reruns": {
-        "284a1c7fc24529c06242f836607204dfacebbb49": 1,
-        "be91ec40fa39ff8a49980d56af4ab7f371194db2": 1
-      },
-      "ci_run_id": 37223940996,
-      "ci_sha": "284a1c7fc24529c06242f836607204dfacebbb49",
-      "closed_at": "2026-10-04T23:10:35Z",
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 1,
-      "feedback_since": "2026-10-04T19:12:17Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 181,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "muse",
-      "queued_at": "2026-10-04T20:22:29Z",
-      "requested_by": "jgoetzmann-bot",
-      "run_id": "37232858275",
-      "source": "conflict",
-      "started_at": "2026-10-04T20:43:37Z",
-      "stop_requested": false
-    },
-    "207": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T15:10:48Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_tier": "medium",
-      "pr": 212,
-      "provider": "muse",
-      "queued_at": "2026-10-04T14:37:04Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37211101189",
-      "started_at": "2026-10-04T14:57:57Z",
-      "stop_requested": false
-    },
     "208": {
       "action": "build",
       "died": 0,
@@ -858,16 +356,6 @@
       "stop_requested": false,
       "stopped_at": "2026-10-04T17:09:16Z",
       "stopped_by": "MaxGoetzmann"
-    },
-    "212": {
-      "closed_at": "2026-10-04T15:50:21Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T14:57:57Z",
-      "issue": 207,
-      "kind": "revise",
-      "merged": true,
-      "queued_at": "2026-10-04T15:11:01Z"
     },
     "214": {
       "action": "review",
@@ -896,111 +384,6 @@
       "run_id": "37307879042",
       "source": "",
       "started_at": "2026-10-05T12:13:04Z",
-      "stop_requested": false
-    },
-    "218": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T17:20:35Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_tier": "medium",
-      "pr": 223,
-      "provider": "muse",
-      "queued_at": "2026-10-04T16:45:17Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37218000895",
-      "started_at": "2026-10-04T16:51:00Z",
-      "stop_requested": false
-    },
-    "219": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-04T17:44:49Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 225,
-      "provider": "devin",
-      "queued_at": "2026-10-04T16:46:35Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37222737914",
-      "started_at": "2026-10-04T18:02:31Z",
-      "stop_requested": false
-    },
-    "220": {
-      "action": "review",
-      "closed_at": "2026-10-04T21:50:22Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-04T20:26:13Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 192,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-2",
-      "queued_at": "2026-10-04T20:40:23Z",
-      "run_id": "37233209932",
-      "source": "",
-      "started_at": "2026-10-04T20:55:19Z",
-      "stop_requested": false
-    },
-    "223": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-05T02:54:34Z",
-        "by": "`muse` (medium), `cognition` (weak)",
-        "sha": "408355446f46df30d7dabf8ef01ad348491b00d6"
-      },
-      "closed_at": "2026-10-05T02:55:54Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-05T01:16:49Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 218,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-05T01:58:47Z",
-      "run_id": "37254141570",
-      "source": "",
-      "started_at": "2026-10-05T02:12:05Z",
-      "stop_requested": false
-    },
-    "225": {
-      "action": "review",
-      "closed_at": "2026-10-04T21:49:31Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-04T18:02:31Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 219,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "devin",
-      "queued_at": "2026-10-04T19:44:23Z",
-      "run_id": "37234186251",
-      "started_at": "2026-10-04T21:02:29Z",
       "stop_requested": false
     },
     "228": {
@@ -2213,24 +1596,6 @@
       "stop_requested": false,
       "strikes": 0
     },
-    "49": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T16:50:20Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "pr": 171,
-      "provider": "devin",
-      "queued_at": "2026-10-01T02:07:14Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37138413401",
-      "started_at": "2026-10-03T16:52:25Z",
-      "stop_requested": false
-    },
     "490": {
       "cleared": {
         "at": "2026-10-08T04:05:02Z",
@@ -3421,7 +2786,6 @@
     },
     "577": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T13:15:09Z",
@@ -3434,20 +2798,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T13:15:11Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 674,
       "provider": "claude-3",
-      "question": "",
       "run_id": "38161414420",
       "started_at": "2026-10-11T17:52:30Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "579": {
       "action": "build",
@@ -3884,21 +3244,6 @@
       "started_at": "2026-10-10T05:58:13Z",
       "stop_requested": false
     },
-    "63": {
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 144,
-      "provider": "devin",
-      "queued_at": "2026-10-03T05:35:09Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37112911948",
-      "started_at": "2026-10-03T09:24:23Z",
-      "stop_requested": false
-    },
     "630": {
       "cleared": {
         "at": "2026-10-10T06:27:18Z",
@@ -4087,32 +3432,26 @@
     },
     "647": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T16:11:39Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 673,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-10T23:57:15Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38161463742",
       "started_at": "2026-10-11T17:53:27Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "648": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T16:41:07Z",
@@ -4125,24 +3464,19 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T16:41:10Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 670,
       "provider": "agy",
-      "question": "",
       "run_id": "38156573004",
       "started_at": "2026-10-11T16:43:09Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "649": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T18:14:03Z",
@@ -4153,35 +3487,21 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-11T18:40:00Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "## State\n\nDONE. The claude-3 plan (below) was followed exactly; no departures.\n\n- `crates/cards/src/query.rs`: `use serde_json::Value;` removed; `pool()` is the single\n  `excluding_def_id(None, args, Some(own_id))` call with the plan's doc paragraph. No\n  `serde_json`/`Value` left in the file.\n- `crates/cards/tests/cross/query.rs`: both planned tests added at the end of the R387 module.\n- Verified: `cargo test -p jackioh-cards --test cards cross::query::` \u2192 34 ok (incl. 2 new);\n  `cargo test -p jackioh-cards` \u2192 5522 + 752 ok; `cargo test -p jackioh-ai` \u2192 314 ok;\n  `cargo clippy -p jackioh-cards --all-targets -- -D warnings` clean; `cargo fmt --check` clean;\n  `git status` \u2192 only the two planned files.\n- Title chosen: `Architecture: eliminate serde_json round-trip in card pool catalog queries`\n  (internal refactor, no card data/rules change \u2192 Architecture prefix per docs/issues-and-patches.md;\n  issue's plain bot-suggestion title does not itself pass the PR title check).\n\n## Log\n(earlier lines of the log were cut here)\n code under **Tests** below. Do not change any `use` line: every name the code calls (`register`, `q`, `ids`, `core_indices`, `strings`, `pool`, `query`, `json!`, `TRAP_TYPES`) is already in scope through `use super::*;`.\n\n4. Run `cargo fmt -p jackioh-cards`. It should change nothing. Then run the commands under **Tests**.\n\n## Tests\n\nIn `crates/cards/tests/cross/query.rs`, inside the R387 module (step 3):\n\n```rust\n    #[test]\n    fn s5_1_pool_adds_the_caller_s_id_to_an_exclude_def_id_list_and_to_one_that_already_holds_it() {\n        register();\n        assert_eq!(\n            core_indices(pool(\n                \"core-082\",\n                &q(json!({ \"tags\": [\"KY\"], \"excludeDefId\": [\"core-057\", \"core-031\"] }))\n            )),\n            strings(&[\"51\"])\n        );\n        // The caller's own id already excluded, as one string or in a list: the same pool.\n        assert_eq!(\n            core_indices(pool(\n                \"core-057\",\n                &q(json!({ \"tags\": [\"KY\"], \"excludeDefId\": \"core-057\" }))\n            )),\n            strings(&[\"31\", \"51\", \"82\"])\n        );\n        assert_eq!(\n            core_indices(pool(\n                \"core-057\",\n                &q(json!({ \"tags\": [\"KY\"], \"excludeDefId\": [\"core-031\", \"core-057\"] }))\n            )),\n            strings(&[\"51\", \"82\"])\n        );\n    }\n\n    #[test]\n    fn s5_1_pool_own_id_args_is_query_with_own_id_excluded_and_every_other_argument_kept() {\n        register();\n        // The pools the card scripts ask `pool` for, and one per remaining filter, each beside the\n        // `query` a script would write with its own id excluded by hand.\n        let cases = [\n            (\"core-057\", json!({ \"tags\": [\"KY\"] })),\n            (\"core-083\", json!({ \"rarity\": \"Legendary\" })),\n            (\"core-096\", json!({ \"rarity\": \"Mythic\" })),\n            (\"core-067\", json!({ \"type\": TRAP_TYPES })),\n            (\n                \"core-054\",\n                json!({ \"type\": \"Unit\", \"costRange\": { \"min\": 3, \"max\": 4 } }),\n            ),\n            (\"core-031\", json!({ \"cost\": 1, \"tags\": [\"KY\"] })),\n            (\"core-059\", json!({})),\n            (\n                \"core-001\",\n                json!({ \"set\": [\"Core\", \"Classic\"], \"notTags\": [\"KY\"] }),\n            ),\n            (\"classicplus-058\", json!({ \"tags\": [\"Fruit\"] })),\n            (\"classicplus-023\", json!({ \"withTokens\": true })),\n            (\"meditative-101\", json!({ \"luckBased\": true })),\n        ];\n        for (own_id, args) in cases {\n            let mut by_hand = args.clone();\n            by_hand[\"excludeDefId\"] = json!(own_id);\n            let pooled = ids(pool(own_id, &q(args)));\n            assert_eq!(pooled, ids(query(&q(by_hand))), \"pool({own_id:?}, \u2026)\");\n            assert!(!pooled.is_empty(), \"pool({own_id:?}, \u2026) is empty\");\n            assert!(\n                !pooled.contains(&own_id.to_string()),\n                \"pool({own_id:?}, \u2026) offers {own_id}\"\n            );\n        }\n    }\n```\n\nWhat each test proves:\n- **First test:**\n  - A list in `excludeDefId` keeps every id and gains the caller's, so the Core KY pool comes down to #51.\n  - An own id the caller already excluded, as a string or in a list, leaves the pool as it was.\n- **Second test:** it covers every argument shape the scripts pass, plus each remaining filter (`cost`, `costRange`, `type`, `rarity`, `set`, `notTags`, `tags`, `withTokens`, `luckBased`, and `{}`). For each one it asserts that `pool(own, args)`:\n  - is exactly `query(args + excludeDefId: own)`, in the same order;\n  - is not empty;\n  - never offers `own`.\n- **Existing test:** `s5_1_pool_own_id_args_adds_the_caller_s_id_to_exclude_def_id_instead_of_replacing_it` already covers an absent `excludeDefId` and a single-string one.\n\nCommands:\n- `cargo test -p jackioh-cards --test cards cross::query::` (34 tests: the 32 existing ones and the 2 new ones)\n- `cargo test -p jackioh-cards`\n- `cargo test -p jackioh-ai`\n- `cargo clippy -p jackioh-cards --all-targets -- -D warnings`\n- `cargo fmt --check`\n\n## Done when\n\n- [ ] `crates/cards/src/query.rs` contains no `serde_json::to_value`, `serde_json::from_value`, `serde_json` or `Value`.\n- [ ] `pool()` is the single `excluding_def_id` call from step 2, with the doc comment from step 2.\n- [ ] Both new tests are in the R387 module and pass.\n- [ ] `cargo test -p jackioh-cards` and `cargo test -p jackioh-ai` pass.\n- [ ] clippy on `jackioh-cards` and `cargo fmt --check` are clean.\n- [ ] `git status` shows only the two files in the table as changed.\n\n## Risks\n\n- **A different pool, which would cause replay drift.**\n  - `query` checks `excludeDefId` with `contains`, so the two differences from today's code change no pool. An own id the caller already listed is now listed once instead of twice, and a single-string `excludeDefId` now becomes a list.\n  - Pool order comes from `catalog::query`'s sort and does not change.\n  - Both new tests were run on the old `pool()` and passed, so if a builder's change makes them fail, it has changed behaviour.\n  - The full change was checked in a scratch copy of this base commit: 34 `cross::query` tests passed, all `jackioh-cards` tests passed (5522 + 752), all `jackioh-ai` tests passed (314), and clippy and fmt were clean.\n- **Fused ids.** `excluding_def_id` expands a fused id (`t-<n>:a+b`, R179) into its ingredients through `self_def_ids`, which the old code did not do. It makes no difference here:\n  - Every `pool` caller passes a literal catalog id (`\"core-054\"`, `\"core-057\"`, `\"core-059\"`, `\"core-067\"`, `\"core-083\"`, a script's `ID`, `INTELLECT`, `TRANSMOGULATE`, \u2026).\n  - None of the 450 ids in `catalog.json` has the fused shape, so for these callers `self_def_ids(None, id)` is `[id]` and nothing changes.\n  - Do not pass a `GameState`: `None` is what keeps `pool` independent of state, as it is today.\n- **The file header's contract.**\n  - The header's rule (\"Nothing here filters, sorts, excludes tokens or reads a cost\") still holds, because the exclusion moves to the engine helper instead of being written a second time in `crates/cards`.\n  - `crates/cards/README.md:189` (`catalog.pool(...)`, \"your own id excluded (R387)\") stays true and needs no edit.\n\n## Open questions\n\nNone.\n\nOne decision the issue left open: reuse the engine's `excluding_def_id` rather than pushing `own_id` onto a cloned `exclude_def_id` by hand in `crates/cards/src/query.rs`. I rejected the hand-written version because it would be a second copy of the engine's exclusion helper, which the file header's one-implementation rule forbids.\n- Edited `crates/cards/src/query.rs`: removed `use serde_json::Value;`, `pool()` is now the single\n  `excluding_def_id` call with the plan's doc paragraph. `grep serde_json|Value` \u2192 clean.\n- Inserted the plan's two tests at the end of the R387 module in `tests/cross/query.rs`.\n- `cargo fmt -p jackioh-cards` \u2192 no changes. `git status` \u2192 only the two planned files.\n- Running `cargo test -p jackioh-cards --test cards cross::query::` (compiling).\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may review it, so it waits for a review run",
-        "trail": "- said: Let me check what the PR title check accepts before picking the title.\n- ran `grep -n \"CONVENTION\\|pull_title\" bot/harness/triage.py | head; grep -n \"CONVENTION\" -A 15 bot/harness/triage.py | sed -n '/CONVENTION = /,/)/p' | head -20`\n- ran `sed -n '108,135p' bot/harness/triage.py`\n- ran `sed -n '185,230p' bot/harness/triage.py; git log --format=\"%s\" -30 origin/main | grep -cE \"^(Patch|v[0-9]|Night bot|CI|Architecture)\"; git log --format=\"%s\" -30 origin/main | grep -vE \"^(Patch|v[0-9]\u2026`\n- ran `python3 - <<'EOF' notes = open('.bot-notes.md').read() new_state = \"\"\"## State DONE. The claude-3 plan (below) was followed exactly; no departures. - `crates/cards/src/query.rs`: `use serde_json::Val\u2026`\n- said: All verification is complete. Let me update the notes to reflect the finished state.\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Architecture: eliminate serde_json round-trip in card pool catalog queries\"} --> ## What changed `crates/cards/src/query.rs` \u2014 `pool(own_id, args)` no longer serializes `CardQuery` to a `serde_json::Value`, mutates `\"excludeDefId\"` in the JSON map, and d\u2026\n- --- answer ---\n- I'll start by reading the journal and notes from earlier runs, then look at the current state of the code.The journal shows a build run was interrupted mid-work. Let me check the current state of the files to see what (if anything) was already changed.Clean worktree \u2014 nothing from the interrupted r\u2026\n- ## What changed\n- `crates/cards/src/query.rs` \u2014 `pool(own_id, args)` no longer serializes `CardQuery` to a `serde_json::Value`, mutates `\"excludeDefId\"` in the JSON map, and deserializes back. It now extends the typed arguments directly through the engine's existing helper:\n- ```rust\n- pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {\n- query(&jackioh_engine::catalog::excluding_def_id(\n- None,\n- args,\n- Some(own_id),\n- ))\n- }\n- ```\n- `use serde_json::Value;` is gone with it (the file holds no `serde_json` or `Value` now), and `pool`'s doc paragraph was rewritten to describe the typed extension. `excluding_def_id` is the same `pub` helper (`crates/engine/src/catalog.rs:562`) that `effects/summon.rs`, `effects/fuse.rs` and `subsy\u2026\n- `crates/cards/tests/cross/query.rs` \u2014 two tests added at the end of the R387 module:\n- - `s5_1_pool_adds_the_caller_s_id_to_an_exclude_def_id_list_and_to_one_that_already_holds_it`: a list exclusion keeps its ids and gains the caller's (Core KY pool \u2192 `[\"51\"]`); an own id already excluded, as a string or in a list, leaves the pool unchanged.\n- - `s5_1_pool_own_id_args_is_query_with_own_id_excluded_and_every_other_argument_kept`: eleven argument shapes covering every filter (`tags`, `rarity`, `type`, `costRange`, `cost`, `set`+`notTags`, `withTokens`, `luckBased`, `{}`), each asserting `pool(own, args) == query(args + excludeDefId: own)` \u2026\n- ## Behaviour\n- Pools are identical. The two internal differences change nothing the filter sees: `query` checks `exclude_def_id` with `contains`, so a single-string exclusion becoming a list, and an already-listed own id being listed once instead of twice, select the same defs; order still comes from `catalog::qu\u2026\n- ## Tests run\n- - `cargo test -p jackioh-cards --test cards cross::query::` \u2192 34 passed (32 existing + 2 new)\n- - `cargo test -p jackioh-cards` \u2192 5522 + 752 passed, 0 failed\n- - `cargo test -p jackioh-ai` \u2192 314 passed, 0 failed\n- - `cargo clippy -p jackioh-cards --all-targets -- -D warnings` \u2192 clean\n- - `cargo fmt --check` \u2192 clean\n- - `git status` \u2192 only the two files above changed\n- ## Decisions the issue left open\n- - Reused the engine's `excluding_def_id` rather than cloning `args` and pushing `own_id` onto `exclude_def_id` by hand: the hand-written version duplicates the engine's exclusion helper, which the file's one-implementation header forbids.\n- - The issue listed `crates/engine/src/catalog.rs`; no change was needed there since `excluding_def_id` is already `pub` and proven by `crates/engine/tests/rules/pools.rs`.\n- - `serde_json` stays a dependency of `jackioh-cards` (other files use it); no manifest or lockfile touched.\n- - No ruling added or cited: no spec decision was made, no new test name carries an `r<n>` token.\n- ## For the reviewer\n- - The title uses the `Architecture:` prefix because this is an internal refactor with no card data, rules or client change; the issue's plain bot-suggestion title doesn't match the PR-title convention on its own."
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T18:14:04Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 672,
       "provider": "devin",
-      "question": "",
       "run_id": "38162965968",
       "started_at": "2026-10-11T18:15:03Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "650": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T16:10:17Z",
@@ -4194,20 +3514,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T16:10:19Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 665,
       "provider": "claude-1",
-      "question": "",
       "run_id": "38154360837",
       "started_at": "2026-10-11T16:11:31Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "651": {
       "cleared": {
@@ -4225,7 +3541,6 @@
     },
     "653": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T04:21:56Z",
@@ -4238,20 +3553,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T04:21:58Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 654,
       "provider": "claude-6",
-      "question": "",
       "run_id": "38111363544",
       "started_at": "2026-10-11T04:24:02Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "654": {
       "cleared": {
@@ -4265,26 +3576,7 @@
       "feedback_since": "2026-10-11T04:24:02Z",
       "issue": 653,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38111363544",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6e3aa47e4329667284c9b4188788c2c8e688b80e",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "655": {
       "action": "plan",
@@ -4324,7 +3616,6 @@
     },
     "659": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-12T00:45:28Z",
@@ -4337,22 +3628,18 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-12T00:45:30Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 694,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-11T23:20:55Z",
       "requested_by": "jgoetzmann",
       "run_id": "38189313515",
       "started_at": "2026-10-12T00:47:27Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "665": {
       "cleared": {
@@ -4366,30 +3653,10 @@
       "feedback_since": "2026-10-11T16:11:31Z",
       "issue": 650,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38154360837",
-            "tier": "strong"
-          }
-        ],
-        "sha": "838050a147364b7c55c924490526b1f94dd11913",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "666": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T20:02:44Z",
@@ -4402,26 +3669,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T20:02:46Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 680,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-11T19:40:12Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38171239643",
       "started_at": "2026-10-11T20:13:35Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "667": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T20:30:25Z",
@@ -4434,26 +3696,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T20:30:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 684,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-11T19:40:30Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38172524006",
       "started_at": "2026-10-11T20:31:31Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "668": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T19:56:25Z",
@@ -4466,26 +3723,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T19:56:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 679,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-11T19:39:55Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38170130117",
       "started_at": "2026-10-11T19:57:26Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "669": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-11T19:58:26Z",
@@ -4498,26 +3750,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-11T19:58:28Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 678,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-11T19:39:21Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38170259236",
       "started_at": "2026-10-11T19:59:30Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "670": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-11T17:50:46Z",
         "by": "`gemini` (medium) twice",
@@ -4540,37 +3787,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38159472150",
-      "self_check_findings": [],
       "started_at": "2026-10-11T17:24:38Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38156573004",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38159472150",
-            "tier": "medium"
-          }
-        ],
-        "sha": "aa353dffe05b3f9234fefe56d83f00700b0c93cc",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "672": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-11T18:47:30Z",
         "by": "`claude` (strong)",
@@ -4593,28 +3814,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38164833557",
-      "self_check_findings": [],
       "started_at": "2026-10-11T18:43:44Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "cognition",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38164833557",
-            "tier": "strong"
-          }
-        ],
-        "sha": "93374b7b006525b221cca78908c3465bca34c558",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "673": {
       "cleared": {
@@ -4628,26 +3829,7 @@
       "feedback_since": "2026-10-11T17:53:27Z",
       "issue": 647,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38161463742",
-            "tier": "strong"
-          }
-        ],
-        "sha": "50e447211b8c01d13aac8110977ce44efa5a5aaa",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "674": {
       "cleared": {
@@ -4661,26 +3843,7 @@
       "feedback_since": "2026-10-11T17:52:30Z",
       "issue": 577,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38161414420",
-            "tier": "strong"
-          }
-        ],
-        "sha": "4d6d3fceafeb4a4894da216e5b6c5ac93965c0fd",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "678": {
       "cleared": {
@@ -4694,26 +3857,7 @@
       "feedback_since": "2026-10-11T19:59:30Z",
       "issue": 669,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38170259236",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d4f98c2223c791dc0f0236c0ae5d073c23efd87a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "679": {
       "cleared": {
@@ -4727,30 +3871,10 @@
       "feedback_since": "2026-10-11T19:57:26Z",
       "issue": 668,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38170130117",
-            "tier": "strong"
-          }
-        ],
-        "sha": "4995e9233533ace837e0ee059863dbac11e3012d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "680": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-11T20:50:45Z",
         "by": "`gemini` (medium) twice",
@@ -4773,37 +3897,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38173494058",
-      "self_check_findings": [],
       "started_at": "2026-10-11T20:45:29Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38171239643",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38173494058",
-            "tier": "medium"
-          }
-        ],
-        "sha": "8ef8ae99966cabfc74d32db98e95fa71cd0ae3e6",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "684": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-11T22:07:52Z",
         "by": "`claude` (strong)",
@@ -4820,48 +3918,17 @@
       "interruptions": 0,
       "issue": 667,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-11T21:27:13Z",
       "run_id": "38176307109",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-11T21:27:33Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/server/src/api/results.rs"
-          ],
-          "from": "f98786d4dfaeac25f318007227c875fe9eaad4c2",
-          "main": "b0200ee51a88b4c8a1c7154b76d9156b6da04059"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38176307109",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9a4e253c86ff9741e2a111c34185623faf5cd77d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "stop_requested": false
     },
     "690": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-12T00:35:54Z",
@@ -4874,20 +3941,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-12T00:52:31Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 693,
       "provider": "muse",
-      "question": "",
       "run_id": "38189765567",
       "started_at": "2026-10-12T00:54:50Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "692": {
       "action": "revise",
@@ -4945,7 +4008,6 @@
     },
     "693": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-12T01:30:08Z",
         "by": "`muse` (medium), `gemini` (medium)",
@@ -4968,39 +4030,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38191784812",
-      "self_check_findings": [],
       "started_at": "2026-10-12T01:25:36Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "gemini"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38189765567",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38191784812",
-            "tier": "medium"
-          }
-        ],
-        "sha": "0dedb013bf6031293f36a737b479c499a170e93d",
-        "tiers": {
-          "gemini": "medium",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "694": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-12T01:49:26Z",
         "by": "`muse` (medium), `gemini` (medium)",
@@ -5023,35 +4057,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38192469026",
-      "self_check_findings": [],
       "started_at": "2026-10-12T01:36:03Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "gemini"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38189313515",
-            "tier": "medium"
-          },
-          {
-            "family": "gemini",
-            "run": "38192469026",
-            "tier": "medium"
-          }
-        ],
-        "sha": "a39edf8d25ce99e9f376b4e39c9306c619f798a5",
-        "tiers": {
-          "gemini": "medium",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "696": {
       "action": "plan",
@@ -5087,25 +4094,6 @@
       "started_at": "2026-10-12T03:05:30Z",
       "stop_requested": false,
       "taken_asks": []
-    },
-    "75": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-03T19:27:09Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_tier": "medium",
-      "pr": 167,
-      "provider": "muse",
-      "queued_at": "2026-10-01T19:19:16Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "37143921203",
-      "started_at": "2026-10-03T18:22:45Z",
-      "stop_requested": false
     },
     "88": {
       "action": "build",
@@ -9156,9 +8144,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-11T04:22:43Z",
-    "dropped": 19,
-    "shed": 18
+    "at": "2026-10-12T04:30:11Z",
+    "dropped": 33,
+    "shed": 24
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
