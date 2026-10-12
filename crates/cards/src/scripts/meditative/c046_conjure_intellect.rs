@@ -136,20 +136,27 @@ mod tests {
                     assert_ne!(pick, INTELLECT);
                 }
                 // Each card still as it was added: at its printed cost, on its base face.
-                for card in got.iter().filter(|card| picks.iter().any(|(id, _)| *id == card.id)) {
+                for card in got
+                    .iter()
+                    .filter(|card| picks.iter().any(|(id, _)| *id == card.id))
+                {
                     assert_eq!(card.cost_override, None);
                     assert!(!card.radiant);
                 }
             }
 
             #[test]
-            fn paid_they_cost_0_read_through_param() {
+            fn paid_they_cost_0() {
                 let s = cast("intellect-paid", false, true);
                 let got = added(&s);
                 assert_eq!(got.len(), 3);
                 for card in &got {
                     assert_eq!(card.cost_override, Some(0));
                 }
+            }
+
+            #[test]
+            fn set_cost_reads_through_param() {
                 // `setCost` is the declared number: tuned, the paid cards cost that.
                 let mut s = scenario(json!({
                     "seed": "intellect-paid-tuned",
@@ -162,9 +169,73 @@ mod tests {
                 }));
                 set_param(s.card_mut(INTELLECT), "setCost", 1);
                 s.play(INTELLECT, json!({ "embiggen": true }));
-                for card in added(&s) {
+                let got = added(&s);
+                assert_eq!(got.len(), 3);
+                for card in got {
                     assert_eq!(card.cost_override, Some(1));
                 }
+            }
+
+            #[test]
+            fn r387_each_a_non_token_card_of_any_set_never_itself() {
+                // The pools span the sets: KY and CN cards come from more than one.
+                for tag in ["KY", "CN"] {
+                    let sets: Vec<SetName> = pool_ids(json!({ "tags": [tag] }))
+                        .iter()
+                        .map(|id| crate::card_def(id).set)
+                        .fold(Vec::new(), |mut sets, set| {
+                            if !sets.contains(&set) {
+                                sets.push(set);
+                            }
+                            sets
+                        });
+                    assert!(sets.len() > 1, "{tag} cards of one set only: {sets:?}");
+                }
+                for n in 0..40 {
+                    let s = cast(&format!("intellect-sweep-{n}"), false, false);
+                    for event in s.events() {
+                        if let GameEvent::AddedToHand { player, def_id, .. } = event
+                            && *player == P1
+                        {
+                            assert_ne!(def_id, INTELLECT, "never itself (R387)");
+                            assert!(!crate::card_def(def_id).token, "{def_id} is a token");
+                        }
+                    }
+                }
+            }
+
+            #[test]
+            fn the_hand_cap_burns_in_that_order() {
+                // Eight cards stay after the play: the KY card and the CN card land, the Book burns.
+                let mut hand = vec![json!(INTELLECT)];
+                hand.extend(std::iter::repeat_n(json!(FILLER), HAND_CAP as usize - 2));
+                let mut s = scenario(json!({
+                    "seed": "intellect-cap",
+                    "p1": { "hand": hand, "library": [FILLER, FILLER], "mana": 4 },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                s.play(INTELLECT, json!({}));
+                assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
+                let landed: Vec<String> = s
+                    .events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::AddedToHand { player, def_id, .. } if *player == P1 => {
+                            Some(def_id.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(landed.len(), 2, "two land: {landed:?}");
+                assert!(pool_ids(json!({ "tags": ["KY"] })).contains(&landed[0]));
+                assert!(pool_ids(json!({ "tags": ["CN"] })).contains(&landed[1]));
+                let burned: Vec<CardInstance> = s
+                    .pile(P1, "graveyard")
+                    .into_iter()
+                    .filter(|card| card.def_id != INTELLECT && card.def_id != FILLER)
+                    .collect();
+                assert_eq!(burned.len(), 1, "the third, the Book, burns");
+                assert!(pool_ids(json!({ "tags": ["Book"] })).contains(&burned[0].def_id));
             }
         }
 

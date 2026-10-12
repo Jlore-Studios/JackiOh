@@ -48,6 +48,7 @@ mod tests {
     const EXPEDITION: &str = "meditative-019";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.
 
     /// p1's first turn (the scenario's default is turn 9), so its later turns are 3, 5, 7 and 9, and
     /// max mana reaches 4 on turn 9.
@@ -138,6 +139,64 @@ mod tests {
                 s.state().players.p1.graveyard.iter().any(|card| card.def_id == RIFT_ID),
                 "the Rift burns to the graveyard"
             );
+        }
+
+        #[test]
+        fn r640_it_is_quickdraw_on_both_faces() {
+            crate::register_all();
+            let scripts = script();
+            for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
+            }
+            assert!(crate::card_def(EXPEDITION).tags.contains(&Tag::Quickdraw));
+        }
+
+        #[test]
+        fn r844_each_lost_refresh_spends_its_rider() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION]));
+            s.play(EXPEDITION, json!({}));
+            for turn in [3, 5, 7] {
+                s.state_mut().players.p1.mana.next_turn_mod = 2;
+                s.end_turn();
+                s.end_turn();
+                assert_eq!(s.state().turn, turn);
+                assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn {turn}");
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0, "the rider spent on turn {turn}");
+            }
+        }
+
+        #[test]
+        fn r844_mana_gained_in_those_turns_still_adds() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION, COIN, COIN]));
+            s.play(EXPEDITION, json!({}));
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().players.p1.mana.current, 0);
+            s.play(COIN, json!({}));
+            assert_eq!(s.state().players.p1.mana.current, 1, "the Coin adds on a lost turn");
+        }
+
+        #[test]
+        fn r386_turns_tuned_reads_through_param() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION]));
+            step_param(s.card_mut(EXPEDITION), "turns", -1);
+            s.play(EXPEDITION, json!({}));
+            // Two lost refreshes, turns 3 and 5; turn 7 is normal.
+            for turn in [3, 5] {
+                s.end_turn();
+                s.end_turn();
+                assert_eq!(s.state().turn, turn);
+                assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn {turn}");
+            }
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().turn, 7);
+            let side = &s.state().players.p1;
+            assert!(side.mana.current > 0);
+            assert_eq!(side.mana.current, side.mana.max);
         }
 
         #[test]

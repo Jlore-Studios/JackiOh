@@ -57,6 +57,9 @@ mod tests {
     const WELL: &str = "core-006";
     const COIN: &str = "core-t-coin";
     const FILLER: &str = "core-005";
+    const HINDER: &str = "core-021"; // (0) Spell: your opponent has less mana next turn.
+    const JAMMED: &str = "core-036"; // (1) Spell: destroy a backrow card.
+    const SHEEPISH: &str = "core-041"; // Sheepish, a Trap to fill a backrow zone.
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER, FILLER, FILLER])
@@ -209,6 +212,127 @@ mod tests {
         // Summoned, so no Cry: every Well arrived by `summoned`, none by a Cry trigger.
         let summoned = s.events()[mark..].iter().filter(|event| matches!(event, GameEvent::Summoned { .. })).count();
         assert_eq!(summoned, 8, "eight Wells summoned");
+    }
+
+    /// `casting`, with every backrow zone but Fate's own lane 1 locked: no Well is ever summoned.
+    fn alone(seed: &str, hand: Value, p2_hand: Value) -> Scenario {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "mana": 10, "hand": hand, "library": library() },
+            "p2": { "hand": p2_hand, "library": library() },
+        }));
+        let state = s.state_mut();
+        for player in [P1, P2] {
+            for lane in 1..=5 {
+                if player == P1 && lane == 1 {
+                    continue;
+                }
+                lock_zone(state, ZoneSlot { player, row: Row::Backrow, lane });
+            }
+        }
+        s
+    }
+
+    #[test]
+    fn r941_a_refresh_under_it_gives_the_next_turn_rider_and_nothing_more() {
+        let mut s = alone("fate-rider", json!([FATE, COIN, FILLER]), json!([COIN, FILLER]));
+        s.play(FATE, json!({ "zone": 1 }));
+        s.state_mut().players.p2.mana.next_turn_mod = 3;
+        s.end_turn();
+        let side = &s.state().players[P2];
+        assert_eq!(side.mana.current, 3, "the rider alone");
+        assert_eq!(side.mana.max, 4, "max mana as usual");
+    }
+
+    #[test]
+    fn r941_hinder_still_works() {
+        let mut s = alone("fate-hinder", json!([FATE, HINDER, FILLER, FILLER]), json!([COIN, FILLER]));
+        s.play(FATE, json!({ "zone": 1 }));
+        s.state_mut().players.p2.mana.next_turn_mod = 3;
+        let hinder = crate::card_def(HINDER)
+            .params
+            .as_ref()
+            .and_then(|params| params.iter().find(|param| param.key == "mana").map(|param| param.base))
+            .expect("Hinder's number");
+        s.play(HINDER, json!({}));
+        s.end_turn();
+        assert_eq!(s.state().players[P2].mana.current, (3 - hinder).max(0), "Hinder still takes its share");
+    }
+
+    #[test]
+    fn r941_leaving_the_field_restores_natural_mana_from_the_next_refresh() {
+        let mut s = alone("fate-leaves", json!([FATE, JAMMED, FILLER]), json!([COIN, FILLER]));
+        s.play(FATE, json!({ "zone": 1 }));
+        let fate = s.card(FATE).id.clone();
+        s.play(JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": fate }] }));
+        s.expect_in_zone(&fate, "graveyard");
+        s.end_turn();
+        let side = &s.state().players[P2];
+        assert_eq!(side.mana.current, side.mana.max, "a natural refresh");
+        assert!(side.mana.max > 0);
+    }
+
+    #[test]
+    fn r942_the_active_side_first_lane_1_upward() {
+        let mut s = casting("fate-order", false);
+        s.play(FATE, json!({ "zone": 1 }));
+        let mark = s.events().len();
+        s.end_turn();
+        let order: Vec<(String, i64)> = s.events()[mark..]
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .map(|id| {
+                let card = s.card(&id);
+                (card.controller.as_str().to_string(), crate::js(&card.zone)["lane"].as_i64().unwrap_or(0))
+            })
+            .collect();
+        let expected: Vec<(String, i64)> = [("p1", 2), ("p1", 3), ("p1", 4), ("p1", 5)]
+            .into_iter()
+            .chain((1..=5).map(|lane| ("p2", lane)))
+            .map(|(player, lane)| (player.to_string(), lane))
+            .collect();
+        assert_eq!(order, expected);
+    }
+
+    #[test]
+    fn r942_an_occupied_zone_gets_no_well() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "fate-occupied",
+            "p1": { "mana": 10, "hand": [FATE, FILLER], "library": library() },
+            "p2": { "hand": [FILLER], "backrow": [{ "def": SHEEPISH, "lane": 3 }], "library": library() },
+        }));
+        s.play(FATE, json!({ "zone": 1 }));
+        s.end_turn();
+        assert_eq!(s.backrow(P2, 3).expect("the Trap stays").def_id, SHEEPISH);
+        let wells = (1..=5).filter(|lane| s.backrow(P2, *lane).is_some_and(|card| card.def_id == WELL)).count();
+        assert_eq!(wells, 4);
+    }
+
+    #[test]
+    fn r941_r942_each_well_gains_its_owner_mana_after_the_empty_refresh() {
+        let mut s = casting("fate-wells", false);
+        s.play(FATE, json!({ "zone": 1 }));
+        s.end_turn();
+        // p2's five Wells, one each, on top of an empty refresh.
+        assert_eq!(s.state().players[P2].mana.current, 5);
+        s.end_turn();
+        // p1's four.
+        assert_eq!(s.state().players[P1].mana.current, 4);
+    }
+
+    #[test]
+    fn r942_radiant_your_wells_give_2_mana_each_theirs_1() {
+        let mut s = casting("fate-radiant-mana", true);
+        s.play(FATE, json!({ "zone": 1 }));
+        s.end_turn();
+        assert_eq!(s.state().players[P2].mana.current, 5, "the opponent's base Wells");
+        s.end_turn();
+        assert_eq!(s.state().players[P1].mana.current, 8, "your four Radiant Wells, 2 each");
     }
 
     #[test]

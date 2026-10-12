@@ -91,6 +91,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::effects::{degrade, upgrade};
+    use jackioh_engine::replay::hash_state;
+    use jackioh_engine::resolve::{HookOptions, make_context};
+    use jackioh_engine::subsystems::ai_policy::choose_action;
+    use jackioh_engine::subsystems::craft::{
+        compile_crafted_scripts, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe,
+    };
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -237,6 +244,314 @@ mod tests {
                 held.iter().all(|card| !card.def_id.starts_with("craft:")),
                 "nothing crafted stays: {held:?}"
             );
+        }
+
+        /// The open craft prompt's presets, in order.
+        fn presets(s: &Scenario) -> Vec<CraftRecipe> {
+            s.state()
+                .pending
+                .clone()
+                .expect("the craft prompt is open")
+                .options
+                .iter()
+                .map(|option| match &option.selection {
+                    Selection::Craft { recipe } => recipe.clone(),
+                    other => panic!("a preset is a recipe, not {other:?}"),
+                })
+                .collect()
+        }
+
+        /// Refused with "cannot be crafted" and `reason`, the state unchanged and the prompt open.
+        fn refused(cost: i32, recipe: Value, reason: &str) {
+            let mut s = crafted_at(cost);
+            let before = hash_state(s.state());
+            s.expect_refused_with(|s| s.answer(json!([{ "pick": "craft", "recipe": recipe }])), reason);
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.kind),
+                Some(PromptKind::Craft),
+                "the prompt stays open"
+            );
+            assert_eq!(hash_state(s.state()), before, "the state is unchanged");
+        }
+
+        fn spell(cost: i32, effects: Value) -> Value {
+            json!({
+                "cost": cost, "type": "Spell", "adjective": "Pure", "noun": "Closure",
+                "attack": 0, "health": 1, "keywords": [], "echo": 0,
+                "hats": [{ "hat": "whenCast", "effects": effects }],
+            })
+        }
+
+        /// Craft `recipe` at its cost and hand back the scenario and the crafted card.
+        fn minted(recipe: Value) -> (Scenario, CardInstance) {
+            let cost = recipe["cost"].as_i64().expect("a cost") as i32;
+            let mut s = crafted_at(cost);
+            s.answer(json!([{ "pick": "craft", "recipe": recipe }]));
+            let card = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id.starts_with("craft:"))
+                .expect("the crafted card");
+            (s, card)
+        }
+
+        #[test]
+        fn r880_the_cost_is_a_number_prompt_from_0_to_4() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [ID], "mana": 10 },
+                "p2": { "hand": ["core-053"] },
+            }));
+            s.play(ID, json!({}));
+            let pending = s.state().pending.clone().expect("the cost prompt is open");
+            assert_eq!(pending.kind, PromptKind::Number);
+            assert_eq!(pending.player_id, P1);
+            let keys: Vec<&str> = pending.options.iter().map(|option| option.key.as_str()).collect();
+            assert_eq!(keys, vec!["mode:0", "mode:1", "mode:2", "mode:3", "mode:4"]);
+            assert_eq!(CRAFT_MAX_COST, 4);
+        }
+
+        #[test]
+        fn r881_the_presets_are_rolled_from_the_match_rng_within_the_budget() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [ID], "mana": 10 },
+                "p2": { "hand": ["core-053"] },
+            }));
+            s.play(ID, json!({}));
+            let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+            s.answer(json!(["3"]));
+
+            let offered = presets(&s);
+            let mut rng = Rng::new(&seed, cursor);
+            assert_eq!(offered, craft_presets(&mut rng, 3), "the match rng rolls them");
+            assert_eq!(s.state().rng_cursor, rng.cursor());
+            for recipe in &offered {
+                assert_eq!(recipe.cost, 3);
+                assert!(recipe_points(recipe) <= 2 + 5 * 3, "within the budget: {recipe:?}");
+                assert!(validate_recipe(recipe, 3).is_ok(), "{recipe:?}");
+            }
+        }
+
+        #[test]
+        fn r880_a_recipe_over_the_24_lines_is_refused() {
+            let damage = json!({ "verb": "damageTarget", "n": 1 });
+            let over_lines = json!({
+                "cost": 4, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+                "attack": 0, "health": 1, "keywords": [], "echo": 0,
+                "hats": [
+                    { "hat": "cry", "effects": [damage, damage, damage] },
+                    { "hat": "death", "effects": [damage, damage, damage] },
+                    { "hat": "startOfTurn", "effects": [damage, damage] },
+                ],
+            });
+            assert!(recipe_loc(&json_as(over_lines.clone())) > CRAFT_LOC_BUDGET);
+            assert_eq!(CRAFT_LOC_BUDGET, 24);
+            refused(4, over_lines, "lines, over the budget of 24");
+        }
+
+        #[test]
+        fn r880_a_recipe_of_more_than_8_effects_is_refused() {
+            let armor = json!({ "verb": "gainArmor", "n": 1 });
+            refused(
+                4,
+                spell(4, json!([armor, armor, armor, armor, armor, armor, armor, armor, armor])),
+                "more than 8",
+            );
+        }
+
+        #[test]
+        fn r880_a_spell_with_no_effect_is_refused() {
+            refused(
+                1,
+                json!({
+                    "cost": 1, "type": "Spell", "adjective": "Pure", "noun": "Closure",
+                    "attack": 0, "health": 1, "keywords": [], "echo": 0, "hats": [],
+                }),
+                "exactly one When cast",
+            );
+        }
+
+        #[test]
+        fn r880_a_trap_without_its_reveal_hat_is_refused() {
+            refused(
+                1,
+                json!({
+                    "cost": 1, "type": "Trap", "adjective": "Pure", "noun": "Closure",
+                    "attack": 0, "health": 1, "keywords": [], "echo": 0, "hats": [],
+                }),
+                "exactly one reveal hat",
+            );
+        }
+
+        #[test]
+        fn r882_its_id_is_the_recipes_digest_kept_on_the_definition() {
+            let recipe = unit_recipe(1, 3, 4);
+            let (s, card) = minted(recipe.clone());
+            let def = transient_of(&s, &card);
+            let parsed: CraftRecipe = json_as(recipe);
+            assert_eq!(card.def_id, craft_id(&parsed));
+            assert_eq!(def.id, craft_id(&parsed));
+            assert_eq!(def.craft.as_ref(), Some(&parsed));
+            // The same recipe always names the same id.
+            let (_, again) = minted(unit_recipe(1, 3, 4));
+            assert_eq!(again.def_id, card.def_id);
+        }
+
+        #[test]
+        fn r179_r468_r882_its_script_rebuilds_after_a_json_round_trip_and_a_replay() {
+            let (s, card) = minted(spell(1, json!([{ "verb": "damageEnemyHero", "n": 5 }])));
+            let tripped: GameState = serde_json::from_value(crate::js(s.state())).expect("the state round-trips");
+            let play = Action::new(
+                ActionBody::Play {
+                    instance_id: card.id.clone(),
+                    zone: None,
+                    x: None,
+                    embiggen: None,
+                    magnetic: None,
+                    tributes: None,
+                    targets: None,
+                    modes: None,
+                    plague: None,
+                    face_down: None,
+                },
+                P1,
+                "craft-replay".to_string(),
+            );
+            let live = reduce(s.state(), &play);
+            let after_trip = reduce(&tripped, &play);
+            assert_eq!(live.error, None);
+            assert_eq!(after_trip.error, None);
+            assert_eq!(after_trip.state.players.p2.hero.health, 25, "the rebuilt script deals its 5");
+            assert_eq!(hash_state(&after_trip.state), hash_state(&live.state), "it replays exactly");
+        }
+
+        #[test]
+        fn r882_its_loc_is_the_counted_lines() {
+            let recipe = spell(1, json!([{ "verb": "draw", "n": 2 }, { "verb": "healYourHero", "n": 2 }]));
+            let (s, card) = minted(recipe.clone());
+            let def = transient_of(&s, &card);
+            let lines = recipe_loc(&json_as(recipe));
+            assert_eq!(lines, 7);
+            assert_eq!(def.loc, Some(lines));
+        }
+
+        #[test]
+        fn every_number_is_a_param_that_a_nerf_or_a_buff_moves() {
+            // A cost-4 Spell dealing 10: its only movable row is the declared number.
+            for (verb, below) in [("degrade", true), ("upgrade", false)] {
+                let (mut s, card) = minted(spell(4, json!([{ "verb": "damageEnemyHero", "n": 10 }])));
+                let def = transient_of(&s, &card);
+                assert_eq!(def.params.as_ref().map(|params| params.len()), Some(1));
+                let change = json_as(json!({ "scope": { "zones": ["hand"] }, "random": 1 }));
+                let effect = if verb == "degrade" { degrade(change) } else { upgrade(change) };
+                let mut events: Vec<GameEvent> = Vec::new();
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions { controller: Some(P1), ..Default::default() },
+                    );
+                    (effect.apply)(&mut ctx);
+                }
+                s.state_mut().rng_cursor = rng.cursor();
+                s.state_mut().players.p1.mana.current = 10;
+                s.play(&card.id, json!({}));
+                let dealt = 30 - s.state().players.p2.hero.health;
+                if below {
+                    assert!(dealt < 10, "a Nerf lowers it: {dealt}");
+                } else {
+                    assert!(dealt > 10, "a Buff raises it: {dealt}");
+                }
+            }
+        }
+
+        #[test]
+        fn r883_only_cry_and_when_cast_take_targeted_blocks_each_declaring_its_target() {
+            let aimed = |hat: &str| {
+                json!({
+                    "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+                    "attack": 4, "health": 5, "keywords": [], "echo": 0,
+                    "hats": [{ "hat": hat, "effects": [{ "verb": "damageTarget", "n": 3 }] }],
+                })
+            };
+            refused(2, aimed("death"), "Cry or When cast");
+
+            let (s, card) = minted(aimed("cry"));
+            let scripts = compile_crafted_scripts(&transient_of(&s, &card).craft.expect("its recipe"));
+            assert_eq!(scripts.base.targets.len(), 1, "the Cry declares its own play-time target");
+
+            let (s, card) = minted(spell(2, json!([{ "verb": "damageTarget", "n": 3 }])));
+            let scripts = compile_crafted_scripts(&transient_of(&s, &card).craft.expect("its recipe"));
+            assert_eq!(scripts.base.targets.len(), 1, "When cast declares its own play-time target");
+        }
+
+        #[test]
+        fn the_ai_and_a_timeout_answer_only_with_presets() {
+            let s = crafted_at(2);
+            let offered = presets(&s);
+
+            let mut rng = Rng::new("craft-policy", 0);
+            match choose_action(s.state(), P1, &mut rng).expect("the policy answers") {
+                ActionBody::Answer { selection, .. } => match &selection[..] {
+                    [Selection::Craft { recipe }] => assert!(offered.contains(recipe)),
+                    other => panic!("one preset, not {other:?}"),
+                },
+                other => panic!("an answer, not {other:?}"),
+            }
+
+            let timed = reduce(
+                s.state(),
+                &json_as::<Action>(json!({ "type": "timeout", "playerId": "p1", "nonce": "craft-t1" })),
+            );
+            assert_eq!(timed.error, None);
+            let card = timed.state.players.p1.hand.iter().find(|card| card.def_id.starts_with("craft:")).expect("crafted");
+            let def = timed.state.transient_defs.get(&card.def_id).expect("its definition");
+            assert!(offered.contains(def.craft.as_ref().expect("its recipe")));
+        }
+
+        #[test]
+        fn r97_the_opponent_sees_only_an_open_prompt_then_a_hidden_card() {
+            let mut s = crafted_at(1);
+            let open = s.view(P2);
+            assert!(matches!(open.pending, Some(PendingView::Elsewhere(_))));
+            let text = serde_json::to_string(&open).expect("the view serializes");
+            assert!(!text.contains("recipe"), "no recipe leaks: {text}");
+
+            s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
+
+            let view = s.view(P2);
+            assert_eq!(view.pending, None);
+            let held = s.hand(P1).len() as i32;
+            assert!(matches!(view.opponent.hand, HandView::Count { count } if count == held));
+            assert!(
+                view.defs.as_ref().is_none_or(|defs| defs.keys().all(|id| !id.starts_with("craft:"))),
+                "no crafted def leaks"
+            );
+        }
+
+        #[test]
+        fn r880_the_editors_preview_reports_the_same_validity_as_the_reducer() {
+            for (recipe, cost, valid) in [
+                (unit_recipe(2, 5, 6), 2, true),
+                (unit_recipe(0, 1, 1), 0, true),
+                (unit_recipe(2, 10, 10), 2, false),
+                (unit_recipe(1, 3, 4), 2, false),
+            ] {
+                let preview = craft_preview(&json_as(recipe.clone()), cost);
+                assert_eq!(preview.valid, valid, "{recipe}");
+                assert_eq!(preview.reasons.is_empty(), valid);
+                let mut s = crafted_at(cost);
+                let answer = json!([{ "pick": "craft", "recipe": recipe }]);
+                if valid {
+                    s.answer(answer);
+                    assert!(s.state().pending.is_none());
+                } else {
+                    s.expect_refused_with(|s| s.answer(answer.clone()), "cannot be crafted");
+                }
+            }
         }
     }
 

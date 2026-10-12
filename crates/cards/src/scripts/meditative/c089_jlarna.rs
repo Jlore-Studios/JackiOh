@@ -90,6 +90,7 @@ mod tests {
 
     const FILLER: &str = "core-016";
     const VANILLA: &str = "core-008"; // (1) 4/4
+    const ALTERNATE_FATE: &str = "meditative-026"; // Aura: Players don't generate mana naturally.
 
     fn fielded(seed: &str, radiant: bool) -> Scenario {
         crate::scenario(json!({
@@ -153,7 +154,10 @@ mod tests {
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 1 })));
                 let id = s.card(ID).id.clone();
                 assert!(
-                    legal_actions(s.state(), P1).iter().map(js).all(|action| action["instanceId"] != json!(id)),
+                    legal_actions(s.state(), P1)
+                        .iter()
+                        .map(js)
+                        .all(|action| action["instanceId"] != json!(id)),
                     "unaffordable even with the line it would open",
                 );
             }
@@ -205,6 +209,122 @@ mod tests {
                 s.end_turn();
                 s.expect_in_zone(ID, "graveyard");
             }
+            #[test]
+            fn r1223_spend_mana_you_dont_have_owing_up_to_4_at_once() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = fielded("jlarna-limit", false);
+                assert_eq!(credit_available(s.state(), P1), 4);
+                for lane in 1..=4 {
+                    s.play(VANILLA, json!({ "zone": lane }));
+                }
+                assert_eq!(s.state().players.p1.mana.current, 0);
+                assert_eq!(owed_mana_of(s.state(), P1), 4);
+                // Hit Job (3) would owe 7: refused.
+                s.expect_refused(|s| s.play(FILLER, json!({})));
+            }
+
+            #[test]
+            fn r1224_a_shortfall_of_4_is_paid_1_1_1_1_one_per_refresh() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = fielded("jlarna-four", false);
+                for lane in 1..=4 {
+                    s.play(VANILLA, json!({ "zone": lane }));
+                }
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1]));
+                s.end_turn();
+                s.end_turn();
+                // p1's refresh gave 1 less than its max: one instalment paid.
+                let mana = s.state().players.p1.mana;
+                assert_eq!(mana.current, mana.max - 1);
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1]));
+            }
+
+            #[test]
+            fn r1224_a_missed_instalment_is_forgiven_never_carried() {
+                // Alternate Fate: "Players don't generate mana naturally" — p1's refresh gives
+                // nothing, so its instalment finds no mana and is forgiven.
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = crate::scenario(json!({
+                    "seed": "jlarna-missed",
+                    "p1": {
+                        "backrow": [ID],
+                        "hand": [VANILLA, VANILLA, VANILLA, VANILLA, FILLER],
+                        "library": [FILLER, FILLER],
+                        "mana": 0,
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "backrow": [ALTERNATE_FATE] },
+                }));
+                for lane in 1..=4 {
+                    s.play(VANILLA, json!({ "zone": lane }));
+                }
+                assert_eq!(owed_mana_of(s.state(), P1), 4);
+                s.end_turn();
+                s.end_turn();
+                // The missed 1 is gone, not added to the next: 1, 1, 1 still owed.
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1]));
+                assert_eq!(owed_mana_of(s.state(), P1), 3);
+            }
+
+            #[test]
+            fn r1224_the_debt_outlives_jlarna() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = fielded("jlarna-outlives", false);
+                for lane in 1..=4 {
+                    s.play(VANILLA, json!({ "zone": lane }));
+                }
+                s.end_turn();
+                s.end_turn();
+                // p1 borrows nothing this turn: Jlarna is Tributed at its end.
+                s.end_turn();
+                s.expect_in_zone(ID, "graveyard");
+                assert_eq!(owed_mana_of(s.state(), P1), 3);
+                s.end_turn();
+                // With no lender left, the next refresh still takes its instalment.
+                let mana = s.state().players.p1.mana;
+                assert_eq!(mana.current, mana.max - 1);
+                assert_eq!(owed_mana_of(s.state(), P1), 2);
+            }
+
+            #[test]
+            fn r1223_two_jlarnas_share_one_line() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = crate::scenario(json!({
+                    "seed": "jlarna-two",
+                    "p1": {
+                        "backrow": [ID, ID],
+                        "hand": [VANILLA, VANILLA, VANILLA, VANILLA, FILLER],
+                        "library": [FILLER, FILLER],
+                        "mana": 0,
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                assert_eq!(credit_available(s.state(), P1), 4, "one line of 4, not two");
+                for lane in 1..=4 {
+                    s.play(VANILLA, json!({ "zone": lane }));
+                }
+                assert_eq!(credit_available(s.state(), P1), 0);
+                s.expect_refused(|s| s.play(FILLER, json!({})));
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1]));
+            }
+
+            #[test]
+            fn r1223_r1224_credit_and_instalments_read_through_param() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = fielded("jlarna-tuned", false);
+                assert_eq!(crate::upgrade_number(&mut s, ID, "credit"), 5);
+                assert_eq!(credit_available(s.state(), P1), 5);
+                assert_eq!(crate::upgrade_number(&mut s, ID, "instalments"), 5);
+                // Borrow 5: two (1)s and a (3) Hit Job; 5 instalments of 1, not 2, 1, 1, 1.
+                s.play(VANILLA, json!({ "zone": 1 }));
+                s.play(VANILLA, json!({ "zone": 2 }));
+                let target = s.unit(P1, 1).unwrap().id;
+                s.play(
+                    FILLER,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": target }] }),
+                );
+                assert_eq!(owed_mana_of(s.state(), P1), 5);
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1, 1]));
+            }
         }
 
         mod radiant {
@@ -238,7 +358,10 @@ mod tests {
                         .clone()
                 };
                 assert_eq!((number("credit").base, number("credit").radiant), (4, 4));
-                assert_eq!((number("instalments").base, number("instalments").radiant), (4, 4));
+                assert_eq!(
+                    (number("instalments").base, number("instalments").radiant),
+                    (4, 4)
+                );
                 let entry = registered_entry(ID).expect("registered");
                 let flags = |face: &Script| face.static_flags.clone().unwrap_or_default();
                 assert_eq!(flags(&entry.base).credit_line, Some(4));

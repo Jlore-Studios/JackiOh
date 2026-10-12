@@ -63,9 +63,44 @@ mod tests {
     const TAOTIE: &str = "meditative-047";
     const BODY: &str = "core-012"; // Duplicating Felinors 3/4, the meal.
     const FILLER: &str = "core-005";
+    const MROW: &str = "core-086"; // "Miss" Mrow 1/1 Felinor, Can't attack, a Death.
+    const D_FENDER: &str = "core-001"; // Big D-fender 0/7: "Aura: … Defense Position … +2 Armor."
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: "End of turn: Deal 2 damage …".
+    const BIGOT: &str = "core-002"; // Bigot: "Cry: Destroy an enemy non-Human Unit."
+    const SAINTESS: &str = "core-081"; // Radiant Saintess 2/2: "Death: Make your other Units Radiant."
+    const SHEEPISH: &str = "core-041"; // a Trap, set face-down.
+    const BIG_FELINOR: &str = "core-043"; // the bottom of a Stack pile.
+    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack, the pile's top.
+    const WALL: &str = "meditative-097-7"; // The Great Wall, printed Immutable.
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
 
     fn meal(n: i32) -> Value {
         json!([{ "def": BODY, "lane": n }])
+    }
+
+    /// p1's 饕餮 in lane 1 (plus `mine`), facing `theirs` on p2's board, p1 to move.
+    fn table(seed: &str, mine: Value, theirs: Value) -> Scenario {
+        let mut field = vec![json!({ "def": TAOTIE, "lane": 1 })];
+        field.extend(mine.as_array().cloned().unwrap_or_default());
+        scenario(json!({
+            "seed": seed,
+            "p1": { "field": field, "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+            "p2": {
+                "field": theirs,
+                "hand": [ECLIPSE, FILLER],
+                "library": [FILLER, FILLER, FILLER],
+            },
+        }))
+    }
+
+    fn fused_def(s: &Scenario, card: &CardInstance) -> CardDef {
+        def_of(Some(s.state()), &s.card(card.id.as_str()).def_id).clone()
+    }
+
+    fn fused(s: &Scenario) -> bool {
+        s.events()
+            .iter()
+            .any(|event| matches!(event, GameEvent::Fused { .. }))
     }
 
     mod m47_taotie {
@@ -107,6 +142,203 @@ mod tests {
             }
 
             #[test]
+            fn r1020_only_at_your_end_of_turn_never_the_opponents() {
+                let mut s = scenario(json!({
+                    "seed": "taotie-their-end",
+                    "active": "p2",
+                    "p1": { "field": [{ "def": TAOTIE, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
+                    "p2": { "field": meal(1), "hand": [FILLER], "library": [FILLER] },
+                }));
+
+                s.end_turn();
+
+                // p2's turn ended, not p1's: nothing eaten.
+                assert_eq!(s.state().active, P1);
+                assert!(!fused(&s));
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(BODY.to_string()));
+                let taotie = s.unit(P1, 1).expect("taotie");
+                s.expect_stats(&taotie, json!({ "attack": 8, "health": 8 }));
+            }
+
+            #[test]
+            fn r1020_a_face_down_backrow_card_is_a_permanent_it_can_eat() {
+                let mut s = table(
+                    "taotie-face-down",
+                    json!([]),
+                    json!([{ "def": SHEEPISH, "row": "backrow", "faceUp": false }]),
+                );
+                let trap = s.backrow(P2, 1).expect("the face-down trap");
+
+                s.end_turn();
+
+                assert!(fused(&s));
+                assert!(s.backrow(P2, 1).is_none());
+                s.expect_in_zone(trap.id.as_str(), "gone");
+            }
+
+            #[test]
+            fn r1020_only_the_top_of_a_pile_is_eaten() {
+                let mut s = table(
+                    "taotie-pile",
+                    json!([]),
+                    json!([{ "def": BIG_FELINOR, "lane": 1 }, { "def": FIENDER, "stack": true }]),
+                );
+                let top = s.unit(P2, 1).expect("the pile's top");
+                assert_eq!(top.def_id, FIENDER);
+
+                s.end_turn();
+
+                // The Fiender on top went in; the Big Felinor under it stays in its lane.
+                assert!(fused(&s));
+                s.expect_in_zone(top.id.as_str(), "gone");
+                assert_eq!(
+                    s.unit(P2, 1).map(|unit| unit.def_id),
+                    Some(BIG_FELINOR.to_string())
+                );
+            }
+
+            #[test]
+            fn r23_never_an_immutable_enemy_permanent() {
+                let mut s = table(
+                    "taotie-immutable-meal",
+                    json!([]),
+                    json!([{ "def": WALL, "lane": 1 }]),
+                );
+
+                s.end_turn();
+
+                // The only enemy permanent is Immutable: nothing to eat.
+                assert!(!fused(&s));
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(WALL.to_string()));
+                let taotie = s.unit(P1, 1).expect("taotie");
+                s.expect_stats(&taotie, json!({ "attack": 8, "health": 8 }));
+            }
+
+            #[test]
+            fn r23_an_immutable_taotie_eats_nothing() {
+                let mut s = table("taotie-immutable", json!([]), meal(1));
+                let id = s.unit(P1, 1).expect("taotie").id;
+                find_instance_mut(s.state_mut(), &id)
+                    .expect("taotie")
+                    .granted_keywords
+                    .push(json_as(json!({ "kind": "Immutable" })));
+
+                s.end_turn();
+
+                assert!(!fused(&s));
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(BODY.to_string()));
+                assert_eq!(s.card(id.as_str()).def_id, TAOTIE);
+            }
+
+            #[test]
+            fn r1020_keywords_tags_and_text_joined_damage_kept_cost_4_and_no_death() {
+                let mut s = table("taotie-joined", json!([]), json!([{ "def": MROW, "lane": 1 }]));
+                let id = s.unit(P1, 1).expect("taotie").id;
+                s.card_mut(id.as_str()).damage = 2;
+                let mrow = s.unit(P2, 1).expect("mrow");
+
+                s.end_turn();
+
+                let after = s.card(id.as_str()).clone();
+                let def = fused_def(&s, &after);
+                // Stats summed (8 + 1 / 8 + 1), the 2 damage kept.
+                s.expect_stats(&after, json!({ "attack": 9, "maxHealth": 9, "health": 7 }));
+                assert_eq!(after.damage, 2);
+                // Keywords, tags and text joined; the cost 饕餮's (4).
+                let keywords = serde_json::to_string(&s.stats(&after).keywords).expect("JSON");
+                assert!(keywords.contains("Can't attack"), "{keywords}");
+                let tags = serde_json::to_value(&def.tags).expect("JSON");
+                assert!(tags.as_array().expect("tags").contains(&json!("CN")), "{tags}");
+                assert!(
+                    tags.as_array().expect("tags").contains(&json!("Felinor")),
+                    "{tags}"
+                );
+                assert!(
+                    def.base.text.contains("Fuse a random enemy permanent"),
+                    "{}",
+                    def.base.text
+                );
+                assert!(def.base.text.contains("Steal the Unit"), "{}", def.base.text);
+                assert_eq!(def.cost, CardCost::Fixed(4));
+                // The meal ceased to exist with no Death: never destroyed, never in a graveyard.
+                s.expect_in_zone(mrow.id.as_str(), "gone");
+                assert!(!s.events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::Destroyed { instance_id, .. } if *instance_id == mrow.id
+                )));
+                assert!(s.pile(P2, "graveyard").is_empty());
+            }
+
+            #[test]
+            fn r1020_a_fused_aura_covers_your_side() {
+                let mut s = table(
+                    "taotie-aura",
+                    json!([{ "def": BODY, "lane": 2, "position": "DEF" }]),
+                    json!([{ "def": D_FENDER, "lane": 1 }]),
+                );
+                let guard = s.unit(P1, 2).expect("p1's Defense Unit");
+                let before = s.stats(&guard).armor;
+
+                s.end_turn();
+
+                // The D-fender's aura now runs on 饕餮, for 饕餮's side: +2 Armor.
+                assert!(s.unit(P2, 1).is_none());
+                assert_eq!(s.stats(&guard).armor, before + 2);
+            }
+
+            #[test]
+            fn r1020_a_fused_end_of_turn_line_runs() {
+                let mut s = table("taotie-eot", json!([]), json!([{ "def": SHREDDER, "lane": 1 }]));
+
+                s.end_turn(); // p1's end: the Shredder is eaten.
+                assert!(s.unit(P2, 1).is_none());
+                s.end_turn(); // p2's turn passes.
+                let before = s.state().players.p2.hero.health;
+                s.end_turn(); // p1's end again: the fused Shredder's line hits the enemy hero.
+
+                s.expect_health(P2, before - 2);
+            }
+
+            #[test]
+            fn r1020_a_fused_cry_never_runs() {
+                let mut s = table(
+                    "taotie-cry",
+                    json!([{ "def": BODY, "lane": 2 }]),
+                    json!([{ "def": BIGOT, "lane": 1 }]),
+                );
+                let felinor = s.unit(P1, 2).expect("p1's non-Human Unit");
+
+                s.end_turn();
+
+                // Bigot's Cry would destroy p1's non-Human Felinors; a fusion fires no Cry.
+                assert!(fused(&s));
+                s.expect_in_zone(&felinor, "field");
+            }
+
+            #[test]
+            fn r1020_a_fused_death_fires_when_it_dies() {
+                let mut s = table(
+                    "taotie-death",
+                    json!([{ "def": BODY, "lane": 2 }]),
+                    json!([{ "def": SAINTESS, "lane": 1 }]),
+                );
+                let id = s.unit(P1, 1).expect("taotie").id;
+                let felinor = s.unit(P1, 2).expect("p1's other Unit");
+
+                s.end_turn(); // 饕餮 eats the Saintess: 10/10.
+                assert!(!s.card(&felinor).radiant);
+                s.card_mut(id.as_str()).damage = 7;
+                s.play(
+                    ECLIPSE,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
+                );
+
+                // 饕餮 died, and the Saintess's Death it carried made p1's other Unit Radiant.
+                s.expect_in_zone(id.as_str(), "graveyard");
+                assert!(s.card(&felinor).radiant);
+            }
+
+            #[test]
             fn r468_the_fused_definition_survives_json() {
                 let mut s = scenario(json!({
                     "seed": "taotie-json",
@@ -133,6 +365,37 @@ mod tests {
 
         mod radiant {
             use super::*;
+
+            #[test]
+            fn r1020_radiant_is_16_16() {
+                let mut s = scenario(json!({
+                    "seed": "taotie-radiant-stats",
+                    "p1": { "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
+                    "p2": { "hand": [FILLER], "library": [FILLER] },
+                }));
+                let taotie = s.unit(P1, 1).expect("taotie");
+                s.expect_stats(&taotie, json!({ "attack": 16, "health": 16 }));
+            }
+
+            #[test]
+            fn r23_radiant_never_eats_an_immutable_card_of_the_deck() {
+                let mut s = scenario(json!({
+                    "seed": "taotie-radiant-immutable",
+                    "p1": { "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
+                    "p2": { "field": meal(1), "hand": [FILLER], "library": [WALL, WALL, WALL] },
+                }));
+                let taotie = s.unit(P1, 1).expect("taotie");
+
+                s.end_turn();
+
+                // The field's meal went in; every deck card is Immutable, so the deck kept all three
+                // (one of them drawn as p2's turn began).
+                assert!(s.unit(P2, 1).is_none());
+                let walls = s.pile(P2, "library").len()
+                    + s.hand(P2).iter().filter(|card| card.def_id == WALL).count();
+                assert_eq!(walls, 3);
+                s.expect_stats(&taotie, json!({ "attack": 22, "health": 25 }));
+            }
 
             #[test]
             fn r1020_radiant_also_fuses_a_random_card_of_the_opponents_deck() {

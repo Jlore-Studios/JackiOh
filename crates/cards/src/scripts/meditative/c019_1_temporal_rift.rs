@@ -51,6 +51,10 @@ mod tests {
     const RIFT: &str = "meditative-019-1";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const WELL: &str = "core-006"; // (3) Field Spell: start of turn, gain 1 mana.
+
+    use jackioh_engine::resolve::{CastOptions, cast_card};
+    use jackioh_engine::triggers::{SettleOptions, settle};
 
     /// p1's first turn (the scenario's default is turn 9), so the extra turn is turn 2 and its max
     /// mana 2.
@@ -117,6 +121,118 @@ mod tests {
         }
 
         #[test]
+        fn r845_the_extra_turn_ticks_brittle_and_runs_start_of_turn_triggers() {
+            crate::register_all();
+            let ticked = std::rc::Rc::new(std::cell::Cell::new(0));
+            let seen = ticked.clone();
+            mock_brittle_tick(move |sink: &mut EngineSink<'_>, player: PlayerId| {
+                if player == PlayerId::P1 {
+                    seen.set(sink.state.turn);
+                }
+            });
+            let mut s = scenario(json!({
+                "seed": "temporal-rift-start",
+                "turn": 1,
+                "p1": {
+                    "hand": [RIFT],
+                    "field": [VANILLA],
+                    "backrow": [{ "def": WELL, "faceUp": true, "lane": 1 }],
+                    "library": [FILLER, FILLER, FILLER, FILLER],
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER] },
+            }));
+            s.play(RIFT, json!({}));
+            s.end_turn();
+            clear_seams();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(ticked.get(), 2, "the Brittle stage ran on the extra turn");
+            // Max mana 2, plus the Mana Well's start-of-turn 1.
+            assert_eq!(s.state().players.p1.mana.current, 3);
+        }
+
+        #[test]
+        fn r2_r845_the_turn_cap_counts_the_extra_turn() {
+            crate::register_all();
+            let mut s = board(json!([RIFT]));
+            s.state_mut().turn = TURN_CAP_PLAYER_TURNS - 1;
+            s.play(RIFT, json!({}));
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().turn, TURN_CAP_PLAYER_TURNS);
+            assert!(s.state().result.is_none());
+            s.end_turn();
+            let result = s.state().result.expect("the cap ends the game");
+            assert_eq!(result.reason, GameOverReason::TurnCap);
+        }
+
+        #[test]
+        fn r846_cast_on_the_opponents_turn_the_extra_turn_follows_your_next() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "temporal-rift-theirs",
+                "turn": 2,
+                "active": "p2",
+                "p1": { "hand": [RIFT, FILLER], "field": [VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER, FILLER] },
+            }));
+            let rift = s.card(RIFT).clone();
+            let mut events: Vec<GameEvent> = Vec::new();
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                cast_card(&mut sink, &rift, CastOptions { controller: Some(P1), ..Default::default() });
+                settle(&mut sink, SettleOptions::default());
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            assert_eq!(s.state().players.p1.extra_turns, Some(1));
+            // p2's turn ends into p1's normal turn, which the extra turn follows.
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players.p1.extra_turns, Some(1));
+            s.end_turn();
+            assert_eq!(s.state().active, P1, "the extra turn");
+            assert_eq!(s.state().players.p1.extra_turns, None);
+            s.end_turn();
+            assert_eq!(s.state().active, P2);
+        }
+
+        #[test]
+        fn r847_a_radiant_second_rift_grants_no_turn_and_resolves_the_rest() {
+            crate::register_all();
+            let mut s = board(json!([RIFT, { "def": RIFT, "radiant": true }, FILLER]));
+            let base = s.hand(P1).into_iter().find(|card| card.def_id == RIFT && !card.radiant).expect("base");
+            let shiny = s.hand(P1).into_iter().find(|card| card.radiant).expect("radiant");
+            s.play(&base.id, json!({}));
+            let library = s.state().players.p1.library.len();
+            s.play(&shiny.id, json!({}));
+            assert_eq!(s.state().players.p1.extra_turns, Some(1), "no second grant");
+            // Its riders still resolve: 2 drawn, 2 mana gained (10 - 2 - 2 + 2).
+            assert_eq!(s.state().players.p1.library.len(), library - 2);
+            assert_eq!(s.state().players.p1.mana.current, 8);
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            s.end_turn();
+            assert_eq!(s.state().active, P2, "only one extra turn");
+        }
+
+        #[test]
+        fn r845_the_opponents_next_turn_effects_wait_for_their_own_turn() {
+            crate::register_all();
+            let mut s = board(json!([RIFT]));
+            s.state_mut().players.p2.mana.next_turn_mod = 2;
+            s.play(RIFT, json!({}));
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players.p2.mana.next_turn_mod, 2, "still waiting on the extra turn");
+            s.end_turn();
+            assert_eq!(s.state().active, P2);
+            let side = &s.state().players.p2;
+            assert_eq!(side.mana.current, side.mana.max + 2, "it lands on p2's own turn");
+            assert_eq!(side.mana.next_turn_mod, 0);
+        }
+
+        #[test]
         fn r847_each_player_has_a_flag() {
             crate::register_all();
             let mut s = board(json!([RIFT]));
@@ -148,6 +264,24 @@ mod tests {
             s.end_turn();
             assert_eq!(s.state().active, P1);
             assert_eq!(s.state().players.p1.mana.current, 4);
+        }
+
+        #[test]
+        fn r386_radiant_numbers_read_through_param() {
+            crate::register_all();
+            let mut s = board(json!([{ "def": RIFT, "radiant": true }]));
+            s.state_mut().players.p1.mana.current = 2;
+            for key in ["mana", "nextMana", "draw"] {
+                step_param(s.card_mut(RIFT), key, 1);
+            }
+            let hand = s.hand(P1).len();
+            s.play(RIFT, json!({}));
+            assert_eq!(s.state().players.p1.mana.current, 3);
+            assert_eq!(s.hand(P1).len(), hand + 3 - 1);
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            // Turn 2's max (2) plus the tuned 3.
+            assert_eq!(s.state().players.p1.mana.current, 5);
         }
     }
 }
