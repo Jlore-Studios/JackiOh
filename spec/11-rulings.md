@@ -234,4 +234,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R1450]] is the reaper's sweep of open rows (issue #666, 2026-10-11)**: a room or a reserved match id still `open` five minutes past its `ceiling_at` (a room's expiry, a reservation's claim) is deleted, which frees the room code and both players, so a failed start whose cleanup failed too no longer locks two players out for good. It takes R1450, the first number free on `main` and on the open branches: issue #638's branch holds R1447 to R1449. It edits [[§9.5]].
 
+**[[R690000]] is the ruling numbers' new scheme (issue #690, 2026-10-12)**: every branch used to take the next free number, so two branches open at once took the same one and the second to merge renumbered its note, its tests and its citations. Now each issue owns a block of a thousand numbers, R(N×1000) to R(N×1000+999), so branches on different issues never meet, and every number before it stands. It takes R690000, the first number of issue #690's block. It edits `spec/README.md` (Note format, Adding a ruling) and CLAUDE.md rule 3.
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

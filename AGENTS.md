@@ -51,10 +51,11 @@ note in `spec/rulings/` plus a test named after it, checked by
 - **Pull requests** follow `.github/pull_request_template.md`: `Closes #n` or `Part of #n`, what
   changed, the tests run with their commands, the risks, the rulings and the patch version, and
   the gates. Commits on a branch say what they change; the squash commit takes the title.
-- **Ruling numbers** (`CLAUDE.md` rule 3): the next free one, the last row of `spec/INDEX.md` on
-  `main` plus one, named in the pull request. When two open pull requests take the same number,
-  the one that merges second renumbers its note, its tests and its index row before merging, and
-  `cargo jackioh spec check` catches a clash.
+- **Ruling numbers** (`CLAUDE.md` rule 3): the lowest one free in your issue's block (issue N
+  owns R(N×1000) to R(N×1000+999), so #690's first is R690000; a sub-issue uses its own number),
+  named in the pull request. Branches on different issues never clash; when two on one issue take
+  the same number, the one that merges second renumbers its note, its tests and its index row
+  within the block before merging, and `cargo jackioh spec check` catches a clash.
 - **Paths the bots may not change:** `.github/`, `bot/`, `.harness/`, `.squishy/`
   (`.github/CODEOWNERS` asks a person's review there).
 

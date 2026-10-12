@@ -50,7 +50,9 @@ as they are.
 
 ## Ruling numbers
 
-A new ruling takes the next free number (`CLAUDE.md` rule 3): the last row of `spec/INDEX.md` on
-`main` plus one. Name it in your pull request. If another open pull request took the same number,
-the one that merges second renumbers its note, its tests and its index row first;
-`cargo jackioh spec check` catches what it misses (`docs/issues-and-patches.md`, Ruling numbers).
+A new ruling takes the lowest number free in its issue's block (`CLAUDE.md` rule 3): issue N
+owns R(N×1000) to R(N×1000+999), so issue #690's first is R690000, and a pull request with no
+issue uses its own number. Name it in your pull request. If another open pull request on the same
+issue took the same number, the one that merges second renumbers its note, its tests and its index
+row first, within the block; `cargo jackioh spec check` catches what it misses
+(`docs/issues-and-patches.md`, Ruling numbers).
