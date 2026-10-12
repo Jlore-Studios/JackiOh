@@ -4307,13 +4307,13 @@
       "previous_branch": "bot/old/issue-724-20261012-2142",
       "previous_pr": 731,
       "previous_why": "it failed 3 times at `difficulty:medium` (`claude-7` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:29`: The Meditative release summary tells players the set is 'built around the Zenith, Flow and Focus mechanics', but no su; `claude-4` (claude, opus) rejected it: `apps/web/src/patches/releaseNotes.ts:37`: The Meditative set's practice AI bullet tells players the AI's decks leave the Meditative cards out until it has been ; `claude-6` (claude, opus) rejected it: `apps/web/src/p",
-      "provider": "claude-6",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-10-12T21:42:01Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "38315064527",
-      "started_at": "2026-10-12T22:10:51Z",
+      "run_id": "38317980861",
+      "started_at": "2026-10-12T22:41:06Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -5052,9 +5052,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T22:40:38Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38317939906",
-    "what": "revise #736 on claude-7"
+    "at": "2026-10-12T22:41:06Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38317980861",
+    "what": "build #724 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-12T22:34:21Z",
