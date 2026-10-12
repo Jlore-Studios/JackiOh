@@ -127,6 +127,12 @@ describe("the legal pages", () => {
     );
   });
 
+  it("R640001 the terms say ranked may pair a player with an AI opponent", () => {
+    render(<TermsRoute />);
+    const ranked = screen.getByRole("region", { name: "Ranked play" });
+    expect(ranked).toHaveTextContent("When no suitable opponent is available, ranked may pair you with an AI opponent.");
+  });
+
   it("open as drafts for the owner: their first source lines say so", () => {
     for (const file of ["terms.tsx", "accessibility.tsx"]) {
       const source = readFileSync(join(HERE, file), "utf8");

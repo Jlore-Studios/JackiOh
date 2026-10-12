@@ -137,7 +137,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave |
-| `GET` | `/api/queue/population` | user | open tickets, in total and per mode |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
@@ -324,10 +324,11 @@ foreign key to `auth.users` for triggers: inserting a person's profile still nee
 and deleting an auth user still deletes its profile, but a bot's profile needs none; and it limits
 the launch collection's backfill (`app.grant_launch_collection_all`, which every catalog stamp
 runs) to people, since a bot owns no collection. A bot's rating
-is a `bot_ratings` row (0022, R610). Nothing a client reads carries a profile's `kind`, a seat's
-pilot or a bot's nonces, and `GET /api/matches/:matchId/ranks` shows a bot's seat the rank its
-rating calls for among the placed players' ratings, on that tier's floor and below Mythic Grape
-unless more players stand in Mythic than Jlorious holds, since it has no season row (R1452). The human
+is a `bot_ratings` row (0022, R610), and its rank a `season_ranks` row its ranked games move as a
+person's move theirs, read against people's ratings alone (R640000). Nothing a client reads carries
+a profile's `kind`, a seat's pilot or a bot's nonces: `GET /api/leaderboard` and
+`GET /api/matches/:matchId/ranks` show a bot's row as a player's, and Jlorious and the percentiles
+read people's rows only, so a bot that would qualify stays Mythic Grape (R640000, R1452). The human
 side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
 with its bot id in `rated_games`, and is read only when a query asks for it (R1451).
 

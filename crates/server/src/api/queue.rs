@@ -48,8 +48,8 @@ use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
 use crate::config::{
-    BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_WAIT_MIN_SAMPLES,
-    QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
+    BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS,
+    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,

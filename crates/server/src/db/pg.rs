@@ -3348,8 +3348,8 @@ pub async fn tickets_claim_pair(
     .bind(match_id)
     .bind(at)
     .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
+    .await
+    .map_err(db_error)?;
     Ok(true)
 }
 

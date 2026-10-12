@@ -13,7 +13,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-03";
+export const TERMS_LAST_UPDATED = "2026-10-12";
 
 export default function TermsRoute(): ReactElement {
   return (
@@ -49,6 +49,10 @@ export default function TermsRoute(): ReactElement {
             JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game
             updates can change cards, mechanics, and progression.
           </p>
+        </section>
+        <section aria-labelledby="terms-ranked">
+          <h3 id="terms-ranked">Ranked play</h3>
+          <p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>
         </section>
         <section aria-labelledby="terms-contact">
           <h3 id="terms-contact">Contact</h3>
