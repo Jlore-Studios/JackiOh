@@ -13,6 +13,7 @@ import type { Plugin } from "vite";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./src/patches/releases.ts";
 import type { Patch } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
@@ -223,16 +224,35 @@ function almanacList(cards: CardDefs): string {
   return entries.join("\n");
 }
 
+const items = (lines: readonly string[]): string => `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
+
+/** R724000: every patch by release line, newest first, each with its player note (R724001), never its record's notes. */
 function patchList(patches: readonly Patch[]): string {
-  return [...patches]
-    .reverse()
-    .map(
-      (patch) =>
-        `<article><h2>${escapeHtml(`${patch.version} ${patch.title}`)}</h2>` +
-        `<p><time datetime="${escapeHtml(patch.date)}">${escapeHtml(patch.date)}</time></p>` +
-        (patch.notes === "" ? "" : `<p>${escapeHtml(patch.notes)}</p>`) +
-        "</article>",
-    )
+  return releaseGroups(patches, RELEASES)
+    .map(({ release, patches: group }) => {
+      const entries = group.map((patch) => {
+        const note = patch.player;
+        const sections =
+          note === undefined
+            ? ""
+            : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0)
+                .map(({ key, heading }) => `<h4>${escapeHtml(heading)}</h4>${items(note[key])}`)
+                .join("");
+        return (
+          `<article><h3>${escapeHtml(`${patch.version} ${playerTitle(patch)}`)}</h3>` +
+          `<p><time datetime="${escapeHtml(patch.date)}">${escapeHtml(patch.date)}</time></p>` +
+          sections +
+          "</article>"
+        );
+      });
+      return (
+        `<section><h2>${escapeHtml(release.name)}</h2>` +
+        (release.summary === "" ? "" : `<p>${escapeHtml(release.summary)}</p>`) +
+        (release.technical.length === 0 ? "" : `<h3>Technical changes</h3>${items(release.technical)}`) +
+        entries.join("\n") +
+        "</section>"
+      );
+    })
     .join("\n");
 }
 

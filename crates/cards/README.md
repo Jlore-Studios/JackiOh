@@ -240,18 +240,22 @@ cargo clippy -p jackioh-cards --all-targets -- -D warnings
 Every change to card data is a patch, and every patch is kept.
 
 - `patches/patches.json` lists every shipped patch in ship order (`{ version, date, title, source,
-  notes }`); `patches/<version>.json` is the whole catalog as that patch left it; `shipped.json`
+  notes, player }`, `player` the note players read on the Patch notes page, R724001);
+  `patches/<version>.json` is the whole catalog as that patch left it; `shipped.json`
   records each patch's commit and snapshot blob; `index.json` maps each card to the versions it
   changed in. Shipped snapshots are never amended.
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
-  the newest shipped snapshot). `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
+  the newest shipped snapshot). Its `player` note is written into the fragment by hand, since no flag
+  sets it, and kept when the command runs again (`docs/issues-and-patches.md`, Patch notes players
+  read). `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a version is
   neither a bare patch number nor a micro `vA.B.Y` (R650), or a fragment's title, sources or notes is
-  empty.
+  empty, and when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
+  an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
-  appends each fragment in first-parent order, snapshots the catalog, records `shipped.json`, deletes
+  appends each fragment in first-parent order with its player note, snapshots the catalog, records `shipped.json`, deletes
   the fragment and bumps the catalog version at every site that carries it (`render.yaml`,
   `crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.

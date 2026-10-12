@@ -112,6 +112,14 @@ describe("R388 the History section", () => {
     expect(entry(V1)).toHaveTextContent("Added in this patch.");
   });
 
+  it("R724000 a history entry names its patch by its player note's title", async () => {
+    renderDetail(fixtureDef(V3, "core-002"), fixtureSource(), true);
+    await screen.findAllByTestId(patchTestid.historyEntry);
+    expect(within(entry(V3)).getByRole("heading", { level: 4 })).toHaveTextContent(`${V3}2026-03-04Two fixture sets`);
+    expect(entry(V3)).not.toHaveTextContent("Two new sets");
+    expect(within(entry(V1)).getByRole("heading", { level: 4 })).toHaveTextContent("First cards");
+  });
+
   it("R388 a card only its first patch touched says \"Unchanged since\" that version", async () => {
     renderDetail(fixtureDef(V3, "classic-001"), fixtureSource(), true);
     expect(await screen.findByTestId(patchTestid.historyUnchanged)).toHaveTextContent(`Unchanged since ${V3}.`);

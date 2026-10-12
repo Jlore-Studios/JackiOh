@@ -154,8 +154,13 @@ cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --note
 ```
 
 It writes or updates `crates/cards/patches/pending/<version>.json`, containing the version, title,
-sources, notes and every catalog id the patch changes. It never changes the shipped history, its
-snapshots or the catalog version. `cargo jackioh patches check` must pass before the branch merges.
+sources, notes, the player note and every catalog id the patch changes. It never changes the shipped
+history, its snapshots or the catalog version. The player note, `player` (R724001), is what the Patch
+notes page shows of the patch: no flag sets it, so write it into the fragment by hand, a short title
+and one fact per line under `new`, `balance`, `changes`, `text` and `fixes`
+([issues-and-patches.md](issues-and-patches.md), Patch notes players read); running the command again
+keeps it. `cargo jackioh patches check` must pass before the branch merges, and fails while the note
+is empty.
 The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the
 catalog at the fragment's first-parent commit, appends the shipped patch and bumps the catalog version
 wherever it is written; the binaries compile it in from `patches.json`.

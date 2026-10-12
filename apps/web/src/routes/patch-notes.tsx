@@ -1,4 +1,4 @@
-// `/patch-notes`: the public Patch notes page (brief B4.2 item 5, R388, R507). Public, like the
+// `/patch-notes`: the public Patch notes page (brief B4.2 item 5, R388, R507, R724000). Public, like the
 // landing page and the privacy policy: the catalog and its history are public (§5.1), the data is
 // static files in the bundle's own chunks (patches/source.ts), and no account or server is needed.
 //
@@ -23,8 +23,8 @@ export default function PatchNotesRoute(): ReactElement {
             Patch notes
           </h1>
           <p className="patch-notes__intro">
-            Every change to JackiOh&rsquo;s cards, newest first. Open a patch to see the cards it touched, and a card to
-            see its whole history.
+            Every JackiOh patch, set by set, newest first. Open a set for its patches and technical changes, a
+            patch&rsquo;s cards to see what it touched, and a card for its whole history.
           </p>
         </header>
         <PatchNotes />

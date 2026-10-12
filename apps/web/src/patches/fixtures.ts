@@ -1,4 +1,5 @@
 // Fixture versions sort out of patch order: consumers must use patches.json order (R105 as B4.2 rewrites it).
+// V1 and V3 carry a player note (R724001); V2 has none, so the page falls back to its record's title.
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -79,6 +80,7 @@ export const FIXTURE_PATCHES: readonly Patch[] = [
     title: "The first cards",
     source: "Fixture commit 1",
     notes: "Four cards to start with.",
+    player: { title: "First cards", new: ["Four test cards."], balance: [], changes: [], text: [], fixes: [] },
     changes: [
       { id: "core-001", name: "Test Knight", kind: "added" },
       { id: "core-002", name: "Test Bolt", kind: "added" },
@@ -103,6 +105,14 @@ export const FIXTURE_PATCHES: readonly Patch[] = [
     title: "Two new sets",
     source: "Fixture commit 3",
     notes: "Classic and Classic+ arrive.",
+    player: {
+      title: "Two fixture sets",
+      new: ["Fresh Face, Pancake Pal and Syrup Token."],
+      balance: ["Test Bolt costs (2), up from (1)."],
+      changes: [],
+      text: [],
+      fixes: ["Quiet Golem records its lines of code."],
+    },
     changes: [
       { id: "core-002", name: "Test Bolt", kind: "changed", fields: ["cost", "params", "base.text", "radiant.keywords", "radiant.text"] },
       { id: "core-004", name: "Quiet Golem", kind: "changed", fields: ["loc"] },

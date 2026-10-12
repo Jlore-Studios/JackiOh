@@ -159,6 +159,37 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
 
+## Patch notes players read
+
+- **Players see the note, never the record (R724000, R724001).** A patch's `title`, `sources` and
+  `notes` are the history's: they may name issues, rulings and commits. The Patch notes page shows
+  its `player` note instead: `{ title, new, balance, changes, text, fixes }`.
+- **Write it by hand in the fragment.** `cargo jackioh patches …` has no flag for it: open
+  `pending/<version>.json` and fill in `player`. Running the command again (when the cards change)
+  keeps the note, `patches ship` carries it onto the shipped patch, and `patches check` fails until
+  it has a title and at least one line, and on a blank line, a line over 200 characters, or a
+  ruling (`R656`), an issue or card number (`#88`) or a `§`.
+- **The title** is a short phrase with no version, which the page shows beside it: "Gary the Gambler
+  buffed", not "Patch v0.2.Y: Buff Gary the Gambler".
+- **One fact per line, under its heading.**
+  - `new`: the cards, tokens, keywords and tags the patch brings.
+  - `balance`: a cost, stat, number or rarity, written from and to ("Hit Job costs (3), up from
+    (2).").
+  - `changes`: how a card or a rule plays.
+  - `text`: wording only, nothing plays differently.
+  - `fixes`: what was broken and now works.
+- **Only what that patch changed.** Take it from the patch's snapshot diff (the cards behind its
+  toggle) and its change, never from a pull request's title, and never say what the game does not
+  do yet.
+- **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
+  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
+- **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
+  (`apps/web/src/patches/releases.ts`), with `first` set to its first card patch, a summary and
+  its technical changes. The page shows one bubble per line, newest open.
+- **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
+  the engine, sound) adds one line to the newest line's `technical`, in its own pull request, in the
+  style of the lines there ("Background music and a main menu theme.").
+
 ## Pull requests
 
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it
