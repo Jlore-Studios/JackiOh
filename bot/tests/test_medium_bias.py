@@ -119,20 +119,21 @@ class WeakTierUntouchedTests(unittest.TestCase):
     def test_weak_builds_only_easy(self):
         self.assertEqual(MIN_TIER, {"easy": "weak", "medium": "medium", "hard": "strong"})
 
-    def test_a_weak_approval_counts_only_for_an_easy_item(self):
-        # A weak approval is an easy item's green light only (#695): recorded, never shipping,
-        # even beside a medium one.
-        self.assertFalse(review_rule.met(["weak", "medium"], "easy"))
+    def test_a_weak_approval_never_ships(self):
+        # A weak approval is a finding round, not a vote (#725): no weak review runs go out,
+        # and it never ships anything at any difficulty.
+        self.assertTrue(review_rule.met(["weak", "medium"], "easy"))  # the medium ships it
         self.assertFalse(review_rule.met(["weak", "medium"], "medium"))
         self.assertFalse(review_rule.met(["weak", "medium"], "hard"))
-        self.assertTrue(review_rule.helps([], "weak", "easy"))
+        self.assertFalse(review_rule.helps([], "weak", "easy"))
         self.assertFalse(review_rule.helps([], "weak", "medium"))
         self.assertFalse(review_rule.reachable([], {"weak"}, "easy"))
-        self.assertFalse(review_rule.reachable(["medium"], {"weak"}, "easy"))
-        # Only a Strong approval ships, weak ones never alone.
+        self.assertTrue(review_rule.reachable(["medium"], {"weak"}, "easy"))  # already met
+        # Only a Strong approval ships medium and hard; a medium one ships easy.
         self.assertTrue(review_rule.met(["strong"], "hard"))
         self.assertFalse(review_rule.met(["medium", "medium"], "hard"))
         self.assertFalse(review_rule.met(["weak"], "easy"))
+        self.assertTrue(review_rule.met(["medium"], "easy"))
 
 
 if __name__ == "__main__":

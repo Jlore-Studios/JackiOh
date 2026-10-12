@@ -258,7 +258,9 @@ def report(ctx: Context) -> str:
     last = state.get("last_run") or {}
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")
-    lines.append(f"- Up to {cfg.max_review_cycles} build and review rounds per item, after a "
+    cycles = cfg.max_review_cycles
+    lines.append(f"- Up to {cycles.get('medium', 3)} build and review rounds "
+                 f"per item ({cycles.get('hard', 10)} for a hard one), after a "
                  "plan on the planning lane (or by its builder when none is free), which goes "
                  "into the issue's description, by a medium or strong model for an easy or "
                  "unrated item and a strong one for the rest; the planner rates an unrated item. "

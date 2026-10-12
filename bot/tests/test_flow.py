@@ -9,8 +9,8 @@ from pathlib import Path
 
 from harness import plan as plan_mod
 from harness import queue as queue_mod
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_WORKING)
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
+                            LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING)
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner
 from harness.state import item as state_item
@@ -263,29 +263,25 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(len(h.gh.dispatches), 1)
         self.assertEqual([d["workflow"] for d in h.gh.dispatches], ["bot-night.yml"])
 
-    def test_a_rejected_build_becomes_a_draft_and_asks_for_help(self):
+    def test_a_rejected_build_goes_to_its_final_audit(self):
+        # Twice rejected in the run, the lane's rounds (2 here) are used: the kept work opens
+        # a ready pull request for its Strong final audit instead of drafting for a person.
         h = Harness(self)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                              "fix": builder({"src/game.txt": "v3\n"}),
                              "review": reviewer(changes("It breaks replay."))})
         _, result = h.night(runner)
-        self.assertEqual(result["status"], "not_approved")
+        self.assertEqual(result["status"], "built")
+        self.assertIn("Strong final audit", result["reason"])
         pull = h.gh.list_pulls(head="bot/issue-12")[0]
-        self.assertTrue(pull["draft"])
+        self.assertFalse(pull["draft"])
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(12), {LABEL_BLOCKED, "bot:planned", "bot:stuck"})
+        self.assertEqual(h.gh.label_names(int(pull["number"])), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(12), {LABEL_PR_OPEN, "bot:planned"})
         said = h.gh.bot_comments(12)[-1]
-        self.assertIn("It breaks replay.", said)
-        # It used every round (2 here), so it says why, round by round, for a person.
-        self.assertIn("After all 2 rounds the reviewer still had blocking findings", said)
-        self.assertIn("### Why it failed 2 times", said)
-        self.assertIn("**The reviewer blocked 2 of 2 reviewed round(s)**", said)
-        self.assertIn("It breaks replay. (×2)", said)  # a finding the builder never settled
-        self.assertIn("| 2 | fix on `", said)
-        self.assertIn("Labelled `bot:stuck`", said)
-        self.assertEqual(h.ctx.store.load()["items"]["12"]["last_findings"][0]["claim"],
-                         "It breaks replay.")
+        self.assertIn("Its own reviewer read it 2 time(s) in the run", said)
+        self.assertIn("one strong model's final audit (Opus)", said)
 
     def test_an_interrupted_build_keeps_its_branch_and_resumes(self):
         h = Harness(self)
@@ -481,7 +477,9 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(h.gh.label_names(40), {LABEL_PR})
         self.assertIn("PR_40", h.gh.auto_merge)
 
-    def test_a_revision_the_reviewer_rejects_is_not_pushed(self):
+    def test_a_revision_the_reviewer_rejects_goes_to_its_final(self):
+        # Twice rejected, the lane's rounds (2 here) are used: the kept revision is pushed for
+        # its Strong final audit, merging nothing by itself (#725).
         h = Harness(self)
         start = push_branch(h.origin, h.root, "bot/issue-12", {"src/game.txt": "v2\n"})
         git(h.clone, "fetch", "-q", "origin")
@@ -490,9 +488,10 @@ class FlowTests(unittest.TestCase):
                              "fix": builder({"src/game.txt": "worse\n"}),
                              "review": reviewer(changes("No."))})
         _, result = h.night(runner)
-        self.assertEqual(result["status"], "not_approved")
-        self.assertEqual(h.origin_sha("bot/issue-12"), start)
-        self.assertEqual(h.gh.label_names(40), {LABEL_PR, LABEL_BLOCKED, "bot:stuck"})
+        self.assertEqual(result["status"], "built")
+        self.assertNotEqual(h.origin_sha("bot/issue-12"), start)
+        self.assertEqual(h.gh.label_names(40), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.auto_merge, {})
 
     def test_suggestions_open_issues_up_to_the_cap(self):
         h = Harness(self)
@@ -534,14 +533,16 @@ class ReactionTests(unittest.TestCase):
         record = h.ctx.store.load()["items"]["12"]
         self.assertEqual((record["asks"], record["taken_asks"]), ([], []))
 
-    def test_a_build_the_reviewer_will_not_pass_ends_without_an_answer(self):
+    def test_a_build_the_reviewer_will_not_pass_goes_to_its_final(self):
+        # The lane's rounds run out without an approval, so the kept work goes to its final
+        # audit (#725): the run finished with an answer, not without one.
         h = Harness(self)
         h.gh.add_issue(12)
         ask(h, 12, "@jgoetzmann-bot make the rules v2", 32)
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "fix": builder({"src/game.txt": "v3\n"}),
                             "review": reviewer(changes("It breaks replay."))}))
-        self.assertEqual(reacted(h, 32)[-2:], ["heart", "confused"])
+        self.assertEqual(reacted(h, 32)[-2:], ["heart", "hooray"])
 
     def test_an_interrupted_run_gives_its_asks_back_for_the_next(self):
         h = Harness(self)
