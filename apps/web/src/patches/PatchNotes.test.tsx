@@ -351,7 +351,7 @@ describe("R724000 the Patch notes page by release line", () => {
       expect(within(entry).getByTestId(patchTestid.note)).toBeInTheDocument();
       expect(entry).not.toHaveTextContent(patch?.source ?? "");
     }
-    // Every line but the earliest's technical changes are shown once opened.
+    // Every line that has technical changes shows them once it is opened.
     expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.filter((release) => release.technical.length > 0).length);
   }, 30_000);
 });

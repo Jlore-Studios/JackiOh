@@ -187,8 +187,10 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
   (`apps/web/src/patches/releases.ts`), with `first` set to its first card patch, a summary and
   its technical changes. The page shows one bubble per line, newest open.
 - **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
-  the engine, sound) adds one line to the newest line's `technical`, in its own pull request, in the
-  style of the lines there ("Background music and a main menu theme.").
+  the engine, sound) adds one line to the `technical` of its major version's line, the newest, in its
+  own pull request, in the style of the lines there ("Background music and a main menu theme."). A
+  major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
+  is Meditative's.
 
 ## Pull requests
 
