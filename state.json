@@ -6701,14 +6701,18 @@
         {
           "at": "2026-10-12T06:02:10Z",
           "minutes": 12.1
+        },
+        {
+          "at": "2026-10-12T06:31:42Z",
+          "minutes": 25.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T10:40:00Z",
-          "utilization": 0.11
+          "utilization": 0.5
         },
-        "observed_at": "2026-10-12T06:02:10Z",
+        "observed_at": "2026-10-12T06:31:42Z",
         "status": "allowed"
       }
     },
