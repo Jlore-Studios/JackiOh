@@ -4204,7 +4204,7 @@
       "taken_asks": []
     },
     "724": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -4224,11 +4224,11 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
-      "provider": "agy",
+      "provider": "muse",
       "queued_at": "2026-10-12T12:34:22Z",
       "requested_by": "jgoetzmann",
-      "run_id": "38250067467",
-      "started_at": "2026-10-12T12:37:21Z",
+      "run_id": "38252949584",
+      "started_at": "2026-10-12T13:03:25Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4256,9 +4256,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T12:57:45Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38252308262",
-    "what": "suggestions on muse"
+    "at": "2026-10-12T13:03:25Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38252949584",
+    "what": "build #724 on muse"
   },
   "last_sweep": {
     "at": "2026-10-12T12:56:43Z",
