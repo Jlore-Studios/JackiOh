@@ -4530,9 +4530,7 @@
       "run_id": "38269827527",
       "started_at": "2026-10-12T15:24:01Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6126907150"
-      ]
+      "taken_asks": []
     },
     "736": {
       "action": "revise",
