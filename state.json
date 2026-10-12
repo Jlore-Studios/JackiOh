@@ -4342,6 +4342,13 @@
       "action": "build",
       "asks": [],
       "died": 0,
+      "difficulty_by": {
+        "at": "2026-10-12T18:49:08Z",
+        "difficulty": "medium",
+        "provider": "sweep",
+        "tier": "",
+        "why": "planned with no rating, so medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
