@@ -6,8 +6,9 @@
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
+import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
@@ -48,10 +49,16 @@ export type CardDetailProps = {
  * Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)".
  */
 export function detailMetaLine(def: CardDef): string {
+  // R711000: the frame's words in the reader's language (chinese.ts), the catalog's English otherwise.
+  const terms = readerTerms();
+  const typeWord = (type: CardType): string => terms?.types[type] ?? type;
   const radiantType = def.radiant.type;
-  const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
-  const parts = [`#${def.index}`, def.set, def.rarity, type];
-  if (def.tags.length > 0) parts.push(def.tags.join(", "));
+  const type =
+    radiantType !== undefined && radiantType !== def.type
+      ? t("{type} (Radiant: {radiant})", { type: typeWord(def.type), radiant: typeWord(radiantType) })
+      : typeWord(def.type);
+  const parts = [`#${def.index}`, t(def.set), terms?.rarities[def.rarity] ?? def.rarity, type];
+  if (def.tags.length > 0) parts.push(def.tags.map((tag) => terms?.tags[tag] ?? tag).join(t(", ")));
   if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }

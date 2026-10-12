@@ -225,8 +225,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
         </span>
 
         {face.element != null && (
-          <span className="cf-element" data-testid="card-element" title={t("Element {element}", { element: face.element })}>
-            {face.element}
+          <span className="cf-element" data-testid="card-element" title={t("Element {element}", { element: t(face.element) })}>
+            {t(face.element)}
           </span>
         )}
 

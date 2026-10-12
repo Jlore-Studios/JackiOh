@@ -3,6 +3,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
 import {
   isTutorialHidden,
@@ -40,22 +41,22 @@ function LockIcon(): ReactElement {
 function statusText(status: LessonStatus, lesson: TutorialLesson, isNext: boolean): string {
   switch (status) {
     case "completed":
-      return "Completed";
+      return t("Completed");
     case "locked":
-      return `Finish lesson ${String(lesson.number - 1)} first`;
+      return t("Finish lesson {n} first", { n: lesson.number - 1 });
     case "unlocked":
-      return isNext ? "Up next" : "Open";
+      return isNext ? t("Up next") : t("Open");
   }
 }
 
 function buttonLabel(status: LessonStatus): string {
   switch (status) {
     case "completed":
-      return "Replay";
+      return t("Replay");
     case "locked":
-      return "Locked";
+      return t("Locked");
     case "unlocked":
-      return "Start";
+      return t("Start");
   }
 }
 
@@ -85,15 +86,15 @@ function LessonNode({
       </span>
       <div className="tutorial-lesson__card">
         <p className="tutorial-lesson__kicker">
-          Lesson {lesson.number}
-          {isNext ? <span className="tutorial-lesson__next"> · Up next</span> : null}
+          {t("Lesson {number}", { number: lesson.number })}
+          {isNext ? <span className="tutorial-lesson__next"> · {t("Up next")}</span> : null}
         </p>
-        <h3 className="tutorial-lesson__title">{lesson.title}</h3>
-        <p className="tutorial-lesson__summary">{lesson.summary}</p>
-        <ul className="tutorial-lesson__chips" aria-label="What it teaches">
+        <h3 className="tutorial-lesson__title">{t(lesson.title)}</h3>
+        <p className="tutorial-lesson__summary">{t(lesson.summary)}</p>
+        <ul className="tutorial-lesson__chips" aria-label={t("What it teaches")}>
           {lesson.mechanics.map((mechanic) => (
             <li key={mechanic} className="tutorial-lesson__chip">
-              {mechanic}
+              {t(mechanic)}
             </li>
           ))}
         </ul>
@@ -111,7 +112,7 @@ function LessonNode({
             className={`tutorial-lesson__button tutorial-lesson__button--${status}${isNext ? " tutorial-lesson__button--next" : ""}`}
             data-testid={tutorialTestid.lessonStart(lesson.id)}
             aria-disabled={locked ? "true" : undefined}
-            aria-label={`${label}: lesson ${String(lesson.number)}, ${lesson.title}`}
+            aria-label={t("{label}: lesson {number}, {title}", { label, number: lesson.number, title: t(lesson.title) })}
             aria-describedby={statusId}
             onClick={() => {
               if (!locked) onStart(lesson);
@@ -127,6 +128,7 @@ function LessonNode({
 }
 
 export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
+  useLocale();
   const progress = useTutorialProgress();
   const headingId = useId();
   const listId = useId();
@@ -160,10 +162,10 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
       >
         <p className="tutorial-path-hidden__text">
           <span className="tutorial-path-hidden__title" id={headingId}>
-            Tutorial hidden
+            {t("Tutorial hidden")}
           </span>
           <span className="tutorial-path-hidden__progress">
-            {done} of {total} lessons complete
+            {t("{done} of {total} lessons complete", { done, total })}
           </span>
         </p>
         <button
@@ -176,7 +178,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
             setTutorialHidden(false);
           }}
         >
-          Show tutorial
+          {t("Show tutorial")}
         </button>
       </section>
     );
@@ -192,12 +194,12 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
       <div className="tutorial-path__head">
         <div className="tutorial-path__heading">
           <h2 className="tutorial-path__title" id={headingId}>
-            Learn to play
+            {t("Learn to play")}
           </h2>
           <p className="tutorial-path__intro">
             {allDone
-              ? "Every lesson is done. Replay any of them whenever you like."
-              : "Short guided games against a gentle AI. Finish one to open the next."}
+              ? t("Every lesson is done. Replay any of them whenever you like.")
+              : t("Short guided games against a gentle AI. Finish one to open the next.")}
           </p>
         </div>
         <div className="tutorial-path__summary">
@@ -207,7 +209,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
                 <i key={lesson.id} data-done={lessonStatus(progress, lesson) === "completed" ? "true" : "false"} />
               ))}
             </span>
-            {done} of {total} lessons complete
+            {t("{done} of {total} lessons complete", { done, total })}
           </p>
           {next !== undefined && done > 0 ? (
             <button
@@ -218,7 +220,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
                 onStart(next);
               }}
             >
-              Continue: Lesson {next.number}
+              {t("Continue: Lesson {number}", { number: next.number })}
             </button>
           ) : null}
           {!allDone ? (
@@ -232,7 +234,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
                 setTutorialHidden(true);
               }}
             >
-              Hide tutorial
+              {t("Hide tutorial")}
             </button>
           ) : null}
           {allDone ? (
@@ -247,7 +249,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
                 setOpenChoice(!open);
               }}
             >
-              {open ? "Hide lessons" : "Show lessons"}
+              {open ? t("Hide lessons") : t("Show lessons")}
             </button>
           ) : null}
         </div>

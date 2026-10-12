@@ -60,7 +60,7 @@ function plainCopy(view: PlayerView): UnitView | undefined {
 }
 
 /** Retires an end-turn prompt once its turn is past. */
-function endTurnOn(n: number, options: { id: string; title: string; text: string; when?: (ctx: CoachCtx) => boolean }): CoachStep {
+function endTurnOn(n: number, options: { id: string; title: CoachStep["title"]; text: CoachStep["text"]; when?: (ctx: CoachCtx) => boolean }): CoachStep {
   const { when, ...rest } = options;
   return {
     kind: "act",

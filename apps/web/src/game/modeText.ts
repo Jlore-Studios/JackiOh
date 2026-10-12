@@ -6,6 +6,10 @@
 // what each option does. This map gives each one a label and a line of detail, written from the
 // card's §8 text, keyed by the card's id and the option string. The option string stays the key the
 // answer sends; an option this map does not know is printed with a capital letter and no detail.
+// The words are English here and read in the reader's language where they are handed out
+// (`modeText`, through `t()`): the Chinese card table has each card's text, not its options' words.
+
+import { t } from "../i18n/i18n.ts";
 
 type ModeText = { label: string; detail: string };
 
@@ -102,9 +106,14 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   },
 };
 
+/** A mode's words in the reader's language. */
+function read(text: ModeText): ModeText {
+  return { label: t(text.label), detail: t(text.detail) };
+}
+
 /**
- * An option's label and detail for card `defId` on the face it will resolve with (`radiant`); an
- * unknown one is its own word, capitalised.
+ * An option's label and detail for card `defId` on the face it will resolve with (`radiant`), in the
+ * reader's language; an unknown one is its own word, capitalised.
  */
 export function modeText(
   defId: string | undefined,
@@ -112,8 +121,8 @@ export function modeText(
   radiant = false,
 ): { label: string; detail?: string } {
   const face = radiant && defId !== undefined ? RADIANT_MODE_TEXT[defId]?.[option] : undefined;
-  if (face !== undefined) return face;
+  if (face !== undefined) return read(face);
   const known = defId === undefined ? undefined : MODE_TEXT[defId]?.[option];
-  if (known !== undefined) return known;
-  return { label: option.length === 0 ? option : `${option.charAt(0).toUpperCase()}${option.slice(1)}` };
+  if (known !== undefined) return read(known);
+  return { label: option.length === 0 ? option : t(`${option.charAt(0).toUpperCase()}${option.slice(1)}`) };
 }

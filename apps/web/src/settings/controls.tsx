@@ -97,7 +97,7 @@ function SelectRow(props: {
   return (
     <div className="settings-row">
       <label className="settings-control" htmlFor={`${id}-select`}>
-        <span className="settings-label">{t(props.label)}</span>
+        <span className="settings-label">{props.label}</span>
         <select
           id={`${id}-select`}
           className="settings-select"
@@ -116,7 +116,7 @@ function SelectRow(props: {
         </select>
       </label>
       <p className="settings-hint" id={`${id}-hint`}>
-        {t(props.hint)}
+        {props.hint}
       </p>
     </div>
   );
@@ -134,8 +134,8 @@ export function FxControls(): ReactElement {
         }}
       />
       <SelectRow
-        label="Effects intensity"
-        hint="Fire, sparks, light rays and the board shake. Off keeps the card motion only."
+        label={t("Effects intensity")}
+        hint={t("Fire, sparks, light rays and the board shake. Off keeps the card motion only.")}
         testId="setting-fxIntensity"
         value={settings.intensity}
         options={INTENSITIES}

@@ -93,7 +93,7 @@ import {
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
-import { t, useLocale } from "../i18n/i18n.ts";
+import { isZhCn, t, useLocale } from "../i18n/i18n.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { CraftEditor } from "./craft/CraftEditor.tsx";
 import MarketPrompt from "./MarketPrompt.tsx";
@@ -258,17 +258,24 @@ function cardRefFor(view: PlayerView, instanceId: string): CardRef | null {
  */
 function whereOf(view: PlayerView, instanceId: string): string | null {
   for (const side of [view.you, view.opponent]) {
-    const whose = side === view.you ? "Your" : "Enemy";
+    // One whole sentence per side, so "Your" and "Enemy" are the reader's words too.
+    const yours = side === view.you;
     const unitAt = side.units.findIndex((pile) => pile !== null && pile.instanceId === instanceId);
-    if (unitAt >= 0) return `${whose} unit, lane ${String(unitAt + 1)}`;
+    if (unitAt >= 0) {
+      const lane = String(unitAt + 1);
+      return yours ? t("Your unit, lane {lane}", { lane }) : t("Enemy unit, lane {lane}", { lane });
+    }
     const backrowAt = side.backrow.findIndex(
       (slot) => slot !== null && slot.faceDown === false && slot.instanceId === instanceId,
     );
-    if (backrowAt >= 0) return `${whose} backrow, lane ${String(backrowAt + 1)}`;
+    if (backrowAt >= 0) {
+      const lane = String(backrowAt + 1);
+      return yours ? t("Your backrow, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
+    }
     const hand = Array.isArray(side.hand) ? side.hand : [];
-    if (hand.some((card) => card.instanceId === instanceId)) return `${whose} hand`;
-    if (side.graveyard.some((card) => card.instanceId === instanceId)) return `${whose} graveyard`;
-    if (side.exile.some((card) => card.instanceId === instanceId)) return `${whose} exile`;
+    if (hand.some((card) => card.instanceId === instanceId)) return yours ? t("Your hand") : t("Enemy hand");
+    if (side.graveyard.some((card) => card.instanceId === instanceId)) return yours ? t("Your graveyard") : t("Enemy graveyard");
+    if (side.exile.some((card) => card.instanceId === instanceId)) return yours ? t("Your exile") : t("Enemy exile");
   }
   return null;
 }
@@ -285,7 +292,12 @@ function itemForInstance(view: PlayerView, instanceId: string, fallback: string)
 
 /** Lanes are 1-based, as `contract.ts` and the engine's `zones.ts` have them. */
 function zoneLabel(row: string, lane: number): string {
-  return `${row === "units" ? "Unit" : "Backrow"} lane ${lane}`;
+  return row === "units" ? t("Unit lane {lane}", { lane }) : t("Backrow lane {lane}", { lane });
+}
+
+/** A zone grid's row heading: the row's own word, "units" or "backrow". */
+function rowName(row: string): string {
+  return row === "units" ? t("units") : row === "backrow" ? t("backrow") : row;
 }
 
 function selectionLabel(view: PlayerView, selection: Selection): string {
@@ -293,15 +305,19 @@ function selectionLabel(view: PlayerView, selection: Selection): string {
     case "instance":
       return cardRefFor(view, selection.instanceId)?.defId ?? selection.instanceId;
     case "hero":
-      return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} hero`;
-    case "zone":
-      return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} ${zoneLabel(selection.row, selection.lane)}`;
+      return sideOf(view, selection.player) === "you" ? t("Your hero") : t("Enemy hero");
+    case "zone": {
+      const { lane } = selection;
+      const yours = sideOf(view, selection.player) === "you";
+      if (selection.row === "units") return yours ? t("Your Unit lane {lane}", { lane }) : t("Enemy Unit lane {lane}", { lane });
+      return yours ? t("Your Backrow lane {lane}", { lane }) : t("Enemy Backrow lane {lane}", { lane });
+    }
     case "mode":
-      return selection.option;
+      return t(selection.option);
     case "craft":
       return `${selection.recipe.adjective} ${selection.recipe.noun}`;
     case "none":
-      return "Nothing";
+      return t("Nothing");
   }
 }
 
@@ -315,18 +331,23 @@ function pickerForPending(
   legal: readonly ActionBody[],
 ): Picker {
   const items = pending.options.map((option): PickerItem => {
-    const base: PickerItem = { key: option.key, label: option.label };
+    // The engine's words for the option, in the reader's language where the dictionary has them.
+    const base: PickerItem = { key: option.key, label: t(option.label) };
     if (option.defId !== undefined) base.defId = option.defId;
     // B5 E17, E18: a card the view lists nowhere (the opponent's hand, C #11) is drawn from the
     // option itself, Radiant and at its cost where the option says so.
     if (option.radiant === true) base.radiant = true;
     if (option.chinese === true) base.chinese = true;
     if (option.cost !== undefined) base.cost = option.cost;
-    if (option.row !== undefined) base.group = option.row;
+    if (option.row !== undefined) base.group = rowName(option.row);
     // R514: a `cell` is a zone of either side, so its list groups by side and row, lane by lane.
     if (pending.kind === "cell" && option.player !== undefined && option.row !== undefined && option.lane !== undefined) {
-      base.group = `${sideOf(view, option.player) === "you" ? "Your" : "Enemy"} ${option.row}`;
-      base.label = `Lane ${String(option.lane)}`;
+      const yours = sideOf(view, option.player) === "you";
+      base.group =
+        option.row === "units"
+          ? yours ? t("Your units") : t("Enemy units")
+          : yours ? t("Your backrow") : t("Enemy backrow");
+      base.label = t("Lane {lane}", { lane: String(option.lane) });
     }
     if (option.instanceId !== undefined) {
       const ref = cardRefFor(view, option.instanceId);
@@ -353,7 +374,8 @@ function pickerForPending(
   const picker: Picker = {
     chrome,
     ...(cards ? { cards } : {}),
-    title: pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt,
+    // The engine's prompt, in the reader's language where the dictionary has it.
+    title: t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
     items,
     min: pending.min,
     max: pending.max,
@@ -412,10 +434,13 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
 
 /** "Pay in mana only", "Spend 2 Plague Counters", and where they come from when several cards pay. */
 function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
-  if (option === "none") return "Pay in mana only";
-  const tokens = `Spend ${String(option.tokens)} Plague ${option.tokens === 1 ? "Counter" : "Counters"}`;
+  if (option === "none") return t("Pay in mana only");
+  const n = String(option.tokens);
   const where = nameSource ? whereOf(view, option.from) : null;
-  return where === null ? tokens : `${tokens} (${where})`;
+  if (where === null) return option.tokens === 1 ? t("Spend {n} Plague Counter", { n }) : t("Spend {n} Plague Counters", { n });
+  return option.tokens === 1
+    ? t("Spend {n} Plague Counter ({where})", { n, where })
+    : t("Spend {n} Plague Counters ({where})", { n, where });
 }
 
 /** The card the play (or activation) in flight is building, as the view lists it. */
@@ -446,7 +471,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
           label: zoneLabel(zone.row, zone.lane),
-          group: zone.row,
+          group: rowName(zone.row),
         })),
         submit: (keys) => {
           const zone = keys[0] === undefined ? null : parseZoneKey(keys[0]);
@@ -598,7 +623,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         title: numbers ? t("Choose a number") : isDirection(need.options) ? t("Choose a direction") : t("Choose one"),
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
-          if (arrow !== undefined) return { key: option, label: option, arrow };
+          if (arrow !== undefined) return { key: option, label: t(option), arrow };
           const text = modeText(source, option, radiant);
           return text.detail === undefined
             ? { key: option, label: text.label }
@@ -648,7 +673,7 @@ function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | unde
 
 /** What an embiggen option pays, in R432's words: "Pay (4)". */
 function priceLine(face: FaceModel): string {
-  return face.cost.text === UNKNOWN_PRICE ? "Pay the embiggen price" : `Pay (${face.cost.text})`;
+  return face.cost.text === UNKNOWN_PRICE ? t("Pay the embiggen price") : t("Pay ({cost})", { cost: face.cost.text });
 }
 
 /** R1301: the option's card is shown in Chinese, by the option or by the card the view lists. */
@@ -712,10 +737,11 @@ function CardOption(props: {
   const verdict = props.verdicts === true ? (props.pressed ? "keep" : "redraw") : undefined;
   // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads, in
   // R432's words ("costs (3)").
-  const faceLabel = `${name}, costs (${face?.cost.text ?? ""})`;
+  const faceLabel = t("{name}, costs ({cost})", { name, cost: face?.cost.text ?? "" });
   const named =
-    face === null ? (number === null ? undefined : `Number ${number}`) : caption === undefined ? faceLabel : `${caption}: ${faceLabel}`;
-  const label = props.over === true && named !== undefined ? `${named}, ${OVER_BUDGET.toLowerCase()}` : named;
+    face === null ? (number === null ? undefined : t("Number {n}", { n: number })) : caption === undefined ? faceLabel : `${caption}: ${faceLabel}`;
+  // R515: OVER_BUDGET's words in lower case after the name.
+  const label = props.over === true && named !== undefined ? t("{name}, over the budget", { name: named }) : named;
   return (
     <>
       <button
@@ -729,7 +755,7 @@ function CardOption(props: {
         aria-pressed={props.pressed}
         aria-disabled={props.over === true ? "true" : undefined}
         aria-label={label}
-        title={props.over === true ? OVER_BUDGET : undefined}
+        title={props.over === true ? t(OVER_BUDGET) : undefined}
         onClick={props.onPick}
         {...inspect.handlers}
       >
@@ -763,7 +789,7 @@ function CardOption(props: {
         )}
         {verdict === undefined ? null : (
           <span className="prompt-card-verdict" aria-hidden="true">
-            {verdict === "keep" ? "Keep" : "Redraw"}
+            {verdict === "keep" ? t("Keep") : t("Redraw")}
           </span>
         )}
       </button>
@@ -832,13 +858,15 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
   const face = props.sourceCard === undefined ? null : liveFace(info, props.sourceCard);
   const inspect = useInspectTrigger(face === null ? null : { key: `prompt-source:${face.defId}`, face }, { prefer: "above", showLoc: false });
   if (props.sourceDefId === undefined) return <p className="prompt-title">{props.title}</p>;
+  // R711000: the asking card's name as a reader of Chinese reads it.
+  const name = nameOf(props.sourceDefId, info, isZhCn());
   return (
     <p className="prompt-title">
       {face === null ? (
-        <span className="prompt-title-source">{info.name}</span>
+        <span className="prompt-title-source">{name}</span>
       ) : (
         <span className="prompt-title-source prompt-title-source--inspect" data-testid="prompt-title-source" {...inspect.handlers}>
-          {info.name}
+          {name}
         </span>
       )}
       <span className="prompt-title-ask">{props.title}</span>
@@ -884,7 +912,7 @@ function CardChoice(props: {
     <>
       {budget === undefined ? null : (
         <p className="prompt-budget" data-testid="prompt-budget" role="status">
-          ({props.spent}) of ({budget.limit}) spent
+          {t("({spent}) of ({limit}) spent", { spent: props.spent, limit: budget.limit })}
         </p>
       )}
       <div className="prompt-cards" data-testid="prompt-cards" data-choice={picker.chrome}>
@@ -999,7 +1027,7 @@ function PromptModal(props: {
 
     if (picker.variant === "plague") {
       return (
-        <div className="prompt-chips prompt-plague" role="group" aria-label="Plague Counters">
+        <div className="prompt-chips prompt-plague" role="group" aria-label={t("Plague Counters")}>
           {items.map((item) => (
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
           ))}
@@ -1062,8 +1090,8 @@ function PromptModal(props: {
       };
       return (
         <>
-          <div className="prompt-stepper" data-testid="x-stepper" role="group" aria-label="Choose X">
-            <button type="button" data-testid="x-minus" aria-label="Lower X" onClick={() => step(-1)}>
+          <div className="prompt-stepper" data-testid="x-stepper" role="group" aria-label={t("Choose X")}>
+            <button type="button" data-testid="x-minus" aria-label={t("Lower X")} onClick={() => step(-1)}>
               −
             </button>
             {/* The number is both typeable and readable: `prompt-x` is the input the value is
@@ -1082,7 +1110,7 @@ function PromptModal(props: {
             <span className="prompt-stepper-value" data-testid="x-value">
               {items[at]?.label ?? ""}
             </span>
-            <button type="button" data-testid="x-plus" aria-label="Raise X" onClick={() => step(1)}>
+            <button type="button" data-testid="x-plus" aria-label={t("Raise X")} onClick={() => step(1)}>
               +
             </button>
           </div>
@@ -1119,7 +1147,7 @@ function PromptModal(props: {
         <div
           className="prompt-numbers"
           role="group"
-          aria-label="Numbers"
+          aria-label={t("Numbers")}
           style={{ "--pad-columns": String(NUMBER_PAD_COLUMNS) } as CSSProperties}
           onKeyDown={arrowFocus(NUMBER_PAD_COLUMNS)}
         >
@@ -1132,7 +1160,7 @@ function PromptModal(props: {
 
     if (picker.chrome === "answer") {
       return (
-        <div className="prompt-answers" role="group" aria-label="Answers" onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
+        <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
           {items.map((item, at) => {
             const letter = ANSWER_LETTERS[at] ?? String(at + 1);
             return (
@@ -1158,7 +1186,7 @@ function PromptModal(props: {
 
     if (picker.chrome === "reward") {
       return (
-        <div className="prompt-rewards" role="group" aria-label="Rewards">
+        <div className="prompt-rewards" role="group" aria-label={t("Rewards")}>
           {items.map((item) => (
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
           ))}
@@ -1212,7 +1240,7 @@ function PromptModal(props: {
         ) : null}
         <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
         <p className="prompt-count">
-          Choose {range}: {selected.length} chosen
+          {t("Choose {range}: {count} chosen", { range, count: selected.length })}
         </p>
         {props.status}
         {body()}
@@ -1260,7 +1288,7 @@ function Waiting(props: { pendingFor: PlayerId }) {
         data-pending-for={props.pendingFor}
         role="dialog"
         aria-modal="true"
-        aria-label="Waiting for choice"
+        aria-label={t("Waiting for choice")}
       >
         <p className="prompt-title">{t("Waiting for choice")}</p>
         <p className="prompt-sub" role="status">
@@ -1301,12 +1329,14 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
     ...(copied === undefined ? {} : { copied }),
   });
   const verdict = props.keep ? "keep" : "redraw";
+  // R711000: the card's name as a reader of Chinese reads it.
+  const name = isZhCn() ? chineseName(props.card.defId, info.name, info.def) : info.name;
   return (
     <span
       className="prompt-card"
       data-testid={`mulligan-waiting-card-${props.card.instanceId}`}
       data-verdict={verdict}
-      aria-label={`${info.name}: ${props.keep ? "kept" : "going back"}`}
+      aria-label={props.keep ? t("{name}: kept", { name }) : t("{name}: going back", { name })}
       role="img"
     >
       <span className="cf-option">
@@ -1347,7 +1377,9 @@ function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
         <p className="prompt-sub" role="status">
           {back === 0
             ? t("You're ready and keeping your whole hand.")
-            : `You're ready. ${String(back)} ${back === 1 ? "card goes" : "cards go"} back and ${back === 1 ? "is" : "are"} redrawn once your opponent is ready too.`}
+            : back === 1
+              ? t("You're ready. {count} card goes back and is redrawn once your opponent is ready too.", { count: back })
+              : t("You're ready. {count} cards go back and are redrawn once your opponent is ready too.", { count: back })}
         </p>
         <MatchCardsProvider view={props.view}>
           <div className="prompt-cards">

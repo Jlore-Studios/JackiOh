@@ -10,7 +10,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
-import { t } from "../../i18n/i18n.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckEditor from "./DeckEditor.tsx";
@@ -348,6 +348,7 @@ function neighbourOf<T extends { id: string }>(items: readonly T[], id: string):
 
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
+  useLocale();
 
   const [store] = useState<DeckStore>(() =>
     createDeckStore({

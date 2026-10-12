@@ -10,6 +10,7 @@ import { useSyncExternalStore, type CSSProperties, type ReactElement } from "rea
 
 import type { PlayerId, PlayerView } from "@jackioh/shared";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
 import { OUTCOME_TITLE, type PracticeOutcome } from "../practice/PracticeResult.tsx";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
@@ -43,6 +44,7 @@ export function TutorialHud({
   onShowResult,
   onExit,
 }: TutorialHudProps): ReactElement {
+  useLocale();
   const coach = useSyncExternalStore(tracker.subscribe, tracker.getState, tracker.getState);
   const display = coach.display;
   const over = outcome !== null;
@@ -64,9 +66,9 @@ export function TutorialHud({
           {lesson.number}
         </span>
         <span className="tutorial-hud__label">
-          <span className="practice-hud__mode tutorial-hud__mode">Tutorial ·</span>
+          <span className="practice-hud__mode tutorial-hud__mode">{t("Tutorial ·")}</span>
           <strong className="tutorial-hud__title">
-            Lesson {lesson.number}: {lesson.title}
+            {t("Lesson {number}: {title}", { number: lesson.number, title: t(lesson.title) })}
           </strong>
         </span>
       </span>
@@ -74,7 +76,7 @@ export function TutorialHud({
         <span className="tutorial-hud__step" data-testid={tutorialTestid.step}>
           <span className="tutorial-hud__step-text">
             <span className="tutorial-hud__step-long">
-              Step {stepNumber} of {stepCount}
+              {t("Step {n} of {total}", { n: stepNumber, total: stepCount })}
             </span>
             <span className="tutorial-hud__step-short" aria-hidden="true">
               {stepNumber}/{stepCount}
@@ -98,7 +100,7 @@ export function TutorialHud({
             data-outcome={outcome}
             onClick={onShowResult}
           >
-            {OUTCOME_TITLE[outcome]}
+            {t(OUTCOME_TITLE[outcome])}
           </button>
         )}
       </span>
@@ -107,12 +109,12 @@ export function TutorialHud({
         className="tutorial-hud__exit"
         data-testid={tutorialTestid.exit}
         aria-haspopup={over ? undefined : "dialog"}
-        aria-label="Exit tutorial"
+        aria-label={t("Exit tutorial")}
         onClick={onExit}
       >
-        <span className="tutorial-hud__long">Exit tutorial</span>
+        <span className="tutorial-hud__long">{t("Exit tutorial")}</span>
         <span className="tutorial-hud__short" aria-hidden="true">
-          Exit
+          {t("Exit")}
         </span>
       </button>
     </header>

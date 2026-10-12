@@ -120,3 +120,13 @@ files and your fragment.
 
 The files you changed; what you left English and why; each display site of engine or server text
 you wrapped; the commands you ran and their results.
+
+## Run 8 additions
+
+- Fragments from earlier agents already exist (`B-board.json`, `E-auth-account.json`,
+  `F1-stats-landing.json`, `G1-practice-emotes.json`); the scanner counts them. Never edit another
+  area's fragment: write only your own, named in your task. If an existing entry (in `zh-CN.json`
+  or a fragment) is wrong, say so in your report with the fix; do not edit it.
+- An earlier agent may have half-converted your files. Read each file whole and finish it.
+- A tutorial step's `title`/`text` may be a string (looked up by `textOf`, so the literal is a key:
+  add it to your fragment) or a function returning a built `t(…)` line.

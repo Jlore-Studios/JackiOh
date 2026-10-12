@@ -22,6 +22,8 @@
 
 import type { Tag } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
+
 /** §8 #98, the one card whose text in play is the power it rolled. */
 export const HEROIC_POWER_ID = "core-098";
 
@@ -121,19 +123,27 @@ export function powerTitle(power: RolledPower, radiant: boolean): string {
  * then on a line of its own its Activate and X and its words, R366's layout — with the card's
  * numbers (`{shot}`, `{ping}`, …) filled in from `values`. Only the rolled power shows, so the other twelve add no
  * clutter. Null for a name this table does not know, which leaves the printed text in place.
+ * `translate` (R711000): the power's name and words in the reader's language, for a face drawn in it;
+ * the English is what the glossary's terms are found in, so it is never translated.
  */
 export function powerText(
   power: RolledPower,
   radiant: boolean,
   keywordLine: string,
   values: Readonly<Record<string, number>> = {},
+  translate = false,
 ): string | null {
   const entry = POWER_WORDS[power.name];
   if (entry === undefined) return null;
-  const words = (radiant ? entry.radiant : entry.base).replace(/\{(\w+)\}/g, (whole, key: string) =>
+  const say = (english: string): string => (translate ? t(english) : english);
+  const words = say(radiant ? entry.radiant : entry.base).replace(/\{(\w+)\}/g, (whole, key: string) =>
     values[key] === undefined ? whole : String(values[key]),
   );
-  const clause = `${radiant ? entry.radiantTitle : entry.title}\nActivate: Spend (${String(entry.x)}): ${words}`;
+  const title = say(radiant ? entry.radiantTitle : entry.title);
+  const line = translate
+    ? t("Activate: Spend ({x}): {words}", { x: entry.x, words })
+    : `Activate: Spend (${String(entry.x)}): ${words}`;
+  const clause = `${title}\n${line}`;
   return keywordLine === "" ? clause : `${keywordLine}\n${clause}`;
 }
 

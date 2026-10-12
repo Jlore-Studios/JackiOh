@@ -93,7 +93,7 @@ function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
   );
 }
 
-export default function UsernameField({ token, onSaved, label = "Username", disabled = false }: UsernameFieldProps): ReactElement {
+export default function UsernameField({ token, onSaved, label, disabled = false }: UsernameFieldProps): ReactElement {
   const id = useId();
   const hintId = `${id}-hint`;
   const previewId = `${id}-preview`;
@@ -157,7 +157,7 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
 
   return (
     <form className="form-card username-field" noValidate onSubmit={save}>
-      <label htmlFor={id}>{t(label)}</label>
+      <label htmlFor={id}>{label ?? t("Username")}</label>
       <input
         id={id}
         data-testid={usernameTestid.input}

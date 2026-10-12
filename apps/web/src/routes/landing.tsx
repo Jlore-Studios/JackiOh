@@ -13,7 +13,9 @@ import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
+import { readerName } from "../cards/chinese.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -217,7 +219,7 @@ function LandingFanCard({
         data-radiant={radiant ? "true" : undefined}
         role="button"
         tabIndex={0}
-        aria-label={`Read ${def.name}`}
+        aria-label={t("Read {name}", { name: readerName(def) })}
         {...inspect.handlers}
         onClick={() => {
           onOpen(def);
@@ -286,7 +288,7 @@ function Corner({ account }: { account: Account }): ReactElement | null {
         data-testid={landingTestid.account}
         onClick={followInApp(paths.account)}
       >
-        Account
+        {t("Account")}
       </a>
     );
   }
@@ -297,23 +299,23 @@ function Corner({ account }: { account: Account }): ReactElement | null {
       data-testid={landingTestid.signIn}
       onClick={followInApp(paths.login)}
     >
-      Sign in
+      {t("Sign in")}
     </a>
   );
 }
 
 function Actions(): ReactElement {
   return (
-    <nav className="landing-ctas" aria-label="Play">
+    <nav className="landing-ctas" aria-label={t("Play")}>
       <a
         className="landing-cta landing-cta--primary"
         href={paths.practice}
         data-testid={landingTestid.playAi}
         onClick={followInApp(paths.practice)}
       >
-        Play vs AI
+        {t("Play vs AI")}
       </a>
-      <p className="landing-cta-note">No account needed. Pick a difficulty and play.</p>
+      <p className="landing-cta-note">{t("No account needed. Pick a difficulty and play.")}</p>
       <div className="landing-ctas-secondary">
         <a
           className="landing-cta landing-cta--secondary"
@@ -321,7 +323,7 @@ function Actions(): ReactElement {
           data-testid={landingTestid.playOnline}
           onClick={followInApp(paths.play)}
         >
-          Play online
+          {t("Play online")}
         </a>
         <a
           className="landing-cta landing-cta--secondary"
@@ -329,12 +331,12 @@ function Actions(): ReactElement {
           data-testid={landingTestid.buildDecks}
           onClick={followInApp(paths.decks)}
         >
-          Build decks
+          {t("Build decks")}
         </a>
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>
-        Online play is invite-only for now: you&rsquo;ll need an invite code after signing up.
+        {t("Online play is invite-only for now: you’ll need an invite code after signing up.")}
       </p>
       {DEV_ONLY ? (
         // Production has no hotseat route; it boots from this full page load's query.

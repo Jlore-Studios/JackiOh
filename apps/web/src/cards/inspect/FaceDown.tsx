@@ -11,6 +11,7 @@
 import { useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardBack } from "../CardBack.tsx";
 import { FACE_ASPECT } from "../constants.ts";
 import { FACE_DOWN_HINT, FACE_DOWN_TITLE, costPhrase } from "../faceDown.ts";
@@ -38,15 +39,16 @@ function BigBack({ cost }: FaceDownProps): ReactElement {
 
 /** The words beside it: what it is, its cost and who can see it. */
 function Words({ cost }: FaceDownProps): ReactElement {
+  useLocale();
   return (
     <span className="inspect-facedown-words">
-      <span className="inspect-facedown-title">{FACE_DOWN_TITLE}</span>
+      <span className="inspect-facedown-title">{t(FACE_DOWN_TITLE)}</span>
       {cost === undefined ? null : (
         <span className="inspect-facedown-cost" data-testid={INSPECT_FACE_DOWN_COST} data-cost={cost}>
-          {costPhrase(cost)}
+          {t(costPhrase(cost))}
         </span>
       )}
-      <span className="inspect-facedown-hint">{FACE_DOWN_HINT}</span>
+      <span className="inspect-facedown-hint">{t(FACE_DOWN_HINT)}</span>
     </span>
   );
 }
@@ -81,6 +83,7 @@ export function FaceDownPreview({ cost, anchor, prefer = "beside" }: FaceDownPro
 }
 
 export function FaceDownSheet({ cost, onClose }: FaceDownProps & { onClose: () => void }): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   return createPortal(
@@ -92,7 +95,7 @@ export function FaceDownSheet({ cost, onClose }: FaceDownProps & { onClose: () =
         data-mode="sheet"
         role="dialog"
         aria-modal="true"
-        aria-label={FACE_DOWN_TITLE}
+        aria-label={t(FACE_DOWN_TITLE)}
       >
         <span className="inspect-grip" aria-hidden="true" />
         <div className="inspect-sheet-body">
@@ -102,7 +105,7 @@ export function FaceDownSheet({ cost, onClose }: FaceDownProps & { onClose: () =
           <Words cost={cost} />
         </div>
         <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>,

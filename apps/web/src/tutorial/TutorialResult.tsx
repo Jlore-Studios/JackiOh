@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from 
 import { DIFFICULTIES, TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 import type { PlayerId, PlayerView } from "@jackioh/shared";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "../practice/config.ts";
 import { outcomeOf } from "../practice/PracticeResult.tsx";
 import { DIFFICULTY_LABEL } from "../practice/Tier.tsx";
@@ -59,9 +60,11 @@ function Emblem({ won, number }: { won: boolean; number: number }): ReactElement
 
 /** "Easy, Medium or Hard", in the tiers' order. */
 function tierList(): string {
-  const labels = DIFFICULTIES.map((tier) => DIFFICULTY_LABEL[tier]);
-  const last = labels.pop();
-  return labels.length === 0 ? (last ?? "") : `${labels.join(", ")} or ${last ?? ""}`;
+  const labels = DIFFICULTIES.map((tier) => t(DIFFICULTY_LABEL[tier]));
+  const last = labels.pop() ?? "";
+  if (labels.length === 0) return last;
+  const list = labels.reduce((joined, label) => t("{first}, {second}", { first: joined, second: label }));
+  return t("{list} or {last}", { list, last });
 }
 
 /** Last-lesson options; tiers are engine handicaps, never AI play (R180). */
@@ -70,14 +73,15 @@ function WhatsNext(): ReactElement {
   return (
     <section className="tutorial-result__next" data-testid={tutorialTestid.whatsNext} aria-labelledby={headingId}>
       <h3 className="tutorial-result__next-title" id={headingId}>
-        What&apos;s next
+        {t("What's next")}
       </h3>
       <ul className="tutorial-result__next-list">
-        <li>Practice games at {tierList()}: the AI plays the same, only its resources change.</li>
-        <li>Build decks of your own under Decks.</li>
+        <li>{t("Practice games at {tiers}: the AI plays the same, only its resources change.", { tiers: tierList() })}</li>
+        <li>{t("Build decks of your own under Decks.")}</li>
         <li>
-          A game still going at the end of turn {TURN_CAP_PLAYER_TURNS} is a draw. Online, you can also offer a draw on your
-          turn.
+          {t("A game still going at the end of turn {turn} is a draw. Online, you can also offer a draw on your turn.", {
+            turn: TURN_CAP_PLAYER_TURNS,
+          })}
         </li>
       </ul>
     </section>
@@ -85,15 +89,15 @@ function WhatsNext(): ReactElement {
 }
 
 function notQuiteLine(outcome: "loss" | "draw" | "win", reason: Result["reason"]): string {
-  if (outcome === "draw") return reason === "turn-cap" ? "The turn limit was reached: a draw." : "The lesson ended in a draw.";
+  if (outcome === "draw") return reason === "turn-cap" ? t("The turn limit was reached: a draw.") : t("The lesson ended in a draw.");
   switch (reason) {
     case "hero-death":
     case "both-heroes-dead":
-      return "Your hero has fallen this time.";
+      return t("Your hero has fallen this time.");
     case "concede":
-      return "You conceded this one.";
+      return t("You conceded this one.");
     default:
-      return "The lesson has ended.";
+      return t("The lesson has ended.");
   }
 }
 
@@ -109,6 +113,7 @@ export function TutorialResult({
   onPlayPractice,
   onViewBoard,
 }: TutorialResultProps): ReactElement {
+  useLocale();
   const outcome = outcomeOf(result, viewer);
   const won = outcome === "win";
   const titleId = useId();
@@ -136,16 +141,16 @@ export function TutorialResult({
   let line: string;
   let primaryButton: ReactElement;
   if (!won) {
-    title = "Not quite";
+    title = t("Not quite");
     line = notQuiteLine(outcome, result.reason);
     primaryButton = (
       <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.retry} onClick={onRetry}>
-        Retry
+        {t("Retry")}
       </button>
     );
   } else if (next === undefined) {
-    title = "Tutorial complete";
-    line = "You have finished every lesson. The whole game is yours: try it against the AI.";
+    title = t("Tutorial complete");
+    line = t("You have finished every lesson. The whole game is yours: try it against the AI.");
     primaryButton = (
       <button
         ref={primary}
@@ -154,17 +159,17 @@ export function TutorialResult({
         data-testid={tutorialTestid.playPractice}
         onClick={onPlayPractice}
       >
-        Play a practice game
+        {t("Play a practice game")}
       </button>
     );
   } else {
-    title = "Lesson complete";
+    title = t("Lesson complete");
     line = unlockedNow
-      ? `Lesson ${String(next.number)}: ${next.title} is unlocked.`
-      : `Next up: Lesson ${String(next.number)}: ${next.title}.`;
+      ? t("Lesson {number}: {title} is unlocked.", { number: next.number, title: t(next.title) })
+      : t("Next up: Lesson {number}: {title}.", { number: next.number, title: t(next.title) });
     primaryButton = (
       <button ref={primary} type="button" className="practice-play" data-testid={tutorialTestid.next} onClick={onNext}>
-        Next lesson
+        {t("Next lesson")}
       </button>
     );
   }
@@ -185,10 +190,10 @@ export function TutorialResult({
           {title}
         </h2>
         <p className="practice-result__reason">{line}</p>
-        {won ? null : <p className="tutorial-result__tip">Tip: {lesson.retryTip}</p>}
+        {won ? null : <p className="tutorial-result__tip">{t("Tip: {tip}", { tip: t(lesson.retryTip) })}</p>}
         {won && next === undefined ? <WhatsNext /> : null}
         <p className="practice-result__meta">
-          Tutorial · Lesson {lesson.number}: {lesson.title}
+          {t("Tutorial · Lesson {number}: {title}", { number: lesson.number, title: t(lesson.title) })}
         </p>
         <div className="practice-result__actions">
           {primaryButton}
@@ -198,7 +203,7 @@ export function TutorialResult({
             data-testid={tutorialTestid.back}
             onClick={onBack}
           >
-            Back to lessons
+            {t("Back to lessons")}
           </button>
         </div>
         <button
@@ -207,7 +212,7 @@ export function TutorialResult({
           data-testid={tutorialTestid.viewBoard}
           onClick={onViewBoard}
         >
-          View the board
+          {t("View the board")}
         </button>
       </section>
     </div>

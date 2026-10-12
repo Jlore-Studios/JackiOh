@@ -34,7 +34,7 @@ export function placeholderFor(format: CodeFormat): string {
 function listInWords(items: readonly string[], last: "or" | "and" = "or"): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} ${t(last)} ${items[items.length - 1] ?? ""}`;
+  return `${items.slice(0, -1).join(t(", "))} ${last === "or" ? t("or") : t("and")} ${items[items.length - 1] ?? ""}`;
 }
 
 /** A character a reader cannot see (a control, format, separator or combining mark) as U+XXXX. */

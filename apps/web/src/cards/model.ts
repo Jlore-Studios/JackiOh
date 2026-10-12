@@ -72,7 +72,8 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
-import { chineseDef, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
+import { isZhCn, t } from "../i18n/i18n.ts";
+import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
@@ -316,7 +317,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   const viewCopies = inPlay?.copies;
   const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
-  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
+  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay, chinese);
   // B5 E38, R1438: a hand card's keywords are the view's where it gives them (a Lucky given in hand).
   const keywords = source.live?.keywords ?? inPlay?.handKeywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
@@ -418,7 +419,7 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
 
 /** E36: "27 lines of code", "1 line of code". */
 export function locWords(loc: number): string {
-  return `${String(loc)} ${loc === 1 ? "line" : "lines"} of code`;
+  return loc === 1 ? t("{n} line of code", { n: loc }) : t("{n} lines of code", { n: loc });
 }
 
 /** R243: a hand card's stats are its face plus what it gained in hand, with nothing on the field's layers. */
@@ -482,19 +483,24 @@ function concealed(def: CardDef | undefined): boolean {
  * What the rules box prints in play (inPlay.ts). A Vanilla unit's text is gone; a Call to Chaos is
  * "???"; a #98 Heroic Power is the power it rolled. Anything else prints its printed text.
  */
-function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay): FaceText {
-  if (inPlay.vanilla === true) return { full: VANILLA_TEXT, marks: [] };
+function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay, chinese: boolean): FaceText {
+  // R711000: a face drawn in Chinese for a reader of Chinese says it in the reader's words; the English
+  // face (`englishText`, what the glossary's terms are found in) keeps the English.
+  const reader = chinese && isZhCn();
+  if (inPlay.vanilla === true) return { full: reader ? t(VANILLA_TEXT) : VANILLA_TEXT, marks: [] };
   if (def === undefined) return printedText;
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
     // B3.4: Steady Shot's {shot} is the card's number as it stands (the view's), else as printed.
     const values = inPlay.params ?? printedValues(def, radiant);
-    const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "), values);
+    const kinds = (list: readonly Keyword[]): string =>
+      reader ? list.map(chineseKeyword).join(CHINESE_COMMA) : list.map(keywordKey).join(", ");
+    const words = powerText(inPlay.power, radiant, kinds(face.keywords), values, reader);
     if (words !== null) {
       // R277: a Radiant power is marked against the same power's base words.
       const baseWords = radiant
-        ? powerText(inPlay.power, false, def.base.keywords.map(keywordKey).join(", "), printedValues(def, false))
+        ? powerText(inPlay.power, false, kinds(def.base.keywords), printedValues(def, false), reader)
         : null;
       return { full: words, marks: baseWords === null ? [] : radiantMarks(baseWords, words) };
     }

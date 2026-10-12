@@ -292,7 +292,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 <p data-testid={accountTestid.badges}>
                   {rank.badges.length === 0
                     ? t("No season best yet — finish placements to earn one.")
-                    : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(", ") })}
+                    : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
                 </p>
                 <div className="account-actions">
                   <a
@@ -493,7 +493,7 @@ function AccountUsername({
       ) : (
         <UsernameField
           token={token}
-          label="Change your username"
+          label={t("Change your username")}
           onSaved={() => {
             announceAccountChange();
           }}

@@ -353,7 +353,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           className="ws-name-input"
           data-testid={DECK_NAME_INPUT}
           value={deck.name}
-          placeholder={UNTITLED_DECK}
+          placeholder={t(UNTITLED_DECK)}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => {

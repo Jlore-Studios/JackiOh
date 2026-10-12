@@ -53,8 +53,7 @@ function Clock({ secondsLeft }: { secondsLeft: number }): ReactElement {
     <p className="series-picker__clock">
       {t("Time left to pick:")}{" "}
       <span className="series-clock" data-testid={seriesPickerTestid.clock} data-seconds={secondsLeft}>
-        {String(secondsLeft)}
-        {t(" s")}
+        {t("{seconds} s", { seconds: String(secondsLeft) })}
       </span>
     </p>
   );
@@ -164,7 +163,7 @@ export default function SeriesPicker({ view, secondsLeft, busy, onLockIn }: Seri
               <DeckIcon />
               <span className="lobby-mode__text">
                 <span className="lobby-mode__name">{deck.name}</span>
-                <span className="lobby-mode__hint">{`${String(deck.cards.length)}${t(" cards")}`}</span>
+                <span className="lobby-mode__hint">{t("{count} cards", { count: String(deck.cards.length) })}</span>
               </span>
               <span className="play-mode-tile__waiting series-picker__standing" data-won={deck.won ? "true" : "false"}>
                 {deckStanding(deck)}

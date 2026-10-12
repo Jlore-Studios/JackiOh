@@ -141,7 +141,7 @@ export function ShellPanel({ testId, children }: { testId?: string; children: Re
 }
 
 /** "Home": back to the landing page, in place on a plain click and a real link otherwise. */
-function HomeLink({ testId, label = "Home" }: { testId: string; label?: string }): ReactElement {
+function HomeLink({ testId, label }: { testId: string; label?: string }): ReactElement {
   return (
     <a
       className="button-secondary"
@@ -149,7 +149,7 @@ function HomeLink({ testId, label = "Home" }: { testId: string; label?: string }
       data-testid={testId}
       onClick={followInApp(paths.landing)}
     >
-      {t(label)}
+      {label ?? t("Home")}
     </a>
   );
 }
@@ -187,7 +187,7 @@ function NotFound({ path }: { path: string }): ReactElement {
         {nothingAfter}
       </p>
       <div className="row">
-        <HomeLink testId={shellTestid.notFoundHome} label="Back to the start" />
+        <HomeLink testId={shellTestid.notFoundHome} label={t("Back to the start")} />
       </div>
     </ShellPanel>
   );

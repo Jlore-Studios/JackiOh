@@ -21,7 +21,7 @@ export default function ManaCurve({ cardIds, catalog }: ManaCurveProps): ReactEl
   const counts = manaCurve(cardIds, catalog);
   const tallest = Math.max(1, ...COST_BUCKETS.map((bucket) => counts[bucket]));
   // R432's noun: "(2) Cost: 3".
-  const summary = COST_BUCKETS.map((bucket) => t("({cost}) Cost: {count}", { cost: bucket, count: String(counts[bucket]) })).join(", ");
+  const summary = COST_BUCKETS.map((bucket) => t("({cost}) Cost: {count}", { cost: bucket, count: String(counts[bucket]) })).join(t(", "));
 
   return (
     <div

@@ -34,6 +34,7 @@ import { Fragment, type ReactElement, type ReactNode } from "react";
 
 import type { CardDef, PreviewValue } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
 import { CardRef } from "./CardRef.tsx";
 import { CHINESE_TERMS, chineseDef } from "./chinese.ts";
 import type { TextRange } from "./radiantDiff.ts";
@@ -159,7 +160,7 @@ export function RulesText({ text, marks = NONE, refs = NONE, values = NONE, tune
         return (
           <Fragment key={next()}>
             {" "}
-            <span className="cf-value" data-value={insert.text} data-label={insert.label} title={`${insert.label}: currently ${insert.text}`}>
+            <span className="cf-value" data-value={insert.text} data-label={insert.label} title={t("{label}: currently {value}", { label: insert.label, value: insert.text })}>
               {`{${insert.text}}`}
             </span>
           </Fragment>

@@ -118,7 +118,7 @@ export function poolCardLabel(
   if (place === "deck") parts.push(t("in this deck"));
   else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));
   if (owned === false) parts.push(t("not in your collection"));
-  return t("{card}. Show details", { card: parts.join(", ") });
+  return t("{card}. Show details", { card: parts.join(t(", ")) });
 }
 
 function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
