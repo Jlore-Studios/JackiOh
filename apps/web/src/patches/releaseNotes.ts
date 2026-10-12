@@ -29,7 +29,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       "The Meditative expansion: 102 cards and 30 tokens built around the Zenith, Flow and Focus mechanics, joining every game mode.",
     technicalChanges: [
       "Engine Rewrite: Complete rewrite of the game engine in pure Rust with strict determinism and zero allocations in the combat resolution loop.",
-      "AI Upgrades: Heuristic evaluation improvements, dual-lane tactical positioning, and tuned bot difficulty levels.",
+      "AI Improvements: Sharper heuristic evaluation, dual-lane tactical positioning, and tuned bot difficulty levels.",
       "WebAssembly Performance: Fast client-side match execution and instant turn response powered by WebAssembly.",
       "Card Text & Clarity: Comprehensive card wording overhaul, streamlining keyword rules (Nerf & Buff) and targeting conditions.",
     ],
@@ -47,7 +47,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       {
         version: "v0.3.4",
         title: "Keyword Refinements: Nerf & Buff",
-        summary: "Renamed Degrade to Nerf and Upgrade to Buff across all printed cards for improved clarity.",
+        summary: "Gave the two tuning keywords their current names, Nerf and Buff, across all printed cards for improved clarity.",
       },
       {
         version: "v0.3.3",
@@ -83,7 +83,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       {
         version: "v0.2.11",
         title: "Heroic Power Rework",
-        summary: "Reworked Heroic Power into thirteen distinct activated abilities with Radiant upgrades.",
+        summary: "Reworked Heroic Power into thirteen distinct activated abilities with Radiant versions.",
       },
       {
         version: "v0.2.10d",
@@ -175,7 +175,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       "The base set launch: 100 cards and 9 tokens on the dual-lane battlefield, with the first balance tuning after release.",
     technicalChanges: [
       "Dual-Lane Battlefield: Innovative tactical lane combat with backrow trap staging and Hearthstone-style mana curves.",
-      "Collection & Deck Builder: Custom deck construction supporting card trios, radiant upgrades, and card detail inspection.",
+      "Collection & Deck Builder: Custom deck construction supporting card trios, Radiant versions, and card detail inspection.",
       "Tutorial & Matchmaking: Interactive onboarding system, local pass-and-play, and online lobby matchmaking.",
     ],
     subPatches: [
@@ -187,7 +187,7 @@ export const ALL_SET_RELEASES: readonly SetReleaseNotes[] = [
       {
         version: "v0.1.0d",
         title: "Radiant Card Faces",
-        summary: "Introduced Radiant visual treatment and gold border card upgrades.",
+        summary: "Introduced the Radiant visual treatment and gold border cards.",
       },
       {
         version: "v0.1.0c",

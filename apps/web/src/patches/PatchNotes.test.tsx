@@ -282,7 +282,7 @@ describe("R724000 the Patch notes page grouped by set", () => {
     const technical = screen.getByTestId(patchTestid.technicalChanges);
     expect(technical).toHaveTextContent("Technical changes");
     expect(technical).toHaveTextContent("Engine Rewrite");
-    expect(technical).toHaveTextContent("AI Upgrades");
+    expect(technical).toHaveTextContent("AI Improvements");
     // Fixture versions belong to no set, so they list under the newest one with their catalog titles.
     expect(subPatchVersions()).toEqual([V3, V2, V1]);
     expect(patchEntry(V3)).toHaveTextContent("Two new sets");
@@ -311,7 +311,7 @@ describe("R724000 the Patch notes page grouped by set", () => {
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
     const nerf = patchEntry("v0.3.4");
     expect(nerf).toHaveTextContent("Keyword Refinements: Nerf & Buff");
-    expect(nerf).toHaveTextContent("Renamed Degrade to Nerf and Upgrade to Buff across all printed cards for improved clarity.");
+    expect(nerf).toHaveTextContent("Gave the two tuning keywords their current names, Nerf and Buff, across all printed cards for improved clarity.");
     expect(nerf).not.toHaveTextContent("Patch v0.3.4: Degrade is Nerf and Upgrade is Buff");
     const numbers = patchEntry("v0.3.2");
     expect(numbers).toHaveTextContent("Declared Numbers Expansion");
