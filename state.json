@@ -4504,10 +4504,14 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "1c14037546d11a873702df1b38041a1ff1c1e278",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "732": {
