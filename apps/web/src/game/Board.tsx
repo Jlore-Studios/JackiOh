@@ -52,6 +52,7 @@ import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, 
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
 import { getAudioEngine } from "../audio/engine.ts";
+import LanguageButton from "../i18n/LanguageButton.tsx";
 import { ActingProvider } from "./spent.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
@@ -702,6 +703,7 @@ export default function Board({
           {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
               sat on the practice HUD's Menu and the match bar's clock (integration). */}
           <AudioToggle className="audio-toggle--bar" />
+          <LanguageButton placement="game" />
           <SettingsButton placement="game" />
         </div>
 

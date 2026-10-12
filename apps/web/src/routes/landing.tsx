@@ -13,6 +13,7 @@ import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
+import LanguageButton from "../i18n/LanguageButton.tsx";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -407,6 +408,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
               volume and reduced motion are reachable from the first screen too. */}
           <div className="landing-corner">
             <Corner account={account} />
+            <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>
         </header>

@@ -64,6 +64,7 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
+import { initLocale, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -450,6 +451,8 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
  * page that does not exist.
  */
 function useDocumentHead(path: string): void {
+  // The tab title is in the reader's language and follows a switch (#711).
+  const locale = useLocale();
   useEffect(() => {
     document.title = documentTitleFor(path);
     const href = canonicalUrlFor(path);
@@ -464,7 +467,7 @@ function useDocumentHead(path: string): void {
       document.head.append(link);
     }
     link.href = href;
-  }, [path]);
+  }, [path, locale]);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -480,6 +483,9 @@ function sessionKeyOf(token: string): string {
 }
 
 export function App(): ReactElement {
+  // The whole tree redraws in the new language when the reader switches (#711): the screens' `t()`
+  // calls run again, and nothing below remounts, so a match in progress keeps its socket.
+  useLocale();
   // Before the first read of the path: an emailed link is scrubbed, and moved to `/login` (R193).
   useState(() => adoptAuthRedirect(paths.login));
   // R767: a room link leaves the address bar and waits in this tab before the gate can send a signed-out visitor to sign in.
@@ -580,6 +586,8 @@ if (import.meta.env.MODE !== "test") {
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();
+  // The language's dictionary is in before the first paint, so a Chinese reader never sees English flash by (#711).
+  const localeReady = initLocale();
   const mount = (): void => {
     createRoot(host).render(
       <StrictMode>
@@ -587,10 +595,12 @@ if (import.meta.env.MODE !== "test") {
       </StrictMode>,
     );
   };
-  loadWasm().then(mount, (cause: unknown) => {
-    console.error("the engine's WebAssembly module did not load", cause);
-    mount();
-  });
+  loadWasm()
+    .then(() => localeReady)
+    .then(mount, (cause: unknown) => {
+      console.error("the engine's WebAssembly module did not load", cause);
+      void localeReady.then(mount);
+    });
   // Polish 2: UI ticks and the audio unlock on every screen, off the first paint (audio/appAudio.ts).
   void import("./audio/appAudio.ts").then((audio) => audio.retainAppAudio());
 }

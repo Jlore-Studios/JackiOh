@@ -11,8 +11,9 @@
 // GLOSSARY's ids (R1303). crates/cards' cross tests hold both to their contract; chinese.test.tsx
 // proves the glossary names exactly GLOSSARY's entries.
 //
-// A card is drawn in Chinese only where the view says it is (`CardView.chinese`, R1301), so every
-// face of it in a match, and only there: the collection's faces are the catalog's. A fused card
+// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), so every face of
+// it in a match, whatever the reader's language, and for a reader who reads Chinese (R711000) every
+// card is drawn from these tables, in a match and in the collection alike. A fused card
 // (R468) has no entry of its own, and its Chinese is its ingredients', joined as the engine joins
 // their English (crates/engine/src/subsystems/fuse.rs). A definition with no entry and no
 // ingredients (the hidden sentinel, Craft a Card's) keeps its English, and so does Glitch, whose
@@ -31,6 +32,7 @@ import {
   type Tag,
 } from "@jackioh/shared";
 
+import { isZhCn, type Locale } from "../i18n/i18n.ts";
 import { isGlitch } from "./glitch.ts";
 import type { GlossaryTermId } from "./glossary.ts";
 
@@ -64,6 +66,28 @@ export type ChineseTerms = {
 export const CHINESE: Readonly<Record<string, ChineseEntry>> = chineseJson;
 
 export const CHINESE_TERMS: ChineseTerms = termsJson;
+
+/** A language's card tables: its cards' words and the frame's, the pair of sidecars beside the catalog (R1303). */
+export type CardTable = { readonly cards: Readonly<Record<string, ChineseEntry>>; readonly terms: ChineseTerms };
+
+/** The card tables by locale (R711000): a reader whose language has none reads the catalog's English. */
+export const CARD_TABLES: Readonly<Partial<Record<Locale, CardTable>>> = {
+  "zh-CN": { cards: CHINESE, terms: CHINESE_TERMS },
+};
+
+/**
+ * R711000: whether a card is drawn from the Chinese table: the view flagged it (R1301, whatever the
+ * reader's language), or the reader reads Chinese, so every card they see is Chinese. Read where a
+ * face or a name is built, never cached across a language switch.
+ */
+export function drawnInChinese(flagged: boolean): boolean {
+  return flagged || isZhCn();
+}
+
+/** R711000: a catalog card's name as the reader reads it: its entry's in Chinese, else the catalog's. */
+export function readerName(def: CardDef): string {
+  return drawnInChinese(false) ? chineseName(def.id, def.name, def) : def.name;
+}
 
 /** What joins a list of keywords on a Chinese face, as the table's texts join them ("嘲讽，圣盾，复生"). */
 export const CHINESE_COMMA = "，";

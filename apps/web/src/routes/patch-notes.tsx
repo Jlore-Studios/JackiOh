@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { PatchNotes } from "../patches/PatchNotes.tsx";
 import { patchTestid } from "../patches/testids.ts";
 import { BackLink } from "./nav.tsx";
@@ -20,11 +21,12 @@ export default function PatchNotesRoute(): ReactElement {
       <main className="patch-notes" aria-labelledby="patch-notes-title">
         <header className="patch-notes__head">
           <h1 id="patch-notes-title" className="patch-notes__title">
-            Patch notes
+            {t("Patch notes")}
           </h1>
           <p className="patch-notes__intro">
-            Every change to JackiOh&rsquo;s cards, newest first. Open a patch to see the cards it touched, and a card to
-            see its whole history.
+            {t(
+              "Every change to JackiOh\u2019s cards, newest first. Open a patch to see the cards it touched, and a card to see its whole history.",
+            )}
           </p>
         </header>
         <PatchNotes />

@@ -52,7 +52,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
             <Printed face={face} />
           </RefsInteractive>
           <Glossary entries={glossaryFor(face)} />
-          {face.known ? <Flavour defId={face.defId} /> : null}
+          {face.known ? <Flavour defId={face.defId} easter={face.flagged === true} /> : null}
           <LocLine face={face} />
         </div>
         <button
