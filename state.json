@@ -4606,6 +4606,8 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-12T15:22:35Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38271917518",
       "self_check_findings": [],
       "started_at": "2026-10-12T15:41:04Z",
