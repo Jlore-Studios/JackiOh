@@ -6303,14 +6303,18 @@
         {
           "at": "2026-10-12T10:38:58Z",
           "minutes": 41.8
+        },
+        {
+          "at": "2026-10-12T10:40:55Z",
+          "minutes": 59.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-12T14:40:00Z",
-          "utilization": 1.0
+          "utilization": 1.01
         },
-        "observed_at": "2026-10-12T10:38:58Z",
+        "observed_at": "2026-10-12T10:40:55Z",
         "rejected_resets_at": "2026-10-12T14:40:00Z",
         "status": "rejected"
       }
