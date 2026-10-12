@@ -834,6 +834,38 @@
   color: var(--tavern-danger-text);
 }
 
+.tavern.play-screen .conquest-explainer {
+  max-width: 68ch;
+  margin: 0 auto 16px;
+}
+
+.tavern.play-screen .conquest-explainer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tavern.play-screen .conquest-explainer__dismiss {
+  font-size: 14px;
+}
+
+.tavern.play-screen .conquest-explainer__list {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--tavern-parchment);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.tavern.play-screen .series-explainer-toggle {
+  align-self: center;
+  margin: 0 auto 16px;
+  font-size: 14px;
+}
+
 /* --- the board's series banner -------------------------------------------------------------- */
 
 .series-banner {
