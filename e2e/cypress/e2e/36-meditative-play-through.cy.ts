@@ -45,7 +45,7 @@ import {
   type PlayStep,
 } from "../../support/playthrough.ts";
 import { constants, timeouts } from "../../support/config.ts";
-import { INSPECT_HOVER, LOG, cardId, ts } from "../../support/testids.ts";
+import { GAME, INSPECT_HOVER, LOG, cardId, handCardId, handRegionId, ts } from "../../support/testids.ts";
 import type { JackiOhDevHandle } from "../../support/types.ts";
 
 /** Where the catalog sits, from e2e/ (Cypress's project root), read at run time. */
@@ -167,18 +167,34 @@ function drive(game: Game, budget: number): void {
   });
 }
 
-/** Every card left in either hand opens a preview that reads (a crafted card's parts, a market lot). */
+/** The seat's own hand in its newest view, as testids, in the order the board draws it. */
+function handCardIds(handle: Handle): string[] {
+  const hand = (handle.view() as unknown as { you: { hand: { instanceId: string }[] | { count: number } } }).you.hand;
+  return Array.isArray(hand) ? hand.map((card) => handCardId(card.instanceId)) : [];
+}
+
+/**
+ * Every card left in either hand opens a preview that reads (a crafted card's parts, a market lot).
+ * The ids are the seat's newest view's, read once the board draws them: after the device moves, or a
+ * game's last play, the board shows the view before it for a moment with nothing animating, which
+ * `cy.settled()` cannot see (#659).
+ */
 function readHands(): void {
   for (const seat of ["p1", "p2"] as const) {
     cy.jackioh().then((handle) => {
       handle.setSeat?.(seat);
     });
+    cy.get(ts(GAME), { timeout: timeouts.view }).should("have.attr", "data-viewer", seat);
     cy.settled();
-    cy.get("body").then(($body) => {
-      const ids = $body
-        .find(HAND_CARD)
-        .toArray()
-        .map((card) => card.getAttribute("data-testid") ?? "");
+    cy.jackioh().then((handle) => {
+      const ids = handCardIds(handle as Handle);
+      cy.get(ts(handRegionId("you")), { timeout: timeouts.view }).should(($hand) => {
+        const drawn = $hand
+          .find(HAND_CARD)
+          .toArray()
+          .map((card) => card.getAttribute("data-testid") ?? "");
+        expect(drawn, `${seat}'s hand on the board is its view's`).to.deep.equal(ids);
+      });
       for (const id of ids) readInspect(ts(id), `${seat}'s ${id}`);
     });
   }
