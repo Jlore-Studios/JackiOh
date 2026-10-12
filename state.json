@@ -4255,6 +4255,8 @@
       "question": "",
       "queued_at": "2026-10-12T14:19:01Z",
       "requested_by": "jgoetzmann-bot",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "38262036691",
       "self_check_findings": [],
