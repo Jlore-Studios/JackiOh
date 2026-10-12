@@ -12,7 +12,7 @@
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
-  RATING_WINDOW_UNCAPPED_AFTER_SECONDS,
+  RATING_WINDOW_FULL_AFTER_SECONDS,
   SERIES_POLL_SECONDS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { type InstalledLoadout } from "../../support/commands.ts";
@@ -45,9 +45,9 @@ import {
 /** Seconds to milliseconds. */
 const MS_PER_SECOND = 1000;
 
-/** Pairing waits out the rating window, a sweep, a poll and a render. */
+/** Pairing waits out the rating window's widening to MAX_FAIR_GAP (R640001), a sweep, a poll and a render. */
 const PAIRING_TIMEOUT_MS =
-  (RATING_WINDOW_UNCAPPED_AFTER_SECONDS + MATCHMAKER_SWEEP_INTERVAL_SECONDS + SERIES_POLL_SECONDS) *
+  (RATING_WINDOW_FULL_AFTER_SECONDS + MATCHMAKER_SWEEP_INTERVAL_SECONDS + SERIES_POLL_SECONDS) *
     MS_PER_SECOND +
   timeouts.view;
 

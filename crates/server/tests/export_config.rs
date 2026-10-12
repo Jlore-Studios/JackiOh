@@ -131,8 +131,8 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
         (
-            "RATING_WINDOW_UNCAPPED_AFTER_SECONDS",
-            json!(c::RATING_WINDOW_UNCAPPED_AFTER_SECONDS),
+            "RATING_WINDOW_FULL_AFTER_SECONDS",
+            json!(c::RATING_WINDOW_FULL_AFTER_SECONDS),
         ),
         ("REDEMPTION_IDENTICAL_ERROR", json!(c::REDEMPTION_IDENTICAL_ERROR)),
         (
@@ -199,7 +199,8 @@ fn every_name_is_listed_once() {
         listed, 59,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441) and the play \
-         telemetry's retention for the privacy policy (R1442)"
+         telemetry's retention for the privacy policy (R1442), with RATING_WINDOW_FULL_AFTER_SECONDS in place \
+         of the uncapped window's RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
     );
 }
 

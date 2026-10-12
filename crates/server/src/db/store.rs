@@ -650,6 +650,14 @@ pub struct Ticket {
     pub match_id: Option<String>,
 }
 
+/// R640002: how long one claimed ticket waited, from its enqueue to its claim, in ms.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct TicketWait {
+    pub mode: QueueMode,
+    pub waited_ms: i64,
+}
+
 // Results
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -807,9 +815,14 @@ pub struct SeasonStanding {
     #[serde(flatten)]
     pub rank: SeasonRank,
     pub rating: f64,
+    /// R640000: a ladder bot's row; never serialised when false. Jlorious and the percentiles read
+    /// the rows without it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub bot: bool,
 }
 
-/// R610: an AI bot's own Glicko-2 rating. A bot has no ladder rank and no place on the leaderboard.
+/// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read
+/// against people's ratings and never in Jlorious (R640000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BotRating {
@@ -1689,9 +1702,15 @@ impl Tx<'_> {
         dispatch!(self, tickets_count_open())
     }
 
-    /// R257: open tickets per mode, for the lobby's per-mode population. Every mode is present.
+    /// R257: open tickets per mode. Every mode is present. No route answers it (R640002).
     pub async fn tickets_count_open_by_mode(&mut self) -> StoreResult<PerMode<i64>> {
         dispatch!(self, tickets_count_open_by_mode())
+    }
+
+    /// R640002: the wait of every ticket claimed at or after `since` (epoch ms), whether a person's
+    /// or a bot's claim, oldest claim first, ties on ticket id.
+    pub async fn tickets_recent_waits(&mut self, since: i64) -> StoreResult<Vec<TicketWait>> {
+        dispatch!(self, tickets_recent_waits(since))
     }
 
     /// §9.5: "both tickets are claimed in one atomic statement". Returns false unless both were
@@ -1927,6 +1946,11 @@ impl Tx<'_> {
     /// R1454: how many people (bots left out) finished a match at or after `since` (epoch ms).
     pub async fn results_count_active_humans(&mut self, since: i64) -> StoreResult<i64> {
         dispatch!(self, results_count_active_humans(since))
+    }
+
+    /// R640002: how many matches ended at or after `since` (epoch ms), games against a bot included.
+    pub async fn results_count_since(&mut self, since: i64) -> StoreResult<i64> {
+        dispatch!(self, results_count_since(since))
     }
 
     /// R611: one row per rated game. Rejects a second row for the same id.

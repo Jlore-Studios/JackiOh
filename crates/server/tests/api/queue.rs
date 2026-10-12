@@ -10,13 +10,17 @@
 //!    pairing; it only closes a ticket that is still open.
 //!  - **R253**: a Best-of-1 deck is checked on L2, L3, L5, L6 and a Best-of-3 trio on L1–L6, by the
 //!    real shared validator, with the decks' own names in its sentences.
-//!  - **R257**: a ticket pairs only with a ticket of its own mode; the population is reported per
-//!    mode. A Best-of-3 pair becomes a series (R259), not a match.
+//!  - **R257**: a ticket pairs only with a ticket of its own mode. A Best-of-3 pair becomes a series
+//!    (R259), not a match.
 //!  - **R258**: All Random deals both decks from the match seed and needs no saved deck.
 //!  - **R264**: a profile in a series that is not over can neither queue nor be paired.
 //!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
 //!    newest set, and only that seat's.
 //!  - **R1450**: a start whose cleanup fails too is released by the reaper once the grace has run.
+//!  - **R640001**: the window widens as §9.5 says and stops at `MAX_FAIR_GAP`, so two people
+//!    further apart than that never pair.
+//!  - **R640002**: the queue readout is each mode's expected wait and the last hour's games, every
+//!    number counted; no read answers a count of open tickets.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, so `enqueuedAt` and the widening
 //! window are set by this file rather than by the host clock (`app::now_ms()` reads tokio's clock).
@@ -46,11 +50,13 @@ use jackioh_engine::{DEFAULT_PORTRAIT, newest_shipped_set, pick_portrait_from_se
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
-use jackioh_server::api::queue::{e2e_seed_count, try_pair};
+use jackioh_server::api::queue::{e2e_seed_count, expected_wait_seconds, try_pair};
 use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
-    MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS, rating_window,
+    MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
+    QUEUE_READOUT_WINDOW_SECONDS, RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START,
+    RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, rating_window,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
@@ -607,7 +613,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         assert!(matches_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 2);
 
-        // …and once the older one's window has widened past the gap, the same two pair (§9.5: uncapped after 60 s).
+        // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them at MAX_FAIR_GAP, still past it).
         tokio::time::advance(Duration::from_millis(120_000)).await;
         assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
@@ -973,53 +979,6 @@ mod r257_queue_modes {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r257_reports_the_queue_population_in_total_and_per_mode() {
-        let app = test_app().await;
-        seed_ticket(
-            &app,
-            SeedTicket {
-                id: "t-a",
-                profile_id: "a",
-                rating: 1000,
-                waited_ms: 0,
-                mode: "bo1",
-            },
-        )
-        .await;
-        seed_ticket(
-            &app,
-            SeedTicket {
-                id: "t-b",
-                profile_id: "b",
-                rating: 1500,
-                waited_ms: 0,
-                mode: "bo3",
-            },
-        )
-        .await;
-        seed_ticket(
-            &app,
-            SeedTicket {
-                id: "t-c",
-                profile_id: "c",
-                rating: 2000,
-                waited_ms: 0,
-                mode: "bo3",
-            },
-        )
-        .await;
-        let token = active_profile(&app, "watcher", 1000.0).await;
-
-        let (status, body) = request(&app, "GET", "/api/queue/population", &token, None).await;
-
-        assert_eq!(status, 200);
-        assert_eq!(
-            body,
-            json!({ "population": 3, "byMode": { "bo1": 1, "bo3": 2, "random": 0 } })
-        );
-    }
-
-    #[tokio::test(start_paused = true)]
     async fn r257_makes_a_best_of_3_pair_a_series_r259_the_older_ticket_is_series_p1_and_no_match_starts() {
         let _seeds = SEED_MAP.lock().await;
         let app = test_app().await;
@@ -1089,6 +1048,190 @@ mod r257_queue_modes {
                 .as_array()
                 .is_some_and(|rows| rows.iter().all(|row| nullable(row, "inMatchId").is_null()))
         );
+    }
+}
+
+// R640001 — the window stops at MAX_FAIR_GAP
+
+mod r640001_the_window_stops_at_max_fair_gap {
+    use super::*;
+
+    #[test]
+    fn r640001_the_window_widens_as_before_and_stops_at_max_fair_gap() {
+        let step = RATING_WINDOW_WIDEN_EVERY_SECONDS as f64;
+        let full = RATING_WINDOW_FULL_AFTER_SECONDS as f64;
+        assert_eq!(rating_window(0.0), RATING_WINDOW_START as f64);
+        assert_eq!(
+            rating_window(step),
+            (RATING_WINDOW_START + RATING_WINDOW_WIDEN_BY) as f64
+        );
+        assert!(rating_window(full - step) < MAX_FAIR_GAP as f64);
+        assert_eq!(rating_window(full), MAX_FAIR_GAP as f64);
+        assert_eq!(rating_window(86_400.0), MAX_FAIR_GAP as f64);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640001_never_pairs_two_people_further_apart_than_max_fair_gap_however_long_they_wait() {
+        const HOUR_MS: i64 = 3_600_000;
+        let app = test_app().await;
+        let t = |id, profile_id, rating, waited_ms| SeedTicket {
+            id,
+            profile_id,
+            rating,
+            waited_ms,
+            mode: "bo1",
+        };
+        seed_ticket(&app, t("t-low", "low", 1000, HOUR_MS + 1_000)).await;
+        seed_ticket(&app, t("t-far", "far", 1000 + MAX_FAIR_GAP + 1, HOUR_MS)).await;
+        assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+        assert!(matches_table(&app).await.is_empty());
+
+        // Control: one exactly MAX_FAIR_GAP away whose window has reached it pairs with the oldest.
+        seed_ticket(
+            &app,
+            t(
+                "t-edge",
+                "edge",
+                1000 + MAX_FAIR_GAP,
+                RATING_WINDOW_FULL_AFTER_SECONDS * 1000,
+            ),
+        )
+        .await;
+        expect_qualifies(
+            (1000, HOUR_MS + 1_000),
+            (1000 + MAX_FAIR_GAP, RATING_WINDOW_FULL_AFTER_SECONDS * 1000),
+        );
+        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["low", "edge"])]);
+        assert_eq!(ticket(&app, "t-far").await["status"], "open");
+    }
+}
+
+// R640002 — the queue readout
+
+mod r640002_the_queue_readout {
+    use super::*;
+
+    /// Two tickets of `mode` that waited `waits_ms`, claimed together now, as a sweep claims a pair.
+    async fn claimed_pair(app: &App, ids: [&str; 2], mode: &str, waits_ms: [i64; 2]) {
+        for (id, waited_ms) in ids.into_iter().zip(waits_ms) {
+            seed_ticket(
+                app,
+                SeedTicket {
+                    id,
+                    profile_id: id,
+                    rating: 1000,
+                    waited_ms,
+                    mode,
+                },
+            )
+            .await;
+        }
+        let match_id = format!("match-{}", ids[0]);
+        assert!(q!(app, tickets_claim_pair(ids[0], ids[1], &match_id, now_ms())));
+    }
+
+    /// A game between `players` that ended now.
+    async fn ended(app: &App, match_id: &str, players: [&str; 2]) {
+        q!(
+            app,
+            results_insert(&from(json!({
+                "matchId": match_id,
+                "players": players,
+                "winnerProfileId": players[0],
+                "reason": "concede",
+                "turns": 3,
+                "endedAt": now_ms(),
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            })))
+        );
+    }
+
+    #[test]
+    fn r640002_the_expected_wait_is_the_upper_quartile_rounded_up_to_the_next_step() {
+        assert_eq!(expected_wait_seconds(&[]), None);
+        assert_eq!(expected_wait_seconds(&[1_000; 4]), None, "too few to say");
+        assert_eq!(expected_wait_seconds(&[0; 5]), Some(10));
+        assert_eq!(expected_wait_seconds(&[29_999; 5]), Some(30));
+        // A wait on a step goes past it, so "under" holds.
+        assert_eq!(expected_wait_seconds(&[30_000; 5]), Some(40));
+        // The upper quartile, not the longest: three waits in four are under it.
+        assert_eq!(
+            expected_wait_seconds(&[1_000, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000, 300_000]),
+            Some(10)
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640002_reports_each_mode_s_expected_wait_and_the_last_hour_s_games_and_nothing_else() {
+        let app = test_app().await;
+        let token = active_profile(&app, "watcher", 1000.0).await;
+        // Just over the window ago: an All Random pair claimed and a game ended. Counted, the pair
+        // would give All Random six waits, enough for an expected wait, and the games would be four.
+        claimed_pair(&app, ["t-old-1", "t-old-2"], "random", [1_000, 2_000]).await;
+        ended(&app, "m-old", ["t-old-1", "t-old-2"]).await;
+        tokio::time::advance(Duration::from_secs(QUEUE_READOUT_WINDOW_SECONDS as u64 + 1)).await;
+
+        // In the window: six Best-of-1 waits claimed in pairs, and two All Random pairs.
+        claimed_pair(&app, ["t-1", "t-2"], "bo1", [4_000, 8_000]).await;
+        claimed_pair(&app, ["t-3", "t-4"], "bo1", [12_000, 16_000]).await;
+        claimed_pair(&app, ["t-5", "t-6"], "bo1", [21_000, 26_000]).await;
+        claimed_pair(&app, ["t-r1", "t-r2"], "random", [5_000, 5_000]).await;
+        claimed_pair(&app, ["t-r3", "t-r4"], "random", [5_000, 5_000]).await;
+        // A ticket still open and one cancelled have waited for nothing.
+        for id in ["t-open", "t-gone"] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id: id,
+                    rating: 1000,
+                    waited_ms: 5_000,
+                    mode: "random",
+                },
+            )
+            .await;
+        }
+        q!(app, tickets_cancel("t-gone", now_ms()));
+        // Three games, one of them against a ladder bot.
+        fake(&app)
+            .await
+            .seed_profile(json!({ "id": "a-bot", "kind": "bot" }));
+        ended(&app, "m-1", ["t-1", "t-2"]).await;
+        ended(&app, "m-2", ["t-3", "t-4"]).await;
+        ended(&app, "m-3", ["t-5", "a-bot"]).await;
+
+        let (status, body) = request(&app, "GET", "/api/queue/population", &token, None).await;
+
+        assert_eq!(status, 200);
+        // Best of 1's upper quartile is the 21 s wait, so under 30 s; All Random's four waits are too
+        // few; Conquest has none.
+        assert_eq!(
+            body,
+            json!({
+                "gamesLastHour": 3,
+                "expectedWaitSeconds": { "bo1": 30, "bo3": null, "random": null },
+            })
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640002_enqueue_answers_its_ticket_and_no_queue_count() {
+        let app = test_app().await;
+        let token = active_profile(&app, "lone", 1000.0).await;
+        let [one, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "lone", &one, "lone's deck").await;
+        let (status, body) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 200, "{body}");
+        let mut keys: Vec<&str> = body
+            .as_object()
+            .expect("an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, vec!["matchId", "mode", "seriesId", "status", "ticketId"]);
     }
 }
 
