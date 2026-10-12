@@ -5018,8 +5018,10 @@
     "what": "review #731 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-12T20:15:06Z",
-    "notes": [],
+    "at": "2026-10-12T20:21:19Z",
+    "notes": [
+      "#757: typed it Feature"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
