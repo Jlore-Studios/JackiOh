@@ -4827,8 +4827,11 @@
     "what": "build #726 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-12T16:54:25Z",
-    "notes": [],
+    "at": "2026-10-12T17:05:14Z",
+    "notes": [
+      "started a night run, as a lane was free: #736 (medium) is queued to revise, for `claude-1`: build on `claude-1` (claude, `opus`, strong); review on `claude-1` (claude, `opus`, strong)",
+      "#743: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
