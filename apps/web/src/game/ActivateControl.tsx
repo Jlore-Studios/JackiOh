@@ -8,11 +8,11 @@ import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
 import { fillParams, type ActivationView, type CardView } from "@jackioh/shared";
 
-import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
 import { NO_HIGHLIGHT, namedAbility, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
-import { t } from "../i18n/i18n.ts";
+import { isZhCn, t } from "../i18n/i18n.ts";
 
 import "./activate.css";
 
@@ -76,7 +76,7 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
         <ActivateButton
           key={activation.ability}
           card={card}
-          name={drawnInChinese(card.chinese === true) ? chineseName(card.defId, info.name, info.def) : info.name}
+          name={isZhCn() ? chineseName(card.defId, info.name, info.def) : info.name}
           label={t(abilityLabel(info, card, activation.label))}
           activation={activation}
           ability={namedAbility(activations.length, activation.ability)}

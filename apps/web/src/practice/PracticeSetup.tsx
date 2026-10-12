@@ -6,6 +6,7 @@ import { useId, useState, type FormEvent, type ReactElement } from "react";
 
 import {
   AI_DIFFICULTY,
+  DECK_SIZE,
   DIFFICULTIES,
   DRAWS_PER_TURN,
   HUMAN_HANDICAP,
@@ -23,7 +24,9 @@ import {
   RANDOM_DECK_IDENTITY,
   deckChoiceFromValue,
   deckOptions,
+  isPlayableSavedDeck,
   presetById,
+  savedDeckOf,
   type PracticeSavedDeck,
 } from "./decks.ts";
 import type { PracticeDeckChoice } from "./protocol.ts";
@@ -115,7 +118,14 @@ function cardCount(count: number): string {
 
 /** A deck option as the reader reads it; a saved deck's name is its player's own and stays as written. */
 function optionLabel(value: string, label: string, saved: readonly PracticeSavedDeck[] | null): string {
-  return deckChoiceFromValue(value, saved)?.kind === "saved" ? label : t(label);
+  const deck = savedDeckOf(value, saved);
+  if (deck === undefined) return t(label);
+  if (isPlayableSavedDeck(deck)) return deck.name;
+  return t("{name} ({count} of {total} cards, not complete)", {
+    name: deck.name,
+    count: String(deck.cards.length),
+    total: String(DECK_SIZE),
+  });
 }
 
 type TierStat = { key: string; label: string; value: string; ahead: boolean };

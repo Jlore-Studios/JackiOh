@@ -282,24 +282,42 @@ export function initLocale(): Promise<Locale> {
   return apply(readStored() ?? bestLocale(languages), false);
 }
 
+/** Forgets this device's choice, back to what a first visit picks: the settings panel's reset. */
+export function resetLocale(): Promise<Locale> {
+  try {
+    window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+  } catch {
+    // Storage is unavailable: nothing was kept.
+  }
+  return initLocale();
+}
+
 /** The language after `locale` in LOCALES, which the button switches to. */
 export function nextLocale(locale: Locale): Locale {
   return LOCALE_TAGS[(LOCALE_TAGS.indexOf(locale) + 1) % LOCALE_TAGS.length] ?? DEFAULT_LOCALE;
 }
 
+/**
+ * The language tag numbers and moments are written in: the reader's, or for English the browser's own,
+ * as the bare `toLocaleString()` these helpers replace wrote them, so English reads as it always did.
+ */
+function formatTag(): string | undefined {
+  return state.locale === DEFAULT_LOCALE ? undefined : state.locale;
+}
+
 /** A number in the reader's language (replaces the bare `toLocaleString()`). */
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
-  return new Intl.NumberFormat(state.locale, options).format(value);
+  return new Intl.NumberFormat(formatTag(), options).format(value);
 }
 
 /** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped, as `${n}s` never was. */
 export function formatSeconds(seconds: number): string {
-  return formatNumber(seconds, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false });
+  return new Intl.NumberFormat(state.locale, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false }).format(seconds);
 }
 
-/** A moment (epoch ms, or a Date) as the reader's date and time. */
+/** A moment (epoch ms, or a Date) as the reader's date and time (replaces the bare `toLocaleString()`). */
 export function formatDateTime(at: Date | number, options?: Intl.DateTimeFormatOptions): string {
-  return new Date(at).toLocaleString(state.locale, options);
+  return new Date(at).toLocaleString(formatTag(), options);
 }
 
 /** A calendar day given as ISO `YYYY-MM-DD` (a patch's date): the ISO date itself in a language with no `day` format. */

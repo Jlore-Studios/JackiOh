@@ -51,7 +51,7 @@ import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
+import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
@@ -170,7 +170,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
 
         {unit.vanilla === true && (
           <span className="cf-vanilla" title={t("Vanilla: its text is gone")}>
-            <span className="cf-vanilla-word">{face.chinese === true ? CHINESE_TERMS.glossary.Vanilla.label : t("Vanilla")}</span>
+            <span className="cf-vanilla-word">{t("Vanilla")}</span>
             <span className="cf-vanilla-mark" aria-hidden="true">
               V
             </span>
@@ -204,7 +204,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
 
         {/* The `divineShieldLost` animation removes this by the keyword leaving the view. */}
         {hasKeyword(unit.keywords, "Divine Shield") && (
-          <span className="shield-icon" data-icon="shield" aria-label={face.chinese === true ? CHINESE_TERMS.keywords["Divine Shield"] : t("Divine Shield")} {...fxAttributesOf(plan, "Divine Shield")} />
+          <span className="shield-icon" data-icon="shield" aria-label={t("Divine Shield")} {...fxAttributesOf(plan, "Divine Shield")} />
         )}
 
       </span>

@@ -17,6 +17,8 @@ export const accessibilityTestid = {
 export const ACCESSIBILITY_LAST_UPDATED = "2026-10-03";
 
 export default function AccessibilityRoute(): ReactElement {
+  // Split around the link, so the sentence is one entry and English reads as it always did.
+  const [helpBefore = "", helpAfter = ""] = t("If something is hard to use, please tell us: {link}.").split("{link}");
   return (
     <div className="app-shell tavern privacy-screen" data-testid={accessibilityTestid.screen}>
       <BackLink />
@@ -50,7 +52,9 @@ export default function AccessibilityRoute(): ReactElement {
         <section aria-labelledby="a11y-help">
           <h3 id="a11y-help">{t("Report an issue")}</h3>
           <p>
-            {t("If something is hard to use, please tell us:")} <a href={CONTACT_URL}>{t("contact us on GitHub")}</a>.
+            {helpBefore}
+            <a href={CONTACT_URL}>{t("contact us on GitHub")}</a>
+            {helpAfter}
           </p>
         </section>
       </article>

@@ -50,11 +50,12 @@ describe("R711000 internationalisation and reader language", () => {
 
     expect(t("The English text governs.")).toBe("The English text governs.");
     expect(formatDay("2026-10-10")).toBe("2026-10-10");
-    expect(formatNumber(1234)).toBe("1,234");
+    // English writes numbers and moments as the bare toLocaleString() they replace did: the browser's way.
+    expect(formatNumber(1234)).toBe((1234).toLocaleString());
     // The clock reads as `${n}s` always did: never grouped (the match ceiling is 7200s).
     expect(formatSeconds(5)).toBe("5s");
     expect(formatSeconds(7200)).toBe("7200s");
-    expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString("en"));
+    expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString());
 
     // 2. Switch to zh-CN
     await setLocale("zh-CN");
@@ -139,16 +140,22 @@ describe("R711000 internationalisation and reader language", () => {
     expect(document.documentElement.lang).toBe("en");
     expect(window.localStorage.getItem("jackioh.locale")).toBeNull();
 
-    // SETTINGS_SLOTS mounts language under gameplay and resets to English (R711000):
+    // SETTINGS_SLOTS mounts language under gameplay; its reset forgets the choice, back to the browser's pick (en-US here):
     const langSlot = SETTINGS_SLOTS.find((slot) => slot.id === "language");
     expect(langSlot).toBeDefined();
     expect(langSlot?.section).toBe("gameplay");
-    await setLocale("zh-CN");
-    expect(getLocale()).toBe("zh-CN");
+    const panel = render(createElement(() => langSlot?.render()));
+    fireEvent.change(panel.getByTestId("setting-language"), { target: { value: "zh-CN" } });
+    await vi.waitFor(() => {
+      expect(getLocale()).toBe("zh-CN");
+    });
+    expect(window.localStorage.getItem("jackioh.locale")).toBe("zh-CN");
     langSlot?.reset?.();
     await vi.waitFor(() => {
       expect(getLocale()).toBe("en");
     });
+    expect(window.localStorage.getItem("jackioh.locale")).toBeNull();
+    panel.unmount();
 
     const { getByTestId } = render(createElement(LanguageButton, { placement: "nav" }));
     const button = getByTestId("language-nav");

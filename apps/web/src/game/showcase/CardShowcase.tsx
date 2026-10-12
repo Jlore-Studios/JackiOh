@@ -32,6 +32,7 @@ import { createPlayTracker, type PlayTracker } from "../runs.ts";
 import ChaosBanner from "./ChaosBanner.tsx";
 import {
   CAST_ON_DRAW_TEXT,
+  CHAOS_TEXT,
   MULTICAST_TEXT,
   SHOWCASE_BURST_MS,
   SHOWCASE_FADE_MS,
@@ -76,7 +77,7 @@ function castCaption(play: ShowcasePlay, viewer: PlayerId): string {
 }
 
 function multicastCaption(byName: string | undefined): string {
-  return byName === undefined ? t(MULTICAST_TEXT.unknown) : t("Cast by {name}", { name: byName });
+  return byName === undefined ? t(MULTICAST_TEXT.unknown) : t(`${MULTICAST_TEXT.by} {name}`, { name: byName });
 }
 
 function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byName: string | undefined): string {
@@ -84,22 +85,27 @@ function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byN
   return kind === "multicast" ? multicastCaption(byName) : t(CAPTION[kind]);
 }
 
-/** A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view hides. */
+/**
+ * A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view
+ * hides. Each is one sentence for the dictionary, worded from the constants the tests read.
+ */
 function multicastSaid(byName: string | undefined, name: string | undefined, ordinal: string): string {
+  const said = MULTICAST_TEXT.said;
   if (byName === undefined) {
-    return name === undefined ? t("A card cast a card ({ordinal})", { ordinal }) : t("A card cast {name} ({ordinal})", { name, ordinal });
+    return name === undefined ? t(`A card ${said} a card ({ordinal})`, { ordinal }) : t(`A card ${said} {name} ({ordinal})`, { name, ordinal });
   }
   return name === undefined
-    ? t("{by} cast a card ({ordinal})", { by: byName, ordinal })
-    : t("{by} cast {name} ({ordinal})", { by: byName, name, ordinal });
+    ? t(`{by} ${said} a card ({ordinal})`, { by: byName, ordinal })
+    : t(`{by} ${said} {name} ({ordinal})`, { by: byName, name, ordinal });
 }
 
 function saidOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, name: string | undefined, byName: string | undefined): string {
   if (kind === "multicast") return multicastSaid(byName, name, String(play.castBy?.ordinal ?? 1));
   if (kind === "cast") {
     const drew = castCaption(play, viewer);
-    if (play.defId === null) return t("{drew}: cast on draw", { drew });
-    return name === undefined ? t("{drew} a card: cast on draw", { drew }) : t("{drew} {name}: cast on draw", { drew, name });
+    const said = CAST_ON_DRAW_TEXT.said;
+    if (play.defId === null) return t(`{drew}: ${said}`, { drew });
+    return name === undefined ? t(`{drew} a card: ${said}`, { drew }) : t(`{drew} {name}: ${said}`, { drew, name });
   }
   if (kind !== "played") return t(CAPTION[kind]);
   return name === undefined ? t("Opponent played a card") : t("Opponent played {name}", { name });
@@ -367,7 +373,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         {said}
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.chaosLive} role="status" aria-live="polite">
-        {chaosSaid === null ? "" : t("Call to Chaos rolled: {names}", { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
+        {chaosSaid === null ? "" : t(`${CHAOS_TEXT.said}: {names}`, { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null

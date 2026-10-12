@@ -124,15 +124,17 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const verdictTitleId = useId();
   const confirmTextId = useId();
 
+  // Timed by the words it shows, as when it held them: saying the same again leaves its timer running.
+  const shown = status === null ? null : status.say();
   useEffect(() => {
-    if (status === null) return undefined;
+    if (shown === null) return undefined;
     const timer = window.setTimeout(() => {
       setStatus(null);
     }, DECK_STATUS_MS);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [status]);
+  }, [shown]);
 
   useEffect(() => {
     if (!awaitingComplete) return;
@@ -566,7 +568,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           status={
             // A non-blocking, polite toast keeps pool-side changes audible on phones (deckbuilder.css).
             <p className="db-deck-status" data-testid={DECK_STATUS} role="status" aria-live="polite">
-              {status === null ? "" : status.say()}
+              {shown ?? ""}
             </p>
           }
           onInspect={openDetail}

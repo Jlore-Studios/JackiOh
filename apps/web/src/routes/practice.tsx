@@ -829,8 +829,8 @@ function PracticeScreen({
             {savedGame === null ? null : (
               <GameBanner
                 testId={gameBannerTestid.practice}
-                title={t("Game in progress")}
-                action={{ label: t("Resume"), testId: gameBannerTestid.practiceResume, onPress: onResume }}
+                title="Game in progress"
+                action={{ label: "Resume", testId: gameBannerTestid.practiceResume, onPress: onResume }}
                 data={{ difficulty: savedGame.difficulty }}
               >
                 {t("Your {difficulty} game against the AI is saved where you left it. Starting a new game ends it.", {

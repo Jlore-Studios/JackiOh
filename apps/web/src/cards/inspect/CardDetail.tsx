@@ -39,9 +39,8 @@ export type CardDetailProps = {
   historyOpen?: boolean;
   /** SPEC §9.11, R654: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
-  /** R711000: card flagged Chinese; a Chinese reader gets the easter egg line. */
+  /** R711000: the card is one a match flagged Chinese (R1301): its faces are Chinese, and a Chinese reader gets the easter egg line. */
   easter?: boolean;
-  flagged?: boolean;
 };
 
 /**
@@ -104,7 +103,6 @@ export function CardDetail({
   historyOpen = false,
   showStats = false,
   easter = false,
-  flagged = false,
 }: CardDetailProps): ReactElement {
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -121,9 +119,8 @@ export function CardDetail({
     return registerDetail(`inspect-detail:${def.id}`, () => onCloseRef.current());
   }, [def.id]);
 
-  const isFlagged = easter || flagged;
-  const base = faceModel({ defId: def.id, def, radiant: false, chinese: isFlagged });
-  const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: isFlagged });
+  const base = faceModel({ defId: def.id, def, radiant: false, chinese: easter });
+  const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
   const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
 
   return createPortal(
@@ -163,7 +160,7 @@ export function CardDetail({
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
-              <Flavour defId={def.id} easter={isFlagged} />
+              <Flavour defId={def.id} easter={easter} />
               {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />

@@ -9,7 +9,7 @@ import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings } from "../car
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
-import { t } from "../i18n/i18n.ts";
+import { LOCALES, parseLocale, setLocale, t, useLocale } from "../i18n/i18n.ts";
 
 /** Every intensity the effects layer knows, in the order the picker lists them. */
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
@@ -202,5 +202,26 @@ export function VibrationSwitch(): ReactElement {
         {t("A short buzz when your card lands, a hit lands and your turn starts, on a phone that can. Off under Reduce motion.")}
       </p>
     </div>
+  );
+}
+
+/** R711000: the reader's language, each named in its own words; the button at the top switches it too. */
+const LANGUAGE_OPTIONS = Object.entries(LOCALES).map(([value, spec]) => ({ value, label: spec.name }));
+
+/** R711000: the language every screen and card reads in, on this device. */
+export function LanguageSelect(): ReactElement {
+  const locale = useLocale();
+  return (
+    <SelectRow
+      label={t("Language")}
+      hint={t("The screens and the cards read in this language. The button at the top of every screen switches it too.")}
+      testId="setting-language"
+      value={locale}
+      options={LANGUAGE_OPTIONS}
+      onChange={(value) => {
+        const next = parseLocale(value);
+        if (next !== null) void setLocale(next);
+      }}
+    />
   );
 }

@@ -397,7 +397,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "emoted":
       return t("{seat} emoted", { seat: name.seat(event.player) });
     case "gameOver": {
-      const why = resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason);
+      const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason));
       return event.winner === "draw" ? t("Draw. {why}", { why }) : t("{seat} won. {why}", { seat: seatLabel(view, event.winner), why });
     }
     // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
@@ -440,7 +440,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return capitalised(
         event.key === "cost"
           ? t("{card} now costs ({value})", { card, value: event.value })
-          : t("{card}'s {key} became {value}", { card, key: keyWords(event.key), value: event.value }),
+          : t("{card}'s {key} became {value}", { card, key: t(keyWords(event.key)), value: event.value }),
       );
     }
     case "redirected":
