@@ -4764,8 +4764,11 @@
     "what": "revise #736 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-12T16:29:49Z",
-    "notes": [],
+    "at": "2026-10-12T16:43:32Z",
+    "notes": [
+      "#726 needs a plan",
+      "started a night run, as a lane was free: #726 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
