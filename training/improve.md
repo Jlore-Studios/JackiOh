@@ -42,8 +42,8 @@ come from, so look there first:
   whether the AI played it, how often, and how the eval moved per play. Run it on a card before and
   after a change aimed at it.
 - A change for one card or one family of them must not cost the rest: the gate is the whole deal.
-- Every one of generation 9's 31 bans is `timeout`: a decision over two seconds at the browser's budget. A
-  faster search is a stronger AI too, since the browser stops a slow one short.
+- Every one of generation 9's 31 bans is `timeout`: a decision over two seconds at the browser's
+  budget. A faster search is a stronger AI too, since the browser stops a slow one short.
 
 ## How you measure
 
