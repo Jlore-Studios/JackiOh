@@ -1,36 +1,48 @@
-//! The bot seat (SPEC §9.12, R1452): what the match actor runs when a ladder bot owes the match a
-//! move. The bot decides on the AI's `decide_styled` at its strength (its budget and style, on the
-//! spec's resources), off the blocking pool so the actor's runtime never waits on a search, then
-//! waits out a human-paced think time before the move is sent: the delay drawn from the think-time
-//! fits (R1442's `THINK_TIME_FITS`, or the hand-set priors until a fit lands) times the bot's speed,
-//! less the time the decision took, inside its acting clock (R79).
+//! The bot seat (SPEC §9.12, R1452, R639000): what the match actor runs when a ladder bot owes the
+//! match a move. The bot decides on the AI's `decide_styled` at its strength (its budget and style,
+//! on the spec's resources), off the blocking pool so the actor's runtime never waits on a search,
+//! then waits out a human-paced think time before the move is sent: the delay drawn from the
+//! think-time fits (R1442's `THINK_TIME_FITS`, or the hand-set priors until a fit lands), longer on a
+//! board with more to do and on a turn that wins (R639000), times the bot's speed, less the time the
+//! decision took, inside its acting clock (R79). A targeted play or attack carries the aim a person's
+//! client would show (`bots::aim`), which the actor relays a beat before the move (R738).
 //!
-//! Both random streams are the server's own, seeded from the match seed and the seat by the actor
+//! The random streams are the server's own, seeded from the match seed and the seat by the actor
 //! and apart from the match rng (`state.rng`): nothing here reaches the engine's state, the log or a
 //! replay hash, and a match with a bot replays from `(seed, log)` like any other.
 //!
-//! R188 holds for a bot as for the practice AI: it never concedes, never offers a draw and never
-//! accepts one. `decide` already declines an offer and offers none; `r188_forbidden` is the actor's
-//! guard on top of it.
+//! R188 holds for the AI's own answer: `decide` never concedes, offers no draw and declines every
+//! offer, and `r188_forbidden` names what it may not answer. R639000 is the ladder bot's exception:
+//! at the start of its own turn it may concede, as a person behind does (`signals::concedes`), and
+//! it may accept a draw offered while it stands behind (`signals::accepts_draw`); it never offers a
+//! draw, and `never_played` is the actor's guard for that and for an emote.
 
 use std::time::Duration;
 
-use jackioh_ai::{AiOptions, AiStyle, decide_styled};
-use jackioh_engine::{ActionBody, ActionType, GameState, PlayerId, Rng};
+use jackioh_ai::{AiOptions, AiStyle, DecisionReason, decide_styled};
+use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
 use crate::actor::engine;
+use crate::bots::aim::bot_aim;
+use crate::bots::signals::{accepts_draw, concedes, deficit, standard_normal};
 use crate::config::{
-    BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS,
-    BOT_THINK_PRIOR_FIRST_MU, BOT_THINK_PRIOR_FIRST_SIGMA, BOT_THINK_PRIOR_LATER_MU,
-    BOT_THINK_PRIOR_LATER_SIGMA, BotStrength, THINK_TIME_FITS,
+    AIM_RELAY_INTERVAL_MS, BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS,
+    BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU,
+    BOT_THINK_PRIOR_FIRST_SIGMA, BOT_THINK_PRIOR_LATER_MU, BOT_THINK_PRIOR_LATER_SIGMA,
+    BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength, THINK_COMPLEXITY_SLOPE,
+    THINK_LETHAL_SHIFT, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
 };
 
 /// One move a bot owes: the true state (the AI reads it only through `ai_to_act` and `redact`,
-/// R185), the engine seat it plays now (R677), its strength and speed, its two streams and what the
-/// think time is drawn for.
+/// R185), the engine seat it plays now (R677) and the one it began in, its strength and speed, its
+/// two streams and what the think time is drawn for.
 pub struct BotJob {
     pub state: GameState,
     pub seat: PlayerId,
+    /// The seat the bot began the match in, which its R639000 streams are keyed by.
+    pub home: PlayerId,
+    /// The match seed, which its R639000 streams are drawn from.
+    pub seed: String,
     pub strength: BotStrength,
     pub speed: f64,
     /// The AI's own stream (`AiOptions.rng`).
@@ -39,30 +51,83 @@ pub struct BotJob {
     pub timing_rng: Rng,
     /// Whether this is the bot's first move of the turn.
     pub first_in_turn: bool,
+    /// R639000: whether this is the first move of the bot's own turn, the one a concession comes at.
+    pub own_turn_start: bool,
+    /// R639000: how long an aim shows before the move (`signals::aim_lead_ms`).
+    pub aim_lead_ms: i64,
     /// The acting clock the bot has left (R79), or none when none is running for it.
     pub clock_left_ms: Option<i64>,
 }
 
-/// What a bot's move came to: the action it plays (`None` when the AI owed nothing or failed) and
-/// where both streams stand after it.
+/// What a bot's move came to: the action it plays (`None` when the AI owed nothing or failed), where
+/// both streams stand after it, and the aim the actor relays `aim_lead_ms` before it (R639000).
 #[derive(Clone, Debug, PartialEq)]
 pub struct BotMove {
     pub body: Option<ActionBody>,
     pub ai_cursor: u32,
     pub timing_cursor: u32,
+    pub aim: Option<Aim>,
+    pub aim_lead_ms: i64,
 }
 
-/// R1452: decides, draws the think time, and waits whatever of it the decision did not take.
+/// R639000: what one think time is drawn for: the move's kind, whether it is the bot's first of the
+/// turn, how many actions were legal to it (`legal_actions`, as R1442 counts a person's) and whether
+/// the decision was a lethal one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThinkFor {
+    pub action_kind: ActionType,
+    pub first_in_turn: bool,
+    pub legal_count: usize,
+    pub lethal: bool,
+}
+
+/// R1452, R639000: the rows a think time is drawn from: the fits, then the per-kind priors, then the
+/// first and later moves' priors; the complexity the priors are centred on; and the two shifts.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThinkModel<'a> {
+    pub fits: &'a [ThinkTimeFit],
+    pub priors: &'a [ThinkTimePrior],
+    pub prior_ln_legal_mean: f64,
+    pub complexity_slope: f64,
+    pub lethal_shift: f64,
+}
+
+/// The think-time model the ladder bots play by: `crate::config`'s rows.
+pub const THINK_MODEL: ThinkModel<'static> = ThinkModel {
+    fits: THINK_TIME_FITS,
+    priors: BOT_THINK_PRIORS,
+    prior_ln_legal_mean: BOT_THINK_PRIOR_LN_LEGAL_MEAN,
+    complexity_slope: THINK_COMPLEXITY_SLOPE.value,
+    lethal_shift: THINK_LETHAL_SHIFT.value,
+};
+
+/// What the blocking half of `play` came back with.
+struct Decided {
+    body: Option<ActionBody>,
+    ai_cursor: u32,
+    legal_count: usize,
+    lethal: bool,
+    aim: Option<Aim>,
+}
+
+/// R1452: decides, draws the think time, and waits whatever of it the decision did not take, less
+/// the aim's lead, which the actor waits out once it has relayed the aim (R639000). At the start of
+/// its own turn the bot first asks whether it concedes; a draw offer it is answering it accepts or
+/// declines as `signals::accepts_draw` says (R639000).
 pub async fn play(job: BotJob) -> BotMove {
     let started = tokio::time::Instant::now();
     let BotJob {
         state,
         seat,
+        home,
+        seed,
         strength,
         speed,
         ai_rng,
         mut timing_rng,
         first_in_turn,
+        own_turn_start,
+        aim_lead_ms,
         clock_left_ms,
     } = job;
     let fallback_cursor = ai_rng.cursor();
@@ -71,6 +136,16 @@ pub async fn play(job: BotJob) -> BotMove {
         // The blocking pool's thread has no card override: the registered catalog it reads is the
         // real one, as the match's own (`actor::engine`).
         jackioh_cards::register_all();
+        let legal_count = engine::legal_actions(&state, seat).len();
+        if own_turn_start && concedes(&seed, home, state.turn, deficit(&state, seat), &BOT_CONCEDE_FIT) {
+            return Decided {
+                body: Some(ActionBody::Concede),
+                ai_cursor: ai_rng.cursor(),
+                legal_count,
+                lethal: false,
+                aim: None,
+            };
+        }
         let deadline =
             std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
         let should_stop = move || std::time::Instant::now() >= deadline;
@@ -84,21 +159,67 @@ pub async fn play(job: BotJob) -> BotMove {
             missed_lethal_chance: strength.missed_lethal_chance,
         };
         let decision = decide_styled(&state, seat, &mut options, &style);
-        (decision.map(|decision| decision.action), options.rng.cursor())
+        let lethal = decision
+            .as_ref()
+            .is_some_and(|decision| decision.reason == DecisionReason::Lethal);
+        let body = decision
+            .map(|decision| decision.action)
+            .filter(|body| !r188_forbidden(body))
+            .map(|body| match body {
+                ActionBody::AnswerDraw { .. } => ActionBody::AnswerDraw {
+                    accept: accepts_draw(&seed, home, state.turn, deficit(&state, seat), &BOT_DRAW_ANSWER_FIT),
+                },
+                body => body,
+            });
+        let aim = body.as_ref().and_then(|body| bot_aim(&state, seat, body));
+        Decided {
+            body,
+            ai_cursor: options.rng.cursor(),
+            legal_count,
+            lethal,
+            aim,
+        }
     })
     .await;
-    let (body, ai_cursor) = decided.unwrap_or((None, fallback_cursor));
+    let Decided {
+        body,
+        ai_cursor,
+        legal_count,
+        lethal,
+        aim,
+    } = decided.unwrap_or(Decided {
+        body: None,
+        ai_cursor: fallback_cursor,
+        legal_count: 0,
+        lethal: false,
+        aim: None,
+    });
 
-    let kind = body.as_ref().map_or(ActionType::EndTurn, ActionBody::action_type);
-    let wait = think_ms(&mut timing_rng, kind, first_in_turn, speed, clock_left_ms);
+    let think = ThinkFor {
+        action_kind: body.as_ref().map_or(ActionType::EndTurn, ActionBody::action_type),
+        first_in_turn,
+        legal_count,
+        lethal,
+    };
+    let wait = think_ms(&mut timing_rng, &think, &THINK_MODEL, speed, clock_left_ms);
     let spent = i64::try_from(started.elapsed().as_millis()).unwrap_or(i64::MAX);
-    if wait > spent {
-        tokio::time::sleep(Duration::from_millis(u64::try_from(wait - spent).unwrap_or(0))).await;
+    let left = wait.saturating_sub(spent).max(0);
+    // R738: an aim shows for its lead, never longer than the wait left, and only when the relay
+    // can send it before the move (one relay per `AIM_RELAY_INTERVAL_MS`).
+    let lead = aim_lead_ms.min(left);
+    let (aim, lead) = match aim {
+        Some(aim) if lead >= AIM_RELAY_INTERVAL_MS => (Some(aim), lead),
+        _ => (None, 0),
+    };
+    if left > lead {
+        tokio::time::sleep(Duration::from_millis(u64::try_from(left - lead).unwrap_or(0))).await;
     }
     BotMove {
         body,
         ai_cursor,
         timing_cursor: timing_rng.cursor(),
+        aim,
+        aim_lead_ms: lead,
     }
 }
 
@@ -112,32 +233,50 @@ pub fn decision_deadline_ms(clock_left_ms: Option<i64>) -> i64 {
     }
 }
 
-/// R1452: one think time, in ms. The log-normal is the first `THINK_TIME_FITS` row for this action
-/// kind and first-or-later move of the turn, else the hand-set prior; one draw of it (Box–Muller,
-/// two draws of `rng`) is scaled by the bot's speed and kept inside `BOT_THINK_MIN_MS` and
-/// `BOT_THINK_MAX_MS`, and inside the acting clock less `BOT_CLOCK_MARGIN_MS`, so a bot never runs its
-/// own clock out by waiting.
+/// R1452, R639000: one think time, in ms. The log-normal is the first of `model`'s fits for this
+/// action kind and first-or-later move of the turn, else its prior for the kind, else the first or
+/// later moves' prior; its mean grows by `complexity_slope` for each unit of `ln(legal_count)` above
+/// the row's (`ln_legal_mean`, or the priors' `prior_ln_legal_mean`), and by `lethal_shift` on a
+/// lethal decision. One draw of it (Box–Muller, two draws of `rng`) is scaled by the bot's speed and
+/// kept inside `BOT_THINK_MIN_MS` and `BOT_THINK_MAX_MS`, and inside the acting clock less
+/// `BOT_CLOCK_MARGIN_MS`, so a bot never runs its own clock out by waiting.
 pub fn think_ms(
     rng: &mut Rng,
-    action_kind: ActionType,
-    first_in_turn: bool,
+    think: &ThinkFor,
+    model: &ThinkModel<'_>,
     speed: f64,
     clock_left_ms: Option<i64>,
 ) -> i64 {
-    let (mu, sigma) = THINK_TIME_FITS
+    let kind = think.action_kind.as_str();
+    let (mu, sigma, ln_legal_mean) = model
+        .fits
         .iter()
-        .find(|fit| fit.action_kind == action_kind.as_str() && fit.first_in_turn == first_in_turn)
-        .map(|fit| (fit.mu, fit.sigma))
-        .unwrap_or(if first_in_turn {
-            (BOT_THINK_PRIOR_FIRST_MU, BOT_THINK_PRIOR_FIRST_SIGMA)
+        .find(|fit| fit.action_kind == kind && fit.first_in_turn == think.first_in_turn)
+        .map(|fit| (fit.mu, fit.sigma, fit.ln_legal_mean))
+        .or_else(|| {
+            model
+                .priors
+                .iter()
+                .find(|prior| prior.action_kind == kind)
+                .map(|prior| (prior.mu, prior.sigma, model.prior_ln_legal_mean))
+        })
+        .unwrap_or(if think.first_in_turn {
+            (
+                BOT_THINK_PRIOR_FIRST_MU,
+                BOT_THINK_PRIOR_FIRST_SIGMA,
+                model.prior_ln_legal_mean,
+            )
         } else {
-            (BOT_THINK_PRIOR_LATER_MU, BOT_THINK_PRIOR_LATER_SIGMA)
+            (
+                BOT_THINK_PRIOR_LATER_MU,
+                BOT_THINK_PRIOR_LATER_SIGMA,
+                model.prior_ln_legal_mean,
+            )
         });
-    // `1 − next()` is in (0, 1], so its logarithm is finite.
-    let radius = (-2.0 * (1.0 - rng.next()).ln()).sqrt();
-    let angle = std::f64::consts::TAU * rng.next();
-    let z = radius * angle.cos();
-    let drawn = ((mu + sigma * z).exp() * speed).round();
+    let complexity = (think.legal_count.max(1) as f64).ln() - ln_legal_mean;
+    let lethal = if think.lethal { model.lethal_shift } else { 0.0 };
+    let z = standard_normal(rng);
+    let drawn = ((mu + model.complexity_slope * complexity + lethal + sigma * z).exp() * speed).round();
     let upper = match clock_left_ms {
         Some(left) => BOT_THINK_MAX_MS.min(left - BOT_CLOCK_MARGIN_MS).max(0),
         None => BOT_THINK_MAX_MS,
@@ -149,9 +288,10 @@ pub fn think_ms(
     (drawn.clamp(lower as f64, upper as f64)) as i64
 }
 
-/// R188: the actions a bot never plays, whatever the AI answered: a concession, a draw offer and an
+/// R188: the answers the AI may not give, which `play` drops: a concession, a draw offer and an
 /// accepted draw. MD-D29, R1127: nor an `Emote`, as practice's AI never takes one: a bot's emotes
-/// come from its persona through the relay, which mints the action while a card hears it.
+/// come from its persona through the relay, which mints the action while a card hears it. A ladder
+/// bot's own concession and draw answer come from `signals` instead (R639000).
 pub fn r188_forbidden(body: &ActionBody) -> bool {
     matches!(
         body,
@@ -160,6 +300,12 @@ pub fn r188_forbidden(body: &ActionBody) -> bool {
             | ActionBody::AnswerDraw { accept: true }
             | ActionBody::Emote { .. }
     )
+}
+
+/// R639000: the moves the actor never plays for a bot, whatever `play` came back with: a draw offer
+/// (a ladder bot never offers one) and an emote (its persona's, through the relay).
+pub fn never_played(body: &ActionBody) -> bool {
+    matches!(body, ActionBody::OfferDraw | ActionBody::Emote { .. })
 }
 
 /// What a bot plays when the AI gave nothing it may play, or the engine refused it: ending the turn

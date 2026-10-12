@@ -1171,6 +1171,23 @@ pub struct MatchSignalRow {
     pub pilot: Pilot,
 }
 
+/// R639000: one seat's signals beside how its match ended, what `timing-fit` fits the concessions,
+/// draws, timeouts and rematches on.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SignalOutcomeRow {
+    pub signal: MatchSignalRow,
+    /// Whether the seat's account won; `None` when the match had no winner (a draw).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub won: Option<bool>,
+    pub reason: GameOverReason,
+    /// The match's last turn, as its result holds it.
+    pub turns: i64,
+    /// Whether a rematch could be offered from the match (R672): it was ranked, as every match a
+    /// ladder bot plays is, and no Conquest series holds it.
+    pub rematchable: bool,
+}
+
 /// R1442: one match's telemetry, as the actor writes it with the result.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]

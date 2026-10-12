@@ -18,7 +18,9 @@
 //!  - R1452: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
 //!    decided and paced in `bots::seat`, off the queue, and comes back as a server action through the
 //!    same path a client's takes; its persona (`bots::persona`) reads the bot seat's own view and its
-//!    emotes are relayed as a player's are.
+//!    emotes are relayed as a player's are. R639000: its aim goes through the relay a beat before a
+//!    targeted move, it lets an occasional turn run out, and once a ranked match ends it stays a
+//!    while and may offer or meet a rematch (`bots::signals`), as a person does.
 //!
 //! Every task runs on one serialized queue, so the actor really is single-threaded: a socket frame
 //! and a clock alarm can never interleave two `reduce` calls or two log appends. In Rust the queue
@@ -57,10 +59,12 @@ use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
-use crate::bots::seat::{self, BotJob, BotMove, fallback_action, r188_forbidden};
+use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
+use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
-    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_STRENGTHS, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
 use crate::ranked::ladder::RankTier;
@@ -241,6 +245,11 @@ struct Core {
     bot_views: PerPlayer<Option<PlayerView>>,
     /// R645: the long-turn wait each bot home's persona keeps on the person's turn.
     bot_long_turn: PerPlayer<Option<Timer>>,
+    /// R639000: each bot home's plan for the end of a ranked match, drawn as the game ends, and when
+    /// its linger ends (epoch ms); `None` while the game is on, and for a match it offers nothing in.
+    bot_rematch: PerPlayer<Option<(RematchPlan, i64)>>,
+    /// R639000: whether each bot home has already answered a person's rematch offer.
+    bot_rematch_answered: PerPlayer<bool>,
 }
 
 struct Shared {
@@ -291,7 +300,8 @@ fn mulligan_key(owed: &[PlayerId]) -> String {
 
 /// R645: the persona of the bot that began in `home`, playing engine seat `seat`: its own rng stream
 /// (`{seed}:bot-persona:{home}`, apart from the match rng and the search's) and its dealt hand
-/// (R1344). `None` for a person's home.
+/// (R1344), waiting out its emotes inside the ladder bots' refit windows (R639000). `None` for a
+/// person's home.
 fn persona_for(
     seed: &str,
     home: PlayerId,
@@ -301,12 +311,15 @@ fn persona_for(
 ) -> Option<EmotePersona> {
     let bot = bot?;
     let mut rng = Rng::new(&format!("{seed}:bot-persona:{home}"), 0);
-    Some(EmotePersona::new(
-        bot.persona,
-        seat,
-        Box::new(move || rng.next()),
-        Some(hand.to_vec()),
-    ))
+    Some(
+        EmotePersona::new(
+            bot.persona,
+            seat,
+            Box::new(move || rng.next()),
+            Some(hand.to_vec()),
+        )
+        .with_delays(BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT),
+    )
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -443,6 +456,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         personas,
         bot_views,
         bot_long_turn: PerPlayer::new(None, None),
+        bot_rematch: PerPlayer::new(None, None),
+        bot_rematch_answered: PerPlayer::new(false, false),
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();

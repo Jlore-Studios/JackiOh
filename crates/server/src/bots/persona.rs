@@ -13,13 +13,27 @@
 //! One documented difference from TS: R643's rate limit (`emote_gate`) takes whole milliseconds, so
 //! the send instant `now + delay_ms` is rounded to the nearest millisecond before the gate judges it
 //! and before it is recorded; TS judges and records the unrounded float.
+//!
+//! R639000: a ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and waits
+//! out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
+//! (`EmotePersona::with_delays`), the rows `jackioh-server timing-fit` refits from people's emotes.
+//! Everything else, and the TS port's own functions, keep the practice AI's weights and its 0.8–2.5 s
+//! window, so the port still draws as `personas.ts` does.
 
 use jackioh_engine::wire::{
     EMOTE_IDS, EmoteId, GameEvent, Phase, PlayerId, PlayerView, SideView, emote_gate, hand_holds, opponent_of,
 };
 
 use crate::config::{
-    AI_EMOTE, AI_PERSONAS, EmoteReplyKey, EmoteTrigger, PERSONA_DEAL_STEPS, PersonaName, persona_spec,
+    AI_EMOTE, AI_PERSONAS, BOT_PERSONA_WEIGHTS, EmoteDelayFit, EmoteReplyKey, EmoteTrigger, PERSONA_DEAL_STEPS,
+    PERSONA_NAMES, PersonaName, persona_spec,
+};
+
+/// R645: the practice AI's delay window, `AI_EMOTE`'s, as an `EmoteDelayFit`.
+pub const PRACTICE_EMOTE_DELAY: EmoteDelayFit = EmoteDelayFit {
+    samples: 0,
+    min_ms: AI_EMOTE.delay_min_ms,
+    max_ms: AI_EMOTE.delay_max_ms,
 };
 
 /// R645: an emote the persona wants on screen, `delay_ms` after its trigger (TS `AiEmote`).
@@ -60,11 +74,21 @@ fn hero_id(seat: PlayerId) -> String {
 
 /// R645: the weighted deal (TS `pickPersona`), one draw. A tutorial bot is always Silent instead.
 pub fn pick_persona(rng: &mut dyn FnMut() -> f64) -> PersonaName {
+    deal_by(rng, &AI_PERSONAS.map(|(_, spec)| spec.weight))
+}
+
+/// R639000: a ladder bot's deal, the same draw over `BOT_PERSONA_WEIGHTS`.
+pub fn pick_bot_persona(rng: &mut dyn FnMut() -> f64) -> PersonaName {
+    deal_by(rng, &BOT_PERSONA_WEIGHTS.weights)
+}
+
+/// The weighted deal over `weights`, in `PERSONA_NAMES` order.
+fn deal_by(rng: &mut dyn FnMut() -> f64, weights: &[f64; 4]) -> PersonaName {
     // Whole-number thresholds keep 0.85 in Silent despite floating-point summation.
     let draw = (rng() * PERSONA_DEAL_STEPS).floor();
     let mut cumulative = 0.0;
-    for (name, spec) in &AI_PERSONAS {
-        cumulative += (spec.weight * PERSONA_DEAL_STEPS).round();
+    for (name, weight) in PERSONA_NAMES.iter().zip(weights) {
+        cumulative += (weight * PERSONA_DEAL_STEPS).round();
         if draw < cumulative {
             return *name;
         }
@@ -84,9 +108,10 @@ fn pick_from(pool: &[EmoteId], rng: &mut dyn FnMut() -> f64) -> Option<EmoteId> 
     pool.get((drawn as usize).min(last)).copied()
 }
 
-/// R645's "a random 0.8–2.5 s delay", drawn inside the window (TS `rollDelay`).
-fn roll_delay(rng: &mut dyn FnMut() -> f64) -> f64 {
-    AI_EMOTE.delay_min_ms + rng() * (AI_EMOTE.delay_max_ms - AI_EMOTE.delay_min_ms)
+/// R645's "a random 0.8–2.5 s delay", drawn inside `window` (TS `rollDelay`; R639000: a ladder bot's
+/// window is its refit row).
+pub fn roll_delay(rng: &mut dyn FnMut() -> f64, window: &EmoteDelayFit) -> f64 {
+    window.min_ms + rng() * (window.max_ms - window.min_ms)
 }
 
 /// R1344: the part of a row's pool the seat's hand holds, in the pool's order.
@@ -106,6 +131,17 @@ pub fn roll_for_trigger(
     rng: &mut dyn FnMut() -> f64,
     hand: &[EmoteId],
 ) -> Option<AiEmote> {
+    roll_for_trigger_within(persona, trigger, rng, hand, &PRACTICE_EMOTE_DELAY)
+}
+
+/// `roll_for_trigger`, its delay drawn inside `window` (R639000).
+pub fn roll_for_trigger_within(
+    persona: PersonaName,
+    trigger: EmoteTrigger,
+    rng: &mut dyn FnMut() -> f64,
+    hand: &[EmoteId],
+    window: &EmoteDelayFit,
+) -> Option<AiEmote> {
     let row = persona_spec(persona).trigger(trigger)?;
     if rng() >= row.chance {
         return None;
@@ -113,7 +149,7 @@ pub fn roll_for_trigger(
     let emote = pick_from(&pool_in_hand(row.pool, hand), rng)?;
     Some(AiEmote {
         emote,
-        delay_ms: roll_delay(rng),
+        delay_ms: roll_delay(rng, window),
     })
 }
 
@@ -149,6 +185,17 @@ pub fn roll_for_reply(
     rng: &mut dyn FnMut() -> f64,
     hand: &[EmoteId],
 ) -> Option<(AiEmote, EmoteReplyKey)> {
+    roll_for_reply_within(persona, emote, rng, hand, &PRACTICE_EMOTE_DELAY)
+}
+
+/// `roll_for_reply`, its delay drawn inside `window` (R639000).
+pub fn roll_for_reply_within(
+    persona: PersonaName,
+    emote: EmoteId,
+    rng: &mut dyn FnMut() -> f64,
+    hand: &[EmoteId],
+    window: &EmoteDelayFit,
+) -> Option<(AiEmote, EmoteReplyKey)> {
     let key = reply_key_of(emote)?;
     let row = persona_spec(persona).reply(key)?;
     if rng() >= row.chance {
@@ -158,7 +205,7 @@ pub fn roll_for_reply(
     Some((
         AiEmote {
             emote: picked,
-            delay_ms: roll_delay(rng),
+            delay_ms: roll_delay(rng, window),
         },
         key,
     ))
@@ -188,6 +235,9 @@ pub struct EmotePersona {
     seat: PlayerId,
     rng: Box<dyn FnMut() -> f64 + Send>,
     hand: Vec<EmoteId>,
+    /// R639000: the windows a triggered emote's and a reply's delays are drawn inside.
+    trigger_delay: EmoteDelayFit,
+    reply_delay: EmoteDelayFit,
     /// R643: the send instants of the emotes it let through, oldest first.
     sent_at: Vec<i64>,
     sent_match: usize,
@@ -216,6 +266,8 @@ impl EmotePersona {
             seat,
             rng,
             hand: hand.unwrap_or_else(|| EMOTE_IDS.to_vec()),
+            trigger_delay: PRACTICE_EMOTE_DELAY,
+            reply_delay: PRACTICE_EMOTE_DELAY,
             sent_at: Vec::new(),
             sent_match: 0,
             sent_own_turn: 0,
@@ -225,6 +277,16 @@ impl EmotePersona {
             big_play_rolled_turn: None,
             long_turn_rolled_turn: None,
             last_moment: None,
+        }
+    }
+
+    /// R639000: the persona, waiting out its triggered emotes inside `trigger` and its replies inside
+    /// `reply` instead of the practice AI's window: a ladder bot's refit rows.
+    pub fn with_delays(self, trigger: EmoteDelayFit, reply: EmoteDelayFit) -> Self {
+        EmotePersona {
+            trigger_delay: trigger,
+            reply_delay: reply,
+            ..self
         }
     }
 
@@ -294,7 +356,13 @@ impl EmotePersona {
         match_exempt: bool,
         out: &mut Vec<AiEmote>,
     ) {
-        let roll = roll_for_trigger(self.persona, trigger, &mut *self.rng, &self.hand);
+        let roll = roll_for_trigger_within(
+            self.persona,
+            trigger,
+            &mut *self.rng,
+            &self.hand,
+            &self.trigger_delay,
+        );
         if let Some(admitted) = self.admit(roll, moment, now, match_exempt) {
             out.push(admitted);
         }
@@ -413,7 +481,9 @@ impl EmotePersona {
     /// emote is passed here, so the bot never replies to a reply. A row is spent only when its reply
     /// is sent; the roll comes before that check, so a spent row still draws.
     pub fn on_player_emote(&mut self, emote: EmoteId, now: i64) -> Vec<AiEmote> {
-        let Some((roll, key)) = roll_for_reply(self.persona, emote, &mut *self.rng, &self.hand) else {
+        let Some((roll, key)) =
+            roll_for_reply_within(self.persona, emote, &mut *self.rng, &self.hand, &self.reply_delay)
+        else {
             return Vec::new();
         };
         if self.replies_used.contains(&key) {
@@ -444,11 +514,12 @@ impl EmotePersona {
             return Vec::new();
         }
         self.long_turn_rolled_turn = Some(view.turn);
-        let roll = roll_for_trigger(
+        let roll = roll_for_trigger_within(
             self.persona,
             EmoteTrigger::PlayerTurnLong,
             &mut *self.rng,
             &self.hand,
+            &self.trigger_delay,
         );
         self.admit(roll, moment, now, false).into_iter().collect()
     }
