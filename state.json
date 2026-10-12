@@ -4640,9 +4640,9 @@
         }
       },
       "wip": {
-        "at": "2026-10-12T17:42:08Z",
-        "provider": "claude-6",
-        "sha": "3fde5fbff4c6958e258733f1b41ba0ad833ee6c3",
+        "at": "2026-10-12T18:20:55Z",
+        "provider": "claude-7",
+        "sha": "88ed7593cc250412c28da5081126f99146c18ab5",
         "start": "3c3427085cdf323b59487a3ce953e3ff5b999ed1"
       }
     },
