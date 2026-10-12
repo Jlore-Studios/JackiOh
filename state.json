@@ -4893,6 +4893,8 @@
       "kind": "review",
       "pending_request": false,
       "provider": "muse",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38189733635",
       "started_at": "2026-10-12T00:54:14Z",
       "stop_requested": false,
