@@ -654,6 +654,24 @@ pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 /// the row displays "not enough games".
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
+/// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
+/// may flag it. Sits above `CARD_STATS_MIN_SAMPLE` (20): a card under 20 games counts toward the
+/// report's not-enough-games list and is never flagged, and a card with 20–39 games shows its
+/// figures as watched but is never flagged either — the same 55% is noise at 20 games and a signal
+/// at hundreds, so the flag reads a z-score against 50% (draws count as not won), not a fixed
+/// win-rate cut-off.
+pub const BALANCE_WATCH_MIN_GAMES: i64 = 40;
+/// SPEC §9.11 (R377): the |z-score| against 50% at and above which `jackioh-server balance-watch`
+/// flags a card with at least `BALANCE_WATCH_MIN_GAMES` in-deck games as too strong (high) or too
+/// weak (low). Advisory only: the report files nothing and changes no card.
+pub const BALANCE_WATCH_Z_THRESHOLD: f64 = 2.5;
+/// SPEC §9.11 (R377): the |played delta| (played win rate minus drawn-but-not-played win rate, in
+/// fraction points) at and above which `jackioh-server balance-watch` flags a card with at least
+/// `BALANCE_WATCH_MIN_GAMES` in-deck games, whatever its in-deck win rate. A big gap here is the
+/// sign of a card the AI pilot cannot use (trap timing, hand-dump spells), so the flag asks for
+/// live human games, not a change.
+pub const BALANCE_WATCH_PLAYED_DELTA_THRESHOLD: f64 = 0.15;
+
 /// SPEC §11 R654: cost bucket boundary for card statistics filters.
 /// Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
 pub const CARD_STATS_CURVE_TOP: i32 = 6;
