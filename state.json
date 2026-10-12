@@ -4262,13 +4262,8 @@
     "what": "build #711 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-12T13:10:20Z",
-    "notes": [
-      "#729: typed it Task",
-      "#728: typed it Task",
-      "#727: typed it Task",
-      "#726: typed it Task"
-    ],
+    "at": "2026-10-12T13:21:11Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
