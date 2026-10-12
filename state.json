@@ -4145,23 +4145,20 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [
           "claude"
         ],
+        "builder": "claude",
+        "rejections": [],
         "reviews": [
           {
-            "family": "muse",
-            "run": "38211914515",
-            "tier": "medium"
+            "family": "claude",
+            "run": "38215870714",
+            "tier": "strong"
           }
         ],
-        "sha": "04c665487458c186e05e1321611c2238ad750a4f",
+        "sha": "4980d20678b86c510a6c1a8e8c1410213b0bdf67",
         "tiers": {
-          "claude": "strong",
-          "muse": "medium"
+          "claude": "strong"
         }
       }
     },
