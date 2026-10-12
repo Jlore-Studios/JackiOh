@@ -405,7 +405,9 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual((planned["action"], planned["provider"], result["status"]),
                          ("build", "agy", "approved"))
         self.assertEqual([c.role for c in runner.calls], ["build", "review"])
-        self.assertIn("bot:cross-review", h.gh.label_names(14))
+        pulls = h.gh.list_pulls(head="bot/issue-12")
+        self.assertEqual(len(pulls), 1)
+        self.assertIn("bot:cross-review", h.gh.label_names(int(pulls[0]["number"])))
         self.assertIn("## The plan", runner.calls[0].prompt)
         self.assertIn("**Plan** section of the issue's description", runner.calls[0].prompt)
         self.assertIn("Edit src/game.txt only", runner.calls[0].prompt)
