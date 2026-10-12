@@ -109,6 +109,9 @@ pub struct MatchActorInput {
     /// R639000: by home seat, the turn each bot last moved in, which a rebuild reads off `log`
     /// (`bot_moved_turns`); a new match has none.
     pub bot_moved_turn: PerPlayer<Option<i32>>,
+    /// R641000: the match is a game of a Conquest series, which offers no rematch (R672), so a bot
+    /// draws no rematch plan when it ends: the series' next pick phase is what comes next.
+    pub series_game: bool,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -331,6 +334,8 @@ struct Shared {
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
     /// R1452: the ladder bot at each home seat, played by this actor; `None` for a person.
     bots: PerPlayer<Option<BotRow>>,
+    /// R641000: a game of a Conquest series (`MatchActorInput::series_game`).
+    series_game: bool,
     core: Mutex<Core>,
 }
 
@@ -416,6 +421,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         telemetry,
         bots,
         bot_moved_turn,
+        series_game,
     } = input;
     let seats = (
         MatchSeat {
@@ -547,6 +553,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         inbox,
         on_voided,
         bots,
+        series_game,
         core: Mutex::new(core),
     });
     let actor = MatchActor { shared };
@@ -1107,7 +1114,8 @@ impl MatchActor {
     /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
     /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
     fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
-        if self.shared.match_row.ranked != Some(true) {
+        // R641000: a series game offers no rematch, so its bot stays for none.
+        if self.shared.match_row.ranked != Some(true) || self.shared.series_game {
             return;
         }
         for home in PLAYERS {
