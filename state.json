@@ -4446,9 +4446,9 @@
         }
       },
       "wip": {
-        "at": "2026-10-12T14:40:02Z",
-        "provider": "claude-5",
-        "sha": "c6fa539faed7e74e124c60328f22d5e214e23add",
+        "at": "2026-10-12T15:18:24Z",
+        "provider": "claude-3",
+        "sha": "e6c5692386831c1d50083cc70d98b2af49f32939",
         "start": "29b638462812a90c1bc166096d0a17dadd20d715"
       }
     },
