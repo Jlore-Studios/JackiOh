@@ -115,7 +115,7 @@ placeholders (`app::load_server_env`).
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
-`timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`balance-watch`, `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -223,6 +223,19 @@ writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stat
 only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
+
+`balance-watch --patch=<version> [--source=live|all]` is the offline, advisory outlier watch whose
+Markdown pastes into #699: per card it prints the in-deck win rate with its games, z-score against
+50% and played delta, flagging too-strong and too-weak bands (`BALANCE_WATCH_Z_THRESHOLD`, 2.5, at
+`BALANCE_WATCH_MIN_GAMES`, 40 games) and large played deltas (`BALANCE_WATCH_PLAYED_DELTA_THRESHOLD`,
+15 points). Cards under `CARD_STATS_MIN_SAMPLE` games are listed as not enough games and never
+flagged. Below `PUBLIC_STATS_MIN_LIVE_GAMES` live games the report says provisional; seat counting
+matches the public endpoint (live records count human seats only, development runs every seat,
+R1451). It reads `DATABASE_URL`, changes no card and files nothing.
+
+```
+target/release/jackioh-server balance-watch --patch=v0.3.6
+```
 
 ## Play telemetry (§9.11, R1442)
 
