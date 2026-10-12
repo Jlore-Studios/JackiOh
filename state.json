@@ -4898,6 +4898,7 @@
       "forced": false,
       "interruptions": 1,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-12T02:17:58Z",
