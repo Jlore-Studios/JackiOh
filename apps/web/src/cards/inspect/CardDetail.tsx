@@ -79,7 +79,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
         <p className="inspect-rules-line">
           <span className="inspect-rules-label">{t("Base")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={base.text.full} refs={base.refs} />
+            <RulesText text={base.text.full} refs={base.refs} chinese={base.chinese === true} />
           </span>
         </p>
       )}
@@ -87,7 +87,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
         <p className="inspect-rules-line inspect-rules-line--radiant">
           <span className="inspect-rules-label">{t("Radiant")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} />
+            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} chinese={radiant.chinese === true} />
           </span>
         </p>
       )}

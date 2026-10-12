@@ -676,9 +676,9 @@ function priceLine(face: FaceModel): string {
   return face.cost.text === UNKNOWN_PRICE ? t("Pay the embiggen price") : t("Pay ({cost})", { cost: face.cost.text });
 }
 
-/** R1301: the option's card is shown in Chinese, by the option or by the card the view lists. */
-function isChinese(item: PickerItem): boolean {
-  return drawnInChinese(item.chinese === true || item.card?.chinese === true);
+/** R1301: the view flagged the option's card Chinese, by the option or by the card it lists. */
+function isFlagged(item: PickerItem): boolean {
+  return item.chinese === true || item.card?.chinese === true;
 }
 
 /** A card option's name: the catalog's, or the Chinese table's for a Chinese card (R1301). */
@@ -702,8 +702,9 @@ function CardOption(props: {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
-  const chinese = isChinese(props.item);
-  const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, chinese);
+  // faceModel reads the reader's language itself (R711000), so the face gets the raw flag.
+  const flagged = isFlagged(props.item);
+  const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
   // The card in play: as the view lists it when it does, else a definition as the game shows it.
@@ -720,7 +721,7 @@ function CardOption(props: {
             def: info.def,
             name: info.name,
             radiant,
-            chinese,
+            chinese: flagged,
             ...(cost === undefined ? {} : { liveCost: cost }),
             inPlay: {},
           });
@@ -803,7 +804,7 @@ function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => v
   const name =
     props.item.defId === undefined
       ? props.item.label
-      : `${nameOf(props.item.defId, info, isChinese(props.item))} — ${props.item.where ?? props.item.label}`;
+      : `${nameOf(props.item.defId, info, drawnInChinese(isFlagged(props.item)))} — ${props.item.where ?? props.item.label}`;
   return (
     <li>
       <button

@@ -214,12 +214,6 @@ const ROTATED_LINE: Readonly<Record<Extract<GameEvent, { type: "rotated" }>["dir
   right: "The board rotated right",
 };
 
-const SWAPPED_LINE: Readonly<Record<Extract<GameEvent, { type: "swapped" }>["what"], string>> = {
-  health: "Both players swapped health",
-  board: "Both players swapped board",
-  library: "Both players swapped library",
-};
-
 function describe(event: GameEvent, view: PlayerView, name: Naming): string | null {
   /** A card an overflow names: by name where the viewer reads it, else "a card" (R97). */
   const named = (defId: string): string => (defId === HIDDEN_CARD ? t("a card") : name.def(defId));
@@ -357,7 +351,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "rotated":
       return t(ROTATED_LINE[event.direction]);
     case "swapped":
-      return t(SWAPPED_LINE[event.what]);
+      // Built from the event so the line reads as the engine names it; zh-CN.json holds each whole sentence.
+      return t(`Both players swapped ${event.what}`);
     case "locked":
       return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
