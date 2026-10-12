@@ -4188,6 +4188,7 @@
     "711": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-12T12:54:54Z",
         "difficulty": "medium",
