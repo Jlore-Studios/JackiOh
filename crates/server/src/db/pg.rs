@@ -77,9 +77,9 @@ use crate::db::store::{
     PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
     RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome,
-    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome,
+    SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, Ticket, TicketStatus,
+    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -4144,6 +4144,45 @@ fn action_timing_of(row: &PgRow) -> Result<ActionTimingRow, StoreError> {
     })
 }
 
+/// The columns `emote_event_of` reads.
+macro_rules! emote_event_columns {
+    () => {
+        "match_id, ordinal, seat, emote_id, turn, trigger_event, ms_since_trigger, reply_to_opponent_ms, \
+         pilot"
+    };
+}
+
+fn emote_event_of(row: &PgRow) -> Result<EmoteEventRow, StoreError> {
+    Ok(EmoteEventRow {
+        match_id: uuid_text(row, "match_id")?,
+        seat: from_literal(&get::<String>(row, "seat")?)?,
+        ordinal: get(row, "ordinal")?,
+        emote_id: from_literal(&get::<String>(row, "emote_id")?)?,
+        turn: get(row, "turn")?,
+        trigger_event: get::<Option<String>>(row, "trigger_event")?
+            .map(|event| from_literal(&event))
+            .transpose()?,
+        ms_since_trigger: get(row, "ms_since_trigger")?,
+        reply_to_opponent_ms: get(row, "reply_to_opponent_ms")?,
+        pilot: from_literal(&get::<String>(row, "pilot")?)?,
+    })
+}
+
+fn match_signal_of(row: &PgRow) -> Result<MatchSignalRow, StoreError> {
+    Ok(MatchSignalRow {
+        match_id: uuid_text(row, "match_id")?,
+        seat: from_literal(&get::<String>(row, "seat")?)?,
+        conceded_turn: get(row, "conceded_turn")?,
+        concede_eval_deficit: get(row, "concede_eval_deficit")?,
+        draw_offers: get(row, "draw_offers")?,
+        draw_accepted: get(row, "draw_accepted")?,
+        rematch_offered: get(row, "rematch_offered")?,
+        rematch_accepted: get(row, "rematch_accepted")?,
+        timeouts: get(row, "timeouts")?,
+        pilot: from_literal(&get::<String>(row, "pilot")?)?,
+    })
+}
+
 /// Three selects, one per table, in the orders the port names.
 pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {
     if !is_uuid(match_id) {
@@ -4159,11 +4198,11 @@ pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayT
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    let emotes = sqlx::query(
-        "select match_id, ordinal, seat, emote_id, turn, trigger_event, ms_since_trigger,
-                reply_to_opponent_ms, pilot
-           from public.emote_events where match_id = $1::uuid order by ordinal",
-    )
+    let emotes = sqlx::query(concat!(
+        "select ",
+        emote_event_columns!(),
+        " from public.emote_events where match_id = $1::uuid order by ordinal"
+    ))
     .bind(match_id)
     .fetch_all(&mut **t)
     .await
@@ -4179,41 +4218,8 @@ pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayT
     .map_err(db_error)?;
     Ok(PlayTelemetry {
         action_timings: timings.iter().map(action_timing_of).collect::<Result<_, _>>()?,
-        emote_events: emotes
-            .iter()
-            .map(|row| -> Result<EmoteEventRow, StoreError> {
-                Ok(EmoteEventRow {
-                    match_id: uuid_text(row, "match_id")?,
-                    seat: from_literal(&get::<String>(row, "seat")?)?,
-                    ordinal: get(row, "ordinal")?,
-                    emote_id: from_literal(&get::<String>(row, "emote_id")?)?,
-                    turn: get(row, "turn")?,
-                    trigger_event: get::<Option<String>>(row, "trigger_event")?
-                        .map(|event| from_literal(&event))
-                        .transpose()?,
-                    ms_since_trigger: get(row, "ms_since_trigger")?,
-                    reply_to_opponent_ms: get(row, "reply_to_opponent_ms")?,
-                    pilot: from_literal(&get::<String>(row, "pilot")?)?,
-                })
-            })
-            .collect::<Result<_, _>>()?,
-        match_signals: signals
-            .iter()
-            .map(|row| -> Result<MatchSignalRow, StoreError> {
-                Ok(MatchSignalRow {
-                    match_id: uuid_text(row, "match_id")?,
-                    seat: from_literal(&get::<String>(row, "seat")?)?,
-                    conceded_turn: get(row, "conceded_turn")?,
-                    concede_eval_deficit: get(row, "concede_eval_deficit")?,
-                    draw_offers: get(row, "draw_offers")?,
-                    draw_accepted: get(row, "draw_accepted")?,
-                    rematch_offered: get(row, "rematch_offered")?,
-                    rematch_accepted: get(row, "rematch_accepted")?,
-                    timeouts: get(row, "timeouts")?,
-                    pilot: from_literal(&get::<String>(row, "pilot")?)?,
-                })
-            })
-            .collect::<Result<_, _>>()?,
+        emote_events: emotes.iter().map(emote_event_of).collect::<Result<_, _>>()?,
+        match_signals: signals.iter().map(match_signal_of).collect::<Result<_, _>>()?,
     })
 }
 
@@ -4229,6 +4235,62 @@ pub async fn play_telemetry_timings(t: &mut PgTx<'_>) -> Result<Vec<ActionTiming
     .await
     .map_err(db_error)?;
     rows.iter().map(action_timing_of).collect()
+}
+
+/// R639000: every row of `emote_events`, for `timing-fit`.
+pub async fn play_telemetry_emotes(t: &mut PgTx<'_>) -> Result<Vec<EmoteEventRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        emote_event_columns!(),
+        " from public.emote_events order by match_id, ordinal"
+    ))
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(emote_event_of).collect()
+}
+
+/// R639000: every row of `match_signals` whose match has a result, beside it, for `timing-fit`.
+/// `won` is null for a draw, and otherwise whether the winner is the account that began in the
+/// row's seat: the match's own seats, since the result's are the seats as credited after a Glitch's
+/// swap (R677). A match is rematchable when it was ranked and no series lists it among its games
+/// (`state.games[].matchId`).
+pub async fn play_telemetry_outcomes(t: &mut PgTx<'_>) -> Result<Vec<SignalOutcomeRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select s.match_id, s.seat, s.conceded_turn, s.concede_eval_deficit, s.draw_offers,
+                s.draw_accepted, s.rematch_offered, s.rematch_accepted, s.timeouts, s.pilot,
+                case when r.winner_profile_id is null then null
+                     else r.winner_profile_id
+                          = (case s.seat when 'p1' then m.p1_profile_id else m.p2_profile_id end)
+                end as won,
+                r.reason, r.turns,
+                (coalesce(m.ranked, false)
+                 and not exists (
+                   select 1 from public.series x
+                    where x.state -> 'games'
+                          @> jsonb_build_array(jsonb_build_object('matchId', s.match_id::text))))
+                  as rematchable
+           from public.match_signals s
+           join public.results r on r.match_id = s.match_id
+           join public.matches m on m.id = s.match_id
+          order by s.match_id, s.seat",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| -> Result<SignalOutcomeRow, StoreError> {
+            Ok(SignalOutcomeRow {
+                signal: match_signal_of(row)?,
+                won: get(row, "won")?,
+                reason: from_literal(&get::<String>(row, "reason")?)?,
+                turns: i64::from(get::<i32>(row, "turns")?),
+                rematchable: get(row, "rematchable")?,
+            })
+        })
+        .collect()
 }
 
 /// The finished matches (`over`) with a log, no timing and an account still held, oldest ending first.
@@ -4757,6 +4819,62 @@ pub async fn tickets_claim_for_bot(
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
+    sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
+        .bind(bot_id)
+        .bind(match_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(true)
+}
+
+/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: in no match, not
+/// retired), then the `open` skeleton written for the finished match's two players and the bot put
+/// in it. A bot that is not free answers false and writes nothing. The skeleton's decks are empty
+/// until `matches_create` writes the match; a start that never comes leaves it to
+/// `bots_release_stale_starts`.
+pub async fn bots_claim_for_rematch(
+    t: &mut PgTx<'_>,
+    bot_id: &str,
+    players: &(String, String),
+    match_id: &str,
+    catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    let bot = sqlx::query(
+        "select p.id
+           from public.profiles p
+           join public.bots b on b.profile_id = p.id
+          where p.id = $1::uuid and p.kind = 'bot' and p.current_match_id is null
+            and b.retired_at is null
+          for update of p, b",
+    )
+    .bind(bot_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if bot.is_none() {
+        return Ok(false);
+    }
+    sqlx::query(concat!(
+        "insert into public.matches (
+             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
+             ceiling_at, created_at)
+           values ($1::uuid, 'open', '', $2::uuid, $3::uuid, '[]'::jsonb, '[]'::jsonb, $4::text, ",
+        ts!("$5"),
+        ", ",
+        ts!("$5"),
+        ")"
+    ))
+    .bind(match_id)
+    .bind(players.0.as_str())
+    .bind(players.1.as_str())
+    .bind(catalog_version)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
     sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
         .bind(bot_id)
         .bind(match_id)
