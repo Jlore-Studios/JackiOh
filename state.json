@@ -4295,8 +4295,8 @@
       "pending_request": false,
       "provider": "agy",
       "round_tier": "",
-      "run_id": "38267466911",
-      "started_at": "2026-10-12T15:04:39Z",
+      "run_id": "38268940383",
+      "started_at": "2026-10-12T15:16:38Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: The stream was interrupted. Please continue the task you were working on."
@@ -4620,8 +4620,8 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-12T15:04:39Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38267466911",
+    "at": "2026-10-12T15:16:38Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38268940383",
     "what": "plan #727 on agy"
   },
   "last_sweep": {
