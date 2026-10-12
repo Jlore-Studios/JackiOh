@@ -4084,11 +4084,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-12T03:12:07Z",
+        "at": "2026-10-12T06:18:34Z",
         "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Fails easy rule 2 (spans apps/web and crates/server's env list), not rule 1 or 3, because the new VITE_ key must be registered in the server's PUBLIC_ENV_VARS to keep env-production.test.ts green."
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails the easy rule's 'one place' and 'no forbidden path' lines: it spans apps/web, crates/server, both vercel.json copies and docs; no engine work, so not hard"
       },
       "failures": 0,
       "forced": false,
