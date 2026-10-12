@@ -4268,6 +4268,13 @@
     "728": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-12T14:54:07Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Line 7 fails outright: the whole change is a new Cypress e2e spec with no unit test, which the rule rates medium at least"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
