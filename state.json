@@ -70,6 +70,12 @@
       "lines": [
         "/harness build you may edit the issue templates for this PR. Issue templates are low risk modifications"
       ]
+    },
+    "c:6129539788": {
+      "at": "2026-10-12T17:46:32Z",
+      "lines": [
+        "(named the bot)"
+      ]
     }
   },
   "items": {
