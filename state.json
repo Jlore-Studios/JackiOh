@@ -4228,10 +4228,8 @@
     "what": "build #639 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-12T12:34:26Z",
-    "notes": [
-      "#711 needs a plan"
-    ],
+    "at": "2026-10-12T12:45:25Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
