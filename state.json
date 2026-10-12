@@ -4490,7 +4490,9 @@
     },
     "735": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6126907150"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-12T14:50:11Z",
@@ -4520,8 +4522,8 @@
       "planned_tier": "medium",
       "provider": "agy",
       "question": "All files required to fix difficulty labeling (.github/ISSUE_TEMPLATE/{bug,micro-patch,night-bot}.yml and bot/tests/test_repo_meta.py) reside under .github/ and bot/, which are forbidden paths that the bot may not modify under AGENTS.md and .harness/config.json. The root cause is confirmed: no cron is failing; the Bug, Micro patch, and Night bot forms simply lack the difficulty dropdown. Should a maintainer apply the planned changes directly under the `human` label, or how would you prefer to proceed?",
-      "queued_at": "2026-10-12T14:32:08Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-12T15:03:47Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "38265983055",
       "started_at": "2026-10-12T14:52:21Z",
       "stop_requested": false,
