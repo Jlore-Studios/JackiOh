@@ -47,8 +47,8 @@ use crate::config::{
     MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    LastBoardKind, MatchRow, MatchSeat, Profile, RatedGameKind, RatedReason, ResultRow, SeriesRow,
-    SeriesStatus, StoreError, Tx,
+    LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
+    SeriesRow, SeriesStatus, StoreError, Tx,
 };
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
@@ -231,6 +231,15 @@ async fn write_once(
         RATING_START
     };
 
+    // R610, R1452: a ladder bot's side is rated as the bot it is, on its own `bot_ratings` row.
+    let side_of = |seat: &MatchSeat| -> RankedSideInput {
+        let profile_id = seat.profile_id.clone();
+        match by_id.get(&seat.profile_id).map(|profile| profile.kind) {
+            Some(ProfileKind::Bot) => RankedSideInput::Bot { bot_id: profile_id },
+            _ => RankedSideInput::Player { profile_id },
+        }
+    };
+
     let mut before: (f64, f64) = (rating_of(seat_a), rating_of(seat_b));
     let mut after: (f64, f64) = (before.0, before.1);
     if rating_policy == RatingPolicy::Rated
@@ -245,14 +254,7 @@ async fn write_once(
                 id: input.match_id.clone(),
                 kind: RatedGameKind::Match,
                 catalog_version: match_row.catalog_version.clone(),
-                sides: (
-                    RankedSideInput::Player {
-                        profile_id: seat_a.profile_id.clone(),
-                    },
-                    RankedSideInput::Player {
-                        profile_id: seat_b.profile_id.clone(),
-                    },
-                ),
+                sides: (side_of(seat_a), side_of(seat_b)),
                 winner_side: winner_side_of(&input.outcome, &input.seats),
                 reason: RatedReason::Game(input.outcome.reason),
                 at: input.at,

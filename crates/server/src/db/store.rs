@@ -35,6 +35,7 @@ use jackioh_engine::wire::{
 };
 
 use super::{fake, pg};
+use crate::config::PersonaName;
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{RankTier, SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
@@ -177,10 +178,25 @@ store_union! {
     }
 }
 
+store_union! {
+    /// R1452: who holds a profile: a person, or a ladder bot. Server-only (`profiles.kind`, migration
+    /// 0032, which no client role may read): no response carries it, so no read tells a bot's seat
+    /// from a person's.
+    #[derive(Default)]
+    pub enum ProfileKind {
+        #[default]
+        Human = "human",
+        Bot = "bot",
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub id: String,
+    /// R1452: a person's profile, or a ladder bot's. Server-only, like the rating.
+    #[serde(default)]
+    pub kind: ProfileKind,
     /// The managed-auth user id.
     pub user_id: String,
     pub email: String,
@@ -788,6 +804,60 @@ pub struct BotRating {
     pub glicko: Glicko,
     pub games: i64,
     pub updated_at: i64,
+}
+
+/// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BotDeck {
+    pub cards: Vec<String>,
+    pub portrait: String,
+}
+
+/// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
+/// 0032), its profile's `created_at` and `current_match_id`, and its R610 rating. Server-only.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BotRow {
+    /// The bot's profile, which is also its R610 bot id.
+    pub profile_id: String,
+    /// Its index in `BOT_STRENGTHS`.
+    pub strength: usize,
+    /// Its think times' multiplier (R1452).
+    pub speed: f64,
+    pub persona: PersonaName,
+    /// Its schedule (R1454): on from this hour of the day (UTC) for `active_hours` hours.
+    pub active_from_hour: i32,
+    pub active_hours: i32,
+    /// Its Best-of-1 decks; empty until the pool deals them.
+    pub decks: Vec<BotDeck>,
+    /// The catalog version its decks were dealt for, or none before they were.
+    pub decks_catalog_version: Option<String>,
+    /// Epoch ms: when its account reads as made.
+    pub created_at: i64,
+    /// Epoch ms it was retired (R1454), or none while it is in the pool.
+    pub retired_at: Option<i64>,
+    /// Its R610 rating (`bot_ratings`), `RATING_START` before it has a row.
+    pub rating: f64,
+    /// The match it is in, as for a profile (§9.5).
+    pub in_match_id: Option<String>,
+}
+
+/// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
+/// `bot_ratings` row starts at (R610), with a new player's deviation and volatility.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct NewBot {
+    pub profile_id: String,
+    pub strength: usize,
+    pub speed: f64,
+    pub persona: PersonaName,
+    pub active_from_hour: i32,
+    pub active_hours: i32,
+    pub decks: Vec<BotDeck>,
+    pub decks_catalog_version: Option<String>,
+    pub created_at: i64,
+    pub seed_rating: f64,
 }
 
 /// R611: one side of a rated game, as recorded.
@@ -1734,6 +1804,73 @@ impl Tx<'_> {
 
     pub async fn ranked_put_bot(&mut self, bot: &BotRating) -> StoreResult<()> {
         dispatch!(self, ranked_put_bot(bot))
+    }
+
+    // bots (R1453, R1454, R1451, R1452, migration 0032): the ladder bots
+
+    /// R1454: every ladder bot, retired ones included, oldest profile first (ties on id).
+    pub async fn bots_list(&mut self) -> StoreResult<Vec<BotRow>> {
+        dispatch!(self, bots_list())
+    }
+
+    /// R1454: a new bot in one write: an `active` profile of kind `bot` made at `created_at`, with
+    /// the default username a new account gets (the lowest free `Player#n`, R1434) and no auth user;
+    /// its `bots` row; and its `bot_ratings` row at `seed_rating` with a new player's deviation and
+    /// volatility and no games (R610).
+    pub async fn bots_create(&mut self, bot: &NewBot) -> StoreResult<()> {
+        dispatch!(self, bots_create(bot))
+    }
+
+    /// R1454: retires the bot at `at`, or puts it back in the pool with `None`. A retired bot
+    /// finishes the match it is in.
+    pub async fn bots_set_retired(&mut self, profile_id: &str, at: Option<i64>) -> StoreResult<()> {
+        dispatch!(self, bots_set_retired(profile_id, at))
+    }
+
+    /// R1454: the bot's Best-of-1 decks, dealt for `catalog_version`.
+    pub async fn bots_set_decks(
+        &mut self,
+        profile_id: &str,
+        decks: &[BotDeck],
+        catalog_version: &str,
+    ) -> StoreResult<()> {
+        dispatch!(self, bots_set_decks(profile_id, decks, catalog_version))
+    }
+
+    /// R1453: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless
+    /// the bot is free (in no match and not retired) and the ticket still open. On true the ticket is
+    /// matched to `match_id`, the `open` match skeleton is written and the bot is put in it; the
+    /// ticket's owner is the caller's to put in the match.
+    pub async fn tickets_claim_for_bot(
+        &mut self,
+        ticket_id: &str,
+        bot_id: &str,
+        match_id: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        dispatch!(self, tickets_claim_for_bot(ticket_id, bot_id, match_id, at))
+    }
+
+    /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
+    /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
+    /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`
+    /// lets a failed start's go; the ticket stays claimed. Answers the bots let go.
+    pub async fn bots_release_stale_starts(&mut self, before: i64) -> StoreResult<Vec<String>> {
+        dispatch!(self, bots_release_stale_starts(before))
+    }
+
+    /// R1453: the profiles `profile_id` faced in its last `limit` finished matches, newest first.
+    pub async fn results_recent_opponents(
+        &mut self,
+        profile_id: &str,
+        limit: usize,
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, results_recent_opponents(profile_id, limit))
+    }
+
+    /// R1454: how many people (bots left out) finished a match at or after `since` (epoch ms).
+    pub async fn results_count_active_humans(&mut self, since: i64) -> StoreResult<i64> {
+        dispatch!(self, results_count_active_humans(since))
     }
 
     /// R611: one row per rated game. Rejects a second row for the same id.

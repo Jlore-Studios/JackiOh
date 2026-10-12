@@ -5,7 +5,9 @@
 //! the engine's `summarize_game`, called directly (SURFACE §11.3). It is filed under:
 //!  - the match's mode (R257), read off its series, room or queue tickets (`matches_mode_of`);
 //!  - the patch the build's cards are (R388, `jackioh_cards::catalog_version()`);
-//!  - two human pilots, even when the clock answered a prompt for one (R79's `timeout`);
+//!  - each seat's pilot: `human` for a person, even when the clock answered a prompt for one (R79's
+//!    `timeout`), and `ai` for a ladder bot (R1451, R1452), each on the seat its account plays as the
+//!    game ends (R677);
 //!  - `source: "live"`, apart from the AI's development runs (R378).
 //!
 //! Telemetry never costs a result: it runs after the result's transaction and every failure is logged
@@ -15,14 +17,9 @@
 use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot};
 use serde_json::{Map, Value, json};
 
+use crate::actor::engine;
 use crate::app::App;
-use crate::db::store::{MatchRow, QueueMode};
-
-/// R376: both seats of a live match are players.
-const LIVE_PILOTS: PerPlayer<Pilot> = PerPlayer {
-    p1: Pilot::Human,
-    p2: Pilot::Human,
-};
+use crate::db::store::{MatchRow, ProfileKind, QueueMode};
 
 /// An error as the sentence a log line carries.
 fn message_of(error: impl std::fmt::Display) -> String {
@@ -93,7 +90,20 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     };
 
     let log = tx.matches_actions(match_id).await.map_err(message_of)?;
+    // R376, R1451: a person's seat is `human`; a ladder bot's is `ai`, so no human figure reads it
+    // unasked.
+    let profiles = tx
+        .profiles_get_many(&[row.players.0.clone(), row.players.1.clone()])
+        .await
+        .map_err(message_of)?;
     tx.commit().await.map_err(message_of)?;
+    let pilot_of = |profile_id: &str| {
+        let bot = profiles
+            .iter()
+            .any(|profile| profile.id == profile_id && profile.kind == ProfileKind::Bot);
+        if bot { Pilot::Ai } else { Pilot::Human }
+    };
+    let began = (pilot_of(&row.players.0), pilot_of(&row.players.1));
     let actions = log.len();
     let mut entries = Vec::with_capacity(actions);
     for entry in &log {
@@ -110,13 +120,22 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);
         return Ok(None);
     };
+    // R677, R1451: each seat is filed under the account that plays it as the game ends, as the
+    // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
+    // game with a bot in it can tell, so only it folds the log again to read the swap.
+    let swapped = began.0 != began.1 && engine::snapshot(&engine::fold(&args).state).seats_swapped;
+    let pilots = if swapped {
+        PerPlayer::new(began.1, began.0)
+    } else {
+        PerPlayer::new(began.0, began.1)
+    };
 
     let record = GameRecord {
         id: match_id.to_string(),
         source: GameSource::Live,
         mode: game_mode_of(mode),
         patch: jackioh_cards::catalog_version().to_string(),
-        pilots: LIVE_PILOTS,
+        pilots,
         game,
     };
     let mut tx = app.db.begin(None).await.map_err(message_of)?;
