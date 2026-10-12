@@ -4,7 +4,9 @@
 //! act on them.
 
 use jackioh_engine::PlayerId;
-use jackioh_server::bots::signals::{accepts_draw, aim_lead_ms, concedes, idles_turn, rematch_plan};
+use jackioh_server::bots::signals::{
+    Standing, accepts_draw, aim_lead_ms, concedes, idles_turn, rematch_plan,
+};
 use jackioh_server::config::{
     AIM_RELAY_INTERVAL_MS, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_REMATCH_DELAY_MAX_MS,
     BOT_REMATCH_DELAY_MIN_MS, BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_REMATCH_LINGER_MIN_MS,
@@ -21,6 +23,11 @@ fn concede_fit(share: f64, deficit_sigma: f64) -> ConcedeFit {
     }
 }
 
+/// A seat `deficit` behind on R1442's scale that trails its opponent by `behind`.
+fn standing_at(deficit: f64, behind: f64) -> Standing {
+    Standing { deficit, behind }
+}
+
 /// How many of `trials` came out true.
 fn share_of(trials: usize, mut trial: impl FnMut(usize) -> bool) -> f64 {
     (0..trials).filter(|at| trial(*at)).count() as f64 / trials as f64
@@ -32,33 +39,54 @@ fn r639000_concede_draws_its_temper_once_and_waits_for_turn_and_deficit() {
     let sure = concede_fit(1.0, 0.0);
     for seed in ["temper-a", "temper-b", "temper-c"] {
         for home in [PlayerId::P1, PlayerId::P2] {
-            assert!(!concedes(seed, home, 5, 1_000.0, &sure), "never before min_turn");
             assert!(
-                !concedes(seed, home, 6, 39.9, &sure),
+                !concedes(seed, home, 5, &standing_at(1_000.0, 1.0), &sure),
+                "never before min_turn"
+            );
+            assert!(
+                !concedes(seed, home, 6, &standing_at(39.9, 1.0), &sure),
                 "never short of the threshold"
             );
-            assert!(concedes(seed, home, 6, 40.0, &sure));
-            assert!(concedes(seed, home, 30, 41.0, &sure));
+            assert!(concedes(seed, home, 6, &standing_at(40.0, 1.0), &sure));
+            assert!(concedes(seed, home, 30, &standing_at(41.0, 1.0), &sure));
         }
     }
-    // A threshold drawn at or below 0 still needs the bot behind: one even or ahead never concedes.
+    // However far past its threshold the deficit reads, a bot that does not trail its opponent never
+    // concedes: R1442's deficit is about the enemy hero's health on an even board, not 0.
+    for (deficit, behind) in [(1_000.0, 0.0), (1_000.0, -5.0), (40.0, 0.0)] {
+        assert!(
+            !concedes(
+                "temper-even",
+                PlayerId::P1,
+                10,
+                &standing_at(deficit, behind),
+                &sure
+            ),
+            "never while even or ahead: {deficit}, {behind}"
+        );
+    }
+    // A threshold drawn at or below 0 is met by any deficit once the bot trails.
     let low = ConcedeFit {
         deficit_mu: -30.0,
         ..sure
     };
-    assert!(
-        !concedes("temper-low", PlayerId::P1, 10, 0.0, &low),
-        "never while even"
-    );
-    assert!(
-        !concedes("temper-low", PlayerId::P1, 10, -5.0, &low),
-        "never while ahead"
-    );
-    assert!(concedes("temper-low", PlayerId::P1, 10, 0.5, &low));
+    assert!(concedes(
+        "temper-low",
+        PlayerId::P1,
+        10,
+        &standing_at(0.5, 0.5),
+        &low
+    ));
 
     // No conceder ever concedes, however far behind.
     let never = concede_fit(0.0, 20.0);
-    assert!((0..200).all(|at| !concedes(&format!("never-{at}"), PlayerId::P2, 20, 1e9, &never)));
+    assert!((0..200).all(|at| !concedes(
+        &format!("never-{at}"),
+        PlayerId::P2,
+        20,
+        &standing_at(1e9, 1e9),
+        &never
+    )));
 
     // The temper is the match's: the same seed and seat answer the same on every turn past
     // `min_turn`, and once a deficit is enough every larger one is.
@@ -67,10 +95,10 @@ fn r639000_concede_draws_its_temper_once_and_waits_for_turn_and_deficit() {
         let seed = format!("temper-{at}");
         let mut conceded = false;
         for deficit in (-40..=160).step_by(5).map(f64::from) {
-            let now = concedes(&seed, PlayerId::P1, 6, deficit, &fit);
+            let now = concedes(&seed, PlayerId::P1, 6, &standing_at(deficit, 1.0), &fit);
             assert_eq!(
                 now,
-                concedes(&seed, PlayerId::P1, 40, deficit, &fit),
+                concedes(&seed, PlayerId::P1, 40, &standing_at(deficit, 1.0), &fit),
                 "{seed} at {deficit}"
             );
             assert!(now || !conceded, "{seed}: conceded below {deficit} but not at it");
@@ -84,7 +112,7 @@ fn r639000_concede_draws_its_temper_once_and_waits_for_turn_and_deficit() {
             &format!("share-{at}"),
             PlayerId::P2,
             10,
-            1e9,
+            &standing_at(1e9, 1e9),
             &concede_fit(0.4, 0.0),
         )
     });
@@ -103,30 +131,48 @@ fn r639000_a_draw_is_accepted_only_behind_at_the_fitted_share() {
     };
     for turn in 1..20 {
         assert!(
-            !accepts_draw("draw", PlayerId::P1, turn, 0.0, &always),
+            !accepts_draw("draw", PlayerId::P1, turn, &standing_at(30.0, 0.0), &always),
             "level: declined"
         );
         assert!(
-            !accepts_draw("draw", PlayerId::P1, turn, -15.0, &always),
+            !accepts_draw("draw", PlayerId::P1, turn, &standing_at(45.0, -15.0), &always),
             "ahead: declined"
         );
-        assert!(accepts_draw("draw", PlayerId::P1, turn, 0.5, &always));
-        assert!(!accepts_draw("draw", PlayerId::P1, turn, 50.0, &never));
+        assert!(accepts_draw(
+            "draw",
+            PlayerId::P1,
+            turn,
+            &standing_at(0.5, 0.5),
+            &always
+        ));
+        assert!(!accepts_draw(
+            "draw",
+            PlayerId::P1,
+            turn,
+            &standing_at(50.0, 50.0),
+            &never
+        ));
     }
     let fit = DrawAnswerFit {
         samples: 0,
         accept_share: 0.25,
     };
     let share = share_of(4_000, |at| {
-        accepts_draw(&format!("draw-{at}"), PlayerId::P2, 7, 10.0, &fit)
+        accepts_draw(
+            &format!("draw-{at}"),
+            PlayerId::P2,
+            7,
+            &standing_at(10.0, 10.0),
+            &fit,
+        )
     });
     assert!((0.22..=0.28).contains(&share), "{share}");
     // One offer's answer is the turn's own: asked again, it answers the same.
     for at in 0..100 {
         let seed = format!("again-{at}");
         assert_eq!(
-            accepts_draw(&seed, PlayerId::P2, 9, 10.0, &fit),
-            accepts_draw(&seed, PlayerId::P2, 9, 10.0, &fit)
+            accepts_draw(&seed, PlayerId::P2, 9, &standing_at(10.0, 10.0), &fit),
+            accepts_draw(&seed, PlayerId::P2, 9, &standing_at(10.0, 10.0), &fit)
         );
     }
 }

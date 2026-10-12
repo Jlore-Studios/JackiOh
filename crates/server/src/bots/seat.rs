@@ -24,7 +24,7 @@ use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
 use crate::actor::engine;
 use crate::bots::aim::bot_aim;
-use crate::bots::signals::{accepts_draw, concedes, deficit, standard_normal};
+use crate::bots::signals::{accepts_draw, concedes, standard_normal, standing};
 use crate::config::{
     AIM_RELAY_INTERVAL_MS, BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS,
     BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU,
@@ -137,7 +137,15 @@ pub async fn play(job: BotJob) -> BotMove {
         // real one, as the match's own (`actor::engine`).
         jackioh_cards::register_all();
         let legal_count = engine::legal_actions(&state, seat).len();
-        if own_turn_start && concedes(&seed, home, state.turn, deficit(&state, seat), &BOT_CONCEDE_FIT) {
+        if own_turn_start
+            && concedes(
+                &seed,
+                home,
+                state.turn,
+                &standing(&state, seat, &seed, home),
+                &BOT_CONCEDE_FIT,
+            )
+        {
             return Decided {
                 body: Some(ActionBody::Concede),
                 ai_cursor: ai_rng.cursor(),
@@ -171,7 +179,7 @@ pub async fn play(job: BotJob) -> BotMove {
                         &seed,
                         home,
                         state.turn,
-                        deficit(&state, seat),
+                        &standing(&state, seat, &seed, home),
                         &BOT_DRAW_ANSWER_FIT,
                     ),
                 },

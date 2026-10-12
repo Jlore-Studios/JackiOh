@@ -277,10 +277,14 @@ is seated and the pool is never sized.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
   `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
-  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit read through `redact`), a draw answer
-  (`BOT_DRAW_ANSWER_FIT`, only when behind), an idle turn its clock times out (`BOT_TIMEOUT_FIT`), its
-  plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
-  it meets an offer, and when) and its aim's lead.
+  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit, only while it trails), a draw answer
+  (`BOT_DRAW_ANSWER_FIT`, only while it trails), an idle turn its clock times out
+  (`BOT_TIMEOUT_FIT`), its plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
+  it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
+  `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
+  cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
+  threshold is fitted on, and how far it trails its opponent, centred on an even board, which both
+  guards read.
 - `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
   person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and

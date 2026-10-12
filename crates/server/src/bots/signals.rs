@@ -7,10 +7,10 @@
 //! the seat the bot began in, apart from the match rng (`state.rng`), the search's and the think
 //! time's. A stream always starts at cursor 0, so the actor keeps no cursor for it and an actor
 //! rebuilt after a restart draws the same. Nothing here reaches the engine's state, the log or a
-//! replay hash. The one read of the state is `deficit`, through `redact`, so a hidden card never
-//! changes what a bot does (R185).
+//! replay hash. The one read of the state is `standing`, through `redact` and `determinize`, so a
+//! hidden card never changes what a bot does (R185).
 
-use jackioh_ai::{AI_EVAL, NextSwing, evaluate, redact};
+use jackioh_ai::{AI_EVAL, DeterminizeOptions, NextSwing, determinize, evaluate, redact};
 use jackioh_engine::{GameState, PlayerId, Rng};
 
 use crate::config::{
@@ -26,16 +26,44 @@ pub fn standard_normal(rng: &mut Rng) -> f64 {
     radius * angle.cos()
 }
 
-/// R639000: how far behind `seat` stands, as R1442 measures a concession: the AI's evaluation of
-/// the state from the seat's side, negated, the next swing the active seat's. It reads the state
-/// only through `redact` (R185).
-pub fn deficit(state: &GameState, seat: PlayerId) -> f64 {
-    let next = if state.active == seat {
-        NextSwing::Seat
-    } else {
-        NextSwing::Enemy
+/// R639000: where a seat stands, read at one moment of its game.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Standing {
+    /// How far behind it stands as R1442 measures a person's concession: the AI's evaluation from
+    /// its side, negated, the scale `ConcedeFit`'s threshold is fitted on. The evaluation is not
+    /// centred on an even board (it counts the enemy hero's health against the seat), so this alone
+    /// never says whether the seat is behind.
+    pub deficit: f64,
+    /// How far it trails its opponent: half the gap between the opponent's evaluation from its own
+    /// side and the seat's, so about 0 on an even board and above 0 only while the seat is behind.
+    pub behind: f64,
+}
+
+/// R639000: where `seat` (the bot that began in `home`) stands on `state`, the next swing the
+/// active seat's. It reads the state only through `redact` (R185), and evaluates one world
+/// `determinize` fills that in with, on the stream `{seed}:bot-standing:{home}:{turn}`, as the
+/// search evaluates only determinized worlds: the evaluation cannot read a face-down placeholder.
+pub fn standing(state: &GameState, seat: PlayerId, seed: &str, home: PlayerId) -> Standing {
+    let mut rng = Rng::new(&format!("{seed}:bot-standing:{home}:{}", state.turn), 0);
+    let world = determinize(
+        &redact(state, seat),
+        seat,
+        &mut rng,
+        DeterminizeOptions::default(),
+    );
+    let swing = |side: PlayerId| {
+        if world.active == side {
+            NextSwing::Seat
+        } else {
+            NextSwing::Enemy
+        }
     };
-    -evaluate(&redact(state, seat), seat, next, &AI_EVAL)
+    let own = evaluate(&world, seat, swing(seat), &AI_EVAL);
+    let theirs = evaluate(&world, seat.opponent(), swing(seat.opponent()), &AI_EVAL);
+    Standing {
+        deficit: -own,
+        behind: (theirs - own) / 2.0,
+    }
 }
 
 /// A whole number of ms drawn uniformly between `min` and `max`.
@@ -44,22 +72,23 @@ fn uniform_ms(rng: &mut Rng, min: i64, max: i64) -> i64 {
 }
 
 /// R639000: whether the bot that began in `home` concedes now, at the start of its own turn `turn`,
-/// standing `deficit` behind. Its temper is drawn once a match: whether it is one who concedes at
+/// standing as `standing` says. Its temper is drawn once a match: whether it is one who concedes at
 /// all (`share`), and the deficit it gives up at (normal, `deficit_mu` and `deficit_sigma`). It
-/// never concedes before `min_turn`, nor while it is not behind at all, whatever its threshold drew.
-pub fn concedes(seed: &str, home: PlayerId, turn: i32, deficit: f64, fit: &ConcedeFit) -> bool {
+/// never concedes before `min_turn`, nor while it is not behind its opponent, whatever its
+/// threshold drew.
+pub fn concedes(seed: &str, home: PlayerId, turn: i32, standing: &Standing, fit: &ConcedeFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-concede:{home}"), 0);
     let conceder = rng.next() < fit.share;
     let threshold = fit.deficit_mu + fit.deficit_sigma * standard_normal(&mut rng);
-    conceder && turn >= fit.min_turn && deficit > 0.0 && deficit >= threshold
+    conceder && turn >= fit.min_turn && standing.behind > 0.0 && standing.deficit >= threshold
 }
 
 /// R639000: whether the bot that began in `home` accepts the draw offered in turn `turn`. Only a
-/// bot that stands behind accepts, and then at the fitted share; the AI's own answer, a refusal
-/// (R188), stands otherwise.
-pub fn accepts_draw(seed: &str, home: PlayerId, turn: i32, deficit: f64, fit: &DrawAnswerFit) -> bool {
+/// bot that stands behind its opponent accepts, and then at the fitted share; the AI's own answer,
+/// a refusal (R188), stands otherwise.
+pub fn accepts_draw(seed: &str, home: PlayerId, turn: i32, standing: &Standing, fit: &DrawAnswerFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-draw:{home}:{turn}"), 0);
-    deficit > 0.0 && rng.next() < fit.accept_share
+    standing.behind > 0.0 && rng.next() < fit.accept_share
 }
 
 /// R639000: whether the bot that began in `home` lets its own turn `turn` run out (R79) rather than

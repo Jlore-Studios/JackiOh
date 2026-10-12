@@ -5,22 +5,27 @@
 //!
 //! R639000: the think time grows with the legal actions and on a lethal turn, a mulligan, a draw
 //! answer and a concession have priors of their own, and `play` concedes only at the bot's turn
-//! start and answers a draw offer by the bot's own roll.
+//! start and answers a draw offer by the bot's own roll, reading where it stands through a
+//! determinized world (a face-down enemy card included) centred on the even board.
 //!
 //! `jackioh_server::bots::seat`, on the real cards.
 
 use jackioh_engine::wire::PLAYER_IDS;
-use jackioh_engine::{Action, ActionBody, ActionType, GameState, PlayerId, Rng};
-use jackioh_server::actor::engine::{begin_game, create_game, create_game_args, reduce};
+use jackioh_engine::{
+    Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
+};
+use jackioh_server::actor::engine::{
+    begin_game, create_game, create_game_args, deal_random_deck, legal_actions, reduce,
+};
 use jackioh_server::bots::seat::{
     BotJob, THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, fallback_action, never_played, play,
     r188_forbidden, think_ms,
 };
-use jackioh_server::bots::signals::{accepts_draw, concedes, deficit, standard_normal};
+use jackioh_server::bots::signals::{accepts_draw, concedes, standard_normal, standing};
 use jackioh_server::config::{
     BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS,
-    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS,
-    THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
+    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, ConcedeFit,
+    DrawAnswerFit, THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
 };
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
@@ -373,9 +378,17 @@ async fn r639000_a_bot_far_behind_concedes_at_its_turn_start_and_only_then() {
     let bot = state.active;
     // A hero on its last point, late in the game.
     state.players[bot].hero.health = 1;
-    let behind = deficit(&state, bot);
+    let behind = standing(&state, bot, "premise", bot).behind;
     assert!(behind > 0.0, "PREMISE: the bot stands behind ({behind})");
-    let conceding = |seed: &str| concedes(seed, bot, state.turn, behind, &BOT_CONCEDE_FIT);
+    let conceding = |seed: &str| {
+        concedes(
+            seed,
+            bot,
+            state.turn,
+            &standing(&state, bot, seed, bot),
+            &BOT_CONCEDE_FIT,
+        )
+    };
     let gives_up = seed_where("concede", conceding);
     let plays_on = seed_where("stay", |seed| !conceding(seed));
 
@@ -407,14 +420,162 @@ async fn r639000_a_bot_answers_a_draw_offer_by_its_own_roll_not_the_searchs_decl
     );
     assert!(offered.error.is_none(), "{:?}", offered.error);
     let state = offered.state;
-    let behind = deficit(&state, bot);
+    let behind = standing(&state, bot, "premise", bot).behind;
     assert!(behind > 0.0, "PREMISE: the bot stands behind ({behind})");
     // `decide` declines every offer (R188); the bot's answer is its roll's, either way.
     for accept in [true, false] {
         let seed = seed_where("draw", |seed| {
-            accepts_draw(seed, bot, state.turn, behind, &BOT_DRAW_ANSWER_FIT) == accept
+            let standing = standing(&state, bot, seed, bot);
+            accepts_draw(seed, bot, state.turn, &standing, &BOT_DRAW_ANSWER_FIT) == accept
         });
         let body = play(job(&state, bot, &seed, false)).await.body;
         assert_eq!(body, Some(ActionBody::AnswerDraw { accept }), "{seed}");
     }
+}
+
+/// `state` with a Trap the opponent of `seat` controls set face-down in its first backrow lane: a
+/// card of its library, made a Trap, which `redact` hides from `seat` as a placeholder.
+fn with_face_down_trap(mut state: GameState, seat: PlayerId) -> GameState {
+    let opp = seat.opponent();
+    let trap = jackioh_cards::CATALOG
+        .values()
+        .find(|def| !def.token && def.type_ == CardType::Trap)
+        .expect("a Trap in the catalog");
+    let mut card = state.players[opp].library.pop().expect("a library card");
+    card.def_id = trap.id.clone();
+    card.zone = Zone::Field {
+        player: opp,
+        row: Row::Backrow,
+        lane: 0,
+    };
+    card.face_up = None;
+    state.players[opp].backrow[0] = Some(card);
+    state
+}
+
+/// The states at each turn's start of a game on `seed` in which both seats play random legal moves
+/// (no concession or draw offer), with random decks: boards, backrows and face-down cards of every
+/// kind a game reaches.
+fn random_turn_starts(seed: &str) -> Vec<GameState> {
+    jackioh_cards::register_all();
+    let decks = (
+        deal_random_deck(&format!("{seed}-a"), None),
+        deal_random_deck(&format!("{seed}-b"), None),
+    );
+    let mut state = begin_game(&create_game(&create_game_args(seed, &decks, None, None, None))).state;
+    let mut rng = Rng::new(seed, 0);
+    let mut starts: Vec<GameState> = Vec::new();
+    for step in 0..2_000 {
+        let Some(seat) = seat_to_act(&state).filter(|_| state.result.is_none()) else {
+            break;
+        };
+        if state.mulligan.is_none()
+            && state.pending.is_none()
+            && starts.last().is_none_or(|last| last.turn != state.turn)
+        {
+            starts.push(state.clone());
+        }
+        let legal: Vec<ActionBody> = legal_actions(&state, seat)
+            .into_iter()
+            .filter(|body| !matches!(body, ActionBody::Concede | ActionBody::OfferDraw))
+            .collect();
+        let at = (rng.next() * legal.len() as f64) as usize;
+        let Some(body) = legal.get(at) else { break };
+        let result = reduce(&state, &Action::new(body.clone(), seat, format!("random-{step}")));
+        if result.error.is_none() {
+            state = result.state;
+        }
+    }
+    starts
+}
+
+#[tokio::test(start_paused = true)]
+async fn r639000_a_face_down_enemy_card_stops_neither_the_standing_read_nor_the_bots_turn() {
+    // The read evaluates a determinized world, never the placeholder `redact` leaves (which the
+    // evaluation cannot look up): it reads at every turn start of random games, the many with a
+    // face-down card the active seat cannot see among them.
+    let mut hidden = 0;
+    for game in 0..12 {
+        let seed = format!("hidden-game-{game}");
+        for state in random_turn_starts(&seed) {
+            let seat = state.active;
+            hidden += usize::from(
+                state.players[seat.opponent()]
+                    .backrow
+                    .iter()
+                    .flatten()
+                    .any(|card| card.face_up != Some(true)),
+            );
+            let read = standing(&state, seat, &seed, seat);
+            assert!(read.deficit.is_finite() && read.behind.is_finite(), "{read:?}");
+        }
+    }
+    assert!(
+        hidden > 50,
+        "PREMISE: turn starts facing a face-down card: {hidden}"
+    );
+
+    // With a Trap set against it, the bot's turn start plays a move.
+    let state = opened_at("seed-play-hidden", BOT_CONCEDE_FIT.min_turn);
+    let bot = state.active;
+    let state = with_face_down_trap(state, bot);
+    let played = play(job(&state, bot, "hidden-play", true)).await;
+    assert!(played.body.is_some(), "the turn start played nothing");
+    assert!(played.ai_cursor > 0, "the search ran");
+
+    // And so does a draw answer with the Trap set.
+    let person = bot.opponent();
+    let mut state = with_face_down_trap(opened_at("seed-play-hidden-draw", 1), bot);
+    if state.active != person {
+        state = reduce(&state, &Action::new(ActionBody::EndTurn, bot, "pass".to_string())).state;
+    }
+    let offered = reduce(
+        &state,
+        &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
+    );
+    assert!(offered.error.is_none(), "{:?}", offered.error);
+    let body = play(job(&offered.state, bot, "hidden-draw", false)).await.body;
+    assert!(matches!(body, Some(ActionBody::AnswerDraw { .. })), "{body:?}");
+}
+
+#[test]
+fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
+    // Both seats have only ended their turns: no board, both heroes whole.
+    let state = opened_at("seed-even", BOT_CONCEDE_FIT.min_turn);
+    let bot = state.active;
+    let read = standing(&state, bot, "even", bot);
+    // R1442's deficit counts the enemy hero's health against the seat, so an even board reads
+    // about that far behind on it; the standing's `behind` is centred on the even board.
+    assert!(read.deficit > 20.0, "PREMISE: {read:?}");
+    assert!(read.behind.abs() < 6.0, "{read:?}");
+
+    // A bot whose threshold any deficit meets concedes only while it trails its opponent: never
+    // with the opponent on its last point, and at once with its own hero there.
+    let any_deficit = ConcedeFit {
+        samples: 0,
+        share: 1.0,
+        min_turn: 0,
+        deficit_mu: f64::MIN,
+        deficit_sigma: 0.0,
+    };
+    let mut winning = state.clone();
+    winning.players[bot.opponent()].hero.health = 1;
+    let ahead = standing(&winning, bot, "even", bot);
+    assert!(ahead.behind < 0.0, "{ahead:?}");
+    assert!(!concedes("even", bot, state.turn, &ahead, &any_deficit));
+    assert!(!accepts_draw(
+        "even",
+        bot,
+        state.turn,
+        &ahead,
+        &DrawAnswerFit {
+            samples: 0,
+            accept_share: 1.0
+        }
+    ));
+    let mut losing = state;
+    losing.players[bot].hero.health = 1;
+    let trailing = standing(&losing, bot, "even", bot);
+    assert!(trailing.behind > 0.0, "{trailing:?}");
+    assert!(concedes("even", bot, losing.turn, &trailing, &any_deficit));
 }

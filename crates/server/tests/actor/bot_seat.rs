@@ -26,7 +26,7 @@ use jackioh_server::actor::match_actor::{MatchActor, bot_moved_turns};
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
-use jackioh_server::bots::signals::{accepts_draw, deficit, idles_turn};
+use jackioh_server::bots::signals::{accepts_draw, idles_turn, standing};
 use jackioh_server::config::{
     AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger,
     MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
@@ -677,7 +677,7 @@ async fn r639000_a_bot_answers_a_draw_offer_at_its_fitted_pace() {
         &m.seed,
         bot,
         state.turn,
-        deficit(&state, bot),
+        &standing(&state, bot, &m.seed, bot),
         &BOT_DRAW_ANSWER_FIT,
     );
     assert_eq!(answer["accept"], json!(accept), "{rows:?}");

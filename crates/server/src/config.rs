@@ -690,7 +690,9 @@ pub struct ScalarFit {
 /// R639000: how people concede. `share` of the players who lose concede at all; those who do never
 /// concede before turn `min_turn`, and concede once they stand `deficit` behind (the AI's evaluation
 /// from their side, negated, R1442), a threshold distributed normally with mean `deficit_mu` and
-/// standard deviation `deficit_sigma`. `samples` is the concessions it was fitted on.
+/// standard deviation `deficit_sigma`, and only while they trail their opponent (`Standing.behind`).
+/// That deficit is not centred on an even board: it counts the enemy hero's health against the seat,
+/// so an even opening reads about 30 behind. `samples` is the concessions it was fitted on.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConcedeFit {
     pub samples: usize,
@@ -755,12 +757,13 @@ pub const THINK_LETHAL_SHIFT: ScalarFit = ScalarFit {
     value: 0.4,
 };
 
-/// R639000: the concession model a ladder bot draws its temper from.
+/// R639000: the concession model a ladder bot draws its temper from. The prior's threshold sits about
+/// 40 past an even opening's deficit, a game clearly lost.
 pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit {
     samples: 0,
     share: 0.4,
     min_turn: 6,
-    deficit_mu: 40.0,
+    deficit_mu: 70.0,
     deficit_sigma: 20.0,
 };
 
