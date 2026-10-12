@@ -53,6 +53,10 @@ mod tests {
     const BIG_ATTACKER: &str = "core-019"; // (9) 9/9 Unit: survives 15 damage, so we can verify exact damage taken.
     const ARMORED: &str = "core-025"; // (4) 7/7, Armor 7 Unit.
     const MOTHS: &str = "core-009"; // (2) 1/14 Unit: forces attacks at start of turn.
+    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const GHOST: &str = "classic-089"; // (2) 5/6 Divine Shield.
+    const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage.
+    const FELINOR: &str = "core-043"; // Big Felinor, Radiant 6/20.
 
     #[test]
     fn is_a_2_cost_unit_token_printed_epic() {
@@ -89,7 +93,10 @@ mod tests {
         );
         let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(2));
-        assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier), Some(3));
+        assert_eq!(
+            s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier),
+            Some(3)
+        );
     }
 
     mod base {
@@ -222,6 +229,100 @@ mod tests {
             // Moths has 14 health, so 15 damage kills Moths!
             assert!(s.unit(P2, 1).is_none(), "Moths took 15 damage and died");
         }
+        fn bunker_against(p2_field: Value) -> Scenario {
+            crate::register_all();
+            crate::scenario(json!({
+                "p1": {
+                    "field": [{ "def": ID, "lane": 1 }],
+                    "hand": [FILLER, BURN],
+                    "library": [SPARE, SPARE]
+                },
+                "p2": { "field": p2_field, "hand": [FILLER], "library": [SPARE, SPARE] },
+            }))
+        }
+
+        #[test]
+        fn cant_attack() {
+            let mut s = bunker_against(json!([{ "def": BIG_ATTACKER, "lane": 1 }]));
+            s.expect_refused(|s| s.attack(ID, "hero"));
+            let big = s.unit(P2, 1).unwrap().id;
+            s.expect_refused(|s| s.attack(ID, &big));
+        }
+
+        #[test]
+        fn tribute_2_is_required() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "field": [{ "def": VANILLA, "lane": 1 }],
+                    "hand": [ID, FILLER],
+                    "library": [SPARE, SPARE],
+                    "mana": 10
+                },
+                "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
+            }));
+            // One Unit is not enough.
+            let one = s.unit(P1, 1).unwrap().id;
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 2, "tributes": [one.clone()] })));
+            assert!(
+                legal_actions(s.state(), P1).iter().all(|action| !matches!(
+                    action,
+                    ActionBody::Play { instance_id, .. } if *instance_id == s.card(ID).id
+                )),
+                "no play is offered with one Unit to pay"
+            );
+        }
+
+        #[test]
+        fn r1283_across_its_lane_its_15_goes_through_a_divine_shield_first() {
+            // The 5/6 Ghost's Shield takes the 15: it stands undamaged, its Shield spent.
+            let mut s = bunker_against(json!([{ "def": GHOST, "lane": 1 }]));
+            s.end_turn();
+            let ghost = s.unit(P2, 1).unwrap().id;
+            let bunker = s.unit(P1, 1).unwrap().id;
+            s.attack(&ghost, &bunker);
+            let ghost_now = s.unit(P2, 1).expect("the Ghost stands");
+            assert_eq!(ghost_now.damage, 0);
+            assert!(
+                !s.stats(&ghost)
+                    .keywords
+                    .iter()
+                    .any(|k| k.kind() == KeywordKind::DivineShield),
+                "its Shield took the hit"
+            );
+            // Then the Ghost's 5 reaches the Bunker through its Armor 3.
+            assert_eq!(s.unit(P1, 1).unwrap().damage, 2);
+        }
+
+        #[test]
+        fn r1283_non_combat_damage_is_never_multiplied() {
+            // Burn's 2 at the Unit across from the Bunker is 2, not 6.
+            let mut s = bunker_against(json!([{ "def": BIG_ATTACKER, "lane": 1 }]));
+            let big = s.unit(P2, 1).unwrap().id;
+            s.play(
+                BURN,
+                json!({ "targets": [{ "pick": "instance", "instanceId": big }] }),
+            );
+            assert_eq!(s.unit(P2, 1).unwrap().damage, 2);
+        }
+
+        #[test]
+        fn r1283_multiplier_reads_through_param() {
+            // A Radiant Big Felinor (6/20) across the lane takes 15 of the printed 3x…
+            let mut s = bunker_against(json!([{ "def": FELINOR, "radiant": true, "lane": 1 }]));
+            s.end_turn();
+            let felinor = s.unit(P2, 1).unwrap().id;
+            s.attack(&felinor, ID);
+            assert_eq!(s.unit(P2, 1).unwrap().damage, 15);
+
+            // …and 20 of a tuned 4x, which kills it.
+            let mut s = bunker_against(json!([{ "def": FELINOR, "radiant": true, "lane": 1 }]));
+            assert_eq!(crate::upgrade_number(&mut s, ID, "multiplier"), 4);
+            s.end_turn();
+            let felinor = s.unit(P2, 1).unwrap().id;
+            s.attack(&felinor, ID);
+            s.expect_in_zone(&felinor, "graveyard");
+        }
     }
 
     mod radiant {
@@ -262,6 +363,16 @@ mod tests {
 
             // Moths strikes back for 1. Bunker has Armor 5, so takes 0 damage!
             assert_eq!(s.unit(P1, 1).unwrap().damage, 0);
+        }
+
+        #[test]
+        fn radiant_is_10_30_with_armor_5() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [{ "def": ID, "radiant": true }] },
+            }));
+            s.expect_stats(ID, json!({ "attack": 10, "health": 30 }));
+            assert_eq!(s.stats(ID).armor, 5);
         }
     }
 }

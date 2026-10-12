@@ -115,7 +115,11 @@ mod tests {
                     def.base.keywords.iter().map(|keyword| keyword.kind()).collect();
                 assert_eq!(kinds, printed_kinds());
                 assert_eq!(
-                    def.radiant.keywords.iter().map(|keyword| keyword.kind()).collect::<Vec<_>>(),
+                    def.radiant
+                        .keywords
+                        .iter()
+                        .map(|keyword| keyword.kind())
+                        .collect::<Vec<_>>(),
                     printed_kinds()
                 );
                 // Armor, Lucky and Spell Damage print numbered (R386's X row).
@@ -136,8 +140,10 @@ mod tests {
 
                 // Indestructible holds Taunt down (R347): no Taunt among the acting keywords.
                 let me = s.card(KEENUS);
-                let kinds: Vec<KeywordKind> =
-                    keywords_of(s.state(), me).iter().map(|keyword| keyword.kind()).collect();
+                let kinds: Vec<KeywordKind> = keywords_of(s.state(), me)
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect();
                 assert!(kinds.contains(&KeywordKind::Indestructible));
                 assert!(!kinds.contains(&KeywordKind::Taunt));
             }
@@ -159,12 +165,114 @@ mod tests {
                 let host = s.unit(P1, 1).expect("the fused host");
                 let stats = s.stats(host.id.as_str());
                 assert_eq!((stats.attack, stats.health), (5, 5));
-                assert!(keywords_of(s.state(), &host).iter().any(|keyword| keyword.kind() == KeywordKind::Magnetic));
+                assert!(
+                    keywords_of(s.state(), &host)
+                        .iter()
+                        .any(|keyword| keyword.kind() == KeywordKind::Magnetic)
+                );
+            }
+        }
+
+        /// Apply `effects` as p1's, outside any card, then run the state check.
+        fn run_and_check(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
+            let mut events = Vec::new();
+            let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+            let mut rng = Rng::new(&seed, cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                {
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(effects, &mut ctx);
+                }
+                state_check(&mut sink);
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            events
+        }
+
+        mod base_more {
+            use super::*;
+
+            #[test]
+            fn played_with_stack_it_goes_on_top_of_a_pile() {
+                crate::register_all();
+                let _guard = preview_sets(&[SetName::Meditative]);
+                let mut s = scenario(json!({
+                    "seed": "keenus-stack",
+                    "p1": { "mana": 10, "field": [VANILLA], "hand": [KEENUS, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let under = s.unit(P1, 1).expect("the Vanilla").id;
+                s.play(KEENUS, json!({ "zone": 1 }));
+                // Keenus tops lane 1's pile, the Vanilla dormant under it (§3.2 Stack, R13).
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(KEENUS.to_string()));
+                assert!(matches!(
+                    s.card(under.as_str()).zone,
+                    Zone::Field {
+                        player: PlayerId::P1,
+                        row: Row::Units,
+                        lane: 1
+                    }
+                ));
+                let stats = s.stats(KEENUS);
+                assert_eq!((stats.attack, stats.health), (1, 1), "not fused: Keenus alone");
+            }
+
+            #[test]
+            fn destroyed_it_survives_indestructible_and_its_death_does_not_fire() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "keenus-destroy",
+                    "p1": {
+                        "field": [{ "def": KEENUS, "radiant": true }, VANILLA],
+                        "hand": [FILLER],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let id = s.unit(P1, 1).expect("Keenus").id;
+                let events = run_and_check(
+                    &mut s,
+                    &[destroy(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": id } }),
+                    ))],
+                );
+                assert_eq!(
+                    s.unit(P1, 1).map(|unit| unit.id),
+                    Some(id.clone()),
+                    "Keenus stands"
+                );
+                assert!(
+                    !events
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::KeywordGranted { .. })),
+                    "no Death: nothing granted"
+                );
             }
         }
 
         mod radiant {
             use super::*;
+
+            #[test]
+            fn the_radiant_face_is_2_2() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "keenus-stats",
+                    "p1": { "mana": 10, "hand": [{ "def": KEENUS, "radiant": true }, FILLER], "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.play(KEENUS, json!({ "zone": 1 }));
+                let stats = s.stats(KEENUS);
+                assert_eq!((stats.attack, stats.health), (2, 2));
+            }
 
             /// Carnivorous Cube (Core #22): (3) Unit, "Cry: Tribute one of your other Units".
             const CUBE: &str = "core-022";
@@ -207,7 +315,11 @@ mod tests {
             fn receivers_since(s: &Scenario, mark: usize) -> Vec<String> {
                 let mut out: Vec<String> = Vec::new();
                 for event in &s.events()[mark..] {
-                    if let GameEvent::KeywordGranted { instance_id, lost: None, .. } = event
+                    if let GameEvent::KeywordGranted {
+                        instance_id,
+                        lost: None,
+                        ..
+                    } = event
                         && !out.contains(instance_id)
                     {
                         out.push(instance_id.clone());
@@ -219,7 +331,10 @@ mod tests {
             /// The keywords Keenus has as it acts now: its 21 but Taunt, which R347 drops while
             /// it is Indestructible.
             fn acting_kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
-                keywords_of(s.state(), s.card(id)).iter().map(|keyword| keyword.kind()).collect()
+                keywords_of(s.state(), s.card(id))
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect()
             }
 
             #[test]
@@ -296,10 +411,11 @@ mod tests {
                 // Death finds no other Unit and draws nothing (R129).
                 let me = s.card(KEENUS).id.clone();
                 s.play(ROCK, json!({ "tributes": [me] }));
-                assert!(s.events().iter().all(|event| !matches!(
-                    event,
-                    GameEvent::KeywordGranted { .. }
-                )));
+                assert!(
+                    s.events()
+                        .iter()
+                        .all(|event| !matches!(event, GameEvent::KeywordGranted { .. }))
+                );
                 // Reborn still returns Keenus.
                 assert_eq!(s.card(KEENUS).def_id, KEENUS);
             }

@@ -16,8 +16,8 @@
 //!   this one included.
 
 use jackioh_engine::effects::{
-    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board,
-    set_cost_mod, set_radiant_random, summon,
+    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board, set_cost_mod,
+    set_radiant_random, summon,
 };
 use jackioh_engine::prelude::*;
 
@@ -81,11 +81,7 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
             RandomEntry {
                 label: format!(
                     "Summon {} for your opponent",
-                    plural(
-                        viruses,
-                        "Radiant Yile's Virus",
-                        "Radiant Yile's Viruses"
-                    )
+                    plural(viruses, "Radiant Yile's Virus", "Radiant Yile's Viruses")
                 ),
                 effects: (0..viruses)
                     .map(|_| {
@@ -124,9 +120,7 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
 fn discount_for(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
     let (player, unspent) = match event {
         GameEvent::TurnEnded {
-            player,
-            unspent_mana,
-            ..
+            player, unspent_mana, ..
         } => (*player, *unspent_mana),
         _ => return vec![],
     };
@@ -267,8 +261,51 @@ mod tests {
             .count()
     }
 
+    /// The entry a label names, by its place in the list (MD-C23).
+    fn entry_index(label: &str) -> usize {
+        ["Datacenter", "Glitch", "AI Girlfriend", "Fill", "Nerf"]
+            .iter()
+            .position(|key| label.contains(key))
+            .unwrap_or_else(|| panic!("no entry for {label}"))
+    }
+
+    /// The base face played from a seed whose roll names the entry holding `key` (and, with
+    /// `without`, not the one holding that): the match rng decides, so the test looks for a seed.
+    fn rolling(key: &str, without: Option<&str>) -> Scenario {
+        for n in 0..96 {
+            let mut s = holding(&format!("unleashed-{key}-{n}"), false);
+            s.play(UNLEASHED, json!({ "zone": 1 }));
+            let labels = rolled(&s);
+            if labels.iter().any(|label| label.contains(key))
+                && without.is_none_or(|other| !labels.iter().any(|label| label.contains(other)))
+            {
+                return s;
+            }
+        }
+        panic!("no seed rolled {key}");
+    }
+
+    /// How many `degraded` reports named this instance.
+    fn degraded_of(s: &Scenario, id: &str) -> usize {
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Degraded { instance_id, .. } if instance_id == id))
+            .count()
+    }
+
     mod m49_1_yilegpt_unleashed {
         use super::*;
+
+        #[test]
+        fn it_cannot_attack() {
+            let mut s = scenario(json!({
+                "seed": "unleashed-cannot-attack",
+                "p1": { "field": [{ "def": UNLEASHED, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER] },
+            }));
+            let me = s.unit(P1, 1).expect("unleashed");
+            s.expect_refused(|s| s.attack(&me, "hero"));
+        }
 
         mod discount {
             use super::*;
@@ -319,8 +356,172 @@ mod tests {
             }
         }
 
+        mod discount_reset {
+            use super::*;
+
+            #[test]
+            fn r1022_the_discount_ends_as_the_card_leaves_hand_and_deck() {
+                // A Yile's Virus's Death discards it. YileGPT Unleashed is a token, so it reaches no
+                // graveyard: it ceases to exist (R11) and its discount with it.
+                let mut s = scenario(json!({
+                    "seed": "unleashed-discount-graveyard",
+                    "p1": {
+                        "field": [{ "def": VIRUS, "lane": 1 }],
+                        "hand": [{ "def": UNLEASHED, "costMod": -6 }],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                let id = s.hand(P1)[0].id.clone();
+                assert_eq!(s.card(id.as_str()).cost_mod, -6);
+                let virus = s.unit(P1, 1).expect("the virus");
+
+                s.activate(&virus, json!({}));
+
+                s.expect_in_zone(id.as_str(), "gone");
+                assert!(s.hand(P1).is_empty());
+            }
+        }
+
         mod base {
             use super::*;
+
+            #[test]
+            fn r1023_the_two_named_entries_resolve_in_list_order_named_to_both_players() {
+                for n in 0..16 {
+                    let mut s = holding(&format!("unleashed-order-{n}"), false);
+                    s.play(UNLEASHED, json!({ "zone": 1 }));
+                    let order: Vec<usize> = rolled(&s).iter().map(|label| entry_index(label)).collect();
+                    assert_eq!(order.len(), 2, "{n}");
+                    assert!(order[0] < order[1], "list order: {order:?}");
+                    // Both seats' views carry the roll's names.
+                    for seat in [P1, P2] {
+                        let seen = s.view(seat).events.iter().any(|event| {
+                            matches!(event, GameEvent::ChaosRolled { effects, .. } if effects.len() == 2)
+                        });
+                        assert!(seen, "{n}: {seat:?} sees the roll");
+                    }
+                }
+            }
+
+            #[test]
+            fn r1023_two_claudes_datacenters_into_your_backrow() {
+                let s = rolling("Datacenter", None);
+                assert_eq!(
+                    backrow_defs(&s, P1)
+                        .iter()
+                        .filter(|def| *def == DATACENTERS)
+                        .count(),
+                    2
+                );
+            }
+
+            #[test]
+            fn r1023_three_radiant_glitch_in_the_system_cards_at_0() {
+                let s = rolling("Glitch", None);
+                let glitches: Vec<CardInstance> = s
+                    .hand(P1)
+                    .into_iter()
+                    .filter(|card| card.def_id == GLITCH)
+                    .collect();
+                assert_eq!(glitches.len(), 3);
+                for card in &glitches {
+                    assert!(card.radiant);
+                    assert_eq!(price_of(&s, &card.id), 0);
+                }
+            }
+
+            #[test]
+            fn r1025_an_ai_girlfriend_animating() {
+                let s = rolling("AI Girlfriend", None);
+                assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+                assert!(!backrow_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+            }
+
+            #[test]
+            fn r1023_the_opponents_board_filled_with_base_viruses() {
+                let s = rolling("Fill", None);
+                // p2's board was empty: all five zones hold a base Yile's Virus, for p2.
+                for lane in 1..=5 {
+                    let unit = s.unit(P2, lane).expect("a virus");
+                    assert_eq!(unit.def_id, VIRUS);
+                    assert!(!unit.radiant);
+                    assert_eq!(unit.controller, P2);
+                }
+            }
+
+            #[test]
+            fn r440_two_nerfs_on_every_enemy_card_hidden_in_hand_and_deck() {
+                let s = rolling("Nerf", Some("Fill"));
+                let hidden: Vec<String> = s
+                    .hand(P2)
+                    .into_iter()
+                    .chain(s.pile(P2, "library"))
+                    .map(|card| card.id)
+                    .collect();
+                assert!(!hidden.is_empty());
+                for id in &hidden {
+                    assert_eq!(degraded_of(&s, id), 2, "{id} Nerfed twice");
+                }
+                // p1's view of those Nerfs names none of the cards (R440).
+                let view = serde_json::to_string(&s.view(P1)).expect("JSON");
+                for id in &hidden {
+                    assert!(!view.contains(&format!("\"{id}\"")), "{id} leaked to p1");
+                }
+            }
+
+            #[test]
+            fn r60_at_your_start_of_turn_one_non_radiant_permanent_itself_included() {
+                // Its only non-Radiant permanent is itself: it becomes Radiant.
+                let mut s = scenario(json!({
+                    "seed": "unleashed-sot-self",
+                    "p1": {
+                        "field": [
+                            { "def": UNLEASHED, "lane": 1 },
+                            { "def": "core-012", "radiant": true, "lane": 2 },
+                        ],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                s.start_turn();
+                assert!(s.unit(P1, 1).expect("unleashed").radiant);
+                // With two plain permanents beside it, exactly one becomes Radiant.
+                let mut s = scenario(json!({
+                    "seed": "unleashed-sot-one",
+                    "p1": {
+                        "field": [
+                            { "def": UNLEASHED, "lane": 1 },
+                            { "def": "core-012", "lane": 2 },
+                            { "def": "core-012", "lane": 3 },
+                        ],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                s.start_turn();
+                let set = s
+                    .events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::RadiantSet { .. }))
+                    .count();
+                assert_eq!(set, 1);
+            }
+
+            #[test]
+            fn r386_its_numbers_read_through_param() {
+                let mut s = holding("unleashed-param", false);
+                let id = s.hand(P1)[0].id.clone();
+                step_param(s.card_mut(id.as_str()), "picks", 1);
+                s.play(UNLEASHED, json!({ "zone": 1 }));
+                // Three entries now, all different.
+                let mut order: Vec<usize> = rolled(&s).iter().map(|label| entry_index(label)).collect();
+                assert_eq!(order.len(), 3);
+                order.dedup();
+                assert_eq!(order.len(), 3);
+            }
 
             #[test]
             fn r1023_two_different_entries_named_and_in_order() {
@@ -358,6 +559,40 @@ mod tests {
             use super::*;
 
             #[test]
+            fn radiant_is_16_40_with_armor_5() {
+                let s = scenario(json!({
+                    "seed": "unleashed-radiant-stats",
+                    "p1": { "field": [{ "def": UNLEASHED, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
+                    "p2": { "hand": [FILLER], "library": [FILLER] },
+                }));
+                let stats = s.stats(s.unit(P1, 1).expect("unleashed"));
+                assert_eq!((stats.attack, stats.health, stats.armor), (16, 40, 5));
+            }
+
+            #[test]
+            fn r60_radiant_makes_two_permanents_radiant() {
+                let mut s = scenario(json!({
+                    "seed": "unleashed-radiant-sot",
+                    "p1": {
+                        "field": [
+                            { "def": UNLEASHED, "radiant": true, "lane": 1 },
+                            { "def": "core-012", "lane": 2 },
+                            { "def": "core-012", "lane": 3 },
+                            { "def": "core-012", "lane": 4 },
+                        ],
+                        "hand": [FILLER],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                s.start_turn();
+                let radiant = (2..=4)
+                    .filter(|lane| s.unit(P1, *lane).expect("felinors").radiant)
+                    .count();
+                assert_eq!(radiant, 2);
+            }
+
+            #[test]
             fn r1024_radiant_does_all_five_with_two_radiant_viruses_for_the_opponent() {
                 let mut s = holding("unleashed-radiant", true);
                 s.play(UNLEASHED, json!({ "zone": 1 }));
@@ -382,10 +617,7 @@ mod tests {
                 assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
                 // … two Radiant Viruses for the opponent in place of the fill (MD-C24) …
                 let foe = field_defs(&s, P2);
-                assert_eq!(
-                    foe.iter().filter(|def| *def == VIRUS).count(),
-                    2
-                );
+                assert_eq!(foe.iter().filter(|def| *def == VIRUS).count(), 2);
                 for lane in 1..=5 {
                     if let Some(unit) = s.unit(P2, lane)
                         && unit.def_id == VIRUS

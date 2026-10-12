@@ -69,6 +69,7 @@ mod tests {
     const EXPEDITION: &str = "meditative-018";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.
 
     /// A board where p1 can play the expedition and neither side auto-ends its turn. It is p1's
     /// first turn (the scenario's default is turn 9), so its later turns are 3 and 5, with max mana
@@ -165,6 +166,61 @@ mod tests {
             assert!(!offered_ids.contains(&shiny), "no Radiant card is offered");
             s.play(EXPEDITION, pick(&s, FILLER));
             assert!(s.card(FILLER).radiant, "the pick becomes Radiant");
+        }
+
+        #[test]
+        fn r640_it_is_quickdraw_on_both_faces() {
+            crate::register_all();
+            let scripts = script();
+            for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
+            }
+            assert!(crate::card_def(EXPEDITION).tags.contains(&Tag::Quickdraw));
+        }
+
+        #[test]
+        fn r844_mana_gained_during_the_lost_turn_still_adds() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION, FILLER, COIN]));
+            s.play(EXPEDITION, pick(&s, FILLER));
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().players.p1.mana.current, 0);
+            // The Coin's gain is an effect, not the refresh: it adds.
+            s.play(COIN, json!({}));
+            assert_eq!(s.state().players.p1.mana.current, 1);
+        }
+
+        #[test]
+        fn r844_the_turn_after_the_lost_one_is_normal() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION, FILLER]));
+            s.play(EXPEDITION, pick(&s, FILLER));
+            for _ in 0..4 {
+                s.end_turn();
+            }
+            assert_eq!(s.state().turn, 5);
+            let side = &s.state().players.p1;
+            assert_eq!(side.mana.current, side.mana.max);
+            assert_eq!(side.mana.current, 3);
+            assert_eq!(side.lost_refresh_through, None);
+        }
+
+        #[test]
+        fn r844_r845_an_extra_turn_taken_next_is_the_lost_one() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION, FILLER]));
+            s.play(EXPEDITION, pick(&s, FILLER));
+            s.state_mut().players.p1.extra_turns = Some(1);
+            s.end_turn();
+            // P1 again: the extra turn's refresh is the lost one.
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players.p1.mana.current, 0);
+            // p2's turn, then p1's next is normal.
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players.p1.mana.current, 3);
         }
 
         #[test]

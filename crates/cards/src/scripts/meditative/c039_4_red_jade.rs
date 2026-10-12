@@ -13,7 +13,9 @@ pub const ID: &str = "meditative-039-4";
 
 fn red_jade() -> Script {
     Script {
-        cry: Some(hook(|ctx| vec![add_jade(json_as(json!({ "amount": param(&*ctx, "jade") })))])),
+        cry: Some(hook(|ctx| {
+            vec![add_jade(json_as(json!({ "amount": param(&*ctx, "jade") })))]
+        })),
         ..Script::default()
     }
 }
@@ -40,7 +42,10 @@ mod tests {
     const FILLER: &str = "core-008";
 
     fn beauties(s: &Scenario) -> Vec<CardInstance> {
-        (1..=5).filter_map(|lane| s.unit(P1, lane)).filter(|unit| unit.def_id == BEAUTY).collect()
+        (1..=5)
+            .filter_map(|lane| s.unit(P1, lane))
+            .filter(|unit| unit.def_id == BEAUTY)
+            .collect()
     }
 
     #[test]
@@ -81,5 +86,15 @@ mod tests {
             })
             .collect();
         assert_eq!(order, vec!["summoned", "radiantSet"]);
+    }
+
+    #[test]
+    fn jade_reads_through_param() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
+        set_param(s.card_mut(ID), "jade", 3);
+        s.play(ID, json!({}));
+        assert_eq!(s.view(P1).you.jade, Some(3));
+        assert!(beauties(&s).is_empty(), "3 crosses no threshold");
     }
 }

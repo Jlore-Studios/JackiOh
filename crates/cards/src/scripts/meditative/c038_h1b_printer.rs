@@ -71,6 +71,35 @@ mod tests {
         def.tags.contains(&Tag::Ky) || def.tags.contains(&Tag::Cn)
     }
 
+    /// The cards the Printer added to p1's hand at this start of turn, as `addedToHand` names them
+    /// (a card may change once in the hand: M #37 CN in a bottle transforms as it arrives).
+    fn printed_at_start(s: &mut Scenario) -> Vec<(String, String)> {
+        let mark = s.events().len();
+        s.start_turn();
+        let events = &s.events()[mark..];
+        // The turn draw arrives too: it is the one with a `drawn` event.
+        let drawn: Vec<&String> = events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Drawn { instance_id, .. } => Some(instance_id),
+                _ => None,
+            })
+            .collect();
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::AddedToHand {
+                    player,
+                    instance_id,
+                    def_id,
+                } if *player == P1 && !drawn.contains(&instance_id) => {
+                    Some((instance_id.clone(), def_id.clone()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
     mod m38_h1b_printer {
         use super::*;
 
@@ -88,15 +117,17 @@ mod tests {
                 let made: Vec<&CardInstance> =
                     hand.iter().filter(|card| !before.contains(&card.id)).collect();
                 assert_eq!(made.len(), 2);
-                let printed = made.into_iter().find(|card| card.radiant).expect("the printed card");
+                let printed = made
+                    .into_iter()
+                    .find(|card| card.radiant)
+                    .expect("the printed card");
                 assert_ne!(printed.def_id, PRINTER, "never itself (R387)");
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert!(!crate::card_def(&printed.def_id).token);
                 assert_eq!(printed.chinese, None);
                 assert_eq!(printed.cost_override, None);
                 // Hidden from the opponent: a count, never the card.
-                let view: Value =
-                    serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
                 assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
             }
 
@@ -111,11 +142,83 @@ mod tests {
                 let ids: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.end_turn();
                 let held = s.hand(P1);
-                let fresh: Vec<&CardInstance> =
-                    held.iter().filter(|card| !ids.contains(&card.id)).collect();
+                let fresh: Vec<&CardInstance> = held.iter().filter(|card| !ids.contains(&card.id)).collect();
                 // The turn draw plus the one printed card.
                 assert_eq!(fresh.len(), 2);
                 assert_eq!(fresh.iter().filter(|card| card.radiant).count(), 1);
+            }
+            #[test]
+            fn r387_never_itself() {
+                // The Printer is a KY and CN card, so the pool would hold it but for R387.
+                let unexcluded = jackioh_engine::catalog::query(&json_as(json!({ "anyTags": ["KY", "CN"] })));
+                assert!(unexcluded.iter().any(|def| def.id == PRINTER));
+                for n in 0..60 {
+                    let mut s = standing(&format!("printer-self-{n}"), false);
+                    let printed = printed_at_start(&mut s);
+                    assert_eq!(printed.len(), 1, "one card a start of turn");
+                    assert_ne!(printed[0].1, PRINTER, "never itself (R387)");
+                }
+            }
+
+            #[test]
+            fn a_card_with_neither_tag_never_appears() {
+                for n in 0..60 {
+                    let mut s = standing(&format!("printer-tags-{n}"), false);
+                    for (_, def_id) in printed_at_start(&mut s) {
+                        assert!(is_ky_or_cn(&def_id), "{def_id} has neither KY nor CN");
+                        assert!(!crate::card_def(&def_id).token, "{def_id} is a token");
+                    }
+                }
+            }
+
+            #[test]
+            fn at_its_printed_cost_and_not_chinese() {
+                let mut s = standing("printer-cost", false);
+                let printed = printed_at_start(&mut s);
+                assert_eq!(printed.len(), 1);
+                let card = s.card(&printed[0].0).clone();
+                assert!(card.radiant);
+                assert_eq!(card.cost_override, None, "at its printed cost");
+                assert_eq!(card.cost_mod, 0);
+                assert_eq!(card.chinese, None, "not Chinese");
+            }
+
+            #[test]
+            fn the_hand_cap_burns_it() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "printer-burn",
+                    "p1": {
+                        "hand": filler(HAND_CAP as usize),
+                        "backrow": [{ "def": PRINTER, "lane": 1 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.start_turn();
+                assert_eq!(s.hand(P1).len(), HAND_CAP as usize, "the cap holds");
+                assert!(s.hand(P1).iter().all(|card| card.def_id == FILLER));
+                let burned: Vec<CardInstance> = s
+                    .pile(P1, "graveyard")
+                    .into_iter()
+                    .filter(|card| card.def_id != FILLER)
+                    .collect();
+                assert_eq!(burned.len(), 1, "the printed card burned");
+                assert!(is_ky_or_cn(&burned[0].def_id));
+            }
+
+            #[test]
+            fn hidden_from_the_opponent() {
+                let mut s = standing("printer-hidden", false);
+                let printed = printed_at_start(&mut s);
+                let (id, def_id) = printed[0].clone();
+                // p2 reads a count of p1's hand, and no event of its stream names the card.
+                let view = s.view(P2);
+                let text = serde_json::to_string(&view).expect("the view serialises");
+                assert!(!text.contains(&id), "p2 never reads the printed card's id");
+                assert!(!text.contains(&def_id), "p2 never reads {def_id}");
+                let mine = serde_json::to_string(&s.view(P1)).expect("the view serialises");
+                assert!(mine.contains(&id), "p1 reads its own card");
             }
         }
 
@@ -130,7 +233,10 @@ mod tests {
                 let held = s.hand(P1);
                 let made: Vec<&CardInstance> =
                     held.iter().filter(|card| !before.contains(&card.id)).collect();
-                let printed = made.into_iter().find(|card| card.radiant).expect("the printed card");
+                let printed = made
+                    .into_iter()
+                    .find(|card| card.radiant)
+                    .expect("the printed card");
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert_eq!(printed.cost_override, Some(0));
                 assert_eq!(printed.chinese, None);

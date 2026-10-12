@@ -22,7 +22,11 @@ fn gaokao(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let times = param(&*ctx, "times");
-            let (destroy_side, buff_side) = if radiant { ("enemy", "self") } else { ("any", "any") };
+            let (destroy_side, buff_side) = if radiant {
+                ("enemy", "self")
+            } else {
+                ("any", "any")
+            };
             vec![
                 destroy_all(json_as(json!({
                     "side": destroy_side,
@@ -120,7 +124,14 @@ mod tests {
                 s.play(GAOKAO, json!({}));
                 // Neither tag on either side: both Vanillas and the face-down Honeypot are gone
                 // (besides the resolved Spell itself).
-                for card in s.state().players.p1.graveyard.iter().chain(s.state().players.p2.graveyard.iter()) {
+                for card in s
+                    .state()
+                    .players
+                    .p1
+                    .graveyard
+                    .iter()
+                    .chain(s.state().players.p2.graveyard.iter())
+                {
                     assert!(
                         ["core-008", "core-060", GAOKAO].contains(&card.def_id.as_str()),
                         "{}",
@@ -150,7 +161,10 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 let victim = s.unit(P1, 1).expect("the Vanilla");
-                s.play(RCTA, json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }));
+                s.play(
+                    RCTA,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
+                );
                 s.play(GAOKAO, json!({}));
                 let standing = s.unit(P1, 1).expect("the granted unit stands");
                 assert_eq!(standing.id, victim.id);
@@ -168,6 +182,109 @@ mod tests {
                 s.play(GAOKAO, json!({}));
                 assert_eq!(upgraded_for(s.events(), &p1_brother), 1);
                 assert_eq!(upgraded_for(s.events(), &p2_brother), 1);
+            }
+
+            #[test]
+            fn destroys_every_permanent_with_neither_tag_on_both_sides_face_down_included() {
+                let mut s = casting("gaokao-destroy", false);
+                let doomed: Vec<String> = [
+                    s.unit(P1, 1).expect("p1's Vanilla").id,
+                    s.backrow(P1, 1).expect("p1's face-down Honeypot").id,
+                    s.unit(P2, 1).expect("p2's Vanilla").id,
+                ]
+                .to_vec();
+                s.play(GAOKAO, json!({}));
+                for id in &doomed {
+                    s.expect_in_zone(id, "graveyard");
+                }
+                assert!(s.unit(P1, 1).is_none() && s.unit(P2, 1).is_none());
+                assert!(s.backrow(P1, 1).is_none());
+            }
+
+            #[test]
+            fn indestructible_spell_immune_and_m25_survive() {
+                const FELINOR: &str = "meditative-025"; // Immune to tribal tag based hate.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "gaokao-survivors",
+                    "p1": {
+                        "hand": [{ "def": GAOKAO }, FILLER],
+                        "field": [{ "def": WALL, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": FELINOR, "lane": 3 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                // The Vanilla is Immune to Spells.
+                let shielded = s.unit(P1, 2).expect("the Vanilla").id;
+                s.card_mut(&shielded)
+                    .granted_keywords
+                    .push(Keyword::ImmuneToSpells);
+                s.play(GAOKAO, json!({}));
+                assert_eq!(s.unit(P1, 1).expect("the Wall stands").def_id, WALL);
+                assert_eq!(s.unit(P1, 2).expect("the Immune Vanilla stands").id, shielded);
+                assert_eq!(s.unit(P1, 3).expect("M 25 stands").def_id, FELINOR);
+                assert!(
+                    !s.events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::Destroyed { .. }))
+                );
+            }
+
+            #[test]
+            fn one_state_check_after_both() {
+                // The destroyed leave at the one state check after the whole list: every Buff lands
+                // before the first card dies.
+                let mut s = casting("gaokao-state-check", false);
+                let mark = s.events().len();
+                s.play(GAOKAO, json!({}));
+                let events = &s.events()[mark..];
+                let last_buff = events
+                    .iter()
+                    .rposition(|event| matches!(event, GameEvent::Upgraded { .. }))
+                    .expect("Buffs");
+                let first_death = events
+                    .iter()
+                    .position(|event| matches!(event, GameEvent::Destroyed { .. }))
+                    .expect("deaths");
+                assert!(last_buff < first_death, "{events:?}");
+            }
+
+            #[test]
+            fn r440_a_buff_on_a_face_down_card_is_reported_hidden() {
+                // p2's face-down Trap carries a granted CN tag (M 35's): Gaokao Buffs it, and p1, who
+                // cannot read it, is cued with the card hidden.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "gaokao-hidden",
+                    "p1": { "hand": [{ "def": GAOKAO }, FILLER], "library": filler(4) },
+                    "p2": {
+                        "hand": [FILLER],
+                        "backrow": [{ "def": "core-041", "lane": 1 }],
+                        "library": filler(4),
+                    },
+                }));
+                let trap = s.backrow(P2, 1).expect("the face-down Trap").id;
+                s.card_mut(&trap).granted_tags = Some(vec![Tag::Cn]);
+                s.play(GAOKAO, json!({}));
+                assert_eq!(s.backrow(P2, 1).expect("it survives").id, trap);
+                assert_eq!(upgraded_for(s.events(), &trap), 2);
+                let hidden_from: Vec<Option<Vec<PlayerId>>> = s
+                    .events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::Upgraded {
+                            instance_id,
+                            hidden_from,
+                            ..
+                        } if *instance_id == trap => Some(hidden_from.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(hidden_from, vec![Some(vec![P1]), Some(vec![P1])]);
+                let theirs = serde_json::to_string(&s.view(P1).events).expect("events serialise");
+                assert!(!theirs.contains(&trap), "p1's cue never names the card");
+                let owners = serde_json::to_string(&s.view(P2).events).expect("events serialise");
+                assert!(owners.contains(&trap), "p2 reads its own card's Buffs");
             }
         }
 
