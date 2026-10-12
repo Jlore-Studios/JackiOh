@@ -9398,6 +9398,10 @@
         {
           "at": "2026-10-12T18:03:14Z",
           "minutes": 3.8
+        },
+        {
+          "at": "2026-10-12T19:14:21Z",
+          "minutes": 68.6
         }
       ],
       "usage": {
@@ -9405,10 +9409,10 @@
           "resets_at": "2026-10-12T21:53:00Z",
           "utilization": 0.0
         },
-        "observed_at": "2026-10-12T18:03:14Z",
+        "observed_at": "2026-10-12T19:14:21Z",
         "seven_day": {
           "resets_at": "2026-10-19T00:00:00Z",
-          "utilization": 0.03
+          "utilization": 0.0
         },
         "status": "allowed"
       }
