@@ -14,7 +14,10 @@
 //! people took into live Best-of-1 games, shuffled, then random decks dealt as a player's All Random
 //! deck is (`deal_random_deck`: no shadow ban, no soft gate, R1453), each kept only when it is legal
 //! (`validate_deck`, against a collection of its own cards: a bot owns nothing and needs nothing),
-//! and dealt again whenever the catalog version changes.
+//! and dealt again whenever the catalog version changes. Its Conquest trio (R641000) is dealt after
+//! them, for the same catalog version: its own decks first, in order, each that shares no card with
+//! those taken before it, then decks dealt with every card already taken left out, until it holds
+//! three that pass the trio's rules (`validate_trio`, R253).
 //!
 //! `release_stale_starts`, which the queue's sweeper runs every sweep whatever `LADDER_BOTS` says,
 //! lets go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a
@@ -25,11 +28,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck};
+use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput};
 use jackioh_engine::wire::{GameMode, GameRecord, GameSource, PLAYER_IDS, Pilot, SourceFilter};
 use jackioh_engine::{Rng, pick_portrait_from_seed};
 
-use crate::actor::engine::deal_random_deck;
+use crate::actor::engine::{deal_random_deck, deal_random_deck_excluding};
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -42,7 +45,8 @@ use crate::config::{
     BOT_STALE_START_SECONDS, BOT_STRENGTHS, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
-    BotDeck, BotRow, GameRecordQuery, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
+    BotDeck, BotRow, FrozenDeck, FrozenTrio, GameRecordQuery, NewBot, StoreError, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::username::{normalize_username, username_key};
 
@@ -50,6 +54,10 @@ use crate::username::{normalize_username, username_key};
 const MS_PER_DAY: i64 = 86_400_000;
 /// Unit conversion, not configuration: a second in milliseconds.
 const MS_PER_SECOND: i64 = 1000;
+
+/// R641000: the name a bot's trio is frozen under. No client reads it: a series shows a player only
+/// which of the opponent's slots have won (R336).
+const TRIO_NAME: &str = "Conquest";
 
 /// R1454: the pool's size for `weekly` people who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`.
@@ -155,19 +163,40 @@ pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<S
     )
 }
 
+/// A collection of exactly the cards of `decks`, which is all a bot needs to own (R1454).
+fn owning<'a>(decks: impl IntoIterator<Item = &'a [String]>) -> IndexMap<String, i32> {
+    let mut owned: IndexMap<String, i32> = IndexMap::new();
+    for card in decks.into_iter().flatten() {
+        *owned.entry(card.clone()).or_insert(0) += 1;
+    }
+    owned
+}
+
 /// R1454: whether `cards` is a deck a player could queue for Best of 1 on this catalog (§9.4's L2,
 /// L3, L5 and L6), against a collection of the deck's own cards.
 fn deck_is_legal(input: &mut DeckInput, cards: &[String]) -> bool {
-    let mut owned: IndexMap<String, i32> = IndexMap::new();
-    for card in cards {
-        *owned.entry(card.clone()).or_insert(0) += 1;
-    }
     input.deck = LoadoutDeck {
         name: None,
         cards: cards.to_vec(),
     };
-    input.collection = owned;
+    input.collection = owning([cards]);
     validator::validate_deck(input).ok
+}
+
+/// The validator's input for one deck on `catalog`, its deck and collection filled in per check.
+fn deck_input(catalog: &Catalog) -> DeckInput {
+    DeckInput {
+        deck: LoadoutDeck {
+            name: None,
+            cards: Vec::new(),
+        },
+        catalog: CatalogSnapshot {
+            version: catalog.version.clone(),
+            cards: catalog.defs.clone(),
+            banned: Some(catalog.banned.clone()),
+        },
+        collection: IndexMap::new(),
+    }
 }
 
 /// R1454: the patch's distinct decklists people took into live Best-of-1 games, in the records'
@@ -212,18 +241,7 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<
     for index in candidates.len()..BOT_DECK_DRAW_ATTEMPTS {
         candidates.push(deal_random_deck(&format!("{seed}:deck:{index}"), None));
     }
-    let mut input = DeckInput {
-        deck: LoadoutDeck {
-            name: None,
-            cards: Vec::new(),
-        },
-        catalog: CatalogSnapshot {
-            version: catalog.version.clone(),
-            cards: catalog.defs.clone(),
-            banned: Some(catalog.banned.clone()),
-        },
-        collection: IndexMap::new(),
-    };
+    let mut input = deck_input(catalog);
     let mut decks: Vec<BotDeck> = Vec::new();
     for cards in candidates {
         if decks.len() >= wanted {
@@ -240,6 +258,75 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<
     decks
 }
 
+/// R641000: the Conquest trio for the bot seeded `seed`, which holds the Best-of-1 decks `own`: its
+/// own decks first, in order, each kept when it shares no card with the decks kept before it and a
+/// player could queue it; then, while the trio is short, decks dealt as All Random deals a player's
+/// with every card kept so far left out (`deal_random_deck_excluding`), kept on the same terms,
+/// trying at most `BOT_DECK_DRAW_ATTEMPTS`, each with a portrait dealt from the seed (R642). `None`
+/// when that finds no three, or the three fail the trio's own rules (§9.4's L1–L6, R253, against a
+/// collection of their own cards), so the bot plays no Conquest until the next refresh.
+pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog) -> Option<FrozenTrio> {
+    jackioh_cards::register_all();
+    let mut input = deck_input(catalog);
+    let mut kept: Vec<BotDeck> = Vec::new();
+    let mut used: IndexSet<String> = IndexSet::new();
+    let shares_none =
+        |cards: &[String], used: &IndexSet<String>| !cards.iter().any(|card| used.contains(card));
+    for deck in own {
+        if kept.len() >= validator::TRIO_DECKS {
+            break;
+        }
+        if shares_none(&deck.cards, &used) && deck_is_legal(&mut input, &deck.cards) {
+            used.extend(deck.cards.iter().cloned());
+            kept.push(deck.clone());
+        }
+    }
+    for attempt in 0..BOT_DECK_DRAW_ATTEMPTS {
+        if kept.len() >= validator::TRIO_DECKS {
+            break;
+        }
+        let excluded: Vec<String> = used.iter().cloned().collect();
+        let cards = deal_random_deck_excluding(&format!("{seed}:trio-deck:{attempt}"), &excluded);
+        if shares_none(&cards, &used) && deck_is_legal(&mut input, &cards) {
+            used.extend(cards.iter().cloned());
+            kept.push(BotDeck {
+                portrait: pick_portrait_from_seed(&format!("{seed}:trio-portrait:{}", kept.len()))
+                    .to_string(),
+                cards,
+            });
+        }
+    }
+    if kept.len() < validator::TRIO_DECKS {
+        return None;
+    }
+    let checked = validator::validate_trio(&LoadoutInput {
+        decks: kept
+            .iter()
+            .map(|deck| LoadoutDeck {
+                name: None,
+                cards: deck.cards.clone(),
+            })
+            .collect(),
+        catalog: input.catalog,
+        collection: owning(kept.iter().map(|deck| deck.cards.as_slice())),
+    });
+    if !checked.ok {
+        return None;
+    }
+    let mut decks = kept.into_iter().enumerate().map(|(slot, deck)| FrozenDeck {
+        name: format!("Deck {}", slot + 1),
+        cards: deck.cards,
+        portrait: Some(Some(deck.portrait)),
+    });
+    let (Some(first), Some(second), Some(third)) = (decks.next(), decks.next(), decks.next()) else {
+        return None;
+    };
+    Some(FrozenTrio {
+        name: TRIO_NAME.to_string(),
+        decks: (first, second, third),
+    })
+}
+
 /// What one refresh did, for its log line and the tests.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PoolRefresh {
@@ -249,6 +336,9 @@ pub struct PoolRefresh {
     pub created: usize,
     /// Bots whose decks were dealt (new bots, and bots whose decks were for another catalog).
     pub dealt: usize,
+    /// R641000: bots whose Conquest trio was dealt (bots that held none, and bots whose trio was for
+    /// another catalog).
+    pub trios: usize,
 }
 
 /// R1454: claims `name` for the new bot as the username route claims one. A name the checks refuse,
@@ -293,7 +383,8 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
 }
 
 /// R1454: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and
-/// deals decks to every active bot that holds none for this catalog. `seed` seeds the new bots.
+/// deals decks to every active bot that holds none for this catalog, then (R641000) a trio to every
+/// active bot that holds none for it. `seed` seeds the new bots.
 pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let bots = tx.bots_list().await?;
@@ -351,12 +442,33 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
             .await?;
         tx.commit().await?;
     }
+
+    // R641000: after the decks, since a trio starts from them.
+    let mut tx = app.db.begin(None).await?;
+    let bots = tx.bots_list().await?;
+    tx.commit().await?;
+    let mut trios = 0;
+    for bot in bots.iter().filter(|bot| bot.retired_at.is_none()) {
+        if bot.trio.is_some() && bot.trio_catalog_version.as_deref() == Some(app.catalog.version.as_str()) {
+            continue;
+        }
+        let Some(trio) = draw_trio(&format!("{seed}:{}", bot.profile_id), &bot.decks, &app.catalog) else {
+            tracing::warn!(event = "bots.pool.trio_short", botId = %bot.profile_id);
+            continue;
+        };
+        let mut tx = app.db.begin(None).await?;
+        tx.bots_set_trio(&bot.profile_id, &trio, &app.catalog.version)
+            .await?;
+        tx.commit().await?;
+        trios += 1;
+    }
     Ok(PoolRefresh {
         target,
         retired: change.retire.len(),
         reinstated: change.reinstate.len(),
         created: change.create,
         dealt: stale.len(),
+        trios,
     })
 }
 
@@ -373,6 +485,7 @@ pub async fn run_bot_pool(app: Arc<App>) {
                 reinstated = done.reinstated,
                 created = done.created,
                 dealt = done.dealt,
+                trios = done.trios,
             ),
             Err(error) => tracing::warn!(event = "bots.pool.failed", message = %error),
         }

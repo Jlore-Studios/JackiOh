@@ -4689,6 +4689,8 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
         active_hours: i32::from(get::<i16>(row, "active_hours")?),
         decks: json_col(row, "decks")?,
         decks_catalog_version: get(row, "decks_catalog_version")?,
+        trio: trio_or_null(get::<Option<Value>>(row, "trio")?.as_ref())?,
+        trio_catalog_version: get(row, "trio_catalog_version")?,
         created_at: ms_of(get(row, "created_at")?),
         retired_at: ms_or_null(get(row, "retired_at")?),
         rating: get::<Option<f64>>(row, "rating")?.unwrap_or(RATING_START),
@@ -4701,8 +4703,8 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select b.profile_id, b.strength, b.speed, b.persona, b.active_from_hour, b.active_hours,
-                b.decks, b.decks_catalog_version, b.retired_at, p.created_at, p.current_match_id,
-                r.rating
+                b.decks, b.decks_catalog_version, b.trio, b.trio_catalog_version, b.retired_at,
+                p.created_at, p.current_match_id, r.rating
            from public.bots b
            join public.profiles p on p.id = b.profile_id
            left join public.bot_ratings r on r.bot_id = b.profile_id::text
@@ -4818,19 +4820,37 @@ pub async fn bots_set_decks(
     Ok(())
 }
 
-/// R1453: the bot is locked first (free: in no match, not retired), then the ticket claimed
-/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
-/// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
-/// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
-/// match.
-pub async fn tickets_claim_for_bot(
+pub async fn bots_set_trio(
     t: &mut PgTx<'_>,
-    ticket_id: &str,
-    bot_id: &str,
-    match_id: &str,
-    at: i64,
-) -> Result<bool, StoreError> {
+    profile_id: &str,
+    trio: &FrozenTrio,
+    catalog_version: &str,
+) -> Result<(), StoreError> {
     run_as(t, None).await?;
+    let done = sqlx::query(
+        "update public.bots set trio = $2::jsonb, trio_catalog_version = $3::text
+          where profile_id = $1::uuid",
+    )
+    .bind(profile_id)
+    .bind(json(trio)?)
+    .bind(catalog_version)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no bot {profile_id}")));
+    }
+    Ok(())
+}
+
+/// R1453, R641000: locks the bot when it is free, answering whether it is: in no match, not
+/// retired (the row lock on its profile and its `bots` row, which every claim of a bot takes first)
+/// and a side of no series that is not over. The series check is a statement of its own, run after
+/// the lock is held: under READ COMMITTED each statement reads a fresh snapshot, so it sees the
+/// series a claim that held the lock first committed (`tickets_claim_for_bot_series` puts the bot
+/// in no match, so the profile's row alone cannot say it is taken). One statement doing both would
+/// read the series as they stood before it waited for the lock.
+async fn lock_free_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<bool, StoreError> {
     let bot = sqlx::query(
         "select p.id
            from public.profiles p
@@ -4844,6 +4864,35 @@ pub async fn tickets_claim_for_bot(
     .await
     .map_err(db_error)?;
     if bot.is_none() {
+        return Ok(false);
+    }
+    let held = sqlx::query(
+        "select 1 as held
+           from public.series
+          where status <> 'over' and (p1_profile_id = $1::uuid or p2_profile_id = $1::uuid)
+          limit 1",
+    )
+    .bind(bot_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(held.is_none())
+}
+
+/// R1453: the bot is locked first (free: `lock_free_bot`), then the ticket claimed
+/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
+/// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
+/// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
+/// match.
+pub async fn tickets_claim_for_bot(
+    t: &mut PgTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if !lock_free_bot(t, bot_id).await? {
         return Ok(false);
     }
     // R640002: stamped with the sweep's clock, as `tickets_claim_pair` stamps a pair.
@@ -4897,8 +4946,70 @@ pub async fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: in no match, not
-/// retired), then the `open` skeleton written for the finished match's two players and the bot put
+/// R641000: `tickets_claim_for_bot` for a `bo3` ticket: the bot locked first (free:
+/// `lock_free_bot`), then the ticket claimed, then game 1's `open` skeleton written and the ticket
+/// linked to it, but the bot put in no match. The series the caller writes in this transaction is
+/// what holds it: `lock_free_bot`'s series check keeps every other claim off it, and with no
+/// `current_match_id` to find it by, `bots_release_stale_starts` leaves game 1's skeleton alone
+/// through the pick phase.
+pub async fn tickets_claim_for_bot_series(
+    t: &mut PgTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if !lock_free_bot(t, bot_id).await? {
+        return Ok(false);
+    }
+    // R640002: stamped with the sweep's clock, as `tickets_claim_pair` stamps a pair.
+    let claimed = sqlx::query(concat!(
+        "update public.tickets set status = 'claimed', claimed_at = ",
+        ts!("$2"),
+        "
+          where id = $1::uuid and status = 'queued' and mode = 'bo3'
+          returning id"
+    ))
+    .bind(ticket_id)
+    .bind(at)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if claimed.is_none() {
+        return Ok(false);
+    }
+    sqlx::query(concat!(
+        "insert into public.matches (
+             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
+             ceiling_at, created_at)
+           select $3::uuid, 'open', '', a.profile_id, $2::uuid, a.frozen_deck, '[]'::jsonb,
+                  a.catalog_version, ",
+        ts!("$4"),
+        ", ",
+        ts!("$4"),
+        "
+             from public.tickets a
+            where a.id = $1::uuid"
+    ))
+    .bind(ticket_id)
+    .bind(bot_id)
+    .bind(match_id)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    sqlx::query("update public.tickets set match_id = $2::uuid where id = $1::uuid")
+        .bind(ticket_id)
+        .bind(match_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(true)
+}
+
+/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: `lock_free_bot`),
+/// then the `open` skeleton written for the finished match's two players and the bot put
 /// in it. A bot that is not free answers false and writes nothing. The skeleton's decks are empty
 /// until `matches_create` writes the match; a start that never comes leaves it to
 /// `bots_release_stale_starts`.
@@ -4911,19 +5022,7 @@ pub async fn bots_claim_for_rematch(
     at: i64,
 ) -> Result<bool, StoreError> {
     run_as(t, None).await?;
-    let bot = sqlx::query(
-        "select p.id
-           from public.profiles p
-           join public.bots b on b.profile_id = p.id
-          where p.id = $1::uuid and p.kind = 'bot' and p.current_match_id is null
-            and b.retired_at is null
-          for update of p, b",
-    )
-    .bind(bot_id)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    if bot.is_none() {
+    if !lock_free_bot(t, bot_id).await? {
         return Ok(false);
     }
     sqlx::query(concat!(

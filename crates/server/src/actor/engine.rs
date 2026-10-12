@@ -196,6 +196,22 @@ pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
     )
 }
 
+/// R641000: `deal_random_deck`'s deal with no lean and none of `excluded`'s cards in it: how the bot
+/// pool deals a ladder bot's trio a deck that shares no card with the decks it holds already (R253).
+pub fn deal_random_deck_excluding(seed: &str, excluded: &[String]) -> Vec<String> {
+    registered();
+    build_ai_deck(
+        &mut Rng::new(seed, 0),
+        DECK_SIZE,
+        &AiDeckOptions {
+            banned: Some(excluded.to_vec()),
+            lean_set: None,
+            gated_sets: Some(vec![]),
+            ..AiDeckOptions::default()
+        },
+    )
+}
+
 /// R1372: the set a seat's All Random deck leans on, from its player's "More cards from the newest
 /// set": the newest set that ships when the deck is dealt (R1371), or none.
 pub fn lean_of(lean_newest: bool) -> Option<SetName> {

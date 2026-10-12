@@ -129,7 +129,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
 | `match_signals` | **none** | no policy | none (R1442) |
-| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule and decks; a readable row would tell a bot's seat from a person's (R1454, R1452) |
+| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule, decks and trio; a readable row would tell a bot's seat from a person's (R1454, R1452, R641000) |
 
 Three Supabase-specific traps this schema avoids on purpose:
 
@@ -480,7 +480,7 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `E2E` | no (`0`) | BUILD M8's test-server mode; refused when `NODE_ENV=production` | — |
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
-| `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452: `on` seats a ladder bot, which this process plays itself, against a ranked Best of 1 or All Random ticket that waited past its fallback time with no person inside its window, and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
+| `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
 file), reports **every** missing or malformed variable in one error naming where to get each, and
@@ -624,7 +624,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
-   `0032_ladder_bots.sql` — and records them in `app.migrations`. Expected result: 29 tables
+   `0032_ladder_bots.sql` → `0033_bot_trios.sql` — and records them in `app.migrations`. Expected result: 29 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -671,6 +671,8 @@ step that is not yet implemented says which BUILD task delivers it.
    its profile, while a bot's profile needs none. It also limits the launch collection's backfill,
    which every catalog stamp runs (0016), to people's profiles, since a bot owns no collection
    (R1454). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
+   0033 adds `bots.trio` and `bots.trio_catalog_version`, the Conquest trio the pool deals each bot
+   and the catalog it was dealt for (R641000); the table stays server-only and no row is backfilled.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

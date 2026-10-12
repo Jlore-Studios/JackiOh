@@ -1,15 +1,16 @@
-//! The empty-queue fallback (SPEC §9.5, R1453): which waiting ticket may be paired with a ladder
-//! bot, and with which bot. Pure but for the fallback key: the queue's sweep (`api/queue.rs`,
+//! The empty-queue fallback (SPEC §9.5, R1453, R641000): which waiting ticket may be paired with a
+//! ladder bot, and with which bot. Pure but for the fallback key: the queue's sweep (`api/queue.rs`,
 //! `try_pair`) reads the tickets, the bots and each player's recent opponents, and asks these
 //! functions.
 //!
-//! A ranked Best of 1 or All Random ticket that has waited past its own fallback time — drawn from
-//! its id and the server's key between `BOT_FALLBACK_MIN_SECONDS` and `BOT_FALLBACK_MAX_SECONDS`, so
-//! it is the same at every sweep and no client can work it out — pairs with the free bot on its
-//! schedule whose rating is closest to the player's, never one the player faced in their last
-//! `BOT_RECENT_OPPONENTS` games. A player rated above every bot is never given one. Conquest never
-//! seats a bot. The sweep pairs every human it can first, so a human inside the window always comes
-//! before a bot.
+//! A ranked ticket of any mode that has waited past its own fallback time — drawn from its id and
+//! the server's key between `BOT_FALLBACK_MIN_SECONDS` and `BOT_FALLBACK_MAX_SECONDS`, so it is the
+//! same at every sweep and no client can work it out — pairs with the free bot on its schedule whose
+//! rating is closest to the player's, never one the player faced in their last
+//! `BOT_RECENT_OPPONENTS` games. A player rated above every bot is never given one. A Conquest
+//! ticket's bot must hold a trio dealt for this catalog (R641000), and plays a series rather than a
+//! match. The sweep pairs every human it can first, so a human inside the window always comes before
+//! a bot.
 
 use std::sync::LazyLock;
 
@@ -47,11 +48,10 @@ pub fn fallback_seconds_keyed(key: &str, ticket_id: &str) -> i64 {
         )
 }
 
-/// R1453: whether the ticket may pair with a bot at `now` (epoch ms): a Best of 1 or All Random
-/// ticket that has waited its fallback time.
+/// R1453, R641000: whether the ticket may pair with a bot at `now` (epoch ms): a ticket of any mode
+/// that has waited its fallback time.
 pub fn fallback_due(ticket: &Ticket, now: i64) -> bool {
-    matches!(ticket.mode, QueueMode::Bo1 | QueueMode::Random)
-        && now - ticket.enqueued_at >= fallback_seconds(&ticket.id) * MS_PER_SECOND
+    now - ticket.enqueued_at >= fallback_seconds(&ticket.id) * MS_PER_SECOND
 }
 
 /// The hour of the day (UTC) at `now` (epoch ms), the hour a bot's schedule is read at.
@@ -71,9 +71,10 @@ pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
 
 /// R1453: the bot the ticket pairs with, or none. None when the player is rated above every bot in
 /// the pool; else, of the bots in the pool, on their schedule, in no match, not `busy` (taken by
-/// this sweep), not among the player's `recent` opponents and, for Best of 1, holding decks dealt
-/// for the catalog this server plays (`catalog_version`, R1454), the one closest in rating, ties on
-/// id.
+/// this sweep, or a side of a series that is not over, R641000), not among the player's `recent`
+/// opponents and holding what the mode needs dealt for the catalog this server plays
+/// (`catalog_version`): Best-of-1 decks (R1454) or, for Conquest, a trio (R641000); the one closest
+/// in rating, ties on id.
 pub fn choose_bot<'a>(
     ticket: &Ticket,
     bots: &'a [BotRow],
@@ -90,9 +91,14 @@ pub fn choose_bot<'a>(
         .filter(|bot| on_schedule(bot, hour))
         .filter(|bot| bot.in_match_id.is_none() && !busy.contains(&bot.profile_id))
         .filter(|bot| !recent.contains(&bot.profile_id))
-        .filter(|bot| {
-            ticket.mode != QueueMode::Bo1
-                || (!bot.decks.is_empty() && bot.decks_catalog_version.as_deref() == Some(catalog_version))
+        .filter(|bot| match ticket.mode {
+            QueueMode::Bo1 => {
+                !bot.decks.is_empty() && bot.decks_catalog_version.as_deref() == Some(catalog_version)
+            }
+            QueueMode::Bo3 => {
+                bot.trio.is_some() && bot.trio_catalog_version.as_deref() == Some(catalog_version)
+            }
+            QueueMode::Random => true,
         })
         .min_by(|a, b| {
             let gap_a = (a.rating - ticket.rating).abs();

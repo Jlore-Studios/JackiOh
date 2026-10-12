@@ -6,6 +6,10 @@
 //! AI's own, each legal, dealt again whenever the catalog version changes. A bot whose claimed match
 //! never started is let go (`release_stale_starts`, which the queue's sweeper runs).
 //!
+//! R641000: each active bot also holds a Conquest trio, three decks a player could queue as a trio
+//! sharing no card (R253): its own Best-of-1 decks first, then decks dealt with the cards already
+//! taken left out, dealt again whenever the catalog version changes.
+//!
 //! `jackioh_server::bots::pool`, against the fake store and the real catalog.
 
 use std::sync::Arc;
@@ -14,14 +18,17 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
-use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, validate_deck};
+use jackioh_engine::validator::{
+    CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput, validate_deck, validate_trio,
+};
 use jackioh_engine::wire::GameRecord;
-use jackioh_server::actor::engine::deal_random_deck;
+use jackioh_server::actor::engine::{deal_random_deck, deal_random_deck_excluding};
 use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::now_ms;
 use jackioh_server::bots::pool::{
-    PoolChange, draw_decks, draw_new_bot, plan_pool, pool_target, refresh_pool, release_stale_starts,
+    PoolChange, draw_decks, draw_new_bot, draw_trio, plan_pool, pool_target, refresh_pool,
+    release_stale_starts,
 };
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
@@ -29,7 +36,7 @@ use jackioh_server::config::{
     BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
     MATCHMAKER_SWEEP_INTERVAL_SECONDS, PersonaName,
 };
-use jackioh_server::db::store::{BotRow, Ticket};
+use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, Ticket};
 use jackioh_server::username::normalize_username;
 
 use crate::support::deps::empty_test_app;
@@ -57,6 +64,8 @@ fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
         active_hours: 24,
         decks: Vec::new(),
         decks_catalog_version: None,
+        trio: None,
+        trio_catalog_version: None,
         created_at,
         retired_at,
         rating: 1000.0,
@@ -484,4 +493,170 @@ async fn r1454_the_sweeper_lets_a_cut_off_start_go_with_the_bots_off() {
         .find(|row| row.profile_id == bot.profile_id)
         .and_then(|row| row.in_match_id);
     assert_eq!(held, None, "the cut-off start's bot is free");
+}
+
+/// A trio's three decks' cards, in slot order.
+fn trio_cards(trio: &FrozenTrio) -> [&Vec<String>; 3] {
+    [&trio.decks.0.cards, &trio.decks.1.cards, &trio.decks.2.cards]
+}
+
+/// Whether a player owning exactly the trio's cards could queue it for Conquest: §9.4's L1–L6, as
+/// the queue runs them (R253).
+fn queueable_trio(catalog: &Catalog, trio: &FrozenTrio) -> bool {
+    let mut owned: IndexMap<String, i32> = IndexMap::new();
+    for card in trio_cards(trio).into_iter().flatten() {
+        *owned.entry(card.clone()).or_insert(0) += 1;
+    }
+    validate_trio(&LoadoutInput {
+        decks: trio_cards(trio)
+            .into_iter()
+            .map(|cards| LoadoutDeck {
+                name: None,
+                cards: cards.clone(),
+            })
+            .collect(),
+        catalog: CatalogSnapshot {
+            version: catalog.version.clone(),
+            cards: catalog.defs.clone(),
+            banned: Some(catalog.banned.clone()),
+        },
+        collection: owned,
+    })
+    .ok
+}
+
+#[test]
+fn r641000_a_dealt_deck_leaves_out_the_cards_it_is_told_to() {
+    let pool = playable();
+    let excluded: Vec<String> = pool[..pool.len() / 2].to_vec();
+    for k in 0..20 {
+        let seed = format!("excluding-{k}");
+        let dealt = deal_random_deck_excluding(&seed, &excluded);
+        assert_eq!(dealt.len(), deck_size());
+        assert!(
+            dealt.iter().all(|card| !excluded.contains(card)),
+            "seed {k} dealt an excluded card: {dealt:?}"
+        );
+        assert_eq!(
+            deal_random_deck_excluding(&seed, &excluded),
+            dealt,
+            "the same seed, the same deck"
+        );
+        // Leaving nothing out is a player's All Random deal with no lean (R258).
+        assert_eq!(
+            deal_random_deck_excluding(&seed, &[]),
+            deal_random_deck(&seed, None)
+        );
+    }
+}
+
+#[tokio::test]
+async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
+    let app = empty_test_app().await;
+    let pool = playable();
+    let size = deck_size();
+    let own_deck = |from: usize, portrait: &str| BotDeck {
+        cards: pool[from..from + size].to_vec(),
+        portrait: portrait.to_string(),
+    };
+    // B shares half its cards with A, so it is passed over; C shares none with A.
+    let (a, b, c) = (
+        own_deck(0, "portrait-a"),
+        own_deck(size / 2, "portrait-b"),
+        own_deck(2 * size, "portrait-c"),
+    );
+    for deck in [&a, &b, &c] {
+        assert!(
+            queueable(&app.catalog, &deck.cards),
+            "PREMISE: {:?} queues",
+            deck.cards
+        );
+    }
+    let own = vec![a.clone(), b.clone(), c.clone()];
+
+    for k in 0..10 {
+        let seed = format!("trio-{k}");
+        let trio = draw_trio(&seed, &own, &app.catalog).expect("a trio");
+        assert_eq!(
+            draw_trio(&seed, &own, &app.catalog),
+            Some(trio.clone()),
+            "the same seed, the same trio"
+        );
+        assert_eq!(trio.decks.0.cards, a.cards);
+        assert_eq!(trio.decks.0.portrait, Some(Some(a.portrait.clone())));
+        assert_eq!(trio.decks.1.cards, c.cards);
+        assert_eq!(trio.decks.1.portrait, Some(Some(c.portrait.clone())));
+        let third = &trio.decks.2;
+        assert!(
+            third
+                .cards
+                .iter()
+                .all(|card| !a.cards.contains(card) && !c.cards.contains(card)),
+            "seed {k}: the dealt deck shares a card: {:?}",
+            third.cards
+        );
+        assert!(matches!(&third.portrait, Some(Some(portrait)) if !portrait.is_empty()));
+        for cards in trio_cards(&trio) {
+            assert!(
+                queueable(&app.catalog, cards),
+                "seed {k}: {cards:?} does not queue"
+            );
+        }
+        assert!(
+            queueable_trio(&app.catalog, &trio),
+            "seed {k}: the trio does not queue"
+        );
+    }
+
+    // A bot with no deck of its own is dealt all three.
+    let trio = draw_trio("trio-none", &[], &app.catalog).expect("a trio");
+    let [first, second, third] = trio_cards(&trio);
+    assert!(
+        first
+            .iter()
+            .all(|card| !second.contains(card) && !third.contains(card))
+    );
+    assert!(second.iter().all(|card| !third.contains(card)));
+    assert!(queueable_trio(&app.catalog, &trio));
+}
+
+#[tokio::test(start_paused = true)]
+async fn r641000_refresh_deals_every_active_bot_a_trio_once_per_catalog() {
+    let app = empty_test_app().await;
+    let now = now_ms();
+    let done = refresh_pool(&app, "trios", now).await.expect("a refresh");
+    assert_eq!(done.trios, BOT_POOL_MIN, "every new bot is dealt a trio");
+    let bots = q!(app, bots_list());
+    for bot in &bots {
+        let trio = bot.trio.as_ref().expect("a trio");
+        assert_eq!(
+            bot.trio_catalog_version.as_deref(),
+            Some(app.catalog.version.as_str())
+        );
+        assert!(
+            queueable_trio(&app.catalog, trio),
+            "{}'s trio does not queue",
+            bot.profile_id
+        );
+    }
+
+    // Nothing changed: nothing is dealt again.
+    let again = refresh_pool(&app, "trios-2", now).await.expect("a refresh");
+    assert_eq!(again.trios, 0);
+    assert_eq!(q!(app, bots_list()), bots);
+
+    // A trio dealt for another catalog is dealt again.
+    let stale = &bots[0];
+    let old_trio = stale.trio.clone().expect("a trio");
+    q!(app, bots_set_trio(&stale.profile_id, &old_trio, "v0.0.1"));
+    let done = refresh_pool(&app, "trios-3", now).await.expect("a refresh");
+    assert_eq!(done.trios, 1);
+    let dealt = q!(app, bots_list())
+        .into_iter()
+        .find(|bot| bot.profile_id == stale.profile_id)
+        .expect("the bot");
+    assert_eq!(
+        dealt.trio_catalog_version.as_deref(),
+        Some(app.catalog.version.as_str())
+    );
 }

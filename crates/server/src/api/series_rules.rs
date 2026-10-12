@@ -296,7 +296,7 @@ fn trio_decks(trio: &FrozenTrio) -> [&FrozenDeck; 3] {
 }
 
 /// `trio.decks[slot]`, or `None` past the end.
-fn trio_deck(trio: &FrozenTrio, slot: usize) -> Option<&FrozenDeck> {
+pub fn trio_deck(trio: &FrozenTrio, slot: usize) -> Option<&FrozenDeck> {
     trio_decks(trio).get(slot).copied()
 }
 
@@ -339,7 +339,7 @@ pub fn both_picked(series: &SeriesRow) -> bool {
 }
 
 /// R335: series `p1` goes first in odd games, `p2` in even ones, drawn games counted.
-fn first_seat_of(game_no: i32) -> SeriesSeat {
+pub fn first_seat_of(game_no: i32) -> SeriesSeat {
     if game_no % 2 == 1 {
         SeriesSeat::P1
     } else {
