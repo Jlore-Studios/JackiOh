@@ -35,6 +35,17 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty (a guess)
+      description: A choice here becomes its `difficulty:*` label; with none, the bot's planner rates it.
+      options:
+        - Not sure (the planner rates it)
+        - easy
+        - medium
+        - hard
+      default: 0
+  - type: dropdown
     id: priority
     attributes:
       label: Priority
