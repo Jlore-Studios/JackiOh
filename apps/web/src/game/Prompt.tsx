@@ -92,7 +92,8 @@ import {
   type PlayNeed,
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
-import { chineseName } from "../cards/chinese.ts";
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { CraftEditor } from "./craft/CraftEditor.tsx";
 import MarketPrompt from "./MarketPrompt.tsx";
@@ -441,7 +442,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "zone",
-        title: "Choose a zone",
+        title: t("Choose a zone"),
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
           label: zoneLabel(zone.row, zone.lane),
@@ -461,7 +462,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         chrome: "x",
         ...(cards ? { cards } : {}),
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: "Choose X",
+        title: t("Choose X"),
         items: need.values.map((value) => {
           const item: PickerItem = { key: String(value), label: String(value) };
           return played === null ? item : { ...item, ...playedFace(played), caption: `X = ${String(value)}` };
@@ -478,9 +479,9 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         chrome: "embiggen",
         cards: true,
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: "Pay the embiggen price?",
+        title: t("Pay the embiggen price?"),
         items: need.values.map((value) => {
-          const label = value ? "Embiggened" : "Normal";
+          const label = value ? t("Embiggened") : t("Normal");
           const item: PickerItem = { key: String(value), label };
           const price: EmbiggenPrice = value ? "embiggen" : "normal";
           return played === null ? item : { ...item, ...playedFace(played), caption: label, price };
@@ -492,7 +493,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "tribute",
-        title: "Choose Tributes",
+        title: t("Choose Tributes"),
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
@@ -501,10 +502,10 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "mode",
-        title: "Magnetic or Stack?",
+        title: t("Magnetic or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
-          label: value ? "Magnetic" : "Stack",
+          label: value ? t("Magnetic") : t("Stack"),
         })),
         submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
       };
@@ -518,7 +519,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: inHand ? "hand" : "target",
-        title: inHand ? "Choose a card in your hand" : "Choose a target",
+        title: inHand ? t("Choose a card in your hand") : t("Choose a target"),
         items: need.selections.map((selection) => {
           const key = selectionKey(selection);
           const label = selectionLabel(view, selection);
@@ -550,7 +551,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         ...common,
         chrome: "number",
         variant: "plague",
-        title: "Pay with Plague Counters?",
+        title: t("Pay with Plague Counters?"),
         items: need.options.map((option) => ({
           key: plagueKey(option),
           label: plagueLabel(view, option, sources.size > 1),
@@ -564,15 +565,15 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
     case "faceDown": {
       // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
       const labels: Record<FaceDownChoice, string> = {
-        up: "Play it face-up",
-        endOfThisTurn: "Set face-down: reveal at the end of this turn",
-        startOfNextTurn: "Set face-down: reveal at the start of your next turn",
-        endOfNextTurn: "Set face-down: reveal at the end of your next turn",
+        up: t("Play it face-up"),
+        endOfThisTurn: t("Set face-down: reveal at the end of this turn"),
+        startOfNextTurn: t("Set face-down: reveal at the start of your next turn"),
+        endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
       };
       return {
         ...common,
         chrome: "mode",
-        title: "Play it how?",
+        title: t("Play it how?"),
         items: need.options.map((option) => ({ key: option, label: labels[option] })),
         submit: (keys) => {
           const choice: FaceDownChoice | undefined =
@@ -594,7 +595,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const picker: Picker = {
         ...common,
         chrome: numbers ? "number" : isDirection(need.options) ? "direction" : discover ? "discover" : "mode",
-        title: numbers ? "Choose a number" : isDirection(need.options) ? "Choose a direction" : "Choose one",
+        title: numbers ? t("Choose a number") : isDirection(need.options) ? t("Choose a direction") : t("Choose one"),
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
           if (arrow !== undefined) return { key: option, label: option, arrow };
@@ -652,7 +653,7 @@ function priceLine(face: FaceModel): string {
 
 /** R1301: the option's card is shown in Chinese, by the option or by the card the view lists. */
 function isChinese(item: PickerItem): boolean {
-  return item.chinese === true || item.card?.chinese === true;
+  return drawnInChinese(item.chinese === true || item.card?.chinese === true);
 }
 
 /** A card option's name: the catalog's, or the Chinese table's for a Chinese card (R1301). */
@@ -672,6 +673,7 @@ function CardOption(props: {
   over?: boolean;
   onPick: () => void;
 }) {
+  useLocale();
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
@@ -859,7 +861,7 @@ const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
 
 function BoardHint(props: { chrome: PromptKind }) {
   const hint = BOARD_HINTS[props.chrome];
-  return hint === undefined ? null : <p className="prompt-board-hint">{hint}</p>;
+  return hint === undefined ? null : <p className="prompt-board-hint">{t(hint)}</p>;
 }
 
 /**
@@ -913,6 +915,7 @@ function PromptModal(props: {
   onCancel?: () => void;
   animating?: string;
 }) {
+  useLocale();
   const { picker } = props;
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
   /**
@@ -1204,7 +1207,7 @@ function PromptModal(props: {
       >
         {picker.chrome === "reward" ? (
           <p className="prompt-quest-banner" data-testid="prompt-quest-complete">
-            {QUEST_COMPLETE}
+            {t(QUEST_COMPLETE)}
           </p>
         ) : null}
         <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
@@ -1214,7 +1217,7 @@ function PromptModal(props: {
         {props.status}
         {body()}
         {(picker.chrome === "target" || picker.chrome === "cell") && props.boardTestids.length > 0 ? (
-          <p className="prompt-board-note">Highlighted on the board as well.</p>
+          <p className="prompt-board-note">{t("Highlighted on the board as well.")}</p>
         ) : null}
         {/* Shown only where the picker folds to a bar with no options in it (prompt.css). */}
         {props.source === "play" ? <BoardHint chrome={picker.chrome} /> : null}
@@ -1228,11 +1231,11 @@ function PromptModal(props: {
             }}
           >
             {/* R265: the mulligan's answer is sealed until both seats have given theirs. */}
-            {picker.chrome === "mulligan" ? "Ready" : "Confirm"}
+            {picker.chrome === "mulligan" ? t("Ready") : t("Confirm")}
           </button>
           {props.onCancel === undefined ? null : (
             <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
-              Cancel
+              {t("Cancel")}
             </button>
           )}
         </div>
@@ -1247,6 +1250,7 @@ function PromptModal(props: {
  * opponent rather than a seat id: in practice that is the AI, which the HUD already shows thinking.
  */
 function Waiting(props: { pendingFor: PlayerId }) {
+  useLocale();
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
@@ -1258,9 +1262,9 @@ function Waiting(props: { pendingFor: PlayerId }) {
         aria-modal="true"
         aria-label="Waiting for choice"
       >
-        <p className="prompt-title">Waiting for choice</p>
+        <p className="prompt-title">{t("Waiting for choice")}</p>
         <p className="prompt-sub" role="status">
-          Your opponent is choosing…
+          {t("Your opponent is choosing…")}
         </p>
       </div>
     </div>
@@ -1272,6 +1276,7 @@ function Waiting(props: { pendingFor: PlayerId }) {
  * has is all the view says — never what it kept (§9.1).
  */
 function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
+  useLocale();
   const ready = props.mulligan.opponentReady;
   return (
     <p
@@ -1280,13 +1285,14 @@ function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
       data-ready={ready ? "true" : "false"}
       role="status"
     >
-      {ready ? <span data-testid={testid.mulliganOpponentReady}>Opponent is ready</span> : "Opponent is choosing…"}
+      {ready ? <span data-testid={testid.mulliganOpponentReady}>{t("Opponent is ready")}</span> : t("Opponent is choosing…")}
     </p>
   );
 }
 
 /** A hand card on the waiting panel: its face, and the stamp saying whether it stays or goes back. */
 function WaitingCard(props: { card: CardView; keep: boolean }) {
+  useLocale();
   const info = useCardInfo(props.card.defId, props.card.radiant);
   const fieldPower = useFieldPower(props.card.instanceId);
   const copied = useCopiedDef(props.card);
@@ -1307,7 +1313,7 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
         <CardFace face={face} layout="full" />
       </span>
       <span className="prompt-card-verdict" aria-hidden="true">
-        {props.keep ? "Keep" : "Redraw"}
+        {props.keep ? t("Keep") : t("Redraw")}
       </span>
     </span>
   );
@@ -1319,6 +1325,7 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
  * with what will happen to it (`kept` is the view's own record of the answer).
  */
 function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
+  useLocale();
   const hand = Array.isArray(props.view.you.hand) ? props.view.you.hand : [];
   const kept = new Set(props.mulligan.kept ?? hand.map((card) => card.instanceId));
   const back = hand.filter((card) => !kept.has(card.instanceId)).length;
@@ -1335,11 +1342,11 @@ function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
         aria-labelledby={titleId}
       >
         <p className="prompt-title" id={titleId}>
-          Waiting for your opponent…
+          {t("Waiting for your opponent…")}
         </p>
         <p className="prompt-sub" role="status">
           {back === 0
-            ? "You're ready and keeping your whole hand."
+            ? t("You're ready and keeping your whole hand.")
             : `You're ready. ${String(back)} ${back === 1 ? "card goes" : "cards go"} back and ${back === 1 ? "is" : "are"} redrawn once your opponent is ready too.`}
         </p>
         <MatchCardsProvider view={props.view}>
@@ -1359,6 +1366,7 @@ function needKey(need: PlayNeed): string {
 }
 
 export default function Prompt(props: PromptProps) {
+  useLocale();
   const interaction = props.interaction ?? IDLE;
   const boardTestids = [...highlightFor(props.view, props.legal ?? [], interaction).legal].sort();
   const pending = props.view.pending;

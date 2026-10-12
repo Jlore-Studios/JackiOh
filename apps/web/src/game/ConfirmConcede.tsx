@@ -12,6 +12,7 @@
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
 import { testid } from "./contract.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "./notices.css";
 
 export type ConfirmConcedeProps = {
@@ -25,6 +26,7 @@ export const CONCEDE_TITLE = "Concede this game?";
 export const CONCEDE_BODY = "Your opponent wins and the game ends here.";
 
 export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedeProps): ReactElement {
+  useLocale();
   const titleId = useId();
   const bodyId = useId();
   const stay = useRef<HTMLButtonElement>(null);
@@ -78,10 +80,10 @@ export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedePr
         tabIndex={-1}
       >
         <h2 className="concede-dialog__title" id={titleId}>
-          {CONCEDE_TITLE}
+          {t(CONCEDE_TITLE)}
         </h2>
         <p className="concede-dialog__body" id={bodyId}>
-          {CONCEDE_BODY}
+          {t(CONCEDE_BODY)}
         </p>
         <div className="concede-dialog__actions">
           <button
@@ -91,7 +93,7 @@ export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedePr
             data-testid={testid.concedeCancel}
             onClick={onCancel}
           >
-            Keep playing
+            {t("Keep playing")}
           </button>
           <button
             ref={concede}
@@ -100,7 +102,7 @@ export default function ConfirmConcede({ onConfirm, onCancel }: ConfirmConcedePr
             data-testid={testid.concedeConfirm}
             onClick={onConfirm}
           >
-            Concede
+            {t("Concede")}
           </button>
         </div>
       </section>

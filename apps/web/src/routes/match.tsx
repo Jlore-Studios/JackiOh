@@ -43,6 +43,7 @@ import {
   type SocketFactory,
 } from "../game/net.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
+import { t } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -303,7 +304,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // The tab says when it is the player's turn, so a match in a background tab can be found.
   const yourTurn = view !== null && view.result === null && view.active === view.viewer;
   useEffect(() => {
-    document.title = yourTurn ? `Your turn · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
+    document.title = yourTurn ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
   }, [yourTurn, matchId]);
 
   if (view === null) {

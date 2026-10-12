@@ -35,6 +35,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -96,7 +97,7 @@ type PoolItemProps = {
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
   if (place === null) return null;
-  return place === "deck" ? "In deck" : `In ${place.name}`;
+  return place === "deck" ? t("In deck") : t("In {name}", { name: place.name });
 }
 
 /**
@@ -118,10 +119,11 @@ export function poolCardLabel(
 }
 
 function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
+  const locale = useLocale();
   const place = deck?.place ?? null;
   const badge = placeWords(place);
 
-  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def]);
+  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {

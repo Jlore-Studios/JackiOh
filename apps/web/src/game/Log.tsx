@@ -31,7 +31,8 @@ import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, t
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger } from "../cards/index.ts";
-import { chineseName } from "../cards/chinese.ts";
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
@@ -428,11 +429,18 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
 
 /** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
-  const def = (defId: string): string => (defId === HIDDEN_CARD ? "a hidden card" : (lookup?.(defId, false)?.name ?? defId));
+  const def = (defId: string): string => {
+    if (defId === HIDDEN_CARD) return "a hidden card";
+    const info = lookup?.(defId, false);
+    const english = info?.name ?? defId;
+    return drawnInChinese(false) ? chineseName(defId, english, info?.def) : english;
+  };
   return {
     def,
     card: (instanceId, defId) => {
-      if (defId === HIDDEN_CARD || instanceId === HIDDEN_CARD || cardInView(view, instanceId)?.chinese !== true) return def(defId);
+      if (defId === HIDDEN_CARD || instanceId === HIDDEN_CARD) return def(defId);
+      const isZh = drawnInChinese(cardInView(view, instanceId)?.chinese === true);
+      if (!isZh) return def(defId);
       const info = lookup?.(defId, false);
       return chineseName(defId, info?.name ?? defId, info?.def);
     },
@@ -443,8 +451,8 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
       if (defId === undefined) return unknown;
       const info = lookup?.(defId, false);
       const english = info?.name ?? defId;
-      // R1301: a card the view shows in Chinese is named in Chinese.
-      return cardInView(view, instanceId)?.chinese === true ? chineseName(defId, english, info?.def) : english;
+      // R1301, R711000: a card the view shows in Chinese is named in Chinese.
+      return drawnInChinese(cardInView(view, instanceId)?.chinese === true) ? chineseName(defId, english, info?.def) : english;
     },
     seat: (player) => seatLabel(view, player),
     whose: (player) => whoseLabel(view, player),
@@ -608,6 +616,7 @@ const LogLine = memo(function LogLine({ line, touchHold }: { line: Line; touchHo
 });
 
 export default function Log({ view, revealed = false }: LogProps): ReactElement {
+  useLocale();
   // R243: a match-made card is named from the definition the view carries for it.
   const lookup = withMatchDefs(useContext(CatalogContext), view.defs);
   const remembered = publicNames(view.events);

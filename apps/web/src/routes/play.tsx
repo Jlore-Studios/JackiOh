@@ -41,6 +41,7 @@ import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -294,13 +295,19 @@ function errorOf(cause: unknown): LobbyError {
 }
 
 export function roomModeMessage(mode: QueueMode): string {
-  if (mode === "random") return `This room plays ${MODE_LABEL[mode]}: join again.`;
-  return `This room plays ${MODE_LABEL[mode]}: pick a ${mode === "bo3" ? "trio" : "deck"} and join again.`;
+  if (mode === "random") return t("This room plays {mode}: join again.", { mode: t(MODE_LABEL[mode]) });
+  return t("This room plays {mode}: pick a {thing} and join again.", {
+    mode: t(MODE_LABEL[mode]),
+    thing: mode === "bo3" ? t("trio") : t("deck"),
+  });
 }
 
 export function roomLinkStatus(mode: QueueMode): string {
-  if (mode === "random") return `No deck needed for ${MODE_LABEL[mode]}: press Join.`;
-  return `Pick a ${mode === "bo3" ? "trio" : "deck"} for ${MODE_LABEL[mode]}, then press Join.`;
+  if (mode === "random") return t("No deck needed for {mode}: press Join.", { mode: t(MODE_LABEL[mode]) });
+  return t("Pick a {thing} for {mode}, then press Join.", {
+    mode: t(MODE_LABEL[mode]),
+    thing: mode === "bo3" ? t("trio") : t("deck"),
+  });
 }
 
 // Pairing watch
@@ -455,7 +462,9 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
         <span className="play-search__ring" />
         <span className="play-search__ring play-search__ring--late" />
       </span>
-      <span className="play-search__text">Looking for a {MODE_LABEL[mode]} opponent…</span>
+      <span className="play-search__text">
+        {t("Looking for a {mode} opponent…", { mode: t(MODE_LABEL[mode]) })}
+      </span>
     </div>
   );
 }
@@ -478,15 +487,15 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
   }
   return (
     <div className="play-ticket">
-      <span className="play-ticket__label">Room code</span>
+      <span className="play-ticket__label">{t("Room code")}</span>
       <code className="play-ticket__code" data-testid={playTestid.roomCode}>
         {room.code}
       </code>
       <span className="lobby-room-mode" data-testid={playTestid.roomMode} data-mode={room.mode}>
-        {MODE_LABEL[room.mode]}
+        {t(MODE_LABEL[room.mode])}
       </span>
       <button type="button" className="play-ticket__copy" data-testid={playTestid.copyRoomCode} onClick={copy}>
-        {copied ? "Copied" : "Copy"}
+        {copied ? t("Copied") : t("Copy")}
       </button>
       <button
         type="button"
@@ -494,7 +503,7 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
         data-testid={playTestid.copyRoomLink}
         onClick={sendLink}
       >
-        {linkSent === "shared" ? "Link shared" : linkSent === "copied" ? "Link copied" : "Copy invite link"}
+        {linkSent === "shared" ? t("Link shared") : linkSent === "copied" ? t("Link copied") : t("Copy invite link")}
       </button>
     </div>
   );
@@ -526,10 +535,14 @@ type Room = { code: string; mode: QueueMode };
 
 /** R505 queue status carries no count. */
 export function queuedStatus(mode: QueueMode): string {
-  return `In the ${MODE_LABEL[mode]} queue. You will be taken to the game as soon as someone is found. You can leave this screen while you wait.`;
+  return t(
+    "In the {mode} queue. You will be taken to the game as soon as someone is found. You can leave this screen while you wait.",
+    { mode: t(MODE_LABEL[mode]) },
+  );
 }
 
 export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
+  useLocale();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
   /** R767 room link, consumed below. */

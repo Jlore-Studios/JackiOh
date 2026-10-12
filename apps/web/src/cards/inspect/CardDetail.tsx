@@ -18,6 +18,7 @@ import { Flavour } from "./Flavour.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -67,7 +68,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
     <div className="inspect-rules" data-long={long ? "true" : "false"}>
       {base.text.full === "" ? null : (
         <p className="inspect-rules-line">
-          <span className="inspect-rules-label">Base</span>
+          <span className="inspect-rules-label">{t("Base")}</span>
           <span className="inspect-rules-text">
             <RulesText text={base.text.full} refs={base.refs} />
           </span>
@@ -75,7 +76,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
       )}
       {radiantLine === null ? null : (
         <p className="inspect-rules-line inspect-rules-line--radiant">
-          <span className="inspect-rules-label">Radiant</span>
+          <span className="inspect-rules-label">{t("Radiant")}</span>
           <span className="inspect-rules-text">
             <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} />
           </span>
@@ -86,6 +87,7 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
 }
 
 export function CardDetail({ def, onClose, actions, meta, historyOpen = false, showStats = false }: CardDetailProps): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -124,13 +126,13 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
                   <CardFace face={base} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Base</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Base")}</figcaption>
               </figure>
               <figure className="inspect-detail-face inspect-detail-face--radiant">
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
                   <CardFace face={radiant} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Radiant</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Radiant")}</figcaption>
               </figure>
             </div>
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
@@ -158,7 +160,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
             data-testid={INSPECT_CLOSE}
             {...modal.dismissProps}
           >
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

@@ -36,6 +36,7 @@ import {
   type TurnClockUrgencyLevel,
 } from "./clockUrgency.ts";
 import { useSetting } from "../settings/index.ts";
+import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import "./clock.css";
 
 /** How often the readout repaints. Not a SPEC value; see the header. */
@@ -254,7 +255,7 @@ export function readClock(props: ClockProps, elapsedMs: number): ClockReadout {
 /** Whole seconds remaining, never negative. `null` reads as an em dash, not as zero. */
 export function formatClock(remainingMs: number | null): string {
   if (remainingMs === null) return "—";
-  return `${String(Math.max(0, Math.ceil(remainingMs / 1000)))}s`;
+  return formatSeconds(Math.max(0, Math.ceil(remainingMs / 1000)));
 }
 
 function attributes(line: ClockLine): Record<string, string> {
@@ -305,7 +306,7 @@ function SideLine({
   if (urgent === "none" || line.remainingMs === null) {
     return (
       <span className="clock-line clock-side" data-testid={`clock-${side}`} data-urgency="none" {...attributes(line)}>
-        <span className="clock-side-label">{SIDE_LABEL[side]}</span>
+        <span className="clock-side-label">{t(SIDE_LABEL[side])}</span>
         <span className="clock-digits">{text}</span>
       </span>
     );
@@ -321,7 +322,7 @@ function SideLine({
       {...attributes(line)}
     >
       <UrgencyGauge fraction={finalFraction(line.remainingMs)} />
-      <span className="clock-side-label">{urgencyLabel(side)}</span>
+      <span className="clock-side-label">{t(urgencyLabel(side))}</span>
       <span key={seconds} className="clock-digits">
         {text}
       </span>
@@ -375,6 +376,7 @@ function useReducedMotion(): boolean {
 }
 
 export default function Clock(props: ClockProps) {
+  useLocale();
   const monotonic = props.monotonic ?? defaultMonotonic;
   const frame = props.frame ?? null;
   const reduced = useReducedMotion();

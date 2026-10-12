@@ -71,6 +71,7 @@ import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
@@ -86,17 +87,17 @@ function bannerText(
   startedFor?: PlayerId,
   extra?: boolean,
 ): string | null {
-  if (view.result !== null) return "Game over";
-  if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
+  if (view.result !== null) return t("Game over");
+  if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting, not the one (or the mulligan) being left.
   // R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
-    if (extra === true) return startedFor === view.viewer ? "Your extra turn" : "Opponent's extra turn";
-    return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
+    if (extra === true) return startedFor === view.viewer ? t("Your extra turn") : t("Opponent's extra turn");
+    return startedFor === view.viewer ? t("Your turn") : t("Opponent's turn");
   }
-  if (view.phase === "mulligan") return "Mulligan";
-  return view.active === view.viewer ? "Your turn" : "Opponent's turn";
+  if (view.phase === "mulligan") return t("Mulligan");
+  return view.active === view.viewer ? t("Your turn") : t("Opponent's turn");
 }
 
 export type GameProps = {
@@ -179,6 +180,7 @@ export default function Game({
   trackStats = false,
   aim,
 }: GameProps): ReactElement {
+  useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
   /**
@@ -621,7 +623,7 @@ export default function Game({
           <>
             {error != null && error !== "" ? (
               <p key={error} className="game-error" data-testid="action-error" role="alert">
-                {error}
+                {t(error)}
               </p>
             ) : null}
             {boardNotice}
