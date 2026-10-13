@@ -244,6 +244,13 @@ class CommandTests(unittest.TestCase):
         self.assertNotIn("`oneshot", text)
         self.assertNotIn("`split", text)
 
+    def test_help_says_whose_an_issue_is(self):
+        # #802: an issue is the bot's or people's (`human`, or the bot's `human required`).
+        text = commands.help_text(self.bot)
+        self.assertIn("`human` keeps me off it", text)
+        self.assertIn("`human required` is my hand-over when I find I cannot do it", text)
+        self.assertIn("Take either label off to hand it back, then `/harness build`.", text)
+
     def test_help_lists_the_votes_on_a_suggestion(self):
         # #796: `approve` and `reject` (#760) are not verbs, but `help` names them.
         text = commands.help_text(self.bot)
