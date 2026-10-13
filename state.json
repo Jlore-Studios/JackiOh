@@ -4426,9 +4426,7 @@
       "run_id": "38433036630",
       "started_at": "2026-10-13T16:45:43Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6149025902"
-      ]
+      "taken_asks": []
     },
     "761": {
       "failures": 0,
