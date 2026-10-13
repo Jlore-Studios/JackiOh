@@ -76,6 +76,12 @@
       "lines": [
         "@jgoetzmann-bot option (a)"
       ]
+    },
+    "c:6149025902": {
+      "at": "2026-10-13T15:26:06Z",
+      "lines": [
+        "@jgoetzmann-bot exception for this issue"
+      ]
     }
   },
   "items": {
