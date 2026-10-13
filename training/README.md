@@ -241,6 +241,15 @@ The live games' records are what the gather lane's figures sit beside, and they 
   `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
   `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
 
+## The ladder bots after a promotion
+
+The ladder bots' strengths are measured against each other on the AI on `main` (R748000,
+`docs/bot-calibration.md`), beside the skill curve their seed ratings are read from (R747000), so a
+merged promotion is followed by that document's re-calibration: `cargo run --release -p
+jackioh-server -- bot-calibrate`, run by a person or the night bot, whose report is compared with the
+curve and, where it should win, pasted into `crates/server/src/config.rs` in a pull request. A lane
+never edits `crates/server`, and a promotion does not wait for it.
+
 ## Where the numbers go
 
 | What | Where |

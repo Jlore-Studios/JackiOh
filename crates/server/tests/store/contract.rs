@@ -4377,6 +4377,70 @@ mod ranked {
         assert_eq!(q!(harness, t => t.ranked_game(&row.id)), Some(row));
     }
 
+    async fn r748000_lists_rated_games_with_a_bot_side_since(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
+        let person = json!({
+            "profileId": a.id,
+            "botId": null,
+            "pilot": "human",
+            "before": j(&glicko(1000.0)),
+            "after": j(&glicko(984.0)),
+            "rankBefore": null,
+            "rankAfter": null,
+        });
+        let bot = json!({
+            "profileId": null,
+            "botId": "calibrated-bot",
+            "pilot": "ai",
+            "before": j(&glicko(1050.0)),
+            "after": j(&glicko(1062.0)),
+            "rankBefore": null,
+            "rankAfter": null,
+        });
+        let people = rated_game(harness, &id(), "v0.1", &a, &b, json!({ "endedAt": now - 3_000 }));
+        let old = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 7_200_000, "sides": [person.clone(), bot.clone()] }),
+        );
+        let recent = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 2_000, "sides": [person.clone(), bot.clone()] }),
+        );
+        let latest = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 1_000, "sides": [bot, person], "winnerSide": 1 }),
+        );
+        for row in [&people, &old, &recent, &latest] {
+            q!(harness, t => t.ranked_record_game(row));
+        }
+
+        // Only the games with a bot side, ended at or after `since`, oldest first.
+        assert_eq!(
+            q!(harness, t => t.ranked_bot_games_since(now - 3_600_000)),
+            vec![recent.clone(), latest.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.ranked_bot_games_since(0)),
+            vec![old, recent, latest]
+        );
+        assert!(q!(harness, t => t.ranked_bot_games_since(now)).is_empty());
+    }
+
     async fn r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it(
         harness: &StoreHarness,
     ) {
@@ -4429,6 +4493,7 @@ mod ranked {
         r610_keeps_each_bot_s_own_rating_upserted,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
+        r748000_lists_rated_games_with_a_bot_side_since,
         r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it,
     );
 }
