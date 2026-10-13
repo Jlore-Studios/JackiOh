@@ -11,11 +11,12 @@
 //! R610 rating seeded from it), a think speed, a persona (R645's weights), the hours it is on, an
 //! account age, and a username drawn from two word lists or, for `BOT_DEFAULT_USERNAME_SHARE` of them,
 //! the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
-//! people took into live Best-of-1 games, shuffled, then random decks dealt as a player's All Random
-//! deck is (`deal_random_deck`: no shadow ban, no soft gate, R1453), each kept only when it is legal
-//! (`validate_deck`, against a collection of its own cards: a bot owns nothing and needs nothing),
-//! and dealt again whenever the catalog version changes. Its Conquest trio (R641000) is dealt after
-//! them, for the same catalog version: its own decks first, in order, each that shares no card with
+//! people took into live Best-of-1 games, those with enough games in the order its strength takes
+//! them and the rest shuffled (R750000), then random decks dealt as a player's All Random deck is (no shadow ban, no soft gate,
+//! R1453) leaning on the cards that win as far as its strength says (`deal_random_deck_with_strength`,
+//! R750000), each kept only when it is legal (`validate_deck`, against a collection of its own cards:
+//! a bot owns nothing and needs nothing), and dealt again whenever the catalog version changes. Its
+//! Conquest trio (R641000) is dealt after them, for the same catalog version: its own decks first, in order, each that shares no card with
 //! those taken before it, then decks dealt with every card already taken left out, until it holds
 //! three that pass the trio's rules (`validate_trio`, R253).
 //!
@@ -32,7 +33,7 @@ use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, L
 use jackioh_engine::wire::{GameMode, GameRecord, GameSource, PLAYER_IDS, Pilot, SourceFilter};
 use jackioh_engine::{Rng, pick_portrait_from_seed};
 
-use crate::actor::engine::{deal_random_deck, deal_random_deck_excluding};
+use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random_deck_with_strength};
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -42,7 +43,7 @@ use crate::config::{
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_HOURS_PER_DAY,
     BOT_NAME_FIRST, BOT_NAME_SECOND, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN,
     BOT_POOL_PER_WEEKLY_ACTIVE, BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN,
-    BOT_STALE_START_SECONDS, BOT_STRENGTHS, USERNAME_CHANGE_COOLDOWN_MS,
+    BOT_STALE_START_SECONDS, BOT_STRENGTHS, CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
     BotDeck, BotRow, FrozenDeck, FrozenTrio, GameRecordQuery, NewBot, StoreError, UsernameClaim,
@@ -199,11 +200,42 @@ fn deck_input(catalog: &Catalog) -> DeckInput {
     }
 }
 
-/// R1454: the patch's distinct decklists people took into live Best-of-1 games, in the records'
-/// order (sorted copies compared, so a reordering is the same list).
-fn human_bo1_decklists(records: &[GameRecord]) -> Vec<Vec<String>> {
-    let mut seen: IndexSet<Vec<String>> = IndexSet::new();
-    let mut lists: Vec<Vec<String>> = Vec::new();
+/// R750000: how far the bot of strength index `strength` leans its random decks on the cards that
+/// win (`deal_random_deck_with_strength`): its seed rating's place between the weakest and the
+/// strongest of `BOT_STRENGTHS`, 0.0 for the weakest and 1.0 for the strongest. 0.0 for an index
+/// `BOT_STRENGTHS` does not hold, or when every strength seeds one rating.
+pub fn bot_target_strength(strength: usize) -> f64 {
+    let Some(own) = BOT_STRENGTHS.get(strength) else {
+        return 0.0;
+    };
+    let ratings = BOT_STRENGTHS.iter().map(|strength| strength.seed_rating);
+    let low = ratings.clone().fold(f64::INFINITY, f64::min);
+    let high = ratings.fold(f64::NEG_INFINITY, f64::max);
+    if high <= low {
+        return 0.0;
+    }
+    ((own.seed_rating - low) / (high - low)).clamp(0.0, 1.0)
+}
+
+/// One distinct decklist's live human Best-of-1 games, and how many of them it won.
+struct ListRecord {
+    /// The list as its first record held it.
+    deck: Vec<String>,
+    /// Its sorted ids, which make two orderings one list.
+    key: Vec<String>,
+    wins: i64,
+    games: i64,
+}
+
+/// R1454, R750000: the patch's distinct decklists people took into live Best-of-1 games (sorted
+/// copies compared, so a reordering is the same list), split in two. `ranked` holds those with at
+/// least `CARD_STATS_MIN_SAMPLE` games, the best exact win rate first (`wins_a × games_b` against
+/// `wins_b × games_a`, so no float decides it, as `win_rate_leader` does), then more games, then the
+/// ids joined, ascending; `unranked` holds the rest in the records' order. A draw is a game not won, as
+/// `card_stats` counts it, and a list needs its 20 games before it is ranked at all, so a list that
+/// won its one game never goes ahead of one that won 90 of 200.
+fn ranked_human_bo1_decklists(records: &[GameRecord]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
+    let mut lists: IndexMap<Vec<String>, ListRecord> = IndexMap::new();
     for record in records {
         if record.source != GameSource::Live || record.mode != GameMode::Bo1 {
             continue;
@@ -212,22 +244,59 @@ fn human_bo1_decklists(records: &[GameRecord]) -> Vec<Vec<String>> {
             if record.pilots[seat] != Pilot::Human {
                 continue;
             }
-            let deck = record.game.seats[seat].deck.clone();
-            let mut sorted = deck.clone();
-            sorted.sort();
-            if seen.insert(sorted) {
-                lists.push(deck);
+            let deck = &record.game.seats[seat].deck;
+            let mut key = deck.clone();
+            key.sort();
+            let list = lists.entry(key.clone()).or_insert_with(|| ListRecord {
+                deck: deck.clone(),
+                key,
+                wins: 0,
+                games: 0,
+            });
+            list.games += 1;
+            if record.game.winner.player() == Some(seat) {
+                list.wins += 1;
             }
         }
     }
-    lists
+    let (mut ranked, unranked): (Vec<ListRecord>, Vec<ListRecord>) = lists
+        .into_values()
+        .partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
+    ranked.sort_by(|a, b| {
+        (b.wins * a.games)
+            .cmp(&(a.wins * b.games))
+            .then_with(|| b.games.cmp(&a.games))
+            .then_with(|| a.key.join(",").cmp(&b.key.join(",")))
+    });
+    (
+        ranked.into_iter().map(|list| list.deck).collect(),
+        unranked.into_iter().map(|list| list.deck).collect(),
+    )
+}
+
+/// R750000: the ranked lists (best first) in the order a bot of strength share `strength` takes them:
+/// nearest first to its place among them, the best list for 1.0 and the worst for 0.0, a tie going to
+/// the better list. Ordered by index distance, so only the share, never a rate, is a float here.
+fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
+    let last = ranked.len().saturating_sub(1) as f64;
+    let place = (1.0 - strength.clamp(0.0, 1.0)) * last;
+    let mut placed: Vec<(usize, Vec<String>)> = ranked.into_iter().enumerate().collect();
+    placed.sort_by(|(a, _), (b, _)| {
+        (*a as f64 - place)
+            .abs()
+            .total_cmp(&(*b as f64 - place).abs())
+            .then_with(|| a.cmp(b))
+    });
+    placed.into_iter().map(|(_, deck)| deck).collect()
 }
 
 /// R1454: two or three legal Best-of-1 decks for the bot seeded `seed`: the patch's human decklists
-/// first (shuffled from the seed), then random decks dealt as a player's are (All Random's deal, with
-/// no shadow ban and no soft gate, R1453), trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with
-/// a portrait dealt from the seed.
-pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<BotDeck> {
+/// first, those with enough games in the order `strength` takes them (`by_strength`) and the rest
+/// shuffled from the seed (R750000), then
+/// random decks dealt as a player's are (All Random's deal, with no shadow ban and no soft gate,
+/// R1453) leaning on the cards that win as far as `strength` says (`bot_target_strength`, R750000),
+/// trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with a portrait dealt from the seed.
+pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
     jackioh_cards::register_all();
     let mut rng = Rng::new(&format!("{seed}:decks"), 0);
     let wanted = usize::try_from(int_in(
@@ -236,10 +305,16 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<
         i64::try_from(BOT_DECKS_MAX).unwrap_or(0),
     ))
     .unwrap_or(BOT_DECKS_MIN);
-    let mut candidates = rng.shuffle(&human_bo1_decklists(records));
+    let (ranked, unranked) = ranked_human_bo1_decklists(records);
+    let mut candidates = by_strength(ranked, strength);
+    candidates.extend(rng.shuffle(&unranked));
     candidates.truncate(BOT_DECK_DRAW_ATTEMPTS);
     for index in candidates.len()..BOT_DECK_DRAW_ATTEMPTS {
-        candidates.push(deal_random_deck(&format!("{seed}:deck:{index}"), None));
+        candidates.push(deal_random_deck_with_strength(
+            &format!("{seed}:deck:{index}"),
+            None,
+            strength,
+        ));
     }
     let mut input = deck_input(catalog);
     let mut decks: Vec<BotDeck> = Vec::new();
@@ -261,11 +336,12 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog) -> Vec<
 /// R641000: the Conquest trio for the bot seeded `seed`, which holds the Best-of-1 decks `own`: its
 /// own decks first, in order, each kept when it shares no card with the decks kept before it and a
 /// player could queue it; then, while the trio is short, decks dealt as All Random deals a player's
-/// with every card kept so far left out (`deal_random_deck_excluding`), kept on the same terms,
+/// with every card kept so far left out, leaning on the cards that win as far as `strength` says
+/// (`deal_random_deck_excluding_with_strength`, R750000), kept on the same terms,
 /// trying at most `BOT_DECK_DRAW_ATTEMPTS`, each with a portrait dealt from the seed (R642). `None`
 /// when that finds no three, or the three fail the trio's own rules (§9.4's L1–L6, R253, against a
 /// collection of their own cards), so the bot plays no Conquest until the next refresh.
-pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog) -> Option<FrozenTrio> {
+pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) -> Option<FrozenTrio> {
     jackioh_cards::register_all();
     let mut input = deck_input(catalog);
     let mut kept: Vec<BotDeck> = Vec::new();
@@ -286,7 +362,11 @@ pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog) -> Option<Froze
             break;
         }
         let excluded: Vec<String> = used.iter().cloned().collect();
-        let cards = deal_random_deck_excluding(&format!("{seed}:trio-deck:{attempt}"), &excluded);
+        let cards = deal_random_deck_excluding_with_strength(
+            &format!("{seed}:trio-deck:{attempt}"),
+            &excluded,
+            strength,
+        );
         if shares_none(&cards, &used) && deck_is_legal(&mut input, &cards) {
             used.extend(cards.iter().cloned());
             kept.push(BotDeck {
@@ -436,7 +516,12 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     };
     tx.commit().await?;
     for bot in &stale {
-        let decks = draw_decks(&format!("{seed}:{}", bot.profile_id), &records, &app.catalog);
+        let decks = draw_decks(
+            &format!("{seed}:{}", bot.profile_id),
+            &records,
+            &app.catalog,
+            bot_target_strength(bot.strength),
+        );
         let mut tx = app.db.begin(None).await?;
         tx.bots_set_decks(&bot.profile_id, &decks, &app.catalog.version)
             .await?;
@@ -452,7 +537,12 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         if bot.trio.is_some() && bot.trio_catalog_version.as_deref() == Some(app.catalog.version.as_str()) {
             continue;
         }
-        let Some(trio) = draw_trio(&format!("{seed}:{}", bot.profile_id), &bot.decks, &app.catalog) else {
+        let Some(trio) = draw_trio(
+            &format!("{seed}:{}", bot.profile_id),
+            &bot.decks,
+            &app.catalog,
+            bot_target_strength(bot.strength),
+        ) else {
             tracing::warn!(event = "bots.pool.trio_short", botId = %bot.profile_id);
             continue;
         };
