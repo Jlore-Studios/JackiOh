@@ -90,14 +90,14 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat.
-      .filter(([name]) => name !== "hotseat")
+      // Production serves a genuine 404 at /dev/hotseat and /dev/replays.
+      .filter(([name]) => name !== "hotseat" && name !== "devReplays")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {
       expect(served(path), path).toBe(true);
       if (path !== paths.landing) expect(served(`${path}/`), `${path}/`).toBe(true);
     }
-    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat"]) expect(served(path), path).toBe(false);
+    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat", "/dev/replays"]) expect(served(path), path).toBe(false);
   });
 });
 
@@ -184,6 +184,14 @@ describe("public/_headers", () => {
     const files = readdirSync(join(PUBLIC, "fonts")).filter((file) => file.endsWith(".woff2"));
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) expect(file, "a versioned name").toMatch(/-\d+\.\d+\.\d+-/u);
+  });
+
+  it("lets a browser keep the bundle and the engine's module a year (#778): Vite names every file in /assets/ by its hash", () => {
+    const cache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    expect(blocks().find((block) => block.path === "/assets/*")?.headers).toEqual(cache);
+    expect(vercel.headers.find((block) => block.source === "/assets/(.*)")?.headers).toEqual(cache);
+    // Only Vite writes /assets/: nothing in public/ is served there under a name without a hash.
+    expect(readdirSync(PUBLIC)).not.toContain("assets");
   });
 });
 

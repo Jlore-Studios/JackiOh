@@ -175,4 +175,8 @@ export const shellTestid = {
   loadFailed: "load-failed",
   reload: "load-failed-reload",
   loadFailedHome: "load-failed-home",
+  /** #778: the panel a screen that calls the engine waits in while its module loads. */
+  engineLoading: "engine-loading",
+  /** #778: the engine's module did not load; the panel's retry is `retry`. */
+  engineFailed: "engine-failed",
 } as const;

@@ -12,8 +12,9 @@
 //
 // LOADING. Nothing here works until the module is instantiated:
 //   - `loadWasm()` fetches and instantiates it (idempotent; one fetch however many callers). The page
-//     awaits it in `main.tsx` before the first render, because the deck builder calls the validator
-//     synchronously; the practice worker awaits it before it handles a message.
+//     starts it at boot, and `main.tsx`'s `EngineGate` holds every screen that calls the engine until
+//     it resolves (#778), because the deck builder calls the validator synchronously; the practice
+//     worker awaits it before it handles a message.
 //   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a file
 //     URL, so `test/setup.ts` reads `pkg/jackioh_wasm_bg.wasm` from disk and hands it over.
 // Both call the module's own `init()` once, which registers the catalog and the card scripts with the

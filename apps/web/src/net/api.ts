@@ -11,7 +11,8 @@
 // Every response shape below is the one `crates/server/src/api/*.rs` actually returns; every error
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
-import type { CardDefs, GameOverReason } from "@jackioh/shared";
+import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
+import type { CardDefs, GameOverReason, PlayerId, PortraitId } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -795,6 +796,47 @@ export type MatchRanksResponse = {
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {
   return apiRequest<MatchRanksResponse>(`/api/matches/${encodeURIComponent(matchId)}/ranks`, { token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Online replays (SPEC §9.3, R768, #510): the shapes of `crates/server/src/api/replays.rs`. A step is
+// the view the caller's seat held; no seed, log, state or deck crosses (CLAUDE.md rule 7).
+// ---------------------------------------------------------------------------------------------
+
+/** One finished match in `GET /api/replays`; `unavailable` is part 1's reason this build cannot show it. */
+export type OnlineReplayListing = {
+  matchId: string;
+  /** Null for a match nothing records the mode of. */
+  mode: QueueMode | null;
+  endedAt: number;
+  /** The seat the caller began in, whose view is step 0. */
+  seat: PlayerId;
+  result: "win" | "loss" | "draw";
+  turns: number;
+  /** Step 0 and one per logged action. */
+  steps: number;
+  portraits: { p1: PortraitId; p2: PortraitId };
+  /** Both empty for a seat a deleted account left. */
+  opponent: { profileId: string; username: string };
+  unavailable?: ReplayRefusal;
+};
+
+/** `GET /api/replays`: one page, newest first, and where the next starts (null on the last). */
+export type OnlineReplayList = { replays: OnlineReplayListing[]; nextOffset: number | null };
+
+/** `GET /api/replays/:matchId`: steps `[from, from + steps.length)` of `total`. */
+export type OnlineReplaySteps = { matchId: string; from: number; steps: ReplayStep[]; total: number };
+
+export function getReplays(token: string, offset = 0): Promise<OnlineReplayList> {
+  return apiRequest<OnlineReplayList>(`/api/replays?offset=${String(offset)}`, { token });
+}
+
+/** A page of a replay: 410 `gone` once its log is purged, 422 `replay_unavailable` (with `details.reason`) when this build cannot show it. */
+export function getReplaySteps(token: string, matchId: string, from: number, count: number): Promise<OnlineReplaySteps> {
+  return apiRequest<OnlineReplaySteps>(
+    `/api/replays/${encodeURIComponent(matchId)}?from=${String(from)}&count=${String(count)}`,
+    { token },
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
