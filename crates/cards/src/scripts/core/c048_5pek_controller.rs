@@ -10,38 +10,7 @@
 //! §4.1: "Spikey Pillow cannot be switched to Defense", by action or effect (#65.1); it is skipped
 //! and the rest flip. Only the top card of a Stack pile is touched (R13).
 
-use jackioh_engine::effects::{chosen_options, switch_all_positions};
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-048";
-
-/// §8.2's two radiant options, as the play action spells them (R81).
-const ENEMY: &str = "enemy";
-const ALL: &str = "all";
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            cry: Some(hook(|_ctx| vec![switch_all_positions(json_as(json!({ "side": "both" })))])),
-            ..Script::default()
-        },
-        radiant: Script {
-            modes: vec![ModeDecl {
-                kind: PromptKind::Mode,
-                options: vec![ENEMY.to_string(), ALL.to_string()],
-            }],
-            cry: Some(hook(|ctx| {
-                // R81: the mode arrived with the play, and R90 validated it against this declaration, so the
-                // only way it is anything else is that no mode was carried. "All units" is what the card does
-                // when it is not narrowed, so that is the reading an unnarrowed play gets.
-                let mode = chosen_options(ctx).into_iter().next();
-                let side = if mode.as_deref() == Some(ENEMY) { "enemy" } else { "both" };
-                vec![switch_all_positions(json_as(json!({ "side": side })))]
-            })),
-            ..Script::default()
-        },
-    }
-}
 
 // #48 5pek Controller — SPEC §8.2, BUILD M4-T4: "Every unit switches, exertion untouched (R20),
 // Spikey Pillow stays ATK; radiant enemy-only mode". R20 is asserted twice: no `exertion.switched`
@@ -49,7 +18,7 @@ pub fn script() -> CardScripts {
 // declared mode opens no `PendingChoice`. #65.1 Spikey Pillow is §4.1's case; the rest are props.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::ID;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -231,7 +200,7 @@ mod tests {
             assert_eq!(def.id, CONTROLLER);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
             assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(0));
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.modes.is_empty());
             assert_eq!(
                 serde_json::to_value(&scripts.radiant.modes).unwrap(),
