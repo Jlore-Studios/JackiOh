@@ -5550,7 +5550,7 @@
       "taken_asks": []
     }
   },
-  "labels_synced": "07194ccb3614e7ac",
+  "labels_synced": "7df6796cdcf8a8be",
   "last_infra": {
     "at": "2026-09-29T16:42:31Z",
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
