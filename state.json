@@ -4335,13 +4335,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-13T07:59:11Z",
-      "free": 83939942400,
+      "at": "2026-10-13T08:27:58Z",
+      "free": 83590807552,
       "percent": 32,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38361237687",
-    "runner": "night-vm-devin-4",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38360915737",
+    "runner": "night-vm-agy",
     "shown": null
   },
   "machine_memory": [
