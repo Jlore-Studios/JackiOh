@@ -152,6 +152,14 @@ thread count.
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
   cursor, so `self` and `bin:<the same build>` play identical games.
 
+## The ladder bots after a promotion
+
+The ladder bots' seed ratings are measured against the AI on `main` (R748000, `docs/bot-calibration.md`),
+so a merged promotion is followed by that document's re-calibration: `cargo run --release -p
+jackioh-server -- bot-calibrate`, run by a person or the night bot, whose printed rows go into
+`crates/server/src/config.rs` in a pull request. A lane never edits `crates/server`, and a promotion
+does not wait for it.
+
 ## Where the numbers go
 
 | What | Where |

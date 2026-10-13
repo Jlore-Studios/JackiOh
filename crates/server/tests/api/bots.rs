@@ -45,8 +45,8 @@ use jackioh_server::bots::pick::{pick_due_at, pick_slot};
 use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
-    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, JLORIOUS_SIZE, MAX_FAIR_GAP, RANK_PLACEMENT_GAMES,
-    RATING_WINDOW_FULL_AFTER_SECONDS,
+    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, JLORIOUS_SIZE, MAX_FAIR_GAP,
+    RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
@@ -890,6 +890,43 @@ async fn r1453_above_the_strongest_bot_gets_none() {
     let strong = new_bot(&app, BotSpec::rated(1600.0)).await;
     q!(app, bots_set_retired(&strong, Some(now_ms())));
     assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+}
+
+/// R748000: a pool holding one fresh bot at each seed rating, as the pool seeds it; answers the
+/// profile ids in `BOT_SEED_RATINGS`' order.
+async fn seeded_pool(app: &App) -> Vec<String> {
+    let mut ids = Vec::new();
+    for seed in BOT_SEED_RATINGS {
+        ids.push(new_bot(app, BotSpec::rated(seed)).await);
+    }
+    ids
+}
+
+/// R748000, R1453: the ceiling gate. With a pool seeded from `BOT_SEED_RATINGS` the strongest bot
+/// is the highest seed: a person rated above it is never given a bot, and one rated at it is given
+/// that one.
+#[tokio::test(start_paused = true)]
+async fn r748000_the_strongest_seed_is_the_ceiling() {
+    let top = BOT_SEED_RATINGS.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let strongest = BOT_SEED_RATINGS
+        .iter()
+        .position(|seed| *seed == top)
+        .expect("a highest seed");
+
+    let app = app_with_bots(true).await;
+    seeded_pool(&app).await;
+    let (above, _) = new_person(&app, top + 1.0).await;
+    ticket(&app, &above, top + 1.0, 10 * past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert!(matches(&app).await.is_empty(), "no match started");
+
+    let app = app_with_bots(true).await;
+    let pool = seeded_pool(&app).await;
+    let (level, _) = new_person(&app, top).await;
+    ticket(&app, &level, top, 10 * past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let ids: Vec<&str> = pool.iter().map(String::as_str).collect();
+    assert_eq!(seated(&app, &ids).await, vec![pool[strongest].clone()]);
 }
 
 #[test]

@@ -3533,3 +3533,18 @@ pub fn ranked_game(f: &mut FakeTx<'_>, id: &str) -> Result<Option<RatedGameRow>,
     call(f, "ranked.game")?;
     Ok(f.tables().rated_games.iter().find(|game| game.id == id).cloned())
 }
+
+pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<RatedGameRow>, StoreError> {
+    call(f, "ranked.botGamesSince")?;
+    let mut games: Vec<RatedGameRow> = f
+        .tables()
+        .rated_games
+        .iter()
+        .filter(|game| {
+            game.ended_at >= since && (game.sides.0.bot_id.is_some() || game.sides.1.bot_id.is_some())
+        })
+        .cloned()
+        .collect();
+    games.sort_by(|a, b| (a.ended_at, &a.id).cmp(&(b.ended_at, &b.id)));
+    Ok(games)
+}
