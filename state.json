@@ -4768,6 +4768,11 @@
       "taken_asks": []
     },
     "784": {
+      "cleared": {
+        "at": "2026-10-13T14:30:40Z",
+        "by": "`claude` (strong)",
+        "sha": "9f5d5ef153dda12d1dd964fb554a3ee9e758148b"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-13T13:19:13Z",
