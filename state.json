@@ -5183,6 +5183,8 @@
       "kind": "review",
       "pending_request": false,
       "provider": "claude-7",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38443460521",
       "started_at": "2026-10-13T18:02:49Z",
       "stop_requested": false,
