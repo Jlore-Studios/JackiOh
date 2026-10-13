@@ -8,19 +8,30 @@ use std::sync::Arc;
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::script::{
-    AttackModArgs, AttackModHook, AuraHook, ConditionContext, ConditionHook, CostArgs,
-    CostAuraArgs, CostAuraHook, CostHook, DiscardGuardHook, DrawLimitHook, EchoXHook,
-    FaceDownPlayHook, GraveyardPlayHook, HasHook, HeroGuardHook, Hook, HookArgs,
-    PlagueMultiplierHook, PreviewHook, ReplacementContext, ReplacementWhen, SetStatHook,
-    TargetCheck, TargetCheckArgs, TargetingDiscardsHook, TributeWhenHook, TriggerExtraHook,
-    TriggerRun, TriggerWhen, WouldCounterArgs, WouldCounterHook,
+    AttackModArgs, AttackModHook, AuraHook, ConditionContext, ConditionHook, CostArgs, CostAuraArgs,
+    CostAuraHook, CostHook, DiscardGuardHook, DrawLimitHook, EchoXHook, FaceDownPlayHook, GraveyardPlayHook,
+    HasHook, HeroGuardHook, Hook, HookArgs, PlagueMultiplierHook, PreviewHook, ReplacementContext,
+    ReplacementWhen, SetStatHook, TargetCheck, TargetCheckArgs, TargetingDiscardsHook, TributeWhenHook,
+    TriggerExtraHook, TriggerRun, TriggerWhen, WouldCounterArgs, WouldCounterHook,
 };
 use mlua::{Function, LuaSerdeExt, Table, Value};
 
+use crate::Site;
 use crate::api::{self, EffectCall};
 use crate::numbers;
 use crate::vm;
-use crate::Site;
+
+/// A hook's list answer from its walked JSON: `{}` (and no return at all)
+/// reads as no entries. An empty Luau table walks as an empty map, never an
+/// empty list (L7), so the typed deserialisation alone would refuse it; the
+/// type here says list, and an empty map is the empty list.
+fn vec_answer<T: serde::de::DeserializeOwned>(json: serde_json::Value) -> mlua::Result<Vec<T>> {
+    match json {
+        serde_json::Value::Null => Ok(vec![]),
+        serde_json::Value::Object(record) if record.is_empty() => Ok(vec![]),
+        json => serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string())),
+    }
+}
 
 /// Helper to get a function from a table trying exact name, camelCase and snake_case.
 pub(crate) fn get_fn(table: &Table, name: &str) -> mlua::Result<Function> {
@@ -116,10 +127,12 @@ pub fn adapt_hook(site: Site, bytecode: &'static [u8]) -> Hook {
 
 /// Adapts an aura hook.
 pub fn adapt_aura_hook(site: Site, bytecode: &'static [u8]) -> AuraHook {
-    Arc::new(move |args: HookArgs<'_>| match vm::call_aura_hook(site, bytecode, args) {
-        Ok(entries) => entries,
-        Err(err) => panic!("{err}"),
-    })
+    Arc::new(
+        move |args: HookArgs<'_>| match vm::call_aura_hook(site, bytecode, args) {
+            Ok(entries) => entries,
+            Err(err) => panic!("{err}"),
+        },
+    )
 }
 
 /// Adapts a cost hook.
@@ -165,7 +178,7 @@ pub fn adapt_preview_hook(site: Site, bytecode: &'static [u8]) -> PreviewHook {
                 let ud = scope.create_any_userdata(ctx, crate::reads::register_condition_ctx)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(previews) => previews,
@@ -201,7 +214,7 @@ pub fn adapt_cost_aura_hook(site: Site, bytecode: &'static [u8]) -> CostAuraHook
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(rules) => rules,
@@ -219,7 +232,7 @@ pub fn adapt_graveyard_play_hook(site: Site, bytecode: &'static [u8]) -> Graveya
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(perms) => perms,
@@ -237,7 +250,7 @@ pub fn adapt_face_down_play_hook(site: Site, bytecode: &'static [u8]) -> FaceDow
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(perms) => perms,
@@ -272,7 +285,7 @@ pub fn adapt_draw_limit_hook(site: Site, bytecode: &'static [u8]) -> DrawLimitHo
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(limits) => limits,
@@ -290,7 +303,7 @@ pub fn adapt_discard_guard_hook(site: Site, bytecode: &'static [u8]) -> DiscardG
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(guards) => guards,
@@ -308,7 +321,7 @@ pub fn adapt_hero_guard_hook(site: Site, bytecode: &'static [u8]) -> HeroGuardHo
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(guards) => guards,
@@ -344,7 +357,7 @@ pub fn adapt_conditional_keywords_hook(site: Site, bytecode: &'static [u8]) -> C
                 let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+                vec_answer(json)
             })
         }) {
             Ok(kws) => kws,
@@ -483,12 +496,7 @@ pub fn adapt_trigger_when(
 }
 
 /// Adapts a trigger `run` hook.
-pub fn adapt_trigger_run(
-    site: Site,
-    bytecode: &'static [u8],
-    key: &'static str,
-    index: usize,
-) -> TriggerRun {
+pub fn adapt_trigger_run(site: Site, bytecode: &'static [u8], key: &'static str, index: usize) -> TriggerRun {
     Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let trigs: Table = face.raw_get(key)?;
@@ -546,11 +554,7 @@ pub fn adapt_activation_run(site: Site, bytecode: &'static [u8], index: usize) -
 }
 
 /// Adapts an activation's `canActivate` hook.
-pub fn adapt_activation_can_activate(
-    site: Site,
-    bytecode: &'static [u8],
-    index: usize,
-) -> ConditionHook {
+pub fn adapt_activation_can_activate(site: Site, bytecode: &'static [u8], index: usize) -> ConditionHook {
     Arc::new(move |ctx: ConditionContext<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let acts: Table = face.raw_get("activations")?;

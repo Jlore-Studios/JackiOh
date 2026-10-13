@@ -158,4 +158,3 @@ pub use crate::subsystems::perfect_hand::{ReplaceHandWithPerfectArgs, replace_ha
 pub use crate::subsystems::board_history::{RollBackArgs, roll_back};
 // The Glitch Easter egg (issue #170, R676): Glitch's one effect, its four outcomes behind one rng draw.
 pub use crate::subsystems::glitch::glitch;
-

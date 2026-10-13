@@ -242,6 +242,8 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
                         if let Ok(cb) = tbl.raw_get::<Function>("more") {
                             let id = after_check::register_callback(lua, cb)?;
                             tbl.raw_set("callbackId", id)?;
+                            // The function itself cannot cross into Rust (L6).
+                            tbl.raw_set("more", Value::Nil)?;
                         }
                         call.raw_set("args", tbl)?;
                     }
@@ -260,10 +262,13 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
                     if let Ok(cb) = tbl.raw_get::<Function>("cards") {
                         let id = after_check::register_callback(lua, cb)?;
                         tbl.raw_set("cardsCallbackId", id)?;
+                        // Functions cannot cross into Rust (L6).
+                        tbl.raw_set("cards", Value::Nil)?;
                     }
                     if let Ok(cb) = tbl.raw_get::<Function>("each") {
                         let id = after_check::register_callback(lua, cb)?;
                         tbl.raw_set("eachCallbackId", id)?;
+                        tbl.raw_set("each", Value::Nil)?;
                     }
                 }
                 call.raw_set("args", args_val)?;
@@ -297,11 +302,7 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
 }
 
 /// `J.div` or `J.rem`: two `i32`s in, one out, or an error where Rust's operator would panic.
-fn integer_function(
-    lua: &Lua,
-    name: &'static str,
-    f: fn(i32, i32) -> Option<i32>,
-) -> mlua::Result<Function> {
+fn integer_function(lua: &Lua, name: &'static str, f: fn(i32, i32) -> Option<i32>) -> mlua::Result<Function> {
     lua.create_function(move |_, (a, b): (Value, Value)| {
         let (a, b) = (arg::<i32>(a)?, arg::<i32>(b)?);
         f(a, b).ok_or_else(|| Error::runtime(format!("J.{name}({a}, {b}) has no i32 answer")))
@@ -442,10 +443,7 @@ pub fn aura_entries<'a>(
                         .and_then(|v| v.as_i64())
                         .and_then(|v| i32::try_from(v).ok())
                         .unwrap_or(0),
-                    Json::Number(num) => num
-                        .as_i64()
-                        .and_then(|v| i32::try_from(v).ok())
-                        .unwrap_or(0),
+                    Json::Number(num) => num.as_i64().and_then(|v| i32::try_from(v).ok()).unwrap_or(0),
                     _ => 0,
                 };
                 let controller = args.self_.controller;

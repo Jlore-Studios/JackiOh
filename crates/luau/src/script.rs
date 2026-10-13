@@ -2,8 +2,8 @@
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::script::{
-    ActivationCost, ActivationDecl, ActivationUses, ReplacementDef, ReplacementMoment,
-    ReplacementWhere, Script, StaticFlags, TriggerDef,
+    ActivationCost, ActivationDecl, ActivationUses, ReplacementDef, ReplacementMoment, ReplacementWhere,
+    Script, StaticFlags, TriggerDef,
 };
 use jackioh_engine::wire::{GameEventType, ModeDecl, TargetDecl};
 use mlua::{Function, Table, Value};
@@ -21,7 +21,6 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     };
 
     vm::with_module(card, bytecode, |_lua, module| {
-
         let mut base_script = None;
         let mut radiant_script = None;
 
@@ -90,12 +89,12 @@ pub fn build_script(
     // Verify all keys first
     for pair in table.pairs::<String, Value>() {
         let (name, value) = pair.map_err(|error| refused(error.to_string()))?;
-        let is_hook = vm::HOOKS.iter().any(|h| {
-            *h == name || hooks::camel_to_snake(h) == name || hooks::snake_to_camel(h) == name
-        });
-        let is_decl = vm::DECLARATIONS.iter().any(|d| {
-            *d == name || hooks::camel_to_snake(d) == name || hooks::snake_to_camel(d) == name
-        });
+        let is_hook = vm::HOOKS
+            .iter()
+            .any(|h| *h == name || hooks::camel_to_snake(h) == name || hooks::snake_to_camel(h) == name);
+        let is_decl = vm::DECLARATIONS
+            .iter()
+            .any(|d| *d == name || hooks::camel_to_snake(d) == name || hooks::snake_to_camel(d) == name);
         if !is_hook && !is_decl {
             return Err(refused(format!(
                 "{} declares {name:?}, which is not a hook",
@@ -312,9 +311,10 @@ pub fn build_script(
                 face,
                 hook: leaked_name,
             };
-            script
-                .target_checks
-                .insert(leaked_name, hooks::adapt_target_check(site, bytecode, leaked_name));
+            script.target_checks.insert(
+                leaked_name,
+                hooks::adapt_target_check(site, bytecode, leaked_name),
+            );
         }
     }
 
@@ -328,9 +328,10 @@ pub fn build_script(
                 face,
                 hook: leaked_name,
             };
-            script
-                .resume
-                .insert(leaked_name, hooks::adapt_sub_hook(site, bytecode, "resume", leaked_name));
+            script.resume.insert(
+                leaked_name,
+                hooks::adapt_sub_hook(site, bytecode, "resume", leaked_name),
+            );
         }
     }
 
@@ -344,9 +345,10 @@ pub fn build_script(
                 face,
                 hook: leaked_name,
             };
-            script
-                .grants
-                .insert(leaked_name, hooks::adapt_sub_hook(site, bytecode, "grants", leaked_name));
+            script.grants.insert(
+                leaked_name,
+                hooks::adapt_sub_hook(site, bytecode, "grants", leaked_name),
+            );
         }
     }
 
@@ -400,7 +402,10 @@ pub fn build_script(
         script.face_down_play = Some(hooks::adapt_face_down_play_hook(site("faceDownPlay"), bytecode));
     }
     if has_fn("targetingDiscards") {
-        script.targeting_discards = Some(hooks::adapt_targeting_discards_hook(site("targetingDiscards"), bytecode));
+        script.targeting_discards = Some(hooks::adapt_targeting_discards_hook(
+            site("targetingDiscards"),
+            bytecode,
+        ));
     }
     if has_fn("drawLimit") {
         script.draw_limit = Some(hooks::adapt_draw_limit_hook(site("drawLimit"), bytecode));
@@ -415,7 +420,10 @@ pub fn build_script(
         script.attack_mods = Some(hooks::adapt_attack_mod_hook(site("attackMods"), bytecode));
     }
     if has_fn("conditionalKeywords") {
-        script.conditional_keywords = Some(hooks::adapt_conditional_keywords_hook(site("conditionalKeywords"), bytecode));
+        script.conditional_keywords = Some(hooks::adapt_conditional_keywords_hook(
+            site("conditionalKeywords"),
+            bytecode,
+        ));
     }
     if has_fn("afterAttack") {
         script.after_attack = Some(hooks::adapt_hook(site("afterAttack"), bytecode));
@@ -424,7 +432,10 @@ pub fn build_script(
         script.after_attacked = Some(hooks::adapt_hook(site("afterAttacked"), bytecode));
     }
     if has_fn("plagueMultiplier") {
-        script.plague_multiplier = Some(hooks::adapt_plague_multiplier_hook(site("plagueMultiplier"), bytecode));
+        script.plague_multiplier = Some(hooks::adapt_plague_multiplier_hook(
+            site("plagueMultiplier"),
+            bytecode,
+        ));
     }
     if has_fn("echoX") {
         script.echo_x = Some(hooks::adapt_echo_x_hook(site("echoX"), bytecode));
@@ -439,10 +450,18 @@ pub fn build_script(
         script.start_of_opponent_turn = Some(hooks::adapt_hook(site("startOfOpponentTurn"), bytecode));
     }
     if has_fn("turnHookExtra") {
-        script.turn_hook_extra = Some(hooks::adapt_trigger_extra_hook(site("turnHookExtra"), bytecode, "turnHookExtra"));
+        script.turn_hook_extra = Some(hooks::adapt_trigger_extra_hook(
+            site("turnHookExtra"),
+            bytecode,
+            "turnHookExtra",
+        ));
     }
     if has_fn("cryDeathExtra") {
-        script.cry_death_extra = Some(hooks::adapt_trigger_extra_hook(site("cryDeathExtra"), bytecode, "cryDeathExtra"));
+        script.cry_death_extra = Some(hooks::adapt_trigger_extra_hook(
+            site("cryDeathExtra"),
+            bytecode,
+            "cryDeathExtra",
+        ));
     }
 
     Ok(script)
@@ -472,8 +491,8 @@ fn parse_triggers(
             let id: String = trig.raw_get("id").unwrap_or_default();
             let on_val: Value = trig.raw_get("on").map_err(|e| refused(e.to_string()))?;
             let json = numbers::to_json(&on_val, site_load)?;
-            let on: Vec<GameEventType> = serde_json::from_value(json)
-                .map_err(|e| refused(format!("{} {key} on: {e}", face.key())))?;
+            let on: Vec<GameEventType> =
+                serde_json::from_value(json).map_err(|e| refused(format!("{} {key} on: {e}", face.key())))?;
 
             let site_trig = Site {
                 card,

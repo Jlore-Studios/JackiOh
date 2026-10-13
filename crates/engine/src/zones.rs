@@ -975,6 +975,7 @@ pub fn remove_from_field(
 /// "exile"). Written by hand rather than with `wire::string_union!`: it is no wire type, and the macro
 /// would export it to the web's generated types (SURFACE §5.1).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum OffFieldZone {
     Hand,

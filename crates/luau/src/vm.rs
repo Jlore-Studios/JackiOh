@@ -309,9 +309,7 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
     for pair in table.pairs::<String, Value>() {
         let (name, value) = pair.map_err(|error| refused(error.to_string()))?;
         if let Some(hook) = HOOKS.iter().find(|h| {
-            **h == name
-                || crate::hooks::camel_to_snake(h) == name
-                || crate::hooks::snake_to_camel(h) == name
+            **h == name || crate::hooks::camel_to_snake(h) == name || crate::hooks::snake_to_camel(h) == name
         }) {
             if !value.is_function() {
                 return Err(refused(format!(
@@ -322,9 +320,7 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
             }
             decl.hooks.push(*hook);
         } else if DECLARATIONS.iter().any(|d| {
-            *d == name
-                || crate::hooks::camel_to_snake(d) == name
-                || crate::hooks::snake_to_camel(d) == name
+            *d == name || crate::hooks::camel_to_snake(d) == name || crate::hooks::snake_to_camel(d) == name
         }) {
             let site = Site {
                 card,
@@ -445,4 +441,3 @@ fn run_aura(
         hook.call::<Value>(ctx)
     })
 }
-
