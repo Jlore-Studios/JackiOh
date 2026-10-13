@@ -5190,7 +5190,25 @@
       "run_id": "38443460521",
       "started_at": "2026-10-13T18:02:49Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "38443460521",
+            "tier": "strong"
+          }
+        ],
+        "sha": "603cbc7421df2d3e0996c12179acb051f606a23d",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
