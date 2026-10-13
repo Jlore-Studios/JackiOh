@@ -1401,7 +1401,9 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 791,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-08T08:15:04Z",
       "requested_by": "squishy-squooby",
       "round_tier": "medium",
@@ -1409,7 +1411,7 @@
       "started_at": "2026-10-13T17:38:26Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "514": {
       "cleared": {
