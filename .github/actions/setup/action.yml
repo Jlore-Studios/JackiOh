@@ -8,8 +8,13 @@
 # The Rust cache is saved only from main and staging, and restored everywhere: a pull request starts
 # from its base branch's cache and never writes its own, so the repository's cache budget is not
 # spent on one entry per pull request, each evicting the next.
+#
+# Two pieces for v0.4.0's Luau card scripts (#442, part 8: #450), each doing nothing until the file
+# it needs exists, so this action can run the same on main and on the branch that brings them: the
+# emsdk cache for a job that builds the web's module, once scripts/build-wasm.sh pins an emsdk, and
+# `luau-analyze` for a job that asks for it, once crates/cards/luau/jackioh.luau exists.
 name: setup
-description: pnpm, Node and the workspace install; the pinned Rust toolchain and its build cache
+description: pnpm, Node and the workspace install; the pinned Rust toolchain and its build cache; the emsdk cache; luau-analyze
 inputs:
   node:
     description: "true: pnpm, Node from .nvmrc with the pnpm cache, and `pnpm install --frozen-lockfile`"
@@ -23,6 +28,10 @@ inputs:
     description: "A name for this job's Rust cache (no commas): a matrix whose entries build different crates gives each its own, or they share the job's one cache entry and only the first to finish writes it"
     required: false
     default: ""
+  luau:
+    description: "true: luau-analyze, Luau's type checker for the card scripts, from the Luau release mlua builds, checked against its SHA-256, kept in .cache/bin and put on PATH; a no-op until crates/cards/luau/jackioh.luau exists"
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -59,10 +68,68 @@ runs:
           if [ "$toolchain" != "$pinned" ]; then rustup toolchain uninstall "$toolchain"; fi
         done
         rustup toolchain list
-    # .cache/bin holds the wasm-bindgen CLI scripts/build-wasm.sh downloads.
+    # .cache/bin holds the wasm-bindgen CLI scripts/build-wasm.sh downloads, and luau-analyze (below).
     - uses: Swatinem/rust-cache@v2
       if: ${{ inputs.rust == 'true' }}
       with:
         cache-directories: .cache/bin
         key: ${{ inputs.cache-key }}
         save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' }}
+
+    # The emsdk (#442 L12). Once the module links through emscripten, scripts/build-wasm.sh clones
+    # and installs the emsdk it pins (EMSDK_VERSION) into .cache/emsdk when that is missing: several
+    # hundred megabytes, every run. The jobs with both halves on are the ones that build the module
+    # (ci.yml's and super.yml's `wasm`, promote-production.yml's `deploy`), so they cache the
+    # directory, keyed on the pinned version. A build-wasm.sh that pins no emsdk (main's, before
+    # v0.4.0) leaves the version empty, and the cache step is skipped.
+    # Unlike the Rust cache, any branch saves it, at the end of a successful job that missed: the key
+    # changes only with the pin, so every other run hits an entry exactly and writes nothing, and a
+    # pull request writes its own only when it moves the pin. Saved after the build, the entry also
+    # holds the system libraries emcc builds into its own cache on the first link. The toolchain
+    # above still installs wasm32-unknown-unknown (bot/tests/test_workflows.py holds that line equal
+    # to the bot's workflows); build-wasm.sh adds wasm32-unknown-emscripten itself when it is missing.
+    - name: the emsdk scripts/build-wasm.sh pins
+      id: emsdk
+      if: ${{ inputs.node == 'true' && inputs.rust == 'true' }}
+      shell: bash
+      run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      if: ${{ steps.emsdk.outputs.version != '' }}
+      with:
+        path: .cache/emsdk
+        key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
+
+    # luau-analyze (#442 L10), for ci.yml's strict analysis of the card scripts: the binary from the
+    # Luau release mlua builds (Cargo.lock's luau0-src is `+luau740`). The two are bumped together,
+    # or a script that runs may not analyze, or the reverse, so the step fails when they differ. The
+    # zip is checked against its SHA-256 before it is opened, and the binary against its own on every
+    # run, so one the Rust cache restored into .cache/bin is used only if it is this very build; any
+    # other is downloaded again. Only once the card scripts are Luau: crates/cards/luau/jackioh.luau,
+    # the module they require, exists.
+    - name: luau-analyze
+      if: ${{ inputs.luau == 'true' && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+      shell: bash
+      env:
+        LUAU_VERSION: "0.740"
+        # sha256sum of the release's luau-ubuntu.zip, and of the luau-analyze inside it.
+        LUAU_ZIP_SHA256: 7d4035db01816f977f6e4c42e3d5e8ef4235d95e9afe63a3c38905b42dde60f2
+        LUAU_ANALYZE_SHA256: 36d0d89c008e037215bdaa96f0cfc049dd5920bd931fffb76eeb269b7ae4de21
+      run: |
+        locked=$(sed -n '/^name = "luau0-src"$/{n;s/^version = ".*+luau\([0-9]*\)"$/\1/p;}' Cargo.lock)
+        if [ "0.$locked" != "$LUAU_VERSION" ]; then
+          echo "::error::Cargo.lock's luau0-src builds Luau 0.$locked, but the setup action pins luau-analyze $LUAU_VERSION: bump them together"
+          exit 1
+        fi
+        bin=.cache/bin/luau-analyze
+        if ! echo "$LUAU_ANALYZE_SHA256  $bin" | sha256sum --check --status 2>/dev/null; then
+          zip="$RUNNER_TEMP/luau-ubuntu.zip"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 3 -o "$zip" \
+            "https://github.com/luau-lang/luau/releases/download/$LUAU_VERSION/luau-ubuntu.zip"
+          echo "$LUAU_ZIP_SHA256  $zip" | sha256sum --check
+          mkdir -p .cache/bin
+          unzip -o -j "$zip" luau-analyze -d .cache/bin
+          echo "$LUAU_ANALYZE_SHA256  $bin" | sha256sum --check
+          chmod +x "$bin"
+        fi
+        echo "$GITHUB_WORKSPACE/.cache/bin" >> "$GITHUB_PATH"
+        echo "luau-analyze from Luau $LUAU_VERSION"

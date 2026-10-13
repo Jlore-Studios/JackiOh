@@ -142,6 +142,9 @@ jobs:
         with:
           ref: production
 
+      # Both halves, as CI's `wasm` job has: the build's prebuild runs scripts/build-wasm.sh, so this
+      # job builds the module, and production's setup action caches the emsdk it links with once
+      # the module moves to emscripten (#442 L12, #450).
       - uses: ./.github/actions/setup
 
       - name: build the web app

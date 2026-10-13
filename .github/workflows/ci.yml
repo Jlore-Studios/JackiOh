@@ -9,10 +9,11 @@
 # five minutes (ci-duration.yml opens an issue past seven, #73); a piece that grows is split further
 # (a longer matrix list, or the test step by crate), never folded back into one long job.
 #
-#   rust       fmt and clippy; cargo test with the generated-types diff (V20); the release build of
-#              jackioh and jackioh-server, made once for the run; the catalog, patches and spec checks
-#              and 200 fuzz seeds on that build; and, on a pull request from a training lane's ai/*
-#              branch, the training gate (README §8).
+#   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
+#              test with the generated-types diff (V20), and the same diff for the scripts' typed
+#              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
+#              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; and, on a
+#              pull request from a training lane's ai/* branch, the training gate (README §8).
 #   web        the WASM module and the e2e client, built once for the run; typecheck and eslint; the
 #              web's unit tests in thirds, without the audio, fx and asset tests.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
@@ -120,6 +121,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
+          luau: "true"
       - name: cargo fmt --check
         run: cargo fmt --check
       # Also after a formatting failure, so one run reports both. Clippy builds the whole workspace
@@ -127,6 +129,18 @@ jobs:
       - name: cargo clippy
         if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets -- -D warnings
+      # #442 L10: every card script, and the typed module they require, under strict types. Skipped
+      # until the scripts are Luau (crates/cards/luau/jackioh.luau exists; the setup installs
+      # luau-analyze only then). `require("@jackioh")` resolves through the alias in
+      # crates/cards/src/scripts/.luaurc, which luau-analyze reads for every file below it, relative
+      # to the .luaurc's own directory and with the `.luau` added itself: the alias names the module
+      # without its extension (`../../luau/jackioh`), or every script fails "Unknown require". Lint
+      # warnings (an unused `J` in a script with no hooks) print and pass; a type error fails.
+      - name: luau-analyze --mode=strict
+        if: ${{ !cancelled() && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        run: |
+          # shellcheck disable=SC2046 # one argument per script on purpose.
+          luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau
 
   # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
@@ -139,7 +153,9 @@ jobs:
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
   # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
   # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
-  # group wrote must be what is committed (V20), so every group checks.
+  # group wrote must be what is committed (V20), so every group checks. The same holds for the card
+  # scripts' typed module (#442 L10), which the group with `luau` (the one that runs crates/luau's
+  # tests) checks once it exists.
   rust-test:
     name: rust (test ${{ matrix.group }})
     needs: changes
@@ -177,6 +193,7 @@ jobs:
           - group: tools, wasm
             cache: tools-wasm
             test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai
+            luau: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -217,6 +234,21 @@ jobs:
             echo "::error::apps/web/src/wire/ differs from what the Rust generates. Regenerate it with \`cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts\` and commit the result."
             echo "$changed"
             git --no-pager diff --stat -- apps/web/src/wire
+            exit 1
+          fi
+      # crates/luau's export_api test writes crates/cards/luau/jackioh.luau from the Rust types
+      # (ts-rs, under the crate's `ts` feature, which the group's own run leaves off), so it runs
+      # here with the feature, and what it wrote must be what is committed. Skipped until the module
+      # exists, as on main before v0.4.0, whose crates/luau has no `ts` feature.
+      - name: the card scripts' typed module is what the Rust generates (#442 L10)
+        if: ${{ matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        run: |
+          cargo test -p jackioh-luau --features ts --test export_api
+          changed=$(git status --porcelain -- crates/cards/luau)
+          if [ -n "$changed" ]; then
+            echo "::error::crates/cards/luau/ differs from what the Rust generates. Regenerate it with \`cargo test -p jackioh-luau --features ts --test export_api\` and commit the result."
+            echo "$changed"
+            git --no-pager diff --exit-code -- crates/cards/luau
             exit 1
           fi
 
