@@ -10,15 +10,18 @@
 // is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
 // deleting an account removes (migration 0012), the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
-// seat played it (migration 0029, R1442). The two things the code
-// cannot say, a minimum age and a private contact address, are marked for the owner. Change the
-// date on the page whenever the text changes.
+// seat played it (migration 0029, R1442), and the age check and the terms each account agreed to
+// (migration 0034, R757000, R757001). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
+// choose. Change the date on the page whenever the text changes: with the terms' date it makes up
+// `TERMS_VERSION`, so every account is asked to agree again.
 
 import type { ReactElement } from "react";
 
 import {
+  AUTH_PENDING_ADDRESS_TTL_SECONDS,
   CODE_ATTEMPT_RETENTION_DAYS,
   MATCH_ACTION_RETENTION_DAYS,
+  MIN_ACCOUNT_AGE_YEARS,
   PLAY_TELEMETRY_RETENTION_DAYS,
 } from "@jackioh/server-config";
 
@@ -29,13 +32,16 @@ import { BackLink } from "./nav.tsx";
 import "../auth/tavern.css";
 import "./privacy.css";
 
+/** Unit conversion, not configuration. */
+const SECONDS_PER_HOUR = 3600;
+
 export const privacyTestid = {
   screen: "privacy-screen",
   updated: "privacy-updated",
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-10";
+export const PRIVACY_LAST_UPDATED = "2026-10-13";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -75,6 +81,12 @@ export default function PrivacyRoute(): ReactElement {
               Your account&rsquo;s status (waiting for an invite code, active or banned), your rating, and when
               the account was created and activated.
             </li>
+            <li>
+              That your account passed the age check, when, and the minimum age it was checked against. We
+              don&rsquo;t keep your date of birth: the month and year you give are used only to work out your
+              age.
+            </li>
+            <li>The version of the Terms and of this policy you agreed to, and when.</li>
             <li>
               A record of each invite code you try: your account, whether the code worked, the time, and a
               scrambled form of your IP address (hashed with a secret key). We use these records to limit how
@@ -155,6 +167,12 @@ export default function PrivacyRoute(): ReactElement {
               The email address of a sign-up or password reset you are waiting on, and a one-time key that
               lets the emailed link sign in on this browser.
             </li>
+            <li>
+              While a new account waits for its email to be confirmed: the month and year of birth you gave and
+              the version of the terms you agreed to, until your first sign-in on this browser sends them to us,
+              for {AUTH_PENDING_ADDRESS_TTL_SECONDS / SECONDS_PER_HOUR} hours at most.
+            </li>
+            <li>If this browser was refused an account: a note saying so, with no age or date in it.</li>
             <li>Your settings, such as sound and reduced motion.</li>
             <li>Your tutorial progress.</li>
             <li>
@@ -171,7 +189,7 @@ export default function PrivacyRoute(): ReactElement {
         <section aria-labelledby="privacy-keep">
           <h3 id="privacy-keep">How long we keep it</h3>
           <ul>
-            <li>Your account and game data: until you delete your account.</li>
+            <li>Your account and game data, your age check and the terms you agreed to: until you delete your account.</li>
             <li>Invite-code attempt records: {CODE_ATTEMPT_RETENTION_DAYS} days.</li>
             <li>
               The move-by-move record of a finished match: {MATCH_ACTION_RETENTION_DAYS} days after the match
@@ -193,8 +211,8 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-choices">Deleting your account or getting a copy</h3>
           <p>
             You can delete your account yourself: sign in, open your Account page, and choose &ldquo;Delete my
-            account&rdquo;. That deletes your sign-in, your decks, trios and cards, your tutorial progress, and the
-            records of how you played.
+            account&rdquo;. That deletes your sign-in, your decks, trios and cards, your tutorial progress, the
+            records of how you played, and the record of your age check and of the terms you agreed to.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
             removed from them. You can&rsquo;t delete your account during a match or a Conquest series that
             hasn&rsquo;t finished.
@@ -207,10 +225,16 @@ export default function PrivacyRoute(): ReactElement {
 
         <section aria-labelledby="privacy-children">
           <h3 id="privacy-children">Children</h3>
-          <p>JackiOh doesn&rsquo;t ask for your age.</p>
-          {/* OWNER: choose the minimum age for an account (13, or 16 if EU players are expected) and
-              say here what happens to an account found to be under it. */}
-          <p data-owner-slot="minimum-age">[Owner to add: the minimum age for an account.]</p>
+          <p>
+            You must be at least {MIN_ACCOUNT_AGE_YEARS} years old to have an account. Creating one asks for the
+            month and year you were born, and we keep only that you passed. Playing against the AI in Practice
+            needs no account and asks nothing.
+          </p>
+          <p>
+            If we learn that an account belongs to someone under {MIN_ACCOUNT_AGE_YEARS}, for example from a
+            parent or guardian, we delete it the way &ldquo;Delete my account&rdquo; does. To tell us, contact
+            us.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-changes">

@@ -17,6 +17,7 @@ import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./src/patch
 import type { Patch } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
+import { AUTH_PENDING_ADDRESS_TTL_SECONDS, MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
 import type { CardCost, CardDefs } from "./src/wire/index.ts";
 
 export type PublicPage = { readonly path: string; readonly description: string };
@@ -48,6 +49,10 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
   },
   {
+    path: paths.copyright,
+    description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
+  },
+  {
     path: paths.patchNotes,
     description: "Every JackiOh patch, newest first: its date, its title and what it changed.",
   },
@@ -61,12 +66,15 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   },
 ];
 
+/** Unit conversion, not configuration. */
+const SECONDS_PER_HOUR = 3600;
+
 /** A section of a page's static text: its heading and its paragraphs or list, as HTML. */
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
- * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms
- * and /accessibility quote their routes word for word (static-pages.test.ts renders each to check);
+ * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
+ * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check);
  * /almanac and /patch-notes are written from their data (`almanacList`, `patchList`).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
@@ -126,6 +134,10 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "<p>JackiOh sets no cookies. It keeps these in your browser&rsquo;s own storage, and only to work:</p>" +
         "<ul><li>The email address of a sign-up or password reset you are waiting on, and a one-time key " +
         "that lets the emailed link sign in on this browser.</li>" +
+        "<li>While a new account waits for its email to be confirmed: the month and year of birth you gave " +
+        "and the version of the terms you agreed to, until your first sign-in on this browser sends them " +
+        `to us, for ${String(AUTH_PENDING_ADDRESS_TTL_SECONDS / SECONDS_PER_HOUR)} hours at most.</li>` +
+        "<li>If this browser was refused an account: a note saying so, with no age or date in it.</li>" +
         "<li>Your settings, such as sound and reduced motion.</li>" +
         "<li>Your tutorial progress.</li>" +
         "<li>For the open tab only, and gone when you close it: your sign-in session and a password-reset " +
@@ -137,13 +149,25 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Deleting your account or getting a copy",
       "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "tutorial progress, and the records of how you played. Finished matches and their results stay in " +
+        "tutorial progress, the records of how you played, and the record of your age check and of the " +
+        "terms you agreed to. Finished matches and their results stay in " +
         "the other player&rsquo;s history, with your account removed from them. You can&rsquo;t delete " +
         "your account during a match or a Conquest series that hasn&rsquo;t finished.</p>" +
         "<p>To ask for a copy of your data, contact us. Please don&rsquo;t put your email address or " +
         "other personal details in a public GitHub issue.</p>",
     ),
   [paths.terms]:
+    section(
+      "Agreeing to these terms",
+      "<p>You agree to these terms and to the Privacy Policy when you create an account, by ticking the box " +
+        "that says so. When either of them changes, we ask you to agree again before you go on, and keep a " +
+        "record of the version you agreed to and when.</p>",
+    ) +
+    section(
+      "Who can have an account",
+      `<p>You must be at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old to have an account. Anyone can play ` +
+        "against the AI in Practice without one.</p>",
+    ) +
     section(
       "Using JackiOh",
       "<p>You may use JackiOh for personal play. Don&rsquo;t try to break the service, automate abuse, " +
@@ -159,7 +183,33 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "<p>JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game " +
         "updates can change cards, mechanics, and progression.</p>",
     ) +
+    section(
+      "What you submit",
+      "<p>Other players see the username you choose. By choosing it, you let us store it and show it to " +
+        "other players for as long as your account exists. Don&rsquo;t choose a name that infringes someone " +
+        "else&rsquo;s rights. We remove content that infringes, and close the accounts of players who " +
+        "repeatedly infringe; see Copyright for how to report it.</p>",
+    ) +
     section("Ranked play", "<p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>"),
+  [paths.copyright]:
+    section(
+      "Reporting content that infringes your copyright",
+      "<p>If you believe something on JackiOh infringes a copyright you own or act for, such as a username, " +
+        "send a written notice to our designated agent below. Under the Digital Millennium Copyright Act " +
+        "(17 U.S.C. &sect; 512(c)(3)), the notice must include:</p>" +
+        "<ul><li>Your physical or electronic signature, as the copyright owner or someone authorised to act for them.</li>" +
+        "<li>The copyrighted work you say is infringed.</li>" +
+        "<li>The material you say infringes it, with enough detail for us to find it on JackiOh.</li>" +
+        "<li>Your name, postal address, telephone number and email address.</li>" +
+        "<li>A statement that you believe in good faith that the use is not authorised by the copyright owner, " +
+        "its agent or the law.</li>" +
+        "<li>A statement that the information in the notice is accurate and, under penalty of perjury, that you " +
+        "are the copyright owner or authorised to act for them.</li></ul>",
+    ) +
+    section(
+      "Repeat infringers",
+      "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
+    ),
   [paths.accessibility]:
     section(
       "Our goal",

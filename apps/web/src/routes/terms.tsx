@@ -1,10 +1,17 @@
 // DRAFT — needs owner and legal review
+//
+// `/terms`. `TERMS_LAST_UPDATED` and the privacy policy's date make up `TERMS_VERSION`
+// (crates/server/src/config.rs), the version each account agrees to (R757001), so a change to the
+// text changes the date, and the version with it, and every account is asked to agree again.
 
 import type { ReactElement } from "react";
 
+import { MIN_ACCOUNT_AGE_YEARS } from "@jackioh/server-config";
+
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
+import { paths } from "../net/navigate.ts";
 import { CONTACT_URL } from "./SiteFooter.tsx";
-import { BackLink } from "./nav.tsx";
+import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -14,7 +21,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-12";
+export const TERMS_LAST_UPDATED = "2026-10-13";
 
 export default function TermsRoute(): ReactElement {
   const locale = useLocale();
@@ -33,6 +40,24 @@ export default function TermsRoute(): ReactElement {
           {t("Last updated")} <time dateTime={TERMS_LAST_UPDATED}>{formatDay(TERMS_LAST_UPDATED)}</time>
         </p>
 
+        <section aria-labelledby="terms-agree">
+          <h3 id="terms-agree">Agreeing to these terms</h3>
+          <p>
+            You agree to these terms and to the{" "}
+            <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+              Privacy Policy
+            </a>{" "}
+            when you create an account, by ticking the box that says so. When either of them changes, we ask
+            you to agree again before you go on, and keep a record of the version you agreed to and when.
+          </p>
+        </section>
+        <section aria-labelledby="terms-age">
+          <h3 id="terms-age">Who can have an account</h3>
+          <p>
+            You must be at least {MIN_ACCOUNT_AGE_YEARS} years old to have an account. Anyone can play against
+            the AI in Practice without one.
+          </p>
+        </section>
         <section aria-labelledby="terms-use">
           <h3 id="terms-use">Using JackiOh</h3>
           <p>
@@ -52,6 +77,19 @@ export default function TermsRoute(): ReactElement {
           <p>
             JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game
             updates can change cards, mechanics, and progression.
+          </p>
+        </section>
+        <section aria-labelledby="terms-submit">
+          <h3 id="terms-submit">What you submit</h3>
+          <p>
+            Other players see the username you choose. By choosing it, you let us store it and show it to other
+            players for as long as your account exists. Don&rsquo;t choose a name that infringes someone
+            else&rsquo;s rights. We remove content that infringes, and close the accounts of players who
+            repeatedly infringe; see{" "}
+            <a href={paths.copyright} onClick={followInApp(paths.copyright)}>
+              Copyright
+            </a>{" "}
+            for how to report it.
           </p>
         </section>
         <section aria-labelledby="terms-ranked">
