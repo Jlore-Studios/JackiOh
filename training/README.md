@@ -9,6 +9,7 @@ docs/v0.3.0/SURFACE.md §14.
 |---|---|---|
 | `improve` | a stronger AI: beat its predecessor in 75 of 100 games and random in 90 of 100 | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 65 of 100 and random in 90 of 100. **Done at generation 8** (2026-10-10), which lifted the last ban | [`unban.md`](unban.md) |
+| `gather` | self-play data, not a stronger AI: best-AI versus best-AI random-deck games filed as development records (R378) for the patch's card statistics (R749000) | [`gather.md`](gather.md) |
 
 The unban lane is done. Generation 8 (`training/history/unban.jsonl`) removed the last entry of
 `SHADOW_BAN`, and no AI can keep strictly fewer cards out of its decks than none, so no unban
@@ -21,9 +22,9 @@ R1390's gate, and the first cycle after it starts a session.
 
 ## How a lane runs
 
-The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs two systemd services,
-`jackioh-train@improve` and `jackioh-train@unban`, each as its own Linux user (`agent-train-improve`,
-`agent-train-unban`) with its own checkout, Devin login and GitHub token. Each runs
+The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs three systemd services,
+`jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user (`agent-train-improve`,
+`agent-train-unban`, `agent-train-gather`) with its own checkout, Devin login and GitHub token. Each runs
 [`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
 
 Each lane keeps one pull request open from `ai/<lane>`: a draft while Devin works, and ready for
@@ -66,6 +67,19 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
 5. Sleep 60 seconds and repeat.
 
 A lane never merges anything itself: CI does, through branch protection, once its checks pass.
+
+## The gather lane
+
+The gather lane (R749000) plays the current AI against itself so the patch's card statistics have
+data behind them. Each cycle builds the parent from `main`, runs one Devin session on
+[`gather.md`](gather.md), and repeats: no branch, no draft pull request, no promotion, no landing.
+A session farms `cargo jackioh stats` slices (best-AI versus best-AI random-deck games, one series
+per UTC day, filed under the named patch) into `~/training-out/gather/`, and the loop's
+`import_records` loads each finished day into Postgres once (`stats-import`), where
+`stats-cards --source=dev` reads them. A session commits nothing; a checkout it changed is
+cleaned, not landed. The figures it feeds are the same ones the public endpoint splits three
+ways: every counted seat merged on display (`/api/stats/cards`), the people's sides under
+`?pilot=human`, the bots' under `?pilot=ai`.
 
 ### Watching a lane on GitHub
 

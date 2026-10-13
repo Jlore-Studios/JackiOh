@@ -106,11 +106,11 @@ mod stats_cards_options {
     }
 
     #[test]
-    fn r378_r1451_reads_the_people_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
+    fn r378_r749000_reads_the_merged_seats_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
         let options = parse_card_stats_args(&args(&[])).expect("no arguments parse");
         assert_eq!(
             filter_json(&options),
-            json!({ "source": "live", "mode": null, "patch": null, "pilot": "human" })
+            json!({ "source": "live", "mode": null, "patch": null, "pilot": "unified" })
         );
         assert_eq!(options.card, None);
         assert!(!options.json);
@@ -282,7 +282,9 @@ mod stats_cards_report {
 
         let names = |card: &str| (card == "core-001").then(|| "Big D Fender".to_owned());
         let text = render_card_stats(&report, &one, &names);
-        assert!(text.contains("Card win rates: live games, every mode, patch v0.2.5, human pilots."));
+        assert!(text.contains(
+            "Card win rates: live games, every mode, patch v0.2.5, human and AI pilots (unified)."
+        ));
         let row = text
             .split('\n')
             .find(|line| line.starts_with("core-001 Big D Fender"))

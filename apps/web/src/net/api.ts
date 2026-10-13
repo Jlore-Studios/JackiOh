@@ -864,6 +864,8 @@ export type PublicStatsCardsResponse = {
   };
   source: "provisional" | "live" | "dev";
   sourceLabel: string;
+  pilot: "merged" | "human" | "ai";
+  pilotLabel: string;
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
@@ -872,6 +874,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     activePatch: string;
     source: "provisional" | "live" | "dev";
+    pilot: "merged" | "human" | "ai";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -891,6 +894,7 @@ export type CardDrillDownResponse = {
 
 export type CardStatsOptions = {
   source?: string;
+  pilot?: string;
   patch?: string;
   set?: string;
   rarity?: string;
@@ -902,6 +906,7 @@ export type CardStatsOptions = {
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
+  if (options.pilot) params.set("pilot", options.pilot);
   if (options.patch) params.set("patch", options.patch);
   if (options.set) params.set("set", options.set);
   if (options.rarity) params.set("rarity", options.rarity);

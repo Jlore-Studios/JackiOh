@@ -2,7 +2,8 @@
 //! holds the true state and plays seeded games between two agents, each seeing only `redact(state,
 //! seat)` (R185):
 //!
-//! - `self`: this build's AI (`agent::decide_with`, the same call `cargo jackioh agent` answers with);
+//! - `self`: this build's AI (`agent::decide_with`, the same call `cargo jackioh agent` answers with),
+//!   degraded by R747000's skill mixture when `--skill-a`/`--skill-b` say so;
 //! - `random`: SPEC §10.7's random policy (`jackioh_ai::random_action`), the quality gates' baseline;
 //! - `bin:<path>`: another build's AI, spawned as `<path> agent` and spoken to in JSON lines
 //!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
@@ -58,6 +59,12 @@ pub struct Args {
     /// Games to play: 1..=N.
     #[arg(long)]
     pub games: i32,
+    /// Agent a's skill, when it is self: the share of its decisions following the best AI (R747000).
+    #[arg(long, default_value_t = 1.0, value_parser = skill_value)]
+    pub skill_a: f64,
+    /// Agent b's skill, when it is self.
+    #[arg(long, default_value_t = 1.0, value_parser = skill_value)]
+    pub skill_b: f64,
     /// The seed base: game n's seed is `<base>:<n>`.
     #[arg(long)]
     pub seed: String,
@@ -98,6 +105,16 @@ fn expand_home(path: &str) -> PathBuf {
     }
 }
 
+/// A `--skill-a`/`--skill-b` value: a share in [0, 1].
+fn skill_value(raw: &str) -> Result<f64, String> {
+    match raw.parse::<f64>() {
+        Ok(skill) if (0.0..=1.0).contains(&skill) => Ok(skill),
+        _ => Err(format!(
+            "--skill-a/--skill-b must be between 0 and 1 (got {raw})."
+        )),
+    }
+}
+
 /// An agent ready to play, with the label its records carry and the shadow ban (R186) its seats' decks omit.
 #[derive(Clone, Debug)]
 pub(crate) struct Entrant {
@@ -107,6 +124,23 @@ pub(crate) struct Entrant {
     pub generation: Option<i64>,
     pub lane: Option<String>,
     pub shadow_ban: Vec<String>,
+    /// R747000's skill for a `self` seat: the share of its decisions following the best AI.
+    pub skill: f64,
+}
+
+impl Entrant {
+    /// Pins a `self` entrant to `skill`, naming the skill in its record label. A skill below 1.0
+    /// with any other agent is refused: only this build's AI can be degraded this way.
+    pub(crate) fn with_skill(mut self, skill: f64) -> anyhow::Result<Entrant> {
+        if !matches!(self.spec, AgentSpec::SelfAi) && jackioh_ai::clamp_skill(skill) < 1.0 {
+            bail!("arena: --skill-a/--skill-b need a self agent for that seat");
+        }
+        self.skill = jackioh_ai::clamp_skill(skill);
+        if self.skill < 1.0 {
+            self.label = format!("{}-s{skill}", self.label, skill = self.skill);
+        }
+        Ok(self)
+    }
 }
 
 /// Readies an agent: `self` reads this build, `bin:` asks the binary (`info`), and `random` is dealt this
@@ -121,6 +155,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
                 generation: Some(info.generation),
                 lane: Some(info.lane),
                 shadow_ban: info.shadow_ban,
+                skill: 1.0,
             })
         }
         AgentSpec::Random => Ok(Entrant {
@@ -129,6 +164,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
             generation: None,
             lane: None,
             shadow_ban: agent::own_info().shadow_ban,
+            skill: 1.0,
         }),
         AgentSpec::Bin(path) => {
             let info = query_info(path)?;
@@ -138,6 +174,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
                 generation: Some(info.generation),
                 lane: Some(info.lane),
                 shadow_ban: info.shadow_ban,
+                skill: 1.0,
             })
         }
     }
@@ -161,6 +198,8 @@ pub(crate) struct ArenaGame {
     pub seed: String,
     pub decks: (Vec<String>, Vec<String>),
     pub seats: PerPlayer<AgentSpec>,
+    /// Each seat's R747000 skill, in seat order.
+    pub skills: PerPlayer<f64>,
     /// Where agent `a` sits.
     pub a_seat: PlayerId,
     /// The agents' labels, a's then b's, for the records.
@@ -228,6 +267,7 @@ pub(crate) fn game_setup(seed: String, n: i32, a: &Entrant, b: &Entrant) -> anyh
         seed,
         decks,
         seats: PerPlayer::new(p1.spec.clone(), p2.spec.clone()),
+        skills: PerPlayer::new(p1.skill, p2.skill),
         a_seat,
         labels: (a.label.clone(), b.label.clone()),
     })
@@ -262,15 +302,15 @@ pub(crate) fn play_games(games: &[ArenaGame]) -> anyhow::Result<Vec<ArenaOutcome
 }
 
 enum Live {
-    SelfAi,
+    SelfAi { skill: f64 },
     Random,
     Bin(BinAgent),
 }
 
 impl Live {
-    fn start(spec: &AgentSpec) -> anyhow::Result<Live> {
+    fn start(spec: &AgentSpec, skill: f64) -> anyhow::Result<Live> {
         Ok(match spec {
-            AgentSpec::SelfAi => Live::SelfAi,
+            AgentSpec::SelfAi => Live::SelfAi { skill },
             AgentSpec::Random => Live::Random,
             AgentSpec::Bin(path) => Live::Bin(BinAgent::spawn(path)?),
         })
@@ -278,7 +318,7 @@ impl Live {
 
     fn label(&self) -> &'static str {
         match self {
-            Live::SelfAi => "self",
+            Live::SelfAi { .. } => "self",
             Live::Random => "random",
             Live::Bin(_) => "bin",
         }
@@ -409,7 +449,12 @@ fn choose_for(
     rng: &mut Rng,
 ) -> Result<Option<ActionBody>, String> {
     match live {
-        Live::SelfAi => {
+        Live::SelfAi { skill } => {
+            // The roll comes first, so a degraded decision skips the search outright.
+            if !jackioh_ai::follows_best(*skill, rng) {
+                return catch_unwind(AssertUnwindSafe(|| random_action(state, seat, rng)))
+                    .map_err(|panic| agent::panic_message(&*panic));
+            }
             let view = redact(state, seat);
             let start = rng.clone();
             let (action, next) = catch_unwind(AssertUnwindSafe(|| agent::decide_with(&view, seat, start)))
@@ -496,7 +541,10 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
 
     let ctl = PerPlayer::new(format!("{}:ctl:p1", game.seed), format!("{}:ctl:p2", game.seed));
     let mut rngs = PerPlayer::new(Rng::new(&ctl.p1, 0), Rng::new(&ctl.p2, 0));
-    let mut live = PerPlayer::new(Live::start(&game.seats.p1)?, Live::start(&game.seats.p2)?);
+    let mut live = PerPlayer::new(
+        Live::start(&game.seats.p1, game.skills.p1)?,
+        Live::start(&game.seats.p2, game.skills.p2)?,
+    );
 
     let mut log: Vec<Action> = Vec::new();
     let mut rejected: Vec<RejectedAction> = Vec::new();
@@ -781,8 +829,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if args.games < 1 {
         bail!("arena: --games must be at least 1, not {}", args.games);
     }
-    let a = entrant(&args.a)?;
-    let b = entrant(&args.b)?;
+    let a = entrant(&args.a)?.with_skill(args.skill_a)?;
+    let b = entrant(&args.b)?.with_skill(args.skill_b)?;
     let base = args.seed.clone();
     let games = setups(&a, &b, args.games, |n| format!("{base}:{n}"))?;
     let outcomes = play_games(&games)?;
@@ -916,6 +964,7 @@ mod tests {
             seed: "improve:abc:1".to_string(),
             decks: (Vec::new(), Vec::new()),
             seats: PerPlayer::new(AgentSpec::SelfAi, AgentSpec::Random),
+            skills: PerPlayer::new(1.0, 1.0),
             a_seat: PlayerId::P1,
             labels: ("self".to_string(), "random".to_string()),
         };

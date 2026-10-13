@@ -15,7 +15,7 @@
 
 use std::time::Duration;
 
-use jackioh_ai::{AiOptions, AiStyle, decide_styled};
+use jackioh_ai::{AiOptions, AiStyle, decide_styled, follows_best, random_action};
 use jackioh_engine::{ActionBody, ActionType, GameState, PlayerId, Rng};
 
 use crate::actor::engine;
@@ -52,6 +52,16 @@ pub struct BotMove {
     pub timing_cursor: u32,
 }
 
+/// R747000: the bot's move under its strength's skill when the skill roll fails it: SPEC §10.7's
+/// random policy, kept to what R188 lets a bot play, else the seat's fallback move. `None` only
+/// when the seat has no legal move at all.
+pub fn skill_random_move(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
+    match random_action(state, seat, rng) {
+        Some(body) if !r188_forbidden(&body) => Some(body),
+        _ => fallback_action(state, seat),
+    }
+}
+
 /// R1452: decides, draws the think time, and waits whatever of it the decision did not take.
 pub async fn play(job: BotJob) -> BotMove {
     let started = tokio::time::Instant::now();
@@ -65,29 +75,36 @@ pub async fn play(job: BotJob) -> BotMove {
         first_in_turn,
         clock_left_ms,
     } = job;
+    let mut ai_rng = ai_rng;
+    // R747000's roll comes first, so a degraded move skips the search outright.
+    let degraded = !follows_best(strength.skill, &mut ai_rng);
     let fallback_cursor = ai_rng.cursor();
-    let deadline_ms = decision_deadline_ms(clock_left_ms);
-    let decided = tokio::task::spawn_blocking(move || {
-        // The blocking pool's thread has no card override: the registered catalog it reads is the
-        // real one, as the match's own (`actor::engine`).
-        jackioh_cards::register_all();
-        let deadline =
-            std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
-        let should_stop = move || std::time::Instant::now() >= deadline;
-        let mut options = AiOptions {
-            rng: ai_rng,
-            budget: strength.budget,
-            should_stop: Some(&should_stop),
-        };
-        let style = AiStyle {
-            temperature: strength.temperature,
-            missed_lethal_chance: strength.missed_lethal_chance,
-        };
-        let decision = decide_styled(&state, seat, &mut options, &style);
-        (decision.map(|decision| decision.action), options.rng.cursor())
-    })
-    .await;
-    let (body, ai_cursor) = decided.unwrap_or((None, fallback_cursor));
+    let (body, ai_cursor) = if degraded {
+        (skill_random_move(&state, seat, &mut ai_rng), ai_rng.cursor())
+    } else {
+        let deadline_ms = decision_deadline_ms(clock_left_ms);
+        let decided = tokio::task::spawn_blocking(move || {
+            // The blocking pool's thread has no card override: the registered catalog it reads is the
+            // real one, as the match's own (`actor::engine`).
+            jackioh_cards::register_all();
+            let deadline = std::time::Instant::now()
+                + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
+            let should_stop = move || std::time::Instant::now() >= deadline;
+            let mut options = AiOptions {
+                rng: ai_rng,
+                budget: strength.budget,
+                should_stop: Some(&should_stop),
+            };
+            let style = AiStyle {
+                temperature: strength.temperature,
+                missed_lethal_chance: strength.missed_lethal_chance,
+            };
+            let decision = decide_styled(&state, seat, &mut options, &style);
+            (decision.map(|decision| decision.action), options.rng.cursor())
+        })
+        .await;
+        decided.unwrap_or((None, fallback_cursor))
+    };
 
     let kind = body.as_ref().map_or(ActionType::EndTurn, ActionBody::action_type);
     let wait = think_ms(&mut timing_rng, kind, first_in_turn, speed, clock_left_ms);

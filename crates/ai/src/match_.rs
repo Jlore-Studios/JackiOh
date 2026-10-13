@@ -35,13 +35,20 @@ const AI_MATCH: AiMatch = AiMatch { max_actions: 3000 };
 const AI_TURN_MAX_ACTIONS: usize = 60;
 
 /// Who plays a seat: the AI (at a budget, AI_BUDGET when none is given), the greedy baseline or the
-/// random policy.
+/// random policy. `Skill` is the AI degraded by R747000's skill mixture: each decision follows the
+/// best AI with chance `skill` (1.0 when none is given) and the random policy otherwise.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SeatController {
     Ai {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         budget: Option<SearchBudget>,
+    },
+    Skill {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        budget: Option<SearchBudget>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        skill: Option<f64>,
     },
     Greedy,
     Random,
@@ -52,6 +59,7 @@ impl SeatController {
     pub fn kind(&self) -> &'static str {
         match self {
             SeatController::Ai { .. } => "ai",
+            SeatController::Skill { .. } => "skill",
             SeatController::Greedy => "greedy",
             SeatController::Random => "random",
         }
@@ -142,6 +150,26 @@ struct ControllerChoice {
     decision: Option<Decision>,
 }
 
+/// One AI decision at `budget`: the roll already passed, so this decides exactly as `Ai` does.
+fn decide_at(
+    budget: Option<SearchBudget>,
+    state: &GameState,
+    seat: PlayerId,
+    rng: &mut Rng,
+) -> ControllerChoice {
+    let mut options = AiOptions {
+        rng: rng.clone(),
+        budget: budget.unwrap_or(AI_BUDGET),
+        should_stop: None,
+    };
+    let decision = decide(state, seat, &mut options);
+    *rng = options.rng;
+    ControllerChoice {
+        action: decision.as_ref().map(|decision| decision.action.clone()),
+        decision,
+    }
+}
+
 fn choose_for(
     controller: &SeatController,
     state: &GameState,
@@ -149,18 +177,16 @@ fn choose_for(
     rng: &mut Rng,
 ) -> ControllerChoice {
     match controller {
-        SeatController::Ai { budget } => {
-            let mut options = AiOptions {
-                rng: rng.clone(),
-                budget: budget.unwrap_or(AI_BUDGET),
-                should_stop: None,
-            };
-            let decision = decide(state, seat, &mut options);
-            *rng = options.rng;
-            ControllerChoice {
-                action: decision.as_ref().map(|decision| decision.action.clone()),
-                decision,
+        SeatController::Ai { budget } => decide_at(*budget, state, seat, rng),
+        // The roll comes first, so a degraded decision skips the search outright.
+        SeatController::Skill { budget, skill } => {
+            if !crate::skill::follows_best(skill.unwrap_or(1.0), rng) {
+                return ControllerChoice {
+                    action: random_action(state, seat, rng),
+                    decision: None,
+                };
             }
+            decide_at(*budget, state, seat, rng)
         }
         SeatController::Greedy => ControllerChoice {
             action: greedy_action(state, seat, rng),

@@ -598,7 +598,7 @@ async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
 }
 
 #[tokio::test]
-async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
+async fn r749000_public_stats_split_human_bot_and_merged_and_display_merged() {
     let app = app_with_bots(true).await;
     let patch = jackioh_cards::catalog_version().to_string();
     let seat = |deck: &[&str]| json!({ "deck": deck, "opening": [], "drawn": deck, "played": deck, "playedTurns": [1, 2] });
@@ -621,28 +621,50 @@ async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
     }));
     q!(app, game_records_insert(&record));
 
-    let (status, _, data) = call(&app, "GET", "/api/stats/cards", None, Value::Null).await;
-    assert_eq!(status, 200);
-    // The gate counts the game, the person's cards count it, the bot's do not.
-    assert_eq!(data["gate"]["liveGames"], json!(1));
-    let games_of = |id: &str| {
+    let games_of = |data: &Value, id: &str| {
         data["cards"]
             .as_array()
             .and_then(|cards| cards.iter().find(|card| card["id"] == id))
             .map_or(json!(0), |card| card["games"].clone())
     };
-    assert_eq!(games_of("core-001"), json!(1));
-    assert_eq!(games_of("core-003"), json!(0));
+    // The gate counts the game, and the display counts every counted seat, human and bot alike.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["gate"]["liveGames"], json!(1));
+    assert_eq!(data["pilot"], json!("merged"));
+    assert_eq!(games_of(&data, "core-001"), json!(1));
+    assert_eq!(games_of(&data, "core-003"), json!(1));
+
+    // `?pilot=human` reads the people's sides only.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards?pilot=human", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["pilot"], json!("human"));
+    assert_eq!(games_of(&data, "core-001"), json!(1));
+    assert_eq!(games_of(&data, "core-003"), json!(0));
+
+    // `?pilot=ai` reads the bots' sides only.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards?pilot=ai", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["pilot"], json!("ai"));
+    assert_eq!(games_of(&data, "core-001"), json!(0));
+    assert_eq!(games_of(&data, "core-003"), json!(1));
 
     let (status, _, card) = call(&app, "GET", "/api/stats/cards/core-003", None, Value::Null).await;
     assert_eq!(status, 200);
+    assert!(card.to_string().contains("\"games\":1"), "{card}");
+    let (status, _, card) = call(
+        &app,
+        "GET",
+        "/api/stats/cards/core-003?pilot=human",
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200);
     assert!(
         !card.to_string().contains("\"games\":1"),
-        "the bot's card drew a game: {card}"
+        "the bot's card drew a human-side game: {card}"
     );
-    let (status, _, card) = call(&app, "GET", "/api/stats/cards/core-001", None, Value::Null).await;
-    assert_eq!(status, 200);
-    assert!(card.to_string().contains("\"games\":1"), "{card}");
 }
 
 #[tokio::test(start_paused = true)]

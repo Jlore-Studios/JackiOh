@@ -680,16 +680,19 @@ pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 /// R1452: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
 /// softmax temperature over the finalists, in evaluation points, and the chance it passes over a
-/// lethal it found) and the rating its `bot_ratings` row is seeded with (R610). Always on the spec's
-/// resources: a strength is never a practice handicap (R180). The chance is rolled at each decision
-/// that finds a lethal, and the bot decides again after every move, so a bot that passed over one
-/// often finds it again before the turn ends: it misses a lethal for the whole turn less often than
-/// the chance says, which calibration (R610's ratings) takes in as it takes in everything else.
+/// lethal it found), its skill (R747000: the share of its decisions following the best AI, the rest
+/// SPEC §10.7's random policy) and the rating its `bot_ratings` row is seeded with (R610). Always on
+/// the spec's resources: a strength is never a practice handicap (R180). The chance is rolled at each
+/// decision that finds a lethal, and the bot decides again after every move, so a bot that passed over
+/// one often finds it again before the turn ends: it misses a lethal for the whole turn less often
+/// than the chance says, which calibration (R610's ratings) takes in as it takes in everything else.
+/// The skills are provisional until R747000's arena ladder measures the skill-to-Elo curve.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BotStrength {
     pub budget: jackioh_ai::SearchBudget,
     pub temperature: f64,
     pub missed_lethal_chance: f64,
+    pub skill: f64,
     pub seed_rating: f64,
 }
 
@@ -709,6 +712,7 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 3.0,
         missed_lethal_chance: 0.4,
+        skill: 0.55,
         seed_rating: 800.0,
     },
     BotStrength {
@@ -724,18 +728,21 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 2.0,
         missed_lethal_chance: 0.25,
+        skill: 0.7,
         seed_rating: 900.0,
     },
     BotStrength {
         budget: jackioh_ai::AI_BUDGET,
         temperature: 1.0,
         missed_lethal_chance: 0.12,
+        skill: 0.85,
         seed_rating: 1000.0,
     },
     BotStrength {
         budget: jackioh_ai::AI_BUDGET,
         temperature: 0.4,
         missed_lethal_chance: 0.05,
+        skill: 0.93,
         seed_rating: 1100.0,
     },
     BotStrength {
@@ -751,6 +758,7 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 0.0,
         missed_lethal_chance: 0.0,
+        skill: 1.0,
         seed_rating: 1200.0,
     },
 ];

@@ -9,10 +9,10 @@
 //! Reads `public.game_records` through the store (DATABASE_URL), keeps the records the filter names,
 //! and prints every card's four breakdowns — in deck, in the opening hand, going first and going
 //! second, played against drawn but not played — each with the games behind it. With nothing named
-//! it reads the people's seats of live games of every mode and patch: a development run's records are
-//! read only with `--source=dev` or `--source=all` (R378), and a ladder bot's side of a live game
-//! only with `--pilot=ai` or `--pilot=unified`, or as `--source=dev` and `--source=all` count every
-//! seat by default (R1451). `--json` prints the report as data instead.
+//! it reads every counted seat of live games of every mode and patch (R749000's merged display):
+//! a development run's records are read only with `--source=dev` or `--source=all` (R378), and
+//! `--pilot=human` reads the people's sides only, `--pilot=ai` the bots'. `--json` prints the
+//! report as data instead.
 //!
 //! The arithmetic is `card_stats` in `jackioh_engine::wire::stats` (TS `packages/shared/src/stats.ts`),
 //! the same the AI's development run prints its own games with, so a pre-release run and the live
@@ -34,8 +34,8 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --source=live|dev|all      Live games (the default), an AI development run's, or both.
   --mode=bo1|bo3|random      One match type. Default: every mode.
   --patch=<version>          One patch, as patches.json names it. Default: every patch.
-  --pilot=human|ai|unified   The seats counted. Default: human for live games, a ladder bot's
-                             side left out; unified, every seat, with --source=dev or all.
+  --pilot=human|ai|unified   The seats counted. Default: unified, every counted seat;
+                             human reads the people's sides only, ai the bots'.
   --card=<id>                One card's row only.
   --json                     The report as JSON.";
 
@@ -119,12 +119,8 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         }
     }
 
-    // R1451: a ladder bot's side of a live game is read only when it is asked for.
-    filter.pilot = pilot.unwrap_or(if filter.source == SourceFilter::Live {
-        PilotFilter::Human
-    } else {
-        PilotFilter::Unified
-    });
+    // R749000: every counted seat merged unless the query names a side.
+    filter.pilot = pilot.unwrap_or(PilotFilter::Unified);
     Ok(CardStatsOptions { filter, card, json })
 }
 

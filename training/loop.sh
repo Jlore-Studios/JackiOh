@@ -1,5 +1,6 @@
 #!/bin/sh
-# training/loop.sh <lane>: one AI training lane, forever (docs/v0.3.0/README.md §8; training/README.md).
+# training/loop.sh <lane>: one training lane, forever (docs/v0.3.0/README.md §8; training/README.md).
+# `improve` and `unban` train the AI; `gather` farms its self-play games into the card statistics.
 #
 # The training box runs it as the systemd service jackioh-train@<lane> (Restart=always), as the
 # lane's own Linux user (agent-train-<lane>) with its own checkout, Devin login and GitHub token.
@@ -41,9 +42,9 @@ set -u
 
 lane="${1:-}"
 case "$lane" in
-  improve | unban) ;;
+  improve | unban | gather) ;;
   *)
-    echo "usage: training/loop.sh improve|unban" >&2
+    echo "usage: training/loop.sh improve|unban|gather" >&2
     exit 2
     ;;
 esac
@@ -436,6 +437,27 @@ progress() {
   rewrite "$session_comment" "$work/session.md"
 }
 
+# One data-gathering Devin session (the gather lane, R749000): no pull request, no promotion,
+# no landing. The session farms `cargo jackioh stats` slices into $out on training/gather.md; this
+# cycle's import_records (next cycle) loads the finished days. The checkout stays clean: a session
+# that changed it is cleaned, and the change is logged, not landed.
+gather_session() {
+  started=$(date +%s)
+  log "gather session $stamp starting on training/gather.md"
+  if timeout "$session_limit" devin -p --prompt-file "training/gather.md" --model "$DEVIN_MODEL" \
+    --permission-mode dangerous --respect-workspace-trust false --export "$logs/gather-$stamp.json" </dev/null; then
+    status=0
+  else
+    status=$?
+  fi
+  minutes=$((($(date +%s) - started) / 60))
+  log "gather session $stamp ended after $minutes minutes (status $status)"
+  if [ -n "$(git status --porcelain)" ]; then
+    log "the gather session changed the checkout; cleaning it (a gatherer commits nothing)"
+    clean_checkout
+  fi
+}
+
 # One Devin session on the standing prompt, its comment kept current; sets $devin_status.
 session() {
   started=$(date +%s)
@@ -527,6 +549,13 @@ cycle() {
       return 0
     fi
     idle_generation=""
+  fi
+
+  # The gather lane farms games, not promotions: one Devin session on training/gather.md, no
+  # branch, no draft, no landing. Its records accumulate in $out and import_records loads them.
+  if [ "$lane" = gather ]; then
+    gather_session
+    return 0
   fi
 
   if ! start=$(git commit-tree "$base^{tree}" -p "$base" -m "[skip ci] AI training ($lane): session $stamp") ||

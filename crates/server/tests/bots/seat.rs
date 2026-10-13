@@ -8,9 +8,12 @@
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{Action, ActionBody, ActionType, Rng};
 use jackioh_server::actor::engine::{begin_game, create_game, create_game_args, reduce};
-use jackioh_server::bots::seat::{decision_deadline_ms, fallback_action, r188_forbidden, think_ms};
+use jackioh_server::bots::seat::{
+    decision_deadline_ms, fallback_action, r188_forbidden, skill_random_move, think_ms,
+};
 use jackioh_server::config::{
-    BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS,
+    BOT_CLOCK_MARGIN_MS, BOT_DECISION_DEADLINE_MS, BOT_STRENGTHS, BOT_THINK_MAX_MS,
+    BOT_THINK_MIN_MS,
 };
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
@@ -123,6 +126,47 @@ fn r1452_r188_forbids_a_concession_a_draw_offer_an_accepted_draw_and_an_emote() 
         ActionBody::SetAutoEndTurn { enabled: true },
     ] {
         assert!(!r188_forbidden(&body), "{body:?}");
+    }
+}
+
+#[test]
+fn r747000_strength_skills_rise_with_the_strengths_and_name_expected_elos_in_order() {
+    assert_eq!(BOT_STRENGTHS.len(), 5);
+    let mut last_skill = -1.0;
+    let mut last_elo = f64::NEG_INFINITY;
+    for strength in BOT_STRENGTHS {
+        assert!((0.0..=1.0).contains(&strength.skill), "{}", strength.skill);
+        assert!(strength.skill >= last_skill, "{}", strength.skill);
+        let elo = jackioh_ai::skill_expected_elo(strength.skill, 1200.0);
+        assert!(elo >= last_elo, "{elo}");
+        last_skill = strength.skill;
+        last_elo = elo;
+    }
+    assert_eq!(BOT_STRENGTHS.last().map(|strength| strength.skill), Some(1.0));
+}
+
+#[test]
+fn r747000_skill_random_moves_are_legal_and_never_forbidden() {
+    let decks = decks();
+    let state = begin_game(&create_game(&create_game_args(
+        "seed-skill-random",
+        &decks,
+        None,
+        None,
+        None,
+    )))
+    .state;
+    // Both mulligans open: every degraded move is a legal keep, never one R188 forbids.
+    for n in 0..50 {
+        for seat in PLAYER_IDS {
+            let mut rng = Rng::new("skill-seat", n);
+            let Some(body) = skill_random_move(&state, seat, &mut rng) else {
+                panic!("{seat}: a mulligan is owed");
+            };
+            assert!(!r188_forbidden(&body), "{seat}: {body:?}");
+            let result = reduce(&state, &Action::new(body, seat, format!("skill-{seat}-{n}")));
+            assert!(result.error.is_none(), "{:?}", result.error);
+        }
     }
 }
 
