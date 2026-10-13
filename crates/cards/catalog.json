@@ -2048,11 +2048,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random combat keyword|random combat keywords}."
     }
   },
   "core-064": {
@@ -2720,11 +2720,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random keyword|random keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random keyword|random keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
     }
   },
   "core-081": {
@@ -7666,11 +7666,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
     }
   },
   "classicplus-016": {
@@ -7708,11 +7708,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
     }
   },
   "classicplus-017": {
@@ -7750,11 +7750,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
     }
   },
   "classicplus-018": {
@@ -13692,152 +13692,36 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "keywords",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 50,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [
         {
-          "kind": "Taunt"
-        },
-        {
-          "kind": "Armor",
-          "n": 1
-        },
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Charge"
-        },
-        {
-          "kind": "First Strike"
-        },
-        {
-          "kind": "Poisonous"
-        },
-        {
-          "kind": "Lifesteal"
-        },
-        {
-          "kind": "Reborn"
-        },
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Trample"
-        },
-        {
-          "kind": "Cleave"
-        },
-        {
-          "kind": "Pierce"
-        },
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
-        },
-        {
-          "kind": "Stack"
-        },
-        {
-          "kind": "Lucky",
-          "n": 1
-        },
-        {
-          "kind": "Spell Damage",
-          "n": 1
-        },
-        {
-          "kind": "Immune to Spells"
-        },
-        {
-          "kind": "Windfury"
-        },
-        {
-          "kind": "Deft"
-        },
-        {
           "kind": "Equip"
         }
       ],
-      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Equip\nThis has every keyword."
+      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [
         {
-          "kind": "Taunt"
-        },
-        {
-          "kind": "Armor",
-          "n": 1
-        },
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Charge"
-        },
-        {
-          "kind": "First Strike"
-        },
-        {
-          "kind": "Poisonous"
-        },
-        {
-          "kind": "Lifesteal"
-        },
-        {
-          "kind": "Reborn"
-        },
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Trample"
-        },
-        {
-          "kind": "Cleave"
-        },
-        {
-          "kind": "Pierce"
-        },
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
-        },
-        {
-          "kind": "Stack"
-        },
-        {
-          "kind": "Lucky",
-          "n": 1
-        },
-        {
-          "kind": "Spell Damage",
-          "n": 1
-        },
-        {
-          "kind": "Immune to Spells"
-        },
-        {
-          "kind": "Windfury"
-        },
-        {
-          "kind": "Deft"
-        },
-        {
           "kind": "Equip"
         }
       ],
-      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Equip\nThis has every keyword.\nDeath: Give every keyword this has to another random Unit of yours."
+      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
     }
   },
   "meditative-066": {

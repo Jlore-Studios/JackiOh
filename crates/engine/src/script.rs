@@ -869,6 +869,10 @@ pub struct Script {
     /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
     /// on every hand arrival, after R151's start-of-game clause.
     pub enters_hand: Option<Hook>,
+    /// R781004: run on the card a Fuse keeps, once this card's text is fused into it (Meditative #65
+    /// Keymaster Keenus's Equip play), as R43's start-of-game roll is: what this text drew for its own
+    /// card ceased to exist with it, so the kept card draws its own.
+    pub fused_into: Option<Hook>,
     /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
@@ -1028,7 +1032,8 @@ pub struct Script {
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
     /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
-    /// "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn".
+    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack",
+    /// "startOfOpponentTurn".
     /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
@@ -1036,6 +1041,7 @@ impl Script {
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
             "entersHand" => self.enters_hand.as_ref(),
+            "fusedInto" => self.fused_into.as_ref(),
             "delayed" => self.delayed.as_ref(),
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),

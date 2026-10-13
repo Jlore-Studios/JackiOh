@@ -127,12 +127,12 @@ mod tests {
             #[test]
             fn an_immutable_unit_is_no_host() {
                 crate::register_all();
-                // Keymaster Keenus (M #65) is Immutable: nothing fuses onto it.
+                // Midrange Menace's Radiant face (Core #19) is Immutable: nothing fuses onto it (R23).
                 let mut s = scenario(json!({
                     "seed": "ears-immutable",
                     "p1": {
                         "hand": [EARS, FILLER],
-                        "field": ["meditative-065"],
+                        "field": [{ "def": "core-019", "radiant": true }],
                         "library": filler(3),
                     },
                     "p2": { "hand": [FILLER], "library": filler(4) },

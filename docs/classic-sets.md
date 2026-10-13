@@ -2392,8 +2392,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 
 > **Designer:** Summon a 3/3 rush token, it gains a random keyword ~~~ Summon 3 of them
 
-- **Text:** Summon a Rush Token. It gains a random keyword.
-- **Radiant:** Summon 3 Rush Tokens. Each gains a random keyword.
+- **Text:** Summon a Rush Token. It gains a random combat keyword.
+- **Radiant:** Summon 3 Rush Tokens. Each gains a random combat keyword.
 - **Engine:** Core's Rush Token (3/3 Rush); R21's pool, never a keyword it has.
 - **Numbers:** keywords 1 ↑.
 
@@ -2402,8 +2402,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 
 > **Designer:** Summon a 3/3 rush token, it gains 3 random keywords ~~~ Summon 3 of them
 
-- **Text:** Summon a Rush Token. It gains 3 random keywords.
-- **Radiant:** Summon 3 Rush Tokens. Each gains 3 random keywords.
+- **Text:** Summon a Rush Token. It gains 3 random combat keywords.
+- **Radiant:** Summon 3 Rush Tokens. Each gains 3 random combat keywords.
 - **Numbers:** keywords 3 ↑.
 
 #### Classic+ #17 · Conjure Rush Token++
@@ -2412,8 +2412,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 > **Designer:** (4) Conjure Tush Token++, spell, Epic · Summon a 3/3 rush token, it gains 3 random
 > keywords ~~~ Summon 3 of them
 
-- **Text (proposed):** Summon a Rush Token. It gains 6 random keywords.
-- **Radiant (proposed):** Summon 3 Rush Tokens. Each gains 6 random keywords.
+- **Text (proposed):** Summon a Rush Token. It gains 6 random combat keywords.
+- **Radiant (proposed):** Summon 3 Rush Tokens. Each gains 6 random combat keywords.
 - **Check:** the text is #16's word for word at twice the cost and a rarity up; 6 keywords (twice #16's)
   is proposed. "Tush" is "Rush". **⚠ designer.**
 - **Numbers:** keywords 6 ↑.

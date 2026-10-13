@@ -1131,6 +1131,7 @@ fn combine_objects(records: &[Script]) -> Script {
         death: hooks(|s| s.death.clone(), "death"),
         start_of_game: hooks(|s| s.start_of_game.clone(), "startOfGame"),
         enters_hand: hooks(|s| s.enters_hand.clone(), "entersHand"),
+        fused_into: hooks(|s| s.fused_into.clone(), "fusedInto"),
         resume: combine_resume(records),
         delayed: hooks(|s| s.delayed.clone(), "delayed"),
         set_stat: None,
@@ -2110,6 +2111,10 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         // has its power keeps it (`hero_power::ensure_power`). A crafted card rolls as it reaches the hand.
         let controller = result.controller;
         let _ = crate::prompts::run_start_of_game(sink, &result, controller);
+        // R781004: and a text that draws for its own card (Keymaster Keenus's Aura) draws for this one.
+        if let Some(live) = find_instance(sink.state, &result.id).cloned() {
+            let _ = crate::prompts::run_fused_into(sink, &live, controller);
+        }
         find_instance(sink.state, &result.id).cloned().unwrap_or(result)
     } else {
         let player = to_hand?;

@@ -1,6 +1,6 @@
 //! #63 Plastic Surgery (SPEC §8.3, §6.1, R21, R78, R81, R90, R703).
 //!
-//! Base: "Target unit gets +3/+3 and 1 random keyword". Radiant: "+6/+6 and 2 random keywords",
+//! Base: "Target unit gets +3/+3 and 1 random combat keyword". Radiant: "+6/+6 and 2 random combat keywords",
 //! which §8's Conventions read as changing only those numbers.
 //!
 //! §8.3's Engine cell is "Pool in 6.1", i.e. R21's eleven keywords. R21 also fixes the two

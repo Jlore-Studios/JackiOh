@@ -287,10 +287,75 @@ pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
 /// that already has Armor from any source is not offered "Armor 1", as R21 counts by keyword.
 fn pool_candidates(ctx: &EffectContext<'_>, unit: &CardInstance) -> Vec<Keyword> {
     let held = unit_view(ctx.sink.state, unit).keywords;
+    candidates_beside(&held)
+}
+
+/// R21, R781004: the combat keywords a card holding `held` may still be given — none it has, and no
+/// Taunt beside Indestructible, which an Indestructible card can never have (R347).
+pub(crate) fn candidates_beside(held: &[Keyword]) -> Vec<Keyword> {
+    let indestructible = has_keyword(held, KeywordKind::Indestructible);
     random_pool_keywords()
         .into_iter()
-        .filter(|keyword| !has_keyword(&held, keyword.kind()))
+        .filter(|keyword| !has_keyword(held, keyword.kind()))
+        .filter(|keyword| !(indestructible && keyword.kind() == KeywordKind::Taunt))
         .collect()
+}
+
+/// R781004: where `draw_combat_keywords` keeps a card's draw (§10.1), unless its argument names a key.
+pub const COMBAT_KEYWORDS_KEY: &str = "combatKeywords";
+
+/// `drawCombatKeywords`' argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DrawCombatKeywordsArgs {
+    pub count: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+}
+
+/// R781004: Meditative #65 Keymaster Keenus's "Aura: Has N random combat keywords". §10.4's layers read
+/// with no rng, so the keywords are drawn at an event and kept on the card itself (`memory`), where its
+/// text reads them back (`conditionalKeywords`, so a Vanilla takes them, and R78's reset as it leaves the
+/// field clears them). It draws `count` different keywords from the combat keyword pool (R21's), each
+/// with `ctx.rng`, none the card already has and no Taunt beside Indestructible; with fewer left it takes
+/// what there is. A card that holds a draw already keeps it, so one arrival draws once.
+pub fn draw_combat_keywords(args: DrawCombatKeywordsArgs) -> Effect {
+    Effect::new("drawCombatKeywords", move |ctx| {
+        let key = args
+            .key
+            .clone()
+            .unwrap_or_else(|| COMBAT_KEYWORDS_KEY.to_string());
+        let Some(me) = ctx.live_self().cloned() else {
+            return;
+        };
+        if me.zone.z() != ZoneName::Field || me.memory.contains_key(&key) {
+            return;
+        }
+        let mut held = unit_view(ctx.sink.state, &me).keywords;
+        let mut drawn: Vec<Keyword> = Vec::new();
+        for _ in 0..args.count.max(0) {
+            let candidates = candidates_beside(&held);
+            let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
+                break;
+            };
+            held.push(keyword.clone());
+            drawn.push(keyword);
+        }
+        if let Some(live) = find_instance_mut(ctx.sink.state, &me.id) {
+            live.memory.insert(
+                key,
+                serde_json::to_value(&drawn).unwrap_or(serde_json::Value::Null),
+            );
+        }
+    })
+}
+
+/// R781004: the keywords `draw_combat_keywords` kept on the card, read back defensively (JSON).
+pub fn drawn_combat_keywords(card: &CardInstance, key: Option<&str>) -> Vec<Keyword> {
+    card.memory
+        .get(key.unwrap_or(COMBAT_KEYWORDS_KEY))
+        .and_then(|value| serde_json::from_value(value.clone()).ok())
+        .unwrap_or_default()
 }
 
 /// `grantRandomKeywords`' argument.

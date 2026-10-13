@@ -52,6 +52,7 @@ mod tests {
             death,
             start_of_game,
             enters_hand,
+            fused_into,
             resume,
             delayed,
             set_stat,
@@ -99,6 +100,7 @@ mod tests {
             && death.is_none()
             && start_of_game.is_none()
             && enters_hand.is_none()
+            && fused_into.is_none()
             && resume.is_empty()
             && delayed.is_none()
             && set_stat.is_none()

@@ -2865,14 +2865,22 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 > **Designer:** 1/1 · Has every Keyword. ~~~ 2/2 · Has every Keyword. · Death: Give them all to another
 > one of your Units.
 
-- **Text:** Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield,
-  Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells,
-  Windfury, Deft, Equip
-  This has every keyword.
-- **Radiant:** (the same keywords)
-  This has every keyword.
-  Death: Give every keyword this has to another random Unit of yours.
-- **Engine:** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Equip.
+> **Designer (patch v0.3.X, #781):** Equip · Aura: Has 5 [10] random combat keywords.
+
+- **Text (since patch v0.3.X):** Equip
+  Aura: Has 5 random combat keywords.
+- **Radiant (since patch v0.3.X):** Equip
+  Aura: Has 10 random combat keywords.
+- **Engine (since patch v0.3.X, R781004):** the Aura's keywords come from the combat keyword pool
+  (SPEC §6.1, R21), drawn as the card arrives on the field and kept on it until it leaves (R78): different
+  ones, none it has, no Taunt beside Indestructible (R347). The Aura is its text, so a Vanilla takes them;
+  played as Equip onto a Unit, the host carries the Aura and draws its own as it fuses (`fusedInto`).
+  The number is declared (`keywords`, 5 and 10, R386).
+- **Until patch v0.3.X:** Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn,
+  Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1,
+  Immune to Spells, Windfury, Deft, Equip; "This has every keyword."; Radiant also "Death: Give every
+  keyword this has to another random Unit of yours."
+- **Engine (until patch v0.3.X):** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Equip.
   Five are left out:
   - Can't attack, Brittle and Temporary, which only hurt;
   - Animated and Animated on your turn, which mean something only on a backrow card.
@@ -2886,7 +2894,8 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 - **Rulings:** **MD-D21:** the list above is the card's printed data, not "whatever the engine knows". A
   later keyword joins only by a patch. **MD-D22:** the Radiant Death's receiver is random (Hearthstone's
   Deathrattle), and the keywords are granted (§10.4).
-- **Numbers:** none (Armor, Lucky and Spell Damage are numbered keywords, R386).
+- **Numbers:** `keywords` 5 (Radiant 10) since patch v0.3.X; before it none (Armor, Lucky and Spell
+  Damage were numbered keywords, R386).
 - **Class:** B (Equip comes from ME-EQUIP).
 
 #### Meditative #66 · Fiery Waraxe
@@ -4405,7 +4414,7 @@ the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbe
     - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
       Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
       Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
-      Peptides, M #65 Keymaster Keenus (Lucky 1 is among its every keyword), M #86 Mayor Medinamogger
+      Peptides, M #65 Keymaster Keenus (Lucky 1 was among its every keyword until patch v0.3.X, R781004), M #86 Mayor Medinamogger
       and M #102 Catboy Maid SSR+.
     - It is a query in `crates/cards/src/query.rs` (`luck_based()`), like every other random pool,
       over the catalog query's `luckBased` (`CatalogQueryArgs.luck_based`, `is_luck_based` in
