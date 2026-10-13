@@ -5112,7 +5112,25 @@
       "run_id": "38437648678",
       "started_at": "2026-10-13T17:19:58Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "38437648678",
+            "tier": "strong"
+          }
+        ],
+        "sha": "a730861ad51e7dc52e9a11e4d2aa0d36a2917c40",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     },
     "789": {
       "cleared": {
