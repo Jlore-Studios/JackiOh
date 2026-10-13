@@ -27,6 +27,7 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
 | CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| Browser | Google Chrome stable (`google-chrome-stable`, from Google's `.deb`, which adds Google's apt repository, so a later `setup.sh` upgrades it), for the UI walkthroughs `scripts/browse.sh` drives (`.claude/skills/ui-walkthrough/`, #816); nothing starts it but an item's UI work |
 | Rust | in each user's home: rustup, and the toolchain `rust-toolchain.toml` pins (1.97.0) on the minimal profile with `rustfmt`, `clippy` and the `wasm32-unknown-unknown` target; `~/.cargo/bin` is first on every runner's `PATH` |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
