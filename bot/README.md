@@ -292,6 +292,7 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `rebuild` | close this bot pull request (or the issue's), keep its branch as `bot/old/issue-<n>-<date>`, and build the issue again from `main` | issue or PR | 2 |
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
 | `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
+| `approve`, `reject` | alone on a line, no prefix needed, on one of the bot's open suggestions: `approve` queues it to build, `reject` closes it unbuilt (#760) | suggestion | 2 |
 | `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |

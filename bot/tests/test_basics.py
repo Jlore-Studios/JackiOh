@@ -244,6 +244,16 @@ class CommandTests(unittest.TestCase):
         self.assertNotIn("`oneshot", text)
         self.assertNotIn("`split", text)
 
+    def test_help_lists_the_votes_on_a_suggestion(self):
+        # #796: `approve` and `reject` (#760) are not verbs, but `help` names them.
+        text = commands.help_text(self.bot)
+        self.assertIn("| `approve`, `reject` |", text)
+        for word in ("approve", "Reject"):
+            one = commands.help_text(self.bot, word)
+            self.assertIn("**`approve`** or **`reject`**", one)
+            self.assertIn("`bot:suggestion`", one)
+            self.assertNotIn("I do not know", one)
+
 
 class TrustTests(unittest.TestCase):
     text = "jgoetzmann 3 id:95732896\nhelper 2\nreader\nbad!login 2\nhigh 9\n"
