@@ -650,3 +650,56 @@ mod r783008_leaving_unrevealed {
         state.rng_cursor = rng.cursor();
     }
 }
+
+mod zz_scratch_probe {
+    use super::*;
+
+    #[test]
+    fn zz_locked_zones_reveal() {
+        let mut state = playing("zz-locked");
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let set = cloak(&mut state, &unit.id, 3);
+        for lane in 1..=5 {
+            state.players.p1.locks.units[(lane - 1) as usize] = true;
+        }
+        let offered = reveal_offered(&state, &set.id, P1);
+        eprintln!("ZZ all unit zones empty+locked: reveal offered = {offered}");
+        if offered {
+            state = act(&state, reveal_body(&set.id, "p1"), None);
+            let _ = answer_keys(&mut state, &["hero:p2"]);
+            eprintln!("ZZ units after reveal: {:?} locks {:?} pending {:?}", state.players.p1.units.iter().map(|z| z.as_ref().map(|p| p[0].id.clone())).collect::<Vec<_>>(), state.players.p1.locks.units, state.pending.is_some());
+        }
+    }
+
+    #[test]
+    fn zz_discount_kept() {
+        let mut state = playing("zz-discount");
+        state.players.p1.mana.current = 10;
+        state.players.p1.mana.max = 10;
+        cast_now(&mut state, &trap_discount().id, P1, false);
+        let mods_before = state.players.p1.mods.len();
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let spell = in_hand(&mut state, &cloaked_bolt().id, P1);
+        let field = in_hand(&mut state, &cloaked_field().id, P1);
+        let m = state.players.p1.mana.current;
+        cloak(&mut state, &unit.id, 2);
+        cloak(&mut state, &spell.id, 3);
+        eprintln!("ZZ mods before {mods_before} after unit+spell {} mana spent {}", state.players.p1.mods.len(), m - state.players.p1.mana.current);
+        let m = state.players.p1.mana.current;
+        cloak(&mut state, &field.id, 4);
+        eprintln!("ZZ field mana spent {} mods after {}", m - state.players.p1.mana.current, state.players.p1.mods.len());
+        let trap = in_hand(&mut state, &cloaked_trap().id, P1);
+        eprintln!("ZZ trap cost now {}", jackioh_engine::mana::effective_cost(&state, &trap, Default::default()));
+    }
+
+    #[test]
+    fn zz_opponent_view_json() {
+        let mut state = playing("zz-view");
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let _set = cloak(&mut state, &unit.id, 2);
+        let v = serde_json::to_string(&view_for(&state, P2)).unwrap();
+        eprintln!("ZZ p2 view mentions cloaked: {} reveal-ability: {}", v.contains("cloaked") || v.contains("Cloaked"), v.contains("\"reveal\""));
+        let acts = legal_actions(&state, P2);
+        eprintln!("ZZ p2 legal actions count {}", acts.len());
+    }
+}
