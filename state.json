@@ -4266,7 +4266,15 @@
       "feedback_since": "2026-10-13T07:13:34Z",
       "issue": 769,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "1e3145c77b313d406915916ea4548e6a0d55c228",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
