@@ -5012,13 +5012,8 @@
     "what": "plan #748 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-13T16:00:24Z",
-    "notes": [
-      "#747 needs a plan",
-      "#748 needs a plan",
-      "#749 needs a plan",
-      "#750 needs a plan"
-    ],
+    "at": "2026-10-13T16:06:51Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
