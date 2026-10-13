@@ -5643,9 +5643,10 @@
     "what": "suggestions on agy"
   },
   "last_sweep": {
-    "at": "2026-10-13T23:26:59Z",
+    "at": "2026-10-13T23:32:48Z",
     "notes": [
-      "started a night run, as a lane was free: a suggestion survey is due, for `agy`"
+      "#817 needs a plan",
+      "started a night run, as a lane was free: #817 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
