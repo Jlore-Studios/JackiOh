@@ -5105,6 +5105,8 @@
       "kind": "review",
       "pending_request": false,
       "provider": "claude-3",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38437648678",
       "started_at": "2026-10-13T17:19:58Z",
       "stop_requested": false,
