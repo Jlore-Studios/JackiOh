@@ -1151,15 +1151,19 @@
       "planned_at": "2026-10-08T11:24:03Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 771,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-13T06:40:12Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "strong",
       "run_id": "38358478874",
       "started_at": "2026-10-13T06:45:48Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6139853125"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "511": {
       "failures": 0,
