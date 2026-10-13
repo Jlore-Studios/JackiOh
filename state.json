@@ -5528,12 +5528,15 @@
     "805": {
       "action": "plan",
       "asks": [],
+      "forced": false,
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
       "run_id": "38472366590",
       "started_at": "2026-10-13T21:41:16Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-13T21:47:31Z",
+      "stopped_by": "jgoetzmann",
       "taken_asks": []
     }
   },
