@@ -31,7 +31,7 @@ use jackioh_engine::{
 use crate::candidates::candidate_actions;
 use crate::config::{AI_EVAL, AI_REPLY};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
-use crate::simulate::{LineStatus, line_status, simulate, static_score};
+use crate::simulate::{LineStatus, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
 
 struct Side {
@@ -162,13 +162,26 @@ fn ranked_attacks(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     ranked.into_iter().map(|(action, _)| action).collect()
 }
 
-/// One opponent action through the reducer; `None` when it panics or is refused.
+/// One opponent action through the reducer; `None` when it panics or is refused. A step whose
+/// reduce runs the expensive work `surcharge_nodes` knows (a whole AI turn inside a trap's answer)
+/// pays its nodes the same way `simulate` does.
 fn reduce_for(
     state: &GameState,
     actor: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
 ) -> Option<GameState> {
+    // `None` here already reads "skip this step" to the reply walk, so a surcharge the slice
+    // cannot pay returns early instead of draining it node by node first.
+    let surcharge = surcharge_nodes(state, actor, action);
+    if counter.used() + surcharge > counter.limit() {
+        return None;
+    }
+    for _ in 0..surcharge {
+        if !counter.take() {
+            return None;
+        }
+    }
     let action = Action::new(action.clone(), actor, format!("reply:{}", counter.used()));
     match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
         Ok(next) if next.error.is_none() => Some(next.state),
