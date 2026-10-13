@@ -1032,6 +1032,7 @@
     "459": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -1045,11 +1046,14 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "e84ab929f865d49184305540cac9d8857385545b",
       "last_findings": [],
       "onto": "bot/issue-442",
+      "parked_on": "",
       "part_of": 442,
       "pending_request": false,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-13T07:05:44Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
