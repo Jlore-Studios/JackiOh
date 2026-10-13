@@ -4766,6 +4766,14 @@
       "started_at": "2026-10-13T13:05:12Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "784": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-13T13:19:13Z",
+      "issue": 511,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
