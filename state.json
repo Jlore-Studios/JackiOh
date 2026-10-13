@@ -5221,6 +5221,14 @@
           "claude": "strong"
         }
       }
+    },
+    "791": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-13T17:38:26Z",
+      "issue": 513,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
