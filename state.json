@@ -8207,6 +8207,10 @@
         {
           "at": "2026-10-13T23:48:02Z",
           "minutes": 55.6
+        },
+        {
+          "at": "2026-10-13T23:57:38Z",
+          "minutes": 56.8
         }
       ],
       "tokens_spent": [
@@ -8433,7 +8437,7 @@
           "resets_at": "2026-10-14T02:40:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-10-13T23:48:02Z",
+        "observed_at": "2026-10-13T23:57:38Z",
         "rejected_resets_at": "2026-10-14T02:40:00Z",
         "status": "rejected"
       }
