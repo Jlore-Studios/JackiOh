@@ -16,6 +16,7 @@ publish = false
 jackioh-engine = { path = "crates/engine" }
 jackioh-cards = { path = "crates/cards" }
 jackioh-ai = { path = "crates/ai" }
+jackioh-luau = { path = "crates/luau" }
 
 # Third-party crates (SURFACE §2), versions as written; `=` for wasm-bindgen and mlua.
 serde = { version = "1.0.229", features = ["derive"] }
@@ -62,6 +63,9 @@ unicode-segmentation = { version = "1.13.3" }
 opt-level = 2
 
 [profile.test.package.jackioh-cards]
+opt-level = 2
+
+[profile.test.package.jackioh-luau]
 opt-level = 2
 
 [profile.test.package.serde_json]

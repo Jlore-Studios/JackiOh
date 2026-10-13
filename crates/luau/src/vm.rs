@@ -15,8 +15,8 @@ use crate::numbers;
 use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped, too_deep};
 use crate::{Face, LuauError, Site};
 
-/// The hooks a face may declare: the effect-list hooks `Script::hook_named` answers, in its order.
-pub const HOOKS: [&str; 9] = [
+/// The hooks a face may declare: the effect-list hooks `Script::hook_named` answers, in its order, plus aura.
+pub const HOOKS: [&str; 10] = [
     "cry",
     "death",
     "startOfGame",
@@ -26,7 +26,31 @@ pub const HOOKS: [&str; 9] = [
     "onPlayHook",
     "afterAttack",
     "startOfOpponentTurn",
+    "aura",
 ];
+
+/// Declarations a face may declare: target choices, modes and static flags.
+pub const DECLARATIONS: [&str; 4] = ["targets", "modes", "static_flags", "staticFlags"];
+
+#[derive(Clone, Debug, Default)]
+pub struct FaceDecl {
+    pub targets: Vec<jackioh_engine::TargetDecl>,
+    pub modes: Vec<jackioh_engine::ModeDecl>,
+    pub static_flags: Option<jackioh_engine::StaticFlags>,
+    pub hooks: Vec<&'static str>,
+}
+
+#[derive(Clone, Debug)]
+pub enum RadiantDecl {
+    Base,
+    Face(Box<FaceDecl>),
+}
+
+#[derive(Clone, Debug)]
+pub struct CardDecl {
+    pub base: FaceDecl,
+    pub radiant: RadiantDecl,
+}
 
 /// A thread's VM: the chunk cache, then the sandbox, which drops last.
 struct Vm {
@@ -114,11 +138,8 @@ impl Drop for BudgetGuard<'_> {
     }
 }
 
-/// The hooks a card's module declares, by face and then in `HOOKS` order. The module is a table with
-/// a `base` table, a `radiant` table or both (the same table for a card whose faces act alike), each
-/// mapping hook names to functions; anything else is refused. Running the module spends a budget
-/// named for a `load` hook on the base face.
-pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, &'static str)>, LuauError> {
+/// Inspects a card's module to extract declarations and hooks for base and radiant faces.
+pub fn inspect_card(card: &'static str, bytecode: &[u8]) -> Result<CardDecl, LuauError> {
     let refused = |message: String| LuauError::Load {
         card: card.to_string(),
         message,
@@ -135,41 +156,134 @@ pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, 
                 .run(site, || vm.module(card, bytecode))
                 .map_err(|error| refused(error.to_string()))?
         };
-        let mut hooks = Vec::new();
+
+        let mut base_decl = None;
+        let mut radiant_decl = None;
+
         for pair in module.pairs::<String, Value>() {
             let (key, value) = pair.map_err(|error| refused(error.to_string()))?;
-            let face = match key.as_str() {
-                "base" => Face::Base,
-                "radiant" => Face::Radiant,
+            match key.as_str() {
+                "base" => {
+                    let Value::Table(table) = value else {
+                        return Err(refused(format!(
+                            "base is of type {}, not a table of hooks",
+                            value.type_name()
+                        )));
+                    };
+                    base_decl = Some(read_face_decl(card, Face::Base, &table)?);
+                }
+                "radiant" => match value {
+                    Value::String(s) => {
+                        if s.to_str().is_ok_and(|str_val| str_val == "base") {
+                            radiant_decl = Some(RadiantDecl::Base);
+                        } else {
+                            return Err(refused(format!(
+                                "radiant string must be \"base\", got {:?}",
+                                s.to_string_lossy()
+                            )));
+                        }
+                    }
+                    Value::Table(table) => {
+                        radiant_decl = Some(RadiantDecl::Face(Box::new(read_face_decl(
+                            card,
+                            Face::Radiant,
+                            &table,
+                        )?)));
+                    }
+                    _ => {
+                        return Err(refused(format!(
+                            "radiant is of type {}, not a table of hooks",
+                            value.type_name()
+                        )));
+                    }
+                },
                 _ => {
                     return Err(refused(format!(
                         "the module declares {key:?}, which is not base or radiant"
                     )));
                 }
-            };
-            let Value::Table(declared) = value else {
-                return Err(refused(format!(
-                    "{key} is of type {}, not a table of hooks",
-                    value.type_name()
-                )));
-            };
-            for pair in declared.pairs::<String, Value>() {
-                let (name, value) = pair.map_err(|error| refused(error.to_string()))?;
-                let Some(hook) = HOOKS.iter().find(|hook| **hook == name) else {
-                    return Err(refused(format!("{key} declares {name:?}, which is not a hook")));
-                };
-                if !value.is_function() {
-                    return Err(refused(format!(
-                        "{key} {name} is of type {}, not a function",
-                        value.type_name()
-                    )));
-                }
-                hooks.push((face, *hook));
             }
         }
-        hooks.sort_by_key(|(face, hook)| (*face, HOOKS.iter().position(|name| name == hook)));
-        Ok(hooks)
+
+        let base = base_decl.ok_or_else(|| refused("the module declares no base face".to_string()))?;
+        let radiant = radiant_decl.unwrap_or_else(|| RadiantDecl::Face(Box::default()));
+
+        Ok(CardDecl { base, radiant })
     })
+}
+
+fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceDecl, LuauError> {
+    let refused = |message: String| LuauError::Load {
+        card: card.to_string(),
+        message,
+    };
+    let mut decl = FaceDecl::default();
+
+    for pair in table.pairs::<String, Value>() {
+        let (name, value) = pair.map_err(|error| refused(error.to_string()))?;
+        if let Some(hook) = HOOKS.iter().find(|h| **h == name) {
+            if !value.is_function() {
+                return Err(refused(format!(
+                    "{} {name} is of type {}, not a function",
+                    face.key(),
+                    value.type_name()
+                )));
+            }
+            decl.hooks.push(*hook);
+        } else if DECLARATIONS.iter().any(|d| *d == name) {
+            let site = Site {
+                card,
+                face,
+                hook: "load",
+            };
+            let json = numbers::to_json(&value, site)?;
+            match name.as_str() {
+                "targets" => {
+                    decl.targets = serde_json::from_value(json)
+                        .map_err(|err| refused(format!("{} targets: {err}", face.key())))?;
+                }
+                "modes" => {
+                    decl.modes = serde_json::from_value(json)
+                        .map_err(|err| refused(format!("{} modes: {err}", face.key())))?;
+                }
+                "static_flags" | "staticFlags" => {
+                    decl.static_flags = Some(
+                        serde_json::from_value(json)
+                            .map_err(|err| refused(format!("{} static_flags: {err}", face.key())))?,
+                    );
+                }
+                _ => {}
+            }
+        } else {
+            return Err(refused(format!(
+                "{} declares {name:?}, which is not a hook",
+                face.key()
+            )));
+        }
+    }
+
+    decl.hooks
+        .sort_by_key(|hook| HOOKS.iter().position(|name| name == hook));
+    Ok(decl)
+}
+
+/// The hooks a card's module declares, by face and then in `HOOKS` order.
+pub fn declared_hooks(card: &'static str, bytecode: &[u8]) -> Result<Vec<(Face, &'static str)>, LuauError> {
+    let decl = inspect_card(card, bytecode)?;
+    let mut hooks = Vec::new();
+    for hook in decl.base.hooks {
+        hooks.push((Face::Base, hook));
+    }
+    match decl.radiant {
+        RadiantDecl::Face(face) => {
+            for hook in face.hooks {
+                hooks.push((Face::Radiant, hook));
+            }
+        }
+        RadiantDecl::Base => {}
+    }
+    hooks.sort_by_key(|(face, hook)| (*face, HOOKS.iter().position(|name| name == hook)));
+    Ok(hooks)
 }
 
 /// Calls one hook on `ctx` and returns the effects it asks for, walked (L6) but not yet built.
@@ -198,6 +312,41 @@ fn run(vm: &Vm, site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> mlu
     let hook: Function = face.raw_get(site.hook)?;
     vm.sandbox.lua.scope(|scope| {
         let ctx = scope.create_any_userdata(ctx, api::register_ctx)?;
+        hook.call::<Value>(ctx)
+    })
+}
+
+/// Calls an `aura` hook on `args` and returns the aura entries it specifies.
+pub fn call_aura_hook<'a>(
+    site: Site,
+    bytecode: &[u8],
+    args: jackioh_engine::script::HookArgs<'a>,
+) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
+    VM.with(|vm| {
+        let returned = {
+            let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+            budget.run(site, || run_aura(vm, site, bytecode, args))
+        };
+        let returned = returned.map_err(|error| LuauError::Hook {
+            site,
+            message: error.to_string(),
+        })?;
+        let calls = api::effect_calls(&numbers::to_json(&returned, site)?, site)?;
+        api::aura_entries(&calls, site, args)
+    })
+}
+
+fn run_aura(
+    vm: &Vm,
+    site: Site,
+    bytecode: &[u8],
+    args: jackioh_engine::script::HookArgs<'_>,
+) -> mlua::Result<Value> {
+    let module = vm.module(site.card, bytecode)?;
+    let face: Table = module.raw_get(site.face.key())?;
+    let hook: Function = face.raw_get(site.hook)?;
+    vm.sandbox.lua.scope(|scope| {
+        let ctx = scope.create_any_userdata(args, api::register_aura_ctx)?;
         hook.call::<Value>(ctx)
     })
 }

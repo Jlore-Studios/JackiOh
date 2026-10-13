@@ -6,8 +6,9 @@
 //! with the engine's own verb (CLAUDE.md rule 5). A reader is a method of `ctx` (`ctx:hero_of(p)`),
 //! since `ctx` is the only way to the state, and only for as long as the hook call lasts.
 
-use jackioh_engine::effects::{self, DamageEffectArgs, DestroyArgs};
-use jackioh_engine::{Effect, EffectContext, PlayerId, query, scripts};
+use jackioh_engine::effects::{self, BoardScope, DamageEffectArgs, DestroyArgs, SummonArgs};
+use jackioh_engine::script::{AuraEntry, HookArgs, StatMod};
+use jackioh_engine::{Effect, EffectContext, Keyword, PlayerId, query, scripts};
 use mlua::{Error, Function, Lua, LuaSerdeExt, Table, UserDataMethods, UserDataRegistry, Value};
 use serde::de::DeserializeOwned;
 use serde_json::Value as Json;
@@ -23,7 +24,14 @@ pub struct EffectCall {
 }
 
 /// The effect verbs `J` binds, each named as the engine's (`jackioh_engine::effects`).
-pub const VERBS: [&str; 2] = ["destroy", "damage"];
+pub const VERBS: [&str; 6] = [
+    "destroy",
+    "destroy_all",
+    "damage",
+    "summon",
+    "defense_armor_aura",
+    "defense_armor",
+];
 
 /// The module, read-only: one function per verb, and `J.div` and `J.rem`.
 pub fn module(lua: &Lua) -> mlua::Result<Table> {
@@ -101,7 +109,9 @@ fn kind(value: &Json) -> &'static str {
 pub fn effect_of(call: &EffectCall, site: Site) -> Result<Effect, LuauError> {
     match call.verb.as_str() {
         "destroy" => typed::<DestroyArgs>(call, site).map(effects::destroy),
+        "destroy_all" => typed::<BoardScope>(call, site).map(effects::destroy_all),
         "damage" => typed::<DamageEffectArgs>(call, site).map(effects::damage),
+        "summon" => typed::<SummonArgs>(call, site).map(effects::summon),
         verb => Err(LuauError::Hook {
             site,
             message: format!("no verb {verb:?}"),
@@ -123,6 +133,9 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
     registry.add_method("hero_of", |lua, ctx, player: Value| {
         lua.to_value(&query::hero_of(ctx.state, arg::<PlayerId>(player)?))
     });
+    registry.add_method("param", |_, ctx, key: String| {
+        Ok(jackioh_engine::params::param(*ctx, &key))
+    });
     // Another card's hook, run on this context: the kinds of the effects it returns. A stand-in for
     // part 6's readers that run a script (a reader of what a card would do), so the host's nesting is
     // tested before any of them exists.
@@ -143,4 +156,64 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
             lua.to_value(&kinds)
         },
     );
+}
+
+/// Context userdata methods when calling an `aura` hook.
+pub fn register_aura_ctx(registry: &mut UserDataRegistry<HookArgs<'_>>) {
+    registry.add_method("controller", |lua, args, ()| lua.to_value(&args.self_.controller));
+    registry.add_method("param", |_, args, key: String| {
+        Ok(jackioh_engine::params::param(args, &key))
+    });
+    registry.add_method("radiant", |_, args, ()| Ok(args.radiant));
+}
+
+/// Turns aura effect calls into `AuraEntry`s.
+pub fn aura_entries<'a>(
+    calls: &[EffectCall],
+    site: Site,
+    args: HookArgs<'a>,
+) -> Result<Vec<AuraEntry<'a>>, LuauError> {
+    let mut entries = Vec::new();
+    for call in calls {
+        match call.verb.as_str() {
+            "defense_armor_aura" | "defense_armor" => {
+                let n = match &call.args {
+                    Json::Object(obj) => obj
+                        .get("armor")
+                        .or_else(|| obj.get("n"))
+                        .and_then(|v| v.as_i64())
+                        .and_then(|v| i32::try_from(v).ok())
+                        .unwrap_or(0),
+                    Json::Number(num) => num.as_i64().and_then(|v| i32::try_from(v).ok()).unwrap_or(0),
+                    _ => 0,
+                };
+                let controller = args.self_.controller;
+                entries.push(AuraEntry {
+                    applies: Box::new(move |unit: &jackioh_engine::CardInstance| {
+                        unit.controller == controller
+                            && matches!(
+                                unit.zone,
+                                jackioh_engine::Zone::Field {
+                                    row: jackioh_engine::Row::Units,
+                                    ..
+                                }
+                            )
+                            && unit.position.unwrap_or(jackioh_engine::Position::Atk)
+                                == jackioh_engine::Position::Def
+                    }),
+                    mod_: StatMod {
+                        keywords: Some(vec![Keyword::Armor { n }]),
+                        ..StatMod::default()
+                    },
+                });
+            }
+            verb => {
+                return Err(LuauError::Hook {
+                    site,
+                    message: format!("no aura verb {verb:?}"),
+                });
+            }
+        }
+    }
+    Ok(entries)
 }
