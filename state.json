@@ -5186,7 +5186,10 @@
         "sha": "603cbc7421df2d3e0996c12179acb051f606a23d"
       },
       "cross_rounds": 0,
+      "died": 0,
       "failures": 0,
+      "forced": false,
+      "interruptions": 0,
       "kind": "review",
       "pending_request": false,
       "provider": "claude-7",
