@@ -255,6 +255,9 @@ fn r748000_a_calibration_game_is_a_function_of_its_seed() {
         },
         temperature: 1.0,
         missed_lethal_chance: 0.5,
+        // R747000: half the decisions follow the search and half the random policy, so the game
+        // takes both paths and must still be a function of its seed.
+        skill: 0.5,
         seed_rating: 1000.0,
     };
     let first: Option<Winner> = play_game("r748000-test", &strength, &strength);
