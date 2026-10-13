@@ -5430,6 +5430,11 @@
       "taken_asks": []
     },
     "799": {
+      "cleared": {
+        "at": "2026-10-13T20:21:51Z",
+        "by": "`claude` (strong)",
+        "sha": "bc32741b50b5232d6670c22f28cef06a64ae0840"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-13T16:48:56Z",
