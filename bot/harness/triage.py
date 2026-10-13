@@ -6,8 +6,10 @@ without anyone asking, from fixed rules and no model, in one job on GitHub's run
   prefix names when it has none (`type_label`), and an issue type (`fallback_type`). The night bot
   holds a build that waits for another issue by itself (`queue.waits_for`: a "Blocked by #n" line,
   the earlier parts of a patch), so triage links nothing.
-- An issue a person labels `human`, or opens with it, goes to people: both are assigned, the bot is
-  unassigned, and the bot's queue labels come off (`hand_to_people`).
+- An issue a person labels `human` (or `human required`, #793), or opens with it, goes to people:
+  both are assigned, the bot is unassigned, and the bot's queue labels come off
+  (`hand_to_people`). The bot hands an issue over itself the same way when it finds it cannot do
+  it (`deliver.Deliverer._needs_person`).
 - A pull request a trusted person opens gets the type label its title's prefix names.
 
 It adds, never removes, but for that last: a label, an assignee or a type a person set stays. A
@@ -33,6 +35,9 @@ HUMANS: tuple[str, ...] = ("MaxGoetzmann", "jgoetzmann")
 #: The type labels (`docs/issues-and-patches.md`): the only ones a pull request gets.
 TYPE_LABELS: tuple[str, ...] = config_mod.TYPE_LABELS
 HUMAN_LABEL = config_mod.LABEL_HUMAN
+#: The labels that hand an issue to people: a person's `human`, and `human required` (#793), the
+#: bot's own hand-over, which a person may put on too.
+HUMAN_LABELS = frozenset({config_mod.LABEL_HUMAN, config_mod.LABEL_HUMAN_REQUIRED})
 #: The bot's queue labels `human` takes off: people do the issue now. A run that holds it
 #: (`bot:working`) or a pull request it opened keep theirs.
 QUEUED = frozenset({config_mod.LABEL_BUILD, config_mod.LABEL_NEEDS_PLAN})
@@ -209,11 +214,11 @@ def gate(payload: Mapping[str, Any], trust: Trust, bot_login: str, *,
     if payload.get("action") == "labeled":
         name = str((payload.get("label") or {}).get("name") or "")
         sender = str((payload.get("sender") or {}).get("login") or "")
-        if is_pr or name.lower() != HUMAN_LABEL:
+        if is_pr or name.lower() not in HUMAN_LABELS:
             return "", f"label {name} asks nothing of triage"
         if not sender or _is_bot(sender, bot_login):
             return "", f"labelled by {sender or 'nobody known'}, which labels its own"
-        return "human", f"#{thread['number']}: @{sender} labelled it human"
+        return "human", f"#{thread['number']}: @{sender} labelled it {name.lower()}"
     if payload.get("action") != "opened":
         return "", f"{payload.get('action')} asks nothing of triage"
     user = thread.get("user") or {}
@@ -253,7 +258,7 @@ def decide(step: str, thread: Mapping[str, Any], is_pr: bool, bot_login: str, *,
     present = _names(thread)
     lowered = {name.lower() for name in present}
     if step == "human":
-        if HUMAN_LABEL in lowered:
+        if lowered & HUMAN_LABELS:
             hand_to_people(plan, thread, bot_login)
         else:
             plan.notes.append("`human` came off again, so it stays as it is")
@@ -270,7 +275,7 @@ def decide(step: str, thread: Mapping[str, Any], is_pr: bool, bot_login: str, *,
         labelled = [*(thread.get("labels") or []), *({"name": n} for n in plan.labels)]
         plan.issue_type = fallback_type({**thread, "labels": labelled},
                                         types or DEFAULT_ISSUE_TYPES)
-    if HUMAN_LABEL in lowered or HUMAN_LABEL in plan.labels:
+    if lowered & HUMAN_LABELS or HUMAN_LABEL in plan.labels:
         hand_to_people(plan, thread, bot_login)
     return plan
 

@@ -1,7 +1,7 @@
 <!-- version: 2 -->
 # Suggest improvements to JackiOh
 
-The night bot of `$repo` has nothing queued tonight. Your job is to propose up to $count
+A lane of the night bot of `$repo` has had nothing it could start for a while. Your job is to propose up to $count
 improvements the maintainer might want built later. You are read-only: read, search and run
 read-only commands, and change nothing.
 
@@ -19,9 +19,12 @@ order, `CLAUDE.md` the rules of the codebase.
   or the opportunity. Nothing you cannot point at.
 - **Buildable by the bot**: a person approves it by commenting `approve` (or by adding the
   `bot:build` label) and rejects it by commenting `reject`, which closes it, and the night bot
-  can then build it inside this repository with tests. Say how big it is.
-- **New**: none of the open or recently closed issues below already covers it, and it is not a
-  suggestion the maintainer closed.
+  can then build it inside this repository with tests. Nothing only a person can do: no change
+  under `.github/`, `.harness/`, `.squishy/` or `bot/`, no secret, no dashboard or account (the
+  bot hands such work to people). Say how big it is.
+- **New**: none of the open or recently closed issues below already covers it, and it is none of
+  the suggestions that came to nothing (below) under another name: those were rejected, closed
+  unbuilt, or turned out to be work the bot could not do, and they are never offered again.
 
 Use subagents to survey different areas in parallel, then keep only the strongest ideas. Fewer,
 better suggestions beat $count weak ones; zero is a fine answer.
@@ -29,6 +32,12 @@ better suggestions beat $count weak ones; zero is a fine answer.
 ## Issues that already exist
 
 $existing
+
+## Suggestions that came to nothing
+
+Never suggest one of these again, nor the same idea reworded.
+
+$declined
 
 ## Your final message
 

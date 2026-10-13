@@ -268,7 +268,7 @@ HELP_ROWS: tuple[tuple[str, str], ...] = (
     ("review", "| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |"),
     ("rebuild", "| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |"),
     ("stop", "| `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |"),
-    ("suggest", "| `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |"),
+    ("suggest", "| `suggest` | ask for improvement suggestions the next time a lane has nothing to start | anywhere | 2 |"),
     ("suggest", "| `approve`, `reject` | alone on a line, no prefix needed: build one of my suggestions, or close it unbuilt | suggestion | 2 |"),
     ("status", "| `status` | halt state, each subscription, the queue | anywhere | 1 |"),
     ("help", "| `help [verb]` | this list, or one command in detail | anywhere | 1 |"),
@@ -343,7 +343,8 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
                 "{slash} rebuild"),
     "stop": ("stop", "Take this issue or pull request out of the queue. A run working on it gives "
              "up at its next checkpoint and keeps what it has.", "{slash} stop"),
-    "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
+    "suggest": ("suggest", "Ask for a suggestion survey the next time a lane has nothing to "
+                "start, without waiting out the 30 idle minutes a survey otherwise waits for.",
                 "@{bot} suggest"),
     "status": ("status", "Halt state, which subscriptions are running what right now, each "
                "subscription (its hours, usage, and what it is doing), and what is queued.",

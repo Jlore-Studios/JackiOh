@@ -1957,9 +1957,11 @@ class Worker:
         wt = worktree_add(self.repo, path, "bot-suggest", self.base_ref)
         self.check()
         prompt = self.render("suggest", repo=self.cfg.repo, count=count,
-                             existing=self.plan.get("existing") or data("(none)", "Issues"))
+                             existing=self.plan.get("existing") or data("(none)", "Issues"),
+                             declined=self.plan.get("declined") or data(
+                                 "(none)", "Suggestions that came to nothing"))
         result = self.call("suggest", prompt, wt.cwd, reader=True,
-                           why="propose improvements while the queue is empty")
+                           why="propose improvements while a lane has nothing to start")
         found = verdicts.suggestions(result.text, count)
         self.result.update(
             status="suggested",
