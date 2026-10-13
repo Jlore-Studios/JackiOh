@@ -4268,11 +4268,8 @@
       "run_id": "38253510716",
       "started_at": "2026-10-12T13:08:27Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-3` (claude, opus) rejected it: `task`: The acceptance item 'the button switches every screen to \u7b80\u4f53\u4e2d\u6587' is not met: most screens and all engine and server English are still unwrappe",
-        "`claude-3` (claude, opus) rejected it: `apps/web/src/cards/chinese.ts:74`: The acceptance item 'adding a language is one dictionary file, one card table pair and one LOCALES line' is not met: the card"
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 0
     },
