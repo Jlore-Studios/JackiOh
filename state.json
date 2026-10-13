@@ -4455,6 +4455,13 @@
     "778": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T11:59:04Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "easy rule 6 fails outright: the change must edit vercel.json (both copies), a review-only path; the rest is one app with unit tests"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
