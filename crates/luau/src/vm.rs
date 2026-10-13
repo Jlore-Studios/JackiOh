@@ -242,7 +242,14 @@ pub(crate) fn with_vm<T>(
             let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
             budget.run(site, || {
                 let module = vm.module(site.card, bytecode)?;
-                let face: Table = module.raw_get(site.face.key())?;
+                // The face's table; a `radiant = "base"` module holds a string under `radiant`,
+                // so those runs read the base table, which `load_card` requires (#464 gap 14: a
+                // shared adapter serves each run from its own face's table, and named sub-hooks
+                // resolve where the run runs).
+                let face: Table = match module.raw_get::<Value>(site.face.key()) {
+                    Ok(Value::Table(table)) => table,
+                    _ => module.raw_get(Face::Base.key())?,
+                };
                 f(&vm.sandbox.lua, face)
             })
         };

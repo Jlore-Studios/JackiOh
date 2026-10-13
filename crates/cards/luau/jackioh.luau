@@ -130,6 +130,20 @@ attack: number,
 poisonous: boolean,
 }
 
+export type AuraApplies = AuraFilter | string
+
+export type AuraArgs = {
+mod: StatMod,
+applies: AuraApplies,
+}
+
+export type AuraFilter = {
+side: ScopeSide | nil,
+rows: {Row} | nil,
+defId: string | nil,
+exceptDefId: string | nil,
+}
+
 export type BoardScope = {
 side: ScopeSide?,
 rows: {Row}?,
@@ -921,6 +935,13 @@ amount: number,
 player: PlayerSpec?,
 }
 
+export type GameCounters = {
+drawn: number,
+played: number,
+destroyed: number,
+exiled: number,
+}
+
 export type GameEvent = {
 ["type"]: "cardPlayed",
 player: PlayerId,
@@ -1668,65 +1689,76 @@ export type PlayerId = "p1" | "p2"
 
 export type PlayerModifierSpec = {
 expiry: ModifierExpiry,
-} & (
-{
 ["kind"]: "costDiscount",
 amount: number,
 onlyType: "Spell"?,
 minCurrentCost: number?,
 oncePerTurn: boolean?,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "echoNextSpell",
 amount: number,
 sourceId: string?,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "radiantFirstCheapCard",
 maxCost: number,
 usedTurn: number?,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "comboDraw",
 amount: number,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "quickstrikerDamage",
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "costRule",
 rule: CostRule,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "enchantNextSpell",
 enchantment: Enchantment,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "replacePlays",
 defId: string,
 radiant: boolean,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "turnEnds",
 actionsLeft: number,
 byInstanceId: string | nil,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "startOfTurnEffect",
 seq: number,
 resume: Resume,
 label: string,
 ranTurn: number?,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "healToDamage",
 converterId: string,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "heroArmor",
 amount: number,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "altWin",
 condition: AltWinCondition,
 threshold: number,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "laneWatch",
 lane: number,
 resume: Resume,
 label: string,
 } | {
+expiry: ModifierExpiry,
 ["kind"]: "heroImmune",
 }
-)
 
 export type PlayerSpec = "self" | "enemy"
 
@@ -2561,7 +2593,8 @@ export type ActivationDecl = {
 -- The pure-read contexts a predicate hook is called with, as methods:
 -- what `reads.rs` registers (`register_condition_ctx`,
 -- `register_replacement_ctx`, `register_hook_args`).
--- Every context with a state carries the shared readers too -- (`reads.rs` `shared_readers!`): the lists below name the ones a -- condition, cost or value hook reaches for most; the rest read as -- on the effect context. export type ConditionContext = {
+-- Every context with a state carries the shared readers too -- (`reads.rs` `shared_readers!`): the lists below name the ones a -- condition, cost or value hook reaches for most; the rest read as -- on the effect context.
+export type ConditionContext = {
 	controller: (self: ConditionContext) -> PlayerId,
 	radiant: (self: ConditionContext) -> boolean,
 	your_turn: (self: ConditionContext) -> boolean,

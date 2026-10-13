@@ -52,11 +52,11 @@ the code wins and this guide gets fixed. The proofs are part 7's
    witness for these numbers, not the comparator: the gate always compares
    two binaries on the same machine in the same run.
 7. **`luau-analyze --mode=strict`** (Luau 0.740, the version `mlua` builds)
-   clean over every new `.luau` file. The checked-in `.luaurc`
-   (`crates/cards/src/scripts/.luaurc`) aliases `@jackioh` at the committed
-   module for editors, but the CLI resolves no aliases: local strict runs
-   copy the module, the card and its neighbours to one directory with a
-   relative require.
+   clean over every new `.luau` file, checked in place: the checked-in
+   `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases `@jackioh` at the
+   committed module, which the CLI resolves (the mapping drops the `.luau`
+   extension, which luau-analyze 0.740 refuses as `Unknown require`,
+   #464 gap 15).
 8. **Write the batch notes** (`docs/v0.4.0/notes/part-NN.md`): which cards,
    which stayed Rust and why (section 5), the `luau diff` / `fuzz` /
    `bench` / strict results.
@@ -89,7 +89,13 @@ value's shape. Sub-hooks for closure-taking verbs are named functions on
 the same face: `after_state_check` calls back `after_check` plus data,
 `draw_while` calls back `draw_more`, `for_each_card` calls back
 `each_cards` / `each_card`; a second use of one verb in the same face
-appends `_2`, `_3`, … (`each_cards_2`, Classic #39). Triggers and
+appends `_2`, `_3`, … (`each_cards_2`, Classic #39). One local named under
+two hooks — two hooks of one face, or one hook of each face — builds one
+adapter shared by an `Arc` (#464 gaps 10 and 14); the run resolves names on
+the running face. Two textually separate literals stay two adapters even
+with identical bodies: Luau reuses one closure object for every evaluation
+of an upvalue-free literal, so a factory called twice is one value
+(`core-t-coin` spells its faces out). Triggers and
 replacements read through their event (`ReplacementContext.event`).
 `crates/luau/tests/fixtures/hooks_all.luau` exercises every adapter with a
 canned answer of its own type; `crates/luau/src/hooks.rs` is the full table.
@@ -498,3 +504,15 @@ In all three cases: the card gets its `.rs` back from the base commit
 `.luau`, and the batch's notes say which cards stayed and why, one line
 each. A card that stays Rust for any other reason is a batch that is not
 done.
+
+**Since part 28 (#464), the first reason no longer holds for the fifteen gaps
+`docs/v0.4.0/api-gaps.md` lists as fixed**, each with its Luau form and a
+fixture test: the empty-table round trip, `for_each_card`'s `data`, the shared
+reader table on every context, `ctx:turn()`, `given_lucky_on`, the action's
+events reader, `J.config`, the generic aura, `left_field_since_resolved`, the
+self-snapshot `killer_of`, integer-unit `radiant_chance`,
+`with_kill_credit`'s `pairs`/`then`, the shared adapter within one face and
+across both faces, the ungated typed-module check, `nil` for absent answers,
+`ctx:data()`, and the extensionless `.luaurc` alias. A card held back on one
+of those ports onto the fixed API; only a gap still listed as waiting, a
+divergence, or a broken bench keeps it in Rust.

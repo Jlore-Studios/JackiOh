@@ -781,7 +781,11 @@ fn every_ctx_reader_has_a_typed_stub() {
 fn run_cry(card: &'static str, fixture: &'static str, opts: Value) -> (Value, IndexMap<String, Value>) {
     use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};
     common::ensure_installed();
-    let site = Site { card, face: Face::Base, hook: "cry" };
+    let site = Site {
+        card,
+        face: Face::Base,
+        hook: "cry",
+    };
     let code = match fixture {
         "gap_empty_tables" => fixture!("gap_empty_tables"),
         "gap_for_each_data" => fixture!("gap_for_each_data"),
@@ -798,10 +802,7 @@ fn run_cry(card: &'static str, fixture: &'static str, opts: Value) -> (Value, In
     let probe_id = probe.id.clone();
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut ctx = EffectContext::new(
-        EngineSink::new(&mut state, &mut events, &mut rng),
-        PlayerId::P1,
-    );
+    let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
     ctx.self_ = Some(probe);
     for effect in run_hook(site, code, &mut ctx).expect("the cry runs") {
         (effect.apply)(&mut ctx);
@@ -828,11 +829,23 @@ fn gap1_empty_tables_round_trip() {
     );
     let probe = memory.get("gap1").expect("the cry remembered gap1");
     assert!(
-        probe.get("handSize").and_then(|size| size.as_i64()).expect("handSize") >= 1,
+        probe
+            .get("handSize")
+            .and_then(|size| size.as_i64())
+            .expect("handSize")
+            >= 1,
         "a hand card ran"
     );
-    assert_eq!(probe.get("orderedSize"), probe.get("handSize"), "every hand card round-trips");
-    assert_eq!(probe.get("emptySize"), Some(&json!(0)), "a literal empty table reads back as a list");
+    assert_eq!(
+        probe.get("orderedSize"),
+        probe.get("handSize"),
+        "every hand card round-trips"
+    );
+    assert_eq!(
+        probe.get("emptySize"),
+        Some(&json!(0)),
+        "a literal empty table reads back as a list"
+    );
     assert!(memory.get("gap1_each").is_none(), "the each hook never ran");
 }
 
@@ -843,7 +856,11 @@ fn gap2_for_each_card_data() {
     use jackioh_engine::testkit::PlayerId;
     common::ensure_installed();
     load_card("lx-gap2-load", fixture!("gap_for_each_data")).expect("gap2 loads");
-    let site = Site { card: "lx-gap2", face: Face::Base, hook: "cry" };
+    let site = Site {
+        card: "lx-gap2",
+        face: Face::Base,
+        hook: "cry",
+    };
     let code = fixture!("gap_for_each_data");
     let mut state = scenario(json!({
         "seed": "lx-gap2",
@@ -852,18 +869,19 @@ fn gap2_for_each_card_data() {
     }))
     .state()
     .clone();
-    let ids: Vec<String> =
-        jackioh_engine::active_units_of(&state, PlayerId::P2).iter().map(|unit| unit.id.clone()).collect();
+    let ids: Vec<String> = jackioh_engine::active_units_of(&state, PlayerId::P2)
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect();
     assert_eq!(ids.len(), 2, "two enemy units to hit");
     // Same runner as `run_cry`, inlined for the state it keeps.
     {
         use jackioh_engine::testkit::{EngineSink, Rng};
-        let probe =
-            jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
-                .into_iter()
-                .next()
-                .expect("a hand card to run as")
-                .clone();
+        let probe = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
+            .into_iter()
+            .next()
+            .expect("a hand card to run as")
+            .clone();
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
@@ -894,8 +912,9 @@ fn gap3_shared_readers_on_condition_preview_and_cost() {
     use jackioh_engine::{Row, query::fusable_permanents_of};
     common::ensure_installed();
     let scripts = load_card("lx-gap3", fixture!("gap_shared_readers")).expect("gap3 loads");
-    let mut state =
-        scenario(json!({ "seed": "lx-gap3", "p1": { "hand": ["lx-p-for-each"] } })).state().clone();
+    let mut state = scenario(json!({ "seed": "lx-gap3", "p1": { "hand": ["lx-p-for-each"] } }))
+        .state()
+        .clone();
     state.turn = 7;
     state.active = PlayerId::P1;
     let me = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
@@ -926,10 +945,16 @@ fn gap3_shared_readers_on_condition_preview_and_cost() {
     assert_eq!(values.len(), 1);
     let expected = open_zones(&state, PlayerId::P1, Row::Units).len()
         + fusable_permanents_of(&state, PlayerId::P1, None).len();
-    assert_eq!(values[0].value, expected as i32, "open zones plus fusable permanents");
+    assert_eq!(
+        values[0].value, expected as i32,
+        "open zones plus fusable permanents"
+    );
     let cost = scripts.base.cost.expect("cost");
     assert_eq!(
-        cost(CostArgs { state: &state, instance: &me }),
+        cost(CostArgs {
+            state: &state,
+            instance: &me
+        }),
         7,
         "the cost hook reads the turn number"
     );
@@ -946,10 +971,25 @@ fn gap5_6_7_9_12_readers_events_config_chance_and_nil() {
     );
     let probe = memory.get("gap579").expect("the cry remembered gap579");
     let state_turn: i64 = state.get("turn").and_then(|turn| turn.as_i64()).expect("turn");
-    assert_eq!(probe.get("turnNumber"), Some(&json!(state_turn)), "turn() answers the turn number");
-    assert_eq!(probe.get("activeIsMe"), Some(&json!(true)), "turn() answers the active player");
-    assert_eq!(probe.get("lucky"), Some(&json!(0)), "no granted Lucky on the probe");
-    assert!(probe.get("eventsFrom").and_then(|from| from.as_u64()).is_some(), "events_from() is a number");
+    assert_eq!(
+        probe.get("turnNumber"),
+        Some(&json!(state_turn)),
+        "turn() answers the turn number"
+    );
+    assert_eq!(
+        probe.get("activeIsMe"),
+        Some(&json!(true)),
+        "turn() answers the active player"
+    );
+    assert_eq!(
+        probe.get("lucky"),
+        Some(&json!(0)),
+        "no granted Lucky on the probe"
+    );
+    assert!(
+        probe.get("eventsFrom").and_then(|from| from.as_u64()).is_some(),
+        "events_from() is a number"
+    );
     assert_eq!(
         probe.get("configHealth"),
         Some(&json!(jackioh_engine::config::HERO_HEALTH)),
@@ -960,7 +1000,11 @@ fn gap5_6_7_9_12_readers_events_config_chance_and_nil() {
         Some(&json!(jackioh_engine::config::CHAIN_OF_THOUGHT_REPEATS)),
         "J.config reads the engine's constant"
     );
-    assert_eq!(probe.get("missingIsNil"), Some(&json!(true)), "an absent answer is nil, not truthy null");
+    assert_eq!(
+        probe.get("missingIsNil"),
+        Some(&json!(true)),
+        "an absent answer is nil, not truthy null"
+    );
     assert_eq!(probe.get("missingType"), Some(&json!("nil")), "type(nil) is nil");
     assert_eq!(
         probe.get("leftField"),
@@ -975,7 +1019,11 @@ fn gap5_6_7_9_12_readers_events_config_chance_and_nil() {
 fn gap9_killer_of_self_reads_the_snapshot() {
     use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};
     common::ensure_installed();
-    let site = Site { card: "lx-gap9", face: Face::Base, hook: "death" };
+    let site = Site {
+        card: "lx-gap9",
+        face: Face::Base,
+        hook: "death",
+    };
     let code = fixture!("gap_readers");
     let mut state = scenario(json!({
         "seed": "lx-gap9",
@@ -984,10 +1032,14 @@ fn gap9_killer_of_self_reads_the_snapshot() {
     }))
     .state()
     .clone();
-    let victim =
-        jackioh_engine::active_units_of(&state, PlayerId::P1).into_iter().next().expect("a victim");
-    let killer =
-        jackioh_engine::active_units_of(&state, PlayerId::P2).into_iter().next().expect("a killer");
+    let victim = jackioh_engine::active_units_of(&state, PlayerId::P1)
+        .into_iter()
+        .next()
+        .expect("a victim");
+    let killer = jackioh_engine::active_units_of(&state, PlayerId::P2)
+        .into_iter()
+        .next()
+        .expect("a killer");
     let victim_id = victim.id.clone();
     let mut snapshot = victim.clone();
     snapshot.last_damaged_by = Some(killer.id.clone());
@@ -995,7 +1047,8 @@ fn gap9_killer_of_self_reads_the_snapshot() {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
     ctx.self_ = Some(snapshot);
-    ctx.data.insert(jackioh_engine::prompts::SELF_KEY.to_string(), json!(true));
+    ctx.data
+        .insert(jackioh_engine::prompts::SELF_KEY.to_string(), json!(true));
     for effect in run_hook(site, code, &mut ctx).expect("the death hook runs") {
         (effect.apply)(&mut ctx);
     }
@@ -1036,15 +1089,25 @@ fn gap8_generic_aura_entries() {
         .next()
         .expect("an enemy unit");
     let aura = scripts.base.aura.expect("aura");
-    let entries = aura(HookArgs { state: &state, self_: &me, radiant: false });
+    let entries = aura(HookArgs {
+        state: &state,
+        self_: me,
+        radiant: false,
+    });
     assert_eq!(entries.len(), 2, "both aura entries build");
     assert_eq!(entries[0].mod_.attack, Some(2));
     assert_eq!(entries[0].mod_.max_health, Some(2));
-    assert!((entries[0].applies)(&me), "the data filter keeps the source's side");
-    assert!(!(entries[0].applies)(&foe), "the data filter turns the enemy away");
+    assert!(
+        (entries[0].applies)(me),
+        "the data filter keeps the source's side"
+    );
+    assert!(
+        !(entries[0].applies)(foe),
+        "the data filter turns the enemy away"
+    );
     assert_eq!(entries[1].mod_.max_health, Some(1));
-    assert!((entries[1].applies)(&me), "the predicate keeps the source");
-    assert!(!(entries[1].applies)(&foe), "the predicate turns lx-fx-002 away");
+    assert!((entries[1].applies)(me), "the predicate keeps the source");
+    assert!(!(entries[1].applies)(foe), "the predicate turns lx-fx-002 away");
 }
 
 /// Gap 9: `with_kill_credit`'s `pairs` and `then` resolve by name and run with data. The cry
@@ -1057,7 +1120,11 @@ fn gap9_kill_credit_pairs_and_then_by_name() {
     common::ensure_installed();
     let code = fixture!("gap_kill_credit");
     load_card("lx-gap9kc-load", code).expect("gap9kc loads");
-    let site = Site { card: "lx-gap9kc", face: Face::Base, hook: "cry" };
+    let site = Site {
+        card: "lx-gap9kc",
+        face: Face::Base,
+        hook: "cry",
+    };
     let mut state = scenario(json!({
         "seed": "lx-gap9kc",
         "p1": { "hand": ["lx-p-for-each"] },
@@ -1065,8 +1132,10 @@ fn gap9_kill_credit_pairs_and_then_by_name() {
     }))
     .state()
     .clone();
-    let foes: Vec<String> =
-        jackioh_engine::active_units_of(&state, PlayerId::P2).iter().map(|unit| unit.id.clone()).collect();
+    let foes: Vec<String> = jackioh_engine::active_units_of(&state, PlayerId::P2)
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect();
     assert_eq!(foes.len(), 2);
     let probe = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
         .into_iter()
@@ -1085,10 +1154,11 @@ fn gap9_kill_credit_pairs_and_then_by_name() {
     let mut state2 = state.clone();
     let mut events2 = Vec::new();
     let mut rng2 = Rng::new(&state2.seed, state2.rng_cursor);
-    let mut ctx2 =
-        EffectContext::new(EngineSink::new(&mut state2, &mut events2, &mut rng2), PlayerId::P1);
-    let credits =
-        call_named_kill_pairs(site, code, "kill_pairs", &mut ctx2, &json!({})).expect("pairs run");
+    let mut ctx2 = EffectContext::new(
+        EngineSink::new(&mut state2, &mut events2, &mut rng2),
+        PlayerId::P1,
+    );
+    let credits = call_named_kill_pairs(site, code, "kill_pairs", &mut ctx2, &json!({})).expect("pairs run");
     assert_eq!(credits.len(), 2, "one pair per enemy unit");
     for credit in &credits {
         assert!(foes.contains(&credit.victim_id), "the victim is a foe");
@@ -1113,5 +1183,72 @@ fn gap10_one_function_under_two_hooks_shares_its_adapter() {
     let end = scripts.base.end_of_turn.expect("endOfTurn");
     assert!(Arc::ptr_eq(&start, &end), "one function, one adapter");
     let radiant_start = scripts.radiant.start_of_turn.expect("radiant startOfTurn");
-    assert!(Arc::ptr_eq(&start, &radiant_start), "radiant = base shares it too");
+    assert!(
+        Arc::ptr_eq(&start, &radiant_start),
+        "radiant = base shares it too"
+    );
+}
+
+/// Gap 14: one function held by both faces' hooks — separate face tables, whose params
+/// differ — shares one adapter, so `Arc::ptr_eq` holds between the base and Radiant faces'
+/// hooks (`classic-082`, `classicplus-047`).
+#[test]
+fn gap14_one_function_across_both_faces_shares_its_adapter() {
+    common::ensure_installed();
+    let scripts = load_card("lx-gap14", fixture!("gap_shared_faces")).expect("gap14 loads");
+    let base = scripts.base.death.expect("base death");
+    let radiant = scripts.radiant.death.expect("radiant death");
+    assert!(
+        Arc::ptr_eq(&base, &radiant),
+        "one function, one adapter across faces"
+    );
+}
+
+/// Gap 14, running-face resolution: the shared `cry`'s named `each_card` resolves on the face
+/// whose run it is — a base run remembers `base:…`, a radiant run `radiant:…`
+/// (`classicplus-012-7`'s shape: one `cry`, per-face closers).
+#[test]
+fn gap14_shared_hook_resolves_named_hooks_on_the_running_face() {
+    use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};
+    common::ensure_installed();
+    let scripts = load_card("lx-gap14b", fixture!("gap_shared_faces")).expect("gap14 loads");
+    // The faces share the one `cry` adapter.
+    assert!(
+        Arc::ptr_eq(
+            scripts.base.cry.as_ref().expect("base cry"),
+            scripts.radiant.cry.as_ref().expect("radiant cry")
+        ),
+        "one cry, one adapter across faces"
+    );
+    for (radiant, want) in [(false, "base:lx-target"), (true, "radiant:lx-target")] {
+        let mut state = scenario(json!({ "seed": "lx-gap14", "p1": { "hand": ["lx-p-for-each"] } }))
+            .state()
+            .clone();
+        let probe = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
+            .into_iter()
+            .next()
+            .expect("a hand card to run as")
+            .clone();
+        let probe_id = probe.id.clone();
+        let mut events = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
+        ctx.self_ = Some(probe);
+        ctx.radiant = radiant;
+        // The adapter, not `run_hook`: only the adapter resolves named hooks.
+        let cry = scripts.base.cry.as_ref().expect("base cry");
+        for effect in cry(&mut ctx) {
+            (effect.apply)(&mut ctx);
+        }
+        drop(ctx);
+        let memory = jackioh_engine::state::find_instance(&state, &probe_id)
+            .expect("the probe card")
+            .memory
+            .clone();
+        assert_eq!(
+            memory.get("gap14_face").and_then(|face| face.as_str()),
+            Some(want),
+            "a run with radiant = {radiant} fires that face's each_card"
+        );
+    }
 }

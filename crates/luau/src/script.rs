@@ -23,6 +23,14 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     vm::with_module(card, bytecode, |_lua, module| {
         let mut base_script = None;
         let mut radiant_script = None;
+        // One adapter for one function under two hooks, across both faces too (#464 gaps 10
+        // and 14): when two hook keys hold the same Luau function value — two hooks of one
+        // face, or the base and Radiant faces' hooks, whose params differ — both share one
+        // `Arc`, so `Arc::ptr_eq` holds the way it does for a Rust script that clones one
+        // hook (`classicplus-070`; `classic-082` and `classicplus-047` across faces). The
+        // shared function reads `param` off the running face, so one adapter serves both.
+        // The cache lives here, not in `build_script`, so both faces draw from it.
+        let mut hook_cache: Vec<(*const std::ffi::c_void, Hook)> = Vec::new();
 
         for pair in module.pairs::<String, Value>() {
             let (key, value) = pair.map_err(|error| refused(error.to_string()))?;
@@ -34,7 +42,7 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                             value.type_name()
                         )));
                     };
-                    base_script = Some(build_script(card, Face::Base, &table, bytecode)?);
+                    base_script = Some(build_script(card, Face::Base, &table, bytecode, &mut hook_cache)?);
                 }
                 "radiant" => match value {
                     Value::String(s) => {
@@ -48,7 +56,13 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                         }
                     }
                     Value::Table(table) => {
-                        radiant_script = Some(build_script(card, Face::Radiant, &table, bytecode)?);
+                        radiant_script = Some(build_script(
+                            card,
+                            Face::Radiant,
+                            &table,
+                            bytecode,
+                            &mut hook_cache,
+                        )?);
                     }
                     _ => {
                         return Err(refused(format!(
@@ -72,12 +86,14 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     })
 }
 
-/// Builds one `Script` for a face from its table.
+/// Builds one `Script` for a face from its table. `hook_cache` is `load_card`'s, shared by both
+/// faces, so one function value held by two hook keys gets one adapter (#464 gaps 10 and 14).
 pub fn build_script(
     card: &'static str,
     face: Face,
     table: &Table,
     bytecode: &'static [u8],
+    hook_cache: &mut Vec<(*const std::ffi::c_void, Hook)>,
 ) -> Result<Script, LuauError> {
     let refused = |message: String| LuauError::Load {
         card: card.to_string(),
@@ -355,17 +371,21 @@ pub fn build_script(
         }
     }
 
-    // Direct hooks. One adapter for one function under two hooks (#464 gap 10): when two hook
-    // keys of one face hold the same Luau function value, both share one `Arc`, so `Arc::ptr_eq`
-    // holds the way it does for a Rust script that clones one hook (`classicplus-070`).
-    let mut hook_cache: Vec<(*const std::ffi::c_void, Hook)> = Vec::new();
+    // Direct hooks. One adapter for one function under two hooks (#464 gaps 10 and 14):
+    // when two hook keys hold the same Luau function value, both share one `Arc`, so
+    // `Arc::ptr_eq` holds the way it does for a Rust script that clones one hook. The cache
+    // is `load_card`'s, shared by both faces.
     let mut direct_hook = |key: &'static str| -> Option<Hook> {
         let func = hooks::get_fn(table, key).ok()?;
         let ptr = func.to_pointer();
         if let Some((_, shared)) = hook_cache.iter().find(|(cached, _)| *cached == ptr) {
             return Some(shared.clone());
         }
-        let site = Site { card, face, hook: key };
+        let site = Site {
+            card,
+            face,
+            hook: key,
+        };
         let adapter = hooks::adapt_hook(site, bytecode);
         hook_cache.push((ptr, adapter.clone()));
         Some(adapter)

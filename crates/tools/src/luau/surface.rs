@@ -1132,9 +1132,7 @@ impl Code<'_> {
                 }
                 continue;
             }
-            if after_word(self.text, ident.start, "fn")
-                || after_attribute_open(self.text, ident.start)
-            {
+            if after_word(self.text, ident.start, "fn") || after_attribute_open(self.text, ident.start) {
                 continue;
             }
             if single {

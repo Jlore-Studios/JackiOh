@@ -7,7 +7,6 @@
 use jackioh_engine::prelude::*;
 use mlua::{Error, Lua, LuaSerdeExt, Table, UserDataMethods, UserDataRegistry, Value};
 
-
 use crate::numbers::arg;
 
 /// Helper to serialize a value to Luau. A Rust `None` hands Luau `nil`, not mlua's truthy
@@ -23,8 +22,7 @@ fn to_lua<T: serde::Serialize + ?Sized>(lua: &Lua, val: &T) -> mlua::Result<Valu
 }
 
 /// The turn as a script reads it (#464 gap 4): the turn number and the active player.
-#[derive(serde::Serialize, Clone, Copy, Debug)]
-#[derive(ts_rs::TS)]
+#[derive(serde::Serialize, Clone, Copy, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnView {
     pub number: i32,
@@ -872,7 +870,13 @@ macro_rules! shared_readers {
         $registry.add_method("turn", |lua, ctx, ()| {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
-            to_lua(lua, &TurnView { number: state.turn, active: state.active })
+            to_lua(
+                lua,
+                &TurnView {
+                    number: state.turn,
+                    active: state.active,
+                },
+            )
         });
         $registry.add_method("param", |_, ctx, key: String| Ok(param(ctx, &key)));
         $registry.add_method("opponent_of", |lua, _, p: Value| {
@@ -973,7 +977,11 @@ macro_rules! shared_readers {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
             let player = arg::<PlayerId>(p)?;
-            let slot = ZoneRef { player, row: Row::Units, lane };
+            let slot = ZoneRef {
+                player,
+                row: Row::Units,
+                lane,
+            };
             to_lua(lua, &card_at(state, slot))
         });
         $registry.add_method("slots_of", |lua, _, (p, r): (Value, Value)| {
@@ -1025,7 +1033,11 @@ macro_rules! shared_readers {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
             if let Some(card) = find_instance(state, &id) {
-                Ok(effective_cost(state, card, jackioh_engine::mana::CostOptions::default()))
+                Ok(effective_cost(
+                    state,
+                    card,
+                    jackioh_engine::mana::CostOptions::default(),
+                ))
             } else {
                 Ok(0)
             }
@@ -1243,14 +1255,22 @@ macro_rules! shared_readers {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
             let player = arg::<PlayerId>(p)?;
-            let slot = ZoneRef { player, row: Row::Backrow, lane };
+            let slot = ZoneRef {
+                player,
+                row: Row::Backrow,
+                lane,
+            };
             to_lua(lua, &carried_at(state, slot))
         });
         $registry.add_method("is_locked", |_, ctx, (p, lane): (Value, i32)| {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
             let player = arg::<PlayerId>(p)?;
-            let slot = ZoneRef { player, row: Row::Units, lane };
+            let slot = ZoneRef {
+                player,
+                row: Row::Units,
+                lane,
+            };
             Ok(is_locked(state, slot))
         });
         $registry.add_method("is_berserk", |_, ctx, id: String| {
@@ -1598,7 +1618,9 @@ pub fn register_condition_ctx(registry: &mut UserDataRegistry<ConditionContext<'
 pub fn register_cost_args(registry: &mut UserDataRegistry<CostArgs<'_>>) {
     registry.add_method("instance", |lua, args, ()| to_lua(lua, &args.instance));
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.instance));
-    registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.instance.controller));
+    registry.add_method("controller", |lua, args, ()| {
+        to_lua(lua, &args.instance.controller)
+    });
     shared_readers!(registry);
 }
 

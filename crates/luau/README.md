@@ -165,13 +165,16 @@ argument is a union (several table shapes, `HealArgs`) cannot narrow an inline l
 hoist the inner table into an annotated local (`local target: J.TargetSpec = { of = "selfHero" }`).
 `luau-analyze --mode=strict` (Luau 0.740, above) is clean over the module, the pilots and every
 card-shaped fixture; the checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
-`@jackioh` at the committed module for editors (this CLI resolves no aliases, so local strict
-runs use copies with a relative require).
+`@jackioh` at the committed module, which the CLI resolves (the mapping drops the `.luau`
+extension, which luau-analyze 0.740 refuses as `Unknown require`, #464 gap 15), so local
+strict runs check the files in place.
 
 - `load_card(id, bytecode)` runs the module once to read which hooks each face declares, and
   fills those slots of `CardScripts` with closures that capture only the hook's `Site` (card, face
   and hook) and the `&'static` bytecode, so any thread's VM can load the chunk the first time it
-  needs it. No Lua value outlives a call.
+  needs it. One function value named under two hooks — two hooks of one face, or one hook of
+  each face — fills both slots with one shared closure, which serves each run from the running
+  face's table (#464 gaps 10 and 14). No Lua value outlives a call.
 - A call runs the module afresh, takes `module[face][hook]` and calls it with `ctx`, a userdata
   scoped to the call (`Lua::scope`), so a script cannot keep it.
 - An effect is data. `J.<verb>(args)` returns `{ verb = "<verb>", args = args }` and touches

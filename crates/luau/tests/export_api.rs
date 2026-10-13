@@ -1,6 +1,10 @@
 //! Generates `crates/cards/luau/jackioh.luau` from ts-rs definitions and the verb binding table.
 //! Run with: `cargo test -p jackioh-luau --test export_api` (#464 gap 11: it runs under the
 //! workspace's ordinary test features, no extra feature needed).
+#![allow(
+    clippy::disallowed_methods,
+    reason = "a generator, not the rules: it writes the committed typed module, as build.rs writes the registry"
+)]
 
 mod generator {
     use std::collections::BTreeMap;
@@ -10,12 +14,12 @@ mod generator {
     use jackioh_engine::script::*;
     use jackioh_engine::wire::*;
     use jackioh_engine::{
-        AltWinCondition, AttackAmong, CastAfterward, CatalogQueryArgs, CostRule, LibraryEnd, ModifierExpiry,
-        NumberRef, NumberedKey, OffFieldZone, Resume, Zone,
+        AltWinCondition, AttackAmong, CastAfterward, CatalogQueryArgs, CostRule, GameCounters, LibraryEnd,
+        ModifierExpiry, NumberRef, NumberedKey, OffFieldZone, Resume, Zone,
     };
     use jackioh_luau::api::after_check::AfterStateCheckArgs;
     use jackioh_luau::api::all_specs;
-    use jackioh_luau::api::aura::DefenseArmorArgs;
+    use jackioh_luau::api::aura::{AuraApplies, AuraArgs, AuraFilter, DefenseArmorArgs};
     use jackioh_luau::api::cast::CastEachArgs;
     use jackioh_luau::api::draw_while::DrawWhileArgs;
     use jackioh_luau::api::each::{CardsSource, ForEachCardArgs};
@@ -70,11 +74,49 @@ mod generator {
                 .strip_suffix(')')
                 .unwrap_or(group);
             if let Some(open) = base.find('{') {
-                lines.push(format!("{} {{", base[..open].trim_end()));
+                let head = base[..open].trim_end().to_string();
                 let inner = base[open + 1..]
                     .trim_end()
                     .strip_suffix('}')
                     .unwrap_or(&base[open + 1..]);
+                let base_fields: Vec<String> = split_top_level(inner)
+                    .into_iter()
+                    .map(|field| field.trim().to_string())
+                    .filter(|field| !field.is_empty())
+                    .collect();
+                if let Some(mut expanded) = split_variants("(", group, 0) {
+                    expanded.remove(0);
+                    // Distributable when every variant is a table: `B & (V1 | V2)` becomes the
+                    // union of the flattened tables, which strict checks a literal against arm
+                    // by arm — an intersection of a table with a union checks no literal at
+                    // all (#464 gap 15, classic-035's `mod`). Anything else keeps the
+                    // intersection rather than guessing joints.
+                    let distributable = !base_fields.is_empty()
+                        && expanded.last().is_some_and(|last| last == "}")
+                        && expanded
+                            .iter()
+                            .all(|line| line == "} | {" || line == "}" || line.ends_with(','));
+                    if distributable {
+                        lines.push(format!("{head} {{"));
+                        for field in &base_fields {
+                            lines.push(format!("{field},"));
+                        }
+                        for line in expanded {
+                            lines.push(line.clone());
+                            if line == "} | {" {
+                                for field in &base_fields {
+                                    lines.push(format!("{field},"));
+                                }
+                            }
+                        }
+                        return lines
+                            .into_iter()
+                            .map(|line| convert_line(&line))
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                    }
+                }
+                lines.push(format!("{} {{", base[..open].trim_end()));
                 push_fields(&mut lines, inner);
                 lines.push("} & (".to_string());
                 if let Some(mut expanded) = split_variants("(", group, 0) {
@@ -511,6 +553,9 @@ mod generator {
         // Host types
         reg! {
             AfterStateCheckArgs,
+            AuraApplies,
+            AuraArgs,
+            AuraFilter,
             DefenseArmorArgs,
             CastEachArgs,
             DrawWhileArgs,
@@ -580,6 +625,7 @@ mod generator {
         reg! {
             CastAfterward,
             CatalogQueryArgs,
+            GameCounters,
             LibraryEnd,
             Zone,
             AltWinCondition,
@@ -794,7 +840,7 @@ mod generator {
 
         // Luau reads types before their use, so every translated declaration
         // comes before the hand-written stubs that name them.
-        for (_, ts_decl) in &decls {
+        for ts_decl in decls.values() {
             let luau_decl = ts_to_luau(ts_decl);
             out.push_str(&luau_decl);
             out.push_str("\n\n");
@@ -938,7 +984,7 @@ mod generator {
             "\teffects_of: (self: EffectContext, card: string, face: string, hook: string) -> {string},",
         ] {
             out.push_str(line);
-            out.push_str("\n");
+            out.push('\n');
         }
         out.push_str("}\n\n");
 
@@ -982,7 +1028,7 @@ mod generator {
              -- Every context with a state carries the shared readers too \
              -- (`reads.rs` `shared_readers!`): the lists below name the ones a \
              -- condition, cost or value hook reaches for most; the rest read as \
-             -- on the effect context. \
+             -- on the effect context.\n\
              export type ConditionContext = {\n\
              \tcontroller: (self: ConditionContext) -> PlayerId,\n\
              \tradiant: (self: ConditionContext) -> boolean,\n\

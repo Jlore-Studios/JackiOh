@@ -18,14 +18,13 @@ unclassified (`replace_hand_with_perfect`, Classic+ #27; `roll_back`, Classic+
 #35). One verb is half-bound:
 
 - `with_kill_credit` — `killer`, `transfer` and `during` bind; `pairs` and `then`
-  do not. They are closures over the watched kills (a live `CardInstance` in,
-  per-pair effects out), and the by-name pattern the other closure verbs use
-  (`after_state_check`, `draw_while`, `for_each_card`: a hook name plus data,
-  resolved from the card's own chunk when the verb builds) needs a second design
-  pass with the batch that ports its card: the pair records cross the boundary as
-  data. Until then the Luau verb watches nothing and `during` still applies.
-  Stays in Rust: Classic+ #19.2 Jungle Loser (which also needs
-  `random_attack_targets`, bound).
+  bind since part 28 (#464 gap 9), by name with data, the `after_state_check`
+  pattern: `J.with_kill_credit({ killer = ..., pairs = "kill_pairs",
+  then = "kill_then", data = { ... }, during = { ... } })`. The named `pairs`
+  runs as `face[pairs](ctx, data)` and answers `{ victimId, toId }` records;
+  the named `then` runs as `face[then](pair, data)` (`crates/luau/tests/api.rs`,
+  `gap9_kill_credit_pairs_and_then_by_name`). The pair records cross the
+  boundary as data, so the Luau verb watches exactly what the Rust one does.
 
 ## Hooks: no gaps outside L14
 
@@ -78,8 +77,9 @@ declarations (`crates/luau/src/script.rs` reads them as data, `vm::HOOKS` and
   `J.query` for filtered defs, `ctx:def_by_index` for index lookups), but a bare
   "give me this id's def" has no Luau form; each batch judges per card whether
   the covers suffice.
-- `left_field_since_resolved` — core-041 Sheepish. Takes the trigger event; no
-  event-parameter reader is bound.
+- `left_field_since_resolved` — bound since part 28 (#464 gap 9) as
+  `ctx:left_field_since_resolved(event)`, taking the trigger's event
+  (`crates/luau/tests/api.rs`, `gap5_6_7_9_12_readers_events_config_chance_and_nil`).
 - `roll_weighted` — meditative-054. Deliberately unbound: its table is
   `&[RollOdds]` holding `&'static str`, which cannot cross without leaking, and
   every random draw goes through the state's rng (`J.query`/`J.pool`); a weighted
@@ -113,3 +113,97 @@ classic-057) or is a test script.
 - `CardQuery` (core-067) is `J.query`; `pool` (core-083) is `J.pool`;
   `TRAP_TYPES` is `J.TRAP_TYPES`; `luck_based` (meditative-101 Gachaholic) is
   `J.query({ luckBased = true })` (`CatalogQueryArgs.luck_based`, R1444).
+
+## Fixed in part 28 (#464): each gap's Luau form
+
+The batches held the cards named below back on these gaps; part 28 fixed each
+with a fixture test (`crates/luau/tests/api.rs`, `gap*`). Port onto these
+forms — `PORTING.md` §5's first reason no longer holds for them.
+
+1. **The empty-table round trip** (`crates/luau/src/numbers.rs`, `api/each.rs`;
+   `gap1_empty_tables_round_trip`). A Rust empty `Vec` crossing into Luau and
+   back, or a script answering `{}` for a list, arrives as a list: the walk
+   honours mlua's array metatable, and a `cards` function answering `{}` names
+   no cards instead of panicking. Example: `each_cards = function(ctx: J.EffectContext) if ctx:zone_count(me, "hand") > n then return {} end ... end`.
+2. **`for_each_card` with `data`** (`api/each.rs`; `gap2_for_each_card_data`).
+   The verb field `data` reaches the named `cards` and `each` functions as
+   their second argument, the way `after_state_check` passes it:
+   `J.for_each_card({ cards = "each_cards", each = "each_card", data = { amount = 2 } })`.
+   Example: `each_card = function(id: string, data: any) return { J.damage({ to = { of = "instance", instanceId = id }, amount = data.amount }) } end`.
+3. **One reader table on every context** (`reads.rs`, `shared_readers!`;
+   `gap3_shared_readers_on_condition_preview_and_cost`). The condition context,
+   the preview context, the replacement and hook-args contexts and `CostArgs`
+   carry every reader the effect context has. Example:
+   `conditionMet = function(ctx: J.ConditionContext) return ctx:played_earlier(ctx:controller(), ctx:self_()) > 0 end`.
+4. **The turn reader** (`ctx:turn()`; same test). Answers the turn number and
+   the active player as `{ number, active }`. Example: `local t = ctx:turn(); if t.number >= 7 and t.active == ctx:controller() then ... end`.
+5. **`given_lucky_on`** (`ctx:given_lucky_on(card)`;
+   `gap5_6_7_9_12_readers_events_config_chance_and_nil`). Granted-only Lucky
+   (R1438); takes an id string or an instance table. Example:
+   `if ctx:given_lucky_on(ctx:live_self()) > 0 then ... end`. `cargo jackioh
+   luau surface` counts a bare function name passed as a value, so
+   `map_or(0, given_lucky_on)` is reported.
+6. **The action's events reader** (`ctx:events()`; same test). This script's
+   own window onto the action's events (R136), `events[events_from..]`;
+   `ctx:events_from()` names its start. Example: `for _, e in ipairs(ctx:events()) do ... end`.
+7. **`J.config`** (`J.config.CHAIN_OF_THOUGHT_REPEATS`; same test). The engine's
+   config constants card scripts use, generated into `jackioh.luau` from the
+   same source as `engineConfig.ts`, so they cannot drift (CLAUDE.md rule 9).
+   Example: `repeats = J.config.CHAIN_OF_THOUGHT_REPEATS`.
+   A script needing a constant not listed there adds it to `CONFIG_I32`
+   (`crates/luau/src/config.rs`) — never a literal.
+8. **A generic aura** (`J.aura({ mod = ..., applies = ... })`, `api/aura.rs`;
+   `gap8_generic_aura_entries`). A stat `mod` and an `applies` filter declared
+   as data: either a `CardQuery`-shaped filter table, evaluated in Rust with no
+   Luau call per stat read, or a named `aura_filter` predicate called per
+   candidate unit. Example: `J.aura({ mod = { attack = 2 }, applies = { side = "self" } })`.
+   Hold it to L13 with `luau bench`; a card that breaks the budget stays Rust
+   (§5's third reason).
+9. **`left_field_since_resolved`** (`ctx:left_field_since_resolved(event)`);
+   **a self-snapshot `killer_of`** (`ctx:killer_of(id)` reads the hook's own
+   snapshot when the id names the running card — in a Death hook the live
+   instance is the reset graveyard card — and `ctx:killer_of_self()` always
+   does; `gap9_killer_of_self_reads_the_snapshot`); **`radiant_chance`** in an
+   integer unit (`J.radiant_chance({ zone = ..., chancePercent = 30 })`,
+   converted with `f64::from(percent) / 100.0`, the Rust literal's own
+   arithmetic, so the rng draw is identical); **`with_kill_credit`'s `pairs`
+   and `then`** by name with data (Verbs, above;
+   `gap9_kill_credit_pairs_and_then_by_name`). Examples:
+   `ctx:left_field_since_resolved(event)` (the trigger's event),
+   `ctx:killer_of_self()`,
+   `J.radiant_chance({ zone = "hand", chancePercent = 30 })`.
+10. **One adapter for one function under two hooks** (the loader shares one
+    `Arc`; `gap10_one_function_under_two_hooks_shares_its_adapter`). Write the
+    one local and name it twice in one face. Example:
+    `local function tick(ctx: J.EffectContext) ... end; base = { startOfTurn = tick, endOfTurn = tick }`.
+11. **The ungated typed-module check**: `crates/luau/tests/export_api.rs` runs
+    under the workspace's ordinary `cargo test` features, not only under
+    `jackioh-luau`'s own `ts` feature — `jackioh.luau` is reproduced by the
+    workspace test run.
+12. **Readers that answer `None` hand Luau `nil`**, not mlua's truthy `null`
+    (`reads.rs`, `to_lua`; same test as 5). Test an absent answer with
+    `== nil`, never `type(x) == "table"` (which stays false for `nil`, but a
+    bare truthiness check on the old `null` was true).
+13. **`ctx:data()`**, a `resume` entry's own data (§10.6). Example:
+    `local target = ctx:data().targetId`.
+14. **One adapter across both faces too** (the cache lives in `load_card`, so
+    both faces draw from it;
+    `gap14_one_function_across_both_faces_shares_its_adapter`,
+    `gap14_shared_hook_resolves_named_hooks_on_the_running_face`). Two faces'
+    hooks holding one function value — faces whose params differ — share one
+    `Arc`. The shared adapter serves each run from the RUNNING face's table,
+    so a named sub-hook resolves where the run runs (one `cry` with per-face
+    `each_card` fires each face's own), and `param` reads off `ctx` either
+    way. Example:
+    `local function death(ctx: J.EffectContext) ... end; return { base = { death = death }, radiant = { death = death } }`.
+    Two traps: Luau reuses one closure object for every evaluation of an
+    upvalue-free literal, so one factory called twice is one value — faces
+    that must keep their own adapters (`!ptr_eq`) spell their hooks out as
+    separate literals (or close over a per-face upvalue), as `core-t-coin`
+    does; and a shared hook with per-face named sub-hooks still shares the
+    adapter — only the named resolution follows the run.
+15. **`.luaurc`'s alias** (`crates/cards/src/scripts/.luaurc` maps `jackioh`
+    to `"../../luau/jackioh"`, no extension). luau-analyze 0.740 refuses the
+    extension as `Unknown require` under `--mode=strict`; without it the CLI
+    resolves the alias, so strict runs check the files in place — no copies
+    with a relative require.

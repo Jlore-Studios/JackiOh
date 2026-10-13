@@ -237,18 +237,33 @@ pub fn call_named_each(
         .collect()
 }
 
-/// Adapts a direct effect-list hook (`cry`, `death`, `start_of_turn`, etc.).
+/// Adapts a direct effect-list hook (`cry`, `death`, `start_of_turn`, etc.). One function value
+/// held by two hook keys — or by both faces (#464 gaps 10 and 14) — shares this one adapter:
+/// the run reads its function from the RUNNING face's table, so a named sub-hook resolves where
+/// the run runs, while `param` reads off `ctx` either way.
 pub fn adapt_hook(site: Site, bytecode: &'static [u8]) -> Hook {
     Arc::new(move |ctx: &mut EffectContext<'_>| {
-        match vm::with_vm(site, bytecode, |lua, face| {
-            let func = get_fn(&face, site.hook)?;
+        let running = if ctx.radiant {
+            crate::Face::Radiant
+        } else {
+            crate::Face::Base
+        };
+        // The run's site: the function and everything it names resolve on the running face.
+        // `with_vm` falls back to the base table when the module holds no table for the run
+        // (`radiant = "base"`).
+        let runtime = Site {
+            face: running,
+            ..site
+        };
+        match vm::with_vm(runtime, bytecode, |lua, face| {
+            let func = get_fn(&face, runtime.hook)?;
             lua.scope(|scope| {
                 let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
                 let returned: Value = func.call(ud)?;
-                to_calls(&returned, site)
+                to_calls(&returned, runtime)
             })
         }) {
-            Ok(calls) => build_effects(&calls, site, bytecode),
+            Ok(calls) => build_effects(&calls, runtime, bytecode),
             Err(err) => panic!("{err}"),
         }
     })
