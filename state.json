@@ -4131,6 +4131,13 @@
     "747": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T16:11:05Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 fails outright (new logic in crates/ai/src/), so easy is impossible; least-certain was line 9, since #636 and open PRs are unreachable from here, but the plan consumes only contracts already on main"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
