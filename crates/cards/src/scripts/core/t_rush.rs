@@ -13,15 +13,7 @@
 //! here: #95 summons this token's Radiant face, #58's aura and #75's flag are theirs, and a
 //! `statsOverride` is instance data (§10.1) that layer 1 reads first.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-t-rush";
-
-pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // T-rush Rush Token (SPEC §7; R11, R74; §3.2, §5.1, §10.4). BUILD M4-T4's token row: "Vanish on
 // leaving the field; … none in random pools". The radiant face is data only (R275: double the
@@ -161,7 +153,7 @@ mod tests {
             #[test]
             fn s7_needs_no_script_for_either_face_and_the_radiant_script_is_the_base_script_r74() {
                 crate::register_all();
-                let scripts = script();
+                let scripts = crate::scripts_of()[ID].clone();
                 assert!(is_empty_script(&scripts.base));
                 // The radiant face is the base Script itself, so it is empty too.
                 assert!(is_empty_script(&scripts.radiant));
