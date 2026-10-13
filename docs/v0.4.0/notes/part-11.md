@@ -1,8 +1,10 @@
 # v0.4.0 Part 11: cards to Luau, batch 3 (Classic Cry cards and Glitch)
 
-Notes for issue #453 (v0.4.0 part 11 of 29), built on `bot/issue-442` at `c65d6d55c` (parts 4–7
-landed, every Classic card still Rust). The procedure is `docs/v0.4.0/PORTING.md`; the parent
-(oracle) is a release `jackioh` built from that commit before any edit.
+Notes for issue #453 (v0.4.0 part 11 of 29), started on `bot/issue-442` at `c65d6d55c` (parts 4–7
+landed, every Classic card still Rust) and finished on `385516a75`, after parts 9, 12, 14 and 15
+had landed (none of them touches a card of this batch, `crates/luau` or `crates/engine`). The
+procedure is `docs/v0.4.0/PORTING.md`; the parent (oracle) is a release `jackioh` built from
+`385516a75`, where this batch's cards are still Rust, and section 5's proofs were run against it.
 
 ## 1. Ported: 20 of 25
 
@@ -69,7 +71,10 @@ Pestilent Slime's multiplier hook, so they do not wait on part 20.
   `Value::NULL` (light userdata), so `ctx:card_at(…) ~= nil` is true for an empty zone and indexing
   it fails. #71 tests `type(card) == "table"`.
 - **`api-gaps.md` does not list the three gaps of section 2**: no turn reader, no reader of the
-  run's events, and `for_each_card`'s named functions taking no data.
+  run's events, and `for_each_card`'s named functions taking no data. The batches landed beside
+  this one found the same four: part 9 keeps Core #35 Lunar Eclipse in Rust for the turn reader,
+  and part 12 keeps C+ #19 League of Losers for the empty list and C+ #23 Dropshipping for the
+  `each` data, and lists the missing events reader.
 - `card_at` binds only the units row (`ZoneRef { row: Units }`); #71 finds a backrow card through
   `permanents_on_field` (the same `card_at` walk) filtered by its zone.
 
@@ -90,19 +95,23 @@ Pestilent Slime's multiplier hook, so they do not wait on part 20.
 - **Glitch is proved by its own tests and the golden traces.** `luau diff --cards classic-t-glitch`
   refuses it ("no deckable card's refs name this token"): it reaches a hand only through R673's
   roll, never a creator's `refs`.
-- **The parent is this worktree's release build before the first edit**, copied out, rather than a
-  second worktree at the base: the same commit, one build fewer.
+- **The parent was rebuilt once the branch moved.** The first run's parent was this worktree's
+  release build at `c65d6d55c` before the first edit; after parts 9, 12, 14 and 15 were merged in
+  underneath this part, every proof of section 5 was run again against a parent built from
+  `385516a75` in a detached worktree (PORTING step 1), so the parent differs from this build by
+  this batch alone. Rejected: keeping the first parent, which would also differ by the other parts'
+  cards.
 
 ## 5. Proofs
 
-Machine: linux x86_64, 4 threads, AMD EPYC 9V74. Date: 2026-10-13.
+Machine: linux x86_64, 4 threads, AMD EPYC 9V45. Date: 2026-10-13. Parent: `385516a75`.
 
 - `cargo test -p jackioh-cards --lib -- <the 25 file stems>`: 321 passed, 0 failed.
 - `cargo test -p jackioh-cards`: 5,860 unit tests and 752 cross-card tests passed.
 - `cargo jackioh luau diff --parent-bin <parent> --cards classic-002,classic-003,classic-012,classic-016,classic-024,classic-025,classic-029,classic-031,classic-034,classic-037,classic-041,classic-067,classic-070,classic-071,classic-073,classic-076,classic-083,classic-085,classic-086`:
   200 games (seeds 1–200, 12,046 steps), 0 mismatches. As a check that the forced cards are
-  played, a build with Book of Knowledge drawing one too many diverged in 14 of 20 games; the card
-  was then restored.
+  played, the first run built Book of Knowledge drawing one too many and saw 14 of 20 games diverge
+  from its parent; the card was then restored.
 - `cargo jackioh golden check`: 240 of 240 games replayed identically (22,713 steps).
 - `cargo jackioh fuzz --seeds 200`: 200 passed, 0 panics, 0 replay mismatches, 0 invariant
   violations.
@@ -110,9 +119,9 @@ Machine: linux x86_64, 4 threads, AMD EPYC 9V74. Date: 2026-10-13.
 
   | Number | Parent | This build | Ratio |
   |---|---|---|---|
-  | `fuzz --seeds 200` | 8,965.475 ms | 9,029.844 ms | ×1.01 |
-  | Slowest decision | 235.368 ms | 235.901 ms | ×1.00 |
-  | Golden step | 1.487 ms | 1.502 ms | ×1.01 |
+  | `fuzz --seeds 200` | 7,085.287 ms | 6,906.936 ms | ×0.97 |
+  | Slowest decision | 245.571 ms | 247.857 ms | ×1.01 |
+  | Golden step | 1.189 ms | 1.170 ms | ×0.98 |
 
 - `cargo jackioh spec check`, `catalog check`, `patches check`: ok. `cargo fmt --check` and
   `cargo clippy --workspace --all-targets -- -D warnings`: clean.
@@ -122,8 +131,9 @@ Machine: linux x86_64, 4 threads, AMD EPYC 9V74. Date: 2026-10-13.
   7's notes report both on the base: surface reads `script()` out of the `.rs` files part 4
   emptied), and
   `acceptance::v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other` (part 4 made
-  `jackioh-luau` a dependency of `jackioh-cards`). `apps/web/src/wire/` is unchanged.
-- `luau-analyze --mode=strict`: not run. This box has no Luau toolchain and no network to fetch
-  one (`luau0-src` ships no Analysis library). The files follow PORTING §2 (annotated contexts,
+  `jackioh-luau` a dependency of `jackioh-cards`); parts 12 and 15 report the same three.
+  `apps/web/src/wire/` is unchanged.
+- `luau-analyze --mode=strict`: not run. Neither run's box had a `luau-analyze`, and the
+  `luau0-src` crate `mlua` builds from ships no Analysis library to build one from. The files follow PORTING §2 (annotated contexts,
   `ipairs` only, no `/`, a hoisted `J.TargetSpec` for `heal`'s union argument); the build's lint and
   compile pass on all twenty.
