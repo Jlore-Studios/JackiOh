@@ -5579,6 +5579,13 @@
     "805": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T23:19:33Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 6 fails: the only change this needs is in .github/workflows/ci.yml, which rules out easy; it is not engine or AI work, so it is not hard"
+      },
       "forced": false,
       "kind": "build",
       "pending_request": false,
