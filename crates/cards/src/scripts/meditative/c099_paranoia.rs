@@ -10,40 +10,7 @@
 //!           Cry: Draw {draw|card|cards}."
 //! Engine: ME-ALTPLAY permission for Spells (Radiant adds Echo), Cry draws.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-099";
-
-fn face_down_spells(radiant: bool) -> FaceDownPlayHook {
-    Arc::new(move |args| {
-        let mut permission = FaceDownPlayPermission {
-            spells: Some(true),
-            ..FaceDownPlayPermission::default()
-        };
-        if radiant {
-            permission.echo = Some(param(&args, "echo"));
-        }
-        vec![permission]
-    })
-}
-
-fn paranoia(radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let count = param(&*ctx, "draw");
-            vec![draw(json_as(json!({ "count": count })))]
-        })),
-        face_down_play: Some(face_down_spells(radiant)),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: paranoia(false),
-        radiant: paranoia(true),
-    }
-}
 
 // M #99 Paranoia — SPEC §8.8 row 99, BUILD M10 row M 99.
 #[cfg(test)]

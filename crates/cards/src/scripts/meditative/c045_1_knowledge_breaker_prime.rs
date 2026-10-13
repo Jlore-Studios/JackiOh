@@ -12,61 +12,7 @@
 //!           start of your next turn."
 //! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), then the Aura.
 
-use jackioh_engine::prelude::*;
-
-use crate::query::TRAP_TYPES;
-
 pub const ID: &str = "meditative-045-1";
-
-fn face_down_units() -> FaceDownPlayHook {
-    Arc::new(|_args| {
-        vec![FaceDownPlayPermission {
-            units: Some(true),
-            ..FaceDownPlayPermission::default()
-        }]
-    })
-}
-
-fn prime(radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let count = param(&*ctx, "traps");
-            let mut effects: Vec<Effect> = (0..count)
-                .map(|_| {
-                    let mut args = json!({
-                        "query": { "type": TRAP_TYPES },
-                        "player": "self",
-                    });
-                    if radiant {
-                        args["radiant"] = json!(true);
-                    }
-                    summon_random(json_as(args))
-                })
-                .collect();
-            let scope = json!({
-                "side": "any",
-                "rows": ["units", "backrow"],
-                "tags": ["CN", "KY"],
-                "excludeSelf": true,
-            });
-            if radiant {
-                effects.push(exile_all(json_as(scope)));
-            } else {
-                effects.push(destroy_all(json_as(scope)));
-            }
-            effects
-        })),
-        face_down_play: Some(face_down_units()),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: prime(false),
-        radiant: prime(true),
-    }
-}
 
 // M #45.1 Knowledge Breaker Prime — SPEC §8.8 row 45.1, BUILD M10 row M 45.1.
 #[cfg(test)]

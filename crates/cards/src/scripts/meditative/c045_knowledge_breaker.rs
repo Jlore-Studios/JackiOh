@@ -15,53 +15,7 @@
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
 //! - Aura: ME-ALTPLAY permission for Units while acting.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-045";
-
-const PRIME: &str = "meditative-045-1";
-
-fn face_down_units() -> FaceDownPlayHook {
-    Arc::new(|_args| {
-        vec![FaceDownPlayPermission {
-            units: Some(true),
-            ..FaceDownPlayPermission::default()
-        }]
-    })
-}
-
-fn breaker(radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let times = param(&*ctx, "times");
-            vec![degrade(json_as(json!({
-                "scope": {
-                    "side": "any",
-                    "zones": ["field", "hand", "library"],
-                    "tags": ["CN", "KY"],
-                    "excludeSelf": true,
-                },
-                "times": times,
-            })))]
-        })),
-        death: Some(hook(move |_ctx| {
-            vec![shuffle_into(json_as(json!({
-                "defId": PRIME,
-                "count": 1,
-                "radiant": radiant,
-            })))]
-        })),
-        face_down_play: Some(face_down_units()),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: breaker(false),
-        radiant: breaker(true),
-    }
-}
 
 // M #45 Knowledge Breaker — SPEC §8.8 row 45, BUILD M10 row M 45.
 #[cfg(test)]
