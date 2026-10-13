@@ -4024,8 +4024,16 @@
       "taken_asks": []
     },
     "761": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-442",
-      "part_of": 442
+      "part_of": 442,
+      "pending_request": false,
+      "queued_at": "2026-10-13T07:06:14Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     },
     "762": {
       "onto": "bot/issue-442",
