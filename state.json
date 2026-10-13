@@ -1007,6 +1007,7 @@
     "458": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -1020,11 +1021,14 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "c29e9490512bb2faf961cf03395357c5f769cb4c",
       "last_findings": [],
       "onto": "bot/issue-442",
+      "parked_on": "",
       "part_of": 442,
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-13T07:05:41Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
