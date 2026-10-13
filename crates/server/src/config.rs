@@ -931,7 +931,7 @@ pub struct BotStrength {
 /// `jackioh-server bot-calibrate` printed them: the reference (the strongest strength) at its anchor
 /// and every other strength at its measured offset from it (docs/bot-calibration.md). A new bot
 /// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-pub const BOT_SEED_RATINGS: [f64; 5] = [1052.0, 1130.0, 1182.0, 1137.0, 1200.0];
+pub const BOT_SEED_RATINGS: [f64; 5] = [1074.0, 1163.0, 1183.0, 1196.0, 1200.0];
 
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.

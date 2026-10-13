@@ -111,4 +111,64 @@ and the live ratings follow the AI.
 
 ## Results
 
-Not yet measured: the section is filled in by the first run of `bot-calibrate` on this branch.
+Run on 2026-10-13 at base commit `21cfe832a` with the code of this change, from the repo root:
+
+```sh
+cargo run --release -p jackioh-server -- bot-calibrate --games=100
+```
+
+(the default, `BOT_CALIBRATION_GAMES_PER_PAIR`), on 4 threads, in about 50 minutes. The anchor is the
+seed of record, 1200: `bot-calibrate-live` has not been run, since production has no rated games of the
+reference against people yet (it needs `LADDER_BOTS=on`). The report is the command's output, unedited,
+and its last two lines are what `config.rs` holds.
+
+Generation 9, seed `bot-calibration:gen9`, 100 games per pair, anchor 1200.0 (the seed of record 1200.0, no promotion since generation 9).
+
+Wins, draws and losses are the lower strength's.
+
+| Pair | Wins | Draws | Losses | Unfinished |
+| --- | ---: | ---: | ---: | ---: |
+| 0 v 1 | 36 | 0 | 63 | 1 |
+| 0 v 2 | 39 | 0 | 61 | 0 |
+| 0 v 3 | 29 | 0 | 71 | 0 |
+| 0 v 4 | 33 | 0 | 67 | 0 |
+| 1 v 2 | 50 | 0 | 50 | 0 |
+| 1 v 3 | 44 | 0 | 56 | 0 |
+| 1 v 4 | 42 | 0 | 58 | 0 |
+| 2 v 3 | 56 | 0 | 44 | 0 |
+| 2 v 4 | 47 | 0 | 53 | 0 |
+| 3 v 4 | 52 | 0 | 48 | 0 |
+
+| Strength | Offset | ± | Seed |
+| --- | ---: | ---: | ---: |
+| 0 | -126.1 | 18.2 | 1074.0 |
+| 1 | -37.0 | 17.5 | 1163.0 |
+| 2 | -16.9 | 17.5 | 1183.0 |
+| 3 | -4.2 | 17.6 | 1196.0 |
+| 4 (reference) | +0.0 | 0.0 | 1200.0 |
+
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+pub const BOT_SEED_RATINGS: [f64; 5] = [1074.0, 1163.0, 1183.0, 1196.0, 1200.0];
+pub const BOT_CALIBRATION_GENERATION: i64 = 9;
+
+Reading it:
+
+- The order is the strengths' own: every offset is at or below the reference's, and rises with the
+  strength. The three strongest are within one standard error or two of each other (-16.9, -4.2 and 0:
+  their softmax temperature and missed-lethal chance differ little), and the weakest is 126 Elo
+  below the reference. The seeds therefore span 1074 to 1200, not the 800 to 1200 the hand-set values
+  did: one search budget against another is a smaller gap than the guess.
+- Pair 0 v 1 has one unfinished game, a turn that went past `BOT_CALIBRATION_MAX_TURN_ACTIONS`.
+
+### Why 100 games, and the University loop
+
+A first run of 40 games per pair (20 minutes, before the turn limit existed) fitted offsets of -147.7,
+-69.8, -17.7, -62.9 and 0, each with an error of about 28 Elo: wider than the gap between three of the
+strengths, and strength 3 fitted below strength 2 (27-13 in their pair), which is noise. Those numbers
+were not kept. At 100 games the errors are about 18 and the order holds.
+
+The first attempt at 100 games hung. In game 66 of pair 0 v 1 a University (Meditative 97.6) Buffs
+itself, which raises its own "Activate N" limit, so the AI can activate it for ever and every step costs
+half as much again as the last. A live game ends such a turn with the acting clock (R79); a calibration
+game has none, hence the turn limit above. That a card can do this is an engine and card design question
+for a person: nothing here changes it.
