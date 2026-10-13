@@ -19,9 +19,10 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::baselines::{greedy_action, random_action};
-use crate::config::AI_BUDGET;
+use crate::config::{AI_BUDGET, AI_SKILL_MAX};
 use crate::decide::decide;
 use crate::observe::ai_to_act;
+use crate::skill::plays_best;
 use crate::types::{AiOptions, Decision, DecisionReason, SearchBudget};
 
 /// `AI_MATCH`'s shape (module-private in TS).
@@ -34,14 +35,18 @@ const AI_MATCH: AiMatch = AiMatch { max_actions: 3000 };
 /// play_ai_turn's ceiling on actions in one turn.
 const AI_TURN_MAX_ACTIONS: usize = 60;
 
-/// Who plays a seat: the AI (at a budget, AI_BUDGET when none is given), the greedy baseline or the
-/// random policy.
+/// Who plays a seat: the AI (at a budget, AI_BUDGET when none is given, and at a skill, full when
+/// none is given: R747000), the greedy baseline or the random policy.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SeatController {
     Ai {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         budget: Option<SearchBudget>,
+        /// R747000: the chance each decision follows the AI, the rest a random legal action
+        /// (`skill::plays_best`); `None` is `AI_SKILL_MAX`, which takes no extra draw.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        skill: Option<f64>,
     },
     Greedy,
     Random,
@@ -149,7 +154,13 @@ fn choose_for(
     rng: &mut Rng,
 ) -> ControllerChoice {
     match controller {
-        SeatController::Ai { budget } => {
+        SeatController::Ai { budget, skill } => {
+            if !plays_best(skill.unwrap_or(AI_SKILL_MAX), rng) {
+                return ControllerChoice {
+                    action: random_action(state, seat, rng),
+                    decision: None,
+                };
+            }
             let mut options = AiOptions {
                 rng: rng.clone(),
                 budget: budget.unwrap_or(AI_BUDGET),

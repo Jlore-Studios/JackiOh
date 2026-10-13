@@ -8,8 +8,13 @@
 //! start and answers a draw offer by the bot's own roll, reading where it stands through a
 //! determinized world (a face-down enemy card included) centred on the even board.
 //!
+//! R747000: the strength's skill is the chance each decision follows the AI, the rest a random legal
+//! action rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before
+//! the knob, and the table's seed ratings are what the skill-to-Elo curve gives their skills.
+//!
 //! `jackioh_server::bots::seat`, on the real cards.
 
+use jackioh_ai::{AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, decide_styled, plays_best, random_action};
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{
     Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
@@ -24,8 +29,9 @@ use jackioh_server::bots::seat::{
 use jackioh_server::bots::signals::{accepts_draw, concedes, standard_normal, standing};
 use jackioh_server::config::{
     BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS,
-    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, ConcedeFit,
-    DrawAnswerFit, THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
+    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength,
+    ConcedeFit, DrawAnswerFit, SKILL_ELO_ANCHOR, SKILL_ELO_TABLE, THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS,
+    ThinkTimeFit, ThinkTimePrior, expected_elo_for_skill,
 };
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
@@ -346,14 +352,23 @@ fn opened_at(seed: &str, turn: i32) -> GameState {
     state
 }
 
-/// The job the actor hands `seat::play` for `seat`'s move on `state`, its R639000 rolls on `seed`.
+/// The job the actor hands `seat::play` for `seat`'s move on `state`, its R639000 rolls on `seed`, at
+/// the weakest strength's search and style with full skill: the search always runs.
 fn job(state: &GameState, seat: PlayerId, seed: &str, own_turn_start: bool) -> BotJob {
+    job_at(state, seat, seed, own_turn_start, AI_SKILL_MAX)
+}
+
+/// `job` at `skill` (R747000), the weakest strength's search and style otherwise.
+fn job_at(state: &GameState, seat: PlayerId, seed: &str, own_turn_start: bool, skill: f64) -> BotJob {
     BotJob {
         state: state.clone(),
         seat,
         home: seat,
         seed: seed.to_string(),
-        strength: BOT_STRENGTHS[0],
+        strength: BotStrength {
+            skill,
+            ..BOT_STRENGTHS[0]
+        },
         speed: 1.0,
         ai_rng: Rng::new(&format!("{seed}:bot-ai:{seat}"), 0),
         timing_rng: Rng::new(&format!("{seed}:bot-timing:{seat}"), 0),
@@ -578,4 +593,149 @@ fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
     let trailing = standing(&losing, bot, "even", bot);
     assert!(trailing.behind > 0.0, "{trailing:?}");
     assert!(concedes("even", bot, losing.turn, &trailing, &any_deficit));
+}
+
+/// The AI stream `job_at` gives the bot on `seed`.
+fn ai_stream(seed: &str, seat: PlayerId) -> Rng {
+    Rng::new(&format!("{seed}:bot-ai:{seat}"), 0)
+}
+
+/// What the seat plays when its roll keeps the AI: `decide_styled` at the weakest strength's search
+/// and style, on `rng`, which the roll has already drawn from. The move and where the stream stands.
+fn ai_move(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<ActionBody>, u32) {
+    let strength = BOT_STRENGTHS[0];
+    let mut options = AiOptions {
+        rng,
+        budget: strength.budget,
+        should_stop: None,
+    };
+    let style = AiStyle {
+        temperature: strength.temperature,
+        missed_lethal_chance: strength.missed_lethal_chance,
+    };
+    let decision = decide_styled(state, seat, &mut options, &style);
+    (decision.map(|decision| decision.action), options.rng.cursor())
+}
+
+#[tokio::test(start_paused = true)]
+async fn r747000_bot_seat_applies_strength_skill() {
+    let state = opened_at("seed-skill", 1);
+    let bot = state.active;
+
+    // Skill 0.0 plays what the random policy plays on the bot's own stream, with no search and no
+    // roll drawn.
+    let seed = "skill-zero";
+    let mut stream = ai_stream(seed, bot);
+    let random = random_action(&state, bot, &mut stream);
+    let played = play(job_at(&state, bot, seed, false, AI_SKILL_MIN)).await;
+    assert!(random.is_some(), "PREMISE: the policy has a move");
+    assert_eq!(played.body, random);
+    assert_eq!(played.ai_cursor, stream.cursor());
+
+    // Skill 1.0 decides exactly as the search does, on a stream no roll was drawn from, and the same
+    // job reproduces.
+    let seed = "skill-full";
+    let (decided, cursor) = ai_move(&state, bot, ai_stream(seed, bot));
+    let first = play(job_at(&state, bot, seed, false, AI_SKILL_MAX)).await;
+    let second = play(job_at(&state, bot, seed, false, AI_SKILL_MAX)).await;
+    assert!(decided.is_some() && cursor > 0, "PREMISE: the search ran");
+    assert_eq!(first.body, decided);
+    assert_eq!(first.ai_cursor, cursor);
+    assert_eq!(second, first);
+
+    // In between, one roll of the stream says which: a decision it keeps from the AI searches on
+    // the stream after the roll, one it does not is the policy's on that stream.
+    for keeps in [false, true] {
+        let seed = seed_where("skill-roll", |seed| {
+            plays_best(0.5, &mut ai_stream(seed, bot)) == keeps
+        });
+        let mut stream = ai_stream(&seed, bot);
+        assert_eq!(plays_best(0.5, &mut stream), keeps);
+        assert_eq!(stream.cursor(), 1, "one draw a roll");
+        let (expected, cursor) = if keeps {
+            ai_move(&state, bot, stream)
+        } else {
+            let action = random_action(&state, bot, &mut stream);
+            (action, stream.cursor())
+        };
+        let played = play(job_at(&state, bot, &seed, false, 0.5)).await;
+        assert_eq!(played.body, expected, "{seed} keeps the AI: {keeps}");
+        assert_eq!(played.ai_cursor, cursor, "{seed} keeps the AI: {keeps}");
+        assert_eq!(play(job_at(&state, bot, &seed, false, 0.5)).await, played);
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r747000_a_random_bot_still_answers_a_draw_offer_by_its_own_roll() {
+    let mut state = opened_at("seed-skill-draw", 1);
+    let person = state.active;
+    let bot = person.opponent();
+    state.players[bot].hero.health = 1;
+    let offered = reduce(
+        &state,
+        &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
+    );
+    assert!(offered.error.is_none(), "{:?}", offered.error);
+    let state = offered.state;
+    // The random policy never answers an offer, so the seat declines as the search does and the
+    // bot's roll turns it into its answer (R639000), whatever the skill.
+    for accept in [true, false] {
+        let seed = seed_where("skill-draw", |seed| {
+            let standing = standing(&state, bot, seed, bot);
+            accepts_draw(seed, bot, state.turn, &standing, &BOT_DRAW_ANSWER_FIT) == accept
+        });
+        let played = play(job_at(&state, bot, &seed, false, AI_SKILL_MIN)).await;
+        assert_eq!(played.body, Some(ActionBody::AnswerDraw { accept }), "{seed}");
+        assert_eq!(played.ai_cursor, 0, "no search and no draw ran");
+    }
+}
+
+#[test]
+fn r747000_strength_seed_ratings_match_skill_curve() {
+    let mut last = None;
+    for (index, strength) in BOT_STRENGTHS.iter().enumerate() {
+        assert!(
+            (AI_SKILL_MIN..=AI_SKILL_MAX).contains(&strength.skill),
+            "strength {index}"
+        );
+        assert_eq!(
+            strength.seed_rating,
+            expected_elo_for_skill(strength.skill),
+            "strength {index}: its seed rating is the curve's at its skill"
+        );
+        // Weakest first: each strength is more skilled than the one before.
+        if let Some(before) = last {
+            assert!(strength.skill > before, "strength {index}");
+        }
+        last = Some(strength.skill);
+    }
+}
+
+#[test]
+fn r747000_expected_elo_reads_the_table_by_straight_lines() {
+    // The table spans the whole range, and a higher skill is never worth fewer points.
+    assert_eq!(SKILL_ELO_TABLE.first().map(|row| row.0), Some(AI_SKILL_MIN));
+    assert_eq!(SKILL_ELO_TABLE.last().map(|row| row.0), Some(AI_SKILL_MAX));
+    for pair in SKILL_ELO_TABLE.windows(2) {
+        assert!(pair[0].0 < pair[1].0, "{pair:?}: skills ascend");
+        assert!(
+            pair[0].1 < pair[1].1,
+            "{pair:?}: a higher skill is worth more Elo"
+        );
+    }
+    // A row is read as it is, the middle of two rows as their mean, an end as the end it is past.
+    for &(skill, elo) in SKILL_ELO_TABLE {
+        assert_eq!(expected_elo_for_skill(skill), elo);
+    }
+    for pair in SKILL_ELO_TABLE.windows(2) {
+        let middle = expected_elo_for_skill((pair[0].0 + pair[1].0) / 2.0);
+        assert!((middle - (pair[0].1 + pair[1].1) / 2.0).abs() < 1e-9, "{pair:?}");
+    }
+    // The reference, full skill, is the table's anchor.
+    assert_eq!(expected_elo_for_skill(AI_SKILL_MAX), SKILL_ELO_ANCHOR);
+    let (_, lowest) = SKILL_ELO_TABLE[0];
+    let (_, highest) = SKILL_ELO_TABLE[SKILL_ELO_TABLE.len() - 1];
+    assert_eq!(expected_elo_for_skill(-1.0), lowest);
+    assert_eq!(expected_elo_for_skill(2.0), highest);
+    assert_eq!(expected_elo_for_skill(f64::NAN), highest);
 }
