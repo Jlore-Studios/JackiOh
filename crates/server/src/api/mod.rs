@@ -5,6 +5,7 @@ pub mod auth;
 pub mod catalog;
 pub mod codes;
 pub mod collection;
+pub mod consent;
 pub mod cors;
 pub mod crypto;
 pub mod decks;

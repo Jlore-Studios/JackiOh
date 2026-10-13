@@ -70,7 +70,7 @@ use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
     MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
     PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
@@ -78,8 +78,9 @@ use crate::db::store::{
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
     RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
     SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
-    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -5254,6 +5255,105 @@ pub async fn player_stats_put(
     .bind(profile_id)
     .bind(json(stats)?)
     .bind(is_private)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Consent on the account (R757000, R757001, migration 0034). No `app.*` function: each table's
+// one rule is "the first row stands", which its primary key and `on conflict do nothing` say.
+// ---------------------------------------------------------------------------
+
+pub async fn consent_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<ConsentRow, StoreError> {
+    let mut consent = ConsentRow {
+        profile_id: profile_id.to_string(),
+        age_checked_at: None,
+        age_min: None,
+        terms: Vec::new(),
+    };
+    if !is_uuid(profile_id) {
+        return Ok(consent);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let age = sqlx::query("select min_age, passed_at from public.age_checks where profile_id = $1::uuid")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    if let Some(row) = age {
+        consent.age_min = Some(i32::from(get::<i16>(&row, "min_age")?));
+        consent.age_checked_at = Some(ms_of(get(&row, "passed_at")?));
+    }
+    let rows = sqlx::query(
+        "select terms_version, source, accepted_at from public.terms_acceptances
+          where profile_id = $1::uuid
+          order by accepted_at, terms_version",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in rows {
+        consent.terms.push(TermsAcceptanceRow {
+            version: get(&row, "terms_version")?,
+            source: get::<String>(&row, "source")?.parse::<TermsSource>()?,
+            accepted_at: ms_of(get(&row, "accepted_at")?),
+        });
+    }
+    Ok(consent)
+}
+
+pub async fn consent_record_age(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    min_age: i32,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    let min_age = i16::try_from(min_age).map_err(|_| StoreError::Other(format!("min_age {min_age}")))?;
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.age_checks (profile_id, min_age, passed_at)
+         values ($1::uuid, $2::smallint, ",
+        ts!("$3"),
+        ")
+         on conflict (profile_id) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(min_age)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn consent_record_terms(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    version: &str,
+    source: TermsSource,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.terms_acceptances (profile_id, terms_version, source, accepted_at)
+         values ($1::uuid, $2::text, $3::text, ",
+        ts!("$4"),
+        ")
+         on conflict (profile_id, terms_version) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(version)
+    .bind(source.as_str())
     .bind(at)
     .execute(&mut **t)
     .await
