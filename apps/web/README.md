@@ -416,9 +416,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `wasm32-unknown-unknown` target and downloads the pinned `wasm-bindgen` CLI only when they are
   missing, and cargo rebuilds only what changed. The package's `pre` scripts run it, so `dev`,
   `build`, `build:e2e` and `test` always load a fresh module.
-- `src/wasm/index.ts` is the module's only caller. `main.tsx` awaits `loadWasm()` before the first
-  render (the deck builder calls the validator synchronously), the practice worker before its first
-  message, and `test/setup.ts` loads it synchronously for jsdom.
+- `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
+  `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
+  calls the validator synchronously), the practice worker awaits it before its first message, and
+  `test/setup.ts` loads it synchronously for jsdom.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
