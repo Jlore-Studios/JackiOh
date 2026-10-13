@@ -153,6 +153,7 @@ const STATUSES: readonly StatusTermId[] = [
   "Can't be attacked",
   "Only Units in this lane can attack this",
   "Berserk",
+  "Combat keyword",
 ];
 
 const VERBS_6_3: readonly VerbTermId[] = [
@@ -262,6 +263,21 @@ describe("B10: tokenizeRules and termsIn", () => {
       ["§6.1", "Can attack twice each turn"],
       ["§6.1", "Discarded from its owner's hand at the end of their turn"],
     ]);
+  });
+
+  it("R781005 combat keywords are a term the cards that draw them print, its entry listing the eighteen", () => {
+    expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
+      { text: "Aura:", term: "Aura" },
+      { text: "combat keywords", term: "Combat keyword" },
+    ]);
+    expect(termsOf("Give a Unit +3/+3 and 1 random combat keyword.")).toEqual([
+      { text: "combat keyword", term: "Combat keyword" },
+    ]);
+    const entry = GLOSSARY["Combat keyword"];
+    expect(entry.section).toBe("§6.1");
+    for (const word of ["Taunt", "Flying", "Ranged", "Indestructible", "Spell Damage +1", "Trample"]) {
+      expect(entry.rule).toContain(word);
+    }
   });
 
   it("R781001 R781003 Immutable and Vanilla read the rules the SPEC rows give", () => {
@@ -590,6 +606,9 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
         expect(entry.aliases, key).toEqual(["hand size"]);
       } else if (key === "Mark in a hand") {
         expect(entry.aliases, key).toEqual(["Mark"]);
+      } else if (key === "Combat keyword") {
+        // R781005: the cards print it lower-case, in the singular and the plural.
+        expect(entry.aliases, key).toEqual(["combat keywords", "combat keyword"]);
       } else {
         expect(entry.aliases, key).toEqual([]);
       }

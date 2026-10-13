@@ -38,10 +38,15 @@ pub struct BuffAmount {
     pub health: Option<i32>,
 }
 
-/// R21's pool is written as text in config; "Armor 1" is its one numbered entry (§6.1).
+/// R21's pool is written as text in config; "Armor 1" and "Spell Damage 1" are its numbered entries
+/// (§6.1, R781005).
 const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Taunt", Keyword::Taunt),
     ("Armor 1", Keyword::Armor { n: 1 }),
+    ("Flying", Keyword::Flying),
+    ("Ranged", Keyword::Ranged),
+    ("Indestructible", Keyword::Indestructible),
+    ("Spell Damage 1", Keyword::SpellDamage { n: 1 }),
     ("Rush", Keyword::Rush),
     ("Charge", Keyword::Charge),
     ("First Strike", Keyword::FirstStrike),

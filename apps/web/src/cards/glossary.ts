@@ -100,7 +100,8 @@ export type StatusTermId =
   | "Can't be in Defense Position"
   | "Can't be attacked"
   | "Only Units in this lane can attack this"
-  | "Berserk";
+  | "Berserk"
+  | "Combat keyword";
 export type GlossaryTermId = KeywordKind | StatusTermId | TriggerTermId | VerbTermId;
 export type GlossaryEntry = {
   id: GlossaryTermId;
@@ -221,6 +222,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "An attack on it is legal only from the enemy unit zone of its own lane",
   ),
   Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
+  // Patch v0.3.X (R781005): the pool's name, printed lower-case ("random combat keywords").
+  "Combat keyword": status(
+    "Combat keyword",
+    "One of the keywords Units fight with: Taunt, Armor 1, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Spell Damage +1, Lifesteal, Pierce, Trample",
+    { aliases: ["combat keywords", "combat keyword"] },
+  ),
 
   // §6.2 Triggers and timing words
   // §6.2's ruling, not its Rule column, and short (R500; see the header).

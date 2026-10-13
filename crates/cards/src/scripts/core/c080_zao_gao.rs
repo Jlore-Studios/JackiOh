@@ -83,12 +83,11 @@ mod tests {
     const DISCARDABLE: [&str; 3] = ["core-001", "core-002", "core-003"];
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
-    /// R21's pool as keyword KINDS; "Armor 1" is its one numbered entry (§6.1).
+    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1, R781005).
     fn pool_kinds() -> IndexSet<String> {
-        RANDOM_KEYWORD_POOL
+        random_pool_keywords()
             .iter()
-            .map(|entry| if *entry == "Armor 1" { "Armor" } else { *entry })
-            .map(str::to_string)
+            .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
     }
 
@@ -115,8 +114,17 @@ mod tests {
         }
         // R21: "no repeats on one unit".
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len(), "{kinds:?}");
-        let granted: Vec<&String> = kinds.iter().filter(|kind| !printed.contains(&kind.as_str())).collect();
-        assert_eq!(granted.len(), count, "{kinds:?}");
+        // The keywords it was given: an Indestructible one has no Taunt to show (R347, R781004), so the
+        // grant is read off the card, not off its acting set.
+        let given: Vec<String> = s
+            .unit(P1, lane)
+            .expect("a token in that lane")
+            .granted_keywords
+            .iter()
+            .map(|keyword| keyword.kind().as_str().to_string())
+            .collect();
+        let granted: Vec<&String> = given.iter().filter(|kind| !printed.contains(&kind.as_str())).collect();
+        assert_eq!(granted.len(), count, "{given:?}");
         let pool = pool_kinds();
         for kind in &granted {
             assert!(pool.contains(*kind), "{kind} is not in the pool");

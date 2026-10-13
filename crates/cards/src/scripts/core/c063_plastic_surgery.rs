@@ -68,6 +68,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::reduce::legal_actions;
     use jackioh_engine::resolve::cast_card;
+    use jackioh_engine::effects::random_pool_keywords;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -77,13 +78,10 @@ mod tests {
     const TIMMY: &str = "core-011"; // 3/3 with Rush and First Strike, both in the pool
     const MENACE: &str = "core-019"; // 9/9 with Taunt, in the pool
 
-    /// R21's pool as keyword KINDS: "Armor 1" is its one numbered entry (§6.1). Read from
-    /// `RANDOM_KEYWORD_POOL`, so this test never restates the eleven keywords (SPEC §6.1).
+    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1). Read from the
+    /// engine's pool, so this test never restates the keywords (SPEC §6.1, R781005).
     fn pool_kinds() -> Vec<&'static str> {
-        RANDOM_KEYWORD_POOL
-            .iter()
-            .map(|entry| if *entry == "Armor 1" { "Armor" } else { *entry })
-            .collect()
+        random_pool_keywords().iter().map(|keyword| keyword.kind().as_str()).collect()
     }
 
     fn sel(card: &CardInstance) -> Value {

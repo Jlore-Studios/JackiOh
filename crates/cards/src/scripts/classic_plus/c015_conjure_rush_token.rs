@@ -66,8 +66,9 @@ mod tests {
 
     /// The keywords a token gained beyond its printed Rush, as R21's pool writes them.
     fn gained(s: &Scenario, token: &str) -> Vec<String> {
-        s.stats(token)
-            .keywords
+        // Read off the card's grants, since an Indestructible one shows no Taunt (R347, R781004).
+        s.card(token)
+            .granted_keywords
             .iter()
             .map(keyword_key)
             .filter(|key| key != "Rush")
