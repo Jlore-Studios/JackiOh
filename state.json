@@ -9195,14 +9195,18 @@
         {
           "at": "2026-10-13T08:30:18Z",
           "minutes": 61.1
+        },
+        {
+          "at": "2026-10-13T10:06:26Z",
+          "minutes": 94.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-13T11:50:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
-        "observed_at": "2026-10-13T08:30:18Z",
+        "observed_at": "2026-10-13T10:06:26Z",
         "seven_day": {
           "resets_at": "2026-10-19T00:00:00Z",
           "utilization": 0.0
