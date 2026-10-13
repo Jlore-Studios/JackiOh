@@ -9463,17 +9463,21 @@
         {
           "at": "2026-10-13T11:44:33Z",
           "minutes": 51.2
+        },
+        {
+          "at": "2026-10-13T12:46:40Z",
+          "minutes": 58.1
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-13T11:50:00Z",
-          "utilization": 0.02
+          "resets_at": "2026-10-13T16:50:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-10-13T11:44:33Z",
+        "observed_at": "2026-10-13T12:46:40Z",
         "seven_day": {
           "resets_at": "2026-10-19T00:00:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
         "status": "allowed"
       }
