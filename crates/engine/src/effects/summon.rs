@@ -229,6 +229,8 @@ fn summon_onto(
         arrived_during: None,
         exits_from: None,
     });
+    // R783010: a Crater Unit Locks the zone it was summoned into, before its Cry.
+    crate::crater::lock_on_arrival(ctx, &placed.id);
     // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
     // turn, animates as it enters the field.
     animate_on_entry(ctx, &placed);

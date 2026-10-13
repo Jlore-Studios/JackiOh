@@ -104,7 +104,9 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
     // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing at all —
     // no hit on the defender and so no Cleave either — so nothing of it can reach the hero. R783000: a
     // Ranged attacker takes no strike back from a defender that is not, so it never falls there.
-    if crate::combat::takes_strike_back(state, attacker, defender) && falls_to_first_strike(state, attacker, defender) {
+    if crate::combat::takes_strike_back(state, attacker, defender)
+        && falls_to_first_strike(state, attacker, defender)
+    {
         return 0;
     }
     let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);

@@ -61,7 +61,12 @@
     "Temporary": "临时",
     "Deft": "灵巧",
     "Untributable": "不可献祭",
-    "Magnetic": "磁力"
+    "Magnetic": "磁力",
+    "Ranged": "远程",
+    "Flying": "飞行",
+    "Cloaked": "隐匿",
+    "Crater": "陨坑",
+    "Flashback": "闪回"
   },
   "labels": {
     "Cry:": "战吼：",
@@ -108,6 +113,11 @@
     "Deft": { "label": "灵巧", "rule": "可以在同一回合内攻击并切换表示形式" },
     "Untributable": { "label": "不可献祭", "rule": "无法被献祭" },
     "Magnetic": { "label": "磁力", "rule": "可以将它置于你的一个单位上，在结算后与该单位融合，保留该单位" },
+    "Ranged": { "label": "远程", "rule": "攻击时不会受到反击伤害，除非防守方也具有远程" },
+    "Flying": { "label": "飞行", "rule": "只有具有飞行或远程的单位才能攻击它，除非它处于守备表示" },
+    "Cloaked": { "label": "隐匿", "rule": "可以作为陷阱背面打出。激活：揭示" },
+    "Crater": { "label": "陨坑", "rule": "作为单位进入场上时，或作为陷阱被揭示时，锁定其所在区域" },
+    "Flashback": { "label": "闪回", "rule": "可以从你的墓地以其法力值消耗打出一次" },
     "Can't be in Defense Position": { "label": "无法成为守备表示", "rule": "永远不会切换为守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },

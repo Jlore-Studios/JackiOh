@@ -158,7 +158,9 @@ pub fn attack_restriction(
         }
     }
     if flies_out_of_reach(state, attacker, defender) {
-        return Err(EngineError::new("only a Flying or Ranged unit may attack that unit"));
+        return Err(EngineError::new(
+            "only a Flying or Ranged unit may attack that unit",
+        ));
     }
     Ok(())
 }

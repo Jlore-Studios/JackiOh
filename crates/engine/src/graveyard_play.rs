@@ -8,6 +8,10 @@
 //! Classic #90 In Too Deep's reward L (an aura of the same permission while the card stands). Each is
 //! `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
 //!
+//! Flashback (#783, R783012, R783013) is the one permission a card grants itself: a card with it in its
+//! owner's graveyard may be played from there, any type at any price, paid in mana. The play that only
+//! Flashback allows spends it (`spends_flashback`, `CardInstance.flashback_spent`), for good.
+//!
 //! Everything else is a play's: the card leaves the graveyard at §10.5 step 4 as a hand card leaves
 //! the hand (`play_steps::take_from_play_source`), its choices are checked and offered as a hand card's
 //! are (R81, R90), R65's player prices reach it (`mana::play_cost`), it counts as played and its Cry
@@ -24,7 +28,7 @@ use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
 use crate::script::EngineSink;
 use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
-use crate::wire::{CardType, CounterKind, GameEvent, PlayerId, Row, Zone};
+use crate::wire::{CardType, CounterKind, GameEvent, KeywordKind, PlayerId, Row, Zone};
 
 /// The Plague Counters a play from the graveyard spends: the play action's `plague` (part 1 put the
 /// type in the wire, where the action names it).
@@ -88,13 +92,39 @@ pub fn in_own_graveyard(state: &GameState, player: PlayerId, card: &CardInstance
             .any(|held| held.id == card.id)
 }
 
-/// The grants that admit this card at all: the right type (Units only, or every type).
-fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<GraveyardGrant> {
+/// R783012: whether the card has Flashback where it is now, read through the layers (§10.4) — gone once
+/// it is spent (R783013).
+pub fn has_flashback(state: &GameState, card: &CardInstance) -> bool {
+    crate::layers::unit_has(state, card, KeywordKind::Flashback)
+}
+
+/// The field's grants that admit this card at all: the right type (Units only, or every type).
+fn field_admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<GraveyardGrant> {
     let unit = crate::faces::card_type_of(state, card) == CardType::Unit;
     graveyard_grants_of(state, player)
         .into_iter()
         .filter(|grant| grant.permission.units != Some(true) || unit)
         .collect()
+}
+
+/// The grants that admit this card at all: the field's, then (R783012) its own Flashback, which admits
+/// any type at any price, paid in mana.
+fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<GraveyardGrant> {
+    let mut out = field_admitting(state, player, card);
+    if has_flashback(state, card) {
+        out.push(GraveyardGrant {
+            source: card.clone(),
+            permission: GraveyardPlayPermission::default(),
+        });
+    }
+    out
+}
+
+/// R783013: whether a play of this card from its player's graveyard now is Flashback's — the card has
+/// it and no permission on the field admits the card — so the play spends it. A play another permission
+/// allows spends no Flashback.
+pub fn spends_flashback(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    has_flashback(state, card) && field_admitting(state, player, card).is_empty()
 }
 
 /// R454, R65: whether a play may take this card from its player's graveyard now — the card lies there

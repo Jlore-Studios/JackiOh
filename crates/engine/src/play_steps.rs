@@ -428,6 +428,10 @@ pub struct PlayRun {
     /// E11, R454: the Plague Counters paying part of the price (`costPaid` is the whole price).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plague: Option<PlagueSpend>,
+    /// R783013: the play from the graveyard is the card's own Flashback's, which step 4 spends as the
+    /// card leaves the graveyard (`take_from_play_source`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flashback: Option<bool>,
     /// E12, R452: a random cast — every choice its caster would make is made at random.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random: Option<bool>,
@@ -525,6 +529,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         lost: None,
         source: None,
         plague: None,
+        flashback: None,
         random: None,
         target_enemies: None,
         fizzled: None,
@@ -797,6 +802,11 @@ pub fn validate_play(
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
+        // R783013: a play only the card's own Flashback allows spends it, read here as the play is
+        // checked — a Tribute at step 2 may take the permission that allowed it off the field.
+        if crate::graveyard_play::spends_flashback(state, player, &card) {
+            run.flashback = Some(true);
+        }
     }
     if let Some(plague) = &action.plague {
         run.plague = Some(PlagueSpend {
@@ -1720,6 +1730,8 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    // R783010: a Crater Unit Locks the zone it was played into, before its Cry.
+    crate::crater::lock_on_arrival(sink, &card.id);
     if placed
         && let Some(times) = landing_buffs
         && times > 0
@@ -1774,6 +1786,10 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         // R155: §5.1's end-of-turn return belongs to the Spell its own play landed in the graveyard
         // (§10.5 step 7). A card that leaves the graveyard has spent that landing (`zones`' removal).
         card.return_to_hand_at_end_of_turn = None;
+        // R783013: a play by its Flashback spends it as the card leaves the graveyard.
+        if run.flashback == Some(true) {
+            card.flashback_spent = Some(true);
+        }
         return true;
     }
     let side = &mut state.players[run.player];

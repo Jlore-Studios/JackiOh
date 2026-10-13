@@ -89,9 +89,9 @@ mod tests {
                 // Every engine keyword kind plus Magnetic, leaving out Can't attack, Brittle,
                 // Temporary and Untributable (which only hurt, R1220), Animated and Animated on
                 // your turn (a backrow meaning only), and Immune to tribal tag based hate (R940),
-                // a keyword the 21 do not name: a later keyword joins only by a patch (R1084). The
-                // print order is the brief's, not the enum's, so the whole-set comparison is
-                // order-insensitive.
+                // a keyword the 21 do not name: a later keyword joins only by a patch (R1084), as
+                // #783's five, which no card prints until #781's part 2, have not. The print order is
+                // the brief's, not the enum's, so the whole-set comparison is order-insensitive.
                 let excluded = [
                     KeywordKind::CantAttack,
                     KeywordKind::Brittle,
@@ -100,6 +100,11 @@ mod tests {
                     KeywordKind::Animated,
                     KeywordKind::AnimatedOnYourTurn,
                     KeywordKind::ImmuneToTribalHate,
+                    KeywordKind::Ranged,
+                    KeywordKind::Flying,
+                    KeywordKind::Cloaked,
+                    KeywordKind::Crater,
+                    KeywordKind::Flashback,
                 ];
                 let expected: Vec<KeywordKind> = KEYWORD_KINDS
                     .iter()

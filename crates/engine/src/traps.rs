@@ -309,7 +309,8 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     }
     // R783006: a Field Spell set by its Cloaked has revealed where it stands, and is its own card again.
     if card.set_as.is_some()
-        && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant) == crate::wire::CardType::FieldSpell
+        && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant)
+            == crate::wire::CardType::FieldSpell
     {
         if let Some(live) = find_instance_mut(sink.state, &instance.id) {
             live.set_as = None;

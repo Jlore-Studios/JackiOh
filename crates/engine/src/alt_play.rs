@@ -19,7 +19,9 @@
 
 use crate::script::{CostAuraArgs, Effect, EngineSink, FaceDownPlayPermission, HookArgs, TriggerDef};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
-use crate::wire::{CardType, GameEvent, GameEventType, KeywordKind, PlayerId, RevealAt, Row, Zone, ZoneChoice};
+use crate::wire::{
+    CardType, GameEvent, GameEventType, KeywordKind, PlayerId, RevealAt, Row, Zone, ZoneChoice,
+};
 
 /// What a side grants now: whether Units and Spells may be set, and the Echo a Radiant Paranoia adds.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -92,6 +94,65 @@ pub fn is_cloaked(state: &GameState, card: &CardInstance) -> bool {
 pub fn is_cloaked_set(card: &CardInstance) -> bool {
     card.set_as
         .is_some_and(|set| set.reveal == RevealAt::Cloaked && set.revealing != Some(true))
+}
+
+/// R783009: every catalog definition that prints Cloaked on a face that is not a Trap or a Field
+/// Trap, in catalog order (`catalog::query`) — what a hidden backrow card may be, set by its Cloaked,
+/// whatever the board shows.
+pub fn printed_cloaked_def_ids() -> Vec<String> {
+    crate::catalog::query(&crate::catalog::CatalogQueryArgs::default())
+        .into_iter()
+        .filter(|def| {
+            [&def.base, &def.radiant].into_iter().any(|face| {
+                !matches!(
+                    face.type_.unwrap_or(def.type_),
+                    CardType::Trap | CardType::FieldTrap
+                ) && crate::wire::has_keyword(&face.keywords, KeywordKind::Cloaked)
+            })
+        })
+        .map(|def| def.id.clone())
+        .collect()
+}
+
+/// R783007, R783009: every catalog definition an aura on the field lends Cloaked to in this player's
+/// hand now, in catalog order — probed as a fresh card of it there, and only while some aura's entry
+/// carries Cloaked at all, so a board with none costs one walk of its auras.
+pub fn lent_cloaked_def_ids(state: &GameState, player: PlayerId) -> Vec<String> {
+    let lends =
+        crate::layers::aura_sources(state).into_iter().any(|source| {
+            !source.vanilla
+                && crate::scripts::script_of(state, source)
+                    .aura
+                    .as_ref()
+                    .is_some_and(|aura| {
+                        aura(HookArgs {
+                            state,
+                            self_: source,
+                            radiant: source.radiant,
+                        })
+                        .iter()
+                        .any(|entry| {
+                            entry.mod_.keywords.as_ref().is_some_and(|keywords| {
+                                crate::wire::has_keyword(keywords, KeywordKind::Cloaked)
+                            })
+                        })
+                    })
+        });
+    if !lends {
+        return Vec::new();
+    }
+    let mut next_id = state.next_id;
+    crate::catalog::query(&crate::catalog::CatalogQueryArgs::default())
+        .into_iter()
+        .filter(|def| {
+            let probe = crate::state::new_instance(&mut next_id, &def.id, player, Zone::Hand { player });
+            !matches!(
+                crate::faces::card_type_of_face(state, &def.id, false),
+                CardType::Trap | CardType::FieldTrap
+            ) && is_cloaked(state, &probe)
+        })
+        .map(|def| def.id.clone())
+        .collect()
 }
 
 /// ME-ALTPLAY: what a permission lets this card be set as, or `None`.
@@ -253,7 +314,8 @@ pub fn reveal_can_complete(state: &GameState, card: &CardInstance) -> bool {
             crate::play_choices::declared_targets(state, &probe)
                 .iter()
                 .all(|decl| {
-                    let offered = crate::play_choices::legal_selections_for(state, card.controller, &probe, decl);
+                    let offered =
+                        crate::play_choices::legal_selections_for(state, card.controller, &probe, decl);
                     !crate::play_choices::unmet_requirement(decl, offered.len())
                 })
         }

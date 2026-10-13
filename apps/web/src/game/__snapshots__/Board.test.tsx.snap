@@ -1996,11 +1996,51 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   MG
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Ranged"
+                  title="Ranged"
+                >
+                  RG
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Flying"
+                  title="Flying"
+                >
+                  FL
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Cloaked"
+                  title="Cloaked"
+                >
+                  CK
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Crater"
+                  title="Crater"
+                >
+                  CR
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Flashback"
+                  title="Flashback"
+                >
+                  FB
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Immune to tribal tag based hate, Windfury, Temporary, Deft, Untributable, Magnetic"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Immune to tribal tag based hate, Windfury, Temporary, Deft, Untributable, Magnetic, Ranged, Flying, Cloaked, Crater, Flashback"
                 >
                   +
-                  23
+                  28
                 </span>
               </span>
               <span

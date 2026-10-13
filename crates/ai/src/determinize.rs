@@ -149,12 +149,14 @@ fn slot_card_mut(state: &mut GameState, side: PlayerId, slot: TrapSlot) -> Optio
 
 /// ME-ALTPLAY, R1046: stamp a sampled Unit or Spell as a set card — a Unit at the start of the
 /// next turn, a Spell at a uniformly sampled timing. With no permission nothing is stamped and no
-/// extra rng draw happens.
+/// extra rng draw happens. R783009: a sampled card the permissions do not cover that may be set by its
+/// Cloaked (`cloakable`) is stamped `cloaked`, with no rng draw.
 fn stamp_sampled_set_as(
     state: &mut GameState,
     side: PlayerId,
     slot: TrapSlot,
     grants: &jackioh_engine::alt_play::FaceDownGrant,
+    cloakable: &[String],
     set_turn: i32,
     rng: &mut Rng,
 ) {
@@ -166,11 +168,14 @@ fn stamp_sampled_set_as(
     };
     let is_unit = def.type_ == CardType::Unit && grants.units;
     let is_spell = def.type_ == CardType::Spell && grants.spells;
-    if !is_unit && !is_spell {
+    let cloaked = !is_unit && !is_spell && cloakable.contains(&def_id);
+    if !is_unit && !is_spell && !cloaked {
         return;
     }
-    // D4: a sampled Spell's timing is uniform; a Unit needs no draw.
-    let reveal = if is_unit {
+    // D4: a sampled Spell's timing is uniform; a Unit needs no draw, nor a Cloaked card (R783009).
+    let reveal = if cloaked {
+        RevealAt::Cloaked
+    } else if is_unit {
         RevealAt::StartOfNextTurn
     } else {
         RevealAt::ALL[rng.int(3) as usize]
@@ -317,10 +322,19 @@ pub fn determinize(
         shown: &shown,
         match_shown_cost: options.match_shown_cost.unwrap_or(true),
     };
+    // R783009: a hidden backrow card may also be a card set by its Cloaked — one that prints it, or one
+    // an aura lends it to in that side's hand now.
+    let printed_cloaked = jackioh_engine::alt_play::printed_cloaked_def_ids();
     for side in [opp, seat] {
         // ME-ALTPLAY, R1046: while a face-down permission acts, a hidden backrow card may be a set
         // Unit or Spell, so that side's pool widens by the Unit and Spell pools.
         let grants = jackioh_engine::alt_play::grants_of(&next, side);
+        let mut cloakable = printed_cloaked.clone();
+        for id in jackioh_engine::alt_play::lent_cloaked_def_ids(&next, side) {
+            if !cloakable.contains(&id) {
+                cloakable.push(id);
+            }
+        }
         let mut pool = trap_pool.clone();
         if grants.units {
             pool.extend(query_ids(json!({ "type": ["Unit"] })));
@@ -328,7 +342,12 @@ pub fn determinize(
         if grants.spells {
             pool.extend(query_ids(json!({ "type": ["Spell"] })));
         }
-        let sampler = if grants.units || grants.spells {
+        for id in &cloakable {
+            if !pool.contains(id) {
+                pool.push(id.clone());
+            }
+        }
+        let sampler = if grants.units || grants.spells || !cloakable.is_empty() {
             TrapSampler {
                 trap_pool: &pool,
                 aura_traps: &aura_traps,
@@ -364,7 +383,7 @@ pub fn determinize(
             };
             let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, &seen, &mut sampled, rng);
             set_slot_def(&mut next, side, slot, &def_id);
-            stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
+            stamp_sampled_set_as(&mut next, side, slot, &grants, &cloakable, set_turn, rng);
         }
         // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
         for at in 0..next.players[side].resolving.len() {
@@ -379,7 +398,7 @@ pub fn determinize(
             if slot_card(&next, side, slot).is_some_and(is_placeholder) {
                 let def_id = sampler.trap_for(&mut next, side, slot, None, &seen, &mut sampled, rng);
                 set_slot_def(&mut next, side, slot, &def_id);
-                stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
+                stamp_sampled_set_as(&mut next, side, slot, &grants, &cloakable, set_turn, rng);
             }
         }
     }
