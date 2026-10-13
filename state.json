@@ -5180,6 +5180,8 @@
     "790": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
+      "failures": 0,
       "kind": "review",
       "pending_request": false,
       "provider": "claude-7",
