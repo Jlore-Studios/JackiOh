@@ -2046,8 +2046,9 @@ class Deliverer:
             if not title or not body:
                 continue
             footer = (f"\n\n---\nSuggested by @{self.cfg.bot_login} while the queue was empty. "
-                      f"Add the `{LABEL_BUILD}` label to have it built, and the bot rates its "
-                      "difficulty when it plans it. Close it to say no.")
+                      "Comment `approve` to have it built (the "
+                      f"`{LABEL_BUILD}` label works too), and the bot rates its difficulty when "
+                      "it plans it. Comment `reject` to close it without building it.")
             issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")
