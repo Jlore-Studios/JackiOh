@@ -14,8 +14,9 @@
 use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
-    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, card_keywords, credit_lapsing,
-    find_def, has_keyword, hero_armor_of, owed_mana_of, own_cost, query_cost, subsystems, unit_view,
+    active_brittle_count, active_units_of, animated_kind_of, attacks_per_turn, cannot_attack, card_keywords,
+    credit_lapsing, find_def, has_keyword, hero_armor_of, owed_mana_of, own_cost, query_cost, subsystems,
+    unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -218,7 +219,10 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
         if !can_swing(state, unit, &view) {
             continue;
         }
-        attacks.push(view.attack);
+        // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
+        for _ in 0..attacks_per_turn(state, unit) {
+            attacks.push(view.attack);
+        }
     }
     damage_past_taunts(state, attacker.opponent(), &attacks)
 }

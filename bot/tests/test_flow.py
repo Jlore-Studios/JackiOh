@@ -504,7 +504,8 @@ class FlowTests(unittest.TestCase):
         made = [t for t in h.gh.threads.values()
                 if LABEL_SUGGESTION in {l["name"] for l in t["labels"]} and t["user"] == BOT]
         self.assertEqual(len(made), 3)
-        self.assertIn("Add the `bot:build` label to have it built", made[0]["body"])
+        self.assertIn("Comment `approve` to have it built", made[0]["body"])
+        self.assertIn("Comment `reject` to close it", made[0]["body"])
 
 
 def ask(h: Harness, number: int, body: str, cid: int) -> None:
@@ -587,6 +588,88 @@ class ReactionTests(unittest.TestCase):
         self.assertEqual(planned["action"], "suggest")
         self.assertEqual(reacted(h, 35), ["eyes", "+1", "rocket", "heart", "hooray"])
         self.assertEqual(h.ctx.store.load()["suggest"]["taken_asks"], [])
+
+    def bot_replies(self, h, number):
+        return [c["body"] for c in h.gh.comments.get(number, []) if c["user"] == BOT]
+
+    def test_an_approve_comment_queues_a_suggestion_for_build(self):
+        h = Harness(self)
+        h.gh.add_issue(20, labels=(LABEL_SUGGESTION,))
+        ask(h, 20, "approve", 41)
+        self.assertNotIn(LABEL_SUGGESTION, h.gh.label_names(20))
+        self.assertIn(LABEL_BUILD, h.gh.label_names(20))
+        self.assertIn("Queued #20", self.bot_replies(h, 20)[0])
+        self.assertEqual(reacted(h, 41), ["eyes", "+1", "rocket"])
+        planned = plan_mod.make(h.ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("build", 20))
+
+    def test_a_reject_comment_closes_a_suggestion(self):
+        h = Harness(self)
+        h.gh.add_issue(21, labels=(LABEL_SUGGESTION,))
+        ask(h, 21, "Reject.", 42)
+        issue = h.gh.get_issue(21)
+        self.assertEqual((issue["state"], issue["state_reason"]), ("closed", "not_planned"))
+        # It stays a suggestion on record, so the survey sees it was one and does not offer it again.
+        self.assertEqual(h.gh.label_names(21), {LABEL_SUGGESTION})
+        self.assertIn("Rejected: I closed #21", self.bot_replies(h, 21)[0])
+        self.assertEqual(reacted(h, 42), ["eyes", "rocket"])  # no model work, so no +1
+
+    def test_a_reject_after_the_bots_name_closes_it_instead_of_building_it(self):
+        h = Harness(self)
+        h.gh.add_issue(24, labels=(LABEL_SUGGESTION,))
+        ask(h, 24, "@jgoetzmann-bot reject", 45)
+        self.assertEqual(h.gh.get_issue(24)["state"], "closed")
+        self.assertNotIn(LABEL_BUILD, h.gh.label_names(24))
+        self.assertEqual(len(self.bot_replies(h, 24)), 1)
+
+    def test_a_vote_on_a_non_suggestion_issue_is_ignored(self):
+        h = Harness(self)
+        h.gh.add_issue(22)
+        from harness import events
+        out = events.handle(h.ctx, "issue_comment", {
+            "action": "created", "sender": OPERATOR, "issue": {"number": 22},
+            "comment": {"id": 43, "body": "approve", "user": OPERATOR,
+                        "author_association": "OWNER"}})
+        self.assertEqual(out, ["no command"])
+        self.assertEqual((self.bot_replies(h, 22), reacted(h, 43)), ([], []))
+        self.assertEqual(h.gh.label_names(22), set())
+
+    def test_a_quoted_vote_casts_nothing(self):
+        h = Harness(self)
+        h.gh.add_issue(25, labels=(LABEL_SUGGESTION,))
+        ask(h, 25, "> reject\n\nWhy would anyone reject this?", 46)
+        self.assertEqual(h.gh.get_issue(25)["state"], "open")
+        self.assertEqual(reacted(h, 46), [])
+
+    def test_a_vote_from_someone_off_the_trust_list_does_nothing(self):
+        h = Harness(self)
+        h.gh.add_issue(26, labels=(LABEL_SUGGESTION,))
+        from harness import events
+        out = events.handle(h.ctx, "issue_comment", {
+            "action": "created", "sender": STRANGER, "issue": {"number": 26},
+            "comment": {"id": 47, "body": "reject", "user": STRANGER,
+                        "author_association": "NONE"}})
+        self.assertEqual(out, ["ignored: @someone-else is not on the trust list"])
+        self.assertEqual(h.gh.get_issue(26)["state"], "open")
+        self.assertEqual(h.gh.label_names(26), {LABEL_SUGGESTION})
+
+    def test_an_edited_vote_comment_is_answered_once(self):
+        h = Harness(self)
+        h.gh.add_issue(23, labels=(LABEL_SUGGESTION,))
+        from harness import events
+        payload = {"sender": OPERATOR, "issue": {"number": 23},
+                   "comment": {"id": 44, "body": "approve", "user": OPERATOR,
+                               "author_association": "OWNER"}}
+        events.handle(h.ctx, "issue_comment", {**payload, "action": "created"})
+        # The first vote queued it, which took `bot:suggestion` off: the edit votes on nothing.
+        out = events.handle(h.ctx, "issue_comment", {**payload, "action": "edited"})
+        self.assertEqual(out, ["no command"])
+        self.assertEqual(len(self.bot_replies(h, 23)), 1)
+        # And a vote line claimed already is never answered twice, suggestion or not.
+        h.gh.add_labels(23, [LABEL_SUGGESTION])
+        out = events.handle(h.ctx, "issue_comment", {**payload, "action": "edited"})
+        self.assertEqual(out, ["ignored: already answered"])
+        self.assertEqual(len(self.bot_replies(h, 23)), 1)
 
     def test_a_stopped_run_ends_without_an_answer(self):
         h = Harness(self)

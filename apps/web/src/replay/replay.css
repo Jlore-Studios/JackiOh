@@ -22,3 +22,13 @@
 .game[data-replay="true"] .card[data-legal="false"] {
   opacity: 1;
 }
+
+/* "Share as GIF" (#513), under the toolbar: its buttons, shape and progress wrap as one centred row. */
+.replay-gif-panel {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

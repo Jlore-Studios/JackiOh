@@ -1226,3 +1226,116 @@ mod r1390_the_ai_decks_soft_gate {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R750000: a ladder bot's deal leans on the cards that win
+// ---------------------------------------------------------------------------------------------
+
+mod win_rate_strength {
+    use super::*;
+    use jackioh_ai::AI_WIN_RATE;
+    use jackioh_engine::testkit::{
+        WinRateRow, WinRateSource, WinRateTable, clear_overrides, register_win_rates,
+    };
+
+    /// The rated cards: the first `RATED` ids of the pool, alternately winners and losers.
+    const RATED: usize = 80;
+    /// Each rated row's games, well past `AI_WIN_RATE.min_games`.
+    const GAMES: i32 = 80;
+    /// A winner's and a loser's wins: 90% and 10%.
+    const WINNER_WINS: i32 = 72;
+    const LOSER_WINS: i32 = 8;
+
+    fn table(games: i32) -> WinRateTable {
+        WinRateTable {
+            patch: "test".to_string(),
+            source: WinRateSource::Live,
+            cards: ai_pool()
+                .into_iter()
+                .take(RATED)
+                .enumerate()
+                .map(|(at, id)| WinRateRow {
+                    id,
+                    wins: if at % 2 == 0 { WINNER_WINS } else { LOSER_WINS },
+                    games,
+                })
+                .collect(),
+        }
+    }
+
+    /// A deck's mean in-deck win rate by `table`, a card with no row counting as even.
+    fn mean_rate(deck: &[String], table: &WinRateTable) -> f64 {
+        let sum: f64 = deck
+            .iter()
+            .map(|id| {
+                table
+                    .cards
+                    .iter()
+                    .find(|row| &row.id == id)
+                    .map_or(0.5, |row| f64::from(row.wins) / f64::from(row.games))
+            })
+            .sum();
+        sum / deck.len() as f64
+    }
+
+    fn deal(seed: &str, strength: Option<f64>) -> Vec<String> {
+        build_ai_deck(
+            &mut create_rng(seed, 0),
+            DECK_SIZE,
+            &AiDeckOptions {
+                banned: Some(vec![]),
+                gated_sets: Some(vec![]),
+                strength,
+                ..AiDeckOptions::default()
+            },
+        )
+    }
+
+    #[test]
+    fn r750000_strength_deals_a_higher_mean_win_rate() {
+        register_cards();
+        let rates = table(GAMES);
+        register_win_rates(rates.clone());
+        let (mut plain, mut strong) = (0.0, 0.0);
+        for n in 1..=SEEDS {
+            let seed = format!("r750000:strength:{n}");
+            plain += mean_rate(&deal(&seed, None), &rates);
+            strong += mean_rate(&deal(&seed, Some(1.0)), &rates);
+        }
+        clear_overrides();
+        let (plain, strong) = (plain / SEEDS as f64, strong / SEEDS as f64);
+        assert!(
+            strong - plain >= 0.05,
+            "strength 1 deals {strong:.3} against {plain:.3} with none"
+        );
+    }
+
+    #[test]
+    fn r750000_no_strength_deals_the_deck_the_seed_always_dealt() {
+        register_cards();
+        let before: Vec<Vec<String>> = (1..=50)
+            .map(|n| deal(&format!("r750000:identity:{n}"), None))
+            .collect();
+        register_win_rates(table(GAMES));
+        for (n, deck) in (1..=50).zip(&before) {
+            let seed = format!("r750000:identity:{n}");
+            assert_eq!(&deal(&seed, None), deck, "{seed}: none");
+            assert_eq!(&deal(&seed, Some(0.0)), deck, "{seed}: 0.0");
+            assert_eq!(&deal(&seed, Some(-1.0)), deck, "{seed}: below 0 clamps to 0");
+            assert_eq!(&deal(&seed, Some(f64::NAN)), deck, "{seed}: NaN is none");
+        }
+        // A row under `min_games` games moves nothing, whatever the strength.
+        register_win_rates(table(AI_WIN_RATE.min_games - 1));
+        for (n, deck) in (1..=50).zip(&before) {
+            let seed = format!("r750000:identity:{n}");
+            assert_eq!(&deal(&seed, Some(1.0)), deck, "{seed}: thin rows");
+        }
+        clear_overrides();
+        // The option is absent unless set, so the AI's own options still read `{}`.
+        assert_eq!(AiDeckOptions::default().strength, None);
+        assert_eq!(
+            serde_json::to_value(options(json!({ "strength": 0.5 }))).ok(),
+            Some(json!({ "strength": 0.5 }))
+        );
+    }
+}

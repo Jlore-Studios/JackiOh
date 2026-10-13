@@ -11,7 +11,7 @@
 //! Each game is a function of its seed: its decks, its engine rng and each seat's AI stream are all
 //! drawn from it, and the AI's search is held to a node budget with no clock, so the tallies are the
 //! same whatever the thread count. A game is the ladder bot's own decision (`decide_styled` at its
-//! strength, its skill's roll included (R747000), and nothing of its manner: no think time, no
+//! strength, its skill's roll included (R747000)) and nothing of its manner: no think time, no
 //! concession, no idle turn.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};

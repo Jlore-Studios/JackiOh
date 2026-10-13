@@ -124,8 +124,8 @@ class DashboardTests(unittest.TestCase):
                       '<br/>7d not read yet · cap 90%"]:::off', body)
         slots = self.ctx.cfg.pool.machine_parallel
         self.assertIn(f'subgraph machine["The night box: 1 of {slots} slots in use"]', body)
-        self.assertIn('m3["<b>muse</b><br/>🟢 revising #49 · since 19:57<br/>5h not read yet · '
-                      'cap 95%<br/>7d not read yet"]:::busy', body)
+        self.assertIn('m3["<b>muse</b><br/>🟢 revising #49 · since 19:57<br/>5h not read yet'
+                      '<br/>7d not read yet"]:::busy', body)
         self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3", body)
         self.assertNotIn(":::free", body)  # no empty slot is drawn as a free subscription
         # The AI's training lanes run outside the harness: no box of theirs here.
