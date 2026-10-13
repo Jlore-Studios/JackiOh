@@ -4209,6 +4209,13 @@
     "749": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T16:30:10Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy lines 2 and 8: it spans training/ and crates/server, and the lane's cap and batch size are judgement calls; nothing in engine or AI, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
