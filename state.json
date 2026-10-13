@@ -5443,9 +5443,11 @@
         "by": "`claude` (strong)",
         "sha": "395cb7d07b7c9fb1342737ff78913f761433a1fe"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-13T20:35:28Z",
+      "forced": false,
       "handoff": {
         "at": "2026-10-13T20:34:04Z",
         "family": "claude",
