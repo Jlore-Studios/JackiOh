@@ -777,7 +777,9 @@
     },
     "448": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6144819178"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -798,7 +800,7 @@
       "pending_request": false,
       "provider": "muse",
       "question": "Part 6 (#448) is built but not finished: the Luau API, generator, typed module and 20 api tests are green, yet clippy -D warnings fails on prior-run after_check.rs (RefCell/HashMap banned by crates/luau/clippy.toml) and the docs (docs/v0.4.0/api-gaps.md, crates/luau/README.md, docs/v0.4.0/notes/part-06.md) plus cargo jackioh spec check remain. Carry on with the handoff in .bot-notes.md, or accept this partial state onto bot/issue-442 for a later run to complete?",
-      "queued_at": "2026-10-13T07:05:17Z",
+      "queued_at": "2026-10-13T11:46:27Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "38386256929",
