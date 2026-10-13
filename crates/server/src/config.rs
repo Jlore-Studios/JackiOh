@@ -222,6 +222,22 @@ pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
 // ---------------------------------------------------------------------------------------------
+// Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
+// the client reads the list's page and the routes' allowance.
+// ---------------------------------------------------------------------------------------------
+
+/// How many finished matches one page of `GET /api/replays` lists, newest first.
+pub const REPLAY_LIST_PAGE: usize = 10;
+/// How many opened replays (each its folded log's checkpoints, R768) the server keeps in memory at
+/// once; opening another drops the one used longest ago.
+pub const REPLAY_CACHE_MATCHES: usize = 16;
+/// How long an opened replay stays in memory after it was opened, in seconds.
+pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
+/// Requests per minute per account to the two replay routes together, on top of R109's
+/// API-wide allowance: opening a replay folds a whole game.
+pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
+
+// ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
 // ---------------------------------------------------------------------------------------------
 
@@ -513,6 +529,10 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
+/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
+/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
+/// row lands, the match ends or the actor stops, never in a loop.
+pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).

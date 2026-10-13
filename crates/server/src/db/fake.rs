@@ -32,7 +32,8 @@
 //!    the redemption it calls in Postgres;
 //!  - `codes_claim`, `rooms_claim` and `tickets_claim_pair` are single-shot, so the second of two
 //!    racing callers loses (§9.4 step 6, §9.5);
-//!  - `matches_append_actions` refuses a `seq` that already exists (append-only, §9.3);
+//!  - `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any
+//!    other clash as `StoreError::SeqClash` (append-only, §9.3, R776000);
 //!  - `results_insert` refuses a second row for the same match (§9.5);
 //!  - `tickets_insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
 //!    which `queue.rs` relies on as the race-proof half of "not already queued");
@@ -102,11 +103,11 @@ use crate::config::{
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
     CollectionGrant, ConsentRow, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery,
-    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
-    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase,
+    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
     SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
     TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
@@ -1216,7 +1217,11 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
     if f.tables().matches.iter().any(|existing| existing.id == row.id) {
         return Err(StoreError::from(format!("matches.id is unique: {}", row.id)));
     }
-    f.tables().matches.push(row.clone());
+    // R768: as in Postgres, only `matches_record_final_hash` writes the hash.
+    f.tables().matches.push(MatchRow {
+        final_hash: None,
+        ..row.clone()
+    });
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != row.id);
     Ok(())
 }
@@ -1226,22 +1231,39 @@ pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
 }
 
-/// Append-only (§9.3). Rejects a seq that already exists.
+/// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
+/// own seq is answered with that row and writes nothing, so a write that committed and whose answer was
+/// lost can be sent again; a seq held under another nonce, or a nonce held at another seq, is a
+/// `StoreError::SeqClash`.
 pub fn matches_append_actions(f: &mut FakeTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     call(f, "matches.appendActions")?;
     let tables = f.tables();
     for row in rows {
-        let clash = tables
+        let logged = tables
             .match_actions
             .iter()
-            .any(|existing| existing.match_id == row.match_id && existing.seq == row.seq);
-        if clash {
-            return Err(StoreError::from(format!(
-                "match_actions is append-only: seq {} exists",
-                row.seq
-            )));
+            .find(|existing| {
+                existing.match_id == row.match_id
+                    && (existing.seq == row.seq || existing.action.nonce == row.action.nonce)
+            })
+            .map(|existing| (existing.seq, existing.action.nonce == row.action.nonce));
+        match logged {
+            None => tables.match_actions.push(row.clone()),
+            // The same row again: answered, as Postgres answers a repeated nonce with its seq.
+            Some((seq, true)) if seq == row.seq => {}
+            Some((seq, true)) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: nonce {} is logged at seq {seq}, not {}",
+                    row.action.nonce, row.seq
+                )));
+            }
+            Some(_) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: seq {} exists",
+                    row.seq
+                )));
+            }
         }
-        tables.match_actions.push(row.clone());
     }
     Ok(())
 }
@@ -1355,6 +1377,125 @@ pub fn matches_reap_open(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreEr
         }
     }
     Ok(reaped as u64)
+}
+
+/// R768: written once; a no-op on a match that has a hash already, and on an unknown id.
+pub fn matches_record_final_hash(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
+    call(f, "matches.recordFinalHash")?;
+    if let Some(row) = f
+        .tables()
+        .matches
+        .iter_mut()
+        .find(|row| row.id == match_id && row.final_hash.is_none())
+    {
+        row.final_hash = Some(final_hash.to_string());
+    }
+    Ok(())
+}
+
+/// R768: a match row is `live` or `over`. The fake keeps no `open` row (`matches_discard_open`), so
+/// an id a claimed room or a claimed ticket holds, with no match row yet, is the `open` one. A bot
+/// rematch's reservation (`bots_claim_for_rematch`) keeps no players here, so it reads as `None`.
+pub fn matches_seats(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchSeats>, StoreError> {
+    call(f, "matches.seats")?;
+    let tables: &FakeTables = f.tables();
+    if let Some(row) = tables.matches.iter().find(|row| row.id == match_id) {
+        return Ok(Some(MatchSeats {
+            phase: if row.status == MatchStatus::Finished {
+                MatchPhase::Over
+            } else {
+                MatchPhase::Live
+            },
+            players: vec![row.players.0.clone(), row.players.1.clone()],
+        }));
+    }
+    if let Some(room) = tables
+        .rooms
+        .iter()
+        .find(|room| room.match_id.as_deref() == Some(match_id))
+    {
+        let mut players = vec![room.host_profile_id.clone()];
+        players.extend(room.guest_profile_id.clone());
+        return Ok(Some(MatchSeats {
+            phase: MatchPhase::Open,
+            players,
+        }));
+    }
+    let players: Vec<String> = tables
+        .tickets
+        .iter()
+        .filter(|ticket| ticket.match_id.as_deref() == Some(match_id))
+        .map(|ticket| ticket.profile_id.clone())
+        .collect();
+    if players.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(MatchSeats {
+        phase: MatchPhase::Open,
+        players,
+    }))
+}
+
+/// R768: one finished match with a result, and how many actions its log holds.
+fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
+    if row.status != MatchStatus::Finished {
+        return None;
+    }
+    let result = tables.results.iter().find(|result| result.match_id == row.id)?;
+    let actions = tables
+        .match_actions
+        .iter()
+        .filter(|action| action.match_id == row.id)
+        .count();
+    Some(ReplayRow {
+        row: row.clone(),
+        result: result.clone(),
+        actions: actions as i64,
+    })
+}
+
+/// R768: newest ended first, the id breaking a tie, as Postgres orders them.
+pub fn replays_list(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayRow>, StoreError> {
+    call(f, "replays.list")?;
+    let tables: &FakeTables = f.tables();
+    let mut rows: Vec<ReplayRow> = tables
+        .matches
+        .iter()
+        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
+        .filter_map(|row| replay_row_in(tables, row))
+        .filter(|replay| replay.actions > 0)
+        .collect();
+    rows.sort_by(|a, b| {
+        b.row
+            .finished_at
+            .cmp(&a.row.finished_at)
+            .then_with(|| b.row.id.cmp(&a.row.id))
+    });
+    Ok(rows
+        .into_iter()
+        .skip(usize::try_from(offset).unwrap_or(0))
+        .take(usize::try_from(limit).unwrap_or(0))
+        .collect())
+}
+
+/// R768: one finished match with a result.
+pub fn replays_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
+    call(f, "replays.get")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .find(|row| row.id == match_id)
+        .and_then(|row| replay_row_in(tables, row)))
 }
 
 // ---------------------------------------------------------------------------

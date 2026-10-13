@@ -154,6 +154,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -186,6 +187,10 @@ What the actor holds, each with a test named after it:
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
   once when the match is ranked (R604); a voided game writes none (R679).
+  A clock's server action whose row the store fails to write is tried again `MATCH_SERVER_ACTION_RETRY_MS`
+  later, its clock run out once more, until it lands; an append the store refuses as
+  `StoreError::SeqClash` makes the actor let go as an unrecorded result does (R1437), for the next
+  socket to rebuild it from the log (R776000).
 - A seat a ladder bot holds has no socket: the actor plays it itself (`drive_bots`), its moves
   server actions with `srv-bot-<seq>` nonces through the same path a client's take, its seat never
   disconnected and so never given a grace, and its persona's emotes relayed as a player's are (R1452).

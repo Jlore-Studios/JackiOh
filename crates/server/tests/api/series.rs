@@ -474,6 +474,7 @@ async fn finish_game(h: &Harness, winner: &str, reason: Option<GameOverReason>) 
             turns: 9,
             at: now_ms(),
             last_boards: None,
+            final_hash: None,
         },
     )
     .await
@@ -1092,6 +1093,7 @@ mod r262_how_a_series_is_rated {
                 turns: 1,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await

@@ -339,6 +339,8 @@ Notes that matter:
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
 | Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction. The actor stays in the map, where a rematch's presence reads its sockets (R672), until a reaper tick finds `REMATCH_OFFER_TTL_MS` passed since the end and no seat's socket open, and drops it (`Registry::reap_finished`). An actor rebuilt on a finished match counts that window from the rebuild |
 | The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
+| A clock's action can't be written | its clock runs out again `MATCH_SERVER_ACTION_RETRY_MS` later until the row lands, the match ends or the actor stops; a new turn, an answered prompt, a closed mulligan window or a reconnect cancels it (R776000) |
+| The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
 | Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
@@ -624,7 +626,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
-   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` — and records them in `app.migrations`. Expected result: 31 tables
+   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
+   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -679,6 +682,8 @@ step that is not yet implemented says which BUILD task delivers it.
    version of the Terms and the Privacy Policy it agreed to. It gives every person's account that
    already exists a `baseline` record dated at its sign-up, so each such account is asked to agree
    to the terms in force on its next visit; an account already active is not asked its age.
+   0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
+   its replay (R768); older matches keep none and their replays are held to their results rows.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

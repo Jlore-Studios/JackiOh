@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 31 tables of migrations 0001-0034 ==='
+\echo '=== CHECK 2: the 31 tables of migrations 0001-0035 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -61,8 +61,8 @@ declare
   -- action_timings/emote_events/match_signals (0029, R1442), the ladder bots' bots (0032, R1454)
   -- and the age_checks/terms_acceptances of consent (0034, R757000, R757001).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
-  -- 0030, 0031 and 0033 add no table. The three loadout tables stay after 0007, unread and unwritten (R254), so
-  -- they are still expected here.
+  -- 0030, 0031, 0033 and 0035 add no table. The three loadout tables stay after 0007, unread and
+  -- unwritten (R254), so they are still expected here.
   expected constant text[] := array[
     'action_timings', 'age_checks', 'bot_ratings', 'bots', 'cards', 'code_attempts', 'collection', 'collection_grants',
     'decks', 'emote_events', 'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks',

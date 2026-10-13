@@ -127,6 +127,10 @@ pub struct RecordResultInput {
     /// order). Absent when the writer could not read the game: the reaper (R112).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_boards: Option<SeatBoards>,
+    /// R768: `hash_state` of the game's final state, which its replay's fold is held to. Absent
+    /// when the writer could not read the game: the reaper (R112).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_hash: Option<String>,
 }
 
 /// R679: what the actor knows of a match a Glitch voided, as
