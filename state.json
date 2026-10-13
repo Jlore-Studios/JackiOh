@@ -6907,13 +6907,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-12T23:40:00Z",
-          "utilization": 0.9
+          "resets_at": "2026-10-13T17:20:00Z",
+          "utilization": 0.35
         },
-        "observed_at": "2026-10-12T19:45:39Z",
+        "observed_at": "2026-10-13T17:17:28Z",
         "seven_day": {
           "resets_at": "2026-10-17T05:00:00Z",
-          "utilization": 0.85
+          "utilization": 0.9
         },
         "status": "allowed_warning"
       }
