@@ -6,8 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
-[lib]
-crate-type = ["cdylib", "rlib"]
+[[bin]]
+name = "jackioh-wasm"
+path = "src/main.rs"
 
 [features]
 default = []
@@ -23,6 +24,3 @@ jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-wasm-bindgen = { workspace = true }
-js-sys = { workspace = true }
-console_error_panic_hook = { workspace = true }
