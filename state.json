@@ -894,12 +894,12 @@
       "onto": "bot/issue-442",
       "part_of": 442,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-6",
       "queued_at": "2026-10-13T07:05:27Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "38405177476",
-      "started_at": "2026-10-13T13:28:53Z",
+      "run_id": "38416671842",
+      "started_at": "2026-10-13T14:50:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -4857,9 +4857,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-13T14:44:12Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38415788295",
-    "what": "build #460 on claude-4"
+    "at": "2026-10-13T14:50:15Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38416671842",
+    "what": "build #453 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-13T14:48:13Z",
