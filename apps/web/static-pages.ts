@@ -213,8 +213,21 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.accessibility]:
     section(
       "Our goal",
-      "<p>We want JackiOh to be usable by as many players as we can make it. It has not had a formal " +
-        "accessibility audit, and some parts are not yet fully accessible.</p>",
+      "<p>We want JackiOh to be usable by as many players as we can make it. It has had an automated " +
+        "check against the Web Content Accessibility Guidelines (WCAG) 2.2 at levels A and AA, and no " +
+        "audit by a person. We do not claim that it conforms to WCAG.</p>",
+    ) +
+    section(
+      "What we checked",
+      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, against its WCAG 2.0, " +
+        "2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except " +
+        "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
+        "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
+        "screen and the screen that asks for your date of birth and agreement to the terms.</li>" +
+        "<li>Play, Decks, Account and the leaderboard.</li>" +
+        "<li>The Almanac, Patch notes and Stats.</li>" +
+        "<li>Practice, its setup and a game, and a game on one device.</li>" +
+        "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
     ) +
     section(
       "Current support",
@@ -224,6 +237,17 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "<li>Card art is decorative and hidden from screen readers; each card&rsquo;s name and text are " +
         "on the card as text.</li>" +
         "<li>Reduce motion, effects and sound can be changed in Settings.</li></ul>",
+    ) +
+    section(
+      "Known gaps",
+      "<ul><li>A card shown as a button, on the home page, in the Almanac&rsquo;s card pool and in a game&rsquo;s " +
+        "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
+        "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
+        "it goes does the same, by click or by Enter on each.</li>" +
+        "<li>With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.</li>" +
+        "<li>Colour contrast is checked only where the tool can measure it, so text over card art and " +
+        "gradients has not been checked.</li>" +
+        "<li>No one has tested JackiOh with a screen reader or other assistive technology yet.</li></ul>",
     ),
 };
 

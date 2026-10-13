@@ -80,6 +80,8 @@ export const timeouts = {
   view: 10_000,
   game: 180_000,
   task: 20_000,
+  /** Spec 38: one axe-core run over a whole page, a board included. */
+  axe: 30_000,
 };
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
