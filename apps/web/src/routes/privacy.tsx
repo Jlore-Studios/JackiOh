@@ -6,7 +6,7 @@
 // DRAFTED FROM THE CODE, NOT FROM A TEMPLATE. Every statement below is something this repository
 // does: what the sign-up form sends (net/auth.ts), what the server stores (crates/server/src/db/
 // migrations/), what this browser keeps (net/session.ts, auth/pkce.ts, settings/store.ts,
-// tutorial/progress.ts, auth/redirect.ts), where it runs (render.yaml, vercel.json), how long it
+// tutorial/progress.ts, auth/redirect.ts), where it runs (render.yaml, wrangler.jsonc, vercel.json), how long it
 // is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
 // deleting an account removes (migration 0012), the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
@@ -134,14 +134,15 @@ export default function PrivacyRoute(): ReactElement {
 
         <section aria-labelledby="privacy-who-gets">
           <h3 id="privacy-who-gets">Who handles it</h3>
-          <p>We use three services to run JackiOh:</p>
+          <p>We use four services to run JackiOh:</p>
           <ul>
             <li>
               Supabase runs sign-in and our database, in the United States (Ohio). It also sends the sign-up
               and password-reset emails.
             </li>
             <li>Render runs our game server, in the United States (Ohio).</li>
-            <li>Vercel hosts this website.</li>
+            <li>Cloudflare hosts this website at jackioh.com.</li>
+            <li>Vercel hosts a test copy of it at jackioh.vercel.app.</li>
           </ul>
           <p>In an online match, your opponent sees the moves you make.</p>
         </section>

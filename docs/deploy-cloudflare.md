@@ -262,17 +262,17 @@ keep spelling `SITE_ORIGIN`, which `apps/web/static-pages.ts` replaces with the 
 each page's canonical link, `og:url`, `og:image` and JSON-LD `url`, in `dist/sitemap.xml` and in the
 copied `robots.txt` and `.well-known/security.txt`.
 
-What still names `jackioh.vercel.app` and moves at cut-over:
+The domain is jackioh.com, and the repo half of the cut-over is done: #701 gave each build its own
+origin, and #770 did the rest. The privacy policy (`apps/web/src/routes/privacy.tsx`) says
+Cloudflare hosts the site at jackioh.com and Vercel a test copy at `jackioh.vercel.app`. Both
+`vercel.json` copies send `X-Robots-Tag: noindex` on every path, and `_headers` does not, so search
+engines stop indexing staging as a duplicate of production; `cloudflare-config.test.ts` allows
+exactly that one extra Vercel header and fails on any other difference. The examples name
+production: `crates/server/tests/deploy/rehearse.sh` boots with
+`PUBLIC_ORIGINS=https://jackioh.com,https://www.jackioh.com`, and the usage comment of
+`e2e/cypress/e2e/99-online-smoke.cy.ts` shows `E2E_BASE_URL=https://jackioh.com`.
 
-- `apps/web/src/routes/privacy.tsx`: "Vercel hosts this website" should name Cloudflare. This is
-  your privacy policy, so it has to be accurate about who hosts the site.
-- `crates/server/tests/deploy/rehearse.sh` `PUBLIC_ORIGINS`
-- `e2e/cypress/e2e/99-online-smoke.cy.ts`: the example `E2E_BASE_URL`
-
-In the same change, add `{ "key": "X-Robots-Tag", "value": "noindex" }` to the headers in **both
-`vercel.json` copies only** (not to `_headers`), so search engines stop indexing staging as a
-duplicate of production. `cloudflare-config.test.ts` compares the two header lists and will need
-to allow that one extra Vercel header. Then set the Supabase Site URL to the Cloudflare domain.
+What is left is the dashboards' half (#256): set the Supabase Site URL to `https://jackioh.com`.
 
 ## 5. Day-to-day operation
 
