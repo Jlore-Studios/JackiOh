@@ -9,7 +9,8 @@
 //!    `effects/targets.rs`, which asks `effect_is_from_spell` for every card a single target or a scope
 //!    names, so every verb written in that vocabulary passes an immune unit by.
 //!  * The attack restrictions: can't be attacked (Classic+ #51), attacked only from its own lane
-//!    (Classic+ #19.1), can't attack or be attacked (a carried Unit, R446). `combat.rs` asks
+//!    (Classic+ #19.1), can't attack or be attacked (a carried Unit, R446), and Flying, attacked only
+//!    by Flying or Ranged units outside Defense Position (#783, R783002). `combat.rs` asks
 //!    `attack_restriction` for a declared attack (§4.2 step 2), for the Taunt wall (step 3: a Taunt
 //!    binds only the attackers that may attack it) and for every forced attack, which skips steps 1 to
 //!    3 (R53) but not these.
@@ -25,10 +26,10 @@
 
 use crate::catalog::def_of;
 use crate::damage::DamageTarget;
-use crate::layers::unit_has;
+use crate::layers::{unit_has, unit_view};
 use crate::script::EffectContext;
-use crate::state::{CardInstance, EngineError, GameState};
-use crate::wire::{CardType, KeywordKind, Row, Zone};
+use crate::state::{CardInstance, EngineError, GameState, Position};
+use crate::wire::{CardType, KeywordKind, Row, Zone, has_keyword};
 use crate::zones::{card_at, slot_of};
 
 /// `faces::card_type_of` for a definition and a face alone (TS passed `{ defId, radiant }`, a card
@@ -156,7 +157,20 @@ pub fn attack_restriction(
             return Err(EngineError::new("only a unit in its lane may attack that unit"));
         }
     }
+    if flies_out_of_reach(state, attacker, defender) {
+        return Err(EngineError::new("only a Flying or Ranged unit may attack that unit"));
+    }
     Ok(())
+}
+
+/// R783002, R783003: a Flying unit in Attack Position may be attacked only by a unit with Flying or
+/// Ranged; in Defense Position it has landed, and anything may attack it.
+fn flies_out_of_reach(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> bool {
+    let view = unit_view(state, defender);
+    if !has_keyword(&view.keywords, KeywordKind::Flying) || view.position == Position::Def {
+        return false;
+    }
+    !unit_has(state, attacker, KeywordKind::Flying) && !unit_has(state, attacker, KeywordKind::Ranged)
 }
 
 // ---------------------------------------------------------------------------

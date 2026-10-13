@@ -187,7 +187,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT,
+ * then R1086's MG, then #783's RG FL CK CR FB.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -218,6 +219,11 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Deft: "DE",
   Untributable: "UT",
   Magnetic: "MG",
+  Ranged: "RG",
+  Flying: "FL",
+  Cloaked: "CK",
+  Crater: "CR",
+  Flashback: "FB",
 };
 
 type Term = { text: string; term: GlossaryTermId };

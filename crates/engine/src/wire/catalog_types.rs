@@ -392,6 +392,16 @@ pub enum Keyword {
     /// R1086: a Unit may be played onto one of its controller's Units, resolving on top of it
     /// before fusing into it (ME-MAGNETIC). In no random keyword pool (R21).
     Magnetic,
+    /// R783000: a Unit that takes no damage back when it attacks, unless the defender is Ranged.
+    Ranged,
+    /// R783002: a Unit only a Flying or Ranged Unit may attack, unless it is in Defense Position.
+    Flying,
+    /// R783004: a card that is not a Trap may be played face-down as one, and revealed by its Activate.
+    Cloaked,
+    /// R783010: a Unit Locks its zone as it arrives, a Trap its backrow zone as it is revealed.
+    Crater,
+    /// R783012: a card that may be played once from its owner's graveyard, at its cost.
+    Flashback,
 }
 
 string_union! {
@@ -426,6 +436,12 @@ string_union! {
         Untributable = "Untributable",
         /// R1086: ME-MAGNETIC's keyword.
         Magnetic = "Magnetic",
+        /// #783's five keywords (R783000, R783002, R783004, R783010, R783012).
+        Ranged = "Ranged",
+        Flying = "Flying",
+        Cloaked = "Cloaked",
+        Crater = "Crater",
+        Flashback = "Flashback",
     }
 }
 
@@ -464,6 +480,11 @@ impl Keyword {
             Keyword::Deft => KeywordKind::Deft,
             Keyword::Untributable => KeywordKind::Untributable,
             Keyword::Magnetic => KeywordKind::Magnetic,
+            Keyword::Ranged => KeywordKind::Ranged,
+            Keyword::Flying => KeywordKind::Flying,
+            Keyword::Cloaked => KeywordKind::Cloaked,
+            Keyword::Crater => KeywordKind::Crater,
+            Keyword::Flashback => KeywordKind::Flashback,
         }
     }
 
@@ -510,6 +531,11 @@ impl Keyword {
             KeywordKind::Deft => Keyword::Deft,
             KeywordKind::Untributable => Keyword::Untributable,
             KeywordKind::Magnetic => Keyword::Magnetic,
+            KeywordKind::Ranged => Keyword::Ranged,
+            KeywordKind::Flying => Keyword::Flying,
+            KeywordKind::Cloaked => Keyword::Cloaked,
+            KeywordKind::Crater => Keyword::Crater,
+            KeywordKind::Flashback => Keyword::Flashback,
         }
     }
 }

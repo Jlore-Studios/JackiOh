@@ -265,6 +265,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub times_played: Option<i32>,
+    /// R783013: the card has used its Flashback, played from its graveyard by it, so it has no
+    /// Flashback any more, printed or given (`layers`). Kept in every zone and through R78's and
+    /// R766's resets, so the card is never offered from a graveyard by it again; a copy or a
+    /// Transform is a new card without it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub flashback_spent: Option<bool>,
     /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
     /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
     /// Transform's new card is without it. Only ever `Some(true)`.
@@ -1773,6 +1780,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         times_played: None,
+        flashback_spent: None,
         chinese: None,
         // R943: every instance minted after the deal is Created; `new_dealt_instance` clears the
         // mark. Written in every game since the Meditative set shipped (v0.3.5; before it, only

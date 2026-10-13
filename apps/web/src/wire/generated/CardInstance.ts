@@ -108,6 +108,13 @@ berserk?: true,
  */
 timesPlayed?: number, 
 /**
+ * R783013: the card has used its Flashback, played from its graveyard by it, so it has no
+ * Flashback any more, printed or given (`layers`). Kept in every zone and through R78's and
+ * R766's resets, so the card is never offered from a graveyard by it again; a copy or a
+ * Transform is a new card without it. Only ever `Some(true)`.
+ */
+flashbackSpent?: true, 
+/**
  * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
  * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
  * Transform's new card is without it. Only ever `Some(true)`.

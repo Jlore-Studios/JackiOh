@@ -307,6 +307,15 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
         live.face_up = Some(true);
     }
+    // R783006: a Field Spell set by its Cloaked has revealed where it stands, and is its own card again.
+    if card.set_as.is_some()
+        && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant) == crate::wire::CardType::FieldSpell
+    {
+        if let Some(live) = find_instance_mut(sink.state, &instance.id) {
+            live.set_as = None;
+        }
+        return;
+    }
     if is_field_trap(sink.state, &card) {
         return;
     }
@@ -402,6 +411,8 @@ pub fn fire_trap(
     if let Some(live) = find_instance_mut(sink.state, &trap.id) {
         live.face_up = Some(true);
     }
+    // R783011: a Crater Trap Locks the backrow zone it is revealed in, before its effects.
+    crate::crater::lock_on_firing(sink, trap, at);
     run_armed_triggers(
         sink,
         TrapFiring {

@@ -690,12 +690,14 @@ pub fn validate_play(
         def_of(Some(&*sink.state), &card.def_id).cost,
         CardCost::Embiggen { .. }
     );
-    // ME-ALTPLAY, R1040, R1044, R1045: stamp the face-down form before the price is read.
+    // ME-ALTPLAY, R1040, R1044, R1045: stamp the face-down form before the price is read. R783005:
+    // a card set by its Cloaked owes no permission anything, Radiant Paranoia's Echo included.
     let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> = action.face_down.map(|reveal| {
         let turn = sink.state.turn;
         let echo = {
             let grants = crate::alt_play::grants_of(sink.state, player);
-            if grants.echo > 0
+            if reveal != RevealAt::Cloaked
+                && grants.echo > 0
                 && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant)
                     != crate::wire::CardType::Unit
             {
