@@ -5405,6 +5405,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "every file this issue changes is under `bot/`, which the night bot may not change. A person (@MaxGoetzmann or @jgoetzmann) makes the change below in a pull request: one row for the `approve` / `reject` votes in `bot/harness/commands.py`'s `HELP_ROWS` (listed by `offered` only where the bot makes suggestions), the matching row in `bot/README.md`'s command table, and the tests in `bot/tests/test_basics.py` and `bot/tests/squishy_cases.py`. Then they run the bot's suite, `cd bot && python3 -m unittest discover -s tests -t .`.",
       "queued_at": "2026-10-13T19:40:49Z",
       "requested_by": "jgoetzmann",
       "run_id": "38458096877",
