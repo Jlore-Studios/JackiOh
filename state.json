@@ -1354,6 +1354,13 @@
     "513": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T15:01:34Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "adds ruling R513000 (spec/) and an e2e component spec across apps/web, e2e and spec: easy rules 2, 3 and 7 fail outright"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
