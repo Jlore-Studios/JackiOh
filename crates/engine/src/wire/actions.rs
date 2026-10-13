@@ -115,10 +115,11 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         embiggen: Option<bool>,
-        /// R1086: play this Magnetic card onto one of its controller's Units (ME-MAGNETIC).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// R1086: play this Equip card onto one of its controller's Units (ME-EQUIP). A log
+        /// recorded before the rename spells it `magnetic`, which reads as it (R781000).
+        #[serde(default, alias = "magnetic", skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
-        magnetic: Option<bool>,
+        equip: Option<bool>,
         /// Units sacrificed to pay a Tribute cost (§6.3).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -343,7 +344,7 @@ mod tests {
                 }),
                 x: None,
                 embiggen: None,
-                magnetic: None,
+                equip: None,
                 tributes: None,
                 targets: Some(vec![Selection::Hero { player: PlayerId::P2 }, Selection::None]),
                 modes: None,

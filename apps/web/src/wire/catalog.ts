@@ -123,8 +123,8 @@ export type Keyword =
   | { kind: "Deft" }
   /** R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing. */
   | { kind: "Untributable" }
-  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-MAGNETIC). */
-  | { kind: "Magnetic" };
+  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-EQUIP). */
+  | { kind: "Equip" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -157,7 +157,7 @@ export const KEYWORD_KINDS = [
   "Temporary",
   "Deft",
   "Untributable",
-  "Magnetic",
+  "Equip",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

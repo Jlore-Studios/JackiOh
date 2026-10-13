@@ -217,7 +217,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Temporary: "TE",
   Deft: "DE",
   Untributable: "UT",
-  Magnetic: "MG",
+  Equip: "EQ",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -255,6 +255,17 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
       ["§6.1", "Can attack twice each turn"],
       ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+    ]);
+  });
+
+  it("R781001 R781003 Immutable and Vanilla read the rules the SPEC rows give", () => {
+    expect(termsOf("Indestructible, Immutable")).toEqual([
+      { text: "Indestructible", term: "Indestructible" },
+      { text: "Immutable", term: "Immutable" },
+    ]);
+    expect([GLOSSARY.Immutable, GLOSSARY.Vanilla].map((entry) => [entry.section, entry.rule])).toEqual([
+      ["§6.1", "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it"],
+      ["§6.3", "Remove a unit's text and return it to its printed stats"],
     ]);
   });
 

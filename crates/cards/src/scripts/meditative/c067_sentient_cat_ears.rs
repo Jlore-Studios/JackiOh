@@ -1,7 +1,7 @@
 //! M #67 Sentient Cat Ears (SPEC §8.8 row 67, R1086): (1) Unit, Felinor, Epic, 1/1 → 2/2.
 //!
-//! Base and Radiant: "Magnetic\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
-//! Engine: ME-MAGNETIC (R1086) comes from the engine — the printed Magnetic keyword offers the play
+//! Base and Radiant: "Equip\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
+//! Engine: ME-EQUIP (R1086) comes from the engine — the printed Equip keyword offers the play
 //! onto your acting, non-Immutable Units, resolving on top before fusing into the host. The script
 //! is the end-of-turn shuffle of a fresh Love Bomb (M #30.1), `param("bombs")` copies (1, radiant
 //! 2), R80's cap turning a full library away.
@@ -33,7 +33,7 @@ pub fn script() -> CardScripts {
 }
 
 // M #67 Sentient Cat Ears — SPEC §8.8 row 67, BUILD M10 row M 67: "Played into an empty zone it is
-// a plain Unit; played as Magnetic onto your acting non-Immutable Unit it resolves on top (its Cry
+// a plain Unit; played as Equip onto your acting non-Immutable Unit it resolves on top (its Cry
 // included), then fuses into the host, which keeps its zone, damage and exertion and gains +1/+1,
 // Felinor and the end-of-turn line (R1086), the Cat Ears ceasing to exist with no Death; an enemy
 // or Immutable Unit is no host; at your end of turn only, one Love Bomb shuffled into your deck
@@ -46,7 +46,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const EARS: &str = "meditative-067";
-    /// (1) 4/4 Unit with no hooks: the Magnetic host.
+    /// (1) 4/4 Unit with no hooks: the Equip host.
     const VANILLA: &str = "core-008";
     /// (1) Spell, deals 3 to a target.
     const ECLIPSE: &str = "core-035";
@@ -89,7 +89,7 @@ mod tests {
             fn r1086_onto_your_unit_fuses_felinor_and_the_line() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "seed": "ears-magnetic",
+                    "seed": "ears-equip",
                     "p1": {
                         "hand": [EARS, FILLER],
                         "field": [VANILLA],
@@ -106,7 +106,7 @@ mod tests {
                 s.play(ECLIPSE, json!({ "targets": [{ "pick": "instance", "instanceId": host }] }));
                 s.end_turn();
                 let ears = s.card(EARS).id.clone();
-                s.play(EARS, json!({ "zone": 1, "magnetic": true }));
+                s.play(EARS, json!({ "zone": 1, "equip": true }));
 
                 // The host is kept in its zone with summed stats and kept damage (4+1 attack, 4+1
                 // health less the 3 dealt), and the Ears are gone with no Death.
@@ -137,7 +137,7 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
-                s.expect_refused(|s| s.play(EARS, json!({ "zone": 1, "magnetic": true })));
+                s.expect_refused(|s| s.play(EARS, json!({ "zone": 1, "equip": true })));
             }
 
             #[test]

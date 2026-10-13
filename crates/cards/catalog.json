@@ -13761,10 +13761,10 @@
           "kind": "Deft"
         },
         {
-          "kind": "Magnetic"
+          "kind": "Equip"
         }
       ],
-      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Magnetic\nThis has every keyword."
+      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Equip\nThis has every keyword."
     },
     "radiant": {
       "attack": 2,
@@ -13834,10 +13834,10 @@
           "kind": "Deft"
         },
         {
-          "kind": "Magnetic"
+          "kind": "Equip"
         }
       ],
-      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Magnetic\nThis has every keyword.\nDeath: Give every keyword this has to another random Unit of yours."
+      "text": "Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells, Windfury, Deft, Equip\nThis has every keyword.\nDeath: Give every keyword this has to another random Unit of yours."
     }
   },
   "meditative-066": {
@@ -13906,20 +13906,20 @@
       "health": 1,
       "keywords": [
         {
-          "kind": "Magnetic"
+          "kind": "Equip"
         }
       ],
-      "text": "Magnetic\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
+      "text": "Equip\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [
         {
-          "kind": "Magnetic"
+          "kind": "Equip"
         }
       ],
-      "text": "Magnetic\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
+      "text": "Equip\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
     }
   },
   "meditative-068": {

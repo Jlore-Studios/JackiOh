@@ -1767,7 +1767,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                 }),
                 x: Some(3),
                 embiggen: Some(true),
-                magnetic: Some(true),
+                equip: Some(true),
                 tributes: Some(vec!["c3".to_string()]),
                 targets: Some(selections.clone()),
                 modes: Some(vec!["draw".to_string()]),
@@ -1831,7 +1831,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                     zone: None,
                     x: None,
                     embiggen: None,
-                    magnetic: None,
+                    equip: None,
                     tributes: None,
                     targets: None,
                     modes: None,
@@ -4329,12 +4329,12 @@ mod r1044_face_down_play_over_the_socket {
     }
 }
 
-mod r1086_magnetic_over_the_socket {
+mod r1086_equip_over_the_socket {
     use super::*;
     use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
 
     #[test]
-    fn r1086_parses_a_play_s_magnetic_flag() {
+    fn r1086_parses_a_play_s_equip_flag() {
         let parsed = parse_client_message(
             &json!({
                 "type": "action",
@@ -4342,9 +4342,9 @@ mod r1086_magnetic_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "units", "lane": 1 },
-                    "magnetic": true,
+                    "equip": true,
                     "playerId": "p1",
-                    "nonce": "mag-1",
+                    "nonce": "eq-1",
                 },
             })
             .to_string(),
@@ -4352,28 +4352,54 @@ mod r1086_magnetic_over_the_socket {
         assert_eq!(
             parsed,
             Ok(ClientMessage::Action(ActionMessage {
-                nonce: "mag-1".to_string(),
+                nonce: "eq-1".to_string(),
                 body: serde_json::from_value(json!({
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "units", "lane": 1 },
-                    "magnetic": true,
+                    "equip": true,
                 }))
                 .expect("a play body"),
             }))
         );
 
-        // Absent reads as no Magnetic play, and a non-boolean is malformed, never passed on.
+        // Absent reads as no Equip play, and a non-boolean is malformed, never passed on.
         let bare = parse_client_message(
-            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "mag-2" } })
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "eq-2" } })
                 .to_string(),
         );
         assert!(matches!(bare, Ok(ClientMessage::Action(_))), "{bare:?}");
         let wrong = parse_client_message(
-            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "magnetic": "yes", "nonce": "bad" } })
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "equip": "yes", "nonce": "bad" } })
                 .to_string(),
         );
         assert!(wrong.is_err(), "{wrong:?}");
+    }
+
+    #[test]
+    fn r781000_a_client_that_still_sends_the_old_magnetic_flag_is_read_as_equip() {
+        let old = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                    "nonce": "eq-3",
+                },
+            })
+            .to_string(),
+        );
+        let Ok(ClientMessage::Action(ActionMessage { body, .. })) = old else {
+            panic!("the old flag parses: {old:?}");
+        };
+        let written = serde_json::to_value(&body).expect("a play body serialises");
+        assert_eq!(written["equip"], json!(true));
+        assert!(
+            written.get("magnetic").is_none(),
+            "written under the new name only: {written}"
+        );
     }
 }
 

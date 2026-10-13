@@ -382,7 +382,7 @@
   animation: kw-tribal var(--kw-period-tribal) ease-in-out infinite alternate;
 }
 
-.cf .kw-fx[data-keyword-fx="Magnetic"][data-kw-motion="on"] .kw-anim {
+.cf .kw-fx[data-keyword-fx="Equip"][data-kw-motion="on"] .kw-anim {
   animation: kw-magnet-pull var(--kw-period-magnet) ease-in-out infinite alternate;
 }
 

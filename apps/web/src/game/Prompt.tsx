@@ -522,17 +522,17 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
-    case "magnetic":
-      // R1086: one zone with both a plain and a Magnetic play asks which.
+    case "equip":
+      // R1086: one zone with both a plain and an Equip play asks which.
       return {
         ...common,
         chrome: "mode",
-        title: t("Magnetic or Stack?"),
+        title: t("Equip or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
-          label: value ? t("Magnetic") : t("Stack"),
+          label: value ? t("Equip") : t("Stack"),
         })),
-        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ equip: keys[0] === "true" })),
       };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));

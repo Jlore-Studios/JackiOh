@@ -255,7 +255,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-tribal", when: "always" },
     numbered: false,
   },
-  Magnetic: {
+  Equip: {
     layer: "glyph",
     priority: 28,
     shape: "a horseshoe magnet, its poles pulling in",

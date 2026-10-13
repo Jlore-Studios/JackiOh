@@ -406,8 +406,8 @@ impl SummonCopyArgs {
     }
 }
 
-/// §10.7's `cloneInstance(inst)` and R57: the copy keeps the radiant flag, the buffs, the granted
-/// keywords, the Vanilla state and `statsOverride`, and resets damage, exertion, counters and
+/// §10.7's `cloneInstance(inst)` and R57: the copy keeps the radiant flag, the buffs (none, for a
+/// copy made Vanilla, R781003), the granted keywords, the Vanilla state and `statsOverride`, and resets damage, exertion, counters and
 /// `summonedTurn` — the last of which `summon_onto` sets to the current turn, so the copy is
 /// summoning sick like any other new body (§4.1).
 ///
@@ -463,6 +463,10 @@ pub fn clone_of(
     }
     if let Some(enchantments) = crate::enchantments::united_enchantments([source]) {
         copy.enchantments = Some(enchantments);
+    }
+    // R781003: a copy made Vanilla is a Vanilla'd Unit like any other, at its printed stats (#61).
+    if args.vanilla == Some(true) {
+        super::transform::to_printed_stats(&mut copy);
     }
     copy
 }

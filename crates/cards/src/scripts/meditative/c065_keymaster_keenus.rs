@@ -4,7 +4,7 @@
 //! Radiant: the same, then "Death: Give every keyword this has to another random Unit of yours."
 //! Engine: the base face is `Script::default()` — the keywords are printed data (R1084). The Radiant
 //! face's Death grants the keywords it had as it died (R78's last-known state) to another random
-//! Unit of yours (R1085). Magnetic and Stack are two play options (ME-MAGNETIC, R1086).
+//! Unit of yours (R1085). Equip and Stack are two play options (ME-EQUIP, R1086).
 
 use jackioh_engine::prelude::*;
 
@@ -28,7 +28,7 @@ pub fn script() -> CardScripts {
 
 // M #65 Keymaster Keenus — SPEC §8.8 row 65, BUILD M10 row M 65: "Prints the 21 keywords (R1084),
 // and the client lists them all; Taunt is dropped while it is Indestructible (R347); played as
-// Magnetic onto your Unit it fuses in (R1086), or with Stack onto a pile; its Armor, Lucky and
+// Equip onto your Unit it fuses in (R1086), or with Stack onto a pile; its Armor, Lucky and
 // Spell Damage move by Nerf and Buff's X row; destroyed, it survives (Indestructible), so its
 // Death needs a Sacrifice or a Tribute; radiant 2/2, and Death: every keyword it had as it died is
 // granted to a random other Unit of yours (R1085), none with no other Unit; Reborn returns it, and
@@ -73,7 +73,7 @@ mod tests {
             ImmuneToSpells,
             Windfury,
             Deft,
-            Magnetic,
+            Equip,
         ]
     }
 
@@ -86,7 +86,7 @@ mod tests {
             #[test]
             fn r1084_prints_the_21_keywords() {
                 crate::register_all();
-                // Every engine keyword kind plus Magnetic, leaving out Can't attack, Brittle,
+                // Every engine keyword kind plus Equip, leaving out Can't attack, Brittle,
                 // Temporary and Untributable (which only hurt, R1220), Animated and Animated on
                 // your turn (a backrow meaning only), and Immune to tribal tag based hate (R940),
                 // a keyword the 21 do not name: a later keyword joins only by a patch (R1084). The
@@ -149,16 +149,16 @@ mod tests {
             }
 
             #[test]
-            fn r1086_magnetic_onto_your_unit_fuses() {
+            fn r1086_equip_onto_your_unit_fuses() {
                 crate::register_all();
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
-                    "seed": "keenus-magnetic",
+                    "seed": "keenus-equip",
                     "p1": { "mana": 10, "hand": [VANILLA, KEENUS, FILLER], "library": filler(4) },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 s.play(VANILLA, json!({}));
-                s.play(KEENUS, json!({ "zone": 1, "magnetic": true }));
+                s.play(KEENUS, json!({ "zone": 1, "equip": true }));
 
                 // The host is kept and united with Keenus: a 4/4 that is also a 1/1, and Felinor...
                 // (Keenus carries no tags, so the host keeps its own).
@@ -168,7 +168,7 @@ mod tests {
                 assert!(
                     keywords_of(s.state(), &host)
                         .iter()
-                        .any(|keyword| keyword.kind() == KeywordKind::Magnetic)
+                        .any(|keyword| keyword.kind() == KeywordKind::Equip)
                 );
             }
         }

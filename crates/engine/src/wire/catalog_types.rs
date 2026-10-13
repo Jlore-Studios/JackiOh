@@ -390,8 +390,10 @@ pub enum Keyword {
     /// R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing.
     Untributable,
     /// R1086: a Unit may be played onto one of its controller's Units, resolving on top of it
-    /// before fusing into it (ME-MAGNETIC). In no random keyword pool (R21).
-    Magnetic,
+    /// before fusing into it (ME-EQUIP). In no random keyword pool (R21). It was called Magnetic,
+    /// and a shipped snapshot's or a stored log's old name still reads as it (R781000).
+    #[serde(alias = "Magnetic")]
+    Equip,
 }
 
 string_union! {
@@ -424,8 +426,9 @@ string_union! {
         Temporary = "Temporary",
         Deft = "Deft",
         Untributable = "Untributable",
-        /// R1086: ME-MAGNETIC's keyword.
-        Magnetic = "Magnetic",
+        /// R1086: ME-EQUIP's keyword; the old name reads as it, never written (R781000).
+        #[serde(alias = "Magnetic")]
+        Equip = "Equip",
     }
 }
 
@@ -463,7 +466,7 @@ impl Keyword {
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
             Keyword::Untributable => KeywordKind::Untributable,
-            Keyword::Magnetic => KeywordKind::Magnetic,
+            Keyword::Equip => KeywordKind::Equip,
         }
     }
 
@@ -509,7 +512,7 @@ impl Keyword {
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
             KeywordKind::Untributable => Keyword::Untributable,
-            KeywordKind::Magnetic => Keyword::Magnetic,
+            KeywordKind::Equip => Keyword::Equip,
         }
     }
 }

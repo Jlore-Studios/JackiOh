@@ -166,7 +166,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Cleave: keyword("Cleave", "Also damages units adjacent to the target"),
   Pierce: keyword("Pierce", "Its damage ignores Armor"),
   Indestructible: keyword("Indestructible", "Can't be destroyed or damaged; can be exiled or tributed"),
-  Immutable: keyword("Immutable", "Text can't be changed or transformed"),
+  Immutable: keyword(
+    "Immutable",
+    "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it",
+  ),
   Stack: keyword("Stack", "May be played onto an occupied zone"),
   "Can't attack": keyword("Can't attack", "Cannot declare attacks"),
   Armor: keyword("Armor", "Reduce each damage instance by X", { row: "Armor X" }),
@@ -200,8 +203,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Deft: keyword("Deft", "Can attack and switch position in the same turn"),
   // R1220: Untributable, Meditative #80 Aluneth's keyword.
   Untributable: keyword("Untributable", "Can't be Tributed, by any cost or effect"),
-  // Meditative batch 16 (issue #532, R1086): Magnetic, M #65 and M #67's keyword.
-  Magnetic: keyword("Magnetic", "May be played onto one of your Units, fusing into it"),
+  // Meditative batch 16 (issue #532, R1086): Equip, M #65 and M #67's keyword.
+  Equip: keyword("Equip", "May be played onto one of your Units, fusing into it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -241,7 +244,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Recruit: verb("Recruit", "Summon from deck, scanning top down"),
   Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4"),
   Transform: verb("Transform", "Replace a card with another in place"),
-  Vanilla: verb("Vanilla", "Remove a unit's text"),
+  Vanilla: verb("Vanilla", "Remove a unit's text and return it to its printed stats"),
   Lock: verb("Lock", "Zone can't be played into"),
   "Choose one": verb("Choose one", "Modal effect"),
   // Patch v0.2.0's verbs (R512, see the header).
@@ -317,5 +320,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Temporary: "TE",
   Deft: "DE",
   Untributable: "UT",
-  Magnetic: "MG",
+  Equip: "EQ",
 };

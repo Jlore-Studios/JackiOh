@@ -14,7 +14,7 @@ A unit has Attack, Max Health and Damage; current health = max health minus dama
 ### 4.2 Declaring an attack
 
 1. Choose an attacker that can attack (exertion unspent, Attack Position, not sick or has Rush/Charge, attack above 0, no "can't attack", not "can't attack or be attacked").
-2. Choose a target: an enemy unit, or the enemy hero (not with Rush on the summon turn). The target's restrictions hold here ([[§6.1]]): a unit that "can't be attacked" (C+ #51) or "can't attack or be attacked" is never a target, and one that "only Units in this lane can attack" (C+ #19.1 Top Loser) is a target only for an attacker in the enemy unit zone of its own lane. Immune to Spells is no restriction on attacks.
+2. Choose a target: an enemy unit, or the enemy hero (not with Rush on the summon turn). The target's restrictions hold here ([[§6.1]]): a unit that "can't be attacked" (C+ #51) or "can't attack or be attacked" is never a target, and one that "only Units in this lane can attack" (C+ #19.1 Top Loser) is a target only for an attacker in the enemy unit zone of its own lane. Immune to Spells is no restriction on attacks, and neither is Immutable ([[R781001]]).
 3. Taunt check: if any enemy unit has Taunt (printed, granted, or from Defense Position; never an Indestructible unit, [[R347]]), the target must be one of them. Only a Taunt the attacker may legally attack under step 2 binds it.
 4. Declaring the attack has now spent the attacker's exertion, before any damage. Trap window: My Pawn checks whether the hit would be lethal and, if so, cancels the attack; the exertion is not given back, so the attack is gone either way ([[R44]]).
 5. Resolve combat, then run the state check.

@@ -11,9 +11,10 @@ import type { ZoneChoice } from "./ZoneChoice";
  */
 export type ActionInput = { playerId: PlayerId, } & ({ "type": "mulligan", keep: Array<string>, } | { "type": "play", instanceId: string, zone?: ZoneChoice, x?: number, embiggen?: boolean, 
 /**
- * R1086: play this Magnetic card onto one of its controller's Units (ME-MAGNETIC).
+ * R1086: play this Equip card onto one of its controller's Units (ME-EQUIP). A log
+ * recorded before the rename spells it `magnetic`, which reads as it (R781000).
  */
-magnetic?: boolean, 
+equip?: boolean, 
 /**
  * Units sacrificed to pay a Tribute cost (§6.3).
  */

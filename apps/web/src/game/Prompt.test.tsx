@@ -427,14 +427,14 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     const view = viewWith();
     const interaction = playing([
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
-      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, equip: true },
     ]);
 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("mode");
     expect(optionTestids()).toEqual(["prompt-option-true", "prompt-option-false"]);
-    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Magnetic");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Equip");
     expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Stack");
 
     fireEvent.click(screen.getByTestId("prompt-option-true"));
@@ -443,7 +443,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       type: "play",
       instanceId: "h1",
       zone: { row: "units", lane: 1 },
-      magnetic: true,
+      equip: true,
     });
   });
 

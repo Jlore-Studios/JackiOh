@@ -182,7 +182,7 @@ list (in M6, after its cards) says more.
 | ME-PICK-N, after-attacked, hero immune, deck bottom, random fuse | small verbs and hooks | #46–#49.3 | MB13 |
 | ME-ALTPLAY | a Unit played as an Animated Field Trap; a Spell played as a timed Trap | #45, #45.1, #99 | MB14 |
 | R383 revised, armor_on_field | "Animated on your turn" not sick once it has been yours since the turn began (D7) | #66, #73 (#71.1) | MB15 |
-| ME-MAGNETIC, query `stats`, random fills, voice trigger hook | Magnetic; printed-stats queries; small verbs | #51, #57, #60, #63, #65, #67, #75 | MB16 |
+| ME-EQUIP, query `stats`, random fills, voice trigger hook | Equip; printed-stats queries; small verbs | #51, #57, #60, #63, #65, #67, #75 | MB16 |
 | ME-STATS, De-Radiant, either-player Activate, ME-GRANT, `manaSpent` | a compiled-in win-rate table; un-Radiant; Activate by either player; a granted Death ability | #50, #53, #54, #58, #59, #69 | MB17 |
 | attack mods and `conditionTargets`, attack redirect, exile on damage, ME-PARETO, ME-EMOTE | combat-only auras and the yellow highlight; the attack half of Redirect; the engine-side judge of an optimal play; emotes as engine actions | #52, #64, #71, #71.1, #72 | MB18 |
 | ME-HANDCAP, hand marks | a per-player hand size; marked hand cards | #76, #79 | MB19 |
@@ -2867,12 +2867,12 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 
 - **Text:** Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield,
   Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1, Immune to Spells,
-  Windfury, Deft, Magnetic
+  Windfury, Deft, Equip
   This has every keyword.
 - **Radiant:** (the same keywords)
   This has every keyword.
   Death: Give every keyword this has to another random Unit of yours.
-- **Engine:** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Magnetic.
+- **Engine:** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Equip.
   Five are left out:
   - Can't attack, Brittle and Temporary, which only hurt;
   - Animated and Animated on your turn, which mean something only on a backrow card.
@@ -2880,14 +2880,14 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
   Quickdraw are not keywords in this sense either; Cast on draw would also clash with Quickdraw (R635).
   R347 drops its Taunt while it is Indestructible. Its Death fires only through a Sacrifice or Tribute
   (Indestructible) or after an exile replacement fails. Numbered keywords move under Nerf and Buff's X
-  row (R386). Magnetic and Stack are two distinct play options (ME-MAGNETIC, MD-D24). Radiant Death: the
+  row (R386). Equip and Stack are two distinct play options (ME-EQUIP, MD-D24). Radiant Death: the
   keywords it had as it died (LKI, R78) go to a random other Unit you control as granted keywords
   (`grant_keyword`), and Reborn's return fires it again on the second death.
 - **Rulings:** **MD-D21:** the list above is the card's printed data, not "whatever the engine knows". A
   later keyword joins only by a patch. **MD-D22:** the Radiant Death's receiver is random (Hearthstone's
   Deathrattle), and the keywords are granted (§10.4).
 - **Numbers:** none (Armor, Lucky and Spell Damage are numbered keywords, R386).
-- **Class:** B (Magnetic comes from ME-MAGNETIC).
+- **Class:** B (Equip comes from ME-EQUIP).
 
 #### Meditative #66 · Fiery Waraxe
 `meditative-066` · (2) Field Spell · Common · 3/2 → 6/4
@@ -2912,30 +2912,30 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 #### Meditative #67 · Sentient Cat Ears
 `meditative-067` · (1) Unit, Felinor · Epic · 1/1 → 2/2
 
-> **Designer:** 1/1 · Magnetic {For AI: can optionally Stack on to one of your Units. If it does, Fuse
-> with it} · End of Turn: Shuffle a Love Bomb into your Deck. ~~~ 2/2 · Magnetic · End of Turn: Shuffle 2
+> **Designer:** 1/1 · Equip {For AI: can optionally Stack on to one of your Units. If it does, Fuse
+> with it} · End of Turn: Shuffle a Love Bomb into your Deck. ~~~ 2/2 · Equip · End of Turn: Shuffle 2
 > Love Bombs into your Deck.
 
-- **Text:** Magnetic
+- **Text:** Equip
   End of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck.
-- **Radiant:** Magnetic
+- **Radiant:** Equip
   End of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck.
-- **Engine:** **ME-MAGNETIC.** A Magnetic Unit may be played onto the zone of one of your acting,
-  non-Immutable Units (R23), chosen in the `play` action (`magnetic: true` beside `zone`, R81; a card
+- **Engine:** **ME-EQUIP.** An Equip Unit may be played onto the zone of one of your acting,
+  non-Immutable Units (R23), chosen in the `play` action (`equip: true` beside `zone`, R81; a card
   with Stack too has both options in `legal_actions`).
   It stands on top of that Unit while its own play resolves, its Cry included. This is R653's reading of
-  Hearthstone's Magnetic, using Ivory Tower's machinery with a Unit host; the host lies dormant beneath
+  Hearthstone's Mech fusion, using Ivory Tower's machinery with a Unit host; the host lies dormant beneath
   it meanwhile (R13). On its `cardResolved`, the card on top is fused into the host (R77, R102, R653).
   The host is the kept instance (zone, damage, exertion, `summonedTurn`). The result sums stats and
   buffs, unions keywords and tags (the host becomes a Felinor), joins texts, and costs min(sum, 4). The
-  Magnetic card ceases to exist with no Death.
+  Equip card ceases to exist with no Death.
   If either card left before the fusion, nothing is fused, and the top card, if still there, stays as
   the pile's top. The play counts as a play (Combo, R70 counters). With the host's text now holding it,
   "End of turn: Shuffle a Love Bomb" (`meditative-030-1`, a fresh copy, R80's cap) runs for the host.
-- **Rulings:** **MD-D24:** Magnetic plays onto your own acting non-Immutable Unit, resolves in full on
+- **Rulings:** **MD-D24:** Equip plays onto your own acting non-Immutable Unit, resolves in full on
   top of it, then fuses with the host kept. It is a separate play option from Stack.
 - **Numbers:** bombs 1 → 2 ↑.
-- **Class:** C (ME-MAGNETIC).
+- **Class:** C (ME-EQUIP).
 
 #### Meditative #68 · Catnip
 `meditative-068` · (1) Field Trap, Felinor · Rare · 5/5 → 10/10
@@ -3197,7 +3197,7 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
   `hears_emotes`. The actor mints it from an emote that passed R643's gate and refuses it on the action
   channel; hotseat, practice and the AI persona send it by the same flag. It revises R643, and
   `AI_SKIPPED_ACTIONS` gains it.
-- **ME-MAGNETIC** (#67, #65). The play option `magnetic: true` onto your acting non-Immutable Unit. The
+- **ME-EQUIP** (#67, #65). The play option `equip: true` onto your acting non-Immutable Unit. The
   card resolves in full on top of it, then is fused into the host (R77, host kept, R653's reading). It
   is distinct from Stack.
 - **ME-JADE** (#54). It provides Jade `meditative-039-2` and Red Jade `meditative-039-4` (and their
@@ -4810,7 +4810,7 @@ differently is corrected in its note, not here.
   yours.
 - **MD-D23** (#66, #71.1; revises R383): an "Animated on your turn" card is not summoning sick when it
   animates at the start of a turn after the one it entered on.
-- **MD-D24** (#67, #65): Magnetic resolves in full on top of your Unit, then fuses with the host kept.
+- **MD-D24** (#67, #65): Equip resolves in full on top of your Unit, then fuses with the host kept.
   It is a separate play option from Stack.
 - **MD-D25** (#68): "casts a Spell" means plays or casts a Spell, answered after it resolves.
 - **MD-D26** (#69): mana spent is its controller's play and activation prices while it is on the field,
@@ -5135,7 +5135,7 @@ policy and the timeout can answer it.
 | MB13 | #529 | the YileGPT line: #46 Conjure Intellect, #47 饕餮, #48 Tranquility, #49 YileGPT Tamed, #49.1 YileGPT Unleashed, #49.2 Yile's Virus, #49.3 AI Girlfriend | pick N different entries (Call to Chaos's R423 draw as a verb); `after_attacked`, the defender's mirror of R426's hook; hero immune to damage until a turn starts; `shuffle_into` at the bottom of the deck; `fuse_cards` with a random ingredient | #515 | hard |
 | MB14 | #530 | alternative plays: #45 Knowledge Breaker, #45.1 Knowledge Breaker Prime, #99 Paranoia | ME-ALTPLAY: a Unit played face down as an Animated Field Trap that fires at its controller's start of turn (#45, #45.1), a Spell played face down as a Trap that fires at a chosen timing (#99), `legal_actions` and the play action carrying the mode, `determinize` sampling them, and the client's control for it | #515 | hard |
 | MB15 | #531 | keywords and existing primitives: #55 Dragon Fruit, #56 House Party, #61 Joon Jorker, #62 Small Time Recruits, #66 Fiery Waraxe, #68 Catnip, #70 I'M WILL BE YOUR DOOM, #70.1 Ready… I'm, #73 Plate Packer, #74 Montaña Giant | R383 revised (D7, MD-D23): an "Animated on your turn" card on its controller's side since the turn began is not summoning sick when it animates (it changes C+ #12.8 Frostspatula's play: say so); `armor_on_field` (#73); it uses R1421's Prime pool (#55), already on `main` | #515 | hard |
-| MB16 | #532 | pools and fusion: #51 Devin Bot, #57 Clip-Farming Critikal, #60 Eschews, #63 Skull of J'Nari, #65 Keymaster Keenus, #67 Sentient Cat Ears, #75 Ever Growing Tree | ME-MAGNETIC (#67, and #65's keyword list): played onto one of your Units, it resolves and fuses into it, with the client's drop target; the catalog query's `stats` field (printed base attack and health); `fill_board_random`, `summon_random_from_hand`; a voice-line `trigger` hook (#63's lines); it uses R1422's `anyTags` (#60), already on `main` | #515, #523 | hard |
+| MB16 | #532 | pools and fusion: #51 Devin Bot, #57 Clip-Farming Critikal, #60 Eschews, #63 Skull of J'Nari, #65 Keymaster Keenus, #67 Sentient Cat Ears, #75 Ever Growing Tree | ME-EQUIP (#67, and #65's keyword list): played onto one of your Units, it resolves and fuses into it, with the client's drop target; the catalog query's `stats` field (printed base attack and health); `fill_board_random`, `summon_random_from_hand`; a voice-line `trigger` hook (#63's lines); it uses R1422's `anyTags` (#60), already on `main` | #515, #523 | hard |
 | MB17 | #533 | riders and outside data: #50 CN Tech, #53 Prestige, #54 Money Machine, #58 Permanent Underclassman, #59 Permanent Upperclassman, #69 The Maestro | ME-STATS: a compiled-in table of card win rates (`crates/cards/data/win_rates.json` with a `cargo jackioh winrates` command, `CN_TECH_MIN_GAMES`, ties and an empty table handled), never a runtime read (CLAUDE.md rule 4); De-Radiant; an Activate either player may use (#54); ME-GRANT: a granted Death ability as plain data (#58, #59); the `manaSpent` event (#69); multi-pool `fuse_generated` (#59) | #515, #525 | hard |
 | MB18 | #535 | combat and the judge: #52 Economic Anxiety, #64 Traitorous Blood, #71 Pareto Optimality, #71.1 The Cane, #72 The Banisher | combat-only attack modifiers and the engine's `conditionTargets`, painted yellow while dragging an attack (#52); the attack half of Redirect (#64); exile on damage (#72); ME-PARETO: the engine-side judge of the AI optimal move, on the scorer, never `crates/ai` (CLAUDE.md rule 4); ME-EMOTE: an emote as an engine action and the `emoted` event while a card listens, minted by the match actor from an emote that passed the rate gate (R643 revised), hotseat and practice alike | #515, #531 | hard |
 | MB19 | #534 | the hand: #76 Do or Die, #77 Bulk Booster, #78 Occidentless Mandate, #79 Touched by KY, #81 Deadman's Hand, #90 Spell Basket | ME-HANDCAP: a per-player hand size read everywhere `HAND_CAP` is read today; hand marks for delayed effects (#76) | #515 | hard |

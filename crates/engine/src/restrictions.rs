@@ -2,12 +2,18 @@
 //! damage step or an attack validator asks whether a card is out of an effect's reach, so the answer a
 //! client greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
 //!
-//! Two families live here.
+//! Three families live here.
 //!
 //!  * Immune to Spells: "a Spell can't target it and doesn't affect it". The targeting half is the
 //!    play pipeline's (`spell_cannot_reach` in `play_choices`); the "doesn't affect it" half is
 //!    `effects/targets.rs`, which asks `effect_is_from_spell` for every card a single target or a scope
 //!    names, so every verb written in that vocabulary passes an immune unit by.
+//!  * Immutable's targeting half (R781001): "while in play, Spells, Field Spells and Field Traps can't
+//!    target it". Targeting is R450's choosing, so `immutable_bars` is asked by every declaration
+//!    (`play_choices`) and every `target` prompt (`targeting_point`); a Field Trap whose trigger names
+//!    the one card it acts on asks it too (Classic #5 Tesla, Classic+ #74). Random picks, scopes,
+//!    attacks, Units and Traps that are not Field Traps still reach the card. Its text half (no
+//!    Transform, Vanilla, Fuse-onto, Nerf or Buff, R23) is read where each of those verbs is.
 //!  * The attack restrictions: can't be attacked (Classic+ #51), attacked only from its own lane
 //!    (Classic+ #19.1), can't attack or be attacked (a carried Unit, R446). `combat.rs` asks
 //!    `attack_restriction` for a declared attack (§4.2 step 2), for the Taunt wall (step 3: a Taunt
@@ -79,6 +85,40 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { .. })
         && effect_is_from_spell(ctx)
         && immune_to_spells(ctx.sink.state, card)
+}
+
+/// R781001: the type Immutable's targeting rule reads off a source. Anything standing in a unit zone
+/// is a Unit (an Animated card there included); any other card is its running face's printed type, so a
+/// Spell set face-down and revealed (ME-ALTPLAY, R1044) is still a Spell, and a Field Trap firing from
+/// the backrow is a Field Trap even when it animates afterwards.
+pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
+    if let Zone::Field { row: Row::Units, .. } = source.zone {
+        return CardType::Unit;
+    }
+    type_of_face(state, &source.def_id, source.radiant)
+}
+
+/// R781001: whether the card is Immutable while in play: on the field, face-up (a face-down card's
+/// text is dormant, and reading it would tell its owner's opponent what it is), with the keyword now
+/// (printed, granted or from an aura).
+pub fn immutable_in_play(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { .. })
+        && !crate::preview::is_face_down(state, card)
+        && unit_has(state, card, KeywordKind::Immutable)
+}
+
+/// R781001: "While in play, Spells, Field Spells and Field Traps can't target it." True when `source`
+/// is a Spell, a Field Spell or a Field Trap (`targeting_type_of`) and `card` is Immutable in play, so
+/// the source may not choose it, its controller's own cards included. A Unit, a Trap that is not a Field
+/// Trap, and no source at all may.
+pub fn immutable_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
+    let Some(source) = source else {
+        return false;
+    };
+    matches!(
+        targeting_type_of(state, source),
+        CardType::Spell | CardType::FieldSpell | CardType::FieldTrap
+    ) && immutable_in_play(state, card)
 }
 
 /// MD-B1, R940: whether the card holds the tribal-hate immunity now (a keyword, so layered:
