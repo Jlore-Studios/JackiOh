@@ -4246,7 +4246,9 @@
     },
     "760": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6149025902"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-13T06:55:58Z",
@@ -4276,8 +4278,8 @@
       "planned_tier": "medium",
       "provider": "muse",
       "question": "Issue #760's plan touches only files under bot/, which the night bot is forbidden to change (CLAUDE.md, .harness/config.json forbidden_paths, deliver refuses the push). Should a person build this \u2014 please add the human label as the plan's Open questions ask \u2014 or is there an explicit exception allowing the bot to edit bot/ for this issue?",
-      "queued_at": "2026-10-13T06:43:10Z",
-      "requested_by": "jgoetzmann",
+      "queued_at": "2026-10-13T15:26:11Z",
+      "requested_by": "MaxGoetzmann",
       "run_id": "38359592872",
       "started_at": "2026-10-13T06:57:06Z",
       "stop_requested": false,
