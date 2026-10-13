@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import { LANES, testid } from "../game/contract.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import {
   COACH_BUBBLE_GAP_PX,
   COACH_BUBBLE_MIN_HEIGHT_PX,
@@ -193,6 +194,7 @@ export type CoachProps = {
 };
 
 export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
+  useLocale();
   const latest = useSyncExternalStore(tracker.subscribe, tracker.getState, tracker.getState);
   const shown = useCaughtUp(latest, boardRoot);
   const display = shown?.display ?? null;
@@ -308,10 +310,10 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
         ...(place?.maxHeight == null ? {} : { maxHeight: place.maxHeight }),
       };
   const count = `${String(display.stepNumber)} / ${String(display.stepCount)}`;
-  const countLabel = `Step ${String(display.stepNumber)} of ${String(display.stepCount)}`;
+  const countLabel = t("Step {n} of {total}", { n: display.stepNumber, total: display.stepCount });
   const full = display.mode === "tip" || display.mode === "step";
   const yourMove = !full && !shown.aiBusy && shown.yourMove;
-  const waitingLine = shown.aiBusy ? AI_MOVE : yourMove ? YOUR_MOVE : "";
+  const waitingLine = shown.aiBusy ? t(AI_MOVE) : yourMove ? t(YOUR_MOVE) : "";
   const className = ["coach", panel ? "coach--panel" : "coach--float", ...(full ? [] : ["coach--slim"])].join(" ");
   const more = panel && (expanded || geometry.clamped);
 
@@ -344,14 +346,14 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
         data-expanded={panel ? (expanded ? "true" : "false") : undefined}
         data-stale={stale ? "true" : undefined}
         role="region"
-        aria-label={full ? undefined : "Tutorial coach"}
+        aria-label={full ? undefined : t("Tutorial coach")}
         aria-labelledby={full ? titleId : undefined}
         tabIndex={-1}
         style={style}
       >
         <div key="heading" className="coach__heading">
           <header className="coach__head">
-            <span className="coach__eyebrow">{display.mode === "tip" ? "Tip" : "Coach"}</span>
+            <span className="coach__eyebrow">{display.mode === "tip" ? t("Tip") : t("Coach")}</span>
             <span className="coach__count" aria-label={countLabel}>
               {count}
             </span>
@@ -376,7 +378,7 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
                 setExpandedFor(expanded ? null : key);
               }}
             >
-              {expanded ? "Less" : "More"}
+              {expanded ? t("Less") : t("More")}
             </button>
           ) : null}
         </div>
@@ -389,7 +391,7 @@ export function Coach({ tracker, boardRoot }: CoachProps): ReactElement | null {
               data-testid={tutorialTestid.coachAck}
               onClick={answer}
             >
-              Got it
+              {t("Got it")}
             </button>
           ) : null}
         </div>

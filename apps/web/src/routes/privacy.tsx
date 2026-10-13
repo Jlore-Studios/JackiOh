@@ -22,6 +22,7 @@ import {
   PLAY_TELEMETRY_RETENTION_DAYS,
 } from "@jackioh/server-config";
 
+import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
@@ -37,6 +38,7 @@ export const privacyTestid = {
 export const PRIVACY_LAST_UPDATED = "2026-10-10";
 
 export default function PrivacyRoute(): ReactElement {
+  const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={privacyTestid.screen}>
       <BackLink />
@@ -45,9 +47,11 @@ export default function PrivacyRoute(): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Privacy policy</h2>
+        <h2>{t("Privacy policy")}</h2>
+        {/* A translation says the English text governs; the English needs no such line. */}
+        {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={privacyTestid.updated}>
-          Last updated <time dateTime={PRIVACY_LAST_UPDATED}>{PRIVACY_LAST_UPDATED}</time>
+          {t("Last updated")} <time dateTime={PRIVACY_LAST_UPDATED}>{formatDay(PRIVACY_LAST_UPDATED)}</time>
         </p>
 
         <section aria-labelledby="privacy-who">

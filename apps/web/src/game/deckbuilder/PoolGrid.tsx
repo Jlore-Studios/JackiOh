@@ -33,8 +33,10 @@ import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
+import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -96,7 +98,7 @@ type PoolItemProps = {
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
   if (place === null) return null;
-  return place === "deck" ? "In deck" : `In ${place.name}`;
+  return place === "deck" ? t("In deck") : t("In {name}", { name: place.name });
 }
 
 /**
@@ -109,19 +111,22 @@ export function poolCardLabel(
   owned: boolean | null = null,
   fresh = false,
 ): string {
-  const parts = [def.name, def.type, costText(def.cost), def.rarity];
-  if (fresh) parts.push("new");
-  if (place === "deck") parts.push("in this deck");
-  else if (place !== null) parts.push(`in ${place.name}, unavailable`);
-  if (owned === false) parts.push("not in your collection");
-  return `${parts.join(", ")}. Show details`;
+  // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
+  const terms = CARD_TABLES[getLocale()]?.terms;
+  const parts = [readerName(def), terms?.types[def.type] ?? def.type, t(costText(def.cost)), terms?.rarities[def.rarity] ?? def.rarity];
+  if (fresh) parts.push(t("new"));
+  if (place === "deck") parts.push(t("in this deck"));
+  else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));
+  if (owned === false) parts.push(t("not in your collection"));
+  return t("{card}. Show details", { card: parts.join(t(", ")) });
 }
 
 function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
+  const locale = useLocale();
   const place = deck?.place ?? null;
   const badge = placeWords(place);
 
-  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def]);
+  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
@@ -175,7 +180,7 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
         </span>
         {fresh ? (
           <span className="db-new" data-new-set={def.set} aria-hidden="true">
-            New
+            {t("New")}
           </span>
         ) : null}
         {badge === null ? null : (
@@ -191,8 +196,8 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
           data-testid={addPoolId(cardId)}
           // Already placed: the same refusal a drag gets, so it still reports why, but says it is off.
           aria-disabled={place !== null}
-          aria-label={`Add ${def.name} to ${deck.deckName}`}
-          title={`Add to ${deck.deckName}`}
+          aria-label={t("Add {card} to {deck}", { card: readerName(def), deck: deck.deckName })}
+          title={t("Add to {deck}", { deck: deck.deckName })}
           onClick={() => {
             deck.onAdd(cardId);
           }}
@@ -224,7 +229,7 @@ export default function PoolGrid(props: PoolGridProps): ReactElement {
   const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET } = props;
 
   return (
-    <section className="db-pool" aria-label="Card pool" data-testid={CARD_POOL}>
+    <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
       {ids.map((cardId) => {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;

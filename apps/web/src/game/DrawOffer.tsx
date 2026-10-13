@@ -26,6 +26,7 @@ import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid } from "./animations.ts";
 import { testid } from "./contract.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "./notices.css";
 
 export type DrawNotice =
@@ -114,6 +115,7 @@ export type DrawOfferNoticeProps = {
 };
 
 export default function DrawOfferNotice({ view, legal, animating, onAction }: DrawOfferNoticeProps): ReactElement {
+  useLocale();
   const titleId = useId();
   const notice = drawNoticeFor(view);
   const text = notice === null ? "" : drawNoticeText(notice);
@@ -132,12 +134,12 @@ export default function DrawOfferNotice({ view, legal, animating, onAction }: Dr
         >
           {notice.kind === "waiting" ? (
             <p className="draw-toast__line" data-testid={testid.drawOfferStatus}>
-              {text}
+              {t(text)}
             </p>
           ) : notice.kind === "offered" ? (
             <section className="draw-offer" data-testid={testid.drawOffer} role="region" aria-labelledby={titleId}>
               <p className="draw-toast__line" id={titleId}>
-                {text}
+                {t(text)}
               </p>
               <div className="draw-offer__actions">
                 <button
@@ -149,7 +151,7 @@ export default function DrawOfferNotice({ view, legal, animating, onAction }: Dr
                     if (accept !== undefined) onAction(accept);
                   }}
                 >
-                  Accept
+                  {t("Accept")}
                 </button>
                 <button
                   type="button"
@@ -160,13 +162,13 @@ export default function DrawOfferNotice({ view, legal, animating, onAction }: Dr
                     if (decline !== undefined) onAction(decline);
                   }}
                 >
-                  Decline
+                  {t("Decline")}
                 </button>
               </div>
             </section>
           ) : (
             <p className="draw-toast__line" data-testid={testid.drawOutcome} data-outcome={notice.kind}>
-              {text}
+              {t(text)}
             </p>
           )}
         </div>

@@ -50,6 +50,7 @@ import { CardArt } from "./art/index.ts";
 import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
@@ -119,6 +120,7 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
 }
 
 export function MinionFace({ face, unit, className }: MinionFaceProps): ReactElement {
+  useLocale();
   const settings = useCardSettings();
   const plan = keywordFxPlan(unit);
   const nameRef = useRef<HTMLSpanElement>(null);
@@ -157,8 +159,8 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         </span>
 
         {face.element != null && (
-          <span className="cf-element" data-testid="card-element" title={`Element ${face.element}`}>
-            {face.element}
+          <span className="cf-element" data-testid="card-element" title={t("Element {element}", { element: t(face.element) })}>
+            {t(face.element)}
           </span>
         )}
 
@@ -167,8 +169,8 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
         </span>
 
         {unit.vanilla === true && (
-          <span className="cf-vanilla" title="Vanilla: its text is gone">
-            <span className="cf-vanilla-word">Vanilla</span>
+          <span className="cf-vanilla" title={t("Vanilla: its text is gone")}>
+            <span className="cf-vanilla-word">{t("Vanilla")}</span>
             <span className="cf-vanilla-mark" aria-hidden="true">
               V
             </span>
@@ -202,7 +204,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
 
         {/* The `divineShieldLost` animation removes this by the keyword leaving the view. */}
         {hasKeyword(unit.keywords, "Divine Shield") && (
-          <span className="shield-icon" data-icon="shield" aria-label="Divine Shield" {...fxAttributesOf(plan, "Divine Shield")} />
+          <span className="shield-icon" data-icon="shield" aria-label={t("Divine Shield")} {...fxAttributesOf(plan, "Divine Shield")} />
         )}
 
       </span>

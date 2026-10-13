@@ -27,6 +27,7 @@ import {
   type PoolFilter,
   type PoolSort,
 } from "../game/deckbuilder/filters.ts";
+import { useLocale, t } from "../i18n/i18n.ts";
 import { getCardStats } from "../net/api.ts";
 import { BackLink } from "./nav.tsx";
 
@@ -54,12 +55,14 @@ export const ALMANAC_CATALOG: CatalogSnapshot = {
  * (if any) and that it never goes in a deck (L3), "Rare · Token · not deckable".
  */
 export function almanacMeta(def: CardDef): string {
-  if (!def.token && !def.tags.includes("Token")) return def.rarity;
-  const printed = def.printedRarity === undefined ? [] : [def.printedRarity];
-  return [...printed, "Token", "not deckable"].join(" · ");
+  // #711: wrapped where it is built (called per render), the rarity through the dictionary's rarity words.
+  if (!def.token && !def.tags.includes("Token")) return t(def.rarity);
+  const printed = def.printedRarity === undefined ? [] : [t(def.printedRarity)];
+  return [...printed, t("Token"), t("not deckable")].join(" · ");
 }
 
 export default function AlmanacRoute(): ReactElement {
+  useLocale();
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export default function AlmanacRoute(): ReactElement {
         <header className="db-header">
           <BackLink />
           <h1 className="db-title" id="almanac-title">
-            Almanac
+            {t("Almanac")}
           </h1>
         </header>
         <main className="almanac-main" aria-labelledby="almanac-title">

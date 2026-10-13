@@ -6,6 +6,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardBack } from "../CardBack.tsx";
 import { CardFace } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
@@ -61,7 +62,7 @@ const DEFAULT_ORDER = "Newest first";
 const UNKNOWN_NAME = "Unknown card";
 
 function cardsWord(count: number): string {
-  return count === 1 ? "1 card" : `${String(count)} cards`;
+  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
 }
 
 function countOf(entry: CardListEntry): number {
@@ -73,7 +74,7 @@ function totalOf(entries: readonly CardListEntry[]): number {
 }
 
 function nameOf(entry: CardListEntry): string {
-  return entry.face?.name ?? UNKNOWN_NAME;
+  return entry.face?.name ?? t(UNKNOWN_NAME);
 }
 
 function entryLabel(entry: CardListEntry): string {
@@ -104,13 +105,13 @@ function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: Card
       data-testid={play.testId}
       data-legal="true"
       data-glow={play.glow ? "ready" : undefined}
-      aria-label={`${PLAY_WORD} ${nameOf(entry)}`}
+      aria-label={t("Play {name}", { name: nameOf(entry) })}
       onClick={() => {
         play.onPlay();
         onClose();
       }}
     >
-      {PLAY_WORD}
+      {t(PLAY_WORD)}
     </button>
   );
 }
@@ -140,6 +141,7 @@ export function CardListPreview({
   anchor,
   prefer = "beside",
 }: CardListProps & { anchor: Rect; prefer?: PreviewPrefer }): ReactElement {
+  useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const shown = entries.slice(0, LIST_PREVIEW_MAX);
   const total = totalOf(entries);
@@ -171,11 +173,11 @@ export function CardListPreview({
       {...OVERLAY_ROOT_PROPS}
     >
       <span className="inspect-list-head">
-        <span className="inspect-list-title">{title}</span>
+        <span className="inspect-list-title">{t(title)}</span>
         <span className="inspect-list-count" data-testid={INSPECT_LIST_COUNT} data-count={total}>
           {cardsWord(total)}
         </span>
-        <span className="inspect-list-order">{order}</span>
+        <span className="inspect-list-order">{t(order)}</span>
       </span>
       <span className="inspect-list-grid">
         {shown.map((entry) => (
@@ -193,7 +195,7 @@ export function CardListPreview({
       </span>
       {more > 0 ? (
         <span className="inspect-list-more" data-testid={INSPECT_LIST_MORE}>
-          +{more} more · click to see them all
+          {t("+{more} more · click to see them all", { more })}
         </span>
       ) : null}
     </div>,
@@ -221,7 +223,7 @@ function FaceTile({
       data-def-name={face.name}
       data-count={countOf(entry)}
       data-entry-key={entry.key}
-      aria-label={`${entryLabel(entry)}: show it large`}
+      aria-label={t("{label}: show it large", { label: entryLabel(entry) })}
       onClick={onOpen}
     >
       <EntryFace entry={entry} />
@@ -242,6 +244,7 @@ export function CardListSheet({
   order = DEFAULT_ORDER,
   onClose,
 }: CardListProps & { onClose: () => void }): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
   const grid = useRef<HTMLUListElement>(null);
@@ -274,13 +277,13 @@ export function CardListSheet({
   return createPortal(
     <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
-      <div className="inspect-list-sheet" data-testid={INSPECT_LIST_SHEET} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="inspect-list-sheet" data-testid={INSPECT_LIST_SHEET} role="dialog" aria-modal="true" aria-label={t(title)}>
         <header className="inspect-list-head">
-          <h2 className="inspect-list-title">{title}</h2>
+          <h2 className="inspect-list-title">{t(title)}</h2>
           <span className="inspect-list-count" data-testid={INSPECT_LIST_COUNT} data-count={total}>
             {cardsWord(total)}
           </span>
-          <span className="inspect-list-order">{order}</span>
+          <span className="inspect-list-order">{t(order)}</span>
         </header>
 
         {opened === undefined ? (
@@ -330,11 +333,11 @@ export function CardListSheet({
                 setOpen(null);
               }}
             >
-              All cards
+              {t("All cards")}
             </button>
           ) : null}
           <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

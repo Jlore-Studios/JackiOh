@@ -14,6 +14,8 @@ import {
   type Tuning,
 } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
+import { listSeparator, readerKeyword } from "./chinese.ts";
 import type { TextRange } from "./radiantDiff.ts";
 
 /** Which way a change went for the card's controller. */
@@ -124,10 +126,10 @@ function verdictOf(changes: readonly TuneChange[]): TuneVerdict {
   return "tuned";
 }
 
-/** A declared number's key in words: "drawLimit" is "Draw limit". */
+/** A declared number's key in words: "drawLimit" is "Draw limit", in the reader's language. */
 export function keyWords(key: string): string {
   const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  return t(spaced.charAt(0).toUpperCase() + spaced.slice(1));
 }
 
 function signed(delta: number): string {
@@ -138,25 +140,27 @@ function signed(delta: number): string {
 export function changeWords(change: TuneChange): string {
   switch (change.kind) {
     case "stat":
-      return `${signed(change.delta)} ${change.stat === "attack" ? "Attack" : "Health"}`;
+      return change.stat === "attack" ? t("{delta} Attack", { delta: signed(change.delta) }) : t("{delta} Health", { delta: signed(change.delta) });
     case "keyword":
-      return change.added ? `Gained ${change.keyword}` : `Lost ${change.keyword}`;
+      return change.added
+        ? t("Gained {keyword}", { keyword: readerKeyword(change.keyword) })
+        : t("Lost {keyword}", { keyword: readerKeyword(change.keyword) });
     case "count":
-      return `${change.key} ${signed(change.delta)}`;
+      return `${readerKeyword(change.key)} ${signed(change.delta)}`;
     case "number":
       return `${keyWords(change.key)} ${String(change.printed)} → ${String(change.value)}`;
     case "set":
-      return `${keyWords(change.key)} set to ${String(change.value)}`;
+      return t("{label} set to {value}", { label: keyWords(change.key), value: change.value });
   }
 }
 
 export function tuningSummary(tuning: FaceTuning): string {
-  return `${VERDICT_WORD[tuning.verdict]}: ${tuning.changes.map(changeWords).join("; ")}`;
+  return t("{verdict}: {changes}", { verdict: t(VERDICT_WORD[tuning.verdict]), changes: tuning.changes.map(changeWords).join(listSeparator()) });
 }
 
 /** A moved number's tooltip: "Better than printed: 2" (the number bare, since "(2)" reads as a cost, R432). */
 export function tunedRangeWords(range: Pick<TunedRange, "printed" | "way">): string {
-  return `${range.way === "better" ? "Better" : "Worse"} than printed: ${String(range.printed)}`;
+  return range.way === "better" ? t("Better than printed: {printed}", { printed: range.printed }) : t("Worse than printed: {printed}", { printed: range.printed });
 }
 
 /**

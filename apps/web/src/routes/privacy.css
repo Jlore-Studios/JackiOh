@@ -11,6 +11,14 @@
   text-align: center;
 }
 
+.tavern.app-shell .privacy-policy__governing {
+  color: var(--tavern-text-dim);
+  font-size: 14px;
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
+
 .tavern.app-shell .privacy-policy section {
   display: flex;
   flex-direction: column;

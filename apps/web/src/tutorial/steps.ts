@@ -94,7 +94,7 @@ type StepText = CoachStep["text"];
 
 type Common = {
   id: string;
-  title: string;
+  title: CoachStep["title"];
   text: StepText;
   when?: (ctx: CoachCtx) => boolean;
   anchor?: CoachStep["anchor"];

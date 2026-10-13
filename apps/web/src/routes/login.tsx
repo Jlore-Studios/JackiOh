@@ -48,6 +48,7 @@ import {
   type OAuthProvider,
 } from "../net/auth.ts";
 import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
+import { t } from "../i18n/i18n.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
 import {
   forgetPendingEmail,
@@ -906,30 +907,37 @@ export default function LoginRoute(): ReactElement {
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
   let title: string;
-  if (signingUp) title = "Create an account";
-  else if (forgot || claiming) title = "Reset your password";
-  else if (emailCode) title = "Sign in with an email code";
-  else if (secondFactor) title = "Two-step sign-in";
-  else title = "Sign in";
+  if (signingUp) title = t("Create an account");
+  else if (forgot || claiming) title = t("Reset your password");
+  else if (emailCode) title = t("Sign in with an email code");
+  else if (secondFactor) title = t("Two-step sign-in");
+  else title = t("Sign in");
 
   let submitLabel: string;
   if (signingUp) {
-    submitLabel = busy ? "Creating…" : "Create account";
+    submitLabel = busy ? t("Creating…") : t("Create account");
   } else if (forgot) {
     // "Send", not "Send again": the interval may have been started before a reload.
     // The wait is said once, in the line under the button (as the confirmation resend says it),
     // so the button keeps its name while it is locked (integration QA: the countdown was twice).
-    submitLabel = busy ? "Sending…" : "Send reset link";
+    submitLabel = busy ? t("Sending…") : t("Send reset link");
   } else if (claiming) {
-    submitLabel = "Continue";
+    submitLabel = t("Continue");
   } else if (emailCode) {
-    if (codeAsked) submitLabel = busy ? "Signing in…" : "Sign in";
-    else submitLabel = busy ? "Sending…" : "Email me a sign-in code";
+    if (codeAsked) submitLabel = busy ? t("Signing in…") : t("Sign in");
+    else submitLabel = busy ? t("Sending…") : t("Email me a sign-in code");
   } else if (secondFactor) {
-    submitLabel = busy ? "Checking…" : "Verify";
+    submitLabel = busy ? t("Checking…") : t("Verify");
   } else {
-    submitLabel = busy ? "Signing in…" : "Sign in";
+    submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
+
+  // Sentences with a link or an address inside: one entry each, split around what is inserted, so
+  // English keeps the text nodes it always had.
+  const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
+  const [agreeBefore = "", agreeBetween = "", agreeAfter = ""] = t(
+    "By creating an account you agree to the {terms} and {privacy}.",
+  ).split(/\{terms\}|\{privacy\}/);
 
   const forgotButton = (
     <button
@@ -940,7 +948,7 @@ export default function LoginRoute(): ReactElement {
         switchMode("forgot");
       }}
     >
-      {claiming ? "Ask for a new link instead" : "Forgot your password?"}
+      {claiming ? t("Ask for a new link instead") : t("Forgot your password?")}
     </button>
   );
 
@@ -949,7 +957,7 @@ export default function LoginRoute(): ReactElement {
       {/* R160 makes an unconfirmed address and a wrong password read alike, so the button says
           who it is for rather than hinting at which one this was. */}
       <span className="auth-hint" data-testid={loginTestid.resendLead}>
-        Just signed up? Confirm your email first:
+        {t("Just signed up? Confirm your email first:")}
       </span>
       <button
         type="button"
@@ -958,11 +966,11 @@ export default function LoginRoute(): ReactElement {
         disabled={resendBusy || resendWait > 0}
         onClick={onResend}
       >
-        {resendBusy ? "Sending…" : "Resend the confirmation email"}
+        {resendBusy ? t("Sending…") : t("Resend the confirmation email")}
       </button>
       {resendWait > 0 ? (
         <span className="auth-cooldown" data-testid={loginTestid.resendCooldown} data-seconds={resendWait}>
-          You can send another in {resendWait} s.
+          {t("You can send another in {seconds} s.", { seconds: resendWait })}
         </span>
       ) : null}
     </div>
@@ -982,62 +990,62 @@ export default function LoginRoute(): ReactElement {
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">
-              {AUTH_NOTICES.mfaRequired}
+              {t(AUTH_NOTICES.mfaRequired)}
             </p>
           ) : null}
 
           {(signingIn || signingUp) && oauthFailed ? (
             <p className="notice" data-testid={loginTestid.oauthError} role="alert">
-              {AUTH_MESSAGES.oauthFailed}
+              {t(AUTH_MESSAGES.oauthFailed)}
             </p>
           ) : null}
 
           {signingIn && sessionExpired ? (
             <p className="notice" data-testid={loginTestid.sessionExpired} role="status">
-              {AUTH_NOTICES.sessionExpired}
+              {t(AUTH_NOTICES.sessionExpired)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "checking" ? (
             <p className="notice" data-testid={loginTestid.checkingLink} role="status">
-              {AUTH_NOTICES.checkingLink}
+              {t(AUTH_NOTICES.checkingLink)}
             </p>
           ) : null}
 
           {signingIn && checkingLong ? (
             <p className="auth-hint" data-testid={loginTestid.checkingSlow}>
-              {AUTH_NOTICES.checkingSlow}
+              {t(AUTH_NOTICES.checkingSlow)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "confirmed" ? (
             <p className="notice" data-testid={loginTestid.confirmed} role="status">
-              {AUTH_NOTICES.emailConfirmed}
+              {t(AUTH_NOTICES.emailConfirmed)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "emailChanged" ? (
             <p className="notice" data-testid={loginTestid.emailChanged} role="status">
-              {AUTH_NOTICES.emailChanged}
+              {t(AUTH_NOTICES.emailChanged)}
             </p>
           ) : null}
 
           {forgot && linkOutcome === "invited" ? (
             <p className="notice" data-testid={loginTestid.invited} role="status">
-              {AUTH_NOTICES.inviteNeedsPassword}
+              {t(AUTH_NOTICES.inviteNeedsPassword)}
             </p>
           ) : null}
 
           {claiming && linkOutcome === "recoveryClaim" ? (
             <p className="notice" data-testid={loginTestid.recoveryClaim} role="status">
-              {AUTH_NOTICES.recoveryClaim}
+              {t(AUTH_NOTICES.recoveryClaim)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "recoveryRefused" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryRefused} role="alert">
-                {AUTH_NOTICES.recoveryElsewhere}
+                {t(AUTH_NOTICES.recoveryElsewhere)}
               </p>
               <div className="auth-actions">{forgotButton}</div>
             </div>
@@ -1046,11 +1054,11 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "recoveryUnchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryUnchecked} role="alert">
-                {AUTH_NOTICES.recoveryUnchecked}
+                {t(AUTH_NOTICES.recoveryUnchecked)}
               </p>
               <div className="auth-actions">
                 <button type="button" data-testid={loginTestid.linkRetry} onClick={retryLinkCheck}>
-                  Try again
+                  {t("Try again")}
                 </button>
                 {forgotButton}
               </div>
@@ -1060,7 +1068,7 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "unchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.linkUnchecked} role="alert">
-                {AUTH_NOTICES.linkUnchecked}
+                {t(AUTH_NOTICES.linkUnchecked)}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1073,12 +1081,12 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-link-error">
               {/* Our sentence only: the link's `error_description` is never read (R193). */}
               <p className="notice" data-testid={loginTestid.linkError} role="alert">
-                {AUTH_MESSAGES.linkExpired}
+                {t(AUTH_MESSAGES.linkExpired)}
               </p>
               {/* Mail scanners open links before the player does: a confirmation link they spent
                   has still confirmed the address, and signing in is all that is left. */}
               <p className="auth-hint" data-testid={loginTestid.linkErrorSignIn}>
-                If you already confirmed your email, just sign in below.
+                {t("If you already confirmed your email, just sign in below.")}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1089,19 +1097,19 @@ export default function LoginRoute(): ReactElement {
 
           {notice !== null ? (
             <p className="notice" data-testid={loginTestid.notice} role="status" ref={noticeRef} tabIndex={-1}>
-              {notice}
+              {t(notice)}
             </p>
           ) : null}
 
           {error !== null ? (
             <p className="notice" data-testid={loginTestid.error} role="alert">
-              {error}
+              {t(error)}
             </p>
           ) : null}
 
           {signingIn && error !== null && confirmFirst ? (
             <p className="auth-hint" data-testid={loginTestid.confirmFirst}>
-              {AUTH_NOTICES.confirmFirst}
+              {t(AUTH_NOTICES.confirmFirst)}
             </p>
           ) : null}
 
@@ -1110,17 +1118,17 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-signed-in" data-testid={loginTestid.signedInAs}>
               <p className="auth-hint">
                 {signedInAs === "" ? (
-                  "This browser is already signed in to an account."
+                  t("This browser is already signed in to an account.")
                 ) : (
                   <>
-                    This browser is signed in as{" "}
+                    {signedInBefore}
                     <strong>
                       <Address value={signedInAs} />
                     </strong>
-                    .
+                    {signedInAfter}
                   </>
                 )}{" "}
-                {signingUp ? "Creating an account does not change that." : "Signing in here signs it out of that account."}
+                {signingUp ? t("Creating an account does not change that.") : t("Signing in here signs it out of that account.")}
               </p>
               <div className="auth-actions">
                 <a
@@ -1129,7 +1137,7 @@ export default function LoginRoute(): ReactElement {
                   data-testid={loginTestid.signedInAccount}
                   onClick={followInApp(paths.account)}
                 >
-                  Go to that account
+                  {t("Go to that account")}
                 </a>
                 <button
                   type="button"
@@ -1148,14 +1156,13 @@ export default function LoginRoute(): ReactElement {
 
           {forgot ? (
             <p className="auth-hint">
-              Enter the address you signed up with. If it has an account, we&rsquo;ll email a link to
-              choose a new password.
+              {t("Enter the address you signed up with. If it has an account, we’ll email a link to choose a new password.")}
             </p>
           ) : null}
           {signingUp ? (
             // Said before the player has an account, not after they have confirmed one.
             <p className="auth-hint" data-testid={loginTestid.inviteOnly}>
-              {AUTH_NOTICES.inviteOnly}
+              {t(AUTH_NOTICES.inviteOnly)}
             </p>
           ) : null}
         </div>
@@ -1172,7 +1179,7 @@ export default function LoginRoute(): ReactElement {
             {secondFactor ? null : (
               <>
                 <label htmlFor="login-email">
-                  {claiming ? "Your account's email" : signingIn ? "Email or username" : "Email"}
+                  {claiming ? t("Your account's email") : signingIn ? t("Email or username") : t("Email")}
                 </label>
                 <input
                   id="login-email"
@@ -1196,7 +1203,7 @@ export default function LoginRoute(): ReactElement {
                 />
                 {emailError !== null ? (
                   <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
-                    {emailError}
+                    {t(emailError)}
                   </p>
                 ) : null}
               </>
@@ -1205,7 +1212,7 @@ export default function LoginRoute(): ReactElement {
             {codeAsked || secondFactor ? (
               <>
                 <label htmlFor="login-code">
-                  {secondFactor ? "Code from your authenticator app" : "Code from the email"}
+                  {secondFactor ? t("Code from your authenticator app") : t("Code from the email")}
                 </label>
                 <input
                   id="login-code"
@@ -1228,7 +1235,7 @@ export default function LoginRoute(): ReactElement {
                 />
                 {codeError !== null ? (
                   <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
-                    {codeError}
+                    {t(codeError)}
                   </p>
                 ) : null}
               </>
@@ -1236,7 +1243,7 @@ export default function LoginRoute(): ReactElement {
 
             {signingIn || signingUp ? (
               <>
-                <label htmlFor="login-password">Password</label>
+                <label htmlFor="login-password">{t("Password")}</label>
                 <div className="input-with-affix">
                   <input
                     id="login-password"
@@ -1263,13 +1270,13 @@ export default function LoginRoute(): ReactElement {
                     className="affix-button"
                     data-testid={loginTestid.togglePassword}
                     // Announced, not just drawn: the icon alone tells a screen reader nothing.
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("Hide password") : t("Show password")}
                     aria-pressed={showPassword}
                     onClick={() => {
                       setShowPassword((shown) => !shown);
                     }}
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {showPassword ? t("Hide") : t("Show")}
                   </button>
                 </div>
                 {passwordError !== null ? (
@@ -1278,7 +1285,7 @@ export default function LoginRoute(): ReactElement {
                     className="auth-field-error"
                     data-testid={loginTestid.passwordError}
                   >
-                    {passwordError}
+                    {t(passwordError)}
                   </p>
                 ) : null}
               </>
@@ -1300,41 +1307,41 @@ export default function LoginRoute(): ReactElement {
                   disabled={busy || codeWait > 0}
                   onClick={sendEmailCode}
                 >
-                  Send a new code
+                  {t("Send a new code")}
                 </button>
               </div>
             ) : null}
             {emailCode && codeWait > 0 ? (
               // Only the wait: whether a mail went out is the neutral notice's to say (R192).
               <p className="auth-hint" data-testid={loginTestid.codeCooldown} data-seconds={codeWait}>
-                You can ask for another in {codeWait} s.
+                {t("You can ask for another in {seconds} s.", { seconds: codeWait })}
               </p>
             ) : null}
             {signingUp ? (
               <p className="auth-hint" data-testid={signUpPrivacyTestid}>
-                By creating an account you agree to the{" "}
+                {agreeBefore}
                 <a href={paths.terms} onClick={followInApp(paths.terms)}>
-                  Terms
-                </a>{" "}
-                and{" "}
-                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-                  Privacy Policy
+                  {t("Terms")}
                 </a>
-                .
+                {agreeBetween}
+                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+                  {t("Privacy Policy")}
+                </a>
+                {agreeAfter}
               </p>
             ) : null}
             {forgot && resetWait > 0 ? (
               // Only the wait: whether a mail went out is the neutral notice's to say (R192).
               <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
-                You can ask for another in {resetWait} s.
+                {t("You can ask for another in {seconds} s.", { seconds: resetWait })}
               </p>
             ) : null}
           </form>
 
           {(signingIn || signingUp) && providers.length > 0 ? (
             // R666: only the providers this build names, so none appears before it is set up.
-            <div className="auth-oauth" role="group" aria-label="Other ways to sign in">
-              <p className="auth-hint">Or continue with</p>
+            <div className="auth-oauth" role="group" aria-label={t("Other ways to sign in")}>
+              <p className="auth-hint">{t("Or continue with")}</p>
               <div className="auth-actions">
                 {providers.map((provider) => (
                   <button
@@ -1365,7 +1372,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("emailCode");
                 }}
               >
-                Sign in with an email code instead
+                {t("Sign in with an email code instead")}
               </button>
             ) : null}
             {(signingIn &&
@@ -1385,7 +1392,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("signIn");
                 }}
               >
-                {secondFactor ? "Cancel and sign in again" : emailCode ? "Sign in with a password" : "Back to sign in"}
+                {secondFactor ? t("Cancel and sign in again") : emailCode ? t("Sign in with a password") : t("Back to sign in")}
               </button>
             ) : (
               <button
@@ -1396,7 +1403,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode(signingUp ? "signIn" : "signUp");
                 }}
               >
-                {signingUp ? "Already have an account? Sign in" : "No account? Create one"}
+                {signingUp ? t("Already have an account? Sign in") : t("No account? Create one")}
               </button>
             )}
           </div>

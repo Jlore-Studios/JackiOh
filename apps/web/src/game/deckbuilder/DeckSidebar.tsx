@@ -15,6 +15,8 @@ import type { CardCost, CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { CardArt, faceModel, isInspectKey, useInspectTrigger } from "../../cards/index.ts";
+import { readerName } from "../../cards/chinese.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder } from "./filters.ts";
 import ManaCurve from "./ManaCurve.tsx";
@@ -103,10 +105,11 @@ type DeckTileProps = {
 export { isInspectKey };
 
 function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: DeckTileProps): ReactElement {
-  const name = def?.name ?? cardId;
+  const locale = useLocale();
+  const name = def === undefined ? cardId : readerName(def);
   const face = useMemo(
     () => (def === undefined ? null : faceModel({ defId: cardId, def, radiant: false })),
-    [cardId, def],
+    [cardId, def, locale],
   );
   const inspect = useInspectTrigger(face === null ? null : { key: deckCardId(cardId), face }, {
     onContextMenu: () => {
@@ -126,10 +129,10 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
         data-conflict-with={conflict?.name}
         aria-label={
           conflict === undefined
-            ? `Remove ${name} from ${deckName}`
-            : `Remove ${name} from ${deckName} (also in ${conflict.name})`
+            ? t("Remove {name} from {deck}", { name, deck: deckName })
+            : t("Remove {name} from {deck} (also in {other})", { name, deck: deckName, other: conflict.name })
         }
-        title={conflict === undefined ? undefined : `Also in ${conflict.name}`}
+        title={conflict === undefined ? undefined : t("Also in {deck}", { deck: conflict.name })}
         aria-keyshortcuts="I"
         onClick={() => {
           onRemove(cardId);
@@ -159,6 +162,7 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
 }
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
+  useLocale();
   const { deckName, cards, catalog, conflicts, head, onDropCard, onRemove, onInspect, children } = props;
   const [listOpen, setListOpen] = useState(false);
   const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog]);
@@ -172,14 +176,14 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
       {head}
       <section
         className="db-deck"
-        aria-label={`Cards in ${deckName}`}
+        aria-label={t("Cards in {deck}", { deck: deckName })}
         data-testid={DECK_DROP}
         data-list-open={listOpen ? "true" : "false"}
         onDragOver={allowDrop}
         onDrop={onDropCard}
       >
         <header className="db-deck-head">
-          <span className="db-deck-title">Cards</span>
+          <span className="db-deck-title">{t("Cards")}</span>
           <span
             className="db-deck-size"
             data-testid={DECK_COUNT}
@@ -200,7 +204,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
                 setListOpen((open) => !open);
               }}
             >
-              {listOpen ? "Hide list" : "Show list"}
+              {listOpen ? t("Hide list") : t("Show list")}
             </button>
           )}
           {/* How full the deck is, at a glance. Drawn only: the count beside it is the number. */}
@@ -226,7 +230,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
           ))}
         </ul>
         {cards.length === 0 ? (
-          <p className="db-deck-hint">Tap + on a card in the pool, or drag it here, to add it.</p>
+          <p className="db-deck-hint">{t("Tap + on a card in the pool, or drag it here, to add it.")}</p>
         ) : null}
       </section>
 

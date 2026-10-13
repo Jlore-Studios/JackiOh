@@ -8,6 +8,7 @@ import { RefsInteractive } from "../cards/refContext.tsx";
 import { ChangeList } from "./ChangeList.tsx";
 import { useLoaded, usePatchSource } from "./context.tsx";
 import { cardHistory, unchangedSince, versionsForCard, type HistoryEntry } from "./history.ts";
+import { formatDay, t } from "../i18n/i18n.ts";
 import { PatchFace } from "./PatchFace.tsx";
 import { playerTitle } from "./releases.ts";
 import { patchTestid } from "./testids.ts";
@@ -23,18 +24,18 @@ function EntryView({ entry }: { entry: HistoryEntry }): ReactElement {
       <h4 className="patch-history__head">
         <span className="patch-version">{patch.version}</span>
         <time className="patch-date" dateTime={patch.date}>
-          {patch.date}
+          {formatDay(patch.date)}
         </time>
         <span className="patch-history__patch-title">{playerTitle(patch)}</span>
       </h4>
       <div className="patch-history__faces">
         <figure className="patch-history__face">
           <PatchFace def={def} face="base" />
-          <figcaption>Base</figcaption>
+          <figcaption>{t("Base")}</figcaption>
         </figure>
         <figure className="patch-history__face patch-history__face--radiant">
           <PatchFace def={def} face="radiant" />
-          <figcaption>Radiant</figcaption>
+          <figcaption>{t("Radiant")}</figcaption>
         </figure>
       </div>
       <ChangeList delta={delta} />
@@ -57,7 +58,7 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   if (read.status === "loading") {
     return (
       <p className="patch-status" role="status" data-testid={patchTestid.historyLoading}>
-        Loading this card&rsquo;s history…
+        {t("Loading this card’s history…")}
       </p>
     );
   }
@@ -65,10 +66,10 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.historyError}>
-          This card&rsquo;s history didn&rsquo;t load.
+          {t("This card’s history didn’t load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.historyRetry} onClick={read.retry}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -76,7 +77,7 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   if (read.value.kind === "no-patches") {
     return (
       <p className="patch-status" data-testid={patchTestid.historyEmpty}>
-        There are no patch notes yet.
+        {t("There are no patch notes yet.")}
       </p>
     );
   }
@@ -84,7 +85,7 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   if (entries.length === 0) {
     return (
       <p className="patch-status" data-testid={patchTestid.historyEmpty}>
-        No patch has recorded this card.
+        {t("No patch has recorded this card.")}
       </p>
     );
   }
@@ -92,7 +93,7 @@ export function CardHistoryBody({ cardId }: { cardId: string }): ReactElement {
   if (since !== null) {
     return (
       <p className="patch-status" data-testid={patchTestid.historyUnchanged}>
-        Unchanged since {since}.
+        {t("Unchanged since {since}.", { since })}
       </p>
     );
   }
@@ -128,7 +129,7 @@ export function CardHistory({ cardId, initiallyOpen = false }: CardHistoryProps)
             setOpen((was) => !was);
           }}
         >
-          History
+          {t("History")}
         </button>
       </h3>
       <div id={bodyId} className="patch-history__body" hidden={!open}>

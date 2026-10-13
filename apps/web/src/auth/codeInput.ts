@@ -6,6 +6,7 @@
 import { excludedCharacters, type CodeFormat, type CodeInputProblem, type CodeInputReading } from "@jackioh/shared";
 
 import { INVITE_CODE_FORMAT } from "@jackioh/server-config";
+import { t } from "../i18n/i18n.ts";
 
 export { INVITE_CODE_FORMAT } from "@jackioh/server-config";
 
@@ -33,7 +34,7 @@ export function placeholderFor(format: CodeFormat): string {
 function listInWords(items: readonly string[], last: "or" | "and" = "or"): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} ${last} ${items[items.length - 1] ?? ""}`;
+  return `${items.slice(0, -1).join(t(", "))} ${last === "or" ? t("or") : t("and")} ${items[items.length - 1] ?? ""}`;
 }
 
 /** A character a reader cannot see (a control, format, separator or combining mark) as U+XXXX. */
@@ -65,15 +66,23 @@ function alphabetInWords(format: CodeFormat): string {
   const parts: string[] = [];
   const letters = rangeOf(format, /^[A-Z]$/);
   if (letters !== null) {
-    const except = letters.missing.length === 0 ? "" : ` except ${listInWords(letters.missing, "and")}`;
-    parts.push(`the letters ${letters.lo}–${letters.hi}${except}`);
+    const { lo, hi } = letters;
+    parts.push(
+      letters.missing.length === 0
+        ? t("the letters {lo}–{hi}", { lo, hi })
+        : t("the letters {lo}–{hi} except {missing}", { lo, hi, missing: listInWords(letters.missing, "and") }),
+    );
   }
   const digits = rangeOf(format, /^[0-9]$/);
   if (digits !== null) {
-    const except = digits.missing.length === 0 ? "" : ` except ${listInWords(digits.missing, "and")}`;
-    parts.push(`the digits ${digits.lo}–${digits.hi}${except}`);
+    const { lo, hi } = digits;
+    parts.push(
+      digits.missing.length === 0
+        ? t("the digits {lo}–{hi}", { lo, hi })
+        : t("the digits {lo}–{hi} except {missing}", { lo, hi, missing: listInWords(digits.missing, "and") }),
+    );
   }
-  return parts.join(", and ");
+  return parts.join(t(", and "));
 }
 
 /** A letter outside ASCII: most likely typed on a keyboard set to another script. */
@@ -86,17 +95,24 @@ export function codeProblemMessage(problem: CodeInputProblem, format: CodeFormat
   switch (problem.kind) {
     case "excluded": {
       const never = listInWords(excludedCharacters(format));
-      return `Invite codes never use ${never}, so “${visibleCharacter(problem.character)}” can’t be part of one. Check that character again.`;
+      return t("Invite codes never use {never}, so “{character}” can’t be part of one. Check that character again.", {
+        never,
+        character: visibleCharacter(problem.character),
+      });
     }
     case "foreign": {
       // Not "capital letters": a capital Ф is one, and a player on a Russian layout typed it.
       const keyboard = isNonLatinLetter(problem.character)
-        ? " Check that your keyboard is set to Latin letters."
+        ? ` ${t("Check that your keyboard is set to Latin letters.")}`
         : "";
-      return `“${visibleCharacter(problem.character)}” isn’t used in invite codes. They use ${alphabetInWords(format)}.${keyboard}`;
+      const refused = t("“{character}” isn’t used in invite codes. They use {alphabet}.", {
+        character: visibleCharacter(problem.character),
+        alphabet: alphabetInWords(format),
+      });
+      return `${refused}${keyboard}`;
     }
     case "tooLong":
-      return `That’s longer than an invite code, which has ${String(format.length)} characters.`;
+      return t("That’s longer than an invite code, which has {count} characters.", { count: String(format.length) });
   }
 }
 
@@ -109,12 +125,12 @@ export function pastedText(text: string, format: CodeFormat = INVITE_CODE_FORMAT
   const trimmed = text.trim();
   const shown = Array.from(trimmed);
   const quoted = shown.length > format.maxInputLength ? `${shown.slice(0, format.maxInputLength).join("")}…` : trimmed;
-  return `You pasted “${quoted}”.`;
+  return t("You pasted “{text}”.", { text: quoted });
 }
 
 /** `code-field-progress`: "12 of 16 characters". */
 export function codeProgressText(reading: CodeInputReading, format: CodeFormat = INVITE_CODE_FORMAT): string {
-  return `${String(reading.characters.length)} of ${String(format.length)} characters`;
+  return t("{count} of {total} characters", { count: String(reading.characters.length), total: String(format.length) });
 }
 
 /** Unit conversions, not configuration. */
@@ -127,10 +143,10 @@ const MINUTES_PER_HOUR = 60;
  */
 export function waitInWords(retryAfterMs: number): string {
   const minutes = Math.ceil(Math.max(0, retryAfterMs) / MS_PER_MINUTE);
-  if (minutes <= 1) return "about a minute";
-  if (minutes < MINUTES_PER_HOUR) return `about ${String(minutes)} minutes`;
+  if (minutes <= 1) return t("about a minute");
+  if (minutes < MINUTES_PER_HOUR) return t("about {count} minutes", { count: String(minutes) });
   const hours = Math.round(minutes / MINUTES_PER_HOUR);
-  return hours <= 1 ? "about an hour" : `about ${String(hours)} hours`;
+  return hours <= 1 ? t("about an hour") : t("about {count} hours", { count: String(hours) });
 }
 
 /**
@@ -140,9 +156,9 @@ export function waitInWords(retryAfterMs: number): string {
 export function attemptsText(remaining: number, retryAfterMs: number | null = null): string {
   if (remaining <= 0) {
     return retryAfterMs === null || retryAfterMs <= 0
-      ? "No tries left for now. Try again later."
-      : `No tries left for now. You can try again in ${waitInWords(retryAfterMs)}.`;
+      ? t("No tries left for now. Try again later.")
+      : t("No tries left for now. You can try again in {wait}.", { wait: waitInWords(retryAfterMs) });
   }
-  if (remaining === 1) return "1 try left this hour";
-  return `${String(remaining)} tries left this hour`;
+  if (remaining === 1) return t("1 try left this hour");
+  return t("{count} tries left this hour", { count: String(remaining) });
 }

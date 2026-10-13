@@ -4,6 +4,7 @@
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./types.ts";
+import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
 export type DomEffect = { readonly el: HTMLElement; remove(): void };
@@ -92,7 +93,7 @@ function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]):
     line.reel.forEach((name, at) => {
       const cell = doc.createElement("span");
       cell.className = "fx-chaos-cell";
-      cell.setAttribute("data-text", name);
+      cell.setAttribute("data-text", t(name));
       if (at === line.reel.length - 1) cell.setAttribute("data-landed", "true");
       reel.appendChild(cell);
     });
@@ -152,12 +153,12 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     }
     case "banner": {
       el.setAttribute("data-tone", cue.tone);
-      el.setAttribute("data-text", cue.text);
+      el.setAttribute("data-text", t(cue.text));
       break;
     }
     case "result": {
       el.setAttribute("data-outcome", cue.outcome);
-      el.setAttribute("data-text", cue.text);
+      el.setAttribute("data-text", t(cue.text));
       break;
     }
     case "fracture": {
@@ -188,7 +189,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       break;
     }
     case "chaos": {
-      el.setAttribute("data-text", cue.title);
+      el.setAttribute("data-text", t(cue.title));
       chaosLines(doc, el, cue.lines);
       break;
     }

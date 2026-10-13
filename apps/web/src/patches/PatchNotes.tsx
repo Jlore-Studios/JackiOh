@@ -7,9 +7,11 @@ import { useId, useState, type ReactElement } from "react";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
+import { listSeparator, readerName } from "../cards/chinese.ts";
 import { isGlitch } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
+import { formatDay, t } from "../i18n/i18n.ts";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
@@ -27,11 +29,11 @@ type OpenCard = (id: string) => void;
 const NO_DEFS: CardDefs = {};
 
 function cards(count: number): string {
-  return `${String(count)} ${count === 1 ? "card" : "cards"}`;
+  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
 }
 
 function patchCount(count: number): string {
-  return `${String(count)} ${count === 1 ? "patch" : "patches"}`;
+  return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
 }
 
 export function countsLine(patch: Patch): string {
@@ -39,13 +41,13 @@ export function countsLine(patch: Patch): string {
   const count = (kind: Patch["changes"][number]["kind"]): number =>
     patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
   const parts = [
-    [count("added"), "added"],
-    [count("changed"), "changed"],
-    [count("removed"), "removed"],
+    [count("added"), (n: number) => t("{cards} added", { cards: cards(n) })],
+    [count("changed"), (n: number) => t("{cards} changed", { cards: cards(n) })],
+    [count("removed"), (n: number) => t("{cards} removed", { cards: cards(n) })],
   ] as const;
   return parts
     .filter(([n]) => n > 0)
-    .map(([n, word]) => `${cards(n)} ${word}`)
+    .map(([n, line]) => line(n))
     .join(" · ");
 }
 
@@ -64,7 +66,7 @@ function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactE
         onOpen(def.id);
       }}
     >
-      {def.name}
+      {readerName(def)}
     </button>
   );
 }
@@ -104,7 +106,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
 }
 
 function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: string; onOpen: OpenCard }): ReactElement {
-  const keep = (def: CardDef): boolean => nameMatches(def.name, query);
+  const keep = (def: CardDef): boolean => nameMatches(def.name, query) || nameMatches(readerName(def), query);
   const changed = all.changed.filter((delta) => keep(delta.def));
   const quiet = all.dataOnly.filter((delta) => keep(delta.def));
   const added = all.added.map((group) => ({ ...group, cards: group.cards.filter(keep) })).filter((group) => group.cards.length > 0);
@@ -115,14 +117,14 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
   if (nothing) {
     return (
       <p className="patch-status" data-testid={patchTestid.noMatch}>
-        {query.trim() === "" ? "This patch changed no card." : `No card in this patch matches “${query.trim()}”.`}
+        {query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
       </p>
     );
   }
   return (
     <>
       {changed.length === 0 ? null : (
-        <Section title="Changed" count={changed.length}>
+        <Section title={t("Changed")} count={changed.length}>
           <ul className="patch-card-list">
             {changed.map((delta) => (
               <ChangedCard key={delta.id} delta={delta} onOpen={onOpen} />
@@ -131,24 +133,24 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
         </Section>
       )}
       {quiet.length === 0 ? null : (
-        <Section title="Changed only in details the card doesn’t print" count={quiet.length}>
+        <Section title={t("Changed only in details the card doesn’t print")} count={quiet.length}>
           <ul className="patch-quiet">
             {quiet.map((delta) => (
               <li key={delta.id} className="patch-quiet__card" data-testid={patchTestid.dataOnly} data-card={delta.id}>
                 <NameButton def={delta.def} onOpen={onOpen} />
-                <span className="patch-quiet__what">{delta.changes.map(changeSummary).join("; ")}</span>
+                <span className="patch-quiet__what">{delta.changes.map(changeSummary).join(listSeparator())}</span>
               </li>
             ))}
           </ul>
         </Section>
       )}
       {added.length === 0 ? null : (
-        <Section title="Added" count={addedCount}>
+        <Section title={t("Added")} count={addedCount}>
           <div className="patch-groups">
             {added.map((group) => (
               <div key={group.label} className="patch-group" data-testid={patchTestid.addedGroup} data-group={group.label}>
                 <h5 className="patch-group__title">
-                  {group.label} <span className="patch-count">({group.cards.length})</span>
+                  {group.token ? t("{set} tokens", { set: t(group.set) }) : t(group.set)} <span className="patch-count">({group.cards.length})</span>
                 </h5>
                 <ul className="patch-names">
                   {group.cards.map((def) => (
@@ -163,7 +165,7 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
         </Section>
       )}
       {removed.length === 0 ? null : (
-        <Section title="Removed" count={removed.length}>
+        <Section title={t("Removed")} count={removed.length}>
           <ul className="patch-names">
             {removed.map((def) => (
               <li key={def.id} data-testid={patchTestid.removed} data-card={def.id}>
@@ -193,7 +195,7 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   if (read.status === "loading") {
     return (
       <p className="patch-status" role="status" data-testid={patchTestid.cardsLoading}>
-        Loading this patch&rsquo;s cards…
+        {t("Loading this patch’s cards…")}
       </p>
     );
   }
@@ -201,10 +203,10 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.cardsError}>
-          This patch&rsquo;s cards didn&rsquo;t load.
+          {t("This patch’s cards didn’t load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.cardsRetry} onClick={read.retry}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -212,12 +214,12 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   return (
     <div className="patch-cards" data-testid={patchTestid.cards}>
       <label className="patch-filter">
-        <span className="patch-filter__label">Find a card in {patch.version}</span>
+        <span className="patch-filter__label">{t("Find a card in {version}", { version: patch.version })}</span>
         <input
           type="search"
           data-testid={patchTestid.filter}
           value={query}
-          placeholder="Card name"
+          placeholder={t("Card name")}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => {
@@ -238,7 +240,7 @@ function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElemen
     <div className="patch-note" data-testid={patchTestid.note}>
       {sections.map(({ key, heading }) => (
         <section key={key} className="patch-note__section" data-testid={patchTestid.noteSection} data-section={key}>
-          <h4 className="patch-note__heading">{heading}</h4>
+          <h4 className="patch-note__heading">{t(heading)}</h4>
           <ul className="patch-note__lines">
             {note[key].map((line, at) => (
               <li key={at}>{line}</li>
@@ -273,13 +275,13 @@ function PatchEntry({
         </h3>
         <p className="patch__meta">
           <time className="patch-date" dateTime={patch.date}>
-            {patch.date}
+            {formatDay(patch.date)}
           </time>
         </p>
       </header>
       <PlayerNoteView note={patch.player} />
       {patch.changes.length === 0 ? (
-        <p className="patch__counts">No card changed.</p>
+        <p className="patch__counts">{t("No card changed.")}</p>
       ) : (
         <>
           <p className="patch__counts">{counts}</p>
@@ -293,7 +295,7 @@ function PatchEntry({
               setOpen((was) => !was);
             }}
           >
-            {open ? "Hide the cards" : `Show the ${cards(patch.changes.length)}`}
+            {open ? t("Hide the cards") : t("Show the {cards}", { cards: cards(patch.changes.length) })}
           </button>
           <div id={panelId} className="patch__panel" hidden={!open}>
             {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpen} /> : null}
@@ -345,7 +347,7 @@ function ReleaseBubble({
             setOpen((was) => !was);
           }}
         >
-          <span className="patch-set__name">{release.name}</span>
+          <span className="patch-set__name">{t(release.name)}</span>
           <span className="patch-set__span">{oldest === newest ? newest : `${oldest} – ${newest}`}</span>
           <span className="patch-set__count">{patchCount(group.length)}</span>
         </button>
@@ -356,7 +358,7 @@ function ReleaseBubble({
             {release.summary === "" ? null : <p className="patch-set__summary">{release.summary}</p>}
             {release.technical.length === 0 ? null : (
               <section className="patch-tech" data-testid={patchTestid.technical}>
-                <h3 className="patch-tech__title">Technical changes</h3>
+                <h3 className="patch-tech__title">{t("Technical changes")}</h3>
                 <ul className="patch-tech__lines">
                   {release.technical.map((line, at) => (
                     <li key={at}>{line}</li>
@@ -423,7 +425,7 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
   if (read.status === "loading") {
     return (
       <p className="patch-status" role="status" data-testid={patchTestid.loading}>
-        Loading the patch notes…
+        {t("Loading the patch notes…")}
       </p>
     );
   }
@@ -431,10 +433,10 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.error}>
-          The patch notes didn&rsquo;t load. Check your connection and try again.
+          {t("The patch notes didn’t load. Check your connection and try again.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.retry} onClick={read.retry}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -442,7 +444,7 @@ export function PatchNotes({ releases = RELEASES }: { releases?: readonly Releas
   if (read.value.length === 0) {
     return (
       <p className="patch-status" data-testid={patchTestid.empty}>
-        There are no patch notes yet.
+        {t("There are no patch notes yet.")}
       </p>
     );
   }

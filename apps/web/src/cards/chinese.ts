@@ -11,8 +11,9 @@
 // GLOSSARY's ids (R1303). crates/cards' cross tests hold both to their contract; chinese.test.tsx
 // proves the glossary names exactly GLOSSARY's entries.
 //
-// A card is drawn in Chinese only where the view says it is (`CardView.chinese`, R1301), so every
-// face of it in a match, and only there: the collection's faces are the catalog's. A fused card
+// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), so every face of
+// it in a match, whatever the reader's language, and for a reader who reads Chinese (R711000) every
+// card is drawn from these tables, in a match and in the collection alike. A fused card
 // (R468) has no entry of its own, and its Chinese is its ingredients', joined as the engine joins
 // their English (crates/engine/src/subsystems/fuse.rs). A definition with no entry and no
 // ingredients (the hidden sentinel, Craft a Card's) keeps its English, and so does Glitch, whose
@@ -31,6 +32,7 @@ import {
   type Tag,
 } from "@jackioh/shared";
 
+import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
 import { isGlitch } from "./glitch.ts";
 import type { GlossaryTermId } from "./glossary.ts";
 
@@ -64,6 +66,42 @@ export type ChineseTerms = {
 export const CHINESE: Readonly<Record<string, ChineseEntry>> = chineseJson;
 
 export const CHINESE_TERMS: ChineseTerms = termsJson;
+
+/** A language's card tables: its cards' words and the frame's, the pair of sidecars beside the catalog (R1303). */
+export type CardTable = { readonly cards: Readonly<Record<string, ChineseEntry>>; readonly terms: ChineseTerms };
+
+/** The card tables by locale (R711000): a reader whose language has none reads the catalog's English. */
+export const CARD_TABLES: Readonly<Partial<Record<Locale, CardTable>>> = {
+  "zh-CN": { cards: CHINESE, terms: CHINESE_TERMS },
+};
+
+/**
+ * R711000: whether a card is drawn from the Chinese table: the view flagged it (R1301, whatever the
+ * reader's language), or the reader reads Chinese, so every card they see is Chinese. Read where a
+ * face or a name is built, never cached across a language switch.
+ */
+export function drawnInChinese(flagged: boolean): boolean {
+  return flagged || isZhCn();
+}
+
+/**
+ * R711000: the frame's words (types, tags, rarities, keywords, labels, the glossary) in the reader's
+ * language, or undefined where it has no card table and the catalog's English is what is read. Read
+ * where a label is built, never cached across a language switch.
+ */
+export function readerTerms(): ChineseTerms | undefined {
+  return CARD_TABLES[getLocale()]?.terms;
+}
+
+/** R711000: a catalog card's name as the reader reads it: its entry's in Chinese, else the catalog's. */
+export function readerName(def: CardDef): string {
+  return drawnInChinese(false) ? chineseName(def.id, def.name, def) : def.name;
+}
+
+/** R711000: what joins a list of phrases in the reader's language: "; ", or "；" for a reader of Chinese. */
+export function listSeparator(): string {
+  return isZhCn() ? "；" : "; ";
+}
 
 /** What joins a list of keywords on a Chinese face, as the table's texts join them ("嘲讽，圣盾，复生"). */
 export const CHINESE_COMMA = "，";
@@ -147,4 +185,21 @@ export function chinesePreviewLabel(
     }
   }
   return label;
+}
+
+/**
+ * R711000: a keyword or glossary term as the reader reads it, from the English a tuning change carries
+ * ("Rush", "Armor 2", "Echo"): its word in the reader's table with its number stuck to it ("护甲2");
+ * as given when the reader's language has no table or the text names no term.
+ */
+export function readerKeyword(text: string): string {
+  const terms = readerTerms();
+  if (terms === undefined) return text;
+  const words: Record<string, string> = {};
+  for (const [id, entry] of Object.entries(terms.glossary)) words[id] = entry.label;
+  Object.assign(words, terms.keywords);
+  const id = Object.keys(words)
+    .filter((candidate) => text === candidate || text.startsWith(`${candidate} `))
+    .sort((a, b) => b.length - a.length)[0];
+  return id === undefined ? text : `${words[id] ?? id}${text.slice(id.length).trim()}`;
 }

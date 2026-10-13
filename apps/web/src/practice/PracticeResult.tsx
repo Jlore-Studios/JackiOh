@@ -10,6 +10,7 @@ import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
 import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, TierCrest } from "./Tier.tsx";
@@ -120,10 +121,10 @@ export function PracticeResult({
           <TierCrest tier={difficulty} size="lg" />
         </div>
         <h2 className="practice-result__title" id={titleId}>
-          {OUTCOME_TITLE[outcome]}
+          {t(OUTCOME_TITLE[outcome])}
         </h2>
-        <p className="practice-result__reason">{reasonText(outcome, result.reason)}</p>
-        <p className="practice-result__meta">Practice · {DIFFICULTY_LABEL[difficulty]}</p>
+        <p className="practice-result__reason">{t(reasonText(outcome, result.reason))}</p>
+        <p className="practice-result__meta">{t("Practice")} · {t(DIFFICULTY_LABEL[difficulty])}</p>
         <div className="practice-result__actions">
           <button
             ref={playAgain}
@@ -132,7 +133,7 @@ export function PracticeResult({
             data-testid={practiceTestid.playAgain}
             onClick={onPlayAgain}
           >
-            Play again
+            {t("Play again")}
           </button>
           <button
             type="button"
@@ -140,11 +141,11 @@ export function PracticeResult({
             data-testid={practiceTestid.changeSetup}
             onClick={onChangeSetup}
           >
-            Change setup
+            {t("Change setup")}
           </button>
         </div>
         <button type="button" className="link-button practice-result__view" data-testid={practiceTestid.viewBoard} onClick={onViewBoard}>
-          View the board
+          {t("View the board")}
         </button>
       </section>
     </div>

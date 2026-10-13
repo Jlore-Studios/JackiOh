@@ -12,6 +12,8 @@ import { AI_DECK } from "@jackioh/ai";
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { newestShippedSet } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
+
 import "./leanNewest.css";
 
 /** Where this device remembers the online All Random pick (the lobby's and the rematch's). */
@@ -36,7 +38,7 @@ export function writePlayLeanNewest(on: boolean): void {
 
 /** R1372, R1373: the switch's words, naming the newest set: "More cards from the newest set (Classic+)". */
 export function leanNewestLabel(): string {
-  return `More cards from the newest set (${newestShippedSet()})`;
+  return t("More cards from the newest set ({set})", { set: t(newestShippedSet()) });
 }
 
 /** The cards a deck of `size` holds from the set at least (R1370: rounded up, as the deck builder rounds). */
@@ -46,7 +48,7 @@ export function leanNewestFloor(size: number = DECK_SIZE): number {
 
 /** The line under the switch: what it asks of the deal. */
 export function leanNewestNote(size: number = DECK_SIZE): string {
-  return `At least ${String(leanNewestFloor(size))} of your ${String(size)} cards come from ${newestShippedSet()}.`;
+  return t("At least {floor} of your {size} cards come from {set}.", { floor: leanNewestFloor(size), size, set: t(newestShippedSet()) });
 }
 
 export type LeanNewestToggleProps = {

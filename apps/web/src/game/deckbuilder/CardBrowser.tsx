@@ -14,6 +14,7 @@ import type { Tag } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { CardDetail } from "../../cards/index.ts";
+import { t } from "../../i18n/i18n.ts";
 import FilterBar from "./FilterBar.tsx";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import PoolGrid, { type PoolGridDeckProps } from "./PoolGrid.tsx";
@@ -59,7 +60,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
   return (
-    <section className="db-browse" aria-label="Browse cards">
+    <section className="db-browse" aria-label={t("Browse cards")}>
       <FilterBar
         filter={filter}
         onFilter={onFilter}
@@ -81,7 +82,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
         )}
         {pool.length === 0 ? (
           <p className="db-empty" data-testid={DB_EMPTY}>
-            No card matches these filters.
+            {t("No card matches these filters.")}
           </p>
         ) : null}
       </div>

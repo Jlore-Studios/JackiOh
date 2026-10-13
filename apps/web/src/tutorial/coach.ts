@@ -6,6 +6,7 @@
 import type { ActionBody, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
 import type { Side } from "../game/contract.ts";
+import { t } from "../i18n/i18n.ts";
 import { TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 
 /** Everything the coach reads, all of it already the page's. */
@@ -36,13 +37,14 @@ export type CoachAnchor =
   | { kind: "library"; side: Side }
   | { kind: "graveyard"; side: Side };
 
+/** A fixed English line, looked up where it is shown, or one built at that moment (a card's name in it, R711000). */
 type Text = string | ((ctx: CoachCtx) => string);
 type AnchorOf = CoachAnchor | null | ((ctx: CoachCtx) => CoachAnchor | null);
 
 export type CoachStep = {
   /** Tests and the page's `data-coach-step` use this lesson-unique id. */
   id: string;
-  title: string;
+  title: Text;
   text: Text;
   anchor?: AnchorOf;
   /** `info`: "Got it" completes it. `act`: its `done` completes it. */
@@ -64,7 +66,7 @@ export type CoachStep = {
 
 export type CoachTip = {
   id: string;
-  title: string;
+  title: Text;
   text: Text;
   anchor?: AnchorOf;
   when: (ctx: CoachCtx) => boolean;
@@ -103,8 +105,9 @@ export const COACH_START: CoachState = {
   finished: false,
 };
 
+/** The line in the reader's language: a fixed line is looked up here, a built one where it is built. */
 export function textOf(text: Text, ctx: CoachCtx): string {
-  return typeof text === "function" ? text(ctx) : text;
+  return typeof text === "function" ? text(ctx) : t(text);
 }
 
 export function anchorOf(anchor: AnchorOf | undefined, ctx: CoachCtx): CoachAnchor | null {
@@ -241,7 +244,7 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
     return {
       mode: "tip",
       id: tip.id,
-      title: tip.title,
+      title: textOf(tip.title, ctx),
       text: textOf(tip.text, ctx),
       anchor: anchorOf(tip.anchor, ctx),
       ack: true,
@@ -257,7 +260,7 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
   return {
     mode: "step",
     id: step.id,
-    title: step.title,
+    title: textOf(step.title, ctx),
     text: textOf(step.text, ctx),
     anchor: anchorOf(step.anchor, ctx),
     ack: step.kind === "info",

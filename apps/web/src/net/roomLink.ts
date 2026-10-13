@@ -5,6 +5,7 @@
 
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
+import { t } from "../i18n/i18n.ts";
 import type { QueueMode } from "./api.ts";
 import { currentPath, paths } from "./navigate.ts";
 
@@ -100,7 +101,7 @@ export function forgetRoomLink(): void {
 /** A declined share must not silently fall back to the clipboard. */
 export async function sendRoomLink(url: string): Promise<"shared" | "copied"> {
   if (typeof navigator.share === "function") {
-    await navigator.share({ title: ROOM_LINK_SHARE_TITLE, url });
+    await navigator.share({ title: t(ROOM_LINK_SHARE_TITLE), url });
     return "shared";
   }
   await navigator.clipboard.writeText(url);

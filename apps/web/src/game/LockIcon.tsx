@@ -7,12 +7,13 @@
 
 import type { ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import "./lock.css";
 
 export default function LockIcon(): ReactElement {
   return (
-    <svg className="zone-lock" role="img" aria-label="Locked zone" viewBox="0 0 24 24">
-      <title>Locked zone</title>
+    <svg className="zone-lock" role="img" aria-label={t("Locked zone")} viewBox="0 0 24 24">
+      <title>{t("Locked zone")}</title>
       <path className="zone-lock-shackle" d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
       <rect className="zone-lock-body" x="4.5" y="10.5" width="15" height="11" rx="2.4" />
       <circle className="zone-lock-keyhole" cx="12" cy="15.2" r="1.6" />

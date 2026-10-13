@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";
 
@@ -29,31 +30,31 @@ export const siteFooterTestid = {
 export function SiteFooter(): ReactElement {
   return (
     <footer className="site-footer" data-testid={siteFooterTestid.root}>
-      <nav className="site-footer__links" aria-label="About JackiOh">
+      <nav className="site-footer__links" aria-label={t("About JackiOh")}>
         <a href={paths.privacy} data-testid={siteFooterTestid.privacy} onClick={followInApp(paths.privacy)}>
-          Privacy
+          {t("Privacy")}
         </a>
         <a href={paths.terms} data-testid={siteFooterTestid.terms} onClick={followInApp(paths.terms)}>
-          Terms
+          {t("Terms")}
         </a>
         <a
           href={paths.accessibility}
           data-testid={siteFooterTestid.accessibility}
           onClick={followInApp(paths.accessibility)}
         >
-          Accessibility
+          {t("Accessibility")}
         </a>
         <a href={paths.patchNotes} data-testid={siteFooterTestid.patchNotes} onClick={followInApp(paths.patchNotes)}>
-          Patch notes
+          {t("Patch notes")}
         </a>
         <a href={paths.almanac} data-testid={siteFooterTestid.almanac} onClick={followInApp(paths.almanac)}>
-          Card almanac
+          {t("Card almanac")}
         </a>
         <a href={paths.stats} data-testid={siteFooterTestid.stats} onClick={followInApp(paths.stats)}>
-          Stats
+          {t("Stats")}
         </a>
         <a href={CONTACT_URL} data-testid={siteFooterTestid.contact} rel="noopener noreferrer">
-          Contact us on GitHub
+          {t("Contact us on GitHub")}
         </a>
       </nav>
     </footer>

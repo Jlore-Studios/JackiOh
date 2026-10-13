@@ -9,6 +9,8 @@ import { useMemo, type ReactElement } from "react";
 import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
 
 import { faceModel, useInspectTrigger } from "../cards/index.ts";
+import { readerName } from "../cards/chinese.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { practiceTestid } from "./testids.ts";
 
 /** The curve's columns, Hearthstone's way: one per cost up to the last, which holds the rest. */
@@ -34,7 +36,7 @@ function previewCards(ids: readonly string[], defs: CardDefs): PreviewCard[] {
   const cards = ids.map((id): PreviewCard => {
     const def: CardDef | undefined = defs[id];
     if (def === undefined) return { id, name: id, type: "", cost: 0 };
-    return { id, name: def.name, type: def.type, cost: printedCost(def.cost), def };
+    return { id, name: readerName(def), type: def.type, cost: printedCost(def.cost), def };
   });
   // Cheapest first, X last, then by name: the order a deck list reads in.
   const rank = (cost: number | "X"): number => (cost === "X" ? Number.POSITIVE_INFINITY : cost);
@@ -57,7 +59,7 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed }: DeckPr
   if (cards !== null && defs === null) {
     body = (
       <p className="deck-preview__status">
-        {defsFailed ? "The card list could not be loaded; the deck still plays." : "Loading the card list…"}
+        {defsFailed ? t("The card list could not be loaded; the deck still plays.") : t("Loading the card list…")}
       </p>
     );
   } else if (cards !== null && defs !== null) {
@@ -80,7 +82,7 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed }: DeckPr
             );
           })}
         </div>
-        <ol className="deck-preview__cards" aria-label={`${title}: ${String(list.length)} cards`}>
+        <ol className="deck-preview__cards" aria-label={t("{title}: {count} cards", { title, count: String(list.length) })}>
           {list.map((card) => (
             <PreviewRow key={card.id} card={card} />
           ))}
@@ -105,7 +107,11 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed }: DeckPr
  */
 function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
   const def = card.def;
-  const face = useMemo(() => (def === undefined ? null : faceModel({ defId: card.id, def, radiant: false })), [card.id, def]);
+  const locale = useLocale();
+  const face = useMemo(
+    () => (def === undefined ? null : faceModel({ defId: card.id, def, radiant: false })),
+    [card.id, def, locale],
+  );
   const inspect = useInspectTrigger(face === null ? null : { key: `deck-preview-${card.id}`, face });
   return (
     <li
@@ -115,7 +121,7 @@ function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
       data-rarity={def?.rarity}
       {...inspect.handlers}
     >
-      <span className="deck-preview__cost" aria-label={`(${String(card.cost)}) Cost`}>
+      <span className="deck-preview__cost" aria-label={t("({cost}) Cost", { cost: String(card.cost) })}>
         {card.cost}
       </span>
       <span className="deck-preview__name">{card.name}</span>
@@ -125,6 +131,6 @@ function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
 }
 
 function curveLabel(columns: readonly CurveColumn[], counts: ReadonlyMap<CurveColumn, number>): string {
-  const parts = columns.map((column) => `${String(counts.get(column) ?? 0)} at ${column}`);
-  return `Mana curve: ${parts.join(", ")}`;
+  const parts = columns.map((column) => t("{count} at {cost}", { count: String(counts.get(column) ?? 0), cost: column }));
+  return t("Mana curve: {columns}", { columns: parts.join(t(", ")) });
 }

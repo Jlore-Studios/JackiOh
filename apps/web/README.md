@@ -418,6 +418,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`), with `tutorial/harness.ts` for tests.
 
+## Internationalisation
+
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English.
+
 ## `PlayerView` gaps found while building M5 (SPEC §10.8)
 
 Moved to docs/history/web-readme.md.

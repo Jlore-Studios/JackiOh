@@ -21,6 +21,7 @@ import {
 } from "./store.ts";
 import { readRememberedTab, rememberTab } from "./tabs.ts";
 import { syncPlayerStats } from "../stats/sync.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
@@ -95,7 +96,7 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
   return (
     <div className="settings-row">
       <label className="settings-control">
-        <span className="settings-label">{label}</span>
+        <span className="settings-label">{t(label)}</span>
         <input
           type="checkbox"
           role="switch"
@@ -114,7 +115,7 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        {hint}
+        {t(hint)}
       </p>
     </div>
   );
@@ -125,6 +126,7 @@ export default function SettingsPanel({
   slots = SETTINGS_SLOTS,
   initialTab,
 }: SettingsPanelProps): ReactElement {
+  useLocale();
   const settings = useSettings();
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -223,17 +225,17 @@ export default function SettingsPanel({
         data-testid="settings-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Settings"
+        aria-label={t("Settings")}
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >
         <header className="settings-head">
-          <h1 className="settings-title">Settings</h1>
+          <h1 className="settings-title">{t("Settings")}</h1>
           <button
             type="button"
             className="settings-close"
             data-testid="settings-close"
-            aria-label="Close settings"
+            aria-label={t("Close settings")}
             onClick={onClose}
           >
             <span aria-hidden="true">✕</span>
@@ -242,7 +244,7 @@ export default function SettingsPanel({
         <div
           className="settings-tabs"
           role="tablist"
-          aria-label="Settings sections"
+          aria-label={t("Settings sections")}
           data-testid="settings-tablist"
           onKeyDown={onTabKeyDown}
         >
@@ -265,7 +267,7 @@ export default function SettingsPanel({
                 choose(section.id);
               }}
             >
-              {section.title}
+              {t(section.title)}
             </button>
           ))}
         </div>
@@ -282,7 +284,7 @@ export default function SettingsPanel({
                 hidden={section.id !== active}
                 data-testid={`settings-section-${section.id}`}
               >
-                <h2 className="settings-section-title">{section.title}</h2>
+                <h2 className="settings-section-title">{t(section.title)}</h2>
                 {section.controls.map((setting) => (
                   <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
                 ))}
@@ -305,7 +307,7 @@ export default function SettingsPanel({
               if (activeSection !== undefined) resetSection(activeSection, slots);
             }}
           >
-            Reset this tab
+            {t("Reset this tab")}
           </button>
           <button
             type="button"
@@ -317,7 +319,7 @@ export default function SettingsPanel({
               for (const slot of slots) slot.reset?.();
             }}
           >
-            Reset all
+            {t("Reset all")}
           </button>
         </footer>
       </div>

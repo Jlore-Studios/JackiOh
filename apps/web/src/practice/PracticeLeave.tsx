@@ -10,6 +10,7 @@
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { practiceTestid } from "./testids.ts";
 import "./practice.css";
 
@@ -81,9 +82,9 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
         aria-labelledby={titleId}
       >
         <h2 className="practice-leave__title" id={titleId}>
-          Leave this game?
+          {t("Leave this game?")}
         </h2>
-        <p className="practice-leave__body">{canSave ? saveBody(to) : LEAVE_BODY[to]}</p>
+        <p className="practice-leave__body">{t(canSave ? saveBody(to) : LEAVE_BODY[to])}</p>
         <div className={canSave ? "practice-leave__actions practice-leave__actions--save" : "practice-leave__actions"}>
           <button
             ref={stay}
@@ -92,7 +93,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
             data-testid={practiceTestid.leaveStay}
             onClick={onStay}
           >
-            Keep playing
+            {t("Keep playing")}
           </button>
           {canSave ? (
             <button
@@ -101,7 +102,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
               data-testid={practiceTestid.leaveSave}
               onClick={onSaveAndLeave}
             >
-              Save and leave
+              {t("Save and leave")}
             </button>
           ) : null}
           <button
@@ -110,7 +111,7 @@ export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeL
             data-testid={practiceTestid.leaveConfirm}
             onClick={onLeave}
           >
-            {canSave ? "Leave without saving" : "Leave game"}
+            {canSave ? t("Leave without saving") : t("Leave game")}
           </button>
         </div>
       </section>

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { ConnectionState } from "../game/net.ts";
 import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
+import { t } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import {
   rematchOffer,
@@ -33,11 +34,13 @@ export type RematchButtonsProps = {
 const MS_PER_SECOND = 1000;
 
 function incomingWords(stakes: RematchStakes): string {
-  return stakes === 2 ? "Your opponent wants double-or-nothing." : "Your opponent wants a rematch.";
+  return stakes === 2 ? t("Your opponent wants double-or-nothing.") : t("Your opponent wants a rematch.");
 }
 
 function waitingWords(stakes: RematchStakes): string {
-  return `${stakes === 2 ? "You offered double-or-nothing." : "You offered a rematch."} Waiting for your opponent…`;
+  return stakes === 2
+    ? t("You offered double-or-nothing. Waiting for your opponent…")
+    : t("You offered a rematch. Waiting for your opponent…");
 }
 
 const OFFERING_LABEL = "Offering…";
@@ -121,7 +124,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
       {incoming ? (
         <p className="rematch-incoming" data-testid={rematchTestid.incoming}>
           {incomingWords(status.opponentOffer as RematchStakes)}{" "}
-          {status.opponentOffer === 2 ? "Offer double-or-nothing back to play." : "Offer a rematch back to play."}
+          {status.opponentOffer === 2 ? t("Offer double-or-nothing back to play.") : t("Offer a rematch back to play.")}
         </p>
       ) : null}
       <div className="rematch-buttons">
@@ -132,20 +135,20 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
           aria-busy={offering === 1}
           onClick={() => void meet(1)}
         >
-          {offering === 1 ? OFFERING_LABEL : "Rematch"}
+          {offering === 1 ? t(OFFERING_LABEL) : t("Rematch")}
         </button>
         <button
           type="button"
           data-testid={rematchTestid.double}
           disabled={offering !== null || !ranked}
           aria-busy={offering === 2}
-          title={ranked ? undefined : "Ranked games only"}
+          title={ranked ? undefined : t("Ranked games only")}
           onClick={() => void meet(2)}
         >
-          {offering === 2 ? OFFERING_LABEL : "Double or nothing"}
+          {offering === 2 ? t(OFFERING_LABEL) : t("Double or nothing")}
         </button>
       </div>
-      {ranked ? null : <p className="rematch-note">Double-or-nothing needs a ranked match.</p>}
+      {ranked ? null : <p className="rematch-note">{t("Double-or-nothing needs a ranked match.")}</p>}
       {random ? (
         <LeanNewestToggle
           checked={leanNewest}
@@ -164,7 +167,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
       ) : null}
       {error !== null ? (
         <p className="rematch-status" data-testid={rematchTestid.status} role="alert">
-          {error}
+          {t(error)}
         </p>
       ) : null}
     </div>

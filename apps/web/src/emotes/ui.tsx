@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type R
 import type { EmojiEmoteId, EmoteId, VoiceEmoteId } from "@jackioh/shared";
 import { isVoiceEmote, type EmoteGate } from "@jackioh/shared";
 
+import { DEFAULT_LOCALE, getLocale, t } from "../i18n/i18n.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX, EMOTE_MENU_TICK_MS } from "./config.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
@@ -158,7 +159,7 @@ export function EmoteMenu({
       data-emote-menu="true"
       data-testid="emote-menu"
       role="menu"
-      aria-label="Emotes"
+      aria-label={t("Emotes")}
       onPointerDown={(event) => event.stopPropagation()}
       // A click inside the menu must never reach .hero's own onClick — it would read the hero as
       // a non-legal target and reopen the very menu the pick just closed (issue §2: closes on a
@@ -178,7 +179,7 @@ export function EmoteMenu({
             style={{ "--emote-arc-drop": `${arcDrop(index, voices.length)}px` } as React.CSSProperties}
             onClick={pick(emote)}
           >
-            {VOICE_LABEL[emote]}
+            {t(VOICE_LABEL[emote])}
             {limited && waitS > 0 ? <span className="emote-wait">{waitS}</span> : null}
           </button>
         ))}
@@ -193,8 +194,8 @@ export function EmoteMenu({
             data-testid={`emote-${emote}`}
             data-limited={limited ? "true" : undefined}
             disabled={limited}
-            title={EMOJI_LABEL[emote]}
-            aria-label={EMOJI_LABEL[emote]}
+            title={t(EMOJI_LABEL[emote])}
+            aria-label={t(EMOJI_LABEL[emote])}
             onClick={pick(emote)}
           >
             <EmojiArt emoji={emote} />
@@ -232,7 +233,7 @@ export function MuteMenu({
       data-emote-menu="true"
       data-testid="emote-mute-menu"
       role="menu"
-      aria-label="Opponent emotes"
+      aria-label={t("Opponent emotes")}
       onPointerDown={(event) => event.stopPropagation()}
       // Same bubbling guard as the emote menu: muting closes the menu, and a click that reached
       // the hero would toggle it straight back open.
@@ -249,10 +250,19 @@ export function MuteMenu({
           onClose();
         }}
       >
-        {muted ? "Emotes muted" : "Mute emotes"}
+        {muted ? t("Emotes muted") : t("Mute emotes")}
       </button>
     </div>
   );
+}
+
+/**
+ * The bubble's words: the voice line as it was recorded, for an English reader; for a reader of any
+ * other language the line's label in their words (#711), since the recording itself stays English.
+ */
+function bubbleText(show: EmoteShowState): string | null {
+  if (show.text === null || getLocale() === DEFAULT_LOCALE || !isVoiceEmote(show.emote)) return show.text;
+  return t(VOICE_LABEL[show.emote]);
 }
 
 /**
@@ -273,7 +283,7 @@ export function EmoteShow({ show }: { show: EmoteShowState }): ReactElement {
       role={isVoice ? "status" : undefined}
     >
       {isVoice ? (
-        show.text
+        bubbleText(show)
       ) : (
         <EmojiArt emoji={show.emote as EmojiEmoteId} />
       )}

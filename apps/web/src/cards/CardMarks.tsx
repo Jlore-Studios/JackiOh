@@ -12,6 +12,7 @@ import type { CSSProperties, ReactElement } from "react";
 
 import type { CardMark } from "@jackioh/shared";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { MARK_GLYPH, MARK_MOTES, markColorOf, markWords, paletteFor } from "./marks.ts";
 import "./marks.css";
 
@@ -28,6 +29,7 @@ function paletteStyle(color: string): CSSProperties {
 export type CardMarksProps = { marks: readonly CardMark[]; instanceId: string };
 
 export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactElement | null {
+  useLocale();
   const first = marks[0];
   if (first === undefined) return null;
   return (
@@ -54,13 +56,13 @@ export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactE
               className="card-mark-badge"
               data-mark={entry.mark}
               data-mark-color={markColorOf(entry.color)}
-              title={words.text}
+              title={t(words.text)}
               style={paletteStyle(entry.color)}
             >
               <span className="card-mark-badge__glyph" aria-hidden="true">
                 {MARK_GLYPH}
               </span>
-              <span className="card-mark-badge__text">{words.text}</span>
+              <span className="card-mark-badge__text">{t(words.text)}</span>
             </span>
           );
         })}

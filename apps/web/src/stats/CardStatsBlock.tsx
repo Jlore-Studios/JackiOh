@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
 import { winPercent } from "./model.ts";
@@ -17,6 +18,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [minSample, setMinSample] = useState<number>(20);
   const [error, setError] = useState(false);
 
+  useLocale();
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
 
@@ -49,8 +51,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   if (loading) {
     return (
       <div className="inspect-stats inspect-stats--loading" data-testid={INSPECT_STATS}>
-        <span className="inspect-stats-title">Statistics</span>
-        <p className="inspect-stats-loading">Loading stats…</p>
+        <span className="inspect-stats-title">{t("Statistics")}</span>
+        <p className="inspect-stats-loading">{t("Loading stats…")}</p>
       </div>
     );
   }
@@ -58,8 +60,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   if (error || !stat) {
     return (
       <div className="inspect-stats inspect-stats--error" data-testid={INSPECT_STATS}>
-        <span className="inspect-stats-title">Statistics</span>
-        <p className="inspect-stats-unavailable">Statistics unavailable</p>
+        <span className="inspect-stats-title">{t("Statistics")}</span>
+        <p className="inspect-stats-unavailable">{t("Statistics unavailable")}</p>
       </div>
     );
   }
@@ -70,7 +72,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const winRateDisplay =
     stat.hasEnoughGames && stat.winRate !== null
       ? `${Math.round(stat.winRate * 100)}%`
-      : "not enough games";
+      : t("not enough games");
 
   const drawnWinRateDisplay =
     stat.hasEnoughGames && stat.drawnWinRate !== null
@@ -82,16 +84,16 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   return (
     <div className="inspect-stats" data-testid={INSPECT_STATS}>
       <div className="inspect-stats-header">
-        <span className="inspect-stats-title">Statistics</span>
+        <span className="inspect-stats-title">{t("Statistics")}</span>
       </div>
 
       <div className="inspect-stats-grid">
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">Games</span>
+          <span className="inspect-stats-metric-label">{t("Games")}</span>
           <span className="inspect-stats-metric-value">{stat.games}</span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">Win rate</span>
+          <span className="inspect-stats-metric-label">{t("Win rate")}</span>
           <span className="inspect-stats-metric-value">
             {winRateDisplay}
             {stat.hasEnoughGames ? null : (
@@ -100,22 +102,24 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           </span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">When drawn</span>
+          <span className="inspect-stats-metric-label">{t("When drawn")}</span>
           <span className="inspect-stats-metric-value">{drawnWinRateDisplay}</span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">Play rate</span>
+          <span className="inspect-stats-metric-label">{t("Play rate")}</span>
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
         </div>
       </div>
 
       {signedIn && (
         <div className="inspect-stats-personal" data-testid="inspect-stats-personal">
-          <span className="inspect-stats-personal-label">Your record:</span>{" "}
+          <span className="inspect-stats-personal-label">{t("Your record:")}</span>{" "}
           <span>
             {personalPlayed > 0
-              ? `played ${personalPlayed}×${personalRate !== null ? `, overall win rate ${personalRate}%` : ""}`
-              : "not played yet"}
+              ? personalRate !== null
+                ? t("played {n}×, overall win rate {rate}%", { n: personalPlayed, rate: personalRate })
+                : t("played {n}×", { n: personalPlayed })
+              : t("not played yet")}
           </span>
         </div>
       )}
@@ -125,7 +129,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           href={`/stats?tab=cards&card=${encodeURIComponent(cardId)}`}
           className="inspect-stats-link"
         >
-          View full stats →
+          {t("View full stats →")}
         </a>
       </div>
     </div>

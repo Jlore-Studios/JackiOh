@@ -25,7 +25,7 @@ import {
 } from "./constants.ts";
 import { Glossary } from "./Glossary.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
-import { Flavour } from "./Flavour.tsx";
+import { Flavour, showsEasterEgg } from "./Flavour.tsx";
 import { flavourFor } from "../flavour.ts";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
@@ -57,7 +57,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const resolve = useDefResolver();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
-  const flavoured = face.known && flavourFor(face.defId) !== null;
+  const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
   const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0), prefer);
 
@@ -93,7 +93,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
           {notes ? <StateNotes face={face} /> : null}
           <Printed face={face} />
           <Glossary entries={entries} />
-          {flavoured ? <Flavour defId={face.defId} /> : null}
+          {flavoured ? <Flavour defId={face.defId} easter={face.flagged === true} /> : null}
           <LocLine face={face} />
         </div>
       ) : null}

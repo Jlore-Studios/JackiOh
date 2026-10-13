@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import type { FaceModel } from "../cards/index.ts";
+import { t } from "../i18n/i18n.ts";
 import { newEventsSince } from "./animations.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 
@@ -63,7 +64,7 @@ export function advanceLogHistory(
   const overlap = view.events.length - fresh.length;
   const left = before.events.length - overlap;
   const joined = overlap > 0 || before.events.length === 0 || view.events.length === 0;
-  const gap: KeptLine[] = joined ? [] : [{ key: key(), type: LOG_GAP, text: LOG_GAP_TEXT, face: null }];
+  const gap: KeptLine[] = joined ? [] : [{ key: key(), type: LOG_GAP, text: t(LOG_GAP_TEXT), face: null }];
   const kept = [
     ...before.kept,
     ...before.window.slice(0, left).flatMap((entry) => (entry.line === null ? [] : [entry.line])),

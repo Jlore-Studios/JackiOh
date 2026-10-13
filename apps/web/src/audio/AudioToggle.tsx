@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 
 import { getAudioEngine } from "./engine.ts";
 import { useAudioSettings, writeAudioSettings } from "./settings.ts";
+import { t } from "../i18n/i18n.ts";
 import "./audio.css";
 
 export type AudioToggleProps = { className?: string };
@@ -48,7 +49,7 @@ function SpeakerIcon({ muted }: { muted: boolean }): ReactElement {
 export default function AudioToggle({ className }: AudioToggleProps): ReactElement {
   const [settings] = useAudioSettings();
   const muted = settings.muted;
-  const label = muted ? "Unmute sound" : "Mute sound";
+  const label = muted ? t("Unmute sound") : t("Mute sound");
   return (
     <button
       type="button"
