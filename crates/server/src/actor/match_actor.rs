@@ -65,9 +65,10 @@ use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
     BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS,
+    MATCH_VOIDED_CLOSE_CODE,
 };
-use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
+use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -829,7 +830,23 @@ impl MatchActor {
             // rebuild, so a rebuilt actor cannot collide with a nonce already in the log. Its prefix is
             // one no client may send (R270), so no client can pre-empt it.
             let nonce = format!("{SERVER_NONCE_PREFIX}{}-{next_seq}", expiry.kind());
-            self.apply_action(player, nonce, body).await;
+            let reply = self.apply_action(player, nonce, body).await;
+            // R776000: a row the store did not take. The clock that ran out runs out again, and the
+            // action is derived again then, under the same nonce while no other row has taken its seq.
+            // The `return` ends R268's loop: the retried mulligan expiry derives the seats still owing.
+            if matches!(
+                reply,
+                ServerMessage::Error {
+                    code: SocketErrorCode::Internal,
+                    ..
+                }
+            ) {
+                if !self.lock().stopped {
+                    tracing::warn!(event = "match.clock.retrying", matchId = %self.match_id_str(), kind = expiry.kind(), player = %player, inMs = MATCH_SERVER_ACTION_RETRY_MS);
+                    self.shared.clock.retry(expiry, MATCH_SERVER_ACTION_RETRY_MS);
+                }
+                return;
+            }
         }
     }
 
@@ -1223,6 +1240,19 @@ impl MatchActor {
         tracing::warn!(event = "match.result.unrecorded", matchId = %self.match_id_str());
     }
 
+    /// R776000: the log holds a row at the seq this actor was about to write (a write that committed and
+    /// whose answer was lost, or a second writer), so the actor is behind its log. It lets go as
+    /// `let_go_unrecorded` does, and the next socket folds `(seed, log)`, that row included. An actor
+    /// already stopped lets nothing go: the registry may hold its rebuilt successor by now.
+    fn let_go_diverged(&self) {
+        if self.lock().stopped {
+            return;
+        }
+        self.shared.deps.matches.forget(self.match_id_str());
+        self.halt();
+        tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
+    }
+
     /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
     /// log row at the next gapless seq, then push.
     async fn apply_action(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
@@ -1269,6 +1299,9 @@ impl MatchActor {
             .await?);
         if let Err(error) = appended {
             tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
+            if matches!(error, StoreError::SeqClash(_)) {
+                self.let_go_diverged();
+            }
             return error_message(
                 SocketErrorCode::Internal,
                 "the action could not be recorded; try again",

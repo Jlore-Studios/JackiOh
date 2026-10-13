@@ -2794,7 +2794,8 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
 ///
 /// The port hands in the `seq` the actor already used, so the two must agree: a mismatch means
 /// the log and the actor have diverged (a replayed nonce, a gap, a second writer), and it is
-/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists."
+/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists." It is
+/// `StoreError::SeqClash` (R776000), which the actor answers by letting go of the match.
 pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     run_as(t, None).await?;
     for row in rows {
@@ -2825,7 +2826,7 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
         // rollback takes that insert with it. A store that wrote the row and then complained
         // would be worse than one that refused.
         if assigned != row.seq {
-            return Err(StoreError::from(format!(
+            return Err(StoreError::SeqClash(format!(
                 "match_actions is append-only: seq {} exists (app.append_match_action assigned {} for nonce {})",
                 row.seq, assigned, action.nonce
             )));

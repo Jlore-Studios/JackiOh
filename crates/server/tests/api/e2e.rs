@@ -400,8 +400,15 @@ mod the_end_to_end_store {
             { "matchId": "m1", "seq": 1, "action": { "type": "endTurn", "playerId": "p1", "nonce": "n" }, "at": 0 },
         ]));
         store!(db, matches_append_actions(&rows));
-        let refused = try_store!(db, matches_append_actions(&rows)).expect_err("a replayed seq");
+        // R776000: the same row again is answered, as Postgres answers a repeated nonce with its seq,
+        // and writes nothing; a different action at the taken seq is still refused.
+        store!(db, matches_append_actions(&rows));
+        let clash: Vec<MatchActionRow> = from(json!([
+            { "matchId": "m1", "seq": 1, "action": { "type": "endTurn", "playerId": "p2", "nonce": "other" }, "at": 0 },
+        ]));
+        let refused = try_store!(db, matches_append_actions(&clash)).expect_err("a replayed seq");
         assert!(refused.to_string().contains("append-only"), "{refused}");
+        assert_eq!(store!(db, matches_actions("m1")).len(), 1);
     }
 }
 

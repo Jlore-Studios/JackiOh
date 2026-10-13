@@ -186,6 +186,10 @@ What the actor holds, each with a test named after it:
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
   once when the match is ranked (R604); a voided game writes none (R679).
+  A clock's server action whose row the store fails to write is tried again `MATCH_SERVER_ACTION_RETRY_MS`
+  later, its clock run out once more, until it lands; an append the store refuses as
+  `StoreError::SeqClash` makes the actor let go as an unrecorded result does (R1437), for the next
+  socket to rebuild it from the log (R776000).
 - A seat a ladder bot holds has no socket: the actor plays it itself (`drive_bots`), its moves
   server actions with `srv-bot-<seq>` nonces through the same path a client's take, its seat never
   disconnected and so never given a grace, and its persona's emotes relayed as a player's are (R1452).

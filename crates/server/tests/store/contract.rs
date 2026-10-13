@@ -2964,6 +2964,37 @@ mod matches {
         assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
     }
 
+    /// R776000: the log answers a nonce it already holds at the row's own seq with that row and writes
+    /// nothing (a write that committed and whose answer was lost can be sent again), and raises
+    /// `StoreError::SeqClash` for a new nonce at a taken seq and for a held nonce at another seq.
+    async fn r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise(
+        harness: &StoreHarness,
+    ) {
+        let row = live_match(harness).await;
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
+
+        let taken = call!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "other", harness.now())]))
+            .expect_err("a new nonce at a taken seq");
+        assert!(
+            matches!(taken, StoreError::SeqClash(_)),
+            "{}: {taken}",
+            harness.name
+        );
+        let moved = call!(harness, t => t.matches_append_actions(&[action_row(&row.id, 2, "p1", "n1", harness.now())]))
+            .expect_err("a held nonce at another seq");
+        assert!(
+            matches!(moved, StoreError::SeqClash(_)),
+            "{}: {moved}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
+
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 2, "p1", "n2", harness.now())]));
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 2);
+    }
+
     async fn stores_the_clocks_the_clients_render(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let now = harness.now();
@@ -3142,6 +3173,7 @@ mod matches {
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         refuses_a_seq_that_already_exists,
+        r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
         r604_round_trips_the_ranked_flag,
         round_trips_the_rematch_mode_and_stake,
