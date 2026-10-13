@@ -27,7 +27,7 @@ use std::rc::Rc;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
-    can_attack, has_exertion, legal_actions, unit_view,
+    attacks_per_turn, can_attack, has_exertion, legal_actions, unit_view,
 };
 
 use crate::candidates::{action_key, candidate_actions};
@@ -147,6 +147,17 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     })
 }
 
+/// R636: the attacks `unit` may still declare this turn, `attacks_per_turn` less those it has declared
+/// (`exertion.attacks`, or 1 when it has only `attacked`): two for a fresh Windfury unit, one after
+/// its first swing.
+fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
+    let spent = unit
+        .exertion
+        .attacks
+        .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
+    attacks_per_turn(state, unit) - spent
+}
+
 /// How far the seat stands from lethal this turn: the enemy hero's health less what the units that
 /// may still attack (those `legal_actions` lists an attack for) would deal it past the enemy's Taunts,
 /// counted as `face_threat` counts it. Zero or less means the attacks left could end the game. It
@@ -172,7 +183,9 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
         if attack > 0 && has_attack(state, unit) {
-            attacks.push(attack);
+            for _ in 0..attacks_left(state, unit) {
+                attacks.push(attack);
+            }
         }
     }
     f64::from(health - damage_past_taunts(state, opp, &attacks))

@@ -152,6 +152,20 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
+    /// Silence on the 9/9 Taunt, then Pointmaster and Mr. Vanilla to the face for 11 into 10
+    #[test]
+    fn silence_on_the_enemy_taunt_then_pointmaster_and_mr_vanilla_to_the_face_for_11_into_10() {
+        let run = puzzle(
+            "silence-taunt",
+            json!({
+                "p1": { "hand": ["classicplus-009"], "field": ["core-020", "core-008"], "library": ["core-008", "core-011"] },
+                "p2": { "field": ["core-019"], "health": 10, "library": ["core-008", "core-011"] },
+            }),
+        );
+        expect_enemy_dead(&run);
+        expect_first_reason_lethal(&run);
+    }
+
     /// B17 P6: Lunar Eclipse to the face plus Tempo Timmy's attack for 6
     #[test]
     fn b17_p6_lunar_eclipse_to_the_face_plus_tempo_timmys_attack_for_6() {
