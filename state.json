@@ -4199,6 +4199,13 @@
     "750": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T16:18:21Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9: I could not verify no open PR touches these files, so medium at least (lines 2 and 5 also fail: two crates, crates/ai/src/)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
