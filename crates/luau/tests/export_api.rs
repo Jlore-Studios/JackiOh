@@ -1,7 +1,7 @@
 //! Generates `crates/cards/luau/jackioh.luau` from ts-rs definitions and the verb binding table.
-//! Run with: `cargo test -p jackioh-luau --test export_api --features ts`
+//! Run with: `cargo test -p jackioh-luau --test export_api` (#464 gap 11: it runs under the
+//! workspace's ordinary test features, no extra feature needed).
 
-#[cfg(feature = "ts")]
 mod generator {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
@@ -20,8 +20,10 @@ mod generator {
     use jackioh_luau::api::draw_while::DrawWhileArgs;
     use jackioh_luau::api::each::{CardsSource, ForEachCardArgs};
     use jackioh_luau::api::kill_credit::WithKillCreditArgs;
+    use jackioh_luau::api::radiant::RadiantChanceLuauArgs;
     use jackioh_luau::api::random_entries::DoRandomEntriesArgs;
     use jackioh_luau::api::random_entries::RandomEntryLuau;
+    use jackioh_luau::reads::TurnView;
     use ts_rs::TS;
 
     fn repo_root() -> PathBuf {
@@ -515,8 +517,10 @@ mod generator {
             CardsSource,
             ForEachCardArgs,
             WithKillCreditArgs,
+            RadiantChanceLuauArgs,
             DoRandomEntriesArgs,
             RandomEntryLuau,
+            TurnView,
         }
 
         // Shared effect-argument shapes other args name
@@ -830,7 +834,14 @@ mod generator {
             "\tunspent_mana_of: (self: EffectContext, player: PlayerId) -> number,",
             "\tmax_mana_of: (self: EffectContext, player: PlayerId) -> number,",
             "\tplayed_ids_this_turn: (self: EffectContext, player: PlayerId) -> {string},",
-            "\tplayed_earlier: (self: EffectContext, player: PlayerId, id: string) -> boolean,",
+            "\tplayed_earlier: (self: EffectContext, player: PlayerId, card: any) -> number,",
+            "\tturn: (self: EffectContext) -> TurnView,",
+            "\tgiven_lucky_on: (self: EffectContext, card: any) -> number,",
+            "\tcounters: (self: EffectContext) -> GameCounters,",
+            "\tdata: (self: EffectContext) -> any,",
+            "\tevents: (self: EffectContext) -> {GameEvent},",
+            "\tevents_from: (self: EffectContext) -> number,",
+            "\tleft_field_since_resolved: (self: EffectContext, event: GameEvent) -> boolean,",
             "\twas_played_this_turn: (self: EffectContext, player: PlayerId, id: string) -> boolean,",
             "\tactive_units_of: (self: EffectContext, player: PlayerId) -> {any},",
             "\tdormant_units_of: (self: EffectContext, player: PlayerId) -> {any},",
@@ -854,6 +865,7 @@ mod generator {
             "\tarmor_on_field: (self: EffectContext) -> number,",
             "\tfind_instance: (self: EffectContext, id: string) -> any,",
             "\tkiller_of: (self: EffectContext, id: string) -> any,",
+            "\tkiller_of_self: (self: EffectContext) -> any,",
             "\tluck_of: (self: EffectContext, player: PlayerId) -> number,",
             "\tplague_on: (self: EffectContext, id: string) -> number,",
             "\tplague_multiplier_of: (self: EffectContext, id: string) -> number,",
@@ -861,7 +873,7 @@ mod generator {
             "\topen_zones: (self: EffectContext, player: PlayerId, row: Row) -> {number},",
             "\tfirst_free_zone: (self: EffectContext, player: PlayerId, row: Row) -> any,",
             "\tmidlane_lanes_of: (self: EffectContext, player: PlayerId) -> {number},",
-            "\ttimes_played_of: (self: EffectContext, id: string) -> number,",
+            "\ttimes_played_of: (self: EffectContext, card: any) -> number,",
             "\tis_unit_token: (self: EffectContext, id: string) -> boolean,",
             "\tis_x_cost: (self: EffectContext, id: string) -> boolean,",
             "\tis_animated: (self: EffectContext, id: string) -> boolean,",
@@ -967,6 +979,10 @@ mod generator {
              -- The pure-read contexts a predicate hook is called with, as methods:\n\
              -- what `reads.rs` registers (`register_condition_ctx`,\n\
              -- `register_replacement_ctx`, `register_hook_args`).\n\
+             -- Every context with a state carries the shared readers too \
+             -- (`reads.rs` `shared_readers!`): the lists below name the ones a \
+             -- condition, cost or value hook reaches for most; the rest read as \
+             -- on the effect context. \
              export type ConditionContext = {\n\
              \tcontroller: (self: ConditionContext) -> PlayerId,\n\
              \tradiant: (self: ConditionContext) -> boolean,\n\
@@ -979,6 +995,20 @@ mod generator {
              \tmax_mana_of: (self: ConditionContext, player: PlayerId) -> number,\n\
              \tcards_played_this_turn: (self: ConditionContext, player: PlayerId) -> number,\n\
              \tzone_count: (self: ConditionContext, player: PlayerId, zone: OffFieldZone) -> number,\n\
+             \tturn: (self: ConditionContext) -> TurnView,\n\
+             \tplayed_earlier: (self: ConditionContext, player: PlayerId, card: any) -> number,\n\
+             \tparams_view: (self: ConditionContext) -> any,\n\
+             \tplay_cost: (self: ConditionContext) -> number,\n\
+             \ttimes_played_of: (self: ConditionContext, card: any) -> number,\n\
+             \topen_zones: (self: ConditionContext, player: PlayerId, row: Row) -> {number},\n\
+             \tfusable_permanents_of: (self: ConditionContext, player: PlayerId, except: string?) -> {any},\n\
+             \tgiven_lucky_on: (self: ConditionContext, card: any) -> number,\n\
+             \tkiller_of: (self: ConditionContext, id: string) -> any,\n\
+             \tkiller_of_self: (self: ConditionContext) -> any,\n\
+             \tleft_field_since_resolved: (self: ConditionContext, event: GameEvent) -> boolean,\n\
+             \tcounters: (self: ConditionContext) -> GameCounters,\n\
+             \tfill_params: (self: ConditionContext, id: string, face: FaceKind, values: any) -> string,\n\
+             \topponent_of: (self: ConditionContext, player: PlayerId) -> PlayerId,\n\
              }\n\n\
              export type ReplacementContext = {\n\
              \tself_: (self: ReplacementContext) -> any,\n\
@@ -986,6 +1016,14 @@ mod generator {
              \tradiant: (self: ReplacementContext) -> boolean,\n\
              \tevent: (self: ReplacementContext) -> ReplacedEvent,\n\
              \tparam: (self: ReplacementContext, key: string) -> number,\n\
+             \tturn: (self: ReplacementContext) -> TurnView,\n\
+             \tplayed_earlier: (self: ReplacementContext, player: PlayerId, card: any) -> number,\n\
+             \tparams_view: (self: ReplacementContext) -> any,\n\
+             \tgiven_lucky_on: (self: ReplacementContext, card: any) -> number,\n\
+             \tkiller_of: (self: ReplacementContext, id: string) -> any,\n\
+             \tleft_field_since_resolved: (self: ReplacementContext, event: GameEvent) -> boolean,\n\
+             \tcounters: (self: ReplacementContext) -> GameCounters,\n\
+             \topponent_of: (self: ReplacementContext, player: PlayerId) -> PlayerId,\n\
              }\n\n\
              export type HookArgs = {\n\
              \tcontroller: (self: HookArgs) -> PlayerId,\n\
@@ -997,6 +1035,26 @@ mod generator {
              \tmax_mana_of: (self: HookArgs, player: PlayerId) -> number,\n\
              \tplague_on: (self: HookArgs, id: string) -> number,\n\
              \topponent_of: (self: HookArgs, player: PlayerId) -> PlayerId,\n\
+             \tturn: (self: HookArgs) -> TurnView,\n\
+             \tplayed_earlier: (self: HookArgs, player: PlayerId, card: any) -> number,\n\
+             \tparams_view: (self: HookArgs) -> any,\n\
+             \tgiven_lucky_on: (self: HookArgs, card: any) -> number,\n\
+             \tkiller_of: (self: HookArgs, id: string) -> any,\n\
+             \tleft_field_since_resolved: (self: HookArgs, event: GameEvent) -> boolean,\n\
+             \tcounters: (self: HookArgs) -> GameCounters,\n\
+             }\n\n\
+             export type CostArgs = {\n\
+             \tinstance: (self: CostArgs) -> any,\n\
+             \tself_: (self: CostArgs) -> any,\n\
+             \tcontroller: (self: CostArgs) -> PlayerId,\n\
+             \tparam: (self: CostArgs, key: string) -> number,\n\
+             \tcounters: (self: CostArgs) -> GameCounters,\n\
+             \tturn: (self: CostArgs) -> TurnView,\n\
+             \thero_of: (self: CostArgs, player: PlayerId) -> any,\n\
+             \tunspent_mana_of: (self: CostArgs, player: PlayerId) -> number,\n\
+             \tplayed_earlier: (self: CostArgs, player: PlayerId, card: any) -> number,\n\
+             \tparams_view: (self: CostArgs) -> any,\n\
+             \tgiven_lucky_on: (self: CostArgs, card: any) -> number,\n\
              }\n\n\
              -- Arbitrary JSON (a remembered value, a prompt's data bag): crosses\n\
              -- as `any` because no Rust type stands behind it.\n\
@@ -1029,6 +1087,19 @@ mod generator {
                 ));
             }
         }
+
+        // `J.config`: the engine constants card scripts read, from the same source as the
+        // runtime table (`CONFIG_I32`), so the typed module and the host cannot drift (#464 gap 7).
+        out.push_str("export type JConfig = {\n");
+        for (name, _) in jackioh_luau::config::CONFIG_I32 {
+            out.push_str(&format!("\t{name}: number,\n"));
+        }
+        out.push_str("}\n\n");
+        out.push_str("J.config = {\n");
+        for (name, value) in jackioh_luau::config::CONFIG_I32 {
+            out.push_str(&format!("\t{name} = {value},\n"));
+        }
+        out.push_str("}\n\n");
 
         // Special / helper functions
         out.push_str("function J.div(a: number, b: number): number\n\treturn (a // b)\nend\n\n");

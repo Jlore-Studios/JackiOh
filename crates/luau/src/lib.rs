@@ -135,7 +135,7 @@ pub fn run_hook(
 /// One aura hook's entries.
 pub fn run_aura_hook<'a>(
     site: Site,
-    bytecode: &[u8],
+    bytecode: &'static [u8],
     args: jackioh_engine::script::HookArgs<'a>,
 ) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
     vm::call_aura_hook(site, bytecode, args)

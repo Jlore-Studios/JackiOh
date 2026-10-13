@@ -355,39 +355,54 @@ pub fn build_script(
         }
     }
 
-    // Direct hooks
+    // Direct hooks. One adapter for one function under two hooks (#464 gap 10): when two hook
+    // keys of one face hold the same Luau function value, both share one `Arc`, so `Arc::ptr_eq`
+    // holds the way it does for a Rust script that clones one hook (`classicplus-070`).
+    let mut hook_cache: Vec<(*const std::ffi::c_void, Hook)> = Vec::new();
+    let mut direct_hook = |key: &'static str| -> Option<Hook> {
+        let func = hooks::get_fn(table, key).ok()?;
+        let ptr = func.to_pointer();
+        if let Some((_, shared)) = hook_cache.iter().find(|(cached, _)| *cached == ptr) {
+            return Some(shared.clone());
+        }
+        let site = Site { card, face, hook: key };
+        let adapter = hooks::adapt_hook(site, bytecode);
+        hook_cache.push((ptr, adapter.clone()));
+        Some(adapter)
+    };
+
     let has_fn = |name: &str| hooks::get_fn(table, name).is_ok();
     let site = |hook: &'static str| Site { card, face, hook };
 
     if has_fn("cost") {
         script.cost = Some(hooks::adapt_cost_hook(site("cost"), bytecode));
     }
-    if has_fn("cry") {
-        script.cry = Some(hooks::adapt_hook(site("cry"), bytecode));
+    if let Some(hook) = direct_hook("cry") {
+        script.cry = Some(hook);
     }
-    if has_fn("death") {
-        script.death = Some(hooks::adapt_hook(site("death"), bytecode));
+    if let Some(hook) = direct_hook("death") {
+        script.death = Some(hook);
     }
-    if has_fn("entersHand") {
-        script.enters_hand = Some(hooks::adapt_hook(site("entersHand"), bytecode));
+    if let Some(hook) = direct_hook("entersHand") {
+        script.enters_hand = Some(hook);
     }
-    if has_fn("delayed") {
-        script.delayed = Some(hooks::adapt_hook(site("delayed"), bytecode));
+    if let Some(hook) = direct_hook("delayed") {
+        script.delayed = Some(hook);
     }
     if has_fn("setStat") {
         script.set_stat = Some(hooks::adapt_set_stat_hook(site("setStat"), bytecode));
     }
-    if has_fn("startOfTurn") {
-        script.start_of_turn = Some(hooks::adapt_hook(site("startOfTurn"), bytecode));
+    if let Some(hook) = direct_hook("startOfTurn") {
+        script.start_of_turn = Some(hook);
     }
-    if has_fn("endOfTurn") {
-        script.end_of_turn = Some(hooks::adapt_hook(site("endOfTurn"), bytecode));
+    if let Some(hook) = direct_hook("endOfTurn") {
+        script.end_of_turn = Some(hook);
     }
     if has_fn("aura") {
         script.aura = Some(hooks::adapt_aura_hook(site("aura"), bytecode));
     }
-    if has_fn("onPlayHook") {
-        script.on_play_hook = Some(hooks::adapt_hook(site("onPlayHook"), bytecode));
+    if let Some(hook) = direct_hook("onPlayHook") {
+        script.on_play_hook = Some(hook);
     }
     if has_fn("conditionMet") {
         script.condition_met = Some(hooks::adapt_condition_hook(site("conditionMet"), bytecode));
@@ -428,11 +443,11 @@ pub fn build_script(
             bytecode,
         ));
     }
-    if has_fn("afterAttack") {
-        script.after_attack = Some(hooks::adapt_hook(site("afterAttack"), bytecode));
+    if let Some(hook) = direct_hook("afterAttack") {
+        script.after_attack = Some(hook);
     }
-    if has_fn("afterAttacked") {
-        script.after_attacked = Some(hooks::adapt_hook(site("afterAttacked"), bytecode));
+    if let Some(hook) = direct_hook("afterAttacked") {
+        script.after_attacked = Some(hook);
     }
     if has_fn("plagueMultiplier") {
         script.plague_multiplier = Some(hooks::adapt_plague_multiplier_hook(
@@ -449,8 +464,8 @@ pub fn build_script(
     if has_fn("wouldCounter") {
         script.would_counter = Some(hooks::adapt_would_counter_hook(site("wouldCounter"), bytecode));
     }
-    if has_fn("startOfOpponentTurn") {
-        script.start_of_opponent_turn = Some(hooks::adapt_hook(site("startOfOpponentTurn"), bytecode));
+    if let Some(hook) = direct_hook("startOfOpponentTurn") {
+        script.start_of_opponent_turn = Some(hook);
     }
     if has_fn("turnHookExtra") {
         script.turn_hook_extra = Some(hooks::adapt_trigger_extra_hook(

@@ -54,6 +54,9 @@ macro_rules! verbs {
     (@build $call:ident, $site:ident, $bytecode:ident, with_kill_credit, $arg:ty) => {
         $crate::api::kill_credit::build_with_kill_credit($call, $site, $bytecode)
     };
+    (@build $call:ident, $site:ident, $bytecode:ident, radiant_chance, $arg:ty) => {
+        $crate::api::radiant::build_radiant_chance($call, $site)
+    };
     (@build $call:ident, $site:ident, $bytecode:ident, do_random_entries, $arg:ty) => {
         $crate::api::random_entries::build_do_random_entries($call, $site, $bytecode)
     };
@@ -67,6 +70,12 @@ macro_rules! verbs {
         Err($crate::LuauError::Hook {
             site: $site,
             message: "defense_armor is an aura verb, not an effect verb".to_string(),
+        })
+    };
+    (@build $call:ident, $site:ident, $bytecode:ident, aura, $arg:ty) => {
+        Err($crate::LuauError::Hook {
+            site: $site,
+            message: "aura is an aura verb, not an effect verb".to_string(),
         })
     };
     (@build $call:ident, $site:ident, $bytecode:ident, $name:ident, $arg:ty) => {{
@@ -190,27 +199,12 @@ pub fn typed<T: DeserializeOwned>(call: &EffectCall, site: Site) -> Result<T, Lu
         Err(err) => {
             // Risk #2: Luau empty tables `{}` serialize as `Json::Object({})`. If the target type
             // expects a sequence (e.g. `Vec<T>`), retry with empty objects coerced to empty arrays.
-            let coerced = coerce_empty_objects(&call.args);
+            let coerced = numbers::coerce_empty_objects(&call.args);
             serde_json::from_value::<T>(coerced).map_err(|_| LuauError::Hook {
                 site,
                 message: format!("{}: {err}", call.verb),
             })
         }
-    }
-}
-
-fn coerce_empty_objects(value: &Json) -> Json {
-    match value {
-        Json::Object(map) if map.is_empty() => Json::Array(Vec::new()),
-        Json::Object(map) => {
-            let mut new_map = serde_json::Map::new();
-            for (k, v) in map {
-                new_map.insert(k.clone(), coerce_empty_objects(v));
-            }
-            Json::Object(new_map)
-        }
-        Json::Array(items) => Json::Array(items.iter().map(coerce_empty_objects).collect()),
-        other => other.clone(),
     }
 }
 
@@ -241,6 +235,17 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
     trap_types.raw_set(1, "Trap")?;
     trap_types.raw_set(2, "Field Trap")?;
     module.raw_set("TRAP_TYPES", trap_types)?;
+
+    // `J.config`: the engine's config constants card scripts use, read from the same source as
+    // `engineConfig.ts` (#464 gap 7). A script reads `J.config.HERO_HEALTH`, never `30`.
+    let config = lua.create_table()?;
+    for (name, value) in crate::config::CONFIG_I32 {
+        config.raw_set(*name, *value)?;
+    }
+    // Read-only like `J` itself: the table lives as long as the thread's VM, so a write to it
+    // would survive the call (L8).
+    config.set_readonly(true);
+    module.raw_set("config", config)?;
 
     module.set_readonly(true);
     Ok(module)
@@ -375,6 +380,7 @@ pub(crate) fn kind(value: &Json) -> &'static str {
 pub fn aura_entries<'a>(
     calls: &[EffectCall],
     site: Site,
+    bytecode: &'static [u8],
     args: jackioh_engine::script::HookArgs<'a>,
 ) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
     let mut entries = Vec::new();
@@ -411,6 +417,14 @@ pub fn aura_entries<'a>(
                     },
                 });
             }
+            "aura" => {
+                let aura: crate::api::aura::AuraArgs =
+                    serde_json::from_value(call.args.clone()).map_err(|err| LuauError::Hook {
+                        site,
+                        message: format!("aura: {err}"),
+                    })?;
+                entries.push(generic_aura_entry(site, bytecode, args, aura)?);
+            }
             verb => {
                 return Err(LuauError::Hook {
                     site,
@@ -420,4 +434,56 @@ pub fn aura_entries<'a>(
         }
     }
     Ok(entries)
+}
+
+/// One generic aura entry (#464 gap 8): the declared stat `mod` with an `applies` filter, either
+/// data evaluated in Rust or a named face predicate called per candidate unit.
+fn generic_aura_entry<'a>(
+    site: Site,
+    bytecode: &'static [u8],
+    args: jackioh_engine::script::HookArgs<'a>,
+    aura: crate::api::aura::AuraArgs,
+) -> Result<jackioh_engine::script::AuraEntry<'a>, LuauError> {
+    use jackioh_engine::effects::ScopeSide;
+    let controller = args.self_.controller;
+    let applies: Box<dyn Fn(&jackioh_engine::CardInstance) -> bool + 'a> = match aura.applies {
+        crate::api::aura::AuraApplies::Filter(filter) => {
+            let side = filter.side.unwrap_or(ScopeSide::SelfSide);
+            let rows = filter.rows.unwrap_or_else(|| vec![jackioh_engine::Row::Units]);
+            let def_id = filter.def_id;
+            let except_def_id = filter.except_def_id;
+            Box::new(move |unit: &jackioh_engine::CardInstance| {
+                let side_ok = match side {
+                    ScopeSide::Any => true,
+                    ScopeSide::SelfSide => unit.controller == controller,
+                    ScopeSide::Enemy => unit.controller != controller,
+                };
+                let row_ok = matches!(
+                    unit.zone,
+                    jackioh_engine::Zone::Field { row, .. } if rows.contains(&row)
+                );
+                let def_ok = def_id.as_deref().is_none_or(|def| unit.def_id == def);
+                let except_ok = except_def_id.as_deref().is_none_or(|def| unit.def_id != def);
+                side_ok && row_ok && def_ok && except_ok
+            })
+        }
+        crate::api::aura::AuraApplies::Predicate(name) => {
+            crate::hooks::check_named_hook(site, bytecode, &name)?;
+            Box::new(move |unit: &jackioh_engine::CardInstance| {
+                match crate::vm::with_vm(site, bytecode, |lua, face| {
+                    let func = crate::hooks::face_function(&face, name.as_str())?;
+                    let unit = lua.to_value(unit)?;
+                    let answered: Value = func.call(unit)?;
+                    Ok(answered.as_boolean().unwrap_or(false))
+                }) {
+                    Ok(applies) => applies,
+                    Err(error) => panic!("{error}"),
+                }
+            })
+        }
+    };
+    Ok(jackioh_engine::script::AuraEntry {
+        applies,
+        mod_: aura.mod_,
+    })
 }

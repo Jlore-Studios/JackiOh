@@ -26,6 +26,8 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if let Some(cost) = maybe_cost() {
         cost(ctx);
     }
+    // A reader passed as a value, never called (#464 gap 5): counts all the same.
+    let _granted: fn(&CardInstance) -> i32 = given_lucky_on;
     mystery_helper(ctx);
     vec![damage(json_as(json!({ "n": roll(1) }))), remember(json_as(json!({ "k": label })))]
 }

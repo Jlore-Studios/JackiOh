@@ -52,11 +52,20 @@ pub const HOOKS: [&str; 30] = [
 ];
 
 /// Named sub-hooks a face may declare beside its hooks: the functions closure-taking
-/// effect verbs call back by name (`after_state_check`, `draw_while`, `for_each_card`).
+/// effect verbs call back by name (`after_state_check`, `draw_while`, `for_each_card`,
+/// `with_kill_credit`, and the generic aura's `applies` predicate).
 /// A second use of one verb in the same face appends `_2`, `_3`, … (`each_cards_2`),
 /// since one face holds two `for_each_card`s with different closures (Classic #39).
 /// Anything else unknown is still a load error, so a misspelled hook stays one.
-pub const SUB_HOOKS: [&str; 4] = ["after_check", "draw_more", "each_cards", "each_card"];
+pub const SUB_HOOKS: [&str; 7] = [
+    "after_check",
+    "draw_more",
+    "each_cards",
+    "each_card",
+    "kill_pairs",
+    "kill_then",
+    "aura_filter",
+];
 
 /// Whether a face key is a named sub-hook: one of `SUB_HOOKS`, optionally with a
 /// `_<n>` suffix for a second use of the verb in the same face.
@@ -438,7 +447,7 @@ fn run(vm: &Vm, site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> mlu
 /// Calls an `aura` hook on `args` and returns the aura entries it specifies.
 pub fn call_aura_hook<'a>(
     site: Site,
-    bytecode: &[u8],
+    bytecode: &'static [u8],
     args: jackioh_engine::script::HookArgs<'a>,
 ) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
     VM.with(|vm| {
@@ -451,7 +460,7 @@ pub fn call_aura_hook<'a>(
             message: error.to_string(),
         })?;
         let calls = api::effect_calls(&numbers::to_json(&returned, site)?, site)?;
-        api::aura_entries(&calls, site, args)
+        api::aura_entries(&calls, site, bytecode, args)
     })
 }
 

@@ -814,6 +814,7 @@ perTails: BuffAmount?,
 export type ForEachCardArgs = {
 cards: CardsSource | nil,
 each: string | nil,
+data: JsonValue,
 }
 
 export type ForRestOfGameArgs = {
@@ -1749,6 +1750,13 @@ lucky: number?,
 player: PlayerSpec?,
 }
 
+export type RadiantChanceLuauArgs = {
+zone: (RadiantZone | {RadiantZone}),
+chancePercent: number,
+lucky: number?,
+player: PlayerSpec?,
+}
+
 export type RadiantTarget = {
 target: TargetSpec?,
 instanceId: string?,
@@ -2307,6 +2315,11 @@ delta: number,
 ["kind"]: "none",
 }
 
+export type TurnView = {
+number: number,
+active: PlayerId,
+}
+
 export type UnlockArgs = {
 zone: ZoneSpec,
 }
@@ -2329,6 +2342,9 @@ export type WithKillCreditArgs = {
 killer: TargetSpec,
 transfer: boolean,
 during: JsonValue,
+pairs: string | nil,
+["then"]: string | nil,
+data: JsonValue,
 }
 
 export type Zone = {
@@ -2405,7 +2421,14 @@ export type EffectContext = {
 	unspent_mana_of: (self: EffectContext, player: PlayerId) -> number,
 	max_mana_of: (self: EffectContext, player: PlayerId) -> number,
 	played_ids_this_turn: (self: EffectContext, player: PlayerId) -> {string},
-	played_earlier: (self: EffectContext, player: PlayerId, id: string) -> boolean,
+	played_earlier: (self: EffectContext, player: PlayerId, card: any) -> number,
+	turn: (self: EffectContext) -> TurnView,
+	given_lucky_on: (self: EffectContext, card: any) -> number,
+	counters: (self: EffectContext) -> GameCounters,
+	data: (self: EffectContext) -> any,
+	events: (self: EffectContext) -> {GameEvent},
+	events_from: (self: EffectContext) -> number,
+	left_field_since_resolved: (self: EffectContext, event: GameEvent) -> boolean,
 	was_played_this_turn: (self: EffectContext, player: PlayerId, id: string) -> boolean,
 	active_units_of: (self: EffectContext, player: PlayerId) -> {any},
 	dormant_units_of: (self: EffectContext, player: PlayerId) -> {any},
@@ -2429,6 +2452,7 @@ export type EffectContext = {
 	armor_on_field: (self: EffectContext) -> number,
 	find_instance: (self: EffectContext, id: string) -> any,
 	killer_of: (self: EffectContext, id: string) -> any,
+	killer_of_self: (self: EffectContext) -> any,
 	luck_of: (self: EffectContext, player: PlayerId) -> number,
 	plague_on: (self: EffectContext, id: string) -> number,
 	plague_multiplier_of: (self: EffectContext, id: string) -> number,
@@ -2436,7 +2460,7 @@ export type EffectContext = {
 	open_zones: (self: EffectContext, player: PlayerId, row: Row) -> {number},
 	first_free_zone: (self: EffectContext, player: PlayerId, row: Row) -> any,
 	midlane_lanes_of: (self: EffectContext, player: PlayerId) -> {number},
-	times_played_of: (self: EffectContext, id: string) -> number,
+	times_played_of: (self: EffectContext, card: any) -> number,
 	is_unit_token: (self: EffectContext, id: string) -> boolean,
 	is_x_cost: (self: EffectContext, id: string) -> boolean,
 	is_animated: (self: EffectContext, id: string) -> boolean,
@@ -2537,7 +2561,7 @@ export type ActivationDecl = {
 -- The pure-read contexts a predicate hook is called with, as methods:
 -- what `reads.rs` registers (`register_condition_ctx`,
 -- `register_replacement_ctx`, `register_hook_args`).
-export type ConditionContext = {
+-- Every context with a state carries the shared readers too -- (`reads.rs` `shared_readers!`): the lists below name the ones a -- condition, cost or value hook reaches for most; the rest read as -- on the effect context. export type ConditionContext = {
 	controller: (self: ConditionContext) -> PlayerId,
 	radiant: (self: ConditionContext) -> boolean,
 	your_turn: (self: ConditionContext) -> boolean,
@@ -2549,6 +2573,20 @@ export type ConditionContext = {
 	max_mana_of: (self: ConditionContext, player: PlayerId) -> number,
 	cards_played_this_turn: (self: ConditionContext, player: PlayerId) -> number,
 	zone_count: (self: ConditionContext, player: PlayerId, zone: OffFieldZone) -> number,
+	turn: (self: ConditionContext) -> TurnView,
+	played_earlier: (self: ConditionContext, player: PlayerId, card: any) -> number,
+	params_view: (self: ConditionContext) -> any,
+	play_cost: (self: ConditionContext) -> number,
+	times_played_of: (self: ConditionContext, card: any) -> number,
+	open_zones: (self: ConditionContext, player: PlayerId, row: Row) -> {number},
+	fusable_permanents_of: (self: ConditionContext, player: PlayerId, except: string?) -> {any},
+	given_lucky_on: (self: ConditionContext, card: any) -> number,
+	killer_of: (self: ConditionContext, id: string) -> any,
+	killer_of_self: (self: ConditionContext) -> any,
+	left_field_since_resolved: (self: ConditionContext, event: GameEvent) -> boolean,
+	counters: (self: ConditionContext) -> GameCounters,
+	fill_params: (self: ConditionContext, id: string, face: FaceKind, values: any) -> string,
+	opponent_of: (self: ConditionContext, player: PlayerId) -> PlayerId,
 }
 
 export type ReplacementContext = {
@@ -2557,6 +2595,14 @@ export type ReplacementContext = {
 	radiant: (self: ReplacementContext) -> boolean,
 	event: (self: ReplacementContext) -> ReplacedEvent,
 	param: (self: ReplacementContext, key: string) -> number,
+	turn: (self: ReplacementContext) -> TurnView,
+	played_earlier: (self: ReplacementContext, player: PlayerId, card: any) -> number,
+	params_view: (self: ReplacementContext) -> any,
+	given_lucky_on: (self: ReplacementContext, card: any) -> number,
+	killer_of: (self: ReplacementContext, id: string) -> any,
+	left_field_since_resolved: (self: ReplacementContext, event: GameEvent) -> boolean,
+	counters: (self: ReplacementContext) -> GameCounters,
+	opponent_of: (self: ReplacementContext, player: PlayerId) -> PlayerId,
 }
 
 export type HookArgs = {
@@ -2569,6 +2615,27 @@ export type HookArgs = {
 	max_mana_of: (self: HookArgs, player: PlayerId) -> number,
 	plague_on: (self: HookArgs, id: string) -> number,
 	opponent_of: (self: HookArgs, player: PlayerId) -> PlayerId,
+	turn: (self: HookArgs) -> TurnView,
+	played_earlier: (self: HookArgs, player: PlayerId, card: any) -> number,
+	params_view: (self: HookArgs) -> any,
+	given_lucky_on: (self: HookArgs, card: any) -> number,
+	killer_of: (self: HookArgs, id: string) -> any,
+	left_field_since_resolved: (self: HookArgs, event: GameEvent) -> boolean,
+	counters: (self: HookArgs) -> GameCounters,
+}
+
+export type CostArgs = {
+	instance: (self: CostArgs) -> any,
+	self_: (self: CostArgs) -> any,
+	controller: (self: CostArgs) -> PlayerId,
+	param: (self: CostArgs, key: string) -> number,
+	counters: (self: CostArgs) -> GameCounters,
+	turn: (self: CostArgs) -> TurnView,
+	hero_of: (self: CostArgs, player: PlayerId) -> any,
+	unspent_mana_of: (self: CostArgs, player: PlayerId) -> number,
+	played_earlier: (self: CostArgs, player: PlayerId, card: any) -> number,
+	params_view: (self: CostArgs) -> any,
+	given_lucky_on: (self: CostArgs, card: any) -> number,
 }
 
 -- Arbitrary JSON (a remembered value, a prompt's data bag): crosses
@@ -2646,6 +2713,10 @@ end
 
 function J.animate(args: AnimateArgs): EffectCall
 	return { verb = "animate", args = args :: any }
+end
+
+function J.aura(args: AuraArgs): EffectCall
+	return { verb = "aura", args = args :: any }
 end
 
 function J.bounce(args: BounceArgs): EffectCall
@@ -3136,7 +3207,7 @@ function J.plague(args: PlagueArgs): EffectCall
 	return { verb = "plague", args = args :: any }
 end
 
-function J.radiant_chance(args: RadiantChanceArgs): EffectCall
+function J.radiant_chance(args: RadiantChanceLuauArgs): EffectCall
 	return { verb = "radiant_chance", args = args :: any }
 end
 
@@ -3359,6 +3430,118 @@ end
 function J.with_kill_credit(args: WithKillCreditArgs): EffectCall
 	return { verb = "with_kill_credit", args = args :: any }
 end
+
+export type JConfig = {
+	ACTIVATE_UNLIMITED_CAP: number,
+	ARMOR_UP_ARMOR: number,
+	BLADE_STORM_ROUNDS: number,
+	BOARD_HISTORY_DEPTH: number,
+	BRAINSTORM_DISCOUNT: number,
+	CALL_TO_CHAOS_CHAIN_CAP: number,
+	CALL_TO_CHAOS_ETERNAL_CAP: number,
+	CAST_ON_DRAW_CHAIN_CAP: number,
+	CHAIN_OF_THOUGHT_REPEATS: number,
+	CHAOS_MED_ACCLAIMED: number,
+	CHAOS_MED_CN_CARDS: number,
+	CHAOS_MED_COST: number,
+	CHAOS_MED_FUSE_COPIES: number,
+	CHAOS_MED_HEAL: number,
+	CHAOS_MED_HERO_ARMOR: number,
+	CHAOS_MED_NERFS: number,
+	CHAOS_MED_PRIME_CARDS: number,
+	CRAFTED_CARD_COST: number,
+	CRAFT_LOC_BUDGET: number,
+	CRAFT_MAX_COST: number,
+	CRAFT_RADIANT_MULTIPLIER: number,
+	DECK_SIZE: number,
+	DIE_INSECT_DAMAGE: number,
+	FENG_SHUI_BRITTLE: number,
+	FUSE_COST_CAP: number,
+	GLITCH_ODDS_DENOMINATOR: number,
+	GLITCH_ODDS_PER_SYSTEM_PLAY: number,
+	GRADE_A_DAMAGE: number,
+	HAND_CAP: number,
+	HAND_CAP_MAX: number,
+	HERO_HEALTH: number,
+	KY_TEST_MIN_PROBLEMS: number,
+	KY_TEST_OPTIONS: number,
+	LIBRARY_CAP: number,
+	LIFE_TAP_DAMAGE: number,
+	LIFE_TAP_DRAW: number,
+	MAX_MANA: number,
+	MIN_CHOSEN_X: number,
+	NIGHT_MARKET_AI_LOTS: number,
+	NIGHT_MARKET_CN_LOTS: number,
+	NIGHT_MARKET_ROCK_LOTS: number,
+	PING_DAMAGE: number,
+	PLUCK_COST: number,
+	RADIANT_SHEEP_TRIBUTE_VALUE: number,
+	ROLLBACK_MAX_TURNS: number,
+	SHEEP_TRIBUTE_VALUE: number,
+	STITCHING_MAX_COST: number,
+	TANK_UP_ARMOR: number,
+	TUNE_STAT_TOTAL: number,
+	TURN_CAP_PLAYER_TURNS: number,
+	UNIT_ZONES: number,
+	VOLATILITY_RADIANT_BUFF_MULTIPLIER: number,
+	VOLATILITY_TUNE_MULTIPLIER: number,
+}
+
+J.config = {
+	ACTIVATE_UNLIMITED_CAP = 100,
+	ARMOR_UP_ARMOR = 2,
+	BLADE_STORM_ROUNDS = 30,
+	BOARD_HISTORY_DEPTH = 4,
+	BRAINSTORM_DISCOUNT = 1,
+	CALL_TO_CHAOS_CHAIN_CAP = 20,
+	CALL_TO_CHAOS_ETERNAL_CAP = 3,
+	CAST_ON_DRAW_CHAIN_CAP = 20,
+	CHAIN_OF_THOUGHT_REPEATS = 4,
+	CHAOS_MED_ACCLAIMED = 3,
+	CHAOS_MED_CN_CARDS = 3,
+	CHAOS_MED_COST = 0,
+	CHAOS_MED_FUSE_COPIES = 2,
+	CHAOS_MED_HEAL = 8,
+	CHAOS_MED_HERO_ARMOR = 8,
+	CHAOS_MED_NERFS = 1,
+	CHAOS_MED_PRIME_CARDS = 2,
+	CRAFTED_CARD_COST = 0,
+	CRAFT_LOC_BUDGET = 24,
+	CRAFT_MAX_COST = 4,
+	CRAFT_RADIANT_MULTIPLIER = 2,
+	DECK_SIZE = 20,
+	DIE_INSECT_DAMAGE = 8,
+	FENG_SHUI_BRITTLE = 2,
+	FUSE_COST_CAP = 4,
+	GLITCH_ODDS_DENOMINATOR = 10000,
+	GLITCH_ODDS_PER_SYSTEM_PLAY = 1,
+	GRADE_A_DAMAGE = 8,
+	HAND_CAP = 10,
+	HAND_CAP_MAX = 14,
+	HERO_HEALTH = 30,
+	KY_TEST_MIN_PROBLEMS = 30,
+	KY_TEST_OPTIONS = 4,
+	LIBRARY_CAP = 60,
+	LIFE_TAP_DAMAGE = 2,
+	LIFE_TAP_DRAW = 1,
+	MAX_MANA = 4,
+	MIN_CHOSEN_X = 1,
+	NIGHT_MARKET_AI_LOTS = 1,
+	NIGHT_MARKET_CN_LOTS = 3,
+	NIGHT_MARKET_ROCK_LOTS = 2,
+	PING_DAMAGE = 1,
+	PLUCK_COST = 0,
+	RADIANT_SHEEP_TRIBUTE_VALUE = 3,
+	ROLLBACK_MAX_TURNS = 3,
+	SHEEP_TRIBUTE_VALUE = 2,
+	STITCHING_MAX_COST = 2,
+	TANK_UP_ARMOR = 4,
+	TUNE_STAT_TOTAL = 4,
+	TURN_CAP_PLAYER_TURNS = 60,
+	UNIT_ZONES = 5,
+	VOLATILITY_RADIANT_BUFF_MULTIPLIER = 3,
+	VOLATILITY_TUNE_MULTIPLIER = 2,
+}
 
 function J.div(a: number, b: number): number
 	return (a // b)

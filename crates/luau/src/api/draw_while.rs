@@ -10,7 +10,7 @@ use crate::{LuauError, Site};
 
 /// `draw_while`'s arguments: the face function answering whether to draw again.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawWhileArgs {
     pub hook: String,

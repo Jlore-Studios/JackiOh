@@ -8,14 +8,17 @@ publish.workspace = true
 
 [dependencies]
 # Pure (CLAUDE.md rule 4), as the engine is, plus mlua (#442 L3), which compiles Luau's C++ (`g++`).
+# ts-rs is a compile-time-only derive, as on the engine: the typed module's generator
+# (`tests/export_api.rs`) runs under the workspace's ordinary test features (#464 gap 11).
 jackioh-engine = { workspace = true }
 mlua = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-ts-rs = { workspace = true, optional = true }
+ts-rs = { workspace = true }
 
 [features]
-ts = ["jackioh-engine/ts", "dep:ts-rs"]
+default = ["ts"]
+ts = ["jackioh-engine/ts"]
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }

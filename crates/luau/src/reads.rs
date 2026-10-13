@@ -6,19 +6,35 @@
 
 use jackioh_engine::prelude::*;
 use mlua::{Error, Lua, LuaSerdeExt, Table, UserDataMethods, UserDataRegistry, Value};
-use serde_json::Value as Json;
+
 
 use crate::numbers::arg;
 
-/// Helper to serialize a value to Luau.
-fn to_lua<T: serde::Serialize>(lua: &Lua, val: &T) -> mlua::Result<Value> {
-    lua.to_value(val)
+/// Helper to serialize a value to Luau. A Rust `None` hands Luau `nil`, not mlua's truthy
+/// `null`: `serialize_none_to_null` is off, so an absent answer is falsy and `type(x) == "table"`
+/// stays false for it (#464 gap 12).
+fn to_lua<T: serde::Serialize + ?Sized>(lua: &Lua, val: &T) -> mlua::Result<Value> {
+    lua.to_value_with(
+        val,
+        mlua::serde::SerializeOptions::new()
+            .serialize_none_to_null(false)
+            .serialize_unit_to_null(false),
+    )
 }
 
-/// Helper to deserialize a Luau argument into serde type T.
+/// The turn as a script reads it (#464 gap 4): the turn number and the active player.
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+#[derive(ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnView {
+    pub number: i32,
+    pub active: PlayerId,
+}
+
+/// Helper to deserialize a Luau argument into serde type T: the one walked boundary, so a
+/// script's `{}` where a list stands reads as the empty list (#464 gap 1).
 fn from_lua<T: serde::de::DeserializeOwned>(val: Value) -> mlua::Result<T> {
-    let json: Json = serde_json::from_value(arg::<Json>(val)?).map_err(|e| Error::runtime(e.to_string()))?;
-    serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))
+    arg(val)
 }
 
 /// Registers all read methods on `&mut EffectContext<'_>`.
@@ -107,9 +123,52 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
         let player = arg::<PlayerId>(p)?;
         to_lua(lua, &played_ids_this_turn(ctx.state, player))
     });
-    registry.add_method("played_earlier", |_, ctx, (p, id): (Value, String)| {
+    registry.add_method("played_earlier", |_, ctx, (p, card): (Value, Value)| {
         let player = arg::<PlayerId>(p)?;
-        Ok(played_earlier(ctx.state, player, &id[..]))
+        // Nil is "nothing played yet", an id string names the card, and an instance table carries
+        // it, so a condition hook passes its `self_` and a Cry its `live_self()` (#464 gap 3).
+        if card.is_nil() {
+            Ok(played_earlier(ctx.state, player, CardOrId::Nothing))
+        } else if let Value::String(id) = &card {
+            Ok(played_earlier(ctx.state, player, CardOrId::Id(&id.to_str()?)))
+        } else {
+            let card = from_lua::<CardInstance>(card)?;
+            Ok(played_earlier(ctx.state, player, CardOrId::Card(&card)))
+        }
+    });
+    registry.add_method("turn", |lua, ctx, ()| {
+        to_lua(
+            lua,
+            &TurnView {
+                number: ctx.state.turn,
+                active: ctx.state.active,
+            },
+        )
+    });
+    registry.add_method("given_lucky_on", |_, ctx, card: Value| {
+        // An id string or an instance table: only the granted Lucky, never the printed kind
+        // (R1438, #464 gap 5).
+        if let Value::String(id) = &card {
+            let id = id.to_str()?;
+            Ok(find_instance(ctx.state, &id).map_or(0, given_lucky_on))
+        } else {
+            let card = from_lua::<CardInstance>(card)?;
+            Ok(given_lucky_on(&card))
+        }
+    });
+    registry.add_method("counters", |lua, ctx, ()| to_lua(lua, &ctx.state.counters));
+    registry.add_method("data", |lua, ctx, ()| to_lua(lua, &ctx.data));
+    registry.add_method("events", |lua, ctx, ()| {
+        // R136: this script's own window onto the action's events, `events[events_from..]`
+        // (#464 gap 6).
+        to_lua(lua, &ctx.sink.events[ctx.events_from..])
+    });
+    registry.add_method("events_from", |_, ctx, ()| Ok(ctx.events_from as i32));
+    registry.add_method("left_field_since_resolved", |_, ctx, event: Value| {
+        // R174, R427: whether the card the trigger event names has left the field since the play
+        // resolved. The event is the one the trigger's `when` or `run` was called with (#464 gap 9).
+        let event = from_lua::<GameEvent>(event)?;
+        Ok(left_field_since_resolved(ctx.state, &event))
     });
     registry.add_method("was_played_this_turn", |_, ctx, (p, id): (Value, String)| {
         let player = arg::<PlayerId>(p)?;
@@ -228,8 +287,17 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
         to_lua(lua, &find_instance(ctx.state, &id))
     });
     registry.add_method("killer_of", |lua, ctx, id: String| {
-        let card = find_instance(ctx.state, &id);
+        // In a Death hook the live instance is the reset graveyard card, which carries no
+        // `last_damaged_by` (R42/R361): an id naming the running card reads its own snapshot
+        // instead (#464 gap 9).
+        let card = match ctx.self_.as_ref().filter(|me| me.id == id) {
+            Some(_) => ctx.live_self(),
+            None => find_instance(ctx.state, &id),
+        };
         to_lua(lua, &killer_of(ctx.state, card))
+    });
+    registry.add_method("killer_of_self", |lua, ctx, ()| {
+        to_lua(lua, &killer_of(ctx.state, ctx.live_self()))
     });
     registry.add_method("luck_of", |_, ctx, p: Value| {
         let player = arg::<PlayerId>(p)?;
@@ -267,11 +335,14 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
         let player = arg::<PlayerId>(p)?;
         to_lua(lua, &midlane_lanes_of(ctx.state, player))
     });
-    registry.add_method("times_played_of", |_, ctx, id: String| {
-        if let Some(card) = find_instance(ctx.state, &id) {
-            Ok(times_played_of(card))
+    registry.add_method("times_played_of", |_, ctx, card: Value| {
+        // An id string or an instance table, so a preview passes its `self_` (#464 gap 3).
+        if let Value::String(id) = &card {
+            let id = id.to_str()?;
+            Ok(find_instance(ctx.state, &id).map_or(0, times_played_of))
         } else {
-            Ok(0)
+            let card = from_lua::<CardInstance>(card)?;
+            Ok(times_played_of(&card))
         }
     });
     registry.add_method("is_unit_token", |_, ctx, id: String| {
@@ -698,35 +769,819 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
     );
 }
 
+/// The readers every context userdata with a `state` carries (#464 gap 3): one definition, bound
+/// onto each context, so a condition, preview or cost hook never lacks a reader the effect context
+/// has. The projections read off `ctx`, whatever its context type: the state, the running card
+/// (`me`), its controller and whether the radiant face runs. Readers that need the sink (the
+/// events window), the data bag, the rng or a prompt answer stay on the effect context alone.
+/// What the shared readers read off any context: the state, the running card and whether the
+/// radiant face runs. Implemented for every context userdata with a `state`, so the macro below
+/// binds once and attaches everywhere (#464 gap 3).
+trait SharedCtx {
+    fn shared_state(&self) -> &GameState;
+    fn shared_me(&self) -> Option<&CardInstance>;
+    fn shared_radiant(&self) -> bool;
+}
+
+impl SharedCtx for ConditionContext<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
+impl SharedCtx for CostArgs<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.instance)
+    }
+    fn shared_radiant(&self) -> bool {
+        false
+    }
+}
+
+impl SharedCtx for HookArgs<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
+impl SharedCtx for jackioh_engine::script::AttackModArgs<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
+impl SharedCtx for jackioh_engine::script::ReplacementContext<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
+impl SharedCtx for WouldCounterArgs<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        false
+    }
+}
+
+impl SharedCtx for jackioh_engine::script::TargetCheckArgs<'_> {
+    fn shared_state(&self) -> &GameState {
+        self.state
+    }
+    fn shared_me(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn shared_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
+macro_rules! shared_readers {
+    ($registry:ident) => {
+        $registry.add_method("turn", |lua, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &TurnView { number: state.turn, active: state.active })
+        });
+        $registry.add_method("param", |_, ctx, key: String| Ok(param(ctx, &key)));
+        $registry.add_method("opponent_of", |lua, _, p: Value| {
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &player.opponent())
+        });
+        $registry.add_method("params_view", |lua, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let me: Option<&CardInstance> = ctx.shared_me();
+            let _ = ctx;
+            if let Some(card) = me {
+                to_lua(lua, &params_view(state, card))
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+        $registry.add_method("counters", |lua, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &state.counters)
+        });
+        $registry.add_method("hero_of", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &hero_of(state, player))
+        });
+        $registry.add_method("zone_cards", |lua, ctx, (p, z): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let zone = from_lua::<OffFieldZone>(z)?;
+            to_lua(lua, &zone_cards(state, player, zone))
+        });
+        $registry.add_method("zone_count", |_, ctx, (p, z): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let zone = from_lua::<OffFieldZone>(z)?;
+            Ok(zone_count(state, player, zone))
+        });
+        $registry.add_method("cards_played_this_turn", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(cards_played_this_turn(state, player))
+        });
+        $registry.add_method("unspent_mana_of", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(unspent_mana_of(state, player))
+        });
+        $registry.add_method("max_mana_of", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(max_mana_of(state, player))
+        });
+        $registry.add_method("played_ids_this_turn", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &played_ids_this_turn(state, player))
+        });
+        $registry.add_method("played_earlier", |_, ctx, (p, card): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            if card.is_nil() {
+                Ok(played_earlier(state, player, CardOrId::Nothing))
+            } else if let Value::String(id) = &card {
+                Ok(played_earlier(state, player, CardOrId::Id(&id.to_str()?)))
+            } else {
+                let card = from_lua::<CardInstance>(card)?;
+                Ok(played_earlier(state, player, CardOrId::Card(&card)))
+            }
+        });
+        $registry.add_method("was_played_this_turn", |_, ctx, (p, id): (Value, String)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(was_played_this_turn(state, player, &id))
+        });
+        $registry.add_method("active_units_of", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &active_units_of(state, player))
+        });
+        $registry.add_method("dormant_units_of", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &dormant_units_of(state, player))
+        });
+        $registry.add_method("card_at", |lua, ctx, (p, lane): (Value, i32)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let slot = ZoneRef { player, row: Row::Units, lane };
+            to_lua(lua, &card_at(state, slot))
+        });
+        $registry.add_method("slots_of", |lua, _, (p, r): (Value, Value)| {
+            let player = arg::<PlayerId>(p)?;
+            let row = from_lua::<Row>(r).unwrap_or(Row::Units);
+            to_lua(lua, &slots_of(player, row))
+        });
+        $registry.add_method("slot_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let card = find_instance(state, &id);
+            to_lua(lua, &card.and_then(|c| slot_of(state, c)))
+        });
+        $registry.add_method("face_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let card = find_instance(state, &id);
+            to_lua(lua, &card.map(|c| face_of(state, c)))
+        });
+        $registry.add_method("stats_with_buffs", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let card = find_instance(state, &id);
+            to_lua(lua, &card.map(|c| stats_with_buffs(state, c)))
+        });
+        $registry.add_method("unit_view", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let card = find_instance(state, &id);
+            to_lua(lua, &card.map(|c| unit_view(state, c)))
+        });
+        $registry.add_method("def_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &jackioh_engine::catalog::find_def(Some(state), &id))
+        });
+        $registry.add_method("printed_cost", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(printed_cost(state, card))
+            } else if let Some(def) = jackioh_engine::catalog::find_def(Some(state), &id) {
+                Ok(query_cost(def))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("effective_cost", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(effective_cost(state, card, jackioh_engine::mana::CostOptions::default()))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("query_cost", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(def) = jackioh_engine::catalog::find_def(Some(state), &id) {
+                Ok(query_cost(def))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("own_cost", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(own_cost(state, card))
+            } else {
+                Ok(None)
+            }
+        });
+        $registry.add_method("cost_now", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(cost_now(state, card))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("play_cost", |_, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let me: Option<&CardInstance> = ctx.shared_me();
+            let _ = ctx;
+            Ok(me.map_or(0, |card| play_cost(state, card)))
+        });
+        $registry.add_method("tags_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &tags_of(state, card))
+            } else {
+                to_lua(lua, &Vec::<Tag>::new())
+            }
+        });
+        $registry.add_method("lucky_on", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(lucky_on(state, card))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("given_lucky_on", |_, ctx, card: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Value::String(id) = &card {
+                let id = id.to_str()?;
+                Ok(find_instance(state, &id).map_or(0, given_lucky_on))
+            } else {
+                let card = from_lua::<CardInstance>(card)?;
+                Ok(given_lucky_on(&card))
+            }
+        });
+        $registry.add_method("highest_permanent_cost", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(highest_permanent_cost(state, player))
+        });
+        $registry.add_method("base_stats_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let card = find_instance(state, &id);
+            to_lua(lua, &card.map(|c| base_stats_of(state, c)))
+        });
+        $registry.add_method("credit_used_this_turn", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(credit_used_this_turn(state, player))
+        });
+        $registry.add_method("armor_on_field", |_, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            Ok(armor_on_field(state))
+        });
+        $registry.add_method("find_instance", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &find_instance(state, &id))
+        });
+        $registry.add_method("killer_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let me: Option<&CardInstance> = ctx.shared_me();
+            let _ = ctx;
+            let card = match me.filter(|card| card.id == id) {
+                Some(card) => Some(card),
+                None => find_instance(state, &id),
+            };
+            to_lua(lua, &killer_of(state, card))
+        });
+        $registry.add_method("killer_of_self", |lua, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let me: Option<&CardInstance> = ctx.shared_me();
+            let _ = ctx;
+            to_lua(lua, &killer_of(state, me))
+        });
+        $registry.add_method("left_field_since_resolved", |_, ctx, event: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let event = from_lua::<GameEvent>(event)?;
+            Ok(left_field_since_resolved(state, &event))
+        });
+        $registry.add_method("luck_of", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(luck_of(state, player))
+        });
+        $registry.add_method("plague_on", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(plague_on(card))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("plague_multiplier_of", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(plague_multiplier_of(state, card))
+            } else {
+                Ok(1)
+            }
+        });
+        $registry.add_method("permanents_on_field", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &permanents_on_field(state, player))
+        });
+        $registry.add_method("open_zones", |lua, ctx, (p, r): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let row = from_lua::<Row>(r)?;
+            to_lua(lua, &open_zones(state, player, row))
+        });
+        $registry.add_method("first_free_zone", |lua, ctx, (p, r): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let row = from_lua::<Row>(r)?;
+            to_lua(lua, &first_free_zone(state, player, row))
+        });
+        $registry.add_method("midlane_lanes_of", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &midlane_lanes_of(state, player))
+        });
+        $registry.add_method("times_played_of", |_, ctx, card: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Value::String(id) = &card {
+                let id = id.to_str()?;
+                Ok(find_instance(state, &id).map_or(0, times_played_of))
+            } else {
+                let card = from_lua::<CardInstance>(card)?;
+                Ok(times_played_of(&card))
+            }
+        });
+        $registry.add_method("is_unit_token", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_unit_token(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("is_x_cost", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_x_cost(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("is_animated", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_animated(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("is_carried", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_carried(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("carried_at", |lua, ctx, (p, lane): (Value, i32)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let slot = ZoneRef { player, row: Row::Backrow, lane };
+            to_lua(lua, &carried_at(state, slot))
+        });
+        $registry.add_method("is_locked", |_, ctx, (p, lane): (Value, i32)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let slot = ZoneRef { player, row: Row::Units, lane };
+            Ok(is_locked(state, slot))
+        });
+        $registry.add_method("is_berserk", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_berserk(card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("unit_has", |_, ctx, (id, k): (String, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let kind = from_lua::<KeywordKind>(k)?;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(unit_has(state, card, kind))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("card_keywords", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &card_keywords(state, card))
+            } else {
+                to_lua(lua, &Vec::<Keyword>::new())
+            }
+        });
+        $registry.add_method("numbered_keywords_on", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &numbered_keywords_on(state, card))
+            } else {
+                to_lua(lua, &Vec::<jackioh_engine::NumberedKeyword>::new())
+            }
+        });
+        $registry.add_method("card_type_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &card_type_of(state, card))
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+        $registry.add_method("card_type_of_face", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let radiant: bool = ctx.shared_radiant();
+            let _ = ctx;
+            to_lua(lua, &card_type_of_face(state, &id, radiant))
+        });
+        $registry.add_method("keywords_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &keywords_of(state, card))
+            } else {
+                to_lua(lua, &Vec::<Keyword>::new())
+            }
+        });
+        $registry.add_method("has_keyword", |_, ctx, (id, k): (String, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let kind = from_lua::<KeywordKind>(k)?;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(has_keyword(&keywords_of(state, card), kind))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("numbers_on", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &numbers_on(state, card))
+            } else {
+                to_lua(lua, &Vec::<NumberOnCard>::new())
+            }
+        });
+        $registry.add_method("numbered_sum", |_, ctx, (id, k): (String, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let kind = from_lua::<KeywordKind>(k)?;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(numbered_sum(&keywords_of(state, card), kind))
+            } else {
+                Ok(None)
+            }
+        });
+        $registry.add_method("numbering_order", |lua, ctx, cards: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let cards = from_lua::<Vec<CardInstance>>(cards)?;
+            to_lua(lua, &numbering_order(state, &cards))
+        });
+        $registry.add_method("applicable_changes", |lua, ctx, (id, dir): (String, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let direction = from_lua::<TuneDirection>(dir)?;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &applicable_changes(state, card, direction))
+            } else {
+                to_lua(lua, &Vec::<TuneRow>::new())
+            }
+        });
+        $registry.add_method("unreadable_by", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &unreadable_by(state, card))
+            } else {
+                to_lua(lua, &Vec::<PlayerId>::new())
+            }
+        });
+        $registry.add_method("stacked_onto", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(stacked_onto(card).map(str::to_string))
+            } else {
+                Ok(None)
+            }
+        });
+        $registry.add_method("redirect_neighbours", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                to_lua(lua, &redirect_neighbours(state, card))
+            } else {
+                to_lua(lua, &Vec::<CardInstance>::new())
+            }
+        });
+        $registry.add_method(
+            "fusable_permanents_of",
+            |lua, ctx, (p, except): (Value, Option<String>)| {
+                let state: &GameState = ctx.shared_state();
+                let _ = ctx;
+                let player = arg::<PlayerId>(p)?;
+                to_lua(lua, &fusable_permanents_of(state, player, except.as_deref()))
+            },
+        );
+        $registry.add_method("fill_board_zones", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &fill_board_zones(state, player))
+        });
+        $registry.add_method("created_in_library", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &created_in_library(state, player))
+        });
+        $registry.add_method("last_face_up_played", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &last_face_up_played(state, player))
+        });
+        $registry.add_method("lethal_attackers_of", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(lua, &lethal_attackers_of(state, player))
+        });
+        $registry.add_method("played_this_game_with_tag", |_, ctx, (p, t): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let tag = from_lua::<Tag>(t)?;
+            Ok(played_this_game_with_tag(state, player, tag))
+        });
+        $registry.add_method("played_this_turn_of_type", |_, ctx, (p, t): (Value, Value)| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            let types = from_lua::<Vec<CardType>>(t)?;
+            Ok(played_this_turn_of_type(state, player, &types))
+        });
+        $registry.add_method("hand_cap_of", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(hand_cap_of(state, player))
+        });
+        $registry.add_method("discard_guarded", |_, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            Ok(jackioh_engine::draw::discard_guarded(state, player))
+        });
+        $registry.add_method("playable_from_graveyard", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(playable_from_graveyard(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("has_triggerable_cry", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(has_triggerable_cry(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("immune_to_tribal_hate", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(immune_to_tribal_hate(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("is_cast_on_draw", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(is_cast_on_draw(state, card))
+            } else {
+                Ok(false)
+            }
+        });
+        $registry.add_method("return_price_of", |_, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            if let Some(card) = find_instance(state, &id) {
+                Ok(return_price_of(card))
+            } else {
+                Ok(0)
+            }
+        });
+        $registry.add_method("secret_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &secret_of(state, &id))
+        });
+        $registry.add_method("judge", |lua, _, (guess, choice): (Value, Value)| {
+            let guess = from_lua::<SecretChoice>(guess)?;
+            let choice = from_lua::<SecretChoice>(choice)?;
+            to_lua(lua, &judge(guess, choice))
+        });
+        $registry.add_method("def_by_index", |lua, _, (set, index): (Value, String)| {
+            let set = from_lua::<SetName>(set)?;
+            to_lua(lua, &def_by_index(set, &index))
+        });
+        $registry.add_method(
+            "fill_params",
+            |_, ctx, (id, face, values): (String, Value, Value)| {
+                let state: &GameState = ctx.shared_state();
+                let _ = ctx;
+                let face = from_lua::<FaceKind>(face)?;
+                let values = if values.is_nil() {
+                    None
+                } else {
+                    Some(from_lua::<IndexMap<String, i32>>(values)?)
+                };
+                if let Some(def) = jackioh_engine::catalog::find_def(Some(state), &id) {
+                    Ok(fill_params(def, face, values.as_ref()))
+                } else {
+                    Ok(String::new())
+                }
+            },
+        );
+        $registry.add_method("win_rate_leader", |lua, _, exclude: Option<String>| {
+            let exclude_str = exclude.as_deref().unwrap_or("");
+            to_lua(lua, &win_rate_leader(exclude_str))
+        });
+        $registry.add_method("fib", |_, _, n: i32| Ok(fib(n)));
+        $registry.add_method("attack_target_of", |lua, ctx, id: String| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &attack_target_of(state, &id))
+        });
+        $registry.add_method(
+            "random_attack_targets",
+            |lua, ctx, (id, among): (String, Value)| {
+                let state: &GameState = ctx.shared_state();
+                let _ = ctx;
+                let among = from_lua::<AttackAmong>(among)?;
+                if let Some(card) = find_instance(state, &id) {
+                    to_lua(lua, &random_attack_targets(state, card, among))
+                } else {
+                    to_lua(lua, &Vec::<AttackTarget>::new())
+                }
+            },
+        );
+        $registry.add_method("subsystems_feng_shui_last_element", |lua, ctx, p: Value| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            let player = arg::<PlayerId>(p)?;
+            to_lua(
+                lua,
+                &jackioh_engine::subsystems::feng_shui::last_element(state, player),
+            )
+        });
+        $registry.add_method(
+            "subsystems_feng_shui_element_preview",
+            |lua, _, (label, elem): (String, Value)| {
+                let element = if elem.is_nil() {
+                    None
+                } else {
+                    Some(from_lua::<jackioh_engine::CardElement>(elem)?)
+                };
+                to_lua(
+                    lua,
+                    &jackioh_engine::subsystems::feng_shui::element_preview(&label, element),
+                )
+            },
+        );
+        $registry.add_method("subsystems_pareto_judgement_of", |lua, ctx, ()| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
+            to_lua(lua, &jackioh_engine::subsystems::pareto::judgement_of(state))
+        });
+    };
+}
+
 /// Registers methods on `HookArgs<'_>`.
 pub fn register_hook_args(registry: &mut UserDataRegistry<HookArgs<'_>>) {
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.self_.controller));
-    registry.add_method("param", |_, args, key: String| Ok(param(args, &key)));
     registry.add_method("radiant", |_, args, ()| Ok(args.radiant));
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.self_));
-    registry.add_method("hero_of", |lua, args, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        to_lua(lua, &hero_of(args.state, player))
-    });
-    registry.add_method("unspent_mana_of", |_, args, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(unspent_mana_of(args.state, player))
-    });
-    registry.add_method("max_mana_of", |_, args, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(max_mana_of(args.state, player))
-    });
-    registry.add_method("plague_on", |_, args, id: String| {
-        if let Some(card) = find_instance(args.state, &id) {
-            Ok(plague_on(card))
-        } else {
-            Ok(0)
-        }
-    });
-    registry.add_method("opponent_of", |lua, _, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        to_lua(lua, &player.opponent())
-    });
+    shared_readers!(registry);
 }
 
 /// Registers methods on `ConditionContext<'_>`.
@@ -736,41 +1591,15 @@ pub fn register_condition_ctx(registry: &mut UserDataRegistry<ConditionContext<'
     registry.add_method("your_turn", |_, ctx, ()| Ok(ctx.your_turn));
     registry.add_method("zone", |lua, ctx, ()| to_lua(lua, &ctx.zone));
     registry.add_method("self_", |lua, ctx, ()| to_lua(lua, &ctx.self_));
-    registry.add_method("param", |_, ctx, key: String| Ok(param(ctx, &key)));
-    registry.add_method("hero_of", |lua, ctx, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        to_lua(lua, &hero_of(ctx.state, player))
-    });
-    registry.add_method("unspent_mana_of", |_, ctx, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(unspent_mana_of(ctx.state, player))
-    });
-    registry.add_method("max_mana_of", |_, ctx, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(max_mana_of(ctx.state, player))
-    });
-    registry.add_method("cards_played_this_turn", |_, ctx, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(cards_played_this_turn(ctx.state, player))
-    });
-    registry.add_method("zone_count", |_, ctx, (p, z): (Value, Value)| {
-        let player = arg::<PlayerId>(p)?;
-        let zone = from_lua::<OffFieldZone>(z)?;
-        Ok(zone_count(ctx.state, player, zone))
-    });
+    shared_readers!(registry);
 }
 
 /// Registers methods on `CostArgs<'_>`.
 pub fn register_cost_args(registry: &mut UserDataRegistry<CostArgs<'_>>) {
     registry.add_method("instance", |lua, args, ()| to_lua(lua, &args.instance));
-    registry.add_method("hero_of", |lua, args, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        to_lua(lua, &hero_of(args.state, player))
-    });
-    registry.add_method("unspent_mana_of", |_, args, p: Value| {
-        let player = arg::<PlayerId>(p)?;
-        Ok(unspent_mana_of(args.state, player))
-    });
+    registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.instance));
+    registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.instance.controller));
+    shared_readers!(registry);
 }
 
 /// Registers methods on `WouldCounterArgs<'_>`.
@@ -779,6 +1608,7 @@ pub fn register_would_counter_args(registry: &mut UserDataRegistry<WouldCounterA
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.controller));
     registry.add_method("player", |lua, args, ()| to_lua(lua, &args.player));
     registry.add_method("cost_paid", |_, args, ()| Ok(args.cost_paid));
+    shared_readers!(registry);
 }
 
 /// Registers methods on `TargetCheckArgs<'_>`.
@@ -790,6 +1620,7 @@ pub fn register_target_check_args(
     registry.add_method("player", |lua, args, ()| to_lua(lua, &args.player));
     registry.add_method("radiant", |_, args, ()| Ok(args.radiant));
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.self_.controller));
+    shared_readers!(registry);
 }
 
 /// Registers methods on `AttackModArgs<'_>`.
@@ -799,7 +1630,7 @@ pub fn register_attack_mod_args(registry: &mut UserDataRegistry<jackioh_engine::
     registry.add_method("defender", |lua, args, ()| to_lua(lua, &args.defender));
     registry.add_method("radiant", |_, args, ()| Ok(args.radiant));
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.self_.controller));
-    registry.add_method("param", |_, args, key: String| Ok(param(args, &key)));
+    shared_readers!(registry);
 }
 
 /// Registers methods on `ReplacementContext<'_>`.
@@ -810,5 +1641,5 @@ pub fn register_replacement_ctx(
     registry.add_method("controller", |lua, ctx, ()| to_lua(lua, &ctx.controller));
     registry.add_method("radiant", |_, ctx, ()| Ok(ctx.radiant));
     registry.add_method("event", |lua, ctx, ()| to_lua(lua, &ctx.event));
-    registry.add_method("param", |_, ctx, key: String| Ok(param(ctx, &key)));
+    shared_readers!(registry);
 }

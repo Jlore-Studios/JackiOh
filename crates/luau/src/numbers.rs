@@ -90,7 +90,11 @@ fn count(nodes: &mut usize) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// A table as a list, a record or, empty, `{}`.
+/// A table as a list, a record or, empty, one of the two empty shapes. An empty table that
+/// carries a metatable is one mlua serialized from a Rust sequence (`lua.to_value` attaches its
+/// array metatable to every sequence, empty included), so it walks as an empty list. An empty
+/// table with no metatable — a script's `{}` — walks as an empty record, and the typed boundary
+/// (`arg`, `typed`) coerces it to whichever empty shape the target type wants (#464 gap 1).
 fn walk_table(table: &Table, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     let refused = |error: Error| Refusal::Value(error.to_string());
     let mut keys = Vec::new();
@@ -100,6 +104,9 @@ fn walk_table(table: &Table, depth: usize, nodes: &mut usize) -> Result<Json, Re
         keys.push(key);
     }
     if keys.is_empty() {
+        if table.has_metatable() {
+            return Ok(Json::Array(Vec::new()));
+        }
         return Ok(Json::Object(Map::new()));
     }
     let len = table.raw_len();
@@ -157,7 +164,30 @@ pub fn to_i32(value: &Value, site: Site) -> Result<i32, LuauError> {
 /// arguments through this, so they cross by the same rules as a hook's return.
 pub fn arg<T: DeserializeOwned>(value: Value) -> mlua::Result<T> {
     let json = walk(&value, 0, &mut 0).map_err(Error::runtime)?;
-    serde_json::from_value(json).map_err(Error::runtime)
+    match serde_json::from_value(json.clone()) {
+        Ok(val) => Ok(val),
+        // An empty table with no metatable walks as an empty record, so a script's `{}` where a
+        // list stands — or a Rust empty `Vec` that lost its metatable on the way out — reads as a
+        // map here. Retry with every empty record coerced to an empty list (#464 gap 1).
+        Err(first) => serde_json::from_value(coerce_empty_objects(&json)).map_err(|_| Error::runtime(first)),
+    }
+}
+
+/// Every empty record as an empty list, recursively: what an empty table with no metatable means
+/// where the target type wants a list (#464 gap 1).
+pub fn coerce_empty_objects(value: &Json) -> Json {
+    match value {
+        Json::Object(map) if map.is_empty() => Json::Array(Vec::new()),
+        Json::Object(map) => {
+            let mut coerced = Map::new();
+            for (key, item) in map {
+                coerced.insert(key.clone(), coerce_empty_objects(item));
+            }
+            Json::Object(coerced)
+        }
+        Json::Array(items) => Json::Array(items.iter().map(coerce_empty_objects).collect()),
+        other => other.clone(),
+    }
 }
 
 /// `J.div`: Rust's `/`, truncating toward zero. `None` where Rust's would panic: a zero divisor, or

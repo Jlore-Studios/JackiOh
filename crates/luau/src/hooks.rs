@@ -161,19 +161,74 @@ pub fn call_named_effects(
         .collect()
 }
 
-/// Runs a closure verb's named face function as `face[name](id)` — `for_each_card`'s
-/// `each`, which takes no context — and builds the effect list it returns. A failure
-/// names the card, face and function; the caller panics with it, since an engine hook
-/// has no error to return.
+/// Runs `with_kill_credit`'s named `pairs` function as `face[name](ctx, data)` and reads its
+/// answer as kill credits: a list of `{ victimId, toId }` records. A failure names the card, face
+/// and function; the caller panics with it, since an engine hook has no error to return.
+pub fn call_named_kill_pairs(
+    site: Site,
+    bytecode: &'static [u8],
+    name: &str,
+    ctx: &mut EffectContext<'_>,
+    data: &serde_json::Value,
+) -> Result<Vec<jackioh_engine::KillCredit>, LuauError> {
+    vm::with_vm(site, bytecode, |lua, face| {
+        let func = face_function(&face, name)?;
+        lua.scope(|scope| {
+            let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            let arg = lua.to_value(data)?;
+            let returned: Value = func.call((ud, arg))?;
+            let json = numbers::to_json(&returned, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
+            let json = match json {
+                serde_json::Value::Null => serde_json::Value::Array(Vec::new()),
+                serde_json::Value::Object(record) if record.is_empty() => {
+                    serde_json::Value::Array(Vec::new())
+                }
+                json => json,
+            };
+            serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
+        })
+    })
+}
+
+/// Runs `with_kill_credit`'s named `then` function as `face[name](pair, data)` and builds the
+/// effect list it returns. A failure names the card, face and function; the caller panics with
+/// it, since an engine hook has no error to return.
+pub fn call_named_kill_then(
+    site: Site,
+    bytecode: &'static [u8],
+    name: &str,
+    pair: &jackioh_engine::KillCredit,
+    data: &serde_json::Value,
+) -> Result<Vec<Effect>, LuauError> {
+    let calls = vm::with_vm(site, bytecode, |lua, face| {
+        let func = face_function(&face, name)?;
+        let pair = lua.to_value(pair)?;
+        let arg = lua.to_value(data)?;
+        let returned: Value = func.call((pair, arg))?;
+        to_calls(&returned, site)
+    })?;
+    calls
+        .iter()
+        .map(|call| api::effect_of(call, site, bytecode))
+        .collect()
+}
+
+/// Runs a closure verb's named face function as `face[name](id, data)` — `for_each_card`'s
+/// `each`, which takes no context — and builds the effect list it returns. `data` is what the
+/// verb's `data` field carried (#464 gap 2); a function written before it ignores the second
+/// argument. A failure names the card, face and function; the caller panics with it, since an
+/// engine hook has no error to return.
 pub fn call_named_each(
     site: Site,
     bytecode: &'static [u8],
     name: &str,
     id: &str,
+    data: &serde_json::Value,
 ) -> Result<Vec<Effect>, LuauError> {
-    let calls = vm::with_vm(site, bytecode, |_lua, face| {
+    let calls = vm::with_vm(site, bytecode, |lua, face| {
         let func = face_function(&face, name)?;
-        let returned: Value = func.call(id.to_string())?;
+        let data = lua.to_value(data)?;
+        let returned: Value = func.call((id.to_string(), data))?;
         to_calls(&returned, site)
     })?;
     calls

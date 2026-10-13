@@ -1119,8 +1119,20 @@ impl Code<'_> {
                 face.pools.insert(last.to_string());
                 continue;
             }
-            if !path.call
-                || after_word(self.text, ident.start, "fn")
+            if !path.call {
+                // A bare engine name passed as a value (`map_or(0, given_lucky_on)`): a reader
+                // all the same (#464 gap 5). Definitions and attributes are not uses.
+                if single
+                    && !local
+                    && !after_word(self.text, ident.start, "fn")
+                    && !after_attribute_open(self.text, ident.start)
+                    && names.readers.contains(first)
+                {
+                    face.readers.insert(first.to_string());
+                }
+                continue;
+            }
+            if after_word(self.text, ident.start, "fn")
                 || after_attribute_open(self.text, ident.start)
             {
                 continue;
@@ -1641,6 +1653,7 @@ mod tests {
             readers: set(&[
                 "chosen_options",
                 "crate::card_def",
+                "given_lucky_on",
                 "hook",
                 "jackioh_engine::work::part_memory_key",
                 "json_as",

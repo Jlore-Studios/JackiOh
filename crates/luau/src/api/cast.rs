@@ -5,7 +5,7 @@ use crate::api::EffectCall;
 use crate::{LuauError, Site};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct CastEachArgs {
     pub cards: Vec<String>,
