@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use jackioh_engine::testkit::{
-    CardDefs, EffectContext, EngineSink, IndexMap, Rng, json_as, register_catalog, register_scripts, scenario,
+    CardDefs, EffectContext, IndexMap, json_as, register_catalog, register_scripts, scenario,
 };
 use jackioh_engine::{CardScripts, Script, hook};
 use serde_json::{Value, json};
@@ -14,23 +14,28 @@ use serde_json::{Value, json};
 use jackioh_luau::api::{all_verbs, effect_of};
 use jackioh_luau::{EffectCall, Face, Site, compile, load_card, run_hook};
 
+/// A source compiled (and linted) to bytecode that lives as long as the test run,
+/// as a card's `include_bytes!` will. Compile-time reads only: rule 4 bans the disk
+/// in this crate, tests included.
+fn bytecode(file: &str, source: &str) -> &'static [u8] {
+    match compile(file, source) {
+        Ok(bytecode) => Vec::leak(bytecode),
+        Err(error) => panic!("{error}"),
+    }
+}
+
+/// `fixtures/<name>.luau`, compiled.
+macro_rules! fixture {
+    ($name:literal) => {
+        bytecode(
+            concat!($name, ".luau"),
+            include_str!(concat!("fixtures/", $name, ".luau")),
+        )
+    };
+}
+
 mod common {
     use super::*;
-
-    /// `fixtures/<name>`, compiled to bytecode that lives as long as the test
-    /// run, as a card's `include_bytes!` will.
-    pub fn bytecode(name: &str) -> &'static [u8] {
-        let path = format!("{}/tests/fixtures/{name}", env!("CARGO_MANIFEST_DIR"));
-        match compile(name, &std::fs::read_to_string(path).unwrap()) {
-            Ok(bytecode) => Vec::leak(bytecode),
-            Err(error) => panic!("{error}"),
-        }
-    }
-
-    /// `fixtures/<name>.luau`, compiled.
-    pub fn fixture(name: &str) -> &'static [u8] {
-        bytecode(&format!("{name}.luau"))
-    }
 
     /// A 0-cost fixture Spell.
     pub fn spell_def(id: &str) -> jackioh_engine::CardDef {
@@ -77,6 +82,7 @@ mod common {
             "lx-p-after-check",
             "lx-p-for-each",
             "lx-p-draw-while",
+            "lx-p-bad-hook",
         ] {
             defs.insert(id.to_string(), spell_def(id));
         }
@@ -109,7 +115,7 @@ mod common {
     pub fn check_parity(
         id: &'static str,
         rust: Script,
-        luau_file: &str,
+        luau_code: &'static [u8],
         mk: impl Fn() -> Value,
         play: Value,
     ) {
@@ -124,7 +130,7 @@ mod common {
         );
         register_scripts(only);
         let rust_out = run_card(id, mk(), play.clone());
-        let luau = load_card(id, fixture(luau_file)).expect("luau twin loads");
+        let luau = load_card(id, luau_code).expect("luau twin loads");
         let mut only: IndexMap<String, CardScripts> = IndexMap::new();
         only.insert(id.to_string(), luau);
         register_scripts(only);
@@ -157,7 +163,7 @@ fn parity_damage() {
     common::check_parity(
         "lx-p-damage",
         rust,
-        "parity_damage",
+        fixture!("parity_damage"),
         || common::hand_of("lx-p-damage"),
         json!({}),
     );
@@ -171,7 +177,7 @@ fn parity_destroy() {
         ..Default::default()
     };
     let mk = || json!({ "p1": { "hand": ["lx-p-destroy"] }, "p2": { "field": ["lx-fx-001"] } });
-    common::check_parity("lx-p-destroy", rust, "parity_destroy", mk, json!({}));
+    common::check_parity("lx-p-destroy", rust, fixture!("parity_destroy"), mk, json!({}));
 }
 
 #[test]
@@ -187,7 +193,7 @@ fn parity_draw() {
             "library": ["lx-filler-00", "lx-filler-01", "lx-filler-02"],
         } })
     };
-    common::check_parity("lx-p-draw", rust, "parity_draw", mk, json!({}));
+    common::check_parity("lx-p-draw", rust, fixture!("parity_draw"), mk, json!({}));
 }
 
 #[test]
@@ -200,7 +206,7 @@ fn parity_buff() {
         ..Default::default()
     };
     let mk = || json!({ "p1": { "hand": ["lx-p-buff"], "field": ["lx-fx-001"] } });
-    common::check_parity("lx-p-buff", rust, "parity_buff", mk, json!({}));
+    common::check_parity("lx-p-buff", rust, fixture!("parity_buff"), mk, json!({}));
 }
 
 #[test]
@@ -213,7 +219,7 @@ fn parity_summon() {
     common::check_parity(
         "lx-p-summon",
         rust,
-        "parity_summon",
+        fixture!("parity_summon"),
         || common::hand_of("lx-p-summon"),
         json!({}),
     );
@@ -229,7 +235,7 @@ fn parity_mana() {
     common::check_parity(
         "lx-p-mana",
         rust,
-        "parity_mana",
+        fixture!("parity_mana"),
         || common::hand_of("lx-p-mana"),
         json!({}),
     );
@@ -243,7 +249,7 @@ fn parity_exile() {
         ..Default::default()
     };
     let mk = || json!({ "p1": { "hand": ["lx-p-exile"] }, "p2": { "field": ["lx-fx-001"] } });
-    common::check_parity("lx-p-exile", rust, "parity_exile", mk, json!({}));
+    common::check_parity("lx-p-exile", rust, fixture!("parity_exile"), mk, json!({}));
 }
 
 #[test]
@@ -261,7 +267,7 @@ fn parity_heal() {
     common::check_parity(
         "lx-p-heal",
         rust,
-        "parity_heal",
+        fixture!("parity_heal"),
         || common::hand_of("lx-p-heal"),
         json!({}),
     );
@@ -275,7 +281,7 @@ fn parity_discard() {
         ..Default::default()
     };
     let mk = || json!({ "p1": { "hand": ["lx-p-discard", "lx-filler-00", "lx-filler-01", "lx-filler-02"] } });
-    common::check_parity("lx-p-discard", rust, "parity_discard", mk, json!({}));
+    common::check_parity("lx-p-discard", rust, fixture!("parity_discard"), mk, json!({}));
 }
 
 #[test]
@@ -293,7 +299,7 @@ fn parity_transform() {
     common::check_parity(
         "lx-p-morph",
         rust,
-        "parity_transform",
+        fixture!("parity_transform"),
         || common::hand_of("lx-p-morph"),
         json!({ "zone": 1 }),
     );
@@ -316,37 +322,55 @@ fn parity_after_state_check() {
     common::check_parity(
         "lx-p-after-check",
         rust,
-        "parity_after_check",
+        fixture!("parity_after_check"),
         || common::hand_of("lx-p-after-check"),
         json!({}),
     );
+}
+
+/// A verb naming a face function that is not there fails when the verb builds, with
+/// an error naming the card, face and name — so a misspelling fails the card's own
+/// test rather than firing nothing.
+#[test]
+#[should_panic(expected = "lx-p-bad-hook base cry: runtime error: after_chek: no such face function")]
+fn misspelled_sub_hook_name_fails_naming_card_face_and_hook() {
+    common::ensure_installed();
+    let code = fixture!("bad_hook_name");
+    let scripts = load_card("lx-p-bad-hook", code).expect("loads: names resolve at build");
+    let mut only: IndexMap<String, CardScripts> = IndexMap::new();
+    only.insert("lx-p-bad-hook".to_string(), scripts);
+    register_scripts(only);
+    let _ = common::run_card("lx-p-bad-hook", common::hand_of("lx-p-bad-hook"), json!({}));
 }
 
 #[test]
 fn parity_for_each_card() {
     use jackioh_engine::effects::{ForEachCardArgs, damage, for_each_card};
     use jackioh_engine::{active_units_of, opponent_of};
+    // Two `for_each_card`s in one hook, as Classic #39 holds: the Luau twin names
+    // its second pair `each_cards_2` and `each_card_2`.
+    fn one() -> jackioh_engine::Effect {
+        for_each_card(ForEachCardArgs {
+            cards: Arc::new(|ctx| {
+                active_units_of(ctx.state, opponent_of(ctx.controller))
+                    .iter()
+                    .map(|unit| unit.id.clone())
+                    .collect()
+            }),
+            each: Arc::new(|id| {
+                damage(json_as(json!({
+                    "to": { "of": "instance", "instanceId": id },
+                    "amount": 1,
+                })))
+            }),
+        })
+    }
     let rust = Script {
-        cry: Some(hook(|_| {
-            vec![for_each_card(ForEachCardArgs {
-                cards: Arc::new(|ctx| {
-                    active_units_of(ctx.state, opponent_of(ctx.controller))
-                        .iter()
-                        .map(|unit| unit.id.clone())
-                        .collect()
-                }),
-                each: Arc::new(|id| {
-                    damage(json_as(json!({
-                        "to": { "of": "instance", "instanceId": id },
-                        "amount": 1,
-                    })))
-                }),
-            })]
-        })),
+        cry: Some(hook(|_| vec![one(), one()])),
         ..Default::default()
     };
     let mk = || json!({ "p1": { "hand": ["lx-p-for-each"] }, "p2": { "field": ["lx-fx-001"] } });
-    common::check_parity("lx-p-for-each", rust, "parity_for_each", mk, json!({}));
+    common::check_parity("lx-p-for-each", rust, fixture!("parity_for_each"), mk, json!({}));
 }
 
 #[test]
@@ -368,7 +392,13 @@ fn parity_draw_while() {
             "library": ["lx-filler-00", "lx-filler-01", "lx-filler-02", "lx-filler-03", "lx-filler-04"],
         } })
     };
-    common::check_parity("lx-p-draw-while", rust, "parity_draw_while", mk, json!({}));
+    common::check_parity(
+        "lx-p-draw-while",
+        rust,
+        fixture!("parity_draw_while"),
+        mk,
+        json!({}),
+    );
 }
 
 // --------------------------------------------------------------------------------
@@ -391,7 +421,7 @@ mod declarations {
     }
 
     fn code() -> &'static [u8] {
-        common::fixture("triggers")
+        fixture!("triggers")
     }
 
     fn scripts() -> CardScripts {
@@ -518,7 +548,7 @@ fn readers_probe_values() {
         face: jackioh_luau::Face::Base,
         hook: "cry",
     };
-    let code = common::fixture("readers_probe");
+    let code = fixture!("readers_probe");
     let mut state = scenario(json!({ "seed": "lx-probe", "p1": { "hand": ["lx-filler-00"] } }))
         .state()
         .clone();
@@ -651,7 +681,10 @@ fn every_listed_verb_builds_its_kind() {
             verb: verb.to_string(),
             args,
         };
-        let effect = effect_of(&call, site).unwrap_or_else(|error| panic!("{verb} builds: {error}"));
+        // Closure-taking verbs resolve their named face function from the card's
+        // bytecode; this table covers data-only verbs, so a dummy suffices.
+        let effect =
+            effect_of(&call, site, b"verb-kinds").unwrap_or_else(|error| panic!("{verb} builds: {error}"));
         // One verb's kind is not its name in camelCase.
         let expected = if verb == "switch_position_of" {
             "switchPosition".to_string()
@@ -666,9 +699,10 @@ fn every_listed_verb_builds_its_kind() {
 // Sync: the committed module names every binding, and every binding is named.
 // --------------------------------------------------------------------------------
 
-fn module_text() -> String {
-    let path = format!("{}/../cards/luau/jackioh.luau", env!("CARGO_MANIFEST_DIR"));
-    std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("reads {path}"))
+/// The committed typed module, read at compile time: rule 4 bans the disk in this
+/// crate, tests included.
+fn module_text() -> &'static str {
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/luau/jackioh.luau"))
 }
 
 #[test]
@@ -685,18 +719,27 @@ fn every_verb_has_a_typed_stub() {
 #[test]
 fn every_ctx_reader_has_a_typed_stub() {
     let module = module_text();
-    let source = std::fs::read_to_string(format!("{}/src/reads.rs", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    let source: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/reads.rs"));
     let mut missing = Vec::new();
-    let mut in_ctx = false;
+    // Every context flavor's readers: the effect context and the predicate ones.
+    let mut in_ctx: Option<&str> = None;
     for line in source.lines() {
-        if line.starts_with("pub fn register_ctx") {
-            in_ctx = true;
+        if line.starts_with("pub fn register_") {
+            in_ctx = [
+                "pub fn register_ctx(",
+                "pub fn register_condition_ctx(",
+                "pub fn register_hook_args(",
+                "pub fn register_replacement_ctx(",
+            ]
+            .into_iter()
+            .find(|prefix| line.starts_with(prefix));
             continue;
         }
-        if in_ctx && line == "}" {
-            break;
+        if line == "}" {
+            in_ctx = None;
+            continue;
         }
-        if !in_ctx {
+        if in_ctx.is_none() {
             continue;
         }
         if let Some(rest) = line.trim().strip_prefix("registry.add_method") {

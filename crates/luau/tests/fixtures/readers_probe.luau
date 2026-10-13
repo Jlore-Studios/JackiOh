@@ -4,7 +4,7 @@ local J = require("@jackioh")
 -- Reads a spread of board facts into one remembered table so tests can run
 -- the effect and read every value back out of the context's data bag.
 local base = {
-	cry = function(ctx)
+	cry = function(ctx: J.EffectContext)
 		local me = ctx:controller()
 		local foe = ctx:opponent_of(me)
 		return {

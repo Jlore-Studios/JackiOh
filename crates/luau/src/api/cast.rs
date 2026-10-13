@@ -13,7 +13,11 @@ pub struct CastEachArgs {
     pub how: CastHow,
 }
 
-pub fn build_cast_each(call: &EffectCall, site: Site) -> Result<jackioh_engine::Effect, LuauError> {
+pub fn build_cast_each(
+    call: &EffectCall,
+    site: Site,
+    _bytecode: &'static [u8],
+) -> Result<jackioh_engine::Effect, LuauError> {
     let args: CastEachArgs = crate::api::typed(call, site)?;
     let cards = args.cards;
     Ok(jackioh_engine::effects::cast_each(EngineCastEachArgs {

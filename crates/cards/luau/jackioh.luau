@@ -96,7 +96,8 @@ memory: {[string]: JsonValue}?,
 }
 
 export type AfterStateCheckArgs = {
-callbackId: number,
+hook: string,
+data: JsonValue,
 }
 
 export type AiPlaysOutTurnArgs = {
@@ -201,6 +202,8 @@ excludeSelf: boolean?,
 export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap"
 
 export type CardZone = "field" | "hand" | "library"
+
+export type CardsSource = string | {string}
 
 export type CastAfterward = "exile"
 
@@ -658,7 +661,7 @@ radiant: boolean?,
 }
 
 export type DrawWhileArgs = {
-callbackId: number | nil,
+hook: string,
 player: PlayerSpec | nil,
 }
 
@@ -809,9 +812,8 @@ perTails: BuffAmount?,
 }
 
 export type ForEachCardArgs = {
-cards: {string},
-cardsCallbackId: number | nil,
-eachCallbackId: number | nil,
+cards: CardsSource | nil,
+each: string | nil,
 }
 
 export type ForRestOfGameArgs = {
@@ -2327,8 +2329,6 @@ export type WithKillCreditArgs = {
 killer: TargetSpec,
 transfer: boolean,
 during: JsonValue,
-pairsCallbackId: number | nil,
-thenCallbackId: number | nil,
 }
 
 export type Zone = {
@@ -2534,21 +2534,41 @@ export type ActivationDecl = {
 	run: (ctx: EffectContext) -> { EffectCall },
 }
 
--- The pure-read contexts a predicate hook is called with.
+-- The pure-read contexts a predicate hook is called with, as methods:
+-- what `reads.rs` registers (`register_condition_ctx`,
+-- `register_replacement_ctx`, `register_hook_args`).
 export type ConditionContext = {
-	controller: PlayerId,
-	radiant: boolean,
-	your_turn: boolean,
+	controller: (self: ConditionContext) -> PlayerId,
+	radiant: (self: ConditionContext) -> boolean,
+	your_turn: (self: ConditionContext) -> boolean,
+	zone: (self: ConditionContext) -> ConditionZone,
+	self_: (self: ConditionContext) -> any,
+	param: (self: ConditionContext, key: string) -> number,
+	hero_of: (self: ConditionContext, player: PlayerId) -> any,
+	unspent_mana_of: (self: ConditionContext, player: PlayerId) -> number,
+	max_mana_of: (self: ConditionContext, player: PlayerId) -> number,
+	cards_played_this_turn: (self: ConditionContext, player: PlayerId) -> number,
+	zone_count: (self: ConditionContext, player: PlayerId, zone: OffFieldZone) -> number,
 }
 
 export type ReplacementContext = {
-	controller: PlayerId,
-	radiant: boolean,
-	event: ReplacedEvent,
+	self_: (self: ReplacementContext) -> any,
+	controller: (self: ReplacementContext) -> PlayerId,
+	radiant: (self: ReplacementContext) -> boolean,
+	event: (self: ReplacementContext) -> ReplacedEvent,
+	param: (self: ReplacementContext, key: string) -> number,
 }
 
 export type HookArgs = {
-	radiant: boolean,
+	controller: (self: HookArgs) -> PlayerId,
+	param: (self: HookArgs, key: string) -> number,
+	radiant: (self: HookArgs) -> boolean,
+	self_: (self: HookArgs) -> any,
+	hero_of: (self: HookArgs, player: PlayerId) -> any,
+	unspent_mana_of: (self: HookArgs, player: PlayerId) -> number,
+	max_mana_of: (self: HookArgs, player: PlayerId) -> number,
+	plague_on: (self: HookArgs, id: string) -> number,
+	opponent_of: (self: HookArgs, player: PlayerId) -> PlayerId,
 }
 
 -- Arbitrary JSON (a remembered value, a prompt's data bag): crosses

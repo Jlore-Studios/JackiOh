@@ -3,12 +3,13 @@ local J = require("@jackioh")
 
 -- Draw while fewer than three cards are in hand.
 local base = {
-	cry = function(ctx)
+	cry = function(ctx: J.EffectContext)
 		return {
-			J.draw_while(function(inner)
-				return #inner:zone_cards(inner:controller(), "hand") < 3
-			end),
+			J.draw_while({ hook = "draw_more" }),
 		}
+	end,
+	draw_more = function(ctx: J.EffectContext)
+		return #ctx:zone_cards(ctx:controller(), "hand") < 3
 	end,
 }
 

@@ -357,6 +357,13 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
     let entries = std::fs::read_dir(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
     for entry in entries {
         let path = entry.unwrap_or_else(|e| panic!("{}: {e}", dir.display())).path();
+        // Dotfiles (`.luaurc`, the `@jackioh` alias for editors) are never cards.
+        if path
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+        {
+            continue;
+        }
         if path.is_dir() {
             walk(&path, out);
         } else {

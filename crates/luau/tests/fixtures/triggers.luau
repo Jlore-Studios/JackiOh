@@ -18,10 +18,10 @@ local base = {
 			id = "ping",
 			label = "Ping",
 			uses = 1,
-			canActivate = function(ctx)
+			canActivate = function(ctx: J.ConditionContext)
 				return true
 			end,
-			run = function(ctx)
+			run = function(ctx: J.EffectContext)
 				return {
 					J.damage({ to = { of = "enemyHero" }, amount = 1 }),
 				}
@@ -32,10 +32,10 @@ local base = {
 		{
 			id = "t1",
 			on = { "turnStarted" },
-			when = function(ctx, event)
+			when = function(ctx: J.EffectContext, event: J.GameEvent)
 				return true
 			end,
-			run = function(ctx, event)
+			run = function(ctx: J.EffectContext, event: J.GameEvent)
 				return {
 					J.draw({ count = 1 }),
 				}
@@ -46,7 +46,7 @@ local base = {
 		{
 			id = "h1",
 			on = { "turnEnded" },
-			run = function(ctx, event)
+			run = function(ctx: J.EffectContext, event: J.GameEvent)
 				return {
 					J.gain_mana({ amount = 1 }),
 				}
@@ -66,20 +66,20 @@ local base = {
 		end,
 	},
 	resume = {
-		step_two = function(ctx)
+		step_two = function(ctx: J.EffectContext)
 			return {
 				J.draw({ count = 1 }),
 			}
 		end,
 	},
 	grants = {
-		extra = function(ctx)
+		extra = function(ctx: J.EffectContext)
 			return {
 				J.gain_mana({ amount = 1 }),
 			}
 		end,
 	},
-	cry = function(ctx)
+	cry = function(ctx: J.EffectContext)
 		return {
 			J.damage({ to = { of = "enemyHero" }, amount = 1 }),
 		}

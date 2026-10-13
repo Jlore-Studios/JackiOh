@@ -121,10 +121,14 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
 }
 
 /// One hook's effects, built with the engine's verbs (CLAUDE.md rule 5).
-pub fn run_hook(site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> Result<Vec<Effect>, LuauError> {
+pub fn run_hook(
+    site: Site,
+    bytecode: &'static [u8],
+    ctx: &mut EffectContext<'_>,
+) -> Result<Vec<Effect>, LuauError> {
     vm::call_hook(site, bytecode, ctx)?
         .iter()
-        .map(|call| api::effect_of(call, site))
+        .map(|call| api::effect_of(call, site, bytecode))
         .collect()
 }
 

@@ -95,13 +95,16 @@ pub fn build_script(
         let is_decl = vm::DECLARATIONS
             .iter()
             .any(|d| *d == name || hooks::camel_to_snake(d) == name || hooks::snake_to_camel(d) == name);
-        if !is_hook && !is_decl {
+        // A named sub-hook beside the hooks (`after_check`, `draw_more`, …, `vm::SUB_HOOKS`):
+        // called back by name, never adapted into `Script`.
+        let is_sub_hook = vm::is_sub_hook(&name);
+        if !is_hook && !is_decl && !is_sub_hook {
             return Err(refused(format!(
                 "{} declares {name:?}, which is not a hook",
                 face.key()
             )));
         }
-        if is_hook && !value.is_function() {
+        if (is_hook || is_sub_hook) && !value.is_function() {
             return Err(refused(format!(
                 "{} {name} is of type {}, not a function",
                 face.key(),

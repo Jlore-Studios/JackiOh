@@ -4,52 +4,54 @@ local J = require("@jackioh")
 -- One face exercising every direct hook adapter: each hook answers a canned
 -- value of its own type so tests can call the adapter and read it back.
 local base = {
-	cry = function(ctx)
+	cry = function(ctx: J.EffectContext)
 		return {
 			J.damage({ to = { of = "enemyHero" }, amount = 1 }),
 		}
 	end,
-	death = function(ctx)
+	death = function(ctx: J.EffectContext)
 		return {
 			J.gain_mana({ amount = 1 }),
 		}
 	end,
-	delayed = function(ctx)
+	delayed = function(ctx: J.EffectContext)
 		return {
 			J.draw({ count = 1 }),
 		}
 	end,
-	startOfTurn = function(ctx)
+	startOfTurn = function(ctx: J.EffectContext)
+		local target: J.TargetSpec = { of = "selfHero" }
 		return {
-			J.heal({ target = { of = "selfHero" }, amount = 1 }),
+			J.heal({ target = target, amount = 1 }),
 		}
 	end,
-	endOfTurn = function(ctx)
+	endOfTurn = function(ctx: J.EffectContext)
 		return {
 			J.damage({ to = { of = "enemyHero" }, amount = 1 }),
 		}
 	end,
-	startOfOpponentTurn = function(ctx)
+	startOfOpponentTurn = function(ctx: J.EffectContext)
 		return {
 			J.draw({ count = 1 }),
 		}
 	end,
-	afterAttack = function(ctx)
+	afterAttack = function(ctx: J.EffectContext)
 		return {
 			J.damage({ to = { of = "enemyHero" }, amount = 1 }),
 		}
 	end,
-	afterAttacked = function(ctx)
+	afterAttacked = function(ctx: J.EffectContext)
+		local target: J.TargetSpec = { of = "selfHero" }
 		return {
-			J.heal({ target = { of = "selfHero" }, amount = 1 }),
+			J.heal({ target = target, amount = 1 }),
 		}
 	end,
-	entersHand = function(ctx)
+	entersHand = function(ctx: J.EffectContext)
 		return {
 			J.gain_mana({ amount = 1 }),
 		}
 	end,
-	onPlayHook = function(ctx)
+	onPlayHook = function(ctx: J.EffectContext)
 		return {
 			J.draw({ count = 1 }),
 		}
@@ -57,10 +59,10 @@ local base = {
 	cost = function(args)
 		return 3
 	end,
-	conditionMet = function(ctx)
+	conditionMet = function(ctx: J.ConditionContext)
 		return ctx:unspent_mana_of(ctx:controller()) >= 0
 	end,
-	preview = function(ctx)
+	preview = function(ctx: J.ConditionContext)
 		return {}
 	end,
 	setStat = function(args)

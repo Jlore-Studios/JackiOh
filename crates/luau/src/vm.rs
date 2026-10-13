@@ -15,11 +15,12 @@ use crate::numbers;
 use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped, too_deep};
 use crate::{Face, LuauError, Site};
 
-/// The hooks a face may declare.
-pub const HOOKS: [&str; 31] = [
+/// The hooks a face may declare. `start_of_game` is not among them: only cards that
+/// stay in Rust use it (L14), so a face naming it fails to load like any other
+/// unknown key, instead of loading and never firing.
+pub const HOOKS: [&str; 30] = [
     "cry",
     "death",
-    "startOfGame",
     "delayed",
     "startOfTurn",
     "endOfTurn",
@@ -49,6 +50,24 @@ pub const HOOKS: [&str; 31] = [
     "turnHookExtra",
     "cryDeathExtra",
 ];
+
+/// Named sub-hooks a face may declare beside its hooks: the functions closure-taking
+/// effect verbs call back by name (`after_state_check`, `draw_while`, `for_each_card`).
+/// A second use of one verb in the same face appends `_2`, `_3`, … (`each_cards_2`),
+/// since one face holds two `for_each_card`s with different closures (Classic #39).
+/// Anything else unknown is still a load error, so a misspelled hook stays one.
+pub const SUB_HOOKS: [&str; 4] = ["after_check", "draw_more", "each_cards", "each_card"];
+
+/// Whether a face key is a named sub-hook: one of `SUB_HOOKS`, optionally with a
+/// `_<n>` suffix for a second use of the verb in the same face.
+pub fn is_sub_hook(name: &str) -> bool {
+    SUB_HOOKS.iter().any(|base| {
+        *base == name
+            || name
+                .strip_prefix(format!("{base}_").as_str())
+                .is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+    })
+}
 
 /// Declarations a face may declare: target choices, modes, static flags, activations, triggers, etc.
 pub const DECLARATIONS: [&str; 19] = [
@@ -345,6 +364,15 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
                 }
                 _ => {}
             }
+        } else if is_sub_hook(&name) {
+            if !value.is_function() {
+                return Err(refused(format!(
+                    "{} {name} is of type {}, not a function",
+                    face.key(),
+                    value.type_name()
+                )));
+            }
+            // A named sub-hook: called back by name, never adapted into `Script`.
         } else {
             return Err(refused(format!(
                 "{} declares {name:?}, which is not a hook",

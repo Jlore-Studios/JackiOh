@@ -18,7 +18,7 @@ mod generator {
     use jackioh_luau::api::aura::DefenseArmorArgs;
     use jackioh_luau::api::cast::CastEachArgs;
     use jackioh_luau::api::draw_while::DrawWhileArgs;
-    use jackioh_luau::api::each::ForEachCardArgs;
+    use jackioh_luau::api::each::{CardsSource, ForEachCardArgs};
     use jackioh_luau::api::kill_credit::WithKillCreditArgs;
     use jackioh_luau::api::random_entries::DoRandomEntriesArgs;
     use jackioh_luau::api::random_entries::RandomEntryLuau;
@@ -512,6 +512,7 @@ mod generator {
             DefenseArmorArgs,
             CastEachArgs,
             DrawWhileArgs,
+            CardsSource,
             ForEachCardArgs,
             WithKillCreditArgs,
             DoRandomEntriesArgs,
@@ -963,19 +964,39 @@ mod generator {
              \thas: ((ctx: HookArgs) -> boolean)?,\n\
              \trun: (ctx: EffectContext) -> { EffectCall },\n\
              }\n\n\
-             -- The pure-read contexts a predicate hook is called with.\n\
+             -- The pure-read contexts a predicate hook is called with, as methods:\n\
+             -- what `reads.rs` registers (`register_condition_ctx`,\n\
+             -- `register_replacement_ctx`, `register_hook_args`).\n\
              export type ConditionContext = {\n\
-             \tcontroller: PlayerId,\n\
-             \tradiant: boolean,\n\
-             \tyour_turn: boolean,\n\
+             \tcontroller: (self: ConditionContext) -> PlayerId,\n\
+             \tradiant: (self: ConditionContext) -> boolean,\n\
+             \tyour_turn: (self: ConditionContext) -> boolean,\n\
+             \tzone: (self: ConditionContext) -> ConditionZone,\n\
+             \tself_: (self: ConditionContext) -> any,\n\
+             \tparam: (self: ConditionContext, key: string) -> number,\n\
+             \thero_of: (self: ConditionContext, player: PlayerId) -> any,\n\
+             \tunspent_mana_of: (self: ConditionContext, player: PlayerId) -> number,\n\
+             \tmax_mana_of: (self: ConditionContext, player: PlayerId) -> number,\n\
+             \tcards_played_this_turn: (self: ConditionContext, player: PlayerId) -> number,\n\
+             \tzone_count: (self: ConditionContext, player: PlayerId, zone: OffFieldZone) -> number,\n\
              }\n\n\
              export type ReplacementContext = {\n\
-             \tcontroller: PlayerId,\n\
-             \tradiant: boolean,\n\
-             \tevent: ReplacedEvent,\n\
+             \tself_: (self: ReplacementContext) -> any,\n\
+             \tcontroller: (self: ReplacementContext) -> PlayerId,\n\
+             \tradiant: (self: ReplacementContext) -> boolean,\n\
+             \tevent: (self: ReplacementContext) -> ReplacedEvent,\n\
+             \tparam: (self: ReplacementContext, key: string) -> number,\n\
              }\n\n\
              export type HookArgs = {\n\
-             \tradiant: boolean,\n\
+             \tcontroller: (self: HookArgs) -> PlayerId,\n\
+             \tparam: (self: HookArgs, key: string) -> number,\n\
+             \tradiant: (self: HookArgs) -> boolean,\n\
+             \tself_: (self: HookArgs) -> any,\n\
+             \thero_of: (self: HookArgs, player: PlayerId) -> any,\n\
+             \tunspent_mana_of: (self: HookArgs, player: PlayerId) -> number,\n\
+             \tmax_mana_of: (self: HookArgs, player: PlayerId) -> number,\n\
+             \tplague_on: (self: HookArgs, id: string) -> number,\n\
+             \topponent_of: (self: HookArgs, player: PlayerId) -> PlayerId,\n\
              }\n\n\
              -- Arbitrary JSON (a remembered value, a prompt's data bag): crosses\n\
              -- as `any` because no Rust type stands behind it.\n\

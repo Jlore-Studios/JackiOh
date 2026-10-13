@@ -30,50 +30,52 @@ macro_rules! verbs {
             $( $crate::api::verbs!(@spec $name $(, $arg)?) ),*
         ];
 
-        pub fn effect_of(call: &$crate::api::EffectCall, site: $crate::Site) -> Result<Option<jackioh_engine::Effect>, $crate::LuauError> {
+        pub fn effect_of(call: &$crate::api::EffectCall, site: $crate::Site, _bytecode: &'static [u8]) -> Result<Option<jackioh_engine::Effect>, $crate::LuauError> {
             match call.verb.as_str() {
-                $( stringify!($name) => $crate::api::verbs!(@build call, site, $name $(, $arg)?).map(Some), )*
+                $( stringify!($name) => $crate::api::verbs!(@build call, site, _bytecode, $name $(, $arg)?).map(Some), )*
                 _ => Ok(None),
             }
         }
     };
     (@spec $name:ident, $arg:ident) => { (stringify!($name), Some(stringify!($arg))) };
     (@spec $name:ident) => { (stringify!($name), None) };
-    (@build $call:ident, $site:ident, after_state_check, $arg:ty) => {
-        $crate::api::after_check::build_after_state_check($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, after_state_check, $arg:ty) => {
+        $crate::api::after_check::build_after_state_check($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, cast_each, $arg:ty) => {
-        $crate::api::cast::build_cast_each($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, cast_each, $arg:ty) => {
+        $crate::api::cast::build_cast_each($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, draw_while, $arg:ty) => {
-        $crate::api::draw_while::build_draw_while($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, draw_while, $arg:ty) => {
+        $crate::api::draw_while::build_draw_while($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, for_each_card, $arg:ty) => {
-        $crate::api::each::build_for_each_card($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, for_each_card, $arg:ty) => {
+        $crate::api::each::build_for_each_card($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, with_kill_credit, $arg:ty) => {
-        $crate::api::kill_credit::build_with_kill_credit($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, with_kill_credit, $arg:ty) => {
+        $crate::api::kill_credit::build_with_kill_credit($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, do_random_entries, $arg:ty) => {
-        $crate::api::random_entries::build_do_random_entries($call, $site)
+    (@build $call:ident, $site:ident, $bytecode:ident, do_random_entries, $arg:ty) => {
+        $crate::api::random_entries::build_do_random_entries($call, $site, $bytecode)
     };
-    (@build $call:ident, $site:ident, defense_armor_aura, $arg:ty) => {
+    (@build $call:ident, $site:ident, $bytecode:ident, defense_armor_aura, $arg:ty) => {
         Err($crate::LuauError::Hook {
             site: $site,
             message: "defense_armor_aura is an aura verb, not an effect verb".to_string(),
         })
     };
-    (@build $call:ident, $site:ident, defense_armor, $arg:ty) => {
+    (@build $call:ident, $site:ident, $bytecode:ident, defense_armor, $arg:ty) => {
         Err($crate::LuauError::Hook {
             site: $site,
             message: "defense_armor is an aura verb, not an effect verb".to_string(),
         })
     };
-    (@build $call:ident, $site:ident, $name:ident, $arg:ty) => {
+    (@build $call:ident, $site:ident, $bytecode:ident, $name:ident, $arg:ty) => {{
+        let _ = $bytecode;
         $crate::api::typed::<$arg>($call, $site).map(jackioh_engine::effects::$name)
-    };
-    (@build $call:ident, $site:ident, $name:ident) => {{
+    }};
+    (@build $call:ident, $site:ident, $bytecode:ident, $name:ident) => {{
         let _ = &$site;
+        let _ = $bytecode;
         Ok(jackioh_engine::effects::$name())
     }};
 }
@@ -95,9 +97,9 @@ macro_rules! register_modules {
             list
         }
 
-        pub fn effect_of(call: &EffectCall, site: Site) -> Result<Effect, LuauError> {
+        pub fn effect_of(call: &EffectCall, site: Site, bytecode: &'static [u8]) -> Result<Effect, LuauError> {
             $(
-                if let Some(effect) = $mod::effect_of(call, site)? {
+                if let Some(effect) = $mod::effect_of(call, site, bytecode)? {
                     return Ok(effect);
                 }
             )*
@@ -215,75 +217,18 @@ fn coerce_empty_objects(value: &Json) -> Json {
 /// The module, read-only: one function per verb, and `J.div`, `J.rem`, `J.sort_by`, `J.query`, etc.
 pub fn module(lua: &Lua) -> mlua::Result<Table> {
     let module = lua.create_table()?;
+    // Every verb is data: `J.damage(args)` returns `{ verb, args }` and touches
+    // nothing. Closure-taking verbs take the *name* of a face function (`hook`,
+    // `cards`, `each`), resolved by name when the verb builds — a function itself
+    // cannot cross into Rust (L6), and the walk below refuses one that tries.
     for &verb in &all_verbs() {
-        if verb == "after_state_check" {
-            let call = lua.create_function(move |lua, callback: Function| {
-                let id = after_check::register_callback(lua, callback)?;
-                let call = lua.create_table()?;
-                call.raw_set("verb", "after_state_check")?;
-                let args = lua.create_table()?;
-                args.raw_set("callbackId", id)?;
-                call.raw_set("args", args)?;
-                Ok(call)
-            })?;
-            module.raw_set(verb, call)?;
-        } else if verb == "draw_while" {
-            let call = lua.create_function(move |lua, args_val: Value| {
-                let call = lua.create_table()?;
-                call.raw_set("verb", "draw_while")?;
-                match &args_val {
-                    Value::Function(cb) => {
-                        let id = after_check::register_callback(lua, cb.clone())?;
-                        let args = lua.create_table()?;
-                        args.raw_set("callbackId", id)?;
-                        call.raw_set("args", args)?;
-                    }
-                    Value::Table(tbl) => {
-                        if let Ok(cb) = tbl.raw_get::<Function>("more") {
-                            let id = after_check::register_callback(lua, cb)?;
-                            tbl.raw_set("callbackId", id)?;
-                            // The function itself cannot cross into Rust (L6).
-                            tbl.raw_set("more", Value::Nil)?;
-                        }
-                        call.raw_set("args", tbl)?;
-                    }
-                    _ => {
-                        call.raw_set("args", args_val)?;
-                    }
-                }
-                Ok(call)
-            })?;
-            module.raw_set(verb, call)?;
-        } else if verb == "for_each_card" {
-            let call = lua.create_function(move |lua, args_val: Value| {
-                let call = lua.create_table()?;
-                call.raw_set("verb", "for_each_card")?;
-                if let Value::Table(tbl) = &args_val {
-                    if let Ok(cb) = tbl.raw_get::<Function>("cards") {
-                        let id = after_check::register_callback(lua, cb)?;
-                        tbl.raw_set("cardsCallbackId", id)?;
-                        // Functions cannot cross into Rust (L6).
-                        tbl.raw_set("cards", Value::Nil)?;
-                    }
-                    if let Ok(cb) = tbl.raw_get::<Function>("each") {
-                        let id = after_check::register_callback(lua, cb)?;
-                        tbl.raw_set("eachCallbackId", id)?;
-                        tbl.raw_set("each", Value::Nil)?;
-                    }
-                }
-                call.raw_set("args", args_val)?;
-                Ok(call)
-            })?;
-            module.raw_set(verb, call)?;
-        } else {
-            let call = lua.create_function(move |lua, args: Value| {
-                let call = lua.create_table()?;
-                call.raw_set("verb", verb)?;
-                call.raw_set("args", args)?;
-                Ok(call)
-            })?;
-            module.raw_set(verb, call)?;
-        }
+        let call = lua.create_function(move |lua, args: Value| {
+            let call = lua.create_table()?;
+            call.raw_set("verb", verb)?;
+            call.raw_set("args", args)?;
+            Ok(call)
+        })?;
+        module.raw_set(verb, call)?;
     }
     module.raw_set("div", integer_function(lua, "div", numbers::div)?)?;
     module.raw_set("rem", integer_function(lua, "rem", numbers::rem)?)?;
@@ -415,7 +360,7 @@ pub fn effect_calls(value: &Json, site: Site) -> Result<Vec<EffectCall>, LuauErr
 }
 
 /// What a walked value is, for an error.
-fn kind(value: &Json) -> &'static str {
+pub(crate) fn kind(value: &Json) -> &'static str {
     match value {
         Json::Null => "nil",
         Json::Bool(_) => "a boolean",

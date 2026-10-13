@@ -16,6 +16,7 @@ use jackioh_engine::script::{
 };
 use mlua::{Function, LuaSerdeExt, Table, Value};
 
+use crate::LuauError;
 use crate::Site;
 use crate::api::{self, EffectCall};
 use crate::numbers;
@@ -98,13 +99,86 @@ fn to_calls(returned: &Value, site: Site) -> mlua::Result<Vec<EffectCall>> {
 }
 
 /// Turns a list of effect calls into engine Effects.
-fn build_effects(calls: &[EffectCall], site: Site) -> Vec<Effect> {
+fn build_effects(calls: &[EffectCall], site: Site, bytecode: &'static [u8]) -> Vec<Effect> {
     calls
         .iter()
-        .map(|call| match api::effect_of(call, site) {
+        .map(|call| match api::effect_of(call, site, bytecode) {
             Ok(eff) => eff,
             Err(err) => panic!("{err}"),
         })
+        .collect()
+}
+
+/// `face[name]` as a function: a missing key reads as nil, never as an error.
+pub fn face_function(face: &Table, name: &str) -> mlua::Result<Function> {
+    match face.raw_get::<Value>(name) {
+        Ok(val) => val.as_function().cloned().ok_or_else(|| {
+            if val.is_nil() {
+                mlua::Error::runtime(format!("{name}: no such face function"))
+            } else {
+                mlua::Error::runtime(format!("{name} is of type {}, not a function", val.type_name()))
+            }
+        }),
+        Err(_) => Err(mlua::Error::runtime(format!("{name}: no such face function"))),
+    }
+}
+
+/// Whether `module[face][name]` is a function: what a closure verb's `hook` must name.
+/// Checked when the verb builds, so a misspelled name fails the card's own test with an
+/// error naming the card, face and function.
+pub fn check_named_hook(site: Site, bytecode: &'static [u8], name: &str) -> Result<(), LuauError> {
+    vm::with_vm(site, bytecode, |_lua, face| {
+        face_function(&face, name).map(|_| ())
+    })
+}
+
+/// Runs a closure verb's named face function as `face[name](ctx, data)` and builds the
+/// effect list it returns: the card's chunk re-run through the thread-local VM, the
+/// function indexed out of its face and called in a `lua.scope` with the scoped `ctx`,
+/// the way part 4 builds every hook. The closure captures only the card, the face, the
+/// name, the data and the site: nothing a script sets survives the call (L8).
+/// A failure names the card, face and function; the caller panics with it, since an
+/// engine hook has no error to return.
+pub fn call_named_effects(
+    site: Site,
+    bytecode: &'static [u8],
+    name: &str,
+    ctx: &mut EffectContext<'_>,
+    data: &serde_json::Value,
+) -> Result<Vec<Effect>, LuauError> {
+    let calls = vm::with_vm(site, bytecode, |lua, face| {
+        let func = face_function(&face, name)?;
+        lua.scope(|scope| {
+            let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            let arg = lua.to_value(data)?;
+            let returned: Value = func.call((ud, arg))?;
+            to_calls(&returned, site)
+        })
+    })?;
+    calls
+        .iter()
+        .map(|call| api::effect_of(call, site, bytecode))
+        .collect()
+}
+
+/// Runs a closure verb's named face function as `face[name](id)` — `for_each_card`'s
+/// `each`, which takes no context — and builds the effect list it returns. A failure
+/// names the card, face and function; the caller panics with it, since an engine hook
+/// has no error to return.
+pub fn call_named_each(
+    site: Site,
+    bytecode: &'static [u8],
+    name: &str,
+    id: &str,
+) -> Result<Vec<Effect>, LuauError> {
+    let calls = vm::with_vm(site, bytecode, |_lua, face| {
+        let func = face_function(&face, name)?;
+        let returned: Value = func.call(id.to_string())?;
+        to_calls(&returned, site)
+    })?;
+    calls
+        .iter()
+        .map(|call| api::effect_of(call, site, bytecode))
         .collect()
 }
 
@@ -119,7 +193,7 @@ pub fn adapt_hook(site: Site, bytecode: &'static [u8]) -> Hook {
                 to_calls(&returned, site)
             })
         }) {
-            Ok(calls) => build_effects(&calls, site),
+            Ok(calls) => build_effects(&calls, site, bytecode),
             Err(err) => panic!("{err}"),
         }
     })
@@ -509,7 +583,7 @@ pub fn adapt_trigger_run(site: Site, bytecode: &'static [u8], key: &'static str,
                 to_calls(&returned, site)
             })
         }) {
-            Ok(calls) => build_effects(&calls, site),
+            Ok(calls) => build_effects(&calls, site, bytecode),
             Err(err) => panic!("{err}"),
         }
     })
@@ -547,7 +621,7 @@ pub fn adapt_activation_run(site: Site, bytecode: &'static [u8], index: usize) -
                 to_calls(&returned, site)
             })
         }) {
-            Ok(calls) => build_effects(&calls, site),
+            Ok(calls) => build_effects(&calls, site, bytecode),
             Err(err) => panic!("{err}"),
         }
     })
@@ -608,7 +682,7 @@ pub fn adapt_sub_hook(
                 to_calls(&returned, site)
             })
         }) {
-            Ok(calls) => build_effects(&calls, site),
+            Ok(calls) => build_effects(&calls, site, bytecode),
             Err(err) => panic!("{err}"),
         }
     })

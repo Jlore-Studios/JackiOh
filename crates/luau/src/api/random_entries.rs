@@ -18,14 +18,18 @@ pub struct DoRandomEntriesArgs {
     pub entries: Vec<RandomEntryLuau>,
 }
 
-pub fn build_do_random_entries(call: &EffectCall, site: Site) -> Result<jackioh_engine::Effect, LuauError> {
+pub fn build_do_random_entries(
+    call: &EffectCall,
+    site: Site,
+    bytecode: &'static [u8],
+) -> Result<jackioh_engine::Effect, LuauError> {
     let args: DoRandomEntriesArgs = crate::api::typed(call, site)?;
     let mut entries = Vec::new();
     for entry in args.entries {
         let calls = crate::api::effect_calls(&serde_json::Value::Array(entry.effects), site)?;
         let mut effects = Vec::new();
         for call in calls {
-            effects.push(crate::api::effect_of(&call, site)?);
+            effects.push(crate::api::effect_of(&call, site, bytecode)?);
         }
         entries.push(jackioh_engine::effects::RandomEntry {
             label: entry.label,
