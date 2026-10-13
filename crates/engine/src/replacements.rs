@@ -309,6 +309,8 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
     });
+    // R783011: a Crater Trap Locks the backrow zone it is revealed in, as `traps::fire_trap` does.
+    crate::crater::lock_on_firing(sink, &cand.card, at);
     cand.card.face_up = Some(true);
     if let Some(card) = find_instance_mut(sink.state, &cand.card.id) {
         card.face_up = Some(true);

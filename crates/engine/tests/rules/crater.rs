@@ -8,8 +8,8 @@ use jackioh_engine::zones::is_locked;
 
 use super::fixtures::harness::{events_of_type, put, set_library, slot};
 use super::fixtures::keywords_783::{
-    crater_cloaked, crater_field, crater_reborn, crater_spell, crater_trap, crater_unit, flicker_all,
-    plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
+    crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell, crater_trap, crater_unit,
+    flicker_all, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
 };
 use super::fixtures::play_pipeline_b::{pb_reduce, plays_of};
 use super::fixtures::prompt_harness::{act, board, cast_now, must};
@@ -261,6 +261,36 @@ mod r783011_crater_traps {
         assert_eq!(result.state.players.p1.hero.health, before - 1);
         assert!(is_locked(&result.state, slot(P2, Row::Backrow, 3)));
         assert_eq!(locked_count(&result.state), 1);
+
+        // One that fires as it replaces an event (§5.1, R33) Locks its zone the same way.
+        let mut moon = playing("r783011-replacement");
+        put(&mut moon, &crater_moon().id, slot(P2, Row::Backrow, 4), json!({}));
+        moon.players.p1.hero.health -= 5;
+        let hurt = moon.players.p1.hero.health;
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&moon.seed.clone(), moon.rng_cursor);
+        {
+            let mut sink = EngineSink::new(&mut moon, &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        controller: Some(P1),
+                        ..Default::default()
+                    },
+                );
+                (jackioh_engine::effects::heal(json_as(
+                    json!({ "target": { "of": "selfHero" }, "amount": 2 }),
+                ))
+                .apply)(&mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        assert_eq!(events_of_type(&events, GameEventType::TrapFired).len(), 1);
+        assert_eq!(moon.players.p1.hero.health, hurt - 2);
+        assert!(is_locked(&moon, slot(P2, Row::Backrow, 4)));
+        assert_eq!(locked_count(&moon), 1);
 
         // Crater on a Spell or a Field Spell does nothing.
         let mut spells = playing("r783011-spell");
