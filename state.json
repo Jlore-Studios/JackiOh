@@ -888,6 +888,7 @@
     "453": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -901,11 +902,14 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "7d2de5364978593e5f9df3563265bc22c838c3b6",
       "last_findings": [],
       "onto": "bot/issue-442",
+      "parked_on": "",
       "part_of": 442,
       "pending_request": false,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-13T07:05:27Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
