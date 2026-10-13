@@ -1177,6 +1177,13 @@
     "511": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T13:18:03Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy's size line (about 21 files, well over 400 lines) and leaves UI choices; not hard: web app only, no engine, AI, rules or migration work"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
