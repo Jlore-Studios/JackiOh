@@ -5722,11 +5722,8 @@
     "what": "plan #822 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-13T23:50:12Z",
-    "notes": [
-      "#821 needs a plan",
-      "#822: typed it Task"
-    ],
+    "at": "2026-10-13T23:58:25Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
