@@ -23,7 +23,8 @@ from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
 from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS,
-                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR,
+                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
+                            LABEL_HUMAN_REQUIRED, LABEL_PR,
                             LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
                             LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
                             LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR, SLASH,
@@ -76,8 +77,10 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
 
 
 def is_human(names: set[str]) -> bool:
-    """Labelled `human` (whatever its case): people do it, and the bot leaves it alone."""
-    return LABEL_HUMAN in {name.lower() for name in names}
+    """Labelled `human` (whatever its case): people do it, and the bot leaves it alone. So does
+    `human required` (#793): the bot found it needs what only a person can do, and leaves it
+    alone until a person takes the label off."""
+    return bool({name.lower() for name in names} & {LABEL_HUMAN, LABEL_HUMAN_REQUIRED})
 
 
 #: What follows another bot's prefix on a label that makes the thread that bot's (#60): its queue
@@ -161,7 +164,13 @@ def parts_reply(number: int, parts: list[int]) -> str:
             "closed.")
 
 
-def human_reply(number: int) -> str:
+def human_reply(number: int, names: set[str] = frozenset()) -> str:
+    """The reply to a request for a thread `is_human` keeps from the bot."""
+    lowered = {name.lower() for name in names}
+    if LABEL_HUMAN_REQUIRED in lowered and LABEL_HUMAN not in lowered:
+        return (f"#{number} is labelled `{LABEL_HUMAN_REQUIRED}`: it needs something only a "
+                "person can do first (my comment on it says what), so I leave it alone. Once that "
+                "is done, take the label off and ask again.")
     return (f"#{number} is labelled `{LABEL_HUMAN}`: people do it, so I leave it alone. Take that "
             "label off to hand it to me.")
 
@@ -236,7 +245,7 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
         return f"#{number} is closed, so there is nothing to build. Reopen it first."
     names = label_names(issue)
     if is_human(names):
-        return human_reply(number)
+        return human_reply(number, names)
     other = owner(issue)
     if other is not None:
         if label_present and LABEL_BUILD in names:
@@ -319,7 +328,8 @@ def adopt(ctx: Context, number: int, names: set[str], children: list[dict[str, A
             continue
         child_names = label_names(child)
         other = owner(child)
-        why = ("labelled `human`" if is_human(child_names)
+        why = ("labelled `human`" if LABEL_HUMAN in {n.lower() for n in child_names}
+               else f"labelled `{LABEL_HUMAN_REQUIRED}`" if is_human(child_names)
                else f"{other.name}'s" if other is not None
                else "a run holds it now" if LABEL_WORKING in child_names
                else "a pull request of mine is open" if LABEL_PR_OPEN in child_names else "")
@@ -364,7 +374,7 @@ def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, sou
     if pull.get("state") != "open":
         return f"#{number} is not open, so I will not change it."
     if is_human(label_names(pull)):
-        return human_reply(number)
+        return human_reply(number, label_names(pull))
     head_repo = ((pull.get("head") or {}).get("repo") or {}).get("full_name")
     if head_repo != ctx.cfg.repo:
         return f"#{number} comes from a fork; I can only push to branches in {ctx.cfg.repo}."
@@ -403,7 +413,7 @@ def queue_review(ctx: Context, number: int, *, by: str, floor: str = "", notes: 
     if pull.get("state") != "open":
         return f"#{number} is not open, so there is nothing to review."
     if is_human(names):
-        return human_reply(number)
+        return human_reply(number, names)
     if LABEL_PR not in names:
         return f"#{number} is not a pull request I opened; review runs are for mine only."
     if LABEL_WORKING in names:
@@ -681,13 +691,14 @@ def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = 
     Read by label, so no number of open threads hides one, and a label changed since the last
     plan counts at this one. Either queue label queues either kind of thread: an issue builds
     and a pull request revises. A queue label is the request, so a thread that failed before and
-    was labelled again is taken again. A thread labelled `human` is left out, whatever model
-    would take it, and so are a fullsend issue whose parts are still open (`open_parts`, #505),
+    was labelled again is taken again. A thread labelled `human` or `human required` is left
+    out, whatever model would take it, and so are a fullsend issue whose parts are still open
+    (`open_parts`, #505),
     forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
     each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
     when the caller keeps that (the status issue's queue)."""
     found: dict[int, Candidate] = {}
-    human: set[int] = set()
+    human: dict[int, str] = {}  # number -> the label that keeps it from the bot
     others: dict[int, str] = {}
     parted: dict[int, list[int]] = {}
     builds: list[dict[str, Any]] = []
@@ -701,9 +712,9 @@ def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = 
             is_pr = "pull_request" in thread
             if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
                 continue  # a second review is for the bot's own pull requests only
-            lowered = {name.lower() for name in names}
-            if LABEL_HUMAN in lowered:
-                human.add(number)
+            if is_human(names):
+                human[number] = (LABEL_HUMAN if LABEL_HUMAN in {n.lower() for n in names}
+                                 else LABEL_HUMAN_REQUIRED)
                 continue
             other = owner(thread)
             if other is not None:
@@ -749,7 +760,7 @@ def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = 
     for number in waiting:
         found.pop(number, None)
     if held_back is not None:
-        held_back.update({number: "labelled `human`" for number in human})
+        held_back.update({number: f"labelled `{label}`" for number, label in human.items()})
         held_back.update({number: f"it is {name}'s" for number, name in others.items()})
         held_back.update({number: "its fullsend parts "
                           f"{', '.join(f'#{n}' for n in parts)} are still open"
@@ -757,8 +768,8 @@ def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = 
         held_back.update({number: f"waits for {', '.join(f'#{n}' for n in blockers)} to close"
                           for number, blockers in waiting.items()})
     if skipped is not None:
-        skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
-                       "tier" for number in sorted(human))
+        skipped.extend(f"#{number} skipped: labelled `{label}`, so no model takes it, whatever "
+                       "its tier" for number, label in sorted(human.items()))
         skipped.extend(f"#{number} skipped: it is {name}'s" for number, name in sorted(others.items()))
         skipped.extend(f"#{number} skipped: its fullsend parts "
                        f"{', '.join(f'#{n}' for n in parts)} are still open"

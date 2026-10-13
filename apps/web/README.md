@@ -153,8 +153,12 @@ inside it and the dev routes (the real entry points come with the result screens
 src/replay/
   source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
-  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search
+  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
   ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
+  gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
+                  function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
+                  OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
   config.ts replay.css
 ```
 

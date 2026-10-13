@@ -10,7 +10,8 @@ import { baseView } from "../test/fixtures.ts";
 import { fakeReplaySource } from "../test/replay.ts";
 import { ReplayFailure } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
-import { createStepCache } from "./steps.ts";
+import { REPLAY_GIF_MAX_STEPS } from "./config.ts";
+import { clampClip, createStepCache, loadClip, turnRange } from "./steps.ts";
 
 /** Forty steps, six to a turn: the turns start at 0, 6, 12, …, 36, and a page boundary falls inside a turn. */
 const STEPS_PER_TURN = 6;
@@ -134,5 +135,38 @@ describe("the replay's step cache", () => {
     cache.prefetch(0);
     await Promise.resolve();
     await expect(cache.load(REPLAY_PAGE_STEPS)).rejects.toBe(failure);
+  });
+});
+
+describe("the replay's clips", () => {
+  it("clampClip orders the ends and caps the clip at REPLAY_GIF_MAX_STEPS", () => {
+    expect(clampClip(3, 7)).toEqual([3, 7]);
+    expect(clampClip(7, 3)).toEqual([3, 7]);
+    expect(clampClip(5, 5)).toEqual([5, 5]);
+    expect(clampClip(2, 2 + REPLAY_GIF_MAX_STEPS - 1)).toEqual([2, 2 + REPLAY_GIF_MAX_STEPS - 1]);
+    expect(clampClip(2, 1000)).toEqual([2, 2 + REPLAY_GIF_MAX_STEPS - 1]);
+    expect(clampClip(1000, 2)).toEqual([2, 2 + REPLAY_GIF_MAX_STEPS - 1]);
+  });
+
+  it("turnRange gives the shown turn's first and last steps", async () => {
+    const cache = createStepCache(fakeReplaySource(STEPS));
+    expect(await turnRange(cache, 8)).toEqual([6, 11]);
+    expect(await turnRange(cache, 6)).toEqual([6, 11]);
+    expect(await turnRange(cache, 11)).toEqual([6, 11]);
+    expect(await turnRange(cache, 0)).toEqual([0, 5]);
+    // The last turn has no step after it.
+    expect(await turnRange(cache, STEPS.length - 1)).toEqual([36, STEPS.length - 1]);
+  });
+
+  it("turnRange caps a turn longer than the clip cap", async () => {
+    const long: ReplayStep[] = Array.from({ length: REPLAY_GIF_MAX_STEPS + 10 }, (_, step) => ({ step, turn: 1, view: baseView({ turn: 1 }) }));
+    const [first, last] = await turnRange(createStepCache(fakeReplaySource(long)), 5);
+    expect([first, last]).toEqual([0, REPLAY_GIF_MAX_STEPS - 1]);
+  });
+
+  it("loadClip loads each step from first to last", async () => {
+    const cache = createStepCache(fakeReplaySource(STEPS));
+    const clip = await loadClip(cache, 4, 9);
+    expect(clip.map((step) => step.step)).toEqual([4, 5, 6, 7, 8, 9]);
   });
 });

@@ -125,6 +125,7 @@ _SAID_MODE_LABELS = ("fullsend", "tree")
 _SHARED: dict[str, tuple[str, str]] = {
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
+    "human required": ("e99695", "The night bot cannot do this (bot/, .github/, a secret, a dashboard): a person must"),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
@@ -199,6 +200,11 @@ LABEL_TREE = f"{LABEL_PREFIX}tree"
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
 #: gets a reply saying so.
 LABEL_HUMAN = "human"
+#: The bot put it on (#793): the item needs what only a person can do, a change to bot/,
+#: .harness/, .squishy/ or .github/, a secret, a dashboard or an account (`human.py`), and the
+#: bot's comment, which names the people, says what. Like `human`, the bot leaves it alone while
+#: it is on; a person who has done their part takes it off and queues the item again.
+LABEL_HUMAN_REQUIRED = "human required"
 #: Labels the bot used to have: the sweep deletes them from the repository (`sweep._labels`), so
 #: nobody puts on one that no longer does anything. #664 took the method labels and `bot:approved`
 #: (`bot:build` and `human` hand an issue on), `bot:needs-review` (always beside `ready for

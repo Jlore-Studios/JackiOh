@@ -171,6 +171,18 @@ class CommandTests(unittest.TestCase):
         body = "> /harness halt\n```\n/harness halt\n```\n~~~\n@jgoetzmann-bot build\n~~~\n"
         self.assertEqual(self.verbs(body), [])
 
+    def test_a_vote_is_the_word_alone_on_its_line(self):
+        # #760: `approve` and `reject` answer a suggestion, bare or after either prefix.
+        self.assertEqual(commands.vote("approve", self.bot), ("approve", "approve"))
+        self.assertEqual(commands.vote("Thanks!\n- **Reject.**", self.bot)[0], "reject")
+        self.assertEqual(commands.vote("@jgoetzmann-bot: reject", self.bot)[0], "reject")
+        self.assertEqual(commands.vote("/harness approve", self.bot)[0], "approve")
+        for prose in ("I approve of this", "reject it if the tests fail", "> approve",
+                      "```\napprove\n```", "@someone approve"):
+            self.assertEqual(commands.vote(prose, self.bot), ("", ""), prose)
+        self.assertEqual(commands.parse("@jgoetzmann-bot reject", self.bot)[0].line,
+                         commands.vote("@jgoetzmann-bot reject", self.bot)[1])
+
     def test_several_commands_in_order_and_capped(self):
         body = "\n".join(["/harness status", "/harness build"] * 8)
         found = commands.parse(body, self.bot)

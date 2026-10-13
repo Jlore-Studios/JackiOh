@@ -37,7 +37,7 @@ ALIASES: dict[str, str] = {
 }
 
 #: The level each verb needs. `request` is naming the bot with free text; `typo` is a near miss
-#: of a verb, which only gets a reply.
+#: of a verb, which only gets a reply; `approve` and `reject` are a vote on a suggestion (`VOTES`).
 LEVELS: dict[str, int] = {
     "status": 1,
     "help": 1,
@@ -52,6 +52,8 @@ LEVELS: dict[str, int] = {
     "stop": 2,
     "suggest": 2,
     "request": 2,
+    "approve": 2,
+    "reject": 2,
     "halt": 3,
     "start": 3,
     "run": 3,
@@ -218,6 +220,26 @@ def parse(body: str, bot_login: str) -> list[Command]:
             continue  # `@bot /harness verb` is matched by _SLASH above
         found.append(_read(rest, line, plain_words=True))
     return found
+
+
+#: The words that answer one of the bot's suggestions (#760): `approve` queues it to build,
+#: `reject` closes it. A vote is a line of its own holding only the word, bare or after `@<bot>`
+#: or `/harness`, and it counts only on an open suggestion (`events.on_comment`).
+VOTES: tuple[str, ...] = ("approve", "reject")
+
+
+def vote(body: str, bot_login: str) -> tuple[str, str]:
+    """The first vote in a comment, `(word, line)`, or `("", "")`. Quoted and fenced lines never
+    vote, so quoting a vote back cannot cast it again."""
+    mention = re.compile(r"^@" + re.escape(bot_login.lstrip("@")) + r"\b[:,]?\s*", re.IGNORECASE)
+    for raw in command_lines(body):
+        line = _unmark(raw)
+        slash = _SLASH.match(line)
+        rest = slash.group(1) if slash else mention.sub("", line)
+        word = _unmark(rest).rstrip(".!").strip().lower()
+        if word in VOTES:
+            return word, line.strip()
+    return "", ""
 
 
 def mentions(body: str, bot_login: str) -> bool:
