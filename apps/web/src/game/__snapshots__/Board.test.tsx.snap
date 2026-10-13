@@ -1993,7 +1993,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   data-keyword="Equip"
                   title="Equip"
                 >
-                  MG
+                  EQ
                 </span>
                 <span
                   class="cf-kw-more"
