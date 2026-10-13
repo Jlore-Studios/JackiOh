@@ -11088,11 +11088,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
-    "last_run": "2026-10-13T23:28:06Z",
-    "provider": "agy",
+    "idle_since": "2026-10-13T22:55:57Z",
+    "last_run": "2026-10-13T09:03:53Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38484343972",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
