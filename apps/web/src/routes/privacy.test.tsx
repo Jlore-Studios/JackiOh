@@ -57,17 +57,29 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-10");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-13");
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
-    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
+    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Cloudflare/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);
   });
+
+    it("names Cloudflare as the website's host and Vercel as its test copy's (#770)", () => {
+      render(<PrivacyRoute />);
+      const page = screen.getByTestId(privacyTestid.screen);
+      const section = within(page).getByRole("heading", { name: /who handles it/i }).closest("section");
+      const items = [...(section?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
+      expect(items).toContain("Cloudflare hosts this website at jackioh.com.");
+      expect(items).toContain("Vercel hosts a test copy of it at jackioh.vercel.app.");
+      expect(items).toHaveLength(4);
+      expect(section?.textContent).toMatch(/We use four services to run JackiOh:/);
+      expect(page.textContent).not.toMatch(/Vercel hosts this website/);
+    });
 
   it("R1442 names the play telemetry, how long it is kept, and that deleting an account deletes it", () => {
     render(<PrivacyRoute />);

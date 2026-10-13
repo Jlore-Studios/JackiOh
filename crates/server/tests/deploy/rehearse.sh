@@ -191,7 +191,7 @@ start_server() {
     -e SUPABASE_URL=https://rehearsal.supabase.co \
     -e SUPABASE_SECRET_KEY=rehearsal-placeholder \
     -e CODE_PEPPER=rehearsal-placeholder-pepper-of-a-length-the-server-accepts-0123456789 \
-    -e PUBLIC_ORIGINS=https://jackioh.vercel.app \
+    -e PUBLIC_ORIGINS=https://jackioh.com,https://www.jackioh.com \
     "$IMAGE" >/dev/null
   SERVER_UP=1
   SERVER_LOG=$1

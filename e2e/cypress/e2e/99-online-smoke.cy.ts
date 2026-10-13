@@ -12,7 +12,7 @@
  * exists, so the suite is behind `--env online=true` and is never part of the M8 gate.
  *
  * Run it with:
- *   E2E_BASE_URL=https://jackioh.vercel.app pnpm exec cypress run --browser chrome \
+ *   E2E_BASE_URL=https://jackioh.com pnpm exec cypress run --browser chrome \
  *     --spec cypress/e2e/99-online-smoke.cy.ts --env online=true,...
  */
 

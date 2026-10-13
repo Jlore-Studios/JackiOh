@@ -1,5 +1,6 @@
 // Cloudflare production must match Vercel staging: routes, 404s and security headers.
-// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it.
+// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it,
+// but for the one header only staging sends (`X-Robots-Tag: noindex`, #770).
 // Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
 // Generated static pages need a folder rule; Vercel serves files before rewrites.
 
@@ -20,6 +21,27 @@ type VercelConfig = {
   rewrites: { source: string; destination: string }[];
   headers: { source: string; headers: { key: string; value: string }[] }[];
 };
+
+type Header = { key: string; value: string };
+type HeaderBlock = { path: string; headers: Header[] };
+
+/** The one header staging sends and production must not: search engines leave the test copy out (#770). */
+const STAGING_ONLY_HEADER: Header = { key: "X-Robots-Tag", value: "noindex" };
+
+const isStagingOnly = (header: Header): boolean =>
+  header.key === STAGING_ONLY_HEADER.key && header.value === STAGING_ONLY_HEADER.value;
+
+/**
+ * The header blocks `_headers` must hold for these vercel.json blocks: each path in Cloudflare's
+ * spelling (`(.*)` as `*`), and the every-path block without STAGING_ONLY_HEADER. Every other
+ * header, value and path is copied as it is, so any other difference fails the comparison.
+ */
+function productionHeaders(staging: VercelConfig["headers"]): HeaderBlock[] {
+  return staging.map((block) => ({
+    path: block.source.replace("(.*)", "*"),
+    headers: block.source === "/(.*)" ? block.headers.filter((header) => !isStagingOnly(header)) : block.headers,
+  }));
+}
 
 const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as VercelConfig;
 
@@ -80,8 +102,8 @@ describe("public/_redirects", () => {
 });
 
 describe("public/_headers", () => {
-  function blocks(): { path: string; headers: { key: string; value: string }[] }[] {
-    const out: { path: string; headers: { key: string; value: string }[] }[] = [];
+  function blocks(): HeaderBlock[] {
+    const out: HeaderBlock[] = [];
     for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {
       if (!/^\s/u.test(line)) {
         out.push({ path: line.trim(), headers: [] });
@@ -93,16 +115,67 @@ describe("public/_headers", () => {
     return out;
   }
 
-  it("sends vercel.json's headers on every path, value for value", () => {
+  it("sends vercel.json's headers on every path, value for value, but for staging's noindex", () => {
     const [first] = blocks();
     expect(first?.path).toBe("/*");
     const all = vercel.headers.find((block) => block.source === "/(.*)");
-    expect(first?.headers).toEqual(all?.headers);
+    expect(first?.headers).toEqual(all?.headers.filter((header) => !isStagingOnly(header)));
   });
 
   it("has exactly vercel.json's header blocks, each path in Cloudflare's spelling (`(.*)` as `*`)", () => {
-    const expected = vercel.headers.map((block) => ({ path: block.source.replace("(.*)", "*"), headers: block.headers }));
-    expect(blocks()).toEqual(expected);
+    expect(blocks()).toEqual(productionHeaders(vercel.headers));
+  });
+
+  it("keeps staging out of search results (#770): vercel.json sends X-Robots-Tag: noindex on every path, _headers never", () => {
+    const all = vercel.headers.find((block) => block.source === "/(.*)");
+    expect(all?.headers.filter(isStagingOnly)).toHaveLength(1);
+    const keys = blocks().flatMap((block) => block.headers.map((header) => header.key.toLowerCase()));
+    expect(keys).not.toContain("x-robots-tag");
+  });
+
+  it("allows staging exactly one extra header, X-Robots-Tag: noindex on every path (#770)", () => {
+    const shared = { key: "X-Frame-Options", value: "DENY" };
+    const cache = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
+    expect(
+      productionHeaders([
+        { source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] },
+        { source: "/fonts/(.*)", headers: [cache] },
+      ]),
+    ).toEqual([
+      { path: "/*", headers: [shared] },
+      { path: "/fonts/*", headers: [cache] },
+    ]);
+  });
+
+  it("fails on any other difference between the two header sets (#770)", () => {
+    const shared = { key: "X-Frame-Options", value: "DENY" };
+    const cache = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
+    const fonts = { source: "/fonts/(.*)", headers: [cache] };
+    const production: HeaderBlock[] = [
+      { path: "/*", headers: [shared] },
+      { path: "/fonts/*", headers: [cache] },
+    ];
+    const differing: VercelConfig["headers"][] = [
+      // Another extra header on every path.
+      [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER, { key: "X-Other", value: "1" }] }, fonts],
+      // The header with another value, or spelled another way.
+      [{ source: "/(.*)", headers: [shared, { key: "X-Robots-Tag", value: "none" }] }, fonts],
+      [{ source: "/(.*)", headers: [shared, { key: "x-robots-tag", value: "noindex" }] }, fonts],
+      // The header on another path.
+      [{ source: "/(.*)", headers: [shared] }, { source: "/fonts/(.*)", headers: [cache, STAGING_ONLY_HEADER] }],
+      // A shared header missing or changed, or a block missing.
+      [{ source: "/(.*)", headers: [STAGING_ONLY_HEADER] }, fonts],
+      [{ source: "/(.*)", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, STAGING_ONLY_HEADER] }, fonts],
+      [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }],
+    ];
+    for (const staging of differing) {
+      expect(productionHeaders(staging), JSON.stringify(staging)).not.toEqual(production);
+    }
+    // Production sending the header is a difference too.
+    expect(productionHeaders([{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }, fonts])).not.toEqual([
+      { path: "/*", headers: [shared, STAGING_ONLY_HEADER] },
+      { path: "/fonts/*", headers: [cache] },
+    ]);
   });
 
   it("lets a browser keep the web fonts a year (#262): their names carry their versions", () => {
