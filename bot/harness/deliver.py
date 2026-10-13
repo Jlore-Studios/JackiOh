@@ -28,6 +28,7 @@ from typing import Any
 
 from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
+from harness import human as human_mod
 from harness import journal as journal_mod
 from harness import stepup, triage
 from harness import split as split_mod
@@ -37,15 +38,16 @@ from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
-                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_HUMAN_REQUIRED,
+                            LABEL_NEEDS_PLAN, LABEL_PLANNED,
                             LABEL_PR, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_STUCK,
                             LABEL_SUGGESTION, LABEL_TREE, OTHERS, PLAN_FLOOR, SLASH, STATE_BRANCH,
                             TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, Identity, matches
-from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
-                           set_mode,
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, is_human,
+                           label_names, set_mode,
                            labelled_difficulty, open_pull_for_branch, rating_source,
                            set_state_label, wip_branch)
 from harness.state import item as state_item
@@ -447,6 +449,20 @@ class Deliverer:
         if status == "stopped":
             set_state_label(self.ctx, number, self._labels(number), None)
             self.gh.create_comment(number, "Stopped, as asked, before any plan was written.")
+            return
+        if status == "blocked" and self.result.get("human_required"):
+            # Its plan leaves nothing the bot may build (#793): it goes into the description
+            # for the person who builds it, and the item to them.
+            who, tier = self._planner()
+            self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                           planned_by_id=self.provider.id, planned_tier=tier)
+            placed = self._plan_into_issue(number, who)
+            rated = getattr(self, "rating_note", "")
+            kept = (f" Planned on {who} ({self._link()})"
+                    + (", and the plan is in this issue's description, under **Plan**."
+                       if placed else "."))
+            self._needs_person(number, str(self.result.get("question") or ""),
+                               kept=f" {rated}{kept}" if rated else kept)
             return
         if status != "planned":
             if status == "interrupted":
@@ -991,6 +1007,21 @@ class Deliverer:
                                    f"is back in the queue (attempt {failures} of "
                                    f"{self.cfg.max_failures}).")
 
+    def _needs_person(self, number: int, question: str, *, what: str = "build this",
+                      kept: str = "", again: str = "") -> None:
+        """Only a person can do it (#793, `human.py`): `human required` beside `bot:blocked`,
+        and a comment that names the people and says what they must do. The queue leaves it
+        alone until a person takes the label off (`queue.is_human`)."""
+        labels = self._labels(number)
+        set_state_label(self.ctx, number, labels, LABEL_BLOCKED)
+        if LABEL_HUMAN_REQUIRED not in labels:
+            self.gh.add_labels(number, [LABEL_HUMAN_REQUIRED])
+        self.gh.create_comment(number, human_mod.ask(question, self.cfg.bot_login, what=what,
+                                                     kept=kept, again=again))
+        # The next run reads it with the thread, once a person has queued the item again.
+        self._remember(number, question=question)
+        self.log.append(f"#{number} needs a person: labelled {LABEL_HUMAN_REQUIRED}")
+
     def _settle(self, number: int) -> None:
         """After a finished run: clear the one-run flags, and go round again for a comment that
         arrived while the run held the thread (after a stop, one that came after it)."""
@@ -1009,6 +1040,8 @@ class Deliverer:
         # `/harness stop` clears any earlier pending request, so one still set came after it.
         if not record.get("pending_request"):
             return
+        if is_human(self._labels(number)):
+            return  # a person's part comes first (`human required`, #793): they queue it again
         target = number
         pr = int(record.get("pr") or 0) if status == "approved" else 0
         if self.plan["action"] == "build" and pr:
@@ -1067,9 +1100,13 @@ class Deliverer:
             return
         started = self._record(number).get("started_at")
         if status == "blocked":
-            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             question = str(self.result.get("question") or self.result.get("reason") or "")
             kept = f" What I had is on `{branch}`." if pushed else ""
+            if self.result.get("human_required"):
+                self._needs_person(number, question, kept=kept)
+                self._remember(number, last_findings=[])
+                return
+            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self.gh.create_comment(number, f"I need a decision before I can build this.{kept}\n\n"
                                    f"{question}\n\nAnswer here, then `{SLASH} build` (or "
                                    f"`@{self.cfg.bot_login} <your answer>`) queues it again.")
@@ -1481,9 +1518,15 @@ class Deliverer:
             self.gh.create_comment(number, "Stopped, as asked. I pushed nothing.")
             return
         if status == "blocked":
+            question = self.result.get("question") or self.result.get("reason")
+            if self.result.get("human_required"):
+                self._hold_auto_merge()
+                self._needs_person(number, str(question or ""), what="revise this", again=(
+                    f"`{SLASH} revise <notes>` (or `@{self.cfg.bot_login} <notes>`) queues the "
+                    "rest"))
+                return
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
-            question = self.result.get("question") or self.result.get("reason")
             self.gh.create_comment(number, f"I need a decision before I can revise this.\n\n"
                                    f"{question}")
             self._remember(number, question=str(question or ""))
