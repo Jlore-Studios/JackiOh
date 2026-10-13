@@ -5102,6 +5102,11 @@
     "788": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-13T17:22:16Z",
+        "by": "`claude` (strong)",
+        "sha": "a730861ad51e7dc52e9a11e4d2aa0d36a2917c40"
+      },
       "cross_rounds": 0,
       "failures": 0,
       "kind": "review",
