@@ -3,7 +3,6 @@
 //! files are part 24's.
 
 pub mod activate;
-pub mod alt_play;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;

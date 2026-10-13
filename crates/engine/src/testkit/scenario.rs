@@ -465,7 +465,7 @@ pub struct PlayOptions {
     /// Units sacrificed for a Tribute cost; each entry is any card reference on the field.
     #[serde(default)]
     pub tributes: Option<Vec<String>>,
-    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    /// R783004: play face-down as a Trap by the card's Cloaked (`cloaked`).
     #[serde(default)]
     pub face_down: Option<RevealAt>,
 }

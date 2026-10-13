@@ -512,7 +512,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 };
                 plague = Some(parsed);
             }
-            // ME-ALTPLAY, R1044: the face-down timing travels as `faceDown`.
+            // R783004, R1044: how a face-down play reveals travels as `faceDown`.
             let mut face_down = None;
             if let Some(value) = raw.get("faceDown") {
                 let Ok(parsed) = serde_json::from_value::<RevealAt>(value.clone()) else {

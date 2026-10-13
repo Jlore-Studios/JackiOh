@@ -8,7 +8,7 @@
 //! the combat keyword pool (R21's), none the card has and no Taunt beside Indestructible
 //! (`draw_combat_keywords`), and stay until it leaves the field (R78). The Aura reads them back
 //! (`conditionalKeywords`), so a Vanilla takes them with the rest of its text (R781004). It printed
-//! every keyword and, Radiant, a Death that gave them away until patch v0.3.X (R1084, R1085).
+//! every keyword and, Radiant, a Death that gave them away until patch v0.3.7 (R1084, R1085).
 
 use jackioh_engine::effects::{DrawCombatKeywordsArgs, draw_combat_keywords, drawn_combat_keywords};
 use jackioh_engine::prelude::*;

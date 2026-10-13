@@ -783,23 +783,9 @@ pub struct GraveyardPlayPermission {
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
-/// ME-ALTPLAY, R1040, R1044: the permission this card gives its controller to play cards face-down
-/// as Traps — Units under Knowledge Breaker's Aura, Spells under Paranoia's. `echo` is the Echo a
-/// Radiant Paranoia adds to a set Spell (R1045), once per play.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct FaceDownPlayPermission {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub units: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub spells: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub echo: Option<i32>,
-}
-
-/// ME-ALTPLAY, R1040, R1044: the face-down play permissions this card grants while it acts.
-pub type FaceDownPlayHook =
-    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<FaceDownPlayPermission> + Send + Sync>;
+/// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their field
+/// (Radiant Paranoia's "Spells you reveal have Echo +{echo}"), read as the Spell reveals. 0 adds none.
+pub type RevealEchoHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
@@ -917,9 +903,9 @@ pub struct Script {
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
-    /// ME-ALTPLAY, R1040, R1044: the permissions this card gives its controller to play cards
-    /// face-down as Traps.
-    pub face_down_play: Option<FaceDownPlayHook>,
+    /// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their
+    /// field (`alt_play::reveal_echo_bonus`).
+    pub reveal_echo: Option<RevealEchoHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
     /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards

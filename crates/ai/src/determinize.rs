@@ -13,8 +13,8 @@
 use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
-    CardInstance, CardType, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, RevealAt, Rng,
-    SecretChoice, SetAs, active_units_of, effective_cost, find_def, query, scripts_for, unit_view,
+    CardInstance, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, RevealAt, Rng,
+    SecretChoice, SetAs, active_units_of, effective_cost, query, scripts_for, unit_view,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -147,44 +147,27 @@ fn slot_card_mut(state: &mut GameState, side: PlayerId, slot: TrapSlot) -> Optio
     }
 }
 
-/// ME-ALTPLAY, R1046: stamp a sampled Unit or Spell as a set card — a Unit at the start of the
-/// next turn, a Spell at a uniformly sampled timing. With no permission nothing is stamped and no
-/// extra rng draw happens. R783009: a sampled card the permissions do not cover that may be set by its
-/// Cloaked (`cloakable`) is stamped `cloaked`, with no rng draw.
+/// R783009, R1046: stamp a sampled card that may be set by its Cloaked (`cloakable`) as a set card
+/// (`cloaked`, which has no timing), with no rng draw. Any other sampled card is a Trap or a Field
+/// Trap and stays unstamped.
 fn stamp_sampled_set_as(
     state: &mut GameState,
     side: PlayerId,
     slot: TrapSlot,
-    grants: &jackioh_engine::alt_play::FaceDownGrant,
     cloakable: &[String],
     set_turn: i32,
-    rng: &mut Rng,
 ) {
     let Some(def_id) = slot_card(state, side, slot).map(|card| card.def_id.clone()) else {
         return;
     };
-    let Some(def) = find_def(Some(&*state), &def_id) else {
-        return;
-    };
-    let is_unit = def.type_ == CardType::Unit && grants.units;
-    let is_spell = def.type_ == CardType::Spell && grants.spells;
-    let cloaked = !is_unit && !is_spell && cloakable.contains(&def_id);
-    if !is_unit && !is_spell && !cloaked {
+    if !cloakable.contains(&def_id) {
         return;
     }
-    // D4: a sampled Spell's timing is uniform; a Unit needs no draw, nor a Cloaked card (R783009).
-    let reveal = if cloaked {
-        RevealAt::Cloaked
-    } else if is_unit {
-        RevealAt::StartOfNextTurn
-    } else {
-        RevealAt::ALL[rng.int(3) as usize]
-    };
     let Some(card) = slot_card_mut(state, side, slot) else {
         return;
     };
     card.set_as = Some(SetAs {
-        reveal,
+        reveal: RevealAt::Cloaked,
         set_turn,
         echo: None,
         revealing: None,
@@ -326,9 +309,8 @@ pub fn determinize(
     // an aura lends it to in that side's hand now.
     let printed_cloaked = jackioh_engine::alt_play::printed_cloaked_def_ids();
     for side in [opp, seat] {
-        // ME-ALTPLAY, R1046: while a face-down permission acts, a hidden backrow card may be a set
-        // Unit or Spell, so that side's pool widens by the Unit and Spell pools.
-        let grants = jackioh_engine::alt_play::grants_of(&next, side);
+        // R1046: Knowledge Breaker's and Paranoia's auras lend Cloaked to a hand's Units and Spells, so
+        // while one acts those cards are `lent_cloaked_def_ids` too.
         let mut cloakable = printed_cloaked.clone();
         for id in jackioh_engine::alt_play::lent_cloaked_def_ids(&next, side) {
             if !cloakable.contains(&id) {
@@ -336,18 +318,12 @@ pub fn determinize(
             }
         }
         let mut pool = trap_pool.clone();
-        if grants.units {
-            pool.extend(query_ids(json!({ "type": ["Unit"] })));
-        }
-        if grants.spells {
-            pool.extend(query_ids(json!({ "type": ["Spell"] })));
-        }
         for id in &cloakable {
             if !pool.contains(id) {
                 pool.push(id.clone());
             }
         }
-        let sampler = if grants.units || grants.spells || !cloakable.is_empty() {
+        let sampler = if !cloakable.is_empty() {
             TrapSampler {
                 trap_pool: &pool,
                 aura_traps: &aura_traps,
@@ -383,7 +359,7 @@ pub fn determinize(
             };
             let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, &seen, &mut sampled, rng);
             set_slot_def(&mut next, side, slot, &def_id);
-            stamp_sampled_set_as(&mut next, side, slot, &grants, &cloakable, set_turn, rng);
+            stamp_sampled_set_as(&mut next, side, slot, &cloakable, set_turn);
         }
         // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
         for at in 0..next.players[side].resolving.len() {
@@ -398,7 +374,7 @@ pub fn determinize(
             if slot_card(&next, side, slot).is_some_and(is_placeholder) {
                 let def_id = sampler.trap_for(&mut next, side, slot, None, &seen, &mut sampled, rng);
                 set_slot_def(&mut next, side, slot, &def_id);
-                stamp_sampled_set_as(&mut next, side, slot, &grants, &cloakable, set_turn, rng);
+                stamp_sampled_set_as(&mut next, side, slot, &cloakable, set_turn);
             }
         }
     }

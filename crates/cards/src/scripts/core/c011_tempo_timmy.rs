@@ -90,7 +90,7 @@ mod tests {
             tribute_when,
             would_counter,
             start_of_opponent_turn,
-            face_down_play,
+            reveal_echo,
             turn_hook_extra,
             cry_death_extra,
             grants,
@@ -138,7 +138,7 @@ mod tests {
             && tribute_when.is_none()
             && would_counter.is_none()
             && start_of_opponent_turn.is_none()
-            && face_down_play.is_none()
+            && reveal_echo.is_none()
             && turn_hook_extra.is_none()
             && cry_death_extra.is_none()
             && grants.is_empty()

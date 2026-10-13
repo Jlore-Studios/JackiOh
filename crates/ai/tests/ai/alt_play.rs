@@ -1,8 +1,8 @@
-//! Face-down plays through the AI's eyes (ME-ALTPLAY, R1046).
+//! Face-down plays through the AI's eyes (R1046, R783009).
 //!
-//! A set card redacts to a placeholder with no `setAs`, and `determinize` samples Units for a
-//! hidden backrow card only while a Unit permission acts on that side, and (R783009) a card that may
-//! be set by its Cloaked whatever acts.
+//! A set card redacts to a placeholder with no `setAs`, and `determinize` samples for a hidden backrow
+//! card a Trap, a card that prints Cloaked whatever acts (R783009), or a card an aura lends Cloaked to
+//! in that side's hand now: every Unit while Knowledge Breaker acts there (R1046).
 
 use jackioh_ai::{DeterminizeOptions, determinize, redact};
 use jackioh_engine::testkit::{
@@ -16,7 +16,7 @@ const BREAKER: &str = "meditative-045";
 const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";
 
-/// p1 with a face-up Breaker acting and a set vanilla in the backrow, seen by p2.
+/// p1 with a face-up Breaker acting and a vanilla set by the Cloaked it lends in the backrow, seen by p2.
 fn set_state(seed: &str) -> GameState {
     register_cards();
     let mut state = scenario(json!({
@@ -53,7 +53,7 @@ fn set_state(seed: &str) -> GameState {
             targets: None,
             modes: None,
             plague: None,
-            face_down: Some(jackioh_engine::RevealAt::StartOfNextTurn),
+            face_down: Some(RevealAt::Cloaked),
         },
     );
     state
@@ -68,7 +68,7 @@ fn backrow_def(state: &GameState) -> String {
 }
 
 #[test]
-fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_a_permission() {
+fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_the_breaker() {
     // The set card really is set.
     let state = set_state("alt-play-redact");
     let set = state.players[AI].backrow[0].as_ref().expect("a set card");
@@ -81,7 +81,7 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_a_permissi
     let js = serde_json::to_value(hidden).expect("a placeholder serialises");
     assert!(js.get("setAs").is_none());
 
-    // Determinized worlds may hold a Unit while the Breaker acts...
+    // Determinized worlds may hold a Unit while the Breaker acts, stamped `cloaked`...
     let options = DeterminizeOptions {
         match_shown_cost: Some(false),
     };
@@ -89,20 +89,24 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_a_permissi
     for n in 0..50 {
         let mut rng = create_rng(&format!("alt-play-det-{n}"), 0);
         let world = determinize(&public, HUMAN, &mut rng, options);
-        let def = find_def(Some(&world), &backrow_def(&world)).expect("a sampled def");
+        let sampled = world.players[AI].backrow[0].clone().expect("a sampled card");
+        let def = find_def(Some(&world), &sampled.def_id).expect("a sampled def");
         if def.type_ == CardType::Unit {
             units += 1;
+            assert_eq!(sampled.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
         } else {
             assert!(
-                def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap,
-                "a Trap without a permission, got {:?}",
+                def.type_ == CardType::Trap
+                    || def.type_ == CardType::FieldTrap
+                    || prints_cloaked(&world, &sampled.def_id),
+                "a Trap or a card that prints Cloaked, got {:?}",
                 def.type_
             );
         }
     }
-    assert!(units > 0, "no Unit sampled in 50 worlds under a permission");
+    assert!(units > 0, "no Unit sampled in 50 worlds under the Breaker");
 
-    // ...and never without one.
+    // ...and without it, only a Trap or a card that prints Cloaked.
     register_cards();
     let plain = scenario(json!({
         "seed": "alt-play-no-grant",
@@ -119,25 +123,35 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_a_permissi
         let sampled = backrow_def(&world);
         let def = find_def(Some(&world), &sampled).expect("a sampled def");
         assert!(
-            def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap,
-            "a Unit sampled with no permission: {sampled}",
+            def.type_ == CardType::Trap
+                || def.type_ == CardType::FieldTrap
+                || prints_cloaked(&world, &sampled),
+            "a Unit that prints no Cloaked sampled with no Breaker: {sampled}",
         );
     }
 
-    // The permission is live: the owner's Units are offered face-down.
+    // The aura is live: the owner's Units are offered face-down, Cloaked.
     let offered: Vec<_> = legal_actions(&state, AI)
         .into_iter()
         .filter(|action| {
             matches!(
                 action,
                 ActionBody::Play {
-                    face_down: Some(_),
+                    face_down: Some(RevealAt::Cloaked),
                     ..
                 }
             )
         })
         .collect();
     assert!(!offered.is_empty());
+}
+
+/// Whether the definition prints Cloaked on a face (Cloaked Toe Cracker does, R783009).
+fn prints_cloaked(state: &GameState, def_id: &str) -> bool {
+    let def = find_def(Some(state), def_id).expect("a def");
+    [&def.base, &def.radiant]
+        .into_iter()
+        .any(|face| face.keywords.contains(&Keyword::Cloaked))
 }
 
 /// R783009: a vanilla that prints Cloaked, registered beside the real cards on this thread only.
@@ -222,12 +236,17 @@ fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
             assert_eq!(sampled.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
         } else {
             let def = find_def(Some(&world), &sampled.def_id).expect("a sampled def");
-            assert!(
-                def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap,
-                "a non-Trap sampled with no permission: {}",
-                sampled.def_id
-            );
-            assert_eq!(sampled.set_as, None);
+            if prints_cloaked(&world, &sampled.def_id) {
+                // Another card that prints Cloaked (Cloaked Toe Cracker), stamped the same way.
+                assert_eq!(sampled.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
+            } else {
+                assert!(
+                    def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap,
+                    "a non-Trap sampled with no aura: {}",
+                    sampled.def_id
+                );
+                assert_eq!(sampled.set_as, None);
+            }
         }
     }
     assert!(cloaked > 0, "the Cloaked card was never sampled in 300 worlds");

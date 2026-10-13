@@ -222,7 +222,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "An attack on it is legal only from the enemy unit zone of its own lane",
   ),
   Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
-  // Patch v0.3.X (R781005): the pool's name, printed lower-case ("random combat keywords").
+  // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords").
   "Combat keyword": status(
     "Combat keyword",
     "One of the keywords Units fight with: Taunt, Armor 1, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Spell Damage +1, Lifesteal, Pierce, Trample",

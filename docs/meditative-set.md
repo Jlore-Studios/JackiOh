@@ -2056,16 +2056,31 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 > units may be played as field Animated Field Traps that activate at the Start of your turn · Death:
 > Shuffle Radiant Knowledge Breaker Prime into your Deck
 
-- **Text:** Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
+> **Designer (patch v0.3.7, #781):** Aura: Your Units have Cloaked.
+
+- **Text (since patch v0.3.7):** Cry: Nerf every other CN or KY card on the field, in each hand and in
+  each deck.
+  Aura: Your Units have Cloaked.
+  Death: Shuffle a Knowledge Breaker Prime into your deck.
+- **Radiant (since patch v0.3.7):** Divine Shield
+  Cry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.
+  Aura: Your Units have Cloaked.
+  Death: Shuffle a Radiant Knowledge Breaker Prime into your deck.
+- **Engine (since patch v0.3.7, R1040, R1041):** the Aura is `alt_play::cloak_hand_aura(Unit)`: while
+  it acts on its controller's field, the Unit cards in that hand have Cloaked (R783007), so each may be
+  set face-down at its own price (R783004, R783005) and revealed only by its Reveal, offered while it
+  has a unit zone to come out into (R783006); revealed on a later turn it may attack at once. A Unit
+  set stays set when the Aura leaves. The face-down permission (`face_down_play`) is gone.
+- **Text (until patch v0.3.7):** Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
   Aura: You may play your Units face-down as Animated Field Traps that reveal at the
   start of your next turn.
   Death: Shuffle a Knowledge Breaker Prime into your deck.
-- **Radiant:** Divine Shield
+- **Radiant (until patch v0.3.7):** Divine Shield
   Cry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.
   Aura: You may play your Units face-down as Animated Field Traps that reveal at the
   start of your next turn.
   Death: Shuffle a Radiant Knowledge Breaker Prime into your deck.
-- **Engine:**
+- **Engine (until patch v0.3.7):**
   - Cry: `degrade { scope: { side: any, zones: [field, hand, library], tags: [CN, KY], excludeSelf },
     times }`. The scope's `tags` is any-of, so "CN & KY" is the union. Changes to cards a seat cannot
     read are reported per R440.
@@ -2074,7 +2089,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
   - Aura: ME-ALTPLAY's permission, live while this acts on its controller's field (MD-C16, MD-C17).
     `determinize` (R185, R762) must also sample a hidden backrow card from that seat's Units while a
     permission is on its side.
-- **Rulings:**
+- **Rulings (until patch v0.3.7):**
   - **MD-C16: While a card with this Aura acts on its controller's field, `legalActions` also offers
     each Unit card in that player's hand as a face-down play into an empty, unlocked backrow zone (a new
     flag on the `play` action). The price is the Unit's: mana, X and Tribute, with R65's cost rules
@@ -2102,7 +2117,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
   - Divine Shield moved to the keyword line.
   - R279: this card's name sits inside its Prime's, so `refs` list both (C+ #38's precedent).
   - R275: stats doubled, Divine Shield added, Nerf twice, Radiant Prime.
-- **Class:** C (ME-ALTPLAY).
+- **Class (until patch v0.3.7):** C (ME-ALTPLAY).
 
 #### Meditative #45.1 · Knowledge Breaker Prime
 `meditative-045-1` · (4) Unit, CN, KY, Prime, Token · Token (printed Legendary) · 6/18 → 12/36
@@ -2112,15 +2127,24 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 > Poisonous · Cry: Summon 5 Random Radiant Traps; Exile all other CN & KY cards · Aura: your units may be
 > played as field Animated Traps that activate at the Start of your turn
 
-- **Text:** Rush
+> **Designer (patch v0.3.7, #781):** Aura: Your Units have Cloaked.
+
+- **Text (since patch v0.3.7):** Rush
+  Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
+  Aura: Your Units have Cloaked.
+- **Radiant (since patch v0.3.7):** Rush, Poisonous
+  Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.
+  Aura: Your Units have Cloaked.
+- **Engine (since patch v0.3.7, R1043):** the Aura is #45's, `cloak_hand_aura(Unit)`.
+- **Text (until patch v0.3.7):** Rush
   Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
   Aura: You may play your Units face-down as Animated Field Traps that reveal at the
   start of your next turn.
-- **Radiant:** Rush, Poisonous
+- **Radiant (until patch v0.3.7):** Rush, Poisonous
   Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.
   Aura: You may play your Units face-down as Animated Field Traps that reveal at the
   start of your next turn.
-- **Engine:**
+- **Engine (until patch v0.3.7):**
   - Cry, in the text's order: first `summon_random { query: { type: TRAP_TYPES } }` five times. These
     are non-token Traps and Field Traps of every set (R380), repeats allowed (R60), placed face-down
     (R33) in the leftmost open backrow zones (R64); a full backrow takes fewer. Then
@@ -2128,7 +2152,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
     card on the field (R13), face-down cards are included, and Indestructible cards survive (R46). The
     Radiant face uses `exile_all` with the same scope.
   - Aura: ME-ALTPLAY, as #45.
-- **Rulings:** **MD-C19: The Prime's "Animated Traps" is the same face-down play as Knowledge Breaker's
+- **Rulings (until patch v0.3.7):** **MD-C19: The Prime's "Animated Traps" is the same face-down play as Knowledge Breaker's
   "Animated Field Traps". R383 already keeps an Animated Trap that has no room face-up, as a Field Trap
   does, so the two wordings differ in nothing.** MD-C18 sets the scope. The Radiant face's Exile keeps
   the base face's reach (both fields): the designer changed the verb, not the scope. A CN or KY Trap
@@ -2136,7 +2160,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 - **Numbers:** `traps` 5 → 5 ↑ (max 5, the backrow's size).
 - **Check:** R275: stats doubled, Poisonous added, Radiant Traps, and an exile that beats Indestructible,
   Reborn and Death.
-- **Class:** C (ME-ALTPLAY).
+- **Class (until patch v0.3.7):** C (ME-ALTPLAY).
 
 #### Meditative #46 · Conjure Intellect
 `meditative-046` · (2, embiggen 4) Spell · Epic
@@ -2865,22 +2889,22 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 > **Designer:** 1/1 · Has every Keyword. ~~~ 2/2 · Has every Keyword. · Death: Give them all to another
 > one of your Units.
 
-> **Designer (patch v0.3.X, #781):** Equip · Aura: Has 5 [10] random combat keywords.
+> **Designer (patch v0.3.7, #781):** Equip · Aura: Has 5 [10] random combat keywords.
 
-- **Text (since patch v0.3.X):** Equip
+- **Text (since patch v0.3.7):** Equip
   Aura: Has 5 random combat keywords.
-- **Radiant (since patch v0.3.X):** Equip
+- **Radiant (since patch v0.3.7):** Equip
   Aura: Has 10 random combat keywords.
-- **Engine (since patch v0.3.X, R781004):** the Aura's keywords come from the combat keyword pool
+- **Engine (since patch v0.3.7, R781004):** the Aura's keywords come from the combat keyword pool
   (SPEC §6.1, R21), drawn as the card arrives on the field and kept on it until it leaves (R78): different
   ones, none it has, no Taunt beside Indestructible (R347). The Aura is its text, so a Vanilla takes them;
   played as Equip onto a Unit, the host carries the Aura and draws its own as it fuses (`fusedInto`).
   The number is declared (`keywords`, 5 and 10, R386).
-- **Until patch v0.3.X:** Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn,
+- **Until patch v0.3.7:** Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn,
   Divine Shield, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Lucky 1, Spell Damage +1,
   Immune to Spells, Windfury, Deft, Equip; "This has every keyword."; Radiant also "Death: Give every
   keyword this has to another random Unit of yours."
-- **Engine (until patch v0.3.X):** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Equip.
+- **Engine (until patch v0.3.7):** The 21 are printed `keywords`: every engine `KeywordKind` plus Meditative's Equip.
   Five are left out:
   - Can't attack, Brittle and Temporary, which only hurt;
   - Animated and Animated on your turn, which mean something only on a backrow card.
@@ -2894,7 +2918,7 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 - **Rulings:** **MD-D21:** the list above is the card's printed data, not "whatever the engine knows". A
   later keyword joins only by a patch. **MD-D22:** the Radiant Death's receiver is random (Hearthstone's
   Deathrattle), and the keywords are granted (§10.4).
-- **Numbers:** `keywords` 5 (Radiant 10) since patch v0.3.X; before it none (Armor, Lucky and Spell
+- **Numbers:** `keywords` 5 (Radiant 10) since patch v0.3.7; before it none (Armor, Lucky and Spell
   Damage were numbered keywords, R386).
 - **Class:** B (Equip comes from ME-EQUIP).
 
@@ -3836,14 +3860,28 @@ Jlarna is played too.
 > the End of your turn, Start of your next turn, or End of your next turn · They also gain Echo +1 ·
 > Draw 1
 
-- **Text:** Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as you
+> **Designer (patch v0.3.7, #781):** Aura: Your Spells have Cloaked. ~~~ Spells you reveal have Echo
+> +1.
+
+- **Text (since patch v0.3.7):** Aura: Your Spells have Cloaked.
+  Cry: Draw {draw|card|cards}.
+- **Radiant (since patch v0.3.7):** Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.
+  Cry: Draw {draw|card|cards}.
+- **Engine (since patch v0.3.7, R1044, R1045):** the Aura is `cloak_hand_aura(Spell)`: the Spell cards
+  in its controller's hand have Cloaked while it acts (R783007). A set Spell is priced as itself, so C
+  #6's "Your Traps cost (0)" no longer makes it free (R783005); it reveals only by its Reveal, not
+  offered while a target its play needs has no pick (R703, R783006); its effects come from a Trap, but
+  Immutable bars its aim (R781001). The Radiant face's `revealEcho` hook adds Echo +`echo` to each Spell
+  its controller reveals while it acts, read at the reveal, the largest of several (R1045). The three
+  reveal times and R1045's reveal on time after Paranoia leaves are gone with the permission.
+- **Text (until patch v0.3.7):** Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as you
   play it: the end of this turn, the start of your next turn, or the end of your next turn.
   Cry: Draw {draw|card|cards}.
-- **Radiant:** Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as
+- **Radiant (until patch v0.3.7):** Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as
   you play it: the end of this turn, the start of your next turn, or the end of your next turn. Each has
   Echo +{echo}.
   Cry: Draw {draw|card|cards}.
-- **Engine:** **ME-ALTPLAY** (shared with Knowledge Breaker). A permission hook (as `graveyard_play`
+- **Engine (until patch v0.3.7):** **ME-ALTPLAY** (shared with Knowledge Breaker). A permission hook (as `graveyard_play`
   is) live while Paranoia acts on its controller's field: `legal_actions` also offers each Spell they
   could play, from hand or under a graveyard permission, as a face-down play into an empty, unlocked
   backrow zone at its price, the timing a mode in the `play` action (R81), with X or embiggen chosen
@@ -3854,7 +3892,7 @@ Jlarna is played too.
   its Spell text resolves, its declared targets and modes asked as prompts in declaration order (R467's
   way), Echo repeats with fresh prompts (Radiant: +`echo`, as Twinspell's grant); then it goes to its
   owner's graveyard as its printed Spell (R766). The Cry is its unlabelled draw (R408).
-- **Rulings:** **MD-E17:** a Spell played this way is a Trap play for every rule that reads plays and
+- **Rulings (until patch v0.3.7):** **MD-E17:** a Spell played this way is a Trap play for every rule that reads plays and
   prices (C #6's "Your Traps cost (0)", C #2's next-Trap discount, play counts by type, Combo), and a
   Trap on the field until it reveals (backrow and Trap effects reach it; a Counter for Spells doesn't
   see it); its effects come from a Trap (no Spell Damage, and Immune to Spells doesn't stop them); it
@@ -3864,7 +3902,7 @@ Jlarna is played too.
   Paranoia acting as it is set gives it Echo +1, however many permit the play.
 - **Numbers:** `draw` 1 → 1 ↑; `echo` 1 (Radiant only, `tunedOn: "radiant"`) ↑.
 - **Check:** the designer's second #93 is #99. "Activate" is read as reveal, not R384's Activate.
-- **Class:** C (ME-ALTPLAY).
+- **Class (until patch v0.3.7):** C (ME-ALTPLAY).
 
 ---
 
@@ -4414,7 +4452,7 @@ the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbe
     - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
       Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
       Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
-      Peptides, M #65 Keymaster Keenus (Lucky 1 was among its every keyword until patch v0.3.X, R781004), M #86 Mayor Medinamogger
+      Peptides, M #65 Keymaster Keenus (Lucky 1 was among its every keyword until patch v0.3.7, R781004), M #86 Mayor Medinamogger
       and M #102 Catboy Maid SSR+.
     - It is a query in `crates/cards/src/query.rs` (`luck_based()`), like every other random pool,
       over the catalog query's `luckBased` (`CatalogQueryArgs.luck_based`, `is_luck_based` in

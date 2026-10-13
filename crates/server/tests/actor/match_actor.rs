@@ -4286,7 +4286,7 @@ mod r1044_face_down_play_over_the_socket {
     use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
 
     #[test]
-    fn r1044_parses_a_face_down_play_and_refuses_a_bad_timing() {
+    fn r1044_parses_a_cloaked_face_down_play_and_refuses_a_bad_timing() {
         let parsed = parse_client_message(
             &json!({
                 "type": "action",
@@ -4294,7 +4294,7 @@ mod r1044_face_down_play_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "backrow", "lane": 2 },
-                    "faceDown": "startOfNextTurn",
+                    "faceDown": "cloaked",
                     "nonce": "set-1",
                 },
             })
@@ -4308,7 +4308,7 @@ mod r1044_face_down_play_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "backrow", "lane": 2 },
-                    "faceDown": "startOfNextTurn",
+                    "faceDown": "cloaked",
                 }))
                 .expect("a play body"),
             }))

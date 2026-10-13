@@ -6,7 +6,6 @@ pub mod activate;
 pub mod after_attack;
 pub mod after_attacked;
 pub mod ai_policy;
-pub mod alt_play;
 pub mod alt_wins;
 pub mod animated;
 pub mod announce;

@@ -1,77 +1,25 @@
-//! Face-down plays as Traps (ME-ALTPLAY, R1040–R1046).
+//! Face-down plays as Traps: Cloaked (#783, R783004–R783010, and R1040–R1046 since patch v0.3.7).
 //!
-//! Knowledge Breaker (#45) and its Prime (#45.1) let their controller play Units face-down into the
-//! backrow as Animated Field Traps that reveal at the start of the next turn (MD-C16, MD-C17, MD-C19);
-//! Paranoia (#99) lets its controller play Spells face-down as Traps that reveal at a chosen timing
-//! (MD-E17, MD-E18). The permission is a hook like `graveyard_play`, live while the granter acts on
-//! its controller's field. A set card is a Field Trap (Unit) or Trap (otherwise) until it reveals,
-//! hidden like any set Trap (R33, R1046), its text dormant. A set Unit flips, animates and runs its
-//! Cry with prompts at its controller's next start of turn, keeping its set turn as `summonedTurn`
-//! so it may attack (MD-C17); a set Spell reveals at its point and resolves its Spell text with
-//! prompts and Echo repeats (MD-E17). The form ends when the card leaves the field (R78, R1045).
+//! A Unit, Spell or Field Spell that has Cloaked in its controller's hand (printed, given, or lent by
+//! an aura that reaches the cards in a hand, §10.4 layer 5, as Knowledge Breaker (#45) and its Prime
+//! (#45.1) lend it to Units and Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at
+//! its own price (R783005). A set card is a Field Trap (a Unit or a Field Spell) or a Trap (a Spell)
+//! until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It has no timing: it
+//! reveals only when its controller activates its Reveal (`CLOAKED_REVEAL`, `subsystems::activate`),
+//! which is offered only while the card can come out whole (`reveal_can_complete`). A set Unit flips,
+//! animates and runs its Cry with prompts, keeping its set turn as `summonedTurn` so it may attack
+//! (R1041); a set Spell resolves its Spell text with prompts and its Echo repeats, Radiant Paranoia's
+//! Echo +N among them while one acts on its controller's field (`reveal_echo_bonus`, R1045). The form
+//! ends when the card leaves the field (R78).
 //!
-//! Cloaked (#783, R783004–R783008) is the keyword form of the same play: a Unit, Spell or Field
-//! Spell that has Cloaked in its controller's hand (printed, given, or lent by an aura that reaches
-//! the cards in a hand, §10.4 layer 5) may be set face-down at its own price (R783005), and has no
-//! timing: it reveals only when its controller activates its Reveal (`CLOAKED_REVEAL`,
-//! `subsystems::activate`), which is offered only while the card can come out whole
-//! (`reveal_can_complete`). The reveal is the same firing as a timed one (`fire_cloaked_reveal`).
+//! Until patch v0.3.7 the same play was ME-ALTPLAY's permission (`face_down_play`): Knowledge
+//! Breaker's Aura set Units that revealed at the start of the next turn, Paranoia's set Spells that
+//! revealed at a time chosen as they were played. No card grants it now, and the three timings
+//! (`RevealAt::ALL`) are never offered; the wire keeps them so old records still read.
 
-use crate::script::{CostAuraArgs, Effect, EngineSink, FaceDownPlayPermission, HookArgs, TriggerDef};
+use crate::script::{AuraEntry, AuraHook, Effect, EngineSink, HookArgs, StatMod, TriggerDef};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
-use crate::wire::{
-    CardType, GameEvent, GameEventType, KeywordKind, PlayerId, RevealAt, Row, Zone, ZoneChoice,
-};
-
-/// What a side grants now: whether Units and Spells may be set, and the Echo a Radiant Paranoia adds.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct FaceDownGrant {
-    pub units: bool,
-    pub spells: bool,
-    pub echo: i32,
-}
-
-/// ME-ALTPLAY: every face-down permission the player has now — from each card acting on their side
-/// of the field whose running face grants one, like `graveyard_play::graveyard_grants_of`.
-pub fn grants_of(state: &GameState, player: PlayerId) -> FaceDownGrant {
-    let mut out = FaceDownGrant::default();
-    for row in [Row::Units, Row::Backrow] {
-        for slot in crate::zones::slots_of(player, row) {
-            let Some(source) = crate::zones::card_at(state, slot) else {
-                continue;
-            };
-            if source.controller != player {
-                continue;
-            }
-            let script = crate::scripts::script_of(state, source);
-            let Some(hook) = script.face_down_play.as_ref() else {
-                continue;
-            };
-            let args = HookArgs {
-                state,
-                self_: source,
-                radiant: source.radiant,
-            };
-            let args = CostAuraArgs {
-                state: args.state,
-                self_: args.self_,
-                radiant: args.radiant,
-            };
-            for permission in hook(args) {
-                if permission.units == Some(true) {
-                    out.units = true;
-                }
-                if permission.spells == Some(true) {
-                    out.spells = true;
-                }
-                if let Some(echo) = permission.echo {
-                    out.echo = out.echo.max(echo);
-                }
-            }
-        }
-    }
-    out
-}
+use crate::wire::{CardType, GameEvent, Keyword, KeywordKind, PlayerId, RevealAt, Row, Zone, ZoneChoice};
 
 /// What a face-down play sets: a Unit, a Spell, or (Cloaked, R783004) a Field Spell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -155,58 +103,68 @@ pub fn lent_cloaked_def_ids(state: &GameState, player: PlayerId) -> Vec<String> 
         .collect()
 }
 
-/// ME-ALTPLAY: what a permission lets this card be set as, or `None`.
-fn permission_kind(
-    state: &GameState,
-    player: PlayerId,
-    card: &CardInstance,
-    from_graveyard: bool,
-) -> Option<SetKind> {
-    let grants = grants_of(state, player);
-    let printed = crate::faces::card_type_of_face(state, &card.def_id, card.radiant);
-    if printed == CardType::Unit && !from_graveyard && grants.units {
-        return Some(SetKind::Unit);
-    }
-    if printed == CardType::Spell {
-        // Field Spells are permanents already (D1): never set.
-        if crate::faces::card_type_of(state, card) == CardType::Spell && grants.spells {
-            return Some(SetKind::Spell);
-        }
-    }
-    None
-}
-
-/// ME-ALTPLAY: the timings a permission's kind may reveal at — a Unit at the start of the next turn only.
-fn timings(kind: SetKind) -> Vec<RevealAt> {
-    match kind {
-        SetKind::Unit => vec![RevealAt::StartOfNextTurn],
-        SetKind::Spell => RevealAt::ALL.to_vec(),
-        SetKind::FieldSpell => Vec::new(),
-    }
-}
-
-/// ME-ALTPLAY, R1040, R1044, R783004: every way this card may be set face-down now, as a kind and
-/// a timing — a permission's timings first, then Cloaked's own (`RevealAt::Cloaked`), which a Unit,
-/// a Spell or a Field Spell in a hand has and a Trap or a Field Trap never does.
+/// R783004: the way this card may be set face-down now, as a kind and its timing (`RevealAt::Cloaked`):
+/// a Unit, a Spell or a Field Spell with Cloaked in a hand has one, a Trap, a Field Trap or a card in a
+/// graveyard never does.
 pub(crate) fn face_down_options(
     state: &GameState,
-    player: PlayerId,
     card: &CardInstance,
     from_graveyard: bool,
 ) -> Vec<(SetKind, RevealAt)> {
-    let mut out: Vec<(SetKind, RevealAt)> = Vec::new();
-    if let Some(kind) = permission_kind(state, player, card, from_graveyard) {
-        out.extend(timings(kind).into_iter().map(|reveal| (kind, reveal)));
+    if from_graveyard || !is_cloaked(state, card) {
+        return Vec::new();
     }
-    if !from_graveyard && is_cloaked(state, card) {
-        let kind = match crate::faces::card_type_of_face(state, &card.def_id, card.radiant) {
-            CardType::Unit => Some(SetKind::Unit),
-            CardType::Spell => Some(SetKind::Spell),
-            CardType::FieldSpell => Some(SetKind::FieldSpell),
-            CardType::Trap | CardType::FieldTrap => None,
-        };
-        if let Some(kind) = kind {
-            out.push((kind, RevealAt::Cloaked));
+    let kind = match crate::faces::card_type_of_face(state, &card.def_id, card.radiant) {
+        CardType::Unit => SetKind::Unit,
+        CardType::Spell => SetKind::Spell,
+        CardType::FieldSpell => SetKind::FieldSpell,
+        CardType::Trap | CardType::FieldTrap => return Vec::new(),
+    };
+    vec![(kind, RevealAt::Cloaked)]
+}
+
+/// R1040, R1044, R783007: "Aura: Your <type>s have Cloaked." — Cloaked for each card of this printed
+/// type in its controller's hand while the source acts on their field (Knowledge Breaker and its
+/// Prime for Units, Paranoia for Spells). A card already set keeps its form when the aura ends.
+pub fn cloak_hand_aura(type_: CardType) -> AuraHook {
+    crate::script::aura_hook(move |args| {
+        let controller = args.self_.controller;
+        let state = args.state;
+        vec![AuraEntry {
+            applies: Box::new(move |card: &CardInstance| {
+                matches!(card.zone, Zone::Hand { player } if player == controller)
+                    && crate::faces::card_type_of_face(state, &card.def_id, card.radiant) == type_
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![Keyword::Cloaked]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+/// R1045: the Echo every card acting on this player's field adds to a Spell they reveal now — the
+/// largest any of them gives (`Script::reveal_echo`, Radiant Paranoia's "Spells you reveal have Echo
+/// +{echo}"), 0 with none. Read as the Spell reveals, so a Paranoia that left before then adds none.
+pub fn reveal_echo_bonus(state: &GameState, player: PlayerId) -> i32 {
+    let mut out = 0;
+    for row in [Row::Units, Row::Backrow] {
+        for slot in crate::zones::slots_of(player, row) {
+            let Some(source) = crate::zones::card_at(state, slot) else {
+                continue;
+            };
+            if source.controller != player || source.vanilla || is_dormant(source) {
+                continue;
+            }
+            let script = crate::scripts::script_of(state, source);
+            let Some(hook) = script.reveal_echo.as_ref() else {
+                continue;
+            };
+            out = out.max(hook(HookArgs {
+                state,
+                self_: source,
+                radiant: source.radiant,
+            }));
         }
     }
     out
@@ -237,15 +195,12 @@ pub fn set_type_of(state: &GameState, card: &CardInstance) -> Option<CardType> {
     }
 }
 
-/// ME-ALTPLAY: what a play pays as — a set printed Unit pays as a Unit (MD-C16), a card set by its
-/// Cloaked as the card it is in hand (R783005), anything else as `card_type_of` reads it (a set
-/// Spell as a Trap, MD-E17).
+/// R783005, R1044: what a play pays as — a card set face-down as the card it is in hand (a set Spell
+/// as a Spell, so Cloaked Toe Cracker's "Your Traps cost (0)" never reaches it), anything else as
+/// `card_type_of` reads it.
 pub fn priced_type_of(state: &GameState, card: &CardInstance) -> CardType {
-    if let Some(set) = card.set_as {
-        let printed = crate::faces::card_type_of_face(state, &card.def_id, card.radiant);
-        if printed == CardType::Unit || set.reveal == RevealAt::Cloaked {
-            return printed;
-        }
+    if card.set_as.is_some() {
+        return crate::faces::card_type_of_face(state, &card.def_id, card.radiant);
     }
     crate::faces::card_type_of(state, card)
 }
@@ -257,42 +212,13 @@ pub fn is_dormant(card: &CardInstance) -> bool {
         && matches!(card.zone, Zone::Field { .. })
 }
 
-/// ME-ALTPLAY: the triggers a set card fires on — one `@reveal` on turn started and ended. A card
-/// set by its Cloaked has no timing (R783006): its `@reveal` names no event, so no dispatch ever
+/// R783006: the trigger a set card fires on — one `@reveal` that names no event, so no dispatch ever
 /// offers it one, and only its Reveal fires it (`fire_cloaked_reveal`).
 pub(crate) fn reveal_triggers(card: &CardInstance) -> Vec<TriggerDef> {
-    let Some(set) = card.set_as else {
+    if card.set_as.is_none() {
         return Vec::new();
-    };
-    let reveal = set.reveal;
-    if reveal == RevealAt::Cloaked {
-        return vec![TriggerDef::new("@reveal", &[], |_, _| vec![reveal_effect()])];
     }
-    let set_turn = set.set_turn;
-    let trigger = TriggerDef::new(
-        "@reveal",
-        &[GameEventType::TurnStarted, GameEventType::TurnEnded],
-        |_, _| vec![reveal_effect()],
-    )
-    .with_when(move |ctx, event| {
-        let controller = ctx.controller;
-        match reveal {
-            RevealAt::EndOfThisTurn => match event {
-                GameEvent::TurnEnded { turn, .. } => *turn >= set_turn,
-                _ => false,
-            },
-            RevealAt::StartOfNextTurn => match event {
-                GameEvent::TurnStarted { player, turn, .. } => *player == controller && *turn > set_turn,
-                _ => false,
-            },
-            RevealAt::EndOfNextTurn => match event {
-                GameEvent::TurnEnded { player, turn, .. } => *player == controller && *turn > set_turn,
-                _ => false,
-            },
-            RevealAt::Cloaked => false,
-        }
-    });
-    vec![trigger]
+    vec![TriggerDef::new("@reveal", &[], |_, _| vec![reveal_effect()])]
 }
 
 /// R783006: whether a card set by its Cloaked can come out whole now, which its Reveal waits for — a
@@ -373,7 +299,9 @@ fn reveal_effect() -> Effect {
             };
             crate::cry_trigger::trigger_cry_of(ctx, &live, controller);
         } else {
-            let echo = set.echo.unwrap_or(0);
+            // R1045: the Echo stamped as it was set (none since patch v0.3.7), and Radiant Paranoia's
+            // while one acts on its controller's field now.
+            let echo = set.echo.unwrap_or(0) + reveal_echo_bonus(ctx.state, controller);
             if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id)
                 && let Some(set) = stored.set_as.as_mut()
             {
@@ -387,7 +315,3 @@ fn reveal_effect() -> Effect {
         }
     })
 }
-
-/// Silence the unused-permission warning: the hook type is built by card scripts.
-#[allow(dead_code)]
-fn _uses_permission(_: &FaceDownPlayPermission) {}

@@ -209,7 +209,6 @@ describe("MN09: every Meditative face fits its frame at the inspect view's sizes
       "meditative-022 radiant",
       "meditative-022-1 base",
       "meditative-022-1 radiant",
-      "meditative-045 radiant",
       "meditative-049-1 base",
       "meditative-049-1 radiant",
       "meditative-095 base",

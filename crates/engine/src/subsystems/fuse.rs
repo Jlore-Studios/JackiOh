@@ -874,6 +874,19 @@ fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadLi
     }
 }
 
+/// R1045: a number read of `{ state, self, radiant }` that several ingredients give (`revealEcho`): the
+/// largest of their answers, as several Radiant Paranoias add one Echo, not their sum.
+fn largest_read(values: Vec<Option<crate::script::RevealEchoHook>>) -> Option<crate::script::RevealEchoHook> {
+    let defined: Vec<crate::script::RevealEchoHook> = values.into_iter().flatten().collect();
+    match defined.len() {
+        0 => None,
+        1 => defined.into_iter().next(),
+        _ => Some(Arc::new(move |args| {
+            defined.iter().map(|f| f(args)).max().unwrap_or(0)
+        })),
+    }
+}
+
 /// `eager_read` for a read of the condition context (`preview`, R280).
 fn eager_condition<R: 'static>(values: Vec<Option<ConditionListHook<R>>>) -> Option<ConditionListHook<R>> {
     let defined: Vec<ConditionListHook<R>> = values.into_iter().flatten().collect();
@@ -1164,7 +1177,7 @@ fn combine_objects(records: &[Script]) -> Script {
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
-        face_down_play: eager_read(records.iter().map(|s| s.face_down_play.clone()).collect()),
+        reveal_echo: largest_read(records.iter().map(|s| s.reveal_echo.clone()).collect()),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),

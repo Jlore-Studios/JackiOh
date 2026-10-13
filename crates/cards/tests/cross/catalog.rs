@@ -5545,7 +5545,7 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
     // R347 keeps Taunt off an Indestructible unit whatever prints it, so a face printing both would
     // print a Taunt it never has. Patch v0.1.1 dropped Indestructible from the two faces that did, #55
     // and #56 radiant (issue #27), and none may print both again. Keymaster Keenus (M #65) printed every
-    // keyword until patch v0.3.X (R1084); it prints Equip and an Aura now (R781004), so no face does.
+    // keyword until patch v0.3.7 (R1084); it prints Equip and an Aura now (R781004), so no face does.
     #[test]
     fn r347_r1084_no_unit_face_prints_both() {
         let both: Vec<String> = entries()

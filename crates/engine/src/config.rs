@@ -192,7 +192,7 @@ pub const RANDOM_ATTACK_TARGET: &str = "random";
 
 /// R21: the combat keyword pool, which Plastic Surgery, Zao Gao, the Conjure Rush Tokens, a Buff's
 /// keyword row and Keymaster Keenus's Aura draw from; a unit never gets a keyword it has. R346: patch
-/// v0.1.1 added Pierce, R636 Windfury and R49 (patch v0.2.4) Deft. Patch v0.3.X (R781005) made it the
+/// v0.1.1 added Pierce, R636 Windfury and R49 (patch v0.2.4) Deft. Patch v0.3.7 (R781005) made it the
 /// designer's combat keyword pool, in the designer's order, adding Flying, Ranged, Indestructible and
 /// Spell Damage +1; the order picks which keyword a seeded draw returns. Temporary (R637) stays out,
 /// since a card on the field is never in a hand to be discarded. (Keyword keys, as `keyword_key`

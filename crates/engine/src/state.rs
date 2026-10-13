@@ -285,10 +285,10 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub created: Option<bool>,
-    /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
-    /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
-    /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
-    /// with the card leaving the field (R1045). Absent on every other card.
+    /// R783004, R1040, R1044: the card was played face-down into the backrow as a Trap by its Cloaked
+    /// (printed, or lent by an aura such as Knowledge Breaker's or Paranoia's) and has not finished
+    /// revealing. Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes
+    /// it off with the card leaving the field (R1045). Absent on every other card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub set_as: Option<SetAs>,
@@ -307,9 +307,10 @@ pub struct CardInstance {
     pub grants: Option<Vec<Grant>>,
 }
 
-/// ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
-/// when it reveals, the turn it was set in, the Echo a Radiant Paranoia gave it (R1045), and, once
-/// a set Spell has turned face-up, that its own text now resolves (`revealing`).
+/// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
+/// it reveals (`cloaked`, by its Reveal; the three timings are from before patch v0.3.7), the turn it
+/// was set in, the Echo stamped as it was set (none since then, R1045), and, once a set Spell has
+/// turned face-up, that its own text now resolves (`revealing`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -320,7 +321,8 @@ pub struct CardInstance {
 pub struct SetAs {
     pub reveal: RevealAt,
     pub set_turn: i32,
-    /// R1045: the Echo the permission added as the card was set (Radiant Paranoia's +1), once.
+    /// R1045: the Echo stamped as the card was set, once. Nothing stamps one since patch v0.3.7:
+    /// Radiant Paranoia's Echo is read as the Spell reveals (`alt_play::reveal_echo_bonus`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub echo: Option<i32>,

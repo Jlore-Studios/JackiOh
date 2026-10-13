@@ -199,7 +199,7 @@ pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
 }
 
 fn trap_triggers_of(state: &GameState, trap: &CardInstance) -> Vec<TrapTrigger> {
-    // ME-ALTPLAY, R1040, R1044: a set card reveals on its own timing, not on its printed triggers.
+    // R783006, R1040, R1044: a set card reveals by its Reveal alone, not on its printed triggers.
     if trap.set_as.is_some() {
         return crate::alt_play::reveal_triggers(trap);
     }
