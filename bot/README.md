@@ -423,10 +423,10 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh`; weak since 2026-10-11, so easy items only | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
-| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
+| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh`; weak since 2026-10-11, so easy items only | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2), on the Devin plan that came with Windsurf, which is canceled; off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-11-02 (`off_from`), when the plan runs out | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -491,7 +491,9 @@ prints each one and whether it could start now, and `/harness status` does the s
     watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
-    last reading had nearly full (85% or more), else an hour.
+    last reading had nearly full (85% or more), else an hour. A failed agy or Muse call whose
+    reading after it has a window full is that window's refusal, whatever the CLI said: their
+    caps are 100% (#798), so their own limit ends such a call.
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
