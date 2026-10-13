@@ -4511,16 +4511,19 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-442",
       "part_of": 442,
       "pending_request": false,
       "provider": "claude-5",
       "queued_at": "2026-10-13T07:06:22Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "38472887957",
       "started_at": "2026-10-13T21:47:58Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "765": {
       "failures": 0,
