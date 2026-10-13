@@ -82,6 +82,12 @@
       "lines": [
         "@jgoetzmann-bot exception for this issue"
       ]
+    },
+    "c:6152444708": {
+      "at": "2026-10-13T18:31:56Z",
+      "lines": [
+        "/harness build"
+      ]
     }
   },
   "items": {
