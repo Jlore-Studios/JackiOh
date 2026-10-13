@@ -804,7 +804,7 @@ pub fn validate_play(
         run.source = Some(PlaySource::Graveyard);
         // R783013: a play only the card's own Flashback allows spends it, read here as the play is
         // checked — a Tribute at step 2 may take the permission that allowed it off the field.
-        if crate::graveyard_play::spends_flashback(state, player, &card) {
+        if crate::graveyard_play::spends_flashback(state, player, &card, cost, action.plague.as_ref()) {
             run.flashback = Some(true);
         }
     }

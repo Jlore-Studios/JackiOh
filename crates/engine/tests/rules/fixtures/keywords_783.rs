@@ -309,6 +309,18 @@ pub fn second_wind() -> CardDef {
     unit(7862, "second-wind", 1, 1, 3, json!([]))
 }
 
+/// "You may play cards from your graveyard that cost (3) or more" (Radiant Second Wind's shape, at a
+/// higher floor than the Flashback cards' (2)).
+pub fn picky_wind() -> CardDef {
+    unit(7865, "picky-wind", 1, 1, 3, json!([]))
+}
+
+/// "You may play Units from your graveyard, paid with this card's Plague Counters" (Classic #74 Corpse
+/// Plantation's shape).
+pub fn plague_field() -> CardDef {
+    def(7866, "plague-field", "Field Spell", 1, json!([]))
+}
+
 /// A Field Trap that prints Cloaked, which a Field Trap may never use.
 pub fn cloaked_field_trap() -> CardDef {
     def(
@@ -360,6 +372,8 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         flashback_spell(),
         flashback_unit(),
         second_wind(),
+        picky_wind(),
+        plague_field(),
         cloaked_mourner(),
         cloaked_field_trap(),
     ]
@@ -612,6 +626,31 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         second_wind().id,
         both(Script {
             graveyard_play: Some(read_hook(|_args| vec![GraveyardPlayPermission::default()])),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        picky_wind().id,
+        both(Script {
+            graveyard_play: Some(read_hook(|_args| {
+                vec![GraveyardPlayPermission {
+                    min_price: Some(3),
+                    ..GraveyardPlayPermission::default()
+                }]
+            })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        plague_field().id,
+        both(Script {
+            graveyard_play: Some(read_hook(|_args| {
+                vec![GraveyardPlayPermission {
+                    units: Some(true),
+                    plague: Some(true),
+                    ..GraveyardPlayPermission::default()
+                }]
+            })),
             ..Script::default()
         }),
     );

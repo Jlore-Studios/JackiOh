@@ -68,6 +68,23 @@ fn damage_on(state: &GameState, id: &str) -> i32 {
     find_instance(state, id).map_or(0, |card| card.damage)
 }
 
+/// The attacker `id` took nothing back: it still stands in a unit zone with no damage, and no damage
+/// event names it — so a strike back that killed it (and reset its damage as it left) cannot pass.
+fn took_nothing_back(state: &GameState, events: &[GameEvent], id: &str) {
+    let card = live(state, id);
+    assert!(
+        matches!(card.zone, Zone::Field { row: Row::Units, .. }),
+        "the attacker still stands"
+    );
+    assert_eq!(card.damage, 0);
+    assert!(
+        events_of_type(events, GameEventType::Damage)
+            .iter()
+            .all(|event| !matches!(event, GameEvent::Damage { target_id, .. } if target_id == id)),
+        "no damage event names the attacker"
+    );
+}
+
 fn in_graveyard(state: &GameState, player: PlayerId, id: &str) -> bool {
     state.players[player].graveyard.iter().any(|card| card.id == id)
 }
@@ -116,13 +133,7 @@ mod r783000_ranged {
         let (refused, events) = declare(&mut state, &archer.id, &target.id);
         assert_eq!(refused, None);
         assert_eq!(damage_on(&state, &target.id), 2);
-        assert_eq!(damage_on(&state, &archer.id), 0);
-        assert!(
-            events_of_type(&events, GameEventType::Damage).iter().all(
-                |event| !matches!(event, GameEvent::Damage { target_id, .. } if *target_id == archer.id)
-            ),
-            "no damage event names the attacker"
-        );
+        took_nothing_back(&state, &events, &archer.id);
 
         // Forced: a forced attack is still an attack, and the same holds.
         let mut forced = board("r783000-forced");
@@ -131,7 +142,7 @@ mod r783000_ranged {
         let events = force(&mut forced, &archer.id, &target.id);
         assert_eq!(events_of_type(&events, GameEventType::AttackDeclared).len(), 1);
         assert_eq!(damage_on(&forced, &target.id), 2);
-        assert_eq!(damage_on(&forced, &archer.id), 0);
+        took_nothing_back(&forced, &events, &archer.id);
 
         // A unit that is not Ranged still takes its strike back.
         let mut plain = board("r783000-plain");
@@ -212,14 +223,14 @@ mod r783001_ranged_and_cleave {
         let left = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
         let target = put(&mut state, &grunt().id, slot(P2, Row::Units, 2), json!({}));
         let right = put(&mut state, &grunt().id, slot(P2, Row::Units, 3), json!({}));
-        let (refused, _) = declare(&mut state, &cleaving.id, &target.id);
+        let (refused, events) = declare(&mut state, &cleaving.id, &target.id);
         assert_eq!(refused, None);
         // The target and both neighbours take the hit; the splashed units never strike back, and the
         // target does not either.
         assert_eq!(damage_on(&state, &target.id), 2);
         assert_eq!(damage_on(&state, &left.id), 2);
         assert_eq!(damage_on(&state, &right.id), 2);
-        assert_eq!(damage_on(&state, &cleaving.id), 0);
+        took_nothing_back(&state, &events, &cleaving.id);
     }
 }
 

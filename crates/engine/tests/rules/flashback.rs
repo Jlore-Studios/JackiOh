@@ -7,7 +7,8 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{put, slot};
 use super::fixtures::keywords_783::{
-    flashback_spell, flashback_unit, plain_spell, plain_unit, register_keywords_783, second_wind,
+    flashback_spell, flashback_unit, picky_wind, plague_field, plain_spell, plain_unit,
+    register_keywords_783, second_wind,
 };
 use super::fixtures::play_pipeline_b::{in_graveyard, pb_reduce, plays_of};
 use super::fixtures::prompt_harness::{act, board, must};
@@ -184,5 +185,72 @@ mod r783013_flashback_spent {
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
         assert!(plays_of(&state, &spell.id, P1).is_empty());
+    }
+
+    #[test]
+    fn r783013_a_permission_that_cannot_cover_the_play_leaves_it_to_flashback_which_is_spent() {
+        // A floor above the card's price (Radiant Second Wind's shape at (3)): the play is Flashback's
+        // alone, so it spends it, and nothing offers the card again.
+        let mut state = playing("r783013-floor");
+        state.players.p1.mana.current = 10;
+        put(&mut state, &picky_wind().id, slot(P1, Row::Units, 1), json!({}));
+        let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
+        state = act(
+            &state,
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+            None,
+        );
+        let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
+        assert_eq!(landed.flashback_spent, Some(true));
+        assert!(!has_flashback(&state, &landed));
+        assert!(plays_of(&state, &spell.id, P1).is_empty());
+        assert!(cast_spell(&state, &spell.id).error.is_some());
+
+        // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's and
+        // spends it; one paid with the permission's Plague Counters is the permission's and keeps it.
+        let mut grave = playing("r783013-plague");
+        let field = put(
+            &mut grave,
+            &plague_field().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        find_instance_mut(&mut grave, &field.id)
+            .expect("the permission stands")
+            .counters
+            .plague = Some(2);
+        let body = in_graveyard(&mut grave, &flashback_unit().id, P1);
+
+        let in_mana = act(
+            &grave,
+            json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
+            None,
+        );
+        let standing = must(
+            find_instance(&in_mana, &body.id).cloned(),
+            "the Unit on the field",
+        );
+        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
+        assert_eq!(standing.flashback_spent, Some(true));
+        assert!(!has_flashback(&in_mana, &standing));
+
+        let in_plague = act(
+            &grave,
+            json!({
+                "type": "play",
+                "instanceId": body.id,
+                "zone": { "row": "units", "lane": 1 },
+                "plague": { "from": field.id, "tokens": 1 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        let standing = must(
+            find_instance(&in_plague, &body.id).cloned(),
+            "the Unit on the field",
+        );
+        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
+        assert_eq!(standing.flashback_spent, None);
+        assert!(has_flashback(&in_plague, &standing));
     }
 }

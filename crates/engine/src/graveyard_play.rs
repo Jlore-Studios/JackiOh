@@ -120,11 +120,23 @@ fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Gr
     out
 }
 
-/// R783013: whether a play of this card from its player's graveyard now is Flashback's — the card has
-/// it and no permission on the field admits the card — so the play spends it. A play another permission
-/// allows spends no Flashback.
-pub fn spends_flashback(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    has_flashback(state, card) && field_admitting(state, player, card).is_empty()
+/// R783013: whether this play of the card from its player's graveyard, at this price and paid as the
+/// action says, is Flashback's — the card has it and no permission on the field covers the play as
+/// `why_graveyard_play_refused` reads it (its type, its `min_price`, and a mana payment only under a
+/// permission without `plague`) — so the play spends it. A play another permission allows spends no
+/// Flashback; a Plague payment is always its permission's, since Flashback is paid in mana.
+pub fn spends_flashback(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    price: i32,
+    plague: Option<&PlagueSpend>,
+) -> bool {
+    has_flashback(state, card)
+        && plague.is_none()
+        && !field_admitting(state, player, card).iter().any(|grant| {
+            grant.permission.plague != Some(true) && price >= grant.permission.min_price.unwrap_or(0)
+        })
 }
 
 /// R454, R65: whether a play may take this card from its player's graveyard now — the card lies there
