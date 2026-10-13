@@ -88,6 +88,12 @@
       "lines": [
         "/harness run #802"
       ]
+    },
+    "c:6155853480": {
+      "at": "2026-10-13T21:47:25Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
