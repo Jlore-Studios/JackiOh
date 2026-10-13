@@ -4924,8 +4924,11 @@
     "what": "build #458 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-13T15:11:31Z",
-    "notes": [],
+    "at": "2026-10-13T15:17:53Z",
+    "notes": [
+      "#785 needs a plan",
+      "#785: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
