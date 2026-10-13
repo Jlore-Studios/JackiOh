@@ -6277,7 +6277,7 @@
   ],
   "providers": {
     "agy": {
-      "refused_until": "2026-10-10T03:56:35Z",
+      "refused_until": "2026-10-16T17:49:53Z",
       "spent": [
         {
           "at": "2026-10-03T02:02:07Z",
@@ -6654,6 +6654,10 @@
         {
           "at": "2026-10-13T10:51:26Z",
           "minutes": 140.6
+        },
+        {
+          "at": "2026-10-13T23:34:53Z",
+          "minutes": 6.0
         }
       ],
       "tokens_spent": [
@@ -6712,17 +6716,20 @@
           "cost": 0.0,
           "input": 3470095,
           "output": 446233
+        },
+        {
+          "at": "2026-10-13T23:34:53Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 447304,
+          "output": 24104
         }
       ],
       "usage": {
-        "five_hour": {
-          "resets_at": "2026-10-13T12:11:02Z",
-          "utilization": 0.96
-        },
-        "observed_at": "2026-10-13T10:51:26Z",
+        "observed_at": "2026-10-13T23:34:53Z",
         "seven_day": {
           "resets_at": "2026-10-16T17:47:52Z",
-          "utilization": 0.98
+          "utilization": 1.0
         },
         "status": "allowed"
       }
