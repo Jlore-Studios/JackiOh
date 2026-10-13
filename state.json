@@ -5333,6 +5333,14 @@
           "claude": "strong"
         }
       }
+    },
+    "795": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-13T18:43:05Z",
+      "issue": 747,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
