@@ -1,5 +1,6 @@
 // Card history (brief B4.2 item 5; R388, R507) is public, read-only data (CLAUDE.md rule 7; §5.1).
-// Old printings do not make card references interactive (R279).
+// Old printings do not make card references interactive (R279). An entry names its patch by its
+// player note's title (R724000).
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -9,6 +10,7 @@ import { useLoaded, usePatchSource } from "./context.tsx";
 import { cardHistory, unchangedSince, versionsForCard, type HistoryEntry } from "./history.ts";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { PatchFace } from "./PatchFace.tsx";
+import { playerTitle } from "./releases.ts";
 import { patchTestid } from "./testids.ts";
 
 import "./patches.css";
@@ -24,7 +26,7 @@ function EntryView({ entry }: { entry: HistoryEntry }): ReactElement {
         <time className="patch-date" dateTime={patch.date}>
           {formatDay(patch.date)}
         </time>
-        <span className="patch-history__patch-title">{patch.title}</span>
+        <span className="patch-history__patch-title">{playerTitle(patch)}</span>
       </h4>
       <div className="patch-history__faces">
         <figure className="patch-history__face">

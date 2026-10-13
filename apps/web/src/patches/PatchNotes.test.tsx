@@ -1,8 +1,9 @@
-// R388, R507: the Patch notes page's body. Every patch newest first with its version, date, title
-// and notes; the newest shows its cards on arrival and the others load their snapshots when opened;
-// a patch's cards as faces with their changes marked, data-only changes and added cards as names by
-// set, a name filter; a card opens its full history. Fixtures through the context, the empty and
-// failed states, then the real history through the default source.
+// R388, R507, R724000: the Patch notes page's body. Patches by release line, one bubble per set, the
+// newest open; every patch newest first with its version, date, player note title and note; the
+// newest shows its cards on arrival and the others load their snapshots when opened; a patch's cards
+// as faces with their changes marked, data-only changes and added cards as names by set, a name
+// filter; a card opens its full history. Fixtures through the context, the empty and failed states,
+// then the real history through the default source.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,7 @@ import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
+import { RELEASES, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -25,8 +27,22 @@ afterEach(() => {
   cleanup();
 });
 
-function renderPage(source?: PatchSource): void {
-  render(source === undefined ? <PatchNotes /> : <PatchSourceProvider source={source}>{<PatchNotes />}</PatchSourceProvider>);
+function renderPage(source?: PatchSource, releases?: readonly Release[]): void {
+  const page = releases === undefined ? <PatchNotes /> : <PatchNotes releases={releases} />;
+  render(source === undefined ? page : <PatchSourceProvider source={source}>{page}</PatchSourceProvider>);
+}
+
+function releaseSet(id: string): HTMLElement {
+  const found = screen.getAllByTestId(patchTestid.set).find((element) => element.dataset.set === id);
+  if (found === undefined) throw new Error(`no release line ${id}`);
+  return found;
+}
+
+/** Opens every release line that is shut. */
+function openEverySet(): void {
+  for (const toggle of screen.getAllByTestId(patchTestid.setToggle)) {
+    if (toggle.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
+  }
 }
 
 function patchEntry(version: string): HTMLElement {
@@ -42,15 +58,15 @@ function byCard(testId: string, id: string, inside: HTMLElement = document.body)
 }
 
 describe("R388 the Patch notes page", () => {
-  it("R388 lists every patch newest first, in the file's order, with its version, date, title, source, notes and counts", async () => {
+  it("R388 R724000 lists every patch newest first, in the file's order, with its version, date, title, note and counts", async () => {
     renderPage(fixtureSource());
     const entries = await screen.findAllByTestId(patchTestid.patch);
     expect(entries.map((element) => element.dataset.version)).toEqual([V3, V2, V1]);
     const newest = patchEntry(V3);
-    expect(within(newest).getByRole("heading", { level: 2 })).toHaveTextContent(`${V3} Two new sets`);
+    expect(within(newest).getByRole("heading", { level: 3 })).toHaveTextContent(`${V3} Two fixture sets`);
     expect(newest).toHaveTextContent("2026-03-04");
-    expect(newest).toHaveTextContent("Fixture commit 3");
-    expect(newest).toHaveTextContent("Classic and Classic+ arrive.");
+    expect(within(newest).getByTestId(patchTestid.note)).toHaveTextContent("Test Bolt costs (2), up from (1).");
+    expect(newest).not.toHaveTextContent("Fixture commit 3");
     expect(newest).toHaveTextContent("3 cards added · 2 cards changed");
     const second = FIXTURE_PATCHES.find((patch) => patch.version === V2);
     expect(second === undefined ? "" : countsLine(second)).toBe("1 card changed · 1 card removed");
@@ -194,7 +210,10 @@ describe("R388 the Patch notes page over the real history", () => {
   it("R388 lists every patch newest first and opens v0.2.0 with Masochism Mask's new cost and the new sets by name", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
-    const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    // Only the newest release line opens on load (R724000): open the others to read the whole list.
+    openEverySet();
+    const entries = screen.getAllByTestId(patchTestid.patch);
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
     // (R646), so the page's list is the file's, whatever the newest patch is called today.
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
@@ -242,5 +261,97 @@ describe("R388 the Patch notes page over the real history", () => {
     ]);
     // The older patches wait to be opened.
     expect(within(patchEntry("v0.1.0")).queryByTestId(patchTestid.cards)).toBeNull();
+  }, 30_000);
+});
+
+describe("R724000 the Patch notes page by release line", () => {
+  const LINES: readonly Release[] = [
+    { id: "older", name: "Older line", first: V1, summary: "The older line's summary.", technical: ["An older technical change."] },
+    { id: "newer", name: "Newer line", first: V3, summary: "The newer line's summary.", technical: [] },
+  ];
+
+  it("R724000 groups patches by release line, newest first, only the newest open", async () => {
+    renderPage(fixtureSource(), LINES);
+    await screen.findAllByTestId(patchTestid.patch);
+    const sets = screen.getAllByTestId(patchTestid.set);
+    expect(sets.map((element) => element.dataset.set)).toEqual(["newer", "older"]);
+    const toggles = screen.getAllByTestId(patchTestid.setToggle);
+    expect(toggles.map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(["true", "false"]);
+    expect(within(releaseSet("newer")).getByRole("heading", { level: 2 })).toHaveTextContent(`Newer line${V3}1 patch`);
+    expect(screen.getAllByTestId(patchTestid.patch).map((element) => element.dataset.version)).toEqual([V3]);
+    expect(screen.queryAllByTestId(patchTestid.technical)).toEqual([]);
+
+    const older = releaseSet("older");
+    const toggle = within(older).getByTestId(patchTestid.setToggle);
+    expect(toggle).toHaveTextContent(`Older line${V1} – ${V2}2 patches`);
+    expect(document.getElementById(toggle.getAttribute("aria-controls") ?? "")).not.toBeVisible();
+    expect(older).not.toHaveTextContent("The older line's summary.");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(older).toHaveTextContent("The older line's summary.");
+    expect(within(older).getByTestId(patchTestid.technical)).toHaveTextContent("Technical changesAn older technical change.");
+    expect(within(older).getAllByTestId(patchTestid.patch).map((element) => element.dataset.version)).toEqual([V2, V1]);
+    // Opening a line opens no patch's cards: only the newest patch shows them on arrival (R507).
+    expect(within(older).queryByTestId(patchTestid.cards)).toBeNull();
+
+    fireEvent.click(within(releaseSet("newer")).getByTestId(patchTestid.setToggle));
+    expect(within(releaseSet("newer")).queryAllByTestId(patchTestid.patch)).toEqual([]);
+  });
+
+  it("R724000 a patch before every release line's first sits under Earlier patches", async () => {
+    renderPage(fixtureSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    const sets = screen.getAllByTestId(patchTestid.set);
+    expect(sets.map((element) => element.dataset.set)).toEqual(["earlier"]);
+    expect(within(releaseSet("earlier")).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "true");
+    expect(within(releaseSet("earlier")).getByTestId(patchTestid.setToggle)).toHaveTextContent(`Earlier patches${V1} – ${V3}3 patches`);
+    expect(within(releaseSet("earlier")).getAllByTestId(patchTestid.patch)).toHaveLength(3);
+    expect(screen.queryAllByTestId(patchTestid.technical)).toEqual([]);
+  });
+
+  it("R724000 a patch shows its player note under fixed headings, never its record's source or notes", async () => {
+    renderPage(fixtureSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    const third = patchEntry(V3);
+    expect(within(third).getByRole("heading", { level: 3 })).toHaveTextContent(`${V3} Two fixture sets`);
+    const sections = within(third).getAllByTestId(patchTestid.noteSection);
+    expect(sections.map((element) => element.dataset.section)).toEqual(["new", "balance", "fixes"]);
+    expect(sections.map((element) => within(element).getByRole("heading", { level: 4 }).textContent)).toEqual(["New", "Balance", "Fixes"]);
+    expect(within(sections[2] ?? third).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["Quiet Golem records its lines of code."]);
+    expect(third).not.toHaveTextContent("Fixture commit 3");
+    expect(third).not.toHaveTextContent("Classic and Classic+ arrive.");
+    expect(third).not.toHaveTextContent("Two new sets");
+    // A patch with no note shows its record's title, and nothing of its record's source or notes.
+    const second = patchEntry(V2);
+    expect(within(second).getByRole("heading", { level: 3 })).toHaveTextContent(`${V2} The knight grows`);
+    expect(within(second).queryByTestId(patchTestid.note)).toBeNull();
+    expect(second).not.toHaveTextContent("Fixture commit 2");
+    expect(second).not.toHaveTextContent("Old Relic leaves.");
+  });
+
+  it("R724000 the real history opens on Meditative and every patch has its note", async () => {
+    renderPage();
+    const shipped = await realPatchSource.patches();
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    expect(screen.getAllByTestId(patchTestid.set).map((element) => element.dataset.set)).toEqual(["meditative", "classic", "core"]);
+    expect(screen.getAllByTestId(patchTestid.setToggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(["true", "false", "false"]);
+    // Every line starts at a shipped patch, in the lines' order.
+    const versions = shipped.map((patch) => patch.version);
+    const firsts = RELEASES.map((release) => versions.indexOf(release.first));
+    expect(firsts.every((at) => at >= 0)).toBe(true);
+    expect([...firsts].sort((a, b) => a - b)).toEqual(firsts);
+    expect(firsts[0]).toBe(0);
+    openEverySet();
+    const entries = screen.getAllByTestId(patchTestid.patch);
+    expect(entries.map((element) => element.dataset.version)).toEqual([...versions].reverse());
+    for (const entry of entries) {
+      const patch = shipped.find((each) => each.version === entry.dataset.version);
+      expect(patch?.player, entry.dataset.version).toBeDefined();
+      expect(within(entry).getByRole("heading", { level: 3 })).toHaveTextContent(`${patch?.version ?? ""} ${patch?.player?.title ?? ""}`);
+      expect(within(entry).getByTestId(patchTestid.note)).toBeInTheDocument();
+      expect(entry).not.toHaveTextContent(patch?.source ?? "");
+    }
+    // Every line that has technical changes shows them once it is opened.
+    expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.filter((release) => release.technical.length > 0).length);
   }, 30_000);
 });

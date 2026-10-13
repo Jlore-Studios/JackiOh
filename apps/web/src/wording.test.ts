@@ -239,3 +239,28 @@ describe("R1320 players read Nerf and Buff", () => {
     expect(OLD_TUNING_WORDS.test("go up a grade and trigger every step")).toBe(false);
   });
 });
+
+/** R724001: the player notes `patches.json` carries, every title and line of each. */
+function playerNoteTexts(): { at: string; text: string }[] {
+  const patches = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/patches.json"), "utf8")) as {
+    version: string;
+    player?: Record<string, string | string[]>;
+  }[];
+  return patches.flatMap(({ version, player }) =>
+    Object.entries(player ?? {}).flatMap(([key, value]) =>
+      (typeof value === "string" ? [value] : value).map((text) => ({ at: `${version} ${key}`, text })),
+    ),
+  );
+}
+
+describe("R724001 players read a patch's note in today's words", () => {
+  it("R724001 no player note in patches.json says library, sacrifice, an old cost form, Degrade or Upgrade", () => {
+    const texts = playerNoteTexts();
+    expect(texts.length).toBeGreaterThan(100);
+    // Every word of a note is a player's, so the guards apply in any form, capitals or not.
+    const found = texts
+      .filter(({ text }) => OLD_WORDS.test(text) || oldCostWords(text) || OLD_TUNING_WORDS.test(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(found).toEqual([]);
+  });
+});

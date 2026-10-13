@@ -1,5 +1,7 @@
 // Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
-// They read public patch data only (CLAUDE.md rule 7).
+// Patches sit in their release line, one bubble per set, the newest open (R724000), and each shows its
+// player note, never its record's source or notes (R724001). They read public patch data only (CLAUDE.md
+// rule 7).
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -11,12 +13,13 @@ import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
-import { PATCHES_OPEN_ON_LOAD } from "./constants.ts";
+import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
-import type { Patch } from "./source.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, type Release } from "./releases.ts";
+import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 import "./patches.css";
@@ -27,6 +30,10 @@ const NO_DEFS: CardDefs = {};
 
 function cards(count: number): string {
   return count === 1 ? t("1 card") : t("{n} cards", { n: count });
+}
+
+function patchCount(count: number): string {
+  return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
 }
 
 export function countsLine(patch: Patch): string {
@@ -77,9 +84,9 @@ function ChangedCard({ delta, onOpen }: { delta: Extract<CardDelta, { kind: "cha
         <PatchFace def={delta.def} face={faceShown(delta)} />
       </div>
       <div className="patch-card__body">
-        <h4 className="patch-card__name">
+        <h5 className="patch-card__name">
           <NameButton def={delta.def} onOpen={onOpen} />
-        </h4>
+        </h5>
         <ChangeList delta={delta} />
       </div>
     </li>
@@ -90,9 +97,9 @@ function Section({ title, count, children }: { title: string; count: number; chi
   const headingId = useId();
   return (
     <section className="patch-section" aria-labelledby={headingId}>
-      <h3 className="patch-section__title" id={headingId}>
+      <h4 className="patch-section__title" id={headingId}>
         {title} <span className="patch-count">({count})</span>
-      </h3>
+      </h4>
       {children}
     </section>
   );
@@ -142,9 +149,9 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
           <div className="patch-groups">
             {added.map((group) => (
               <div key={group.label} className="patch-group" data-testid={patchTestid.addedGroup} data-group={group.label}>
-                <h4 className="patch-group__title">
+                <h5 className="patch-group__title">
                   {group.token ? t("{set} tokens", { set: t(group.set) }) : t(group.set)} <span className="patch-count">({group.cards.length})</span>
-                </h4>
+                </h5>
                 <ul className="patch-names">
                   {group.cards.map((def) => (
                     <li key={def.id}>
@@ -225,6 +232,26 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   );
 }
 
+/** R724001: a patch's note under the page's fixed headings; nothing when it has none or no line. */
+function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElement | null {
+  const sections = note === undefined ? [] : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0);
+  if (note === undefined || sections.length === 0) return null;
+  return (
+    <div className="patch-note" data-testid={patchTestid.note}>
+      {sections.map(({ key, heading }) => (
+        <section key={key} className="patch-note__section" data-testid={patchTestid.noteSection} data-section={key}>
+          <h4 className="patch-note__heading">{t(heading)}</h4>
+          <ul className="patch-note__lines">
+            {note[key].map((line, at) => (
+              <li key={at}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function PatchEntry({
   patch,
   patches,
@@ -243,17 +270,16 @@ function PatchEntry({
   return (
     <article className="patch" data-testid={patchTestid.patch} data-version={patch.version} aria-labelledby={titleId}>
       <header className="patch__head">
-        <h2 className="patch__title" id={titleId}>
-          <span className="patch-version">{patch.version}</span> <span className="patch__name">{patch.title}</span>
-        </h2>
+        <h3 className="patch__title" id={titleId}>
+          <span className="patch-version">{patch.version}</span> <span className="patch__name">{playerTitle(patch)}</span>
+        </h3>
         <p className="patch__meta">
           <time className="patch-date" dateTime={patch.date}>
             {formatDay(patch.date)}
           </time>
-          {patch.source === "" ? null : <span className="patch__source"> · {patch.source}</span>}
         </p>
       </header>
-      {patch.notes === "" ? null : <p className="patch__notes">{patch.notes}</p>}
+      <PlayerNoteView note={patch.player} />
       {patch.changes.length === 0 ? (
         <p className="patch__counts">{t("No card changed.")}</p>
       ) : (
@@ -287,20 +313,94 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <CardDetail def={read.value} onClose={onClose} historyOpen />;
 }
 
-function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
+/** R724000: one release line as a bubble: its name, span and count, and, opened, its summary, technical changes and patches. */
+function ReleaseBubble({
+  release,
+  group,
+  patches,
+  opened,
+  initiallyOpen,
+  onOpen,
+}: {
+  release: Release;
+  group: readonly Patch[];
+  patches: readonly Patch[];
+  opened: ReadonlySet<string>;
+  initiallyOpen: boolean;
+  onOpen: OpenCard;
+}): ReactElement {
+  const [open, setOpen] = useState(initiallyOpen);
+  const headingId = useId();
+  const panelId = useId();
+  const newest = group[0]?.version ?? "";
+  const oldest = group.at(-1)?.version ?? "";
+  return (
+    <section className="patch-set" data-testid={patchTestid.set} data-set={release.id} aria-labelledby={headingId}>
+      <h2 className="patch-set__heading" id={headingId}>
+        <button
+          type="button"
+          className="link-button patch-set__toggle"
+          data-testid={patchTestid.setToggle}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => {
+            setOpen((was) => !was);
+          }}
+        >
+          <span className="patch-set__name">{t(release.name)}</span>
+          <span className="patch-set__span">{oldest === newest ? newest : `${oldest} – ${newest}`}</span>
+          <span className="patch-set__count">{patchCount(group.length)}</span>
+        </button>
+      </h2>
+      <div id={panelId} className="patch-set__panel" hidden={!open}>
+        {open ? (
+          <>
+            {release.summary === "" ? null : <p className="patch-set__summary">{release.summary}</p>}
+            {release.technical.length === 0 ? null : (
+              <section className="patch-tech" data-testid={patchTestid.technical}>
+                <h3 className="patch-tech__title">{t("Technical changes")}</h3>
+                <ul className="patch-tech__lines">
+                  {release.technical.map((line, at) => (
+                    <li key={at}>{line}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <ol className="patch-list">
+              {group.map((patch) => (
+                <li key={patch.version}>
+                  <PatchEntry patch={patch} patches={patches} initiallyOpen={opened.has(patch.version)} onOpen={onOpen} />
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function PatchList({ patches, releases }: { patches: readonly Patch[]; releases: readonly Release[] }): ReactElement {
   const source = usePatchSource();
   const [openId, setOpenId] = useState<string | null>(null);
   const newest = patches[patches.length - 1];
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
-  const ordered = newestFirst(patches);
+  const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
-      <ol className="patch-list">
-        {ordered.map((patch, at) => (
-          <li key={patch.version}>
-            <PatchEntry patch={patch} patches={patches} initiallyOpen={at < PATCHES_OPEN_ON_LOAD} onOpen={setOpenId} />
+      <ol className="patch-sets">
+        {releaseGroups(patches, releases).map(({ release, patches: group }, at) => (
+          <li key={release.id}>
+            <ReleaseBubble
+              release={release}
+              group={group}
+              patches={patches}
+              opened={opened}
+              initiallyOpen={at < RELEASES_OPEN_ON_LOAD}
+              onOpen={setOpenId}
+            />
           </li>
         ))}
       </ol>
@@ -318,7 +418,7 @@ function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
   );
 }
 
-export function PatchNotes(): ReactElement {
+export function PatchNotes({ releases = RELEASES }: { releases?: readonly Release[] }): ReactElement {
   const source = usePatchSource();
   const read = useLoaded("patches", () => source.patches());
 
@@ -348,5 +448,5 @@ export function PatchNotes(): ReactElement {
       </p>
     );
   }
-  return <PatchList patches={read.value} />;
+  return <PatchList patches={read.value} releases={releases} />;
 }
