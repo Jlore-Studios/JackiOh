@@ -513,6 +513,10 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
+/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
+/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
+/// row lands, the match ends or the actor stops, never in a loop.
+pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).

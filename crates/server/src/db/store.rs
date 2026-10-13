@@ -61,6 +61,12 @@ pub enum StoreError {
     /// `results_pkey`. The field is the match id.
     #[error("result for match {0} is already recorded")]
     Duplicate(String),
+    /// R776000: `matches.appendActions` was handed a seq the log already holds under another nonce, or
+    /// a nonce it already holds at another seq, so the log has moved past the actor that wrote it (a
+    /// write that committed and whose answer was lost, or a second writer). A nonce at its own seq is
+    /// no clash: the log answers it with that row. The field is the message.
+    #[error("{0}")]
+    SeqClash(String),
     /// The driver's own failure: a lost connection, a constraint, a function's `raise`.
     #[error(transparent)]
     Db(#[from] sqlx::Error),

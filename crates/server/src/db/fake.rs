@@ -32,7 +32,8 @@
 //!    the redemption it calls in Postgres;
 //!  - `codes_claim`, `rooms_claim` and `tickets_claim_pair` are single-shot, so the second of two
 //!    racing callers loses (§9.4 step 6, §9.5);
-//!  - `matches_append_actions` refuses a `seq` that already exists (append-only, §9.3);
+//!  - `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any
+//!    other clash as `StoreError::SeqClash` (append-only, §9.3, R776000);
 //!  - `results_insert` refuses a second row for the same match (§9.5);
 //!  - `tickets_insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
 //!    which `queue.rs` relies on as the race-proof half of "not already queued");
@@ -1226,22 +1227,39 @@ pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
 }
 
-/// Append-only (§9.3). Rejects a seq that already exists.
+/// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
+/// own seq is answered with that row and writes nothing, so a write that committed and whose answer was
+/// lost can be sent again; a seq held under another nonce, or a nonce held at another seq, is a
+/// `StoreError::SeqClash`.
 pub fn matches_append_actions(f: &mut FakeTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     call(f, "matches.appendActions")?;
     let tables = f.tables();
     for row in rows {
-        let clash = tables
+        let logged = tables
             .match_actions
             .iter()
-            .any(|existing| existing.match_id == row.match_id && existing.seq == row.seq);
-        if clash {
-            return Err(StoreError::from(format!(
-                "match_actions is append-only: seq {} exists",
-                row.seq
-            )));
+            .find(|existing| {
+                existing.match_id == row.match_id
+                    && (existing.seq == row.seq || existing.action.nonce == row.action.nonce)
+            })
+            .map(|existing| (existing.seq, existing.action.nonce == row.action.nonce));
+        match logged {
+            None => tables.match_actions.push(row.clone()),
+            // The same row again: answered, as Postgres answers a repeated nonce with its seq.
+            Some((seq, true)) if seq == row.seq => {}
+            Some((seq, true)) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: nonce {} is logged at seq {seq}, not {}",
+                    row.action.nonce, row.seq
+                )));
+            }
+            Some(_) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: seq {} exists",
+                    row.seq
+                )));
+            }
         }
-        tables.match_actions.push(row.clone());
     }
     Ok(())
 }
