@@ -94,6 +94,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(fullFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toBe("full=false");
     // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
     expect(fullFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toBe("full=false");
+    // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
+    expect(fullFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toBe("full=false");
   });
 
   it("runs everything the moment one changed file is read by a job", () => {
@@ -142,6 +144,8 @@ describe("scripts/ci-scope.sh", () => {
       ".github/ISSUE_TEMPLATE-copy/x.yml",
       ".github/CODEOWNERS.bak",
       "docs/CONTRIBUTING.md",
+      "analysis-copy/x.py",
+      "crates/tools/analysis/x.rs",
     ]) {
       expect(fullFor(file), file).toBe("full=true");
       expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe("full=true");
