@@ -28,8 +28,8 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
 use jackioh_server::bots::signals::{accepts_draw, idles_turn, standing};
 use jackioh_server::config::{
-    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger,
-    MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
+    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
+    EmoteTrigger, MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, NewBot, StoreError};
@@ -146,7 +146,9 @@ async fn unopened_bot_match(
         .seed_profile(json!({ "id": PERSON, "rating": 1000 }));
     let bot: NewBot = from(json!({
         "profileId": BOT,
-        "strength": 0,
+        // The strongest row: R747000's weaker rows hand some decisions, or all, to the random policy, and
+        // these tests are about what the bot's seat does with the AI's turn.
+        "strength": BOT_STRENGTHS.len() - 1,
         "speed": 1.0,
         "persona": persona.as_str(),
         "activeFromHour": 0,

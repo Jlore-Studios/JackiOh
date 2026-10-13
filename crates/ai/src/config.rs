@@ -20,6 +20,11 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
     missed_lethal_chance: 0.0,
 };
 
+/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
+/// decision, 1.0 follows the AI at every decision as it did before the knob.
+pub const AI_SKILL_MIN: f64 = 0.0;
+pub const AI_SKILL_MAX: f64 = 1.0;
+
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
     nodes: 600,

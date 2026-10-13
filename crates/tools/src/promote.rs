@@ -513,6 +513,7 @@ mod tests {
             generation: Some(8),
             lane: Some("unban".to_string()),
             shadow_ban: shadow_ban.iter().map(|id| id.to_string()).collect(),
+            skill: jackioh_ai::AI_SKILL_MAX,
         }
     }
 
