@@ -152,7 +152,10 @@ thread count.
   [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd games. It is
   the free-form version of the gate, for experiments on other seeds than the gate's. Per game it
   prints duel.ts's line (who won, why, the hash, whether the log replays, decision times) and a
-  tally at the end.
+  tally at the end: the wins, draws and games without a result, and agent `a`'s win share with its
+  95% Wilson interval (`aShare`, `aLow`, `aHigh`). The gate's report gives the same interval for
+  its wins. `improve.md` (How much a result says) sets how many games a lane plays before it trusts
+  one.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
