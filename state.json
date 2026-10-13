@@ -4487,10 +4487,10 @@
     "what": "plan #775 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-13T11:25:39Z",
+    "at": "2026-10-13T11:32:23Z",
     "notes": [
-      "#776 needs a plan",
-      "started a night run, as a lane was free: #776 (medium) is queued to build, for `claude-1`: plan on `claude-1` (claude, `opus`, strong)"
+      "#778 needs a plan",
+      "started a night run, as a lane was free: #778 (medium) is queued to build, for `claude-6`: plan on `claude-6` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
