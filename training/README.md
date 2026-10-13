@@ -10,6 +10,9 @@ docs/v0.3.0/SURFACE.md §14.
 |---|---|---|
 | `improve` | a stronger AI: beat its predecessor in 65 of 100 games | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
+| `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
+
+The `gather` lane runs no Devin session and opens no pull request (The gather lane, below).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
@@ -34,6 +37,9 @@ The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) r
 `jackioh-train@improve` and `jackioh-train@unban`, each as its own Linux user (`agent-train-improve`,
 `agent-train-unban`) with its own checkout, Devin login and GitHub token. Each runs
 [`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
+
+The steps below are the `improve` and `unban` lanes'. The `gather` lane's cycle is its own (The
+gather lane).
 
 Each lane keeps one pull request open from `ai/<lane>`: a draft while Devin works, and ready for
 review, with auto-merge on, once a promotion is in it. Each cycle:
@@ -152,12 +158,98 @@ thread count.
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
   cursor, so `self` and `bin:<the same build>` play identical games.
 
+## The gather lane
+
+`loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
+#636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card
+win rates (SPEC §9.11, R376–R378) of every patch have a development source beside the live games. No
+model runs it, so [`gather.md`](gather.md) is its contract rather than a prompt, and it needs no Devin
+login and opens no pull request. Each cycle:
+
+1. Fetch `main`, check out `origin/main` (a new `loop.sh` there restarts the lane, as for the others)
+   and build `jackioh` from it. The AI that plays is always the one on `main`.
+2. Load the finished days' record files into Postgres with `stats-import`, once each, when the box has
+   `DATABASE_URL` (the same step as the other lanes').
+3. Play the next `TRAIN_GATHER_GAMES` (100) games with `jackioh stats --series gather --patch <patch>`,
+   where `<patch>` is `cargo jackioh catalog-version`, `main`'s. Game `n`'s seed is `gather:<n>`, so
+   the lane's games are neither the gate's nor a person's `dev` run's. The file `cursor-<patch>` in
+   `~/training-out/gather/` holds the next `n`: no game of a patch is played twice, and a new patch
+   starts at 1.
+   A patch stops at `TRAIN_GATHER_PATCH_GAMES` (5000), which keeps its records near 9 MB in Postgres;
+   the lane then idles, looking again every `TRAIN_IDLE_SECONDS`, until `main` ships another patch.
+4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
+   the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
+   holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, from every game
+   the lane's files hold.
+5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
+
+The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
+`dev:<patch>:gather:<n>`. The games run under `nice -n 19`, so the other two lanes' gates keep the CPU.
+A record is about 1.8 KB and a game takes about 4 seconds on one core. If the AI is promoted in the
+middle of a patch, that patch's games come from more than one generation of it. Nothing feeds the
+records back to the AI, the gate or the shadow ban (`gather.md`, What it never does).
+
+### Setting it up
+
+The training box sets up its lanes in `bot/machine/setup.sh`, which the bot never edits, so a person
+does this once:
+
+- Add `gather` to `TRAIN_LANES` and to the `systemctl enable --now` line in `bot/machine/setup.sh`,
+  then run `setup.sh --training` (`bot/machine/README.md`, The training box). It creates the user
+  `agent-train-gather` with its own checkout and the service `jackioh-train@gather`.
+- To load its records into Postgres, run `sudo systemctl edit jackioh-train@gather` and add
+  `Environment=DATABASE_URL=…`. Without it the lane keeps only the files.
+- It needs no Devin login. A `gh` login is needed only if the repository is private, so the lane can
+  read it.
+
+### Reading the figures
+
+```sh
+tail -f ~agent-train-gather/logs/gather.log
+cat ~agent-train-gather/training-out/gather/cards-<patch>.txt     # the patch's card figures, a row per card
+cargo jackioh stats report --source=dev --patch <patch> ~agent-train-gather/training-out/gather/*.jsonl
+jackioh-server stats-cards --source=dev --patch=<patch>           # the same, from Postgres, once loaded
+jackioh-server stats-cards --source=dev --patch=<patch> --card=<id> --json
+jackioh-server stats-cards --patch=<patch>                        # that patch's live games, human seats
+jackioh-server stats-cards --patch=<patch> --pilot=ai             # the ladder bots' sides of them
+```
+
+Each row of the report is a card: the win rate, with the games behind it, of the decks that held it
+(in deck), held it in the opening hand, went first or second with it, played it, or drew it and never
+played it, and its played delta (the played win rate less the drawn-but-not-played one, in points). A
+card's play rate is its played games over its in-deck games, both printed in the row. `--json` has the
+same figures as numbers, and `stats-cards --source=all` reads both sources at once. Development and
+live games are never added together unless asked (R378, R1451).
+
+### Live games
+
+The live games' records are what the gather lane's figures sit beside, and they are filed already:
+
+- Every finished live match files a record, and no switch turns that off: `api::results::record_result`
+  calls `api::game_records::record_live_game` once the result is in, and `LADDER_BOTS` only decides
+  who is seated, not whether the game is filed. The ones that file none are a match no series, room or
+  queue ticket made, a log that never reaches a result and one already filed; a failure to file is
+  logged as `game.record.failed` and the result stands.
+- A seat is `ai` when its profile is a ladder bot's and `human` otherwise, so a game against a bot has
+  one of each.
+- A query counts the human seats of live data by default and reads the bots' sides only when asked
+  (`--pilot=ai` or `--pilot=unified`; R1451). Development data counts every seat.
+- Proving tests, all under `crates/server/`: `tests/api/game_records.rs`
+  `r376_files_a_finished_match_once_its_result_is_in_its_mode_the_patch_two_human_pilots_and_the_game`,
+  `tests/api/bots.rs` `r1451_the_bot_side_is_ai_and_the_human_side_counts`, `tests/actor/glitch.rs`
+  `r1451_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in`, and in `tests/store/card_stats.rs`
+  `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
+  `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
+
 ## Where the numbers go
 
 | What | Where |
 |---|---|
 | Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
 | The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL` | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` |
+| The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
+| The gather lane's next game number for a patch, and that patch's card figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `cards-<patch>.json` |
+| The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
 | What each Devin session tried, and why the loop set a promotion back | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
 | The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
@@ -171,6 +263,7 @@ sudo systemctl disable jackioh-train@improve   # and keep it stopped across rebo
 sudo systemctl enable --now jackioh-train@improve
 systemctl status jackioh-train@unban
 tail -f ~agent-train-unban/logs/unban.log
+tail -f ~agent-train-gather/logs/gather.log
 ```
 
 To refuse a promotion, close its pull request: the loop opens a new draft with its next session,

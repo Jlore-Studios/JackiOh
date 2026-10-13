@@ -422,6 +422,13 @@ mod face_threat_b13 {
     }
 
     #[test]
+    fn b13_a_windfury_unit_threatens_each_of_its_two_attacks() {
+        // R636: Windfurious Prime (5 attack, Windfury) swings twice, so against 9 health it is lethal.
+        let state = board(json!({ "p1": { "health": 9 }, "p2": { "field": ["meditative-091-1"] } }));
+        assert_eq!(face_threat(&state, PlayerId::P2), 10);
+    }
+
+    #[test]
     fn b13_our_own_boards_threat_is_read_the_same_way_in_the_other_direction() {
         let state = board(json!({ "p1": { "field": enemy() }, "p2": {} }));
         assert_eq!(face_threat(&state, AI), 10);

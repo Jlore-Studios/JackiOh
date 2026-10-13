@@ -12,8 +12,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of,
-    owed_mana_of, reduce,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions,
+    opponent_of, owed_mana_of, reduce, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -350,9 +350,48 @@ pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter
     static_score(state, seat, root_turn)
 }
 
+/// What a backrow card or an own hand card is, for `search_signature`: its id, its definition (a
+/// Transform or a discovered card keeps the id), its Radiant face, and its cost changes.
+fn card_signature(card: &CardInstance) -> String {
+    format!(
+        "{}={}{}{}/{:?}",
+        card.id,
+        card.def_id,
+        if card.radiant { "*" } else { "" },
+        card.cost_mod,
+        card.cost_override,
+    )
+}
+
+/// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
+/// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
+/// and armor overrides, a spent Divine Shield, and its counters and enchantments.
+fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
+    let view = unit_view(state, unit);
+    format!(
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}",
+        unit.def_id,
+        if unit.radiant { "*" } else { "" },
+        if unit.vanilla { "~" } else { "" },
+        view.attack,
+        view.max_health,
+        view.health,
+        view.armor,
+        view.keywords,
+        unit.stats_override,
+        unit.armor_override,
+        u8::from(unit.divine_shield_spent == Some(true)),
+        unit.counters,
+        unit.enchantments,
+    )
+}
+
 /// A cheap identity for a position inside one turn, for the lethal solver's visited set and the
-/// beam's duplicate check: both heroes, every active unit's id, damage, buffs, exertion and position,
-/// the seat's hand and mana, the enemy hand size and the open prompt.
+/// beam's duplicate check: both heroes, the open prompt whole, both library sizes, every active unit's
+/// id, damage, buffs, exertion and position and what else changes how it plays (`unit_play_signature`),
+/// every backrow card (`card_signature`, and whether it is face up), the seat's hand (`card_signature`)
+/// and mana, and the enemy hand size. A unit's lane is left out, so the two lanes `candidate_actions`
+/// keeps for one play stay one position.
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -368,7 +407,15 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         format!("n{}", state.players[opp].hand.len()),
         format!(
             "q{}",
-            state.pending.as_ref().map_or("-", |pending| pending.id.as_str())
+            state
+                .pending
+                .as_ref()
+                .map_or("-".to_string(), |pending| format!("{pending:?}"))
+        ),
+        format!(
+            "l{}/{}",
+            state.players[seat].library.len(),
+            state.players[opp].library.len()
         ),
     ];
     for player in PLAYER_IDS {
@@ -379,19 +426,25 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
             let exerted = format!("{}{}", attacks, if unit.exertion.switched { 1 } else { 0 });
             parts.push(format!(
-                "{}:{}:{}/{}:{}:{}",
+                "{}:{}:{}/{}:{}:{}:{}",
                 unit.id,
                 unit.damage,
                 unit.buffs.attack,
                 unit.buffs.health,
                 exerted,
                 unit.position.map_or("ATK", |position| position.as_str()),
+                unit_play_signature(state, unit),
             ));
         }
         let backrow = state.players[player]
             .backrow
             .iter()
-            .map(|card| card.as_ref().map_or("-", |card| card.id.as_str()))
+            .map(|card| {
+                card.as_ref().map_or("-".to_string(), |card| {
+                    let face = if card.face_up == Some(true) { "^" } else { "" };
+                    format!("{}{face}:{:?}", card_signature(card), card.counters)
+                })
+            })
             .collect::<Vec<_>>()
             .join(",");
         parts.push(format!("b{backrow}"));
@@ -401,7 +454,7 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         state.players[seat]
             .hand
             .iter()
-            .map(|card| card.id.as_str())
+            .map(card_signature)
             .collect::<Vec<_>>()
             .join(",")
     ));
