@@ -21,6 +21,7 @@ import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { foldedReplaySteps } from "../test/replay.ts";
 
 const END_TURN: ActionBody = { type: "endTurn" };
 
@@ -345,5 +346,43 @@ describe("each event animates once", () => {
       vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
     });
     expect(screen.queryByTestId("animation-queue"), "one hit, one entry").toBeNull();
+  });
+});
+
+describe("a replay board (#511)", () => {
+  /** The first step of a folded game: the mulligan, a prompt a live board opens and lights its hand for. */
+  const mulligan = (): PlayerView => {
+    const view = foldedReplaySteps()[0]?.view;
+    if (view?.pending === null || view === undefined) throw new Error("the folded game does not open on a prompt");
+    return view;
+  };
+
+  it("a replay board opens no prompt where the same view live does", () => {
+    const { unmount } = render(<Game view={mulligan()} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("prompt-scrim")).toBeInTheDocument();
+    expect(document.querySelector("[data-glow]"), "live, the open prompt's cards glow").not.toBeNull();
+    expect(screen.getByTestId("game")).not.toHaveAttribute("data-replay");
+    unmount();
+
+    render(<Game view={mulligan()} legal={[]} onAction={vi.fn()} replay />);
+    expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+    expect(document.querySelector("[data-glow]")).toBeNull();
+    expect(document.querySelector('[data-legal="true"]')).toBeNull();
+    expect(screen.getByTestId("game")).toHaveAttribute("data-replay", "true");
+  });
+
+  it("a replay board sends no \"End turn automatically\" preference where a live one does", () => {
+    // The step's view says the engine ends turns automatically; the player's setting says not to.
+    act(() => {
+      writeSettings({ autoEndTurn: false });
+    });
+    const live = vi.fn();
+    const { unmount } = render(<Game view={mulligan()} legal={[]} onAction={live} />);
+    expect(live).toHaveBeenCalledWith({ type: "setAutoEndTurn", enabled: false });
+    unmount();
+
+    const replay = vi.fn();
+    render(<Game view={mulligan()} legal={[]} onAction={replay} replay />);
+    expect(replay).not.toHaveBeenCalled();
   });
 });
