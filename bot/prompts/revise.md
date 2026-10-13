@@ -62,8 +62,8 @@ The very first line must be a single HTML comment carrying JSON, with nothing be
 or `{"status": "blocked", "question": "..."}` when a person must decide something first. When
 nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or `bot/`, a
 secret or a token, a dashboard setting such as Vercel's or Render's, an account), add
-`"human_required": true` and say in `question` exactly what a person must do: the harness labels
-the thread `human required` and names the people.
+`"human_required": true` and say in `question` exactly what a person must do: the harness hands
+the thread to the people (`human required`, the bot's labels off) and names them.
 
 After that line, write a short Markdown report for the pull request conversation: each point of
 feedback and what you did about it (or why you did nothing), and how you tested it.

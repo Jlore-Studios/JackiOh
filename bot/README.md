@@ -55,7 +55,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
     D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
     X -- "approved" --> CI
-    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
+    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -115,18 +115,23 @@ gets no `bot:*` stage label, and a conflicted `human` pull request is not revise
 `/harness build`, an assignment or a mention gets one reply saying so, and nothing else. Take
 the label off to hand it to the bot.
 
-**`human required`** is the bot's own word that it cannot do an item (#793): it needs a change
-under `bot/`, `.harness/`, `.squishy/` or `.github/`, a secret or a token, a setting in a dashboard
-(GitHub's, Vercel's, Render's, Supabase's, Cloudflare's) or an account. The bot puts it on beside
-`bot:blocked`, with a comment that names both people (@MaxGoetzmann and @jgoetzmann) and says what
-a person must do, instead of asking the same question on every run (#760 spent two runs on one).
+**`human required`** is the bot handing an item to people because it found it cannot do it
+(#793): it needs a change under `bot/`, `.harness/`, `.squishy/` or `.github/`, a secret or a
+token, a setting in a dashboard (GitHub's, Vercel's, Render's, Supabase's, Cloudflare's) or an
+account. Instead of asking the same question on every run (#760 spent two runs on one), it lets go
+of the item as a person's `human` would make it: its own labels come off (`bot:blocked`,
+`bot:build`, `bot:working`, `bot:needs-plan`, the modes), it unassigns itself and assigns both
+people, puts on `human required`, and comments naming them (@MaxGoetzmann and @jgoetzmann) with
+what a person must do. So an item is always one or the other: `human` or `human required`
+(people's, the bot not working on it), or the bot's own labels (the bot working on it).
 It does so when its plan's **Files to touch** table lists only paths the bot may not change, or the
 planner opens the plan with a `**Human required:**` line (either way the plan still goes into the
 description, for the person, and nothing is built); when a builder or reviser stops with
-`"human_required": true`; and when the path guard puts back the whole of a build's change. While
-it is on the bot treats the item as `human`: nothing queues, plans or builds it, and a request gets
-one reply. A person who has done their part takes the label off and queues the item again
-(`/harness build`) for the rest; one who builds it all closes it ([`harness/human.py`](harness/human.py)).
+`"human_required": true`; and when the path guard puts back the whole of a build's change. From
+then on it is `human`: nothing queues, plans or builds it, and a request gets one reply. A person
+may put the label on too, which triage treats as `human`. When the rest is the bot's once a
+person has done their part, they take the label off and queue it (`/harness build`); one who
+builds it all closes it ([`harness/human.py`](harness/human.py)).
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -291,7 +296,8 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `review [strong\|medium] [notes]` | queue a review run of this bot pull request's head, by that tier or stronger, and no revision | PR | 2 |
 | `rebuild` | close this bot pull request (or the issue's), keep its branch as `bot/old/issue-<n>-<date>`, and build the issue again from `main` | issue or PR | 2 |
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
-| `suggest` | ask for a suggestion survey the next time the queue is empty | anywhere | 2 |
+| `suggest` | ask for a suggestion survey the next time a lane is free (without waiting out the 30 idle minutes) | anywhere | 2 |
+| `approve`, `reject` | alone on a line, no prefix needed, on one of the bot's open suggestions: `approve` queues it to build, `reject` closes it unbuilt (#760) | suggestion | 2 |
 | `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
 | `halt [reason]` | stop all model work until `start` | anywhere | 3 |
@@ -370,7 +376,7 @@ in place of the `bot:*` ones.
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
-| `human required` | the bot put it on: only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account); its comment names both people and says what. The bot leaves it alone until a person takes the label off ([above](#priority-and-human)) |
+| `human required` | the bot's hand-over: it found only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account), took its own labels off, unassigned itself and assigned both people, and its comment names them and says what. People's from then on, like `human` ([above](#priority-and-human)) |
 
 ## Triage
 
@@ -910,8 +916,14 @@ account.
    that takes it ([who takes what](#subscriptions)), and starts another run if another lane and
    more work are free. (One run at a time: the plan job's concurrency group keeps one running and
    one waiting, so runs started together would be cancelled; each claim starts the next, and six
-   lanes fill in a few minutes.) With nothing queued, it runs a suggestion survey if one is due
-   (at most one every 20 hours, and only while fewer than four are open). Once a day it prunes the
+   lanes fill in a few minutes.) Once a lane has been free for 30 minutes with nothing in the
+   queue it can start (`suggestions.idle_minutes`; work held back behind a dependency or waiting
+   for another subscription does not count), it runs a suggestion survey, while fewer than four
+   are open (#797). The sweep keeps that clock (`suggest.idle_since`), and each survey starts it
+   again. Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
+   rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
+   [`harness/declined.py`](harness/declined.py)) and never offers one again; one it offers anyway,
+   by the same title, is not opened. Once a day it prunes the
    state file: an item's record goes 7 days after its thread closed, and a closed thread's bulky
    parts at once (`plan.prune`; GitHub's Contents API stops returning a file past 1 MB).
 2. **work** (up to about five and a half hours, holding only the chosen subscription's secret).
@@ -1085,7 +1097,7 @@ days.
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |
-| give the bot back an item it labelled `human required` | do the person's part its comment names, take the label off, then `/harness build` |
+| give the bot back an item it handed you (`human required`) | do the person's part its comment names, take the label off, then `/harness build` |
 | change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
@@ -1189,7 +1201,8 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `triage.py` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
 | `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
-| `human.py` | work only a person can do (#793): when a plan needs one, and the `human required` comment that names the people |
+| `human.py` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
+| `declined.py` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |

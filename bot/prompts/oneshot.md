@@ -91,8 +91,8 @@ GitHub's, Vercel's, Render's, Supabase's or Cloudflare's; an account), the same 
 
     <!-- bot: {"status": "blocked", "human_required": true, "question": "What a person must do, and where"} -->
 
-The harness then labels the issue `human required`, names the people in its comment and leaves
-the issue alone until a person has done their part.
+The harness then hands the issue to the people: it takes the bot's labels off, assigns them,
+labels it `human required` and names them in a comment, and the bot no longer touches it.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
 the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number

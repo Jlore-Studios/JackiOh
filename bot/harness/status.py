@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any, Callable
 
 from harness import providers as providers_mod
-from harness import review_rule
+from harness import declined, review_rule
 from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
                             LABEL_HUMAN_REQUIRED, LABEL_NEEDS_PLAN, LABEL_PR, LABEL_REVISE,
@@ -252,14 +252,18 @@ def report(ctx: Context) -> str:
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
                  f"for a review run: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
     lines.append(f"- Waiting for a person: {_numbers(labelled(LABEL_BLOCKED))}.")
-    lines.append(f"- Only a person can do (`{LABEL_HUMAN_REQUIRED}`, left alone until it comes "
-                 f"off): {_numbers(labelled(LABEL_HUMAN_REQUIRED))}.")
+    lines.append(f"- Handed to people as only a person can do it (`{LABEL_HUMAN_REQUIRED}`, "
+                 f"never touched): {_numbers(labelled(LABEL_HUMAN_REQUIRED))}.")
     lines.append(f"- People's work (`{LABEL_HUMAN}`, never touched): "
                  f"{_numbers(labelled(LABEL_HUMAN))}.")
     lines.append(f"- Open bot pull requests: {_numbers(labelled(LABEL_PR, prs=True))}.")
     suggestions = labelled(LABEL_SUGGESTION, prs=False)
+    idle = state["suggest"].get("idle_since")
     lines.append(f"- Suggestions open: {len(suggestions)} of {cfg.suggestions_max_open}"
-                 f"{' (asked for more)' if state['suggest'].get('requested') else ''}.")
+                 f"{' (asked for more)' if state['suggest'].get('requested') else ''}; a survey "
+                 f"once a free lane has had nothing to start for {cfg.suggestions_idle_minutes} "
+                 "minutes" + (f" (idle since {idle})" if idle else "") + "; "
+                 f"{len(declined.entries(state))} that came to nothing are never offered again.")
     last = state.get("last_run") or {}
     if last.get("url"):
         lines.append(f"- Last run: [{last.get('what', 'run')}]({last['url']}) at {last.get('at', '?')}.")

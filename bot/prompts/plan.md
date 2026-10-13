@@ -72,8 +72,8 @@ sections:
    it is a secret, a token, a dashboard setting such as GitHub's, Vercel's, Render's, Supabase's
    or Cloudflare's, or an account), make the plan's first line, before **Goal**,
    `**Human required:** <what a person must do, and where>`, and still write the plan, for the
-   person who does it. The harness then labels the issue `human required`, names the people and
-   builds nothing. When a person is needed for one part only, plan the rest and name that part
+   person who does it. The harness then hands the issue to the people (`human required`, the
+   bot's labels off), names them and builds nothing. When a person is needed for one part only, plan the rest and name that part
    here.
 
 Keep the whole plan under $plan_words words: the harness keeps only the

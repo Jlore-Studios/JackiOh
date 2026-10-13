@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from harness import plan as plan_mod
+from harness.clock import iso
 from harness import queue as queue_mod
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING)
@@ -17,7 +18,7 @@ from harness.state import item as state_item
 from harness.work import Worker
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub, git, make_origin, push_branch
-from tests.support import DAY, NIGHT, make_config, make_ctx
+from tests.support import DAY, NIGHT, idle_for, make_config, make_ctx
 from tests.test_work import APPROVE, GATES, builder, changes, reviewer
 
 
@@ -179,9 +180,12 @@ class PlanTests(unittest.TestCase):
     def test_suggestions_when_idle_up_to_the_cap(self):
         for n in (20, 21, 22):
             self.gh.add_issue(n, labels=(LABEL_SUGGESTION,))
+        self.assertEqual(plan_mod.make(self.ctx)["action"], "none")  # not idle for 30 minutes
+        idle_for(self.ctx)
         planned = plan_mod.make(self.ctx)
         self.assertEqual((planned["action"], planned["count"]), ("suggest", 1))
-        # Claimed: not due again for twenty hours.
+        # Claimed: the clock starts again, so not due until another 30 idle minutes (#797).
+        self.assertEqual(self.ctx.store.load()["suggest"]["idle_since"], iso(self.ctx.now()))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "none")
         self.gh.add_issue(23, labels=(LABEL_SUGGESTION,))
         self.assertIsNone(plan_mod.suggestion_plan(self.ctx, plan_mod.Lanes(3), force=True))
@@ -498,6 +502,7 @@ class FlowTests(unittest.TestCase):
         h.gh.add_issue(20, labels=(LABEL_SUGGESTION,))
         text = ('<!-- suggestions: [' + ",".join(
             json.dumps({"title": f"Idea {i}", "body": "## Why\nx"}) for i in range(5)) + '] -->')
+        idle_for(h.ctx)
         planned, result = h.night(FakeRunner({"suggest": reviewer(text)}))
         self.assertEqual(planned["count"], 3)
         self.assertEqual(len(result["suggestions"]), 3)

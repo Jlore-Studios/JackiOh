@@ -13,7 +13,8 @@ from harness import plan as plan_mod
 from harness import providers
 from harness import queue as queue_mod
 from harness.__main__ import make_probe
-from harness.config import Gate, LABEL_BLOCKED, LABEL_BUILD, LABEL_HUMAN, LABEL_PR, LABEL_REVISE
+from harness.config import (Gate, LABEL_BLOCKED, LABEL_BUILD, LABEL_HUMAN, LABEL_HUMAN_REQUIRED,
+                            LABEL_PR, LABEL_REVISE)
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner, RunResult
 from harness.state import item as state_item
@@ -151,7 +152,9 @@ class ForbiddenOnlyTests(unittest.TestCase):
         self.assertNotIn("review", [c.role for c in runner.calls])  # no rounds spent on it
         self.assertNotIn("bundle", result)
         self.assertIsNone(h.origin_sha("bot/issue-12"))
-        self.assertIn(LABEL_BLOCKED, h.gh.label_names(12))
+        # Handed to people (#793): `human required` in place of the bot's own `bot:blocked`.
+        self.assertIn(LABEL_HUMAN_REQUIRED, h.gh.label_names(12))
+        self.assertNotIn(LABEL_BLOCKED, h.gh.label_names(12))
         said = h.gh.bot_comments(12)[-1]
         self.assertIn("`bot/harness/tuned.py`", said)
         self.assertIn("A person has to make this change", said)

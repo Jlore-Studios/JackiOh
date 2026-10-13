@@ -12,7 +12,7 @@ from typing import Any
 
 from datetime import timedelta
 
-from harness import asks, commands, stepup
+from harness import asks, commands, declined, stepup
 from harness import providers as providers_mod
 
 from harness.asks import Ask
@@ -292,8 +292,8 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
         if command.force:
             ctx.dispatch(force=True, mode="suggest")
             return "A suggestion survey is starting now."
-        return ("I will survey for suggestions the next time the queue is empty and a "
-                "subscription is free.")
+        return ("I will survey for suggestions the next time a subscription is free with "
+                "nothing in the queue it can start.")
     if not number:
         return f"`{verb}` needs an issue or a pull request to act on."
     if verb in commands.VOTES:
@@ -354,13 +354,19 @@ def open_suggestion(ctx: Context, number: int) -> bool:
 def answer_vote(ctx: Context, vote: str, number: int, *, by: str, ask: Ask | None = None) -> str:
     """A person's vote on one of my suggestions (#760): `approve` queues it to build, which takes
     `bot:suggestion` off (`queue_build`), as `bot:build` does; `reject` closes it as not planned,
-    which frees its place under `suggestions.max_open` for the next survey. A rejected one keeps
-    its label, so the survey still sees it was a suggestion, and reopened it can be approved."""
+    which frees its place under `suggestions.max_open` for the next survey, and goes into the log
+    of suggestions that came to nothing (`declined`, #797). A rejected one keeps its label, so it
+    still reads as a suggestion, and reopened it can be approved."""
     if vote == "approve":
         return queue_build(ctx, number, by=by, ask=ask)
-    if ctx.gh.get_issue(number).get("state") != "open":
+    issue = ctx.gh.get_issue(number)
+    if issue.get("state") != "open":
         return f"#{number} is closed already, so there was nothing to reject."
     ctx.gh.update_issue(number, state="closed", state_reason="not_planned")
+    # Logged, so no survey offers it again however long ago it was (#797).
+    ctx.store.update(lambda s: declined.note(s, number, str(issue.get("title") or ""),
+                                             f"rejected by @{by}", iso(ctx.now())),
+                     f"suggestion #{number} rejected")
     return (f"Rejected: I closed #{number} without building it. Reopen it and comment `approve` "
             "to change that.")
 

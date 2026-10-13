@@ -77,9 +77,9 @@ def _halt_note(ctx: Context, state: dict[str, Any]) -> str:
 
 
 def is_human(names: set[str]) -> bool:
-    """Labelled `human` (whatever its case): people do it, and the bot leaves it alone. So does
-    `human required` (#793): the bot found it needs what only a person can do, and leaves it
-    alone until a person takes the label off."""
+    """Labelled `human` (whatever its case): people do it, and the bot leaves it alone. So is one
+    labelled `human required` (#793): the bot found it needs what only a person can do and
+    handed it to people (`deliver.Deliverer._needs_person`), or a person said so."""
     return bool({name.lower() for name in names} & {LABEL_HUMAN, LABEL_HUMAN_REQUIRED})
 
 
@@ -169,8 +169,8 @@ def human_reply(number: int, names: set[str] = frozenset()) -> str:
     lowered = {name.lower() for name in names}
     if LABEL_HUMAN_REQUIRED in lowered and LABEL_HUMAN not in lowered:
         return (f"#{number} is labelled `{LABEL_HUMAN_REQUIRED}`: it needs something only a "
-                "person can do first (my comment on it says what), so I leave it alone. Once that "
-                "is done, take the label off and ask again.")
+                "person can do (my comment on it says what), so it is people's and I leave it "
+                "alone. Take that label off to hand it back to me.")
     return (f"#{number} is labelled `{LABEL_HUMAN}`: people do it, so I leave it alone. Take that "
             "label off to hand it to me.")
 
@@ -281,8 +281,11 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     if mode_of(names) == "fullsend" and is_fullsend("", record):
         words = "reconcile its parts into one pull request"  # split already (#505)
     if LABEL_SUGGESTION in names:
-        # A person queued one of my suggestions, which is their yes to it (#664).
+        # A person queued one of my suggestions, which is their yes to it (#664). Its record
+        # remembers it was one, so if it comes to nothing it is logged as such (#797).
         ctx.gh.remove_label(number, LABEL_SUGGESTION)
+        ctx.store.update(lambda s: state_item(s, number).update(suggestion=True),
+                         f"suggestion #{number} approved")
     if LABEL_WORKING in names:
         _pending(ctx, number, by, ask)
         return (f"I am working on #{number} right now. When this run ends I go round once more "
