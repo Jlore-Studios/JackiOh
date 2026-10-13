@@ -54,6 +54,7 @@ fn as_it_stands(ctx: &EffectContext<'_>, card: CardInstance) -> CardInstance {
 
 /// `setCostMod`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetCostModArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -99,6 +100,7 @@ pub fn set_cost_mod(args: SetCostModArgs) -> Effect {
 
 /// `setCostOverride`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetCostOverrideArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

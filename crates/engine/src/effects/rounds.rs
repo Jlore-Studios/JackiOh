@@ -25,6 +25,7 @@ use crate::script::{Effect, EffectPart, Memo};
 /// type so this file names none of `BoardScope`'s; it reaches a scope through its JSON, which is the
 /// same literal.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum StormSide {
     #[serde(rename = "any")]
     Any,
@@ -36,6 +37,7 @@ pub enum StormSide {
 
 /// `damageRoundsUntilDeath`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct Storm {
     pub amount: i32,
@@ -99,6 +101,7 @@ pub fn damage_rounds_until_death(args: Storm) -> Effect {
 
 /// `castRoundsUntilDeath`'s arguments: the Spell to cast, and how many rounds.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastStorm {
     pub def: String,

@@ -153,8 +153,9 @@ pub use crate::config::{LAST_BOARD_CARD_COST, LAST_BOARD_DISCOVER_OPTIONS};
 
 // Verbs TS's barrel re-exported from `subsystems/` (`effects/index.ts`, its last lines).
 // B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).
-pub use crate::subsystems::perfect_hand::replace_hand_with_perfect;
+pub use crate::subsystems::perfect_hand::{ReplaceHandWithPerfectArgs, replace_hand_with_perfect};
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
-pub use crate::subsystems::board_history::roll_back;
+pub use crate::subsystems::board_history::{RollBackArgs, roll_back};
 // The Glitch Easter egg (issue #170, R676): Glitch's one effect, its four outcomes behind one rng draw.
 pub use crate::subsystems::glitch::glitch;
+

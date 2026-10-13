@@ -1287,6 +1287,7 @@ dependencies = [
  "mlua",
  "serde",
  "serde_json",
+ "ts-rs",
 ]
 
 [[package]]

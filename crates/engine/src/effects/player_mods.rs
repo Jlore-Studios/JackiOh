@@ -31,6 +31,7 @@ use super::targets::{PlayerSpec, player_of};
 /// TS `DistributiveOmit<PlayerModifier, "id">`: a `PlayerModifier` without the id the engine assigns,
 /// written as TS writes it (the kind's fields flattened beside `expiry`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerModifierSpec {
     pub expiry: ModifierExpiry,
@@ -40,6 +41,7 @@ pub struct PlayerModifierSpec {
 
 /// `addPlayerModifier`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddPlayerModifierArgs {
     /// Whose player state it goes on, relative to the controller. Default "self".
@@ -64,6 +66,7 @@ pub fn add_player_modifier(args: AddPlayerModifierArgs) -> Effect {
 
 /// `setHandCap`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetHandCapArgs {
     /// The hand size, held to 0..=`HAND_CAP_MAX`.
@@ -87,6 +90,7 @@ pub fn set_hand_cap(args: SetHandCapArgs) -> Effect {
 
 /// `makeHeroImmune`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct MakeHeroImmuneArgs {
     /// Whose hero it covers, relative to the controller. Default "self".

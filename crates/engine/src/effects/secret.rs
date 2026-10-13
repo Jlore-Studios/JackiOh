@@ -19,6 +19,7 @@ use crate::wire::{GameEvent, Phase, PredictOutcome, SecretChoice};
 
 /// The card `keep_secret` hands over with the secret's id riding it (R862).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SecretLink {
     pub def_id: String,
@@ -30,6 +31,7 @@ pub struct SecretLink {
 
 /// `keep_secret`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct KeepSecretArgs {
     pub choice: SecretChoice,
@@ -40,6 +42,7 @@ pub struct KeepSecretArgs {
 
 /// `guess_secret`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GuessSecretArgs {
     pub secret_id: String,
@@ -48,6 +51,7 @@ pub struct GuessSecretArgs {
 
 /// `resolve_secret`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ResolveSecretArgs {
     pub secret_id: String,

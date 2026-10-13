@@ -6,9 +6,12 @@
 
 pub mod api;
 pub mod config;
+pub mod hooks;
 pub mod lint;
 pub mod numbers;
+pub mod reads;
 pub mod sandbox;
+pub mod script;
 pub mod vm;
 
 pub use api::EffectCall;
@@ -16,7 +19,7 @@ pub use lint::{Finding, Rule, lint};
 
 use std::fmt;
 
-use jackioh_engine::{CardScripts, Effect, EffectContext, Hook, Script, hook};
+use jackioh_engine::{CardScripts, Effect, EffectContext};
 use mlua::chunk::Compiler;
 
 /// A card's face: the module's `base` or `radiant` table.
@@ -114,67 +117,7 @@ pub fn compiler() -> Compiler {
 /// any thread's VM can run it. A hook that fails panics with its error, which names its card, face and
 /// hook (an engine hook has no error to return).
 pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScripts, LuauError> {
-    let decl = vm::inspect_card(card, bytecode)?;
-    let mut scripts = CardScripts::default();
-
-    scripts.base.targets = decl.base.targets;
-    scripts.base.modes = decl.base.modes;
-    scripts.base.static_flags = decl.base.static_flags;
-    for name in decl.base.hooks {
-        let site = Site {
-            card,
-            face: Face::Base,
-            hook: name,
-        };
-        if name == "aura" {
-            scripts.base.aura = Some(jackioh_engine::aura_hook(move |args| {
-                match run_aura_hook(site, bytecode, args) {
-                    Ok(entries) => entries,
-                    Err(error) => panic!("{error}"),
-                }
-            }));
-        } else {
-            *hook_slot(&mut scripts.base, name) =
-                Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
-                    Ok(effects) => effects,
-                    Err(error) => panic!("{error}"),
-                }));
-        }
-    }
-
-    match decl.radiant {
-        vm::RadiantDecl::Base => {
-            scripts.radiant = scripts.base.clone();
-        }
-        vm::RadiantDecl::Face(face) => {
-            scripts.radiant.targets = face.targets;
-            scripts.radiant.modes = face.modes;
-            scripts.radiant.static_flags = face.static_flags;
-            for name in face.hooks {
-                let site = Site {
-                    card,
-                    face: Face::Radiant,
-                    hook: name,
-                };
-                if name == "aura" {
-                    scripts.radiant.aura = Some(jackioh_engine::aura_hook(move |args| {
-                        match run_aura_hook(site, bytecode, args) {
-                            Ok(entries) => entries,
-                            Err(error) => panic!("{error}"),
-                        }
-                    }));
-                } else {
-                    *hook_slot(&mut scripts.radiant, name) =
-                        Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
-                            Ok(effects) => effects,
-                            Err(error) => panic!("{error}"),
-                        }));
-                }
-            }
-        }
-    }
-
-    Ok(scripts)
+    script::load_card(card, bytecode)
 }
 
 /// One hook's effects, built with the engine's verbs (CLAUDE.md rule 5).
@@ -192,21 +135,4 @@ pub fn run_aura_hook<'a>(
     args: jackioh_engine::script::HookArgs<'a>,
 ) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
     vm::call_aura_hook(site, bytecode, args)
-}
-
-/// The field of `script` a hook name fills: the names `Script::hook_named` answers, which are
-/// `vm::HOOKS`.
-fn hook_slot<'s>(script: &'s mut Script, name: &str) -> &'s mut Option<Hook> {
-    match name {
-        "cry" => &mut script.cry,
-        "death" => &mut script.death,
-        "startOfGame" => &mut script.start_of_game,
-        "delayed" => &mut script.delayed,
-        "startOfTurn" => &mut script.start_of_turn,
-        "endOfTurn" => &mut script.end_of_turn,
-        "onPlayHook" => &mut script.on_play_hook,
-        "afterAttack" => &mut script.after_attack,
-        "startOfOpponentTurn" => &mut script.start_of_opponent_turn,
-        _ => unreachable!("{name} is not one of vm::HOOKS"),
-    }
 }

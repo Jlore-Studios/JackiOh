@@ -12,6 +12,7 @@ use crate::state::{AltWinCondition, ModifierExpiry, ModifierKind};
 
 /// `winGame`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct WinGameArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -29,6 +30,7 @@ pub fn win_game(args: WinGameArgs) -> Effect {
 
 /// `altWin`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AltWinArgs {
     pub condition: AltWinCondition,

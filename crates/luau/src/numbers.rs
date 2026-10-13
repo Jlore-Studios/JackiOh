@@ -148,6 +148,11 @@ pub fn to_json(value: &Value, site: Site) -> Result<Json, LuauError> {
     })
 }
 
+/// A Luau number as an `i32`, or the error that names its hook.
+pub fn to_i32(value: &Value, site: Site) -> Result<i32, LuauError> {
+    number_to_i32(value).map_err(|value| LuauError::Number { site, value })
+}
+
 /// A host function's argument, walked and then read as `T`. Every reader and `J` function reads its
 /// arguments through this, so they cross by the same rules as a hook's return.
 pub fn arg<T: DeserializeOwned>(value: Value) -> mlua::Result<T> {

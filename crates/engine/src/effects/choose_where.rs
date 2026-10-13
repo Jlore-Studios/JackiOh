@@ -39,6 +39,7 @@ pub type TargetWhere = Arc<dyn Fn(&EffectContext<'_>, Option<&CardInstance>) -> 
 /// `choose_target_where`'s arguments (TS's inline object). `where_` is a callback, so serde skips it and
 /// a card sets it in Rust; left unset it admits everything the scope offers.
 #[derive(Serialize, Deserialize, Clone, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseTargetWhereArgs {
     pub step: String,

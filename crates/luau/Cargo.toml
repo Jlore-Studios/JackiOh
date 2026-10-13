@@ -12,6 +12,11 @@ jackioh-engine = { workspace = true }
 mlua = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+ts-rs = { workspace = true, optional = true }
+
+[features]
+ts = ["jackioh-engine/ts", "dep:ts-rs"]
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }
+ts-rs = { workspace = true }

@@ -25,6 +25,7 @@ use crate::wire::{GameEvent, LibraryOverflowOutcome, Zone};
 
 /// `shuffleCardInto`'s arguments: the card, by id.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ShuffleCardIntoArgs {
     pub instance_id: String,

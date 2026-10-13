@@ -1,0 +1,4 @@
+
+verbs! {
+    verb!(heal, HealArgs);
+}

@@ -70,6 +70,7 @@ use crate::damage::DamageTarget;
 
 /// Which way a change goes.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum TuneDirection {
     #[serde(rename = "degrade")]
     Degrade,
@@ -106,6 +107,7 @@ pub fn tune_multiplier_of(state: &GameState, card: &CardInstance, direction: Tun
 /// of it (R60: #8's "4 random cards", #70 Chaos Machine's, T-AI-10 Fine-Tuning's). `times` is how many
 /// applications each card takes ("5 times" is five draws, B3.4 rule 1), default 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TuneArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -153,6 +155,7 @@ enum MenuApply {
 
 /// B3.4 rule 3's menu rows, in its order.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum TuneRow {
     #[serde(rename = "cost")]
     Cost,
@@ -889,6 +892,7 @@ fn write_number(ctx: &mut EffectContext<'_>, card_id: &str, number: &NumberRef, 
 /// `setNumber`'s `which`: `NumberRef | string | "random"` — a reference, its id as a prompt option
 /// carries it (`number_ref_id`), or `"random"`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum NumberWhich {
     Ref(NumberRef),
@@ -897,6 +901,7 @@ pub enum NumberWhich {
 
 /// `setNumber`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetNumberArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -978,6 +983,7 @@ pub const NUMBER_CARD_KEY: &str = "numberOf";
 
 /// `discoverNumber`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverNumberArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1059,7 +1065,8 @@ pub fn discover_number(args: DiscoverNumberArgs) -> Effect {
 }
 
 /// The number a `discover_number` answer picked and the card it is on (`chosen_tuning_number`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub struct ChosenTuningNumber {
     pub instance_id: String,
     pub which: NumberRef,

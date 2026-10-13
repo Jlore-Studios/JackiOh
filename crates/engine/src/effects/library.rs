@@ -39,6 +39,7 @@ fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 
 /// `exileRandomFromLibrary`'s arguments: `count` defaults to 1, `player` to "self".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileRandomFromLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -71,6 +72,7 @@ pub fn exile_random_from_library(args: ExileRandomFromLibraryArgs) -> Effect {
 
 /// `exileBottomOfLibrary`'s arguments: `player` defaults to "self", `count` to 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileBottomOfLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

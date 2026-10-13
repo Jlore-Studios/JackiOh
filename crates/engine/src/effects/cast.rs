@@ -40,6 +40,7 @@ use crate::wire::{Enchantment, PlayerId, Zone, ZoneName};
 
 /// How a cast verb casts (`resolve.CastOptions`, without the choices R70 leaves to the caster).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastHow {
     /// R452: every choice at random.
@@ -89,6 +90,7 @@ fn options_of(how: &CastHow) -> CastOptions {
 
 /// `cast`'s argument: `{ target? } & CastHow`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -155,6 +157,7 @@ pub fn cast_each(args: CastEachArgs) -> Effect {
 
 /// What `castNew` casts: a definition, and the face to cast it with.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastDef {
     pub def_id: String,
@@ -166,6 +169,7 @@ pub struct CastDef {
 /// (#7's remembered Spell), where `None` casts nothing (TS `string | CastDef | ((ctx) => string |
 /// CastDef | null)`). A card's `json!` literal reads as `Id` or `Def`; `Read` is set in Rust.
 #[derive(Clone, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum CastNewDef {
     Id(String),
@@ -197,6 +201,7 @@ impl From<CastDef> for CastNewDef {
 
 /// `castNew`'s argument: `{ def; radiant? } & CastHow`.
 #[derive(Clone, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastNewArgs {
     pub def: CastNewDef,
@@ -283,6 +288,7 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
 /// Rust; a `json!` literal reads as `Fixed`). The fixed query is boxed: it is far larger than the
 /// reader beside it.
 #[derive(Clone, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum CastRandomQuery {
     Fixed(Box<CatalogQueryArgs>),
@@ -299,6 +305,7 @@ impl From<CatalogQueryArgs> for CastRandomQuery {
 /// `castRandom`'s `count`: a number, or one read off the context as the part is built (set in Rust;
 /// a `json!` number reads as `Fixed`).
 #[derive(Clone, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum CastRandomCount {
     Fixed(i32),
@@ -314,6 +321,7 @@ impl From<i32> for CastRandomCount {
 
 /// `castRandom`'s argument: `{ query; count?; radiant? } & Omit<CastHow, "random">`.
 #[derive(Clone, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CastRandomArgs {
     pub query: CastRandomQuery,
@@ -374,6 +382,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
 /// named player's next turn (R48: "during their next turn", AI Alignment Tax), or for the rest of the
 /// game.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CostRuleSpan {
     Used,
@@ -398,6 +407,7 @@ fn expiry_of(ctx: &EffectContext<'_>, span: CostRuleSpan, player: PlayerId) -> M
 
 /// `addCostRule`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddCostRuleArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -428,6 +438,7 @@ pub fn add_cost_rule(args: AddCostRuleArgs) -> Effect {
 
 /// `enchantNextSpell`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct EnchantNextSpellArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

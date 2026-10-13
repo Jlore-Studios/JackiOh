@@ -15,8 +15,8 @@ use crate::numbers;
 use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped, too_deep};
 use crate::{Face, LuauError, Site};
 
-/// The hooks a face may declare: the effect-list hooks `Script::hook_named` answers, in its order, plus aura.
-pub const HOOKS: [&str; 10] = [
+/// The hooks a face may declare.
+pub const HOOKS: [&str; 31] = [
     "cry",
     "death",
     "startOfGame",
@@ -27,10 +27,51 @@ pub const HOOKS: [&str; 10] = [
     "afterAttack",
     "startOfOpponentTurn",
     "aura",
+    "cost",
+    "entersHand",
+    "setStat",
+    "conditionMet",
+    "preview",
+    "costAura",
+    "graveyardPlay",
+    "faceDownPlay",
+    "targetingDiscards",
+    "drawLimit",
+    "discardGuard",
+    "heroGuard",
+    "attackMods",
+    "conditionalKeywords",
+    "afterAttacked",
+    "plagueMultiplier",
+    "echoX",
+    "tributeWhen",
+    "wouldCounter",
+    "turnHookExtra",
+    "cryDeathExtra",
 ];
 
-/// Declarations a face may declare: target choices, modes and static flags.
-pub const DECLARATIONS: [&str; 4] = ["targets", "modes", "static_flags", "staticFlags"];
+/// Declarations a face may declare: target choices, modes, static flags, activations, triggers, etc.
+pub const DECLARATIONS: [&str; 19] = [
+    "targets",
+    "modes",
+    "secretModes",
+    "secret_modes",
+    "staticFlags",
+    "static_flags",
+    "activations",
+    "triggers",
+    "handTriggers",
+    "hand_triggers",
+    "deckTriggers",
+    "deck_triggers",
+    "graveyardTriggers",
+    "graveyard_triggers",
+    "replacements",
+    "targetChecks",
+    "target_checks",
+    "resume",
+    "grants",
+];
 
 #[derive(Clone, Debug, Default)]
 pub struct FaceDecl {
@@ -53,17 +94,17 @@ pub struct CardDecl {
 }
 
 /// A thread's VM: the chunk cache, then the sandbox, which drops last.
-struct Vm {
+pub(crate) struct Vm {
     /// Card id to its loaded chunk, in a Lua table, so the cache needs no interior mutability.
-    chunks: Table,
-    sandbox: Sandbox,
+    pub(crate) chunks: Table,
+    pub(crate) sandbox: Sandbox,
 }
 
 // CLAUDE.md rule 4's one exception in this crate (#442 L8): a VM per thread, which keeps only the
 // loaded chunks between calls. It holds no game state: every hook call runs its chunk afresh, so what a
 // hook returns depends only on its context, on any thread.
 thread_local! {
-    static VM: Vm = Vm::new();
+    pub(crate) static VM: Vm = Vm::new();
 }
 
 impl Vm {
@@ -136,6 +177,52 @@ impl Drop for BudgetGuard<'_> {
             budget.leave();
         }
     }
+}
+
+pub(crate) fn with_module<T>(
+    card: &'static str,
+    bytecode: &[u8],
+    f: impl FnOnce(&Lua, Table) -> Result<T, LuauError>,
+) -> Result<T, LuauError> {
+    let refused = |message: String| LuauError::Load {
+        card: card.to_string(),
+        message,
+    };
+    VM.with(|vm| {
+        let module = {
+            let site = Site {
+                card,
+                face: Face::Base,
+                hook: "load",
+            };
+            let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+            budget
+                .run(site, || vm.module(card, bytecode))
+                .map_err(|error| refused(error.to_string()))?
+        };
+        f(&vm.sandbox.lua, module)
+    })
+}
+
+pub(crate) fn with_vm<T>(
+    site: Site,
+    bytecode: &[u8],
+    f: impl FnOnce(&Lua, Table) -> mlua::Result<T>,
+) -> Result<T, LuauError> {
+    VM.with(|vm| {
+        let returned = {
+            let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+            budget.run(site, || {
+                let module = vm.module(site.card, bytecode)?;
+                let face: Table = module.raw_get(site.face.key())?;
+                f(&vm.sandbox.lua, face)
+            })
+        };
+        returned.map_err(|error| LuauError::Hook {
+            site,
+            message: error.to_string(),
+        })
+    })
 }
 
 /// Inspects a card's module to extract declarations and hooks for base and radiant faces.
@@ -221,7 +308,11 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
 
     for pair in table.pairs::<String, Value>() {
         let (name, value) = pair.map_err(|error| refused(error.to_string()))?;
-        if let Some(hook) = HOOKS.iter().find(|h| **h == name) {
+        if let Some(hook) = HOOKS.iter().find(|h| {
+            **h == name
+                || crate::hooks::camel_to_snake(h) == name
+                || crate::hooks::snake_to_camel(h) == name
+        }) {
             if !value.is_function() {
                 return Err(refused(format!(
                     "{} {name} is of type {}, not a function",
@@ -230,7 +321,11 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
                 )));
             }
             decl.hooks.push(*hook);
-        } else if DECLARATIONS.iter().any(|d| *d == name) {
+        } else if DECLARATIONS.iter().any(|d| {
+            *d == name
+                || crate::hooks::camel_to_snake(d) == name
+                || crate::hooks::snake_to_camel(d) == name
+        }) {
             let site = Site {
                 card,
                 face,
@@ -311,7 +406,7 @@ fn run(vm: &Vm, site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> mlu
     let face: Table = module.raw_get(site.face.key())?;
     let hook: Function = face.raw_get(site.hook)?;
     vm.sandbox.lua.scope(|scope| {
-        let ctx = scope.create_any_userdata(ctx, api::register_ctx)?;
+        let ctx = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
         hook.call::<Value>(ctx)
     })
 }
@@ -346,7 +441,8 @@ fn run_aura(
     let face: Table = module.raw_get(site.face.key())?;
     let hook: Function = face.raw_get(site.hook)?;
     vm.sandbox.lua.scope(|scope| {
-        let ctx = scope.create_any_userdata(args, api::register_aura_ctx)?;
+        let ctx = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
         hook.call::<Value>(ctx)
     })
 }
+

@@ -605,6 +605,7 @@ pub fn activate_actions_for(state: &GameState, player: PlayerId, card: &CardInst
 /// R384, R78: a unit a Tribute cost took, as it stood before it died — Classic #21 Turtinator deals
 /// damage equal to its Attack "as it stood" (last-known information, as a Death hook reads, R89).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TributedUnit {
     pub instance_id: String,
@@ -620,6 +621,7 @@ pub const ACTIVATION_DATA_KEY: &str = "__activation";
 
 /// What an ability's effect list reads of the activation that runs it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ActivationPaid {
     pub ability: String,
