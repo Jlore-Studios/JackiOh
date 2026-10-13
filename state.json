@@ -4803,6 +4803,8 @@
       "run_id": "38397659561",
       "started_at": "2026-10-13T12:30:13Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "776": {
