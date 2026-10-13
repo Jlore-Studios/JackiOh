@@ -4212,6 +4212,14 @@
       "started_at": "2026-10-13T07:19:48Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "771": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-13T06:45:48Z",
+      "issue": 510,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7df6796cdcf8a8be",
