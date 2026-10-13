@@ -88,6 +88,12 @@
       "lines": [
         "/harness fullsend"
       ]
+    },
+    "c:6140233662": {
+      "at": "2026-10-13T07:06:24Z",
+      "lines": [
+        "/harness build"
+      ]
     }
   },
   "items": {
