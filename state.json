@@ -783,6 +783,8 @@
       "stop_requested": false
     },
     "448": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -790,9 +792,13 @@
       "onto": "bot/issue-442",
       "part_of": 442,
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-13T07:05:17Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "38369549044",
+      "started_at": "2026-10-13T08:29:54Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "449": {
       "failures": 0,
@@ -4328,9 +4334,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-13T08:07:10Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38367031215",
-    "what": "build #757 on claude-1"
+    "at": "2026-10-13T08:29:54Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38369549044",
+    "what": "build #448 on agy"
   },
   "last_sweep": {
     "at": "2026-10-13T08:27:51Z",
