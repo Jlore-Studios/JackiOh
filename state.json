@@ -4269,6 +4269,7 @@
     "773": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-13T07:13:34Z",
