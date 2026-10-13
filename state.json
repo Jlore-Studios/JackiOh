@@ -3748,11 +3748,8 @@
     "what": "build #510 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-13T06:41:33Z",
-    "notes": [
-      "#757 needs a plan",
-      "started a night run, as a lane was free: #757 (hard) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-13T06:47:25Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
