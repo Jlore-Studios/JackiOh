@@ -4961,6 +4961,13 @@
     "785": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T16:05:08Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "line 7: a two-file CSS fix with a unit test, but it is a layout fix whose real proof is the Cypress component and e2e specs (the unit test only reads the stylesheet), and line 9 (open PRs on board.css) cannot be checked from here"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
