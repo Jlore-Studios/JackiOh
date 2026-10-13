@@ -10892,6 +10892,7 @@
   },
   "suggest": {
     "asks": [],
+    "idle_since": "2026-10-13T21:59:38Z",
     "last_run": "2026-10-13T09:03:53Z",
     "provider": null,
     "requested": false,
