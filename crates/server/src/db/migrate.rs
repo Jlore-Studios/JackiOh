@@ -154,8 +154,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0033_bot_trios.sql"),
     ),
     (
-        "0034_replay_final_hash.sql",
-        include_str!("../../migrations/0034_replay_final_hash.sql"),
+        "0034_account_consent.sql",
+        include_str!("../../migrations/0034_account_consent.sql"),
+    ),
+    (
+        "0035_replay_final_hash.sql",
+        include_str!("../../migrations/0035_replay_final_hash.sql"),
     ),
 ];
 

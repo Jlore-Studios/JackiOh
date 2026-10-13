@@ -193,6 +193,13 @@ export type MeResponse = {
    * activation is still owed. Optional because a server from before R1435 (or a test stub) omits it.
    */
   username?: OwnUsername;
+  /**
+   * R757000: a pending account that has not answered the age screen. Optional because a server from
+   * before R757000 (or a test stub) omits it; missing means nothing is owed.
+   */
+  ageCheckOwed?: boolean;
+  /** R757001: the account has not agreed to the terms in force (`TERMS_VERSION`). Missing: not owed. */
+  termsOwed?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
@@ -281,6 +288,23 @@ export function usernamePreviewOf(error: unknown): UsernamePreview | null {
   if (typeof reason !== "string" || typeof message !== "string") return null;
   if (reason === "cooldown" && typeof (details as { nextChangeAt?: unknown }).nextChangeAt !== "number") return null;
   return details as UsernamePreview;
+}
+
+/**
+ * `POST /api/account/consent` (R757000, R757001): agreement to `termsVersion` and, while the age
+ * check is owed, the month and year of birth, which the server counts and does not keep. Refusals:
+ * 403 `under_age` (the account is deleted), 409 `update_required` (the terms changed since this
+ * client loaded), 400 `bad_request` (the birth is missing or cannot be right).
+ */
+export function postConsent(
+  token: string,
+  body: { termsVersion: string; birthYear?: number; birthMonth?: number },
+): Promise<{ ageCheckOwed: boolean; termsOwed: boolean }> {
+  return apiRequest<{ ageCheckOwed: boolean; termsOwed: boolean }>("/api/account/consent", {
+    method: "POST",
+    token,
+    body,
+  });
 }
 
 /**

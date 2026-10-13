@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-seven specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36` and the rematch offers' `37`, plus sixteen component specs
+# `e2e/` — the thirty-eight specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37` and the accessibility check's `38`, plus sixteen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -39,7 +39,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
@@ -153,6 +153,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `answerPrompt(kind, { first, embiggen })` | `first: 1` takes the first option offered, which is the only way to answer a Discover (its options are rng-drawn). `embiggen: true` is R81's price as the boolean it is, not the picker's `"true"` key. |
 | `keepMulligans()` | Both opening mulligans are open at once (R265). On `/dev/hotseat` the device follows the seat that still owes one, so this answers both; networked it answers this client's own, after which the picker gives way to `mulligan-waiting`. |
 | `concede()` | The `concede` control only asks ("Concede this game?"); this confirms in the dialog it opens. A spec that clicks `concede` alone has conceded nothing. |
+| `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. |
 | `wsPlayer` `awaitView` `where: { mulliganOpponentReady, drawOfferBy }` | R266's "the other seat is ready" and R269's standing offer, read off seat 2's own view (`view.mulligan.opponentReady`, `view.drawOffer.by`). |
 
 ## Which spec needs which milestone

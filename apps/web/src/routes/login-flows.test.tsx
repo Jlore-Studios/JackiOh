@@ -9,10 +9,12 @@ import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_PENDING_ADDRESS_TTL_SECONDS,
   GATE_SLOW_NOTICE_SECONDS,
+  MIN_ACCOUNT_AGE_YEARS,
 } from "@jackioh/server-config";
+import { utcToday } from "../auth/consent.ts";
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
 import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
-import { loginTestid } from "../auth/testids.ts";
+import { consentTestid, loginTestid } from "../auth/testids.ts";
 import { emailProblem, newPasswordProblem } from "../auth/validation.ts";
 import {
   AUTH_MESSAGES,
@@ -222,9 +224,15 @@ function submitForm(): void {
   fireEvent.submit(form());
 }
 
+/** Sign-up mode, with an answer the age screen passes (R757000) and the terms box ticked (R757001). */
 function toSignUp(): void {
   fireEvent.click(screen.getByTestId(loginTestid.mode));
   expect(form()).toHaveAttribute("data-mode", "signUp");
+  fireEvent.change(screen.getByTestId(consentTestid.birthMonth), { target: { value: "1" } });
+  fireEvent.change(screen.getByTestId(consentTestid.birthYear), {
+    target: { value: String(utcToday().year - MIN_ACCOUNT_AGE_YEARS - 1) },
+  });
+  fireEvent.click(screen.getByTestId(consentTestid.agree));
 }
 
 function bodyText(): string {

@@ -144,6 +144,25 @@ export const usernameTestid = {
   promptError: "username-prompt-error",
 } as const;
 
+/** The age screen, the terms box and the consent screen (R757000, R757001). */
+export const consentTestid = {
+  birthMonth: "consent-birth-month",
+  birthYear: "consent-birth-year",
+  birthError: "consent-birth-error",
+  /** The checkbox itself. */
+  agree: "consent-agree",
+  /** The box and its sentence (on the sign-up form, `signUpPrivacyTestid` instead). */
+  agreeLine: "consent-agree-line",
+  agreeError: "consent-agree-error",
+  /** The neutral refusal shown in place of the form. */
+  refused: "consent-refused",
+  prompt: "consent-prompt",
+  /** The terms changed since the account last agreed to them. */
+  changed: "consent-changed",
+  submit: "consent-submit",
+  error: "consent-error",
+} as const;
+
 export const shellTestid = {
   loading: "gate-loading",
   error: "gate-error",

@@ -20,7 +20,7 @@
 //!
 //! The fold is the actor's rebuild's (`registry.rs`): the row's seed, frozen decks, last boards and
 //! Glitch boards, its log, and the dealt seats of an All Random match (R433). It is held to the final
-//! hash the result recorded (migration 0034). A match that ended before 0034, or that the reaper
+//! hash the result recorded (migration 0035). A match that ended before 0035, or that the reaper
 //! resolved (R112), has none, so its fold is held to its results row instead: the same winner, reason
 //! and turn count, and then to the hash of the state it ends on.
 //!

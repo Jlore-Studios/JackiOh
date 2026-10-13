@@ -33,6 +33,8 @@ export function screenNameFor(path: string): string | null {
       return "Terms";
     case paths.accessibility:
       return "Accessibility";
+    case paths.copyright:
+      return "Copyright";
     case paths.patchNotes:
       return "Patch notes";
     case paths.almanac:

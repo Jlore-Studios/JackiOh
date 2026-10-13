@@ -85,6 +85,8 @@ export const paths = {
   privacy: "/privacy",
   terms: "/terms",
   accessibility: "/accessibility",
+  /** Issue #757: the copyright and takedown page. */
+  copyright: "/copyright",
   /** R388: patch notes and touched cards. */
   patchNotes: "/patch-notes",
   /** R630: browsable cards, including tokens. */

@@ -48,6 +48,10 @@ pub enum ApiErrorCode {
     EmailUnverified,
     AccountPending,
     AccountBanned,
+    /// R757000: the age screen's answer is under `MIN_ACCOUNT_AGE_YEARS`; the account is deleted.
+    UnderAge,
+    /// R757000, R757001: the account owes the age check or agreement to the terms in force.
+    ConsentOwed,
     NotFound,
     Conflict,
     /// R768: what was asked for is gone for good (a replay whose log the retention purge took).
@@ -76,6 +80,8 @@ impl ApiErrorCode {
             ApiErrorCode::EmailUnverified => 403,
             ApiErrorCode::AccountPending => 403,
             ApiErrorCode::AccountBanned => 403,
+            ApiErrorCode::UnderAge => 403,
+            ApiErrorCode::ConsentOwed => 403,
             ApiErrorCode::NotFound => 404,
             ApiErrorCode::Conflict => 409,
             ApiErrorCode::Gone => 410,
@@ -102,6 +108,8 @@ impl ApiErrorCode {
             ApiErrorCode::EmailUnverified => "email_unverified",
             ApiErrorCode::AccountPending => "account_pending",
             ApiErrorCode::AccountBanned => "account_banned",
+            ApiErrorCode::UnderAge => "under_age",
+            ApiErrorCode::ConsentOwed => "consent_owed",
             ApiErrorCode::NotFound => "not_found",
             ApiErrorCode::Conflict => "conflict",
             ApiErrorCode::Gone => "gone",

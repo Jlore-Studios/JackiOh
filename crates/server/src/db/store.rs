@@ -564,7 +564,7 @@ pub struct MatchRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
     /// R768: `hash_state` of the final state, written with the result (`matches_record_final_hash`,
-    /// migration 0034) and never by `matches_create`. Absent on a match that ended before it, on one
+    /// migration 0035) and never by `matches_create`. Absent on a match that ended before it, on one
     /// the reaper resolved (R112) and on one not over yet.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_hash: Option<String>,
@@ -1109,6 +1109,42 @@ pub struct PlayerStatsRow {
     pub updated_at: i64,
 }
 
+// Consent on the account (SPEC §9.4, R757000, R757001, migration 0034).
+
+store_union! {
+    /// R757001: how an account came to agree to a version of the terms.
+    pub enum TermsSource {
+        /// While setting up the account: the sign-up box, or the consent screen of a pending one.
+        Signup = "signup",
+        /// Again, after the terms changed.
+        Reaccept = "reaccept",
+        /// Migration 0034's row for an account that existed before the box did.
+        Baseline = "baseline",
+    }
+}
+
+/// One version of the terms an account agreed to (`public.terms_acceptances`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct TermsAcceptanceRow {
+    pub version: String,
+    pub source: TermsSource,
+    pub accepted_at: i64,
+}
+
+/// What an account has agreed to: its age check (R757000) and every version of the terms
+/// (R757001), oldest first. Never a birth date: none is stored.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsentRow {
+    pub profile_id: String,
+    /// When the age check passed, or `None` when the account never answered it.
+    pub age_checked_at: Option<i64>,
+    /// The minimum age it was checked against, beside `age_checked_at`.
+    pub age_min: Option<i32>,
+    pub terms: Vec<TermsAcceptanceRow>,
+}
+
 /// One of `PublicPlayerSummary.favourite_cards`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1494,8 +1530,8 @@ impl Tx<'_> {
     }
 
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
-    /// trios, tutorial progress, queue tickets, rooms it opened that nobody joined, and its
-    /// invite-code attempts' link to it. Finished matches, results and series stay for the other
+    /// trios, tutorial progress, its age check and terms acceptances (R757000, R757001), queue
+    /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
     /// player, with this profile's seat left empty (migration 0012). False when there was no such
     /// profile. The caller refuses a profile in a live match or series first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
@@ -2167,6 +2203,31 @@ impl Tx<'_> {
         options: &PlayerStatsListOptions,
     ) -> StoreResult<Vec<PublicPlayerSummary>> {
         dispatch!(self, player_stats_list_public(options))
+    }
+
+    // consent (R757000, R757001: the age check and the terms agreed to, migration 0034)
+
+    /// The account's age check and terms acceptances; a row with neither when nothing is stored.
+    pub async fn consent_get(&mut self, profile_id: &str) -> StoreResult<ConsentRow> {
+        dispatch!(self, consent_get(profile_id))
+    }
+
+    /// R757000: records that the account passed the age check against `min_age`. The first record
+    /// stands: a second call changes nothing.
+    pub async fn consent_record_age(&mut self, profile_id: &str, min_age: i32, at: i64) -> StoreResult<()> {
+        dispatch!(self, consent_record_age(profile_id, min_age, at))
+    }
+
+    /// R757001: records that the account agreed to `version`. Each version is recorded once; a
+    /// second call for it changes nothing.
+    pub async fn consent_record_terms(
+        &mut self,
+        profile_id: &str,
+        version: &str,
+        source: TermsSource,
+        at: i64,
+    ) -> StoreResult<()> {
+        dispatch!(self, consent_record_terms(profile_id, version, source, at))
     }
 
     // playTelemetry (R1442: how each seat played a match, migration 0029)

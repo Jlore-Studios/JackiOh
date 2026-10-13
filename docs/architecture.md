@@ -624,8 +624,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
-   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_replay_final_hash.sql` — and records them in
-   `app.migrations`. Expected result: 29 tables
+   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
+   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -674,7 +674,13 @@ step that is not yet implemented says which BUILD task delivers it.
    (R1454). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
    0033 adds `bots.trio` and `bots.trio_catalog_version`, the Conquest trio the pool deals each bot
    and the catalog it was dealt for (R641000); the table stays server-only and no row is backfilled.
-   0034 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
+   0034 adds the two server-only consent tables (R757000, R757001), with RLS on and no policy or
+   grant: `age_checks`, one row per account that passed the age screen (when, and the minimum it
+   was checked against, never a birth date), and `terms_acceptances`, one row per account and
+   version of the Terms and the Privacy Policy it agreed to. It gives every person's account that
+   already exists a `baseline` record dated at its sign-up, so each such account is asked to agree
+   to the terms in force on its next visit; an account already active is not asked its age.
+   0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
    its replay (R768); older matches keep none and their replays are held to their results rows.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations

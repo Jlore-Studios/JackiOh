@@ -813,15 +813,25 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   },
 };
 
+/**
+ * The table's row for `type`, or `undefined` for an event type this build has never seen: a tab
+ * left open on an older bundle can receive one a newer patch added, when the server already runs
+ * it (issue #769). The table stays a total map over `GameEventType` — a missing row for a known
+ * type is still a compile error, so the widening cast lives at this lookup and nowhere else.
+ */
+export function animationRow(type: string): AnimationRow | undefined {
+  return (ANIMATIONS as unknown as Partial<Record<string, AnimationRow>>)[type];
+}
+
 /* ------------------------------------------------------------------------------------------- *
  * Durations and reduced motion
  * ------------------------------------------------------------------------------------------- */
 
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
-/** `prefers-reduced-motion` collapses every duration to 0 (BUILD M5-T4). */
+/** `prefers-reduced-motion` collapses every duration to 0 (BUILD M5-T4); an unknown type has none (issue #769). */
 export function durationFor(type: GameEventType, reducedMotion: boolean): number {
-  return reducedMotion ? 0 : ANIMATIONS[type].durationMs;
+  return reducedMotion ? 0 : (animationRow(type)?.durationMs ?? 0);
 }
 
 /** Reads the media query, tolerating a non-browser host and a host without `matchMedia`. */
@@ -851,7 +861,9 @@ export function reducedMotionNow(settings?: Pick<FxSettings, "motion">): boolean
 
 /** Resolves one event's element against a view, without the caller narrowing the union itself. */
 export function targetFor(event: GameEvent, view: PlayerView): string | null {
-  const resolve = ANIMATIONS[event.type].target as (e: GameEvent, v: PlayerView) => string | null;
+  const row = animationRow(event.type);
+  if (row === undefined) return null;
+  const resolve = row.target as (e: GameEvent, v: PlayerView) => string | null;
   return resolve(event, view);
 }
 

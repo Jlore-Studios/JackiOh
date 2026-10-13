@@ -14,7 +14,9 @@
 // knows to show the code screen", and send the browser to the screen that will actually work. It
 // lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
 // read says whether an active account still owes the username prompt (R1435), which the gate then
-// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`).
+// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`),
+// and whether the account owes the age check or agreement to the terms in force (R757000, R757001),
+// which comes first (`auth/ConsentPrompt.tsx`).
 //
 // NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
 // error, the banned account, the 404, a screen whose code failed to load, and a check that is
@@ -62,6 +64,8 @@ import { createRoot } from "react-dom/client";
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
+import { dropStaleSignUpConsent } from "./auth/consent.ts";
+import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { initLocale, t, useLocale } from "./i18n/i18n.ts";
@@ -108,6 +112,7 @@ const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const TermsRoute = lazy(() => import("./routes/terms.tsx"));
 const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
+const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
@@ -343,6 +348,11 @@ export type GatedProps = {
    * Everything else is `active`-only.
    */
   allowPending?: boolean;
+  /**
+   * R757001: `/account` opens whether or not the account owes the consent screen, so a player who
+   * will not agree can still delete their account or sign out there.
+   */
+  consentExempt?: boolean;
   children: (account: ReadyAccount) => ReactElement;
 };
 
@@ -371,13 +381,24 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
  */
 const usernamePromptPassed = new Set<string>();
 
-/** Test seam: a new page, which has let no profile past the prompt yet. */
+/**
+ * R757000, R757001: the profiles that answered the consent screen on this page. The answer counts
+ * at once, as the username prompt's does, whatever the re-read after it finds.
+ */
+const consentAnswered = new Set<string>();
+
+/** Test seam: a new page, which has let no profile past either prompt yet. */
 export function resetUsernamePromptForTests(): void {
   usernamePromptPassed.clear();
+  consentAnswered.clear();
 }
 
-export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
+export function Gated({ allowPending = false, consentExempt = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R757001: this gate has shown its screen to an active account that owed nothing. A later read
+  // that finds the terms owed (they changed while the player was here) leaves the screen up, and
+  // the next screen asks. Per gate, since each screen mounts its own (ONE GATE PER SCREEN).
+  const [screenShown] = useState(() => new Set<string>());
   // R634: an active account's game settings are kept level with this device's, on every gated screen.
   useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
@@ -423,6 +444,30 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   // waits for the next sign-in like any other screen it found open.
   const profileId = account.me.profile.id;
   const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
+  // R757000, R757001: an account owing the age check or agreement to the terms in force meets the
+  // consent screen first, the server's `ageCheckOwed` and `termsOwed` (a server that sends neither
+  // owes none). A pending account meets it before the code screen, whose redemption the server
+  // refuses until it is answered. Never on `/account`, never while in a match or a series, and
+  // never over a screen this gate already showed an active account.
+  const consentOwed = account.me.ageCheckOwed === true || account.me.termsOwed === true;
+  if (
+    consentOwed &&
+    !consentExempt &&
+    !playing &&
+    !consentAnswered.has(profileId) &&
+    !(status === "active" && screenShown.has(profileId))
+  ) {
+    return (
+      <ConsentPrompt
+        token={account.token}
+        me={account.me}
+        onAnswered={() => {
+          consentAnswered.add(profileId);
+          setAnswered((count) => count + 1);
+        }}
+      />
+    );
+  }
   if (
     status === "active" &&
     account.me.username?.promptOwed === true &&
@@ -442,7 +487,10 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   }
   // Remembered from the render itself, so the screen's first render already counts. Adding a member
   // the set may hold already is the same however often React renders this.
-  if (status === "active") usernamePromptPassed.add(profileId);
+  if (status === "active") {
+    usernamePromptPassed.add(profileId);
+    screenShown.add(profileId);
+  }
 
   return children({ token: account.token, me: account.me });
 }
@@ -517,7 +565,7 @@ export function App(): ReactElement {
     // this route exists to remove.
     if (path === paths.account) {
       return (
-        <Gated key={path} allowPending>
+        <Gated key={path} allowPending consentExempt>
           {(account) => <AccountRoute token={account.token} me={account.me} />}
         </Gated>
       );
@@ -530,6 +578,7 @@ export function App(): ReactElement {
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
+    if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) return <PatchNotesRoute />;
     // R630: the Card Almanac is public, like the catalog it shows.
@@ -592,6 +641,8 @@ if (import.meta.env.MODE !== "test") {
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();
+  // R757000: a sign-up's held birth answer past its time leaves this browser.
+  dropStaleSignUpConsent();
   // The language's dictionary is in before the first paint, so a Chinese reader never sees English flash by (#711).
   const localeReady = initLocale();
   const mount = (): void => {

@@ -17,6 +17,7 @@ use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
 use sha2::Sha256;
 
+use crate::api::consent::consent_owed;
 use crate::api::crypto::{
     canonical_invite_code, format_code, is_well_formed_code, normalize_code, random_code,
 };
@@ -56,6 +57,8 @@ const ALREADY_ACTIVE_MESSAGE: &str = "This account is already active.";
 // wherever it is turned away.
 const BANNED_MESSAGE: &str = "this account is banned";
 const EMAIL_UNVERIFIED_MESSAGE: &str = "Verify your email address before redeeming an invite code.";
+// R757000, R757001: the account owes the age screen or the terms box.
+const CONSENT_OWED_MESSAGE: &str = "Finish setting up your account first.";
 
 /// Unit conversion, not configuration.
 const MS_PER_SECOND: i64 = 1000;
@@ -276,6 +279,17 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
         return Ok(RedeemOutcome::Refused(ApiError::new(
             ApiErrorCode::EmailUnverified,
             EMAIL_UNVERIFIED_MESSAGE,
+        )));
+    }
+    // R757000, R757001: an account still owing the age check or agreement to the terms in force is
+    // sent back to the consent screen, before the attempt log, so the refusal costs no try.
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let consent = tx.consent_get(&profile.id).await?;
+    tx.commit().await?;
+    if consent_owed(profile, &consent) {
+        return Ok(RedeemOutcome::Refused(ApiError::new(
+            ApiErrorCode::ConsentOwed,
+            CONSENT_OWED_MESSAGE,
         )));
     }
 

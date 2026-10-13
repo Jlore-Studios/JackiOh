@@ -164,6 +164,25 @@ pub const GATE_SLOW_NOTICE_SECONDS: i64 = 5;
 pub const CODE_STATUS_RECHECK_FLOOR_SECONDS: i64 = 1;
 
 // ---------------------------------------------------------------------------------------------
+// The age screen and the terms a player agrees to (SPEC §9.4, R757000, R757001). Public: the
+// sign-up form, the consent screen and the privacy policy read them.
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §11 R757000: the youngest age, in whole years, at which a person may hold an account. The
+/// owner's to choose: 13 meets COPPA; 16 if players in the EU are expected (GDPR art. 8 lets each
+/// member state pick between 13 and 16, and 16 is the default). Changing it asks no existing
+/// account again: each account's age check records the minimum it was checked against.
+pub const MIN_ACCOUNT_AGE_YEARS: i32 = 13;
+/// R757000: the earliest birth year the age screen offers and the server accepts.
+pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
+/// SPEC §11 R757001: the version of the Terms and the Privacy Policy a player agrees to: the terms'
+/// "Last updated" date, then the privacy policy's (`TERMS_LAST_UPDATED` in
+/// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
+/// holds it to). Changing either page's text changes its date and so this, and every account is
+/// asked to agree again.
+pub const TERMS_VERSION: &str = "2026-10-13/2026-10-13";
+
+// ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
 // ---------------------------------------------------------------------------------------------
 
