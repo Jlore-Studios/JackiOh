@@ -3723,6 +3723,13 @@
     "760": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T06:55:58Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 6 of the easy rule: the whole change lives under bot/ (events.py, deliver.py, tests, README, prompt), an explicitly forbidden path, so easy fails on that line alone"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
