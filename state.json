@@ -4333,6 +4333,11 @@
     "774": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-13T08:34:14Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "23cb73b51c189cdede42224f09d3bc6a088d5ffb"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
