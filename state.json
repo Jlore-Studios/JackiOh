@@ -8366,14 +8366,18 @@
         {
           "at": "2026-10-12T19:14:21Z",
           "minutes": 68.6
+        },
+        {
+          "at": "2026-10-13T06:55:49Z",
+          "minutes": 5.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-12T21:53:00Z",
+          "resets_at": "2026-10-13T11:50:00Z",
           "utilization": 0.0
         },
-        "observed_at": "2026-10-12T19:14:21Z",
+        "observed_at": "2026-10-13T06:55:49Z",
         "seven_day": {
           "resets_at": "2026-10-19T00:00:00Z",
           "utilization": 0.0
