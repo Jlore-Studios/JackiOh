@@ -4421,6 +4421,13 @@
     "776": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-13T11:42:02Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails the easy rule on line 3 (it adds ruling R776000 and edits spec/), and it also spans crates/server, spec/ and docs/; it is not hard, because there is no engine, AI or migration work and it stays in one crate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
