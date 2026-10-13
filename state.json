@@ -5638,9 +5638,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-13T23:20:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38483584097",
-    "what": "build #766 on claude-7"
+    "at": "2026-10-13T23:28:06Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38484343972",
+    "what": "suggestions on agy"
   },
   "last_sweep": {
     "at": "2026-10-13T23:26:59Z",
@@ -11031,11 +11031,49 @@
   },
   "suggest": {
     "asks": [],
-    "idle_since": "2026-10-13T22:55:57Z",
-    "last_run": "2026-10-13T09:03:53Z",
-    "provider": null,
+    "declined": [
+      {
+        "at": "2026-10-13T11:28:01Z",
+        "number": 777,
+        "title": "Architecture: the fuzz monitor checks that every card sits in exactly one pile and that a settled board holds nothing half-done (I8, I9)",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-08T02:29:57Z",
+        "number": 439,
+        "title": "Say who goes first and who gets The Coin during the mulligan",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-08T02:30:43Z",
+        "number": 431,
+        "title": "Make the board usable with a screen reader and without colour vision",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-07T01:47:02Z",
+        "number": 429,
+        "title": "Keep each device's player statistics on the account instead of overwriting them",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-06T05:42:27Z",
+        "number": 350,
+        "title": "Keep the whole game in the log, not just the view's last 32 events",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-06T05:06:43Z",
+        "number": 347,
+        "title": "Start disconnect grace for an absent seat after a restart or no-show",
+        "why": "closed unbuilt by a person (completed)"
+      }
+    ],
+    "idle_since": "2026-10-13T23:28:06Z",
+    "last_run": "2026-10-13T23:28:06Z",
+    "provider": "agy",
     "requested": false,
-    "run_id": null,
+    "run_id": "38484343972",
     "taken_asks": []
   },
   "usage": {
