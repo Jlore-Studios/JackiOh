@@ -20,7 +20,10 @@
 //! Every finished game leaves one `GameRecord` (R376; `source: "dev"`, `mode: "random"`, R378) on a
 //! JSONL line: in `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout.
 //! The duel lines go to stdout when the records went to a file and to stderr when they took stdout;
-//! a tally closes them.
+//! a tally closes them: the wins, draws and games without a result, and agent `a`'s share of the
+//! games won with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`), so a series says how far its
+//! result can be trusted. Draws and games without a result count as games `a` did not win, as the
+//! gate counts them.
 
 use std::io::{BufRead, BufReader, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -53,6 +56,12 @@ const ARENA_MAX_ACTIONS: usize = 3000;
 pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
 
 const DUEL_PERCENTILE: f64 = 0.95;
+
+/// The normal quantile of a two-sided 95% interval, for the tally's Wilson interval.
+pub(crate) const WILSON_Z: f64 = 1.96;
+
+/// The tally's shares are rounded to this many parts of one (three decimals).
+const SHARE_PRECISION: f64 = 1000.0;
 
 #[derive(clap::Args)]
 pub struct Args {
@@ -800,7 +809,7 @@ fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> 
     Ok(serde_json::to_string(&line)?)
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Tally {
     pub a: String,
@@ -810,20 +819,54 @@ pub(crate) struct Tally {
     pub b_wins: usize,
     pub draws: usize,
     pub aborted: usize,
+    /// `a_wins` over `games`, and its 95% Wilson interval.
+    pub a_share: f64,
+    pub a_low: f64,
+    pub a_high: f64,
+}
+
+/// The 95% Wilson score interval of `wins` in `games`: the range a true win rate can sit in and still
+/// give this result. It stays inside [0, 1] and is sound at 0 or every win, where the normal
+/// approximation is not. No games is no information: [0, 1].
+pub(crate) fn wilson_interval(wins: usize, games: usize) -> (f64, f64) {
+    if games == 0 {
+        return (0.0, 1.0);
+    }
+    let n = games as f64;
+    let p = wins as f64 / n;
+    let z2 = WILSON_Z * WILSON_Z;
+    let denominator = 1.0 + z2 / n;
+    let centre = (p + z2 / (2.0 * n)) / denominator;
+    let half = WILSON_Z * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt() / denominator;
+    ((centre - half).max(0.0), (centre + half).min(1.0))
+}
+
+fn round_share(share: f64) -> f64 {
+    (share * SHARE_PRECISION).round() / SHARE_PRECISION
 }
 
 pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome]) -> Tally {
+    let games = outcomes.len();
+    let a_wins = outcomes.iter().filter(|outcome| outcome.a_won()).count();
+    let (low, high) = wilson_interval(a_wins, games);
     Tally {
         a: a.to_string(),
         b: b.to_string(),
-        games: outcomes.len(),
-        a_wins: outcomes.iter().filter(|outcome| outcome.a_won()).count(),
+        games,
+        a_wins,
         b_wins: outcomes
             .iter()
             .filter(|outcome| won_by(outcome.result, outcome.game.a_seat.opponent()))
             .count(),
         draws: outcomes.iter().filter(|outcome| outcome.drawn()).count(),
         aborted: outcomes.iter().filter(|outcome| outcome.result.is_none()).count(),
+        a_share: round_share(if games == 0 {
+            0.0
+        } else {
+            a_wins as f64 / games as f64
+        }),
+        a_low: round_share(low),
+        a_high: round_share(high),
     }
 }
 
@@ -968,6 +1011,25 @@ mod tests {
         });
         assert!(won_by(p2, PlayerId::P2));
         assert!(!won_by(p2, PlayerId::P1));
+    }
+
+    #[test]
+    fn the_wilson_interval_brackets_the_share_and_narrows_with_games() {
+        // 65 of 100: the improve gate's bar reads as anything from about 55% to 74%.
+        let (low, high) = wilson_interval(65, 100);
+        assert_eq!((round_share(low), round_share(high)), (0.553, 0.736));
+        // Four times the games halves the width, near enough.
+        let (low_400, high_400) = wilson_interval(260, 400);
+        assert!(high_400 - low_400 < (high - low) * 0.55);
+        assert!(low_400 < 0.65 && 0.65 < high_400);
+        // It stays in [0, 1] at the ends, and no games says nothing.
+        let (none_low, none_high) = wilson_interval(0, 60);
+        assert_eq!(none_low, 0.0);
+        assert!(none_high > 0.0);
+        let (all_low, all_high) = wilson_interval(60, 60);
+        assert!(all_low < 1.0);
+        assert_eq!(round_share(all_high), 1.0);
+        assert_eq!(wilson_interval(0, 0), (0.0, 1.0));
     }
 
     #[test]

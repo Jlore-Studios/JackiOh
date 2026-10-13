@@ -1084,7 +1084,9 @@ cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh>
 
 `arena` writes one `GameRecord` JSONL line per game (`packages/shared/src/stats.ts`'s format, R376;
 `source: "dev"`, `mode: "random"`, `pilots` naming the two agents) to `--out` (default
-`$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout).
+`$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout). A tally closes its duel lines: `a`, `b`, `games`,
+`aWins`, `bWins`, `draws`, `aborted`, and `aShare` (`aWins` over `games`) with its 95% Wilson interval
+`aLow` and `aHigh`, each rounded to three decimals.
 
 `promote` plays `TRAINING_GAMES` (100) games against the parent, seats alternating (candidate `p1`
 on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
