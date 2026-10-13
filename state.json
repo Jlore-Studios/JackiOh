@@ -5052,7 +5052,7 @@
       "started_at": "2026-10-13T17:25:09Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "784": {
       "cleared": {
