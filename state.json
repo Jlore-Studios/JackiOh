@@ -4214,6 +4214,11 @@
       "taken_asks": []
     },
     "771": {
+      "cleared": {
+        "at": "2026-10-13T07:34:27Z",
+        "by": "`claude` (strong)",
+        "sha": "7bc8d787a26fe126b199216643005fb6bd8a5abf"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-13T06:45:48Z",
