@@ -101,6 +101,8 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
 // Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
 // behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
 const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
+// The replay player's dev list (#511), left out of a production build the same way.
+const DevReplaysRoute = DEV_ONLY ? lazy(() => import("./routes/dev/replays.tsx")) : null;
 const LoginRoute = lazy(() => import("./routes/login.tsx"));
 const ResetPasswordRoute = lazy(() => import("./routes/reset-password.tsx"));
 const InviteRoute = lazy(() => import("./routes/invite.tsx"));
@@ -606,6 +608,10 @@ export function App(): ReactElement {
     if (path === paths.hotseat) {
       if (HotseatRoute === null) return <NotFound path={path} />;
       return <HotseatRoute />;
+    }
+    if (path === paths.devReplays) {
+      if (DevReplaysRoute === null) return <NotFound path={path} />;
+      return <DevReplaysRoute />;
     }
     return <NotFound path={path} />;
   })();
