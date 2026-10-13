@@ -4798,7 +4798,7 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "question": "The signature fix makes two frozen R290 tests in crates/ai/tests/ai/tutorial_tier.rs fail, and neither bot may weaken them. Which should be done? (a) Re-measure and re-freeze R290's run: new series or new thresholds, with R290's text updated. (b) Make AI_TUTORIAL weaker, which touches engine config, R290's text and the lessons. (c) Ship only the Windfury half (face_threat and ready_gap) now, and the signature change after (a) or (b).",
-      "queued_at": "2026-10-13T15:23:51Z",
+      "queued_at": "2026-10-13T17:10:25Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38397659561",
       "started_at": "2026-10-13T12:30:13Z",
